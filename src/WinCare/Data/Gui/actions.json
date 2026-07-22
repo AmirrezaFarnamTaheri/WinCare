@@ -1,0 +1,696 @@
+[
+  {
+    "id": "system-overview",
+    "title": "System overview",
+    "description": "Inspect Windows build, uptime, memory, storage, Defender, restart state, and privilege context.",
+    "category": "Health",
+    "icon": "",
+    "command": "system",
+    "risk": "ReadOnly",
+    "featured": true,
+    "defaultArguments": {},
+    "argumentHelp": "No arguments required.",
+    "sourceRecords": [
+      "D111-V5-HEALTH-DASHBOARD"
+    ]
+  },
+  {
+    "id": "toolkit-diagnostics",
+    "title": "Unified diagnostics",
+    "description": "Collect bounded OS, power, battery, hotfix, Secure Boot, Defender, and reboot evidence.",
+    "category": "Health",
+    "icon": "",
+    "command": "toolkit-diagnostics",
+    "risk": "ReadOnly",
+    "featured": true,
+    "defaultArguments": {},
+    "argumentHelp": "No arguments required.",
+    "sourceRecords": [
+      "D111-V5-HEALTH-DASHBOARD"
+    ]
+  },
+  {
+    "id": "health-findings",
+    "title": "Health findings",
+    "description": "Summarize immediate storage, restart, and security warnings with recommendations.",
+    "category": "Health",
+    "icon": "",
+    "command": "health",
+    "risk": "ReadOnly",
+    "featured": true,
+    "defaultArguments": {},
+    "argumentHelp": "No arguments required.",
+    "sourceRecords": [
+      "D111-V5-HEALTH-DASHBOARD"
+    ]
+  },
+  {
+    "id": "storage",
+    "title": "Storage overview",
+    "description": "Inspect local volumes, used space, free space, and pressure thresholds.",
+    "category": "Health",
+    "icon": "",
+    "command": "storage",
+    "risk": "ReadOnly",
+    "featured": true,
+    "defaultArguments": {},
+    "argumentHelp": "No arguments required.",
+    "sourceRecords": [
+      "D111-V5-HEALTH-DASHBOARD"
+    ]
+  },
+  {
+    "id": "cleanup-assessment",
+    "title": "Cleanup assessment",
+    "description": "Discover bounded cleanup targets and estimated reclaimable space without deleting anything.",
+    "category": "Health",
+    "icon": "",
+    "command": "cleanup-targets",
+    "risk": "ReadOnly",
+    "featured": true,
+    "defaultArguments": {
+      "Refresh": false
+    },
+    "argumentHelp": "Refresh: rescan all supported cleanup targets.",
+    "sourceRecords": [
+      "D111-MAINTENANCE-WORKFLOW"
+    ]
+  },
+  {
+    "id": "security-summary",
+    "title": "Security posture",
+    "description": "Inspect Defender, firewall, encryption, Secure Boot, TPM, UAC, and related controls.",
+    "category": "Security",
+    "icon": "",
+    "command": "security",
+    "risk": "ReadOnly",
+    "featured": true,
+    "defaultArguments": {},
+    "argumentHelp": "No arguments required.",
+    "sourceRecords": [
+      "D127-V5-RISK-COMMUNICATION"
+    ]
+  },
+  {
+    "id": "hardening-balanced-assess",
+    "title": "Balanced hardening assessment",
+    "description": "Compare the balanced hardening profile with current machine state before any change.",
+    "category": "Security",
+    "icon": "",
+    "command": "hardening-assess",
+    "risk": "ReadOnly",
+    "featured": true,
+    "defaultArguments": {
+      "ProfileId": "balanced"
+    },
+    "argumentHelp": "ProfileId: balanced, strict, or hailmary.",
+    "sourceRecords": [
+      "D127-HARDENING-PRESETS"
+    ]
+  },
+  {
+    "id": "hardening-balanced",
+    "title": "Apply balanced hardening",
+    "description": "Apply the bounded balanced hardening profile through typed plans, policy, preview, journal, and recovery.",
+    "category": "Profiles",
+    "icon": "",
+    "command": "hardening-apply",
+    "risk": "High",
+    "featured": true,
+    "defaultArguments": {
+      "ProfileId": "balanced"
+    },
+    "argumentHelp": "ProfileId: balanced. Preview is mandatory before apply.",
+    "sourceRecords": [
+      "D127-HARDENING-PRESETS"
+    ]
+  },
+  {
+    "id": "hardening-strict",
+    "title": "Apply strict hardening",
+    "description": "Apply stricter privacy and security controls with compatibility warnings and recovery evidence.",
+    "category": "Profiles",
+    "icon": "",
+    "command": "hardening-apply",
+    "risk": "High",
+    "featured": false,
+    "defaultArguments": {
+      "ProfileId": "strict"
+    },
+    "argumentHelp": "ProfileId: strict. Review compatibility warnings.",
+    "sourceRecords": [
+      "D127-HARDENING-PRESETS"
+    ]
+  },
+  {
+    "id": "hardening-hailmary",
+    "title": "Hail Mary hardening",
+    "description": "Execute the intentionally destructive hardening profile. This may reduce compatibility and recovery can be incomplete.",
+    "category": "Profiles",
+    "icon": "",
+    "command": "hardening-apply",
+    "risk": "Critical",
+    "critical": true,
+    "featured": false,
+    "defaultArguments": {
+      "ProfileId": "hailmary"
+    },
+    "argumentHelp": "Requires Critical policy permission and the exact unsafe acknowledgement.",
+    "sourceRecords": [
+      "D127-V5-RISK-COMMUNICATION"
+    ]
+  },
+  {
+    "id": "privacy-strict",
+    "title": "Strict privacy profile",
+    "description": "Apply reversible consumer-feature, diagnostic-data, cross-device, and content-delivery restrictions.",
+    "category": "Profiles",
+    "icon": "",
+    "command": "experience-privacy-apply",
+    "risk": "High",
+    "featured": true,
+    "defaultArguments": {
+      "ProfileId": "strict"
+    },
+    "argumentHelp": "ProfileId: balanced, strict, or maximum.",
+    "sourceRecords": [
+      "D141-PRIVACY-COLLECTION"
+    ]
+  },
+  {
+    "id": "privacy-maximum",
+    "title": "Maximum privacy profile",
+    "description": "Apply the broadest privacy profile, including high-impact restrictions and compatibility tradeoffs.",
+    "category": "Profiles",
+    "icon": "",
+    "command": "experience-privacy-apply",
+    "risk": "Critical",
+    "critical": true,
+    "featured": false,
+    "defaultArguments": {
+      "ProfileId": "maximum"
+    },
+    "argumentHelp": "Requires Critical policy permission and exact acknowledgement.",
+    "sourceRecords": [
+      "D127-V5-RISK-COMMUNICATION"
+    ]
+  },
+  {
+    "id": "deep-clean-safe",
+    "title": "Safe deep clean",
+    "description": "Clean bounded caches and temporary data using the donor-safe profile and coordinated service restoration.",
+    "category": "Maintenance",
+    "icon": "",
+    "command": "deep-clean",
+    "risk": "Moderate",
+    "featured": true,
+    "defaultArguments": {
+      "ProfileId": "donor-safe-deep-clean"
+    },
+    "argumentHelp": "ProfileId: donor-safe-deep-clean.",
+    "sourceRecords": [
+      "D111-MAINTENANCE-WORKFLOW"
+    ]
+  },
+  {
+    "id": "maintenance-weekly",
+    "title": "Create weekly health window",
+    "description": "Create a revisioned weekly maintenance window from the health template.",
+    "category": "Maintenance",
+    "icon": "",
+    "command": "maintenance-template-create",
+    "risk": "Moderate",
+    "featured": false,
+    "defaultArguments": {
+      "TemplateId": "weekly-health",
+      "StartAt": "2026-07-22T09:00:00+04:00",
+      "Name": "Weekly health"
+    },
+    "argumentHelp": "Set StartAt to an ISO-8601 timestamp appropriate for your locale.",
+    "sourceRecords": [
+      "D111-MAINTENANCE-WORKFLOW"
+    ]
+  },
+  {
+    "id": "updates-search",
+    "title": "Search Windows updates",
+    "description": "Search Windows Update Agent results without installing or hiding updates.",
+    "category": "Maintenance",
+    "icon": "",
+    "command": "wua-search",
+    "risk": "ReadOnly",
+    "featured": true,
+    "defaultArguments": {},
+    "argumentHelp": "Optional criteria are supported by the headless contract.",
+    "sourceRecords": [
+      "D127-UPDATE-WORKFLOW"
+    ]
+  },
+  {
+    "id": "operation-recovery",
+    "title": "Undoable operations",
+    "description": "Inspect completed operations with compensators, receipts, and recovery eligibility.",
+    "category": "Maintenance",
+    "icon": "",
+    "command": "reports",
+    "risk": "ReadOnly",
+    "featured": false,
+    "defaultArguments": {},
+    "argumentHelp": "No arguments required.",
+    "sourceRecords": [
+      "D127-V5-RISK-COMMUNICATION"
+    ]
+  },
+  {
+    "id": "network-summary",
+    "title": "Network summary",
+    "description": "Inspect adapters, addressing, routes, proxy, DNS, listeners, and connectivity.",
+    "category": "Network",
+    "icon": "",
+    "command": "network",
+    "risk": "ReadOnly",
+    "featured": true,
+    "defaultArguments": {},
+    "argumentHelp": "No arguments required.",
+    "sourceRecords": [
+      "D143-V5-CAPABILITY-NAVIGATION"
+    ]
+  },
+  {
+    "id": "network-measure",
+    "title": "Measure network endpoints",
+    "description": "Run bounded latency and TCP reachability samples against explicit endpoints.",
+    "category": "Network",
+    "icon": "",
+    "command": "network-measure",
+    "risk": "ReadOnly",
+    "featured": false,
+    "defaultArguments": {
+      "TargetHosts": [
+        "www.microsoft.com",
+        "www.cloudflare.com"
+      ],
+      "SampleCount": 7,
+      "TimeoutMilliseconds": 2000,
+      "Port": 443
+    },
+    "argumentHelp": "Edit TargetHosts, sample count, timeout, and port as needed.",
+    "sourceRecords": [
+      "D143-V5-CAPABILITY-NAVIGATION"
+    ]
+  },
+  {
+    "id": "wlan-survey",
+    "title": "WLAN survey",
+    "description": "Inspect local wireless interfaces, profiles, visible networks, signal, radio, and security state.",
+    "category": "Network",
+    "icon": "",
+    "command": "peer-wlan",
+    "risk": "ReadOnly",
+    "featured": false,
+    "defaultArguments": {},
+    "argumentHelp": "No arguments required.",
+    "sourceRecords": [
+      "D143-V5-CAPABILITY-NAVIGATION"
+    ]
+  },
+  {
+    "id": "workspace-snapshot",
+    "title": "Workspace snapshot",
+    "description": "Inspect monitoring, file workspaces, layouts, package admission, devices, and local integrations.",
+    "category": "Workspace",
+    "icon": "",
+    "command": "studio-snapshot",
+    "risk": "ReadOnly",
+    "featured": true,
+    "defaultArguments": {},
+    "argumentHelp": "No arguments required.",
+    "sourceRecords": [
+      "D143-V5-CAPABILITY-NAVIGATION"
+    ]
+  },
+  {
+    "id": "window-inventory",
+    "title": "Window inventory",
+    "description": "Inspect top-level windows, processes, monitor association, bounds, state, and topmost status.",
+    "category": "Workspace",
+    "icon": "",
+    "command": "windows",
+    "risk": "ReadOnly",
+    "featured": true,
+    "defaultArguments": {},
+    "argumentHelp": "No arguments required.",
+    "sourceRecords": [
+      "D143-V5-CAPABILITY-NAVIGATION"
+    ]
+  },
+  {
+    "id": "browser-workspace",
+    "title": "Browser workspace",
+    "description": "Inspect local browser profiles, windows, and extension-permission risk without reading browsing content.",
+    "category": "Workspace",
+    "icon": "",
+    "command": "browsers",
+    "risk": "ReadOnly",
+    "featured": false,
+    "defaultArguments": {},
+    "argumentHelp": "No arguments required.",
+    "sourceRecords": [
+      "D143-V5-CAPABILITY-NAVIGATION"
+    ]
+  },
+  {
+    "id": "applications",
+    "title": "Installed applications",
+    "description": "Inspect desktop and Store application inventory with uninstall metadata and source classification.",
+    "category": "Workspace",
+    "icon": "",
+    "command": "applications",
+    "risk": "ReadOnly",
+    "featured": false,
+    "defaultArguments": {
+      "IncludeStoreApps": true,
+      "Refresh": false
+    },
+    "argumentHelp": "IncludeStoreApps and Refresh are optional booleans.",
+    "sourceRecords": [
+      "D143-V5-CAPABILITY-NAVIGATION"
+    ]
+  },
+  {
+    "id": "display-reset",
+    "title": "Reset display overrides",
+    "description": "Remove EDID overrides and graphics topology caches. Displays may disconnect, reorder, or require reboot.",
+    "category": "Profiles",
+    "icon": "",
+    "command": "peer-display-reset",
+    "risk": "Critical",
+    "critical": true,
+    "featured": false,
+    "defaultArguments": {},
+    "argumentHelp": "Requires AllowDisplayOverrideReset, Critical permission, and exact acknowledgement.",
+    "sourceRecords": [
+      "D127-V5-RISK-COMMUNICATION"
+    ]
+  },
+  {
+    "id": "xbox-fullscreen",
+    "title": "Xbox Full Screen Experience",
+    "description": "Apply hidden feature IDs and OEM DeviceForm changes through exact-hash verified ViVeTool bytes.",
+    "category": "Profiles",
+    "icon": "",
+    "command": "studio-xbox-fse",
+    "risk": "Critical",
+    "critical": true,
+    "featured": false,
+    "defaultArguments": {
+      "ViVeToolPath": "C:\\Tools\\ViVeTool.exe",
+      "Sha256": "REPLACE_WITH_EXACT_SHA256",
+      "Enabled": true,
+      "BasicFeatureSet": false
+    },
+    "argumentHelp": "Provide the exact local ViVeTool path and 64-character SHA-256.",
+    "sourceRecords": [
+      "D127-V5-RISK-COMMUNICATION"
+    ]
+  },
+  {
+    "id": "legacy-unsafe",
+    "title": "Legacy Unsafe profile",
+    "description": "Execute an explicitly selected destructive one-click profile through the typed unsafe mutation plane.",
+    "category": "Profiles",
+    "icon": "",
+    "command": "legacy-unsafe",
+    "risk": "Critical",
+    "critical": true,
+    "featured": false,
+    "defaultArguments": {
+      "ProfileId": "legacy-unsafe-all",
+      "IncludeProvisionedAppx": false
+    },
+    "argumentHelp": "Choose a profile ID. Critical policy and exact acknowledgement are mandatory.",
+    "sourceRecords": [
+      "D127-V5-RISK-COMMUNICATION"
+    ]
+  },
+  {
+    "id": "evidence-cards",
+    "title": "Capability evidence cards",
+    "description": "Search capability cards that connect operator outcomes to source records and risk boundaries.",
+    "category": "Evidence",
+    "icon": "",
+    "command": "experience-cards",
+    "risk": "ReadOnly",
+    "featured": true,
+    "defaultArguments": {
+      "Query": ""
+    },
+    "argumentHelp": "Query is optional.",
+    "sourceRecords": [
+      "D143-V5-EVIDENCE-EXPLORER"
+    ]
+  },
+  {
+    "id": "operation-journals",
+    "title": "Reports and receipts",
+    "description": "Inspect JSON, Markdown, HTML, logs, operation journals, and integrity evidence.",
+    "category": "Evidence",
+    "icon": "",
+    "command": "reports",
+    "risk": "ReadOnly",
+    "featured": false,
+    "defaultArguments": {},
+    "argumentHelp": "No arguments required.",
+    "sourceRecords": [
+      "D143-V5-EVIDENCE-EXPLORER"
+    ]
+  },
+  {
+    "id": "hardware-inventory",
+    "title": "Hardware inventory",
+    "description": "Inspect bounded computer, OS, firmware, CPU, memory, graphics, disk, network, battery, and TPM state with sensitive identifiers hashed by default.",
+    "category": "Health",
+    "icon": "",
+    "command": "hardware-inventory",
+    "risk": "ReadOnly",
+    "featured": true,
+    "defaultArguments": {
+      "IncludeSensitiveIdentifiers": false,
+      "MaximumItemsPerClass": 128
+    },
+    "argumentHelp": "Keep IncludeSensitiveIdentifiers false for shareable reports.",
+    "sourceRecords": [
+      "D149-NWINFO-HARDWARE-INVENTORY"
+    ]
+  },
+  {
+    "id": "monitor-controls",
+    "title": "External monitor controls",
+    "description": "Inspect DDC/CI brightness and contrast support for physical monitors without changing values.",
+    "category": "Workspace",
+    "icon": "",
+    "command": "monitor-controls",
+    "risk": "ReadOnly",
+    "featured": true,
+    "defaultArguments": {},
+    "argumentHelp": "No arguments required. Unsupported VCP features are reported explicitly.",
+    "sourceRecords": [
+      "D146-MONITORIAN-DDCCI"
+    ]
+  },
+  {
+    "id": "window-search",
+    "title": "Window search",
+    "description": "Find top-level windows with bounded fuzzy matching over process and title metadata.",
+    "category": "Workspace",
+    "icon": "",
+    "command": "window-search",
+    "risk": "ReadOnly",
+    "featured": true,
+    "defaultArguments": {
+      "Query": "explorer",
+      "Limit": 50
+    },
+    "argumentHelp": "Set Query to a title or process fragment and Limit to 1..200.",
+    "sourceRecords": [
+      "D148-WINDOW-WALKER-SEARCH"
+    ]
+  },
+  {
+    "id": "explorer-session",
+    "title": "Explorer session",
+    "description": "Capture current canonical local Explorer folder locations for review before saving or restoring a session.",
+    "category": "Workspace",
+    "icon": "",
+    "command": "explorer-session",
+    "risk": "ReadOnly",
+    "featured": false,
+    "defaultArguments": {},
+    "argumentHelp": "No arguments required.",
+    "sourceRecords": [
+      "D144-7PLUS-EXPLORER-TABS",
+      "D163-EXPLORER-SESSION-RESTORE"
+    ]
+  },
+  {
+    "id": "appx-runtime",
+    "title": "AppX runtime inventory",
+    "description": "Map running processes to supported Windows package identities without mutating applications.",
+    "category": "Workspace",
+    "icon": "",
+    "command": "appx-runtime",
+    "risk": "ReadOnly",
+    "featured": false,
+    "defaultArguments": {
+      "IncludeUnpackaged": false,
+      "Limit": 512
+    },
+    "argumentHelp": "IncludeUnpackaged is optional; Limit must be 1..2048.",
+    "sourceRecords": [
+      "D152-APPX-PROCESS-PACKAGE-MAPPING"
+    ]
+  },
+  {
+    "id": "archive-inspection",
+    "title": "Archive safety inspection",
+    "description": "Inspect ZIP, AppX, MSIX, bundle, and NuGet containers for traversal, collisions, symlinks, expansion, and compression bombs without extraction.",
+    "category": "Maintenance",
+    "icon": "",
+    "command": "archive-inspect",
+    "risk": "ReadOnly",
+    "featured": true,
+    "defaultArguments": {
+      "LiteralPath": "C:\\Path\\To\\Package.zip",
+      "MaximumMembers": 50000,
+      "MaximumExpandedBytes": 10737418240,
+      "MaximumCompressionRatio": 200
+    },
+    "argumentHelp": "Replace LiteralPath with an existing local ZIP-container file.",
+    "sourceRecords": [
+      "D159-NANAZIP-ARCHIVE-SAFETY",
+      "D153-RNX-SYMLINK-GUARDRAIL"
+    ]
+  },
+  {
+    "id": "ui-automation-snapshot",
+    "title": "Accessibility tree snapshot",
+    "description": "Inspect a bounded UI Automation tree with visible text redacted by default.",
+    "category": "Evidence",
+    "icon": "",
+    "command": "ui-automation-snapshot",
+    "risk": "ReadOnly",
+    "featured": false,
+    "defaultArguments": {
+      "ProcessId": 0,
+      "MaximumDepth": 5,
+      "MaximumNodes": 500,
+      "IncludeText": false
+    },
+    "argumentHelp": "Use a specific ProcessId where possible. IncludeText should remain false for shareable evidence.",
+    "sourceRecords": [
+      "D154-GUI-INSPECT-BOUNDARY",
+      "D147-WINDEV-XAML-AUDIT"
+    ]
+  },
+  {
+    "id": "winhance-maximum",
+    "title": "Winhance maximum profile",
+    "description": "Execute the broad Winhance-derived hardening, debloat, AppX, service, task, privacy, update, cleanup, and capability reduction composition through WinCare's typed Legacy Unsafe plane.",
+    "category": "Profiles",
+    "icon": "",
+    "command": "legacy-unsafe",
+    "risk": "Critical",
+    "critical": true,
+    "featured": false,
+    "defaultArguments": {
+      "ProfileId": "winhance-maximum",
+      "IncludeProvisionedAppx": true
+    },
+    "argumentHelp": "Requires all applicable policy gates, preview receipt, explicit Apply, UAC where required, and the exact unsafe acknowledgement.",
+    "sourceRecords": [
+      "D161-WINHANCE-MAXIMUM",
+      "D161-WINHANCE-APP-MANAGEMENT",
+      "D161-WINHANCE-PRIVACY-SERVICES"
+    ]
+  },
+  {
+    "id": "disk-pressure-cleanup",
+    "title": "Disk-pressure cleanup",
+    "description": "Assess free-space pressure and preview a bounded cleanup plan over canonical WinCare targets.",
+    "category": "Maintenance",
+    "icon": "",
+    "command": "cleaner-disk-pressure",
+    "risk": "Moderate",
+    "featured": true,
+    "defaultArguments": {
+      "Profile": "Auto",
+      "MinimumFreePercent": 15,
+      "MinimumFreeBytes": 21474836480
+    },
+    "argumentHelp": "Auto selects Conservative, Balanced, or Emergency from current free space. Apply remains separately gated.",
+    "sourceRecords": [
+      "D164-WINDOWS-CLEANER-DISK-PRESSURE",
+      "D164-WINDOWS-CLEANER-GUARDRAILS"
+    ]
+  },
+  {
+    "id": "winapp2-assessment",
+    "title": "Winapp2 cleanup admission",
+    "description": "Parse FileKey-only Winapp2 rules into an exact, size-bounded file manifest; registry and broad-scan directives are rejected.",
+    "category": "Maintenance",
+    "icon": "",
+    "command": "cleaner-winapp2",
+    "risk": "ReadOnly",
+    "featured": false,
+    "defaultArguments": {
+      "LiteralPath": "C:\\Path\\To\\winapp2.ini",
+      "MinimumAgeHours": 24,
+      "MaximumFiles": 500,
+      "MaximumBytes": 536870912
+    },
+    "argumentHelp": "Use a local .ini or .txt file no larger than 2 MiB.",
+    "sourceRecords": [
+      "D164-WINDOWS-CLEANER-WINAPP2",
+      "D164-WINDOWS-CLEANER-GUARDRAILS"
+    ]
+  },
+  {
+    "id": "local-file-preview",
+    "title": "Safe local file preview",
+    "description": "Inspect local files and directories with bounded, redacted, non-executing format profiles.",
+    "category": "Evidence",
+    "icon": "",
+    "command": "file-preview",
+    "risk": "ReadOnly",
+    "featured": true,
+    "defaultArguments": {
+      "LiteralPath": "C:\\Path\\To\\File",
+      "MaximumBytes": 1048576,
+      "MaximumLines": 200,
+      "IncludeText": false
+    },
+    "argumentHelp": "Active content is never executed; text remains excluded unless explicitly requested.",
+    "sourceRecords": [
+      "D166-QUICKLOOK-PREVIEW-PIPELINE",
+      "D166-QUICKLOOK-ACTIVE-CONTENT-GUARDRAIL"
+    ]
+  },
+  {
+    "id": "preview-handler-assessment",
+    "title": "Preview-handler assessment",
+    "description": "Inventory registered COM preview handlers and signature state without loading them.",
+    "category": "Security",
+    "icon": "",
+    "command": "preview-handlers",
+    "risk": "ReadOnly",
+    "featured": false,
+    "defaultArguments": {
+      "Limit": 256
+    },
+    "argumentHelp": "Server paths are represented by hashes; no handler DLL is loaded.",
+    "sourceRecords": [
+      "D166-QUICKLOOK-PLUGIN-PRIORITY",
+      "D166-QUICKLOOK-ACTIVE-CONTENT-GUARDRAIL"
+    ]
+  }
+]

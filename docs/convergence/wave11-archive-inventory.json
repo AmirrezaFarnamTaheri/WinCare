@@ -1,0 +1,403 @@
+[
+  {
+    "path": "/mnt/data/WindowsCleaner-2.zip",
+    "sha256": "dfbfecd11afef113f8eea487b7f4ec87e44f02076d3dfaebd721d063618facca",
+    "known_matches": [],
+    "crc_bad_member": null,
+    "members": 122,
+    "files": 91,
+    "dirs": 31,
+    "expanded_bytes": 7765226,
+    "max_member_bytes": 2129136,
+    "compression_ratio": 1.74,
+    "roots": [
+      "WindowsCleaner-2"
+    ],
+    "duplicates": [],
+    "case_collisions": [],
+    "unsafe_paths": [],
+    "symlinks": [],
+    "top_extensions": [
+      [
+        ".png",
+        17
+      ],
+      [
+        ".tsx",
+        17
+      ],
+      [
+        ".json",
+        9
+      ],
+      [
+        ".rs",
+        9
+      ],
+      [
+        ".ts",
+        9
+      ],
+      [
+        ".yml",
+        7
+      ],
+      [
+        ".svg",
+        5
+      ],
+      [
+        "<none>",
+        3
+      ],
+      [
+        ".md",
+        2
+      ],
+      [
+        ".mjs",
+        2
+      ],
+      [
+        ".ttf",
+        2
+      ],
+      [
+        ".css",
+        1
+      ],
+      [
+        ".html",
+        1
+      ],
+      [
+        ".icns",
+        1
+      ],
+      [
+        ".ico",
+        1
+      ],
+      [
+        ".ini",
+        1
+      ],
+      [
+        ".jpg",
+        1
+      ],
+      [
+        ".lock",
+        1
+      ],
+      [
+        ".toml",
+        1
+      ],
+      [
+        ".yaml",
+        1
+      ]
+    ],
+    "sample_members": [
+      "WindowsCleaner-2/",
+      "WindowsCleaner-2/.github/",
+      "WindowsCleaner-2/.github/FUNDING.yml",
+      "WindowsCleaner-2/.github/ISSUE_TEMPLATE/",
+      "WindowsCleaner-2/.github/ISSUE_TEMPLATE/1_feature_request.yml",
+      "WindowsCleaner-2/.github/ISSUE_TEMPLATE/2_bug_report.yml",
+      "WindowsCleaner-2/.github/ISSUE_TEMPLATE/config.yml",
+      "WindowsCleaner-2/.github/SECURITY.md",
+      "WindowsCleaner-2/.github/workflows/",
+      "WindowsCleaner-2/.github/workflows/build.yml",
+      "WindowsCleaner-2/.github/workflows/ci.yml",
+      "WindowsCleaner-2/.github/workflows/release.yml",
+      "WindowsCleaner-2/.gitignore",
+      "WindowsCleaner-2/.vscode/",
+      "WindowsCleaner-2/.vscode/extensions.json",
+      "WindowsCleaner-2/LICENSE",
+      "WindowsCleaner-2/README.md",
+      "WindowsCleaner-2/index.html",
+      "WindowsCleaner-2/package.json",
+      "WindowsCleaner-2/pnpm-lock.yaml",
+      "WindowsCleaner-2/public/",
+      "WindowsCleaner-2/public/tauri.svg",
+      "WindowsCleaner-2/public/vite.svg",
+      "WindowsCleaner-2/readme/",
+      "WindowsCleaner-2/readme/ui.jpg",
+      "WindowsCleaner-2/recovery-disk.svg",
+      "WindowsCleaner-2/scripts/",
+      "WindowsCleaner-2/scripts/dev-reset.mjs",
+      "WindowsCleaner-2/scripts/dev-server.mjs",
+      "WindowsCleaner-2/src-tauri/"
+    ]
+  },
+  {
+    "path": "/mnt/data/WindowsCommunityToolkit-main(1).zip",
+    "sha256": "beaf2574280404f7647dff0c7e7c956260b2fdbb19c10203855dd3d40a73d92e",
+    "known_matches": [
+      "Windows Community Toolkit"
+    ],
+    "crc_bad_member": null,
+    "members": 2697,
+    "files": 2255,
+    "dirs": 442,
+    "expanded_bytes": 16883073,
+    "max_member_bytes": 1120058,
+    "compression_ratio": 1.91,
+    "roots": [
+      "WindowsCommunityToolkit-main"
+    ],
+    "duplicates": [],
+    "case_collisions": [],
+    "unsafe_paths": [],
+    "symlinks": [],
+    "top_extensions": [
+      [
+        ".cs",
+        1422
+      ],
+      [
+        ".png",
+        285
+      ],
+      [
+        ".xaml",
+        199
+      ],
+      [
+        ".bind",
+        148
+      ],
+      [
+        ".csproj",
+        38
+      ],
+      [
+        ".jpg",
+        25
+      ],
+      [
+        ".xml",
+        25
+      ],
+      [
+        ".json",
+        12
+      ],
+      [
+        ".md",
+        11
+      ],
+      [
+        ".appxmanifest",
+        10
+      ],
+      [
+        ".resx",
+        8
+      ],
+      [
+        ".targets",
+        8
+      ],
+      [
+        ".ps1",
+        7
+      ],
+      [
+        "<none>",
+        7
+      ],
+      [
+        ".resw",
+        6
+      ],
+      [
+        ".txt",
+        6
+      ],
+      [
+        ".pfx",
+        4
+      ],
+      [
+        ".props",
+        4
+      ],
+      [
+        ".bat",
+        3
+      ],
+      [
+        ".config",
+        3
+      ]
+    ],
+    "sample_members": [
+      "WindowsCommunityToolkit-main/",
+      "WindowsCommunityToolkit-main/.editorconfig",
+      "WindowsCommunityToolkit-main/.gitattributes",
+      "WindowsCommunityToolkit-main/.github/",
+      "WindowsCommunityToolkit-main/.github/ISSUE_TEMPLATE/",
+      "WindowsCommunityToolkit-main/.github/ISSUE_TEMPLATE/config.yml",
+      "WindowsCommunityToolkit-main/.github/PULL_REQUEST_TEMPLATE.md",
+      "WindowsCommunityToolkit-main/.github/fabricbot.json",
+      "WindowsCommunityToolkit-main/.gitignore",
+      "WindowsCommunityToolkit-main/.runsettings",
+      "WindowsCommunityToolkit-main/CODE_OF_CONDUCT.md",
+      "WindowsCommunityToolkit-main/Contributing.md",
+      "WindowsCommunityToolkit-main/Directory.Build.props",
+      "WindowsCommunityToolkit-main/Directory.Build.targets",
+      "WindowsCommunityToolkit-main/GazeInputTest/",
+      "WindowsCommunityToolkit-main/GazeInputTest/App.xaml",
+      "WindowsCommunityToolkit-main/GazeInputTest/App.xaml.cs",
+      "WindowsCommunityToolkit-main/GazeInputTest/Assets/",
+      "WindowsCommunityToolkit-main/GazeInputTest/Assets/LockScreenLogo.scale-200.png",
+      "WindowsCommunityToolkit-main/GazeInputTest/Assets/SplashScreen.scale-200.png",
+      "WindowsCommunityToolkit-main/GazeInputTest/Assets/Square150x150Logo.scale-200.png",
+      "WindowsCommunityToolkit-main/GazeInputTest/Assets/Square44x44Logo.scale-200.png",
+      "WindowsCommunityToolkit-main/GazeInputTest/Assets/Square44x44Logo.targetsize-24_altform-unplated.png",
+      "WindowsCommunityToolkit-main/GazeInputTest/Assets/StoreLogo.png",
+      "WindowsCommunityToolkit-main/GazeInputTest/Assets/Wide310x150Logo.scale-200.png",
+      "WindowsCommunityToolkit-main/GazeInputTest/GazeInputTest.csproj",
+      "WindowsCommunityToolkit-main/GazeInputTest/MainPage.xaml",
+      "WindowsCommunityToolkit-main/GazeInputTest/MainPage.xaml.cs",
+      "WindowsCommunityToolkit-main/GazeInputTest/Package.appxmanifest",
+      "WindowsCommunityToolkit-main/GazeInputTest/Properties/"
+    ]
+  },
+  {
+    "path": "/mnt/data/QuickLook-master.zip",
+    "sha256": "6405f67eee72bf66e96f9fd43b6c8dd8b7a4a48178f6108e95c20f84ff5ef4df",
+    "known_matches": [],
+    "crc_bad_member": null,
+    "members": 1152,
+    "files": 1000,
+    "dirs": 152,
+    "expanded_bytes": 38260545,
+    "max_member_bytes": 5028909,
+    "compression_ratio": 1.95,
+    "roots": [
+      "QuickLook-master"
+    ],
+    "duplicates": [],
+    "case_collisions": [],
+    "unsafe_paths": [],
+    "symlinks": [],
+    "top_extensions": [
+      [
+        ".cs",
+        384
+      ],
+      [
+        ".xshd",
+        248
+      ],
+      [
+        ".png",
+        130
+      ],
+      [
+        ".xaml",
+        55
+      ],
+      [
+        ".csproj",
+        27
+      ],
+      [
+        ".config",
+        21
+      ],
+      [
+        ".cpp",
+        15
+      ],
+      [
+        ".h",
+        15
+      ],
+      [
+        ".js",
+        12
+      ],
+      [
+        ".html",
+        11
+      ],
+      [
+        ".md",
+        10
+      ],
+      [
+        ".ps1",
+        10
+      ],
+      [
+        "<none>",
+        8
+      ],
+      [
+        ".ico",
+        7
+      ],
+      [
+        ".filters",
+        4
+      ],
+      [
+        ".vcxproj",
+        4
+      ],
+      [
+        ".css",
+        3
+      ],
+      [
+        ".xml",
+        3
+      ],
+      [
+        ".dll",
+        2
+      ],
+      [
+        ".reg",
+        2
+      ]
+    ],
+    "sample_members": [
+      "QuickLook-master/",
+      "QuickLook-master/.appveyor.yml",
+      "QuickLook-master/.github/",
+      "QuickLook-master/.github/ISSUE_TEMPLATE/",
+      "QuickLook-master/.github/ISSUE_TEMPLATE/bug_report.md",
+      "QuickLook-master/.github/ISSUE_TEMPLATE/feature_request.md",
+      "QuickLook-master/.github/PULL_REQUEST_TEMPLATE.md",
+      "QuickLook-master/.github/copilot-instructions.md",
+      "QuickLook-master/.github/workflows/",
+      "QuickLook-master/.github/workflows/msbuild.yml",
+      "QuickLook-master/.gitignore",
+      "QuickLook-master/.gitmodules",
+      "QuickLook-master/Build/",
+      "QuickLook-master/Build/AppxManifest.xml",
+      "QuickLook-master/Build/Assets/",
+      "QuickLook-master/Build/Assets/Branding/",
+      "QuickLook-master/Build/Assets/Branding/01.png",
+      "QuickLook-master/Build/Assets/Branding/02.png",
+      "QuickLook-master/Build/Assets/Branding/03.png",
+      "QuickLook-master/Build/Assets/Branding/04.png",
+      "QuickLook-master/Build/Assets/Branding/05.png",
+      "QuickLook-master/Build/Assets/Branding/06.png",
+      "QuickLook-master/Build/Assets/Branding/07.png",
+      "QuickLook-master/Build/Assets/Branding/08.png",
+      "QuickLook-master/Build/Assets/Branding/09.png",
+      "QuickLook-master/Build/Assets/Branding/10.png",
+      "QuickLook-master/Build/Assets/LargeTile.scale-100.png",
+      "QuickLook-master/Build/Assets/LargeTile.scale-125.png",
+      "QuickLook-master/Build/Assets/LargeTile.scale-150.png",
+      "QuickLook-master/Build/Assets/LargeTile.scale-200.png"
+    ]
+  }
+]

@@ -1,0 +1,69 @@
+{
+  "schemaVersion": 1,
+  "widgets": [
+    {
+      "id": "system-health",
+      "title": "System health",
+      "description": "Windows health findings, restart state, uptime, and memory pressure.",
+      "provider": "SystemHealth",
+      "minimumRefreshSeconds": 10,
+      "sourceRecords": ["D22-WIDGET-MEASURES", "D30-WIDGET-MEASURES", "D33-WIDGET-MEASURES", "D36-DASHBOARD-CARDS"]
+    },
+    {
+      "id": "storage-pressure",
+      "title": "Storage pressure",
+      "description": "Drive utilization and low-space warnings without recursive rescans.",
+      "provider": "StoragePressure",
+      "minimumRefreshSeconds": 15,
+      "sourceRecords": ["D22-WIDGET-MEASURES", "D25-MAINTENANCE-METRICS", "D36-DASHBOARD-CARDS"]
+    },
+    {
+      "id": "maintenance-state",
+      "title": "Maintenance",
+      "description": "Current and upcoming maintenance windows and lifecycle state.",
+      "provider": "MaintenanceState",
+      "minimumRefreshSeconds": 5,
+      "sourceRecords": ["D24-MAINTENANCE-LIFECYCLE", "D25-MAINTENANCE-METRICS"]
+    },
+    {
+      "id": "update-status",
+      "title": "Updates",
+      "description": "Pending Windows updates and restart requirements.",
+      "provider": "UpdateStatus",
+      "minimumRefreshSeconds": 60,
+      "sourceRecords": ["D17-WUA-UPDATE-CONTROL", "D20-UPDATE-HARDENING", "D27-UPDATE-ORCHESTRATION"]
+    },
+    {
+      "id": "security-posture",
+      "title": "Security posture",
+      "description": "Defender, firewall, Secure Boot, TPM, and policy posture.",
+      "provider": "SecurityPosture",
+      "minimumRefreshSeconds": 30,
+      "sourceRecords": ["D04-WDAC-LIFECYCLE", "D20-SECURITY-BASELINE", "D37-SECURITY-PLAYBOOKS"]
+    },
+    {
+      "id": "bluetooth-devices",
+      "title": "Bluetooth devices",
+      "description": "Connected Bluetooth device and battery observations when Windows exposes them.",
+      "provider": "BluetoothDevices",
+      "minimumRefreshSeconds": 15,
+      "sourceRecords": ["D34-BLUETOOTH-DEVICE-TELEMETRY"]
+    },
+    {
+      "id": "process-pressure",
+      "title": "Process pressure",
+      "description": "Highest CPU and working-set consumers from a bounded process snapshot.",
+      "provider": "ProcessPressure",
+      "minimumRefreshSeconds": 5,
+      "sourceRecords": ["D07-PROCESS-INTERNALS", "D36-DASHBOARD-CARDS"]
+    },
+    {
+      "id": "network-status",
+      "title": "Network",
+      "description": "Operational adapters, gateway, DNS, and active connection counts.",
+      "provider": "NetworkStatus",
+      "minimumRefreshSeconds": 10,
+      "sourceRecords": ["D11-DESKTOP-NETWORK-STATE", "D34-DEVICE-CONNECTIVITY"]
+    }
+  ]
+}

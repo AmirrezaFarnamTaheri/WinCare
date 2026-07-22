@@ -1,0 +1,97 @@
+{
+  "schemaVersion": 1,
+  "playbooks": [
+    {
+      "id": "safe-maintenance-baseline",
+      "title": "Safe maintenance baseline",
+      "description": "Apply low-risk repair, visibility, privacy, and security defaults without removing applications.",
+      "minimumBuild": 19044,
+      "maximumBuild": 99999,
+      "architectures": ["AMD64", "ARM64"],
+      "requiresAdmin": true,
+      "sourceRecords": ["D21-REVERSIBLE-OPTIMIZATION", "D08-MAINTENANCE-ORCHESTRATION", "D37-PLAYBOOK-LIFECYCLE", "D01-STATE-CONDITIONS"],
+      "steps": [
+        {"kind": "preset", "id": "safe"},
+        {"kind": "preset", "id": "repair"},
+        {"kind": "catalog", "ids": ["security.pua-protection", "security.disable-smb1", "security.disable-powershell-v2", "updates.no-auto-reboot-user"]}
+      ]
+    },
+    {
+      "id": "developer-secure-workstation",
+      "title": "Developer secure workstation",
+      "description": "Developer capabilities, visible file extensions, secure PowerShell auditing, and exact developer context menus.",
+      "minimumBuild": 19044,
+      "maximumBuild": 99999,
+      "architectures": ["AMD64", "ARM64"],
+      "requiresAdmin": true,
+      "sourceRecords": ["D20-POWERSHELL-HARDENING", "D21-CATEGORY-MODEL", "D29-MODERN-CONTEXT-MENU", "D37-PLAYBOOK-COMPATIBILITY"],
+      "steps": [
+        {"kind": "preset", "id": "developer"},
+        {"kind": "catalog", "ids": ["explorer.show-extensions", "explorer.show-hidden", "security.powershell-scriptblock-logging", "security.powershell-module-logging", "security.powershell-transcription"]},
+        {"kind": "context-menu", "id": "terminal-here", "enable": true},
+        {"kind": "context-menu", "id": "powershell7-here", "enable": true},
+        {"kind": "context-menu", "id": "vscode-open", "enable": true},
+        {"kind": "context-menu", "id": "git-bash-here", "enable": true}
+      ]
+    },
+    {
+      "id": "privacy-security-balanced",
+      "title": "Privacy and security balanced",
+      "description": "Privacy reductions and audit-oriented security controls that preserve Windows Update, Defender, Store, and normal account functionality.",
+      "minimumBuild": 19044,
+      "maximumBuild": 99999,
+      "architectures": ["AMD64", "ARM64"],
+      "requiresAdmin": true,
+      "sourceRecords": ["D02-DEBLOAT-BOUNDARIES", "D20-HARDENING-BASELINES", "D26-PRIVACY-CATEGORIES", "D37-PLAYBOOK-PRIVACY"],
+      "steps": [
+        {"kind": "preset", "id": "privacy"},
+        {"kind": "preset", "id": "security"},
+        {"kind": "catalog", "ids": ["privacy.consumer-features-disabled", "privacy.diagnostic-data-required-minimum", "security.remote-assistance-disabled", "security.no-lanman-hash", "security.restrict-anonymous-sam"]}
+      ]
+    },
+    {
+      "id": "gaming-balanced",
+      "title": "Gaming balanced",
+      "description": "Reversible gaming and responsiveness settings without timer hacks, service purges, Defender disabling, or network folklore.",
+      "minimumBuild": 19044,
+      "maximumBuild": 99999,
+      "architectures": ["AMD64", "ARM64"],
+      "requiresAdmin": false,
+      "sourceRecords": ["D05-OPTIMIZATION-GUARDRAILS", "D21-POWER-MANAGEMENT", "D26-GAMING-CATEGORIES", "D27-OFFLINE-INTEGRATION"],
+      "steps": [
+        {"kind": "preset", "id": "gaming"},
+        {"kind": "preset", "id": "performance"},
+        {"kind": "catalog", "ids": ["gaming.game-mode", "gaming.disable-background-capture", "performance.visual-balanced", "repair.restore-balanced-power"]}
+      ]
+    },
+    {
+      "id": "optional-consumer-app-review",
+      "title": "Optional consumer application review",
+      "description": "Build an explicit plan for exact optional consumer AppX identities. Nothing is removed by wildcard or hidden from preview.",
+      "minimumBuild": 19044,
+      "maximumBuild": 99999,
+      "architectures": ["AMD64", "ARM64"],
+      "requiresAdmin": false,
+      "sourceRecords": ["D02-EXACT-APPX-REMOVAL", "D06-APP-INVENTORY", "D21-BLOATWARE-CONFIRMATION", "D37-PLAYBOOK-DEBLOAT"],
+      "steps": [
+        {"kind": "app-removal", "id": "consumer-optional", "includeProvisioned": false}
+      ]
+    },
+    {
+      "id": "shell-productivity",
+      "title": "Shell productivity",
+      "description": "Install exact, reversible Explorer context-menu entries for trusted built-in or discovered applications.",
+      "minimumBuild": 19044,
+      "maximumBuild": 99999,
+      "architectures": ["AMD64", "ARM64"],
+      "requiresAdmin": false,
+      "sourceRecords": ["D19-REGISTRY-MENU-PRESETS", "D29-MODERN-CONTEXT-MENU", "D35-AUTOMATION-IDEAS", "D38-START-MENU-UX"],
+      "steps": [
+        {"kind": "context-menu", "id": "terminal-here", "enable": true},
+        {"kind": "context-menu", "id": "notepad-edit", "enable": true},
+        {"kind": "context-menu", "id": "new-markdown-file", "enable": true},
+        {"kind": "context-menu", "id": "defender-scan-file", "enable": true}
+      ]
+    }
+  ]
+}

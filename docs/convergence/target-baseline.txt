@@ -1,0 +1,19 @@
+WinCare V5 pre-wave target baseline
+
+Base source commit: 55f61d28edc633882550994875cc971f5da22c10 (WinCare 4.8.0)
+V5 GUI state: preserved working tree before D144-D163 convergence
+Date: 2026-07-21
+PowerShell files: 145
+Discovered functions: 909
+Typed action contracts: 110
+Headless commands: 204
+Routed TUI actions: 46
+Submitted donor IDs: 143
+Unique archive baselines: 135
+Classified donor surfaces: 34,486
+Semantic decisions: 539
+Composition groups: 360
+Target nodes: 314
+Convergence test nodes: 150
+
+This is the frozen logical baseline for the D144-D163 convergence wave. The V5 GUI work had not yet been committed independently, so WinCare 5.1.0 preserves and commits the V5 presentation layer together with the new Shell & Hardware Studio wave. Windows-native validation remained pending at this baseline.

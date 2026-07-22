@@ -1,0 +1,71 @@
+name: validate
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  evidence:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Cross-file source validation
+        run: python tools/validate_source.py . --json-output artifacts/source-validation.json
+      - name: Peer-convergence evidence validation
+        run: python tools/validate_convergence.py . --output artifacts/convergence-validation.json
+      - name: V5 GUI and completeness validation
+        run: python tools/validate_v5.py . --output artifacts/v5-completeness-validation.json
+      - name: Release, convergence, and V5 tooling tests
+        run: python -m unittest tools.test_release_tools tools.test_convergence_tools tools.test_v5 tools.test_wave11 -v
+      - name: Deterministic development package
+        run: |
+          mkdir -p artifacts
+          python tools/build_release.py . --output-directory artifacts
+          VERSION=$(python -c "import re,pathlib; print(re.search(r\"ModuleVersion\\s*=\\s*'([^']+)'\", pathlib.Path('src/WinCare/WinCare.psd1').read_text()).group(1))")
+          python tools/verify_release.py "artifacts/WinCare-$VERSION.zip" --output artifacts/archive-validation.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: evidence-and-release
+          path: artifacts/*
+          if-no-files-found: error
+
+  windows:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-2022, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Verify PowerShell requirement
+        shell: pwsh
+        run: |
+          $current=$PSVersionTable.PSVersion
+          if ($current.Major -ne 7 -or $current.Minor -lt 2) { throw "PowerShell 7.2+ is required; found $current" }
+      - name: Install validation modules
+        shell: pwsh
+        run: |
+          Set-PSRepository PSGallery -InstallationPolicy Trusted
+          Install-Module Pester -MinimumVersion 5.5.0 -Scope CurrentUser -Force -SkipPublisherCheck
+          Install-Module PSScriptAnalyzer -MinimumVersion 1.22.0 -Scope CurrentUser -Force
+      - name: Static, convergence, Pester, module and release gates
+        shell: pwsh
+        run: ./tools/Invoke-WindowsValidation.ps1 -OutputDirectory ./artifacts/windows-validation
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: windows-validation-${{ matrix.os }}
+          path: artifacts/windows-validation/**
+          if-no-files-found: warn

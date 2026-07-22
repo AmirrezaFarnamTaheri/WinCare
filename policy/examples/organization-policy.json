@@ -1,0 +1,65 @@
+{
+  "SchemaVersion": 1,
+  "PolicyName": "Example organization policy",
+  "ReadOnly": false,
+  "RequirePreview": true,
+  "RequireTypedHighRisk": true,
+  "AllowCriticalActions": false,
+  "AllowWdacEnforcement": false,
+  "AllowLocalBroker": false,
+  "AllowUnsignedExtensions": false,
+  "AllowRegistryTreeRemoval": false,
+  "AllowExternalCustomizerWrites": false,
+  "AllowOfflineImageServicing": false,
+  "AllowPageFileDisable": false,
+  "AllowSecurityControlReduction": false,
+  "AllowUacDisable": false,
+  "AllowWindowsUpdateServiceDisable": false,
+  "AllowNetworkExperiments": false,
+  "AllowExperimentalTcpSettings": false,
+  "AllowProcessInstrumentation": true,
+  "AllowInjectionSurfaceRemediation": false,
+  "MaximumSecurityMaintenanceMinutes": 60,
+  "MaximumNetworkExperimentMinutes": 10,
+  "AllowedContextMenuRuleIds": [
+    "*"
+  ],
+  "DeniedContextMenuRuleIds": [],
+  "AllowedPlaybookIds": [
+    "safe-*"
+  ],
+  "DeniedPlaybookIds": [],
+  "MaximumPlanActions": 100,
+  "MaximumEstimatedBytes": 10737418240,
+  "MaintenanceWindow": "22:00-05:00",
+  "AllowedActionTypes": [
+    "*"
+  ],
+  "DeniedActionTypes": [
+    "WuaUninstall",
+    "RemoveWdacPolicy",
+    "ReplaceBootLoader",
+    "DisableDefender",
+    "DisableWindowsUpdateService"
+  ],
+  "TrustedExtensionSigners": [],
+  "AllowedCatalogRuleIds": [
+    "privacy.*",
+    "explorer.*",
+    "security.*",
+    "repair.*"
+  ],
+  "DeniedCatalogRuleIds": [
+    "developer.developer-mode"
+  ],
+  "AllowAwayModePowerSession": false,
+  "AllowIndefinitePowerSession": false,
+  "MaximumPowerSessionMinutes": 480,
+  "AllowRemoteSupportTermination": false,
+  "MaximumRemoteConsentMinutes": 120,
+  "AllowInsecureDownloads": false,
+  "AllowOfflineImageReduction": false,
+  "AllowGameStateRestore": false,
+  "MaximumDownloadJobs": 1000,
+  "MaximumDownloadBytes": 107374182400
+}

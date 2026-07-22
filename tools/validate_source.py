@@ -1,0 +1,135 @@
+#!/usr/bin/env python3
+from __future__ import annotations
+import argparse,csv,json,re,sys
+from pathlib import Path
+
+PSEXT={'.ps1','.psm1','.psd1'}
+
+def strip_ps(text:str)->str:
+    out=[];i=0;state='code'
+    while i<len(text):
+        c=text[i];n=text[i+1] if i+1<len(text) else ''
+        if state=='code':
+            if c=='#':
+                if n=='<': state='block';out.extend('  ');i+=2;continue
+                state='line';out.append(' ');i+=1;continue
+            if c=="'": state='single';out.append(' ');i+=1;continue
+            if c=='"': state='double';out.append(' ');i+=1;continue
+            out.append(c);i+=1
+        elif state=='line':
+            out.append('\n' if c=='\n' else ' ');state='code' if c=='\n' else state;i+=1
+        elif state=='block':
+            if c=='#' and n=='>': state='code';out.extend('  ');i+=2
+            else: out.append('\n' if c=='\n' else ' ');i+=1
+        elif state=='single':
+            if c=="'" and n=="'": out.extend('  ');i+=2
+            elif c=="'": state='code';out.append(' ');i+=1
+            else: out.append('\n' if c=='\n' else ' ');i+=1
+        elif state=='double':
+            if c=='`' and n: out.extend('  ');i+=2
+            elif c=='"': state='code';out.append(' ');i+=1
+            else: out.append('\n' if c=='\n' else ' ');i+=1
+    return ''.join(out)
+
+def check_balance(path:Path,text:str,errors:list[str]):
+    stripped=strip_ps(text);stack=[];pairs={')':'(',']':'[','}':'{'}
+    for idx,c in enumerate(stripped):
+        if c in '([{': stack.append((c,idx))
+        elif c in ')]}':
+            if not stack or stack[-1][0]!=pairs[c]:
+                errors.append(f'{path}: delimiter mismatch near line {text[:idx].count(chr(10))+1}')
+                return
+            stack.pop()
+    if stack:
+        errors.append(f'{path}: unclosed delimiter near line {text[:stack[-1][1]].count(chr(10))+1}')
+
+def main()->int:
+    ap=argparse.ArgumentParser();ap.add_argument('root',nargs='?',default='.');ap.add_argument('--json-output')
+    args=ap.parse_args();root=Path(args.root).resolve();errors=[];warnings=[]
+    files=sorted(p for p in root.rglob('*') if p.is_file() and p.suffix.lower() in PSEXT and '.git' not in p.parts)
+    funcs={};refs={}
+    for p in files:
+        text=p.read_text('utf-8',errors='replace');check_balance(p,text,errors);code=strip_ps(text)
+        for m in re.finditer(r'(?im)^\s*function\s+([A-Za-z][A-Za-z0-9_-]*)',code): funcs.setdefault(m.group(1).lower(),[]).append((p,text[:m.start()].count('\n')+1,m.group(1)))
+        for m in re.finditer(r'(?<![-\w])([A-Za-z][A-Za-z0-9]*-WinCare[A-Za-z0-9_-]*)\b',code): refs.setdefault(m.group(1).lower(),[]).append((p,text[:m.start()].count('\n')+1,m.group(1)))
+        if p.name not in {'Invoke-StaticChecks.ps1'}:
+            for pat,label in [(r'(?i)\bInvoke-Expression\b|(?<![\w-])iex(?![\w-])','dynamic evaluation'),(r'(?i)\bcmd(?:\.exe)?\s+/c\b','shell string execution'),(r'(?i)\bTODO\b|\bFIXME\b|\bTBD\b|notimplemented','placeholder marker')]:
+                for m in re.finditer(pat,code): errors.append(f'{p}:{text[:m.start()].count(chr(10))+1}: {label}')
+    for name,defs in funcs.items():
+        if len(defs)>1: errors.append('duplicate function '+name+': '+', '.join(f'{p}:{line}' for p,line,_ in defs))
+    for name,uses in refs.items():
+        if name not in funcs: errors.append('unresolved WinCare function '+uses[0][2]+': '+', '.join(f'{p}:{line}' for p,line,_ in uses[:8]))
+    contract=(root/'src/WinCare/Core/11-ActionContracts.ps1').read_text('utf-8')
+    transaction=(root/'src/WinCare/Core/09-Transactions.ps1').read_text('utf-8')
+    contracts=set(re.findall(r"Add-Contract\s+'([^']+)'",contract));dispatch=set(re.findall(r"(?m)^\s*'([^']+)'\s*\{Invoke-WinCare",transaction))
+    if contracts!=dispatch: errors.append(f'action parity mismatch: missing dispatch {sorted(contracts-dispatch)}; missing contracts {sorted(dispatch-contracts)}')
+    literal_actions=set()
+    for p in files:
+        text=p.read_text('utf-8',errors='replace')
+        literal_actions.update(re.findall(r"New-WinCareAction\s+[^\r\n]*?-Type\s+(?:'([^']+)'|\"([^\"]+)\"|([A-Za-z][A-Za-z0-9_-]*))",text))
+    literal_action_names={next(value for value in group if value) for group in literal_actions}
+    unknown_literal_actions=literal_action_names-contracts
+    if unknown_literal_actions: errors.append(f'literal action constructors without contracts: {sorted(unknown_literal_actions)}')
+    headless=(root/'src/WinCare/UI/98-Headless.ps1').read_text('utf-8')
+    list_match=re.search(r'function Get-WinCareHeadlessCommandName\s*\{\s*@\((.*?)\)\s*\}',headless,re.S)
+    listed=set(re.findall(r"'([^']+)'",list_match.group(1))) if list_match else set();cases=set(re.findall(r"(?m)^\s*'([^']+)'\s*\{",headless))
+    if listed!=cases: errors.append(f'headless declaration/case mismatch: missing cases {sorted(listed-cases)}; unlisted cases {sorted(cases-listed)}')
+    main=(root/'src/WinCare/UI/99-Main.ps1').read_text('utf-8');palette=(root/'src/WinCare/UI/97-CommandPalette.ps1').read_text('utf-8')
+    menu=set(re.findall(r"Action='([^']+)'",main));routes=set(re.findall(r"'([^']+)'\s*\{Show-WinCare",palette));route_special={'Palette'}
+    missing_routes=(menu-{'Exit'})-(routes|route_special)
+    if missing_routes: errors.append(f'menu actions without routes: {sorted(missing_routes)}')
+    for p in sorted(root.rglob('*.json')):
+        if '.git' in p.parts: continue
+        try: json.loads(p.read_text('utf-8'))
+        except Exception as e: errors.append(f'{p}: invalid JSON: {e}')
+    psm=(root/'src/WinCare/WinCare.psm1').read_text('utf-8');psd=(root/'src/WinCare/WinCare.psd1').read_text('utf-8')
+    versions=re.findall(r"(?:WinCareVersion\s*=|ModuleVersion\s*=)\s*'([^']+)'",psm+'\n'+psd)
+    if len(set(versions))!=1 or not versions:
+        errors.append(f'version mismatch: {versions}')
+        product_version=None
+    else:
+        product_version=versions[0]
+        display_version='.'.join(product_version.split('.')[:2])
+        metadata_checks={
+            root/'README.md': f'WinCare {display_version}',
+            root/'CHANGELOG.md': f'## {product_version}',
+            root/'docs/Architecture.md': f'WinCare {display_version}',
+        }
+        for metadata_path,marker in metadata_checks.items():
+            if not metadata_path.is_file(): errors.append(f'missing release metadata file: {metadata_path.relative_to(root)}')
+            elif marker not in metadata_path.read_text('utf-8',errors='replace'):
+                errors.append(f'{metadata_path.relative_to(root)} does not identify current version {marker!r}')
+        ci_path=root/'.github/workflows/ci.yml'
+        if not ci_path.is_file(): errors.append('missing Windows/packaging CI workflow')
+        else:
+            ci_text=ci_path.read_text('utf-8',errors='replace')
+            hardcoded=set(re.findall(r'WinCare-(\d+\.\d+\.\d+)\.zip',ci_text))
+            if hardcoded and hardcoded!={product_version}: errors.append(f'CI contains stale hardcoded release versions: {sorted(hardcoded)}')
+            if 'Invoke-WindowsValidation.ps1' not in ci_text or 'tools/verify_release.py' not in ci_text:
+                errors.append('CI does not include Windows-native and independent archive validation gates')
+    exports=set(re.findall(r"(?m)^\s*'([A-Za-z][A-Za-z0-9_-]+)'[,]?\s*$",psm[psm.find('Export-ModuleMember'):]))
+    psd_export_match=re.search(r'FunctionsToExport\s*=\s*@\((.*?)\)\s*CmdletsToExport',psd,re.S)
+    psd_exports=set(re.findall(r"'([A-Za-z][A-Za-z0-9_-]+)'",psd_export_match.group(1))) if psd_export_match else set()
+    if not psd_export_match: errors.append('module manifest FunctionsToExport block was not found')
+    elif exports!=psd_exports: errors.append(f'module export mismatch: psm-only {sorted(exports-psd_exports)}; psd-only {sorted(psd_exports-exports)}')
+    if 'Invoke-WinCarePlan' in exports or 'Invoke-WinCarePlan' in psd_exports: errors.append('unrestricted internal plan executor must not be exported')
+    missing_defs=sorted(x for x in exports|psd_exports if x.lower() not in funcs)
+    if missing_defs: errors.append(f'exports without functions: {missing_defs}')
+    proc=(root/'src/WinCare/Core/03-Process.ps1').read_text('utf-8')
+    if 'Get-WinCareActionContractTable' not in proc or 'HMACSHA256' not in proc or 'FixedTimeEquals' not in proc: errors.append('elevation broker is not contract-derived and authenticated')
+    wdac=(root/'src/WinCare/Providers/76-WDAC.ps1').read_text('utf-8')
+    if re.search(r'Copy-Item.*CodeIntegrity|Remove-Item.*CodeIntegrity',wdac,re.I): errors.append('WDAC provider writes policy directories directly')
+    all_text='\n'.join(p.read_text('utf-8',errors='replace') for p in files)
+    if re.search(r'(?i)(analytics|telemetry).*(http|invoke-restmethod|invoke-webrequest)',all_text): errors.append('telemetry/network emission detected')
+    ledger=root/'docs/convergence/adoption-matrix.csv';surface=root/'docs/convergence/surface-accountability.csv'
+    if ledger.exists():
+        rows=list(csv.DictReader(ledger.open(encoding='utf-8')));ids=[r.get('record_id','') for r in rows]
+        if len(ids)!=len(set(ids)) or any(not x for x in ids): errors.append('adoption matrix has missing or duplicate record IDs')
+    else: warnings.append('adoption matrix not present')
+    if not surface.exists(): warnings.append('surface accountability matrix not present')
+    report={'root':'.','powershellFiles':len(files),'functions':len(funcs),'references':len(refs),'actionContracts':len(contracts),'headlessCommands':len(listed),'menuActions':len(menu),'errors':errors,'warnings':warnings,'status':'passed' if not errors else 'failed'}
+    payload=json.dumps(report,indent=2)
+    print(payload)
+    if args.json_output: Path(args.json_output).write_text(payload+'\n',encoding='utf-8')
+    return 0 if not errors else 1
+if __name__=='__main__': raise SystemExit(main())

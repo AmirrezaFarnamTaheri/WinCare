@@ -1,0 +1,249 @@
+{
+  "schema": "wincare.wave6.archive-inventory/v1",
+  "target": "WinCare 4.5.0",
+  "archives": [
+    {
+      "archive": "Monitoring-master.zip",
+      "sha256": "36922e6133dcdcff9dda6baf74c08814e38bf65aa143c2389d5bae221cf44ed6",
+      "members": 24,
+      "files": 21,
+      "directories": 3,
+      "symlinks": [],
+      "uncompressed_bytes": 5053459,
+      "extracted_bytes": 5053459,
+      "warnings": []
+    },
+    {
+      "archive": "explorerplusplus-master(1).zip",
+      "sha256": "e5889755541ba85ea009e2e136434dda1015248b9dbcb171fa875585ff64ca2b",
+      "members": 2198,
+      "files": 2075,
+      "directories": 123,
+      "symlinks": [],
+      "uncompressed_bytes": 11436681,
+      "extracted_bytes": 11436681,
+      "warnings": []
+    },
+    {
+      "archive": "UnitedSets-master.zip",
+      "sha256": "6b065b03baa280a47cb24f114214e148ce3146b9c79c49220759203736cfef74",
+      "members": 307,
+      "files": 266,
+      "directories": 41,
+      "symlinks": [],
+      "uncompressed_bytes": 8886644,
+      "extracted_bytes": 8886644,
+      "warnings": []
+    },
+    {
+      "archive": "12Bar-main.zip",
+      "sha256": "729bdcb4c239a0544b26977b966780c5f60e393b3439894f3f066a433e722f15",
+      "members": 58,
+      "files": 51,
+      "directories": 7,
+      "symlinks": [],
+      "uncompressed_bytes": 5409319,
+      "extracted_bytes": 5409319,
+      "warnings": []
+    },
+    {
+      "archive": "twinkle-tray-master (1).zip",
+      "sha256": "160cba99947cc9d56a65e33f8d8ee58b938869e2908a48e0f513f8f6cf8975de",
+      "members": 275,
+      "files": 234,
+      "directories": 41,
+      "symlinks": [],
+      "uncompressed_bytes": 4843193,
+      "extracted_bytes": 4843193,
+      "warnings": []
+    },
+    {
+      "archive": "SystemExplorer-master.zip",
+      "sha256": "b7482d2e6879b104c60aebfb4fe65991f49cabf65ce013e4c8dae2a6713363e9",
+      "members": 372,
+      "files": 365,
+      "directories": 7,
+      "symlinks": [],
+      "uncompressed_bytes": 4566469,
+      "extracted_bytes": 4566469,
+      "warnings": []
+    },
+    {
+      "archive": "ADB-Explorer-master.zip",
+      "sha256": "3fda7467811b4e16115df8d8cfa4496accba3d56f6f367e86aebc9e8a35f34a1",
+      "members": 535,
+      "files": 478,
+      "directories": 57,
+      "symlinks": [],
+      "uncompressed_bytes": 7229847,
+      "extracted_bytes": 7229847,
+      "warnings": []
+    },
+    {
+      "archive": "kanata-main.zip",
+      "sha256": "f1cd8570e7682657e8b7cd8427d7c1ddf8ffc5899683444c1041078bb810e0d6",
+      "members": 356,
+      "files": 295,
+      "directories": 61,
+      "symlinks": [],
+      "uncompressed_bytes": 3940690,
+      "extracted_bytes": 3940690,
+      "warnings": []
+    },
+    {
+      "archive": "taskbar-monitor-master.zip",
+      "sha256": "5484041069b03709c083862b3162db963707c67127cb24bac39cf4b6f1a68729",
+      "members": 210,
+      "files": 189,
+      "directories": 21,
+      "symlinks": [],
+      "uncompressed_bytes": 5976736,
+      "extracted_bytes": 5976736,
+      "warnings": []
+    },
+    {
+      "archive": "Folcolor-main.zip",
+      "sha256": "a9a8507e527705c79a68e53d9695c966d13550e0fff495284724e9286cd11153",
+      "members": 84,
+      "files": 73,
+      "directories": 11,
+      "symlinks": [],
+      "uncompressed_bytes": 1930461,
+      "extracted_bytes": 1930461,
+      "warnings": []
+    },
+    {
+      "archive": "comet-master.zip",
+      "sha256": "44ecc7d1fb2ac16f92be144b1d65a8eb5c28d25e8be88283974be7de9e77440a",
+      "members": 109,
+      "files": 83,
+      "directories": 26,
+      "symlinks": [],
+      "uncompressed_bytes": 4204060,
+      "extracted_bytes": 4204060,
+      "warnings": []
+    },
+    {
+      "archive": "bar.wezterm-main.zip",
+      "sha256": "17f9c2ccf5fa325a18bcc995b7510bd751fd707fcd3206a945c8a033e9b9147b",
+      "members": 19,
+      "files": 15,
+      "directories": 4,
+      "symlinks": [],
+      "uncompressed_bytes": 1233613,
+      "extracted_bytes": 1233613,
+      "warnings": []
+    },
+    {
+      "archive": "SyncTrayzor-main.zip",
+      "sha256": "a06bd436e37799df951dcfaa8eb7886cc518889983a801d8cde4a11631064443",
+      "members": 428,
+      "files": 385,
+      "directories": 43,
+      "symlinks": [],
+      "uncompressed_bytes": 4031358,
+      "extracted_bytes": 4031358,
+      "warnings": []
+    },
+    {
+      "archive": "FloatWindowUtils-master.zip",
+      "sha256": "58f40fbddd076137990ed3c0dce31122cca6b330659bde8b2248df0f103b8c83",
+      "members": 74,
+      "files": 41,
+      "directories": 33,
+      "symlinks": [],
+      "uncompressed_bytes": 1237353,
+      "extracted_bytes": 1237353,
+      "warnings": []
+    },
+    {
+      "archive": "notion-main.zip",
+      "sha256": "a98231de10219a3b35a491317ecf2b3785a2e46b31c907ffc2df51f030856a7d",
+      "members": 702,
+      "files": 644,
+      "directories": 55,
+      "symlinks": [
+        {
+          "path": "notion-main/utils/docker/start-xephyr.sh",
+          "target": "../xephyr/start-xephyr.sh"
+        },
+        {
+          "path": "notion-main/utils/xephyr/xephyr-notion-gdb.sh",
+          "target": "xephyr-notion.sh"
+        },
+        {
+          "path": "notion-main/utils/xephyr/xephyr-notion-lldb.sh",
+          "target": "xephyr-notion.sh"
+        }
+      ],
+      "uncompressed_bytes": 3123468,
+      "extracted_bytes": 3123411,
+      "warnings": []
+    },
+    {
+      "archive": "XboxFullScreenExperienceTool-main.zip",
+      "sha256": "28c081519383605e58df8d1e50771ce783148ab53d14d348f33fef44fc11231d",
+      "members": 71,
+      "files": 58,
+      "directories": 13,
+      "symlinks": [],
+      "uncompressed_bytes": 1893457,
+      "extracted_bytes": 1893457,
+      "warnings": []
+    },
+    {
+      "archive": "apkshellext-ApkShellext2.zip",
+      "sha256": "af5da191f9fb643734ee166cc8d180d3c248d1420d978adb62a1811c0acd6fa3",
+      "members": 117,
+      "files": 99,
+      "directories": 18,
+      "symlinks": [],
+      "uncompressed_bytes": 1668759,
+      "extracted_bytes": 1668759,
+      "warnings": []
+    },
+    {
+      "archive": "FileExplorer-master.zip",
+      "sha256": "72bb8024c34f7e9e236a981bb07312552e67125379ec9495e07e91e2247b6e37",
+      "members": 312,
+      "files": 272,
+      "directories": 40,
+      "symlinks": [],
+      "uncompressed_bytes": 3640209,
+      "extracted_bytes": 3640209,
+      "warnings": []
+    },
+    {
+      "archive": "flogo-master.zip",
+      "sha256": "b39b2a83681250bb4d830681df18fa918df19ab6424c0afc22bcb92d8750993a",
+      "members": 102,
+      "files": 90,
+      "directories": 12,
+      "symlinks": [],
+      "uncompressed_bytes": 4867571,
+      "extracted_bytes": 4867571,
+      "warnings": []
+    },
+    {
+      "archive": "WinCare-4.3.0(2).zip",
+      "sha256": "f03b7933e7461d3f99643a76a045f6f727b3149a7af7b78a39808439703a9e4f",
+      "members": 191,
+      "files": 191,
+      "directories": 0,
+      "symlinks": [],
+      "uncompressed_bytes": 9975168,
+      "extracted_bytes": 9975168,
+      "warnings": []
+    }
+  ],
+  "totals": {
+    "archives": 20,
+    "members": 6544,
+    "regularFiles": 5925,
+    "symlinks": 3,
+    "uncompressedBytes": 95148515,
+    "warnings": 0
+  },
+  "targetBaselineArchive": "WinCare-4.3.0(2).zip",
+  "targetBaselineDisposition": "historical reference only; not assigned a donor ID"
+}

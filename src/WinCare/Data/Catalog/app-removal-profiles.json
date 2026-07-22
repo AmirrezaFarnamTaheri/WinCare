@@ -1,0 +1,131 @@
+{
+  "schemaVersion": 1,
+  "profiles": [
+    {
+      "id": "consumer-optional",
+      "title": "Review optional consumer applications",
+      "description": "Removes only currently matched optional consumer packages selected through an explicit preview. Core shell, Store, security, codecs, frameworks, and system experience packages are excluded.",
+      "risk": "Moderate",
+      "patterns": [
+        "Microsoft.BingNews",
+        "Microsoft.BingWeather",
+        "Microsoft.GetHelp",
+        "Microsoft.Getstarted",
+        "Microsoft.MicrosoftSolitaireCollection",
+        "Microsoft.People",
+        "Microsoft.WindowsFeedbackHub",
+        "Microsoft.YourPhone",
+        "Clipchamp.Clipchamp"
+      ],
+      "sourceRecords": [
+        "D02-APPX-REMOVAL",
+        "D03-APP-REMOVAL",
+        "D06-APP-GUIDE"
+      ]
+    },
+    {
+      "id": "gaming-optional",
+      "title": "Review optional Xbox and gaming applications",
+      "description": "For systems that do not use Xbox, Game Bar, Game Pass, or Microsoft gaming services. Individual matched packages remain visible in the operation preview.",
+      "risk": "High",
+      "patterns": [
+        "Microsoft.GamingApp",
+        "Microsoft.XboxApp",
+        "Microsoft.XboxGamingOverlay",
+        "Microsoft.Xbox.TCUI",
+        "Microsoft.XboxIdentityProvider",
+        "Microsoft.XboxSpeechToTextOverlay"
+      ],
+      "sourceRecords": [
+        "D02-APPX-REMOVAL",
+        "D05-GAMING",
+        "D14-GAMING-GUIDE"
+      ]
+    },
+    {
+      "id": "communication-optional",
+      "title": "Review optional communication applications",
+      "description": "Removes legacy consumer communication packages when present.",
+      "risk": "Moderate",
+      "patterns": [
+        "Microsoft.SkypeApp",
+        "MSTeams",
+        "MicrosoftTeams"
+      ],
+      "sourceRecords": [
+        "D02-APPX-REMOVAL",
+        "D03-APP-REMOVAL"
+      ]
+    },
+    {
+      "id": "mixed-reality-optional",
+      "title": "Review optional 3D and mixed-reality applications",
+      "description": "Removes optional 3D and mixed-reality applications, not runtimes or graphics drivers.",
+      "risk": "Moderate",
+      "patterns": [
+        "Microsoft.MixedReality.Portal",
+        "Microsoft.Microsoft3DViewer",
+        "Microsoft.Print3D"
+      ],
+      "sourceRecords": [
+        "D02-APPX-REMOVAL",
+        "D06-APP-GUIDE"
+      ]
+    },
+    {
+      "id": "legacy-aggressive",
+      "title": "Legacy Unsafe aggressive application removal",
+      "description": "Removes a broad donor-derived set of consumer, communication, gaming, media, feedback, Store, and shell-adjacent AppX packages. This can remove Microsoft Store recovery paths and is intentionally destructive.",
+      "risk": "Critical",
+      "patterns": [
+        "Clipchamp.Clipchamp",
+        "Microsoft.549981C3F5F10",
+        "Microsoft.BingNews",
+        "Microsoft.BingWeather",
+        "Microsoft.GetHelp",
+        "Microsoft.Getstarted",
+        "Microsoft.Microsoft3DViewer",
+        "Microsoft.MicrosoftOfficeHub",
+        "Microsoft.MicrosoftSolitaireCollection",
+        "Microsoft.MixedReality.Portal",
+        "Microsoft.MSPaint",
+        "Microsoft.Office.OneNote",
+        "Microsoft.OneConnect",
+        "Microsoft.People",
+        "Microsoft.PowerAutomateDesktop",
+        "Microsoft.Print3D",
+        "Microsoft.ScreenSketch",
+        "Microsoft.SkypeApp",
+        "Microsoft.StorePurchaseApp",
+        "Microsoft.Todos",
+        "Microsoft.Wallet",
+        "Microsoft.WindowsAlarms",
+        "Microsoft.WindowsCamera",
+        "Microsoft.WindowsFeedbackHub",
+        "Microsoft.WindowsMaps",
+        "Microsoft.WindowsSoundRecorder",
+        "Microsoft.WindowsStore",
+        "Microsoft.Xbox.TCUI",
+        "Microsoft.XboxApp",
+        "Microsoft.XboxGameCallableUI",
+        "Microsoft.XboxGamingOverlay",
+        "Microsoft.XboxIdentityProvider",
+        "Microsoft.XboxSpeechToTextOverlay",
+        "Microsoft.YourPhone",
+        "Microsoft.ZuneMusic",
+        "Microsoft.ZuneVideo",
+        "MicrosoftCorporationII.MicrosoftFamily",
+        "MicrosoftCorporationII.QuickAssist",
+        "MSTeams",
+        "MicrosoftTeams"
+      ],
+      "sourceRecords": [
+        "D71-ET-EXTREME-PROFILE",
+        "D73-REINS-NUCLEAR-PROFILE",
+        "D74-TOOLBOX-AGGRESSIVE-PROFILE",
+        "D78-PLEASANT-LEGACY-PROFILE",
+        "D86-XD-ANTISPY-MAX-PROFILE"
+      ]
+    }
+  ]
+}

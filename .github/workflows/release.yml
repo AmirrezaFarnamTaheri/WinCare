@@ -1,0 +1,48 @@
+name: release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  publish-release:
+    name: Build & Publish GitHub Release (No Custom Token Needed)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Build Deterministic Release Package
+        run: |
+          mkdir -p artifacts
+          python tools/build_release.py . --output-directory artifacts
+          VERSION=$(python -c "import re,pathlib; print(re.search(r\"ModuleVersion\s*=\s*'([^']+)'\", pathlib.Path('src/WinCare/WinCare.psd1').read_text()).group(1))")
+          echo "PACKAGE_VERSION=$VERSION" >> $GITHUB_ENV
+          echo "PACKAGE_PATH=artifacts/WinCare-$VERSION.zip" >> $GITHUB_ENV
+
+      - name: Verify Release Archive
+        run: |
+          python tools/verify_release.py "$PACKAGE_PATH" --output artifacts/archive-validation.json
+
+      - name: Create GitHub Release using Native CLI
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG_NAME="${{ github.ref_name }}"
+          if [ "$TAG_NAME" = "main" ] || [ "$TAG_NAME" = "master" ] || [ -z "$TAG_NAME" ]; then
+            TAG_NAME="v${PACKAGE_VERSION}"
+          fi
+          gh release create "$TAG_NAME" "$PACKAGE_PATH" \
+            --title "WinCare v${PACKAGE_VERSION}" \
+            --notes "Official release package for WinCare v${PACKAGE_VERSION}. Deterministic zero-token build." \
+            --clobber

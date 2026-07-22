@@ -1,0 +1,32 @@
+WinCare 4.2 third-wave convergence baseline
+
+Target baseline commit: 9e951ae2c56b04a0f694886fc7ff5217cd7322bb
+Preserved post-release documentation correction commit: 50905a5
+Target version before convergence: 4.1.0
+Target version after convergence: 4.2.0
+
+New donors: D39-D52
+- light-awake-main(1).zip
+- basic-zones-main(1).zip
+- ModernPicker-main.zip
+- context-mode-main (1).zip
+- tab-counter-master (1)(1).zip
+- always-on-top-main (1).zip
+- DPengine_old-master.zip
+- rustdesk-master.zip
+- cosmic-switch-less-main.zip
+- localnotes-main.zip
+- MouseKeyProxy-master.zip
+- Blink-master.zip
+- StarHue-Color-Picker-main.zip
+- nosleep-main.zip
+
+Requested scope
+- Safely inventory every archive member and account for every donor surface.
+- Extract, compare, adapt, harden, recompose, or reject every material mechanism.
+- Integrate useful behavior through WinCare's existing typed policy, preview, transaction, journal, integrity, recovery, TUI, headless, report, extension, packaging, and release contracts.
+- Preserve the cumulative D01-D38 convergence evidence and revalidate the combined graph.
+
+Environment boundary
+- Source, evidence, archive, manifest, SBOM, checksum, and reproducibility checks execute in the current Linux build environment.
+- PowerShell AST import, PSScriptAnalyzer, Pester, Windows APIs, UAC, Registry, browser/profile state, windowing, power requests, installer, and recovery integration remain mandatory Windows-native gates and must not be represented as executed here.

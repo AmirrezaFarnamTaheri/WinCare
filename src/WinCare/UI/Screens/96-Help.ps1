@@ -1,0 +1,42 @@
+function Show-WinCareHelpScreen {
+    $lines=@(
+        'WinCare is a terminal-native Windows maintenance console.',
+        '',
+        'SAFETY MODEL',
+        '  Discover -> Normalize -> Plan -> Preview -> Authorize -> Execute -> Verify -> Journal',
+        '  Read-only mode blocks all modifying operation plans.',
+        '  WinCare does not use registry cleaners, RAM cleaners, blanket service presets, or shell-string execution.',
+        '  Cleanup rules target explicit cache and temporary-data locations. Downloads and personal files are excluded.',
+        '  Startup changes are backed up before the active entry is removed.',
+        '',
+        'KEYBOARD',
+        '  Up/Down          Move selection',
+        '  PageUp/PageDown  Move one page',
+        '  Home/End         First or last item',
+        '  Space            Toggle an item in multi-select lists',
+        '  Enter            Select or continue',
+        '  /                Search lists',
+        '  Escape           Return to the previous screen',
+        '',
+        'PRIVILEGES',
+        '  WinCare starts unelevated. Individual operations request elevation when required.',
+        '  Native application installers may open their own user interface or request additional approval.',
+        '',
+        'DATA',
+        "  Settings and journals: $($script:WinCareState.Root)",
+        '  Logs use JSON Lines. Operation journals are structured JSON.',
+        '  Reports can redact the current Windows user name.',
+        '',
+        'SUPPORTED PLATFORM',
+        '  Windows 10/11 with PowerShell 7.2 or later.',
+        '  WinGet and AppX integrations are capability-detected and disabled when unavailable.',
+        '',
+        'TROUBLESHOOTING',
+        '  1. Review the operation journal and daily log.',
+        '  2. Retry after a pending Windows restart.',
+        '  3. Use native Windows Settings for platform-owned configuration.',
+        '  4. Run WinCare with -ReadOnly to collect a report without modifying the system.'
+    )
+    Show-WinCareTextPage -Title 'Help and safety' -Lines $lines
+}
+

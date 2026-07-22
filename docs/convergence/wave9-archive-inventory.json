@@ -1,0 +1,254 @@
+[
+  {
+    "donor_id": "D130",
+    "name": "Aseprite",
+    "archive": "aseprite-main.zip",
+    "path": "/mnt/data/aseprite-main.zip",
+    "archive_sha256": "a5a059be4ba8568e8b19f42a9e64a6de8040549b4746a59997e97ca304ef4c72",
+    "size_bytes": 2840649,
+    "duplicate_of": null,
+    "members": 2037,
+    "files": 1926,
+    "dirs": 111,
+    "symlinks": 0,
+    "expanded_bytes": 8678023,
+    "root_names": [
+      "aseprite-main"
+    ],
+    "links": []
+  },
+  {
+    "donor_id": "D131",
+    "name": "Enhance",
+    "archive": "Enhance-master(1).zip",
+    "path": "/mnt/data/Enhance-master(1).zip",
+    "archive_sha256": "c3a8eddf7369889f4efa5845bae9a2e29ff57bd155a35e3d27f0fc41b02a14e3",
+    "size_bytes": 2790781,
+    "duplicate_of": "D36",
+    "members": 108,
+    "files": 87,
+    "dirs": 21,
+    "symlinks": 0,
+    "expanded_bytes": 4978404,
+    "root_names": [
+      "Enhance-master"
+    ],
+    "links": []
+  },
+  {
+    "donor_id": "D132",
+    "name": "Twinkle Tray duplicate submission",
+    "archive": "twinkle-tray-master.zip",
+    "path": "/mnt/data/twinkle-tray-master.zip",
+    "archive_sha256": "160cba99947cc9d56a65e33f8d8ee58b938869e2908a48e0f513f8f6cf8975de",
+    "size_bytes": 2329207,
+    "duplicate_of": "D91",
+    "members": 275,
+    "files": 234,
+    "dirs": 41,
+    "symlinks": 0,
+    "expanded_bytes": 4843193,
+    "root_names": [
+      "twinkle-tray-master"
+    ],
+    "links": []
+  },
+  {
+    "donor_id": "D133",
+    "name": "RyTuneX",
+    "archive": "RyTuneX-main.zip",
+    "path": "/mnt/data/RyTuneX-main.zip",
+    "archive_sha256": "b31bac0ed065cdae59214c53a643c41dfc8f8ffd8f3cbb91744ac92c6b5167d7",
+    "size_bytes": 2006321,
+    "duplicate_of": null,
+    "members": 213,
+    "files": 178,
+    "dirs": 35,
+    "symlinks": 0,
+    "expanded_bytes": 4157626,
+    "root_names": [
+      "RyTuneX-main"
+    ],
+    "links": []
+  },
+  {
+    "donor_id": "D134",
+    "name": "ContextMenuForWindows11",
+    "archive": "ContextMenuForWindows11-main.zip",
+    "path": "/mnt/data/ContextMenuForWindows11-main.zip",
+    "archive_sha256": "8597a56080a870a7b294a17f451bfcea27a086b8c84828bd7b6d068ac466ac0d",
+    "size_bytes": 1916164,
+    "duplicate_of": "D29",
+    "members": 357,
+    "files": 312,
+    "dirs": 45,
+    "symlinks": 0,
+    "expanded_bytes": 2404704,
+    "root_names": [
+      "ContextMenuForWindows11-main"
+    ],
+    "links": []
+  },
+  {
+    "donor_id": "D135",
+    "name": "Windows",
+    "archive": "Windows-main.zip",
+    "path": "/mnt/data/Windows-main.zip",
+    "archive_sha256": "9955a2e29fe45f8c6a8d30fbbdfeb40d4eb603180b53c6df51200d59b4741374",
+    "size_bytes": 3508875,
+    "duplicate_of": null,
+    "members": 1543,
+    "files": 1290,
+    "dirs": 253,
+    "symlinks": 0,
+    "expanded_bytes": 6409610,
+    "root_names": [
+      "Windows-main"
+    ],
+    "links": []
+  },
+  {
+    "donor_id": "D136",
+    "name": "Windows Utilities Release",
+    "archive": "windows-utilities-release-master.zip",
+    "path": "/mnt/data/windows-utilities-release-master.zip",
+    "archive_sha256": "693183f2a60d0aaacf5f80615f721474b17df986c1e358ebef3cf5edc64fb1c9",
+    "size_bytes": 3188598,
+    "duplicate_of": null,
+    "members": 964,
+    "files": 813,
+    "dirs": 151,
+    "symlinks": 0,
+    "expanded_bytes": 13347092,
+    "root_names": [
+      "windows-utilities-release-master"
+    ],
+    "links": []
+  },
+  {
+    "donor_id": "D137",
+    "name": "Flutter Location",
+    "archive": "flutterlocation-master.zip",
+    "path": "/mnt/data/flutterlocation-master.zip",
+    "archive_sha256": "44539bd133e87b5dcbec36f8bd457b7a9516925d617ae698af202a3181e1298b",
+    "size_bytes": 3151988,
+    "duplicate_of": null,
+    "members": 319,
+    "files": 218,
+    "dirs": 101,
+    "symlinks": 0,
+    "expanded_bytes": 3602023,
+    "root_names": [
+      "flutterlocation-master"
+    ],
+    "links": []
+  },
+  {
+    "donor_id": "D138",
+    "name": "Rainmeter",
+    "archive": "rainmeter-master(1).zip",
+    "path": "/mnt/data/rainmeter-master(1).zip",
+    "archive_sha256": "dad18255dbe2c7a41b355e676220cf5508dff2119075e3e45d351591af1ab18c",
+    "size_bytes": 2853545,
+    "duplicate_of": "D33",
+    "members": 1027,
+    "files": 937,
+    "dirs": 90,
+    "symlinks": 0,
+    "expanded_bytes": 10262161,
+    "root_names": [
+      "rainmeter-master"
+    ],
+    "links": []
+  },
+  {
+    "donor_id": "D139",
+    "name": "Surge",
+    "archive": "Surge-main.zip",
+    "path": "/mnt/data/Surge-main.zip",
+    "archive_sha256": "e3d51553cc6bf7d22667b63da59bcdf60348e63c134545622c5cc2ce80c241e7",
+    "size_bytes": 3551053,
+    "duplicate_of": null,
+    "members": 405,
+    "files": 361,
+    "dirs": 44,
+    "symlinks": 0,
+    "expanded_bytes": 5309591,
+    "root_names": [
+      "Surge-main"
+    ],
+    "links": []
+  },
+  {
+    "donor_id": "D140",
+    "name": "BatteryMode",
+    "archive": "BatteryMode-main.zip",
+    "path": "/mnt/data/BatteryMode-main.zip",
+    "archive_sha256": "cc8c117884f1467c281930fb1d637c89568616375d9cee6ffc005ee44103fbbe",
+    "size_bytes": 3821654,
+    "duplicate_of": null,
+    "members": 408,
+    "files": 371,
+    "dirs": 37,
+    "symlinks": 0,
+    "expanded_bytes": 28066688,
+    "root_names": [
+      "BatteryMode-main"
+    ],
+    "links": []
+  },
+  {
+    "donor_id": "D141",
+    "name": "privacy.sexy",
+    "archive": "privacy.sexy-master.zip",
+    "path": "/mnt/data/privacy.sexy-master.zip",
+    "archive_sha256": "2c6d2996c4e3cd31fb41cc81e53a6198cd78bf4a190671be8c6bbc53ba29868e",
+    "size_bytes": 3736750,
+    "duplicate_of": null,
+    "members": 1597,
+    "files": 1178,
+    "dirs": 419,
+    "symlinks": 0,
+    "expanded_bytes": 11365849,
+    "root_names": [
+      "privacy.sexy-master"
+    ],
+    "links": []
+  },
+  {
+    "donor_id": "D142",
+    "name": "Windhawk",
+    "archive": "windhawk-main(1).zip",
+    "path": "/mnt/data/windhawk-main(1).zip",
+    "archive_sha256": "e3e843996d1c1c878d08a7209a7caab2b44f8dd5e6cd51bcccf7dc09d21ad72c",
+    "size_bytes": 7326219,
+    "duplicate_of": "D28",
+    "members": 891,
+    "files": 736,
+    "dirs": 155,
+    "symlinks": 0,
+    "expanded_bytes": 41008630,
+    "root_names": [
+      "windhawk-main"
+    ],
+    "links": []
+  },
+  {
+    "donor_id": "D143",
+    "name": "Windows Community Toolkit",
+    "archive": "WindowsCommunityToolkit-main.zip",
+    "path": "/mnt/data/WindowsCommunityToolkit-main.zip",
+    "archive_sha256": "beaf2574280404f7647dff0c7e7c956260b2fdbb19c10203855dd3d40a73d92e",
+    "size_bytes": 8844787,
+    "duplicate_of": null,
+    "members": 2697,
+    "files": 2255,
+    "dirs": 442,
+    "symlinks": 0,
+    "expanded_bytes": 16883073,
+    "root_names": [
+      "WindowsCommunityToolkit-main"
+    ],
+    "links": []
+  }
+]

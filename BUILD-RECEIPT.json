@@ -1,0 +1,32 @@
+{
+  "schema": "wincare.build.receipt/v1",
+  "product": "WinCare",
+  "version": "5.2.0",
+  "source": {
+    "gitCommit": "2c40dc84a32e49cb49d2451d6a7bc26a46727a06",
+    "dirty": false,
+    "treeSha256": "a59572f7a358b2baa0e2007a13babf40b0749170e7519b8442158db7e971369a"
+  },
+  "generatedAt": "2026-07-21T20:54:14Z",
+  "evidence": {
+    "donors": 166,
+    "semanticRecords": 615,
+    "classifiedSurfaces": 52629,
+    "adoptionMatrixSha256": "103985b149becb1e1c5053bb2636207bceec52c40ca7aa6889e8219180a035b7",
+    "surfaceMatrixSha256": "481b526d1bf6428a2f721cf515d535b6bfd4773007162f020ddb994e06989b4a",
+    "donorInventorySha256": "2218e088b695a0105ed8aacc4e852a31e59ace2fdc7baf29f67515b959cb49b1"
+  },
+  "validation": {
+    "source": "passed",
+    "convergence": "passed",
+    "v5Completeness": "passed",
+    "windowsNative": "pending-separate-windows-evidence"
+  },
+  "reproducibility": {
+    "ordering": "case-insensitive relative POSIX path",
+    "timestampEpoch": 1784667254,
+    "zipTimestamp": "2026-07-21T20:54:14Z",
+    "compression": "deflate-9",
+    "normalizedModes": "0755 scripts; 0644 other files"
+  }
+}

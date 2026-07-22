@@ -1,0 +1,322 @@
+[
+  {
+    "donor_id": "D110",
+    "archive": "WindowsUtils-main.zip",
+    "path": "/mnt/data/WindowsUtils-main.zip",
+    "sha256": "b720ce6d6d6d29f8c520dbc8114f027204ade179e5a35232b0db43d228b69f1f",
+    "size_bytes": 1281772,
+    "kind": "zip",
+    "members": 256,
+    "files": 205,
+    "dirs": 51,
+    "symlinks": 0,
+    "uncompressed_bytes": 4403518,
+    "root_names": [
+      "WindowsUtils-main"
+    ]
+  },
+  {
+    "donor_id": "D111",
+    "archive": "Windows-Maintenance-Tool-main.zip",
+    "path": "/mnt/data/Windows-Maintenance-Tool-main.zip",
+    "sha256": "72505c310517e756d139bf5161a83b2686d1ca49dbc0c07f2ca3995a56a124d6",
+    "size_bytes": 529855,
+    "kind": "zip",
+    "members": 14,
+    "files": 10,
+    "dirs": 4,
+    "symlinks": 0,
+    "uncompressed_bytes": 2549362,
+    "root_names": [
+      "Windows-Maintenance-Tool-main"
+    ]
+  },
+  {
+    "donor_id": "D112",
+    "archive": "WindowsHardeningScript-main(2).zip",
+    "path": "/mnt/data/WindowsHardeningScript-main(2).zip",
+    "sha256": "2fd7cac6408a81ca93fcc8bf32b5cef99a02d80870124917b7d7993087e9625e",
+    "size_bytes": 21611,
+    "kind": "zip",
+    "members": 7,
+    "files": 5,
+    "dirs": 2,
+    "symlinks": 0,
+    "uncompressed_bytes": 85598,
+    "root_names": [
+      "WindowsHardeningScript-main"
+    ]
+  },
+  {
+    "donor_id": "D113",
+    "archive": "laravel-scheduled-maintenance-main(3).zip",
+    "path": "/mnt/data/laravel-scheduled-maintenance-main(3).zip",
+    "sha256": "903f7f08751524274db6a5d09fdaa262082e692973aa0403bb76cc1fe66af7c1",
+    "size_bytes": 21022,
+    "kind": "zip",
+    "members": 39,
+    "files": 26,
+    "dirs": 13,
+    "symlinks": 0,
+    "uncompressed_bytes": 34300,
+    "root_names": [
+      "laravel-scheduled-maintenance-main"
+    ]
+  },
+  {
+    "donor_id": "D114",
+    "archive": "optimizerDuck-master(1).zip",
+    "path": "/mnt/data/optimizerDuck-master(1).zip",
+    "sha256": "3c3e6c20964733bbac04831385d11392600bdd520d01917991ac82e24d0caee0",
+    "size_bytes": 1415518,
+    "kind": "zip",
+    "members": 402,
+    "files": 305,
+    "dirs": 97,
+    "symlinks": 0,
+    "uncompressed_bytes": 4193147,
+    "root_names": [
+      "optimizerDuck-master"
+    ]
+  },
+  {
+    "donor_id": "D115",
+    "archive": "windows_hardening-master.zip",
+    "path": "/mnt/data/windows_hardening-master.zip",
+    "sha256": "1cb83e5b219a0f29bbd4d6df84aa672934725f3b30c810bdb079b982999cc527",
+    "size_bytes": 1374888,
+    "kind": "zip",
+    "members": 143,
+    "files": 141,
+    "dirs": 2,
+    "symlinks": 0,
+    "uncompressed_bytes": 10674920,
+    "root_names": [
+      "windows_hardening-master"
+    ]
+  },
+  {
+    "donor_id": "D116",
+    "archive": "winpower-main.zip",
+    "path": "/mnt/data/winpower-main.zip",
+    "sha256": "2ca6e838881f69c92fe794cd94fd8bc4e5acdfb7ca512e56beb322c0803429b2",
+    "size_bytes": 649008,
+    "kind": "zip",
+    "members": 18,
+    "files": 16,
+    "dirs": 2,
+    "symlinks": 0,
+    "uncompressed_bytes": 842910,
+    "root_names": [
+      "winpower-main"
+    ]
+  },
+  {
+    "donor_id": "D117",
+    "archive": "Personalization(1).txt",
+    "path": "/mnt/data/Personalization(1).txt",
+    "sha256": "5f05b25e12a2787390b5363774bc654c3e0c93c622dbe97d3ddf5a7a72eda9d2",
+    "size_bytes": 25419,
+    "kind": "text",
+    "members": 1,
+    "files": 1,
+    "dirs": 0,
+    "symlinks": 0,
+    "uncompressed_bytes": 25419,
+    "root_names": [
+      "Personalization(1).txt"
+    ]
+  },
+  {
+    "donor_id": "D118",
+    "archive": "duplicacy-utils-master(2).zip",
+    "path": "/mnt/data/duplicacy-utils-master(2).zip",
+    "sha256": "e02fd008b488531491d018e90bf7f8dd7f016132a45a6fe52b51640ba74e90a3",
+    "size_bytes": 22151,
+    "kind": "zip",
+    "members": 17,
+    "files": 13,
+    "dirs": 4,
+    "symlinks": 0,
+    "uncompressed_bytes": 61091,
+    "root_names": [
+      "duplicacy-utils-master"
+    ]
+  },
+  {
+    "donor_id": "D119",
+    "archive": "AppWindowUtility-main(2).zip",
+    "path": "/mnt/data/AppWindowUtility-main(2).zip",
+    "sha256": "c0ffaab8a99a0f4444470b58f9c303abaaa6fd1dad66d5e80df58fba63c07673",
+    "size_bytes": 21163,
+    "kind": "zip",
+    "members": 30,
+    "files": 25,
+    "dirs": 5,
+    "symlinks": 0,
+    "uncompressed_bytes": 43857,
+    "root_names": [
+      "AppWindowUtility-main"
+    ]
+  },
+  {
+    "donor_id": "D120",
+    "archive": "Windows-Super-God-Mode-main(1).zip",
+    "path": "/mnt/data/Windows-Super-God-Mode-main(1).zip",
+    "sha256": "11d5eeddf2e14bbc04589687af6829f6a1b0d150341488c253cf775870a1cb3a",
+    "size_bytes": 1018216,
+    "kind": "zip",
+    "members": 57,
+    "files": 49,
+    "dirs": 8,
+    "symlinks": 0,
+    "uncompressed_bytes": 6683201,
+    "root_names": [
+      "Windows-Super-God-Mode-main"
+    ]
+  },
+  {
+    "donor_id": "D121",
+    "archive": "WindowsUpdateUtility-master(2).zip",
+    "path": "/mnt/data/WindowsUpdateUtility-master(2).zip",
+    "sha256": "dc4d9c18782ea85e54a2fcf6289559be558829294e3dd129eb844f3a04135af7",
+    "size_bytes": 14244,
+    "kind": "zip",
+    "members": 9,
+    "files": 7,
+    "dirs": 2,
+    "symlinks": 0,
+    "uncompressed_bytes": 64509,
+    "root_names": [
+      "WindowsUpdateUtility-master"
+    ]
+  },
+  {
+    "donor_id": "D122",
+    "archive": "DracMaintenanceTool-main(2).zip",
+    "path": "/mnt/data/DracMaintenanceTool-main(2).zip",
+    "sha256": "f404eff9ae693332c774bd3eb599190e125d6921b2649249e8131c9fbad55bdc",
+    "size_bytes": 8438,
+    "kind": "zip",
+    "members": 3,
+    "files": 2,
+    "dirs": 1,
+    "symlinks": 0,
+    "uncompressed_bytes": 33781,
+    "root_names": [
+      "DracMaintenanceTool-main"
+    ]
+  },
+  {
+    "donor_id": "D123",
+    "archive": "winapi-util-master(1).zip",
+    "path": "/mnt/data/winapi-util-master(1).zip",
+    "sha256": "07d6f0db7acb4f4c5fd8e71a66fdd25196012099eb3f7c4c0ca244939483b076",
+    "size_bytes": 16206,
+    "kind": "zip",
+    "members": 18,
+    "files": 14,
+    "dirs": 4,
+    "symlinks": 0,
+    "uncompressed_bytes": 41492,
+    "root_names": [
+      "winapi-util-master"
+    ]
+  },
+  {
+    "donor_id": "D124",
+    "archive": "gsudo-master.zip",
+    "path": "/mnt/data/gsudo-master.zip",
+    "sha256": "443fa880a945644825b206b70d1dd26f350c53c9c3db440c7a798be06d05436d",
+    "size_bytes": 1140775,
+    "kind": "zip",
+    "members": 249,
+    "files": 200,
+    "dirs": 49,
+    "symlinks": 0,
+    "uncompressed_bytes": 1881057,
+    "root_names": [
+      "gsudo-master"
+    ]
+  },
+  {
+    "donor_id": "D125",
+    "archive": "Windows-Optimize-Debloat-main.zip",
+    "path": "/mnt/data/Windows-Optimize-Debloat-main.zip",
+    "sha256": "8b433157411370191a7e7bcbb51584ec6067c6b4ac4713c09258be88b88de70a",
+    "size_bytes": 1372164,
+    "kind": "zip",
+    "members": 86,
+    "files": 55,
+    "dirs": 31,
+    "symlinks": 0,
+    "uncompressed_bytes": 3024434,
+    "root_names": [
+      "Windows-Optimize-Debloat-main"
+    ]
+  },
+  {
+    "donor_id": "D126",
+    "archive": "WindowsContextMenuCustomizations-master(1).zip",
+    "path": "/mnt/data/WindowsContextMenuCustomizations-master(1).zip",
+    "sha256": "178f64ff93f38b4085478406a8354202d02f0ba3de5f55e1a78ca3394b3edc71",
+    "size_bytes": 1356499,
+    "kind": "zip",
+    "members": 74,
+    "files": 73,
+    "dirs": 1,
+    "symlinks": 0,
+    "uncompressed_bytes": 1460987,
+    "root_names": [
+      "WindowsContextMenuCustomizations-master"
+    ]
+  },
+  {
+    "donor_id": "D127",
+    "archive": "winutil-main.zip",
+    "path": "/mnt/data/winutil-main.zip",
+    "sha256": "e54c481949b5181adc951401d8247d8ef6d2ab5c0009b0fa47fa8357ea94e144",
+    "size_bytes": 1592848,
+    "kind": "zip",
+    "members": 347,
+    "files": 303,
+    "dirs": 44,
+    "symlinks": 0,
+    "uncompressed_bytes": 2661169,
+    "root_names": [
+      "winutil-main"
+    ]
+  },
+  {
+    "donor_id": "D128",
+    "archive": "ab-download-manager-master.zip",
+    "path": "/mnt/data/ab-download-manager-master.zip",
+    "sha256": "257e830c90a23d068a1e7939bf5cbedaba41f02b2e68fbd92a92e6b2b25b4717",
+    "size_bytes": 4233507,
+    "kind": "zip",
+    "members": 1659,
+    "files": 1128,
+    "dirs": 531,
+    "symlinks": 0,
+    "uncompressed_bytes": 7398025,
+    "root_names": [
+      "ab-download-manager-master"
+    ]
+  },
+  {
+    "donor_id": "D129",
+    "archive": "torrent-live-master.zip",
+    "path": "/mnt/data/torrent-live-master.zip",
+    "sha256": "7061135e69d856c27f5244328426cc648874376fb8117441744cd599bf791f4e",
+    "size_bytes": 1168877,
+    "kind": "zip",
+    "members": 117,
+    "files": 96,
+    "dirs": 21,
+    "symlinks": 0,
+    "uncompressed_bytes": 1506365,
+    "root_names": [
+      "torrent-live-master"
+    ]
+  }
+]

@@ -1,0 +1,62 @@
+[
+  {
+    "id": "dashboard",
+    "label": "Overview",
+    "icon": "",
+    "description": "Health, safety posture, and recommended actions"
+  },
+  {
+    "id": "actions",
+    "label": "Action catalog",
+    "icon": "",
+    "description": "Search every WinCare command and capability"
+  },
+  {
+    "id": "profiles",
+    "label": "Profiles",
+    "icon": "",
+    "description": "Curated safe, hardening, and destructive profiles"
+  },
+  {
+    "id": "health",
+    "label": "Health & storage",
+    "icon": "",
+    "description": "Diagnostics, repair evidence, cleanup, and disks"
+  },
+  {
+    "id": "security",
+    "label": "Security",
+    "icon": "",
+    "description": "Defender, firewall, WDAC, privacy, and hardening"
+  },
+  {
+    "id": "maintenance",
+    "label": "Maintenance",
+    "icon": "",
+    "description": "Updates, automation, recovery, and reports"
+  },
+  {
+    "id": "network",
+    "label": "Network",
+    "icon": "",
+    "description": "Adapters, DNS, WLAN, measurement, and experiments"
+  },
+  {
+    "id": "workspace",
+    "label": "Workspace",
+    "icon": "",
+    "description": "Windows, layouts, devices, downloads, and productivity"
+  },
+  {
+    "id": "evidence",
+    "label": "Evidence",
+    "icon": "",
+    "description": "Convergence coverage, receipts, and validation"
+  },
+  {
+    "id": "settings",
+    "label": "Settings",
+    "icon": "",
+    "description": "Theme, accessibility, policy, and workspace mode"
+  }
+]

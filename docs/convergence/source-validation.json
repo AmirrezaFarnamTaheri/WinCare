@@ -1,0 +1,12 @@
+{
+  "root": ".",
+  "powershellFiles": 151,
+  "functions": 960,
+  "references": 936,
+  "actionContracts": 116,
+  "headlessCommands": 236,
+  "menuActions": 47,
+  "errors": [],
+  "warnings": [],
+  "status": "passed"
+}

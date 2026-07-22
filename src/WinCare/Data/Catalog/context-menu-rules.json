@@ -1,0 +1,152 @@
+{
+  "schemaVersion": 1,
+  "rules": [
+    {
+      "id": "terminal-here",
+      "title": "Open Windows Terminal here",
+      "description": "Adds user-scoped directory and background entries that open Windows Terminal in the selected folder.",
+      "risk": "Moderate",
+      "requiresAdmin": false,
+      "minimumBuild": 19041,
+      "requiredExecutables": ["wt.exe"],
+      "sourceRecords": ["D19-CONTEXT-MENU-PAIRS", "D29-MODERN-MENU-SCHEMA"],
+      "trees": [
+        {"path":"HKCU:\\Software\\Classes\\Directory\\Background\\shell\\WinCare.Terminal","values":[{"name":"","value":"Open in Windows Terminal","valueType":"String"},{"name":"Icon","value":"wt.exe","valueType":"String"}],"deleteValues":[],"deleteSubKeys":[]},
+        {"path":"HKCU:\\Software\\Classes\\Directory\\Background\\shell\\WinCare.Terminal\\command","values":[{"name":"","value":"wt.exe -d \"%V\"","valueType":"String"}],"deleteValues":[],"deleteSubKeys":[]},
+        {"path":"HKCU:\\Software\\Classes\\Directory\\shell\\WinCare.Terminal","values":[{"name":"","value":"Open in Windows Terminal","valueType":"String"},{"name":"Icon","value":"wt.exe","valueType":"String"}],"deleteValues":[],"deleteSubKeys":[]},
+        {"path":"HKCU:\\Software\\Classes\\Directory\\shell\\WinCare.Terminal\\command","values":[{"name":"","value":"wt.exe -d \"%1\"","valueType":"String"}],"deleteValues":[],"deleteSubKeys":[]}
+      ]
+    },
+    {
+      "id": "powershell7-here",
+      "title": "Open PowerShell 7 here",
+      "description": "Adds user-scoped directory and background entries for PowerShell 7.",
+      "risk": "Moderate",
+      "requiresAdmin": false,
+      "minimumBuild": 10240,
+      "requiredExecutables": ["pwsh.exe"],
+      "sourceRecords": ["D19-CONTEXT-MENU-PAIRS", "D21-SHELL-SERVICE"],
+      "trees": [
+        {"path":"HKCU:\\Software\\Classes\\Directory\\Background\\shell\\WinCare.PowerShell7","values":[{"name":"","value":"Open PowerShell 7 here","valueType":"String"},{"name":"Icon","value":"pwsh.exe","valueType":"String"}],"deleteValues":[],"deleteSubKeys":[]},
+        {"path":"HKCU:\\Software\\Classes\\Directory\\Background\\shell\\WinCare.PowerShell7\\command","values":[{"name":"","value":"pwsh.exe -NoExit -Command Set-Location -LiteralPath '%V'","valueType":"String"}],"deleteValues":[],"deleteSubKeys":[]},
+        {"path":"HKCU:\\Software\\Classes\\Directory\\shell\\WinCare.PowerShell7","values":[{"name":"","value":"Open PowerShell 7 here","valueType":"String"},{"name":"Icon","value":"pwsh.exe","valueType":"String"}],"deleteValues":[],"deleteSubKeys":[]},
+        {"path":"HKCU:\\Software\\Classes\\Directory\\shell\\WinCare.PowerShell7\\command","values":[{"name":"","value":"pwsh.exe -NoExit -Command Set-Location -LiteralPath '%1'","valueType":"String"}],"deleteValues":[],"deleteSubKeys":[]}
+      ]
+    },
+    {
+      "id": "command-prompt-here",
+      "title": "Open Command Prompt here",
+      "description": "Adds an extended user-scoped command prompt entry for directory backgrounds.",
+      "risk": "Moderate",
+      "requiresAdmin": false,
+      "minimumBuild": 10240,
+      "requiredExecutables": ["cmd.exe"],
+      "sourceRecords": ["D19-CONTEXT-MENU-PAIRS"],
+      "trees": [
+        {"path":"HKCU:\\Software\\Classes\\Directory\\Background\\shell\\WinCare.CommandPrompt","values":[{"name":"","value":"Open Command Prompt here","valueType":"String"},{"name":"Extended","value":"","valueType":"String"},{"name":"Icon","value":"cmd.exe","valueType":"String"}],"deleteValues":[],"deleteSubKeys":[]},
+        {"path":"HKCU:\\Software\\Classes\\Directory\\Background\\shell\\WinCare.CommandPrompt\\command","values":[{"name":"","value":"cmd.exe /s /k pushd \"%V\"","valueType":"String"}],"deleteValues":[],"deleteSubKeys":[]}
+      ]
+    },
+    {
+      "id": "vscode-open",
+      "title": "Open with Visual Studio Code",
+      "description": "Adds user-scoped file, directory, and directory-background entries for Visual Studio Code.",
+      "risk": "Moderate",
+      "requiresAdmin": false,
+      "minimumBuild": 10240,
+      "requiredExecutables": ["code.exe"],
+      "sourceRecords": ["D19-VSCODE-CONTEXT", "D29-MENU-FILTERS"],
+      "trees": [
+        {"path":"HKCU:\\Software\\Classes\\*\\shell\\WinCare.VSCode","values":[{"name":"","value":"Open with Visual Studio Code","valueType":"String"},{"name":"Icon","value":"code.exe","valueType":"String"}],"deleteValues":[],"deleteSubKeys":[]},
+        {"path":"HKCU:\\Software\\Classes\\*\\shell\\WinCare.VSCode\\command","values":[{"name":"","value":"code.exe -- \"%1\"","valueType":"String"}],"deleteValues":[],"deleteSubKeys":[]},
+        {"path":"HKCU:\\Software\\Classes\\Directory\\shell\\WinCare.VSCode","values":[{"name":"","value":"Open with Visual Studio Code","valueType":"String"},{"name":"Icon","value":"code.exe","valueType":"String"}],"deleteValues":[],"deleteSubKeys":[]},
+        {"path":"HKCU:\\Software\\Classes\\Directory\\shell\\WinCare.VSCode\\command","values":[{"name":"","value":"code.exe -- \"%1\"","valueType":"String"}],"deleteValues":[],"deleteSubKeys":[]},
+        {"path":"HKCU:\\Software\\Classes\\Directory\\Background\\shell\\WinCare.VSCode","values":[{"name":"","value":"Open with Visual Studio Code","valueType":"String"},{"name":"Icon","value":"code.exe","valueType":"String"}],"deleteValues":[],"deleteSubKeys":[]},
+        {"path":"HKCU:\\Software\\Classes\\Directory\\Background\\shell\\WinCare.VSCode\\command","values":[{"name":"","value":"code.exe -- \"%V\"","valueType":"String"}],"deleteValues":[],"deleteSubKeys":[]}
+      ]
+    },
+    {
+      "id": "git-bash-here",
+      "title": "Open Git Bash here",
+      "description": "Adds a user-scoped Git Bash entry when git-bash.exe is available.",
+      "risk": "Moderate",
+      "requiresAdmin": false,
+      "minimumBuild": 10240,
+      "requiredExecutables": ["git-bash.exe"],
+      "sourceRecords": ["D19-GIT-CONTEXT"],
+      "trees": [
+        {"path":"HKCU:\\Software\\Classes\\Directory\\Background\\shell\\WinCare.GitBash","values":[{"name":"","value":"Git Bash Here","valueType":"String"},{"name":"Icon","value":"git-bash.exe","valueType":"String"}],"deleteValues":[],"deleteSubKeys":[]},
+        {"path":"HKCU:\\Software\\Classes\\Directory\\Background\\shell\\WinCare.GitBash\\command","values":[{"name":"","value":"git-bash.exe --cd=\"%V\"","valueType":"String"}],"deleteValues":[],"deleteSubKeys":[]}
+      ]
+    },
+    {
+      "id": "defender-scan-file",
+      "title": "Scan with Microsoft Defender",
+      "description": "Adds a user-scoped file entry that invokes the supported Defender command-line scanner for the selected path.",
+      "risk": "Moderate",
+      "requiresAdmin": false,
+      "minimumBuild": 10240,
+      "requiredExecutables": ["MpCmdRun.exe"],
+      "sourceRecords": ["D19-DEFENDER-CONTEXT", "D20-DEFENDER-HARDENING"],
+      "trees": [
+        {"path":"HKCU:\\Software\\Classes\\*\\shell\\WinCare.DefenderScan","values":[{"name":"","value":"Scan with Microsoft Defender","valueType":"String"},{"name":"Icon","value":"%ProgramFiles%\\Windows Defender\\MpCmdRun.exe","valueType":"ExpandString"}],"deleteValues":[],"deleteSubKeys":[]},
+        {"path":"HKCU:\\Software\\Classes\\*\\shell\\WinCare.DefenderScan\\command","values":[{"name":"","value":"\"%ProgramFiles%\\Windows Defender\\MpCmdRun.exe\" -Scan -ScanType 3 -File \"%1\"","valueType":"ExpandString"}],"deleteValues":[],"deleteSubKeys":[]}
+      ]
+    },
+    {
+      "id": "notepad-edit",
+      "title": "Edit with Notepad",
+      "description": "Adds an extended user-scoped file entry for Notepad.",
+      "risk": "Moderate",
+      "requiresAdmin": false,
+      "minimumBuild": 10240,
+      "requiredExecutables": ["notepad.exe"],
+      "sourceRecords": ["D19-CONTEXT-MENU-PAIRS"],
+      "trees": [
+        {"path":"HKCU:\\Software\\Classes\\*\\shell\\WinCare.Notepad","values":[{"name":"","value":"Edit with Notepad","valueType":"String"},{"name":"Extended","value":"","valueType":"String"},{"name":"Icon","value":"notepad.exe","valueType":"String"}],"deleteValues":[],"deleteSubKeys":[]},
+        {"path":"HKCU:\\Software\\Classes\\*\\shell\\WinCare.Notepad\\command","values":[{"name":"","value":"notepad.exe \"%1\"","valueType":"String"}],"deleteValues":[],"deleteSubKeys":[]}
+      ]
+    },
+    {
+      "id": "new-markdown-file",
+      "title": "Markdown file in New menu",
+      "description": "Adds a .md ShellNew entry for the current user.",
+      "risk": "Moderate",
+      "requiresAdmin": false,
+      "minimumBuild": 10240,
+      "requiredExecutables": [],
+      "sourceRecords": ["D19-NEW-MARKDOWN"],
+      "trees": [
+        {"path":"HKCU:\\Software\\Classes\\.md","values":[{"name":"","value":"markdownfile","valueType":"String"}],"deleteValues":[],"deleteSubKeys":[]},
+        {"path":"HKCU:\\Software\\Classes\\.md\\ShellNew","values":[{"name":"NullFile","value":"","valueType":"String"}],"deleteValues":[],"deleteSubKeys":[]},
+        {"path":"HKCU:\\Software\\Classes\\markdownfile","values":[{"name":"","value":"Markdown Document","valueType":"String"}],"deleteValues":[],"deleteSubKeys":[]}
+      ]
+    },
+    {
+      "id": "extended-vlc-play",
+      "title": "Move VLC play action to Shift+right-click",
+      "description": "Marks the VLC Play shell verb as Extended when the user-scoped verb exists.",
+      "risk": "Moderate",
+      "requiresAdmin": false,
+      "minimumBuild": 10240,
+      "requiredExecutables": ["vlc.exe"],
+      "sourceRecords": ["D19-VLC-EXTENDED"],
+      "trees": [
+        {"path":"HKCU:\\Software\\Classes\\Directory\\shell\\PlayWithVLC","values":[{"name":"Extended","value":"","valueType":"String"}],"deleteValues":[],"deleteSubKeys":[]}
+      ]
+    },
+    {
+      "id": "explorer-copy-naming",
+      "title": "Use readable Explorer copy names",
+      "description": "Sets current-user Explorer copy naming templates without importing a broad .reg file.",
+      "risk": "Moderate",
+      "requiresAdmin": false,
+      "minimumBuild": 10240,
+      "requiredExecutables": [],
+      "sourceRecords": ["D19-COPY-NAMING"],
+      "trees": [
+        {"path":"HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\NamingTemplates","values":[{"name":"CopyNameTemplate","value":"%s - Copy","valueType":"String"}],"deleteValues":[],"deleteSubKeys":[]}
+      ]
+    }
+  ]
+}

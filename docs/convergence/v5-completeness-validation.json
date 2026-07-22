@@ -1,0 +1,68 @@
+{
+  "schema": "wincare.v5.completeness/v2",
+  "root": ".",
+  "status": "passed",
+  "gui": {
+    "namedControls": 77,
+    "runtimeControlBindings": 73,
+    "xamlResourceDefinitions": 25,
+    "xamlResourceReferences": 25,
+    "missingXamlResources": [],
+    "visibleSubmittedDonors": 166,
+    "visibleUniqueBaselines": 153,
+    "navigationItems": 10,
+    "curatedActions": 40,
+    "headlessCommands": 236,
+    "criticalCuratedActions": 6,
+    "pesterSuites": 18,
+    "pesterCases": 217,
+    "guiPesterCases": 12,
+    "contrast": [
+      {
+        "foreground": "#F4F7FB",
+        "background": "#0B1020",
+        "ratio": 17.62,
+        "minimum": 4.5
+      },
+      {
+        "foreground": "#9AA9C3",
+        "background": "#121A2B",
+        "ratio": 7.313,
+        "minimum": 4.5
+      },
+      {
+        "foreground": "#F97066",
+        "background": "#512128",
+        "ratio": 4.717,
+        "minimum": 4.5
+      },
+      {
+        "foreground": "#36C5F0",
+        "background": "#173B46",
+        "ratio": 5.942,
+        "minimum": 4.5
+      },
+      {
+        "foreground": "#2DD4A8",
+        "background": "#173D35",
+        "ratio": 6.32,
+        "minimum": 4.5
+      },
+      {
+        "foreground": "#F6C85F",
+        "background": "#3D3520",
+        "ratio": 7.721,
+        "minimum": 4.5
+      }
+    ]
+  },
+  "convergence": {
+    "submittedDonors": 166,
+    "uniqueBaselines": 153,
+    "semanticRecords": 615,
+    "classifiedSurfaces": 52629,
+    "v5SynthesisRecords": 5
+  },
+  "errors": [],
+  "warnings": []
+}

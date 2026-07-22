@@ -1,0 +1,9 @@
+WinCare 4.3 convergence target baseline
+
+Baseline release: WinCare 4.2.0
+Baseline archive SHA-256: 04628ce2a5b3b1024a4482d194a85cee3a1d0a641af809f34f913a41dfd1411c
+Baseline source commit: fabe87d256df3d4fc1c8b28d0747d4ee237cbdf3
+Operating mode: release convergence
+New donor range: D53-D69
+Explicit authority exclusion: cheat execution, memory patching, DLL/process injection, anti-cheat bypass, credential/session theft, arbitrary scripts/macros/RPC/plugin execution
+Validation boundary: Linux static/evidence/package checks; Windows-native execution pending

@@ -1,0 +1,49 @@
+{
+  "schema": "wincare.wave7.archive-inventory/v1",
+  "archives": [
+    {
+      "donor_id": "D106",
+      "archive": "WindowsMods-master(3).zip",
+      "archive_sha256": "ad17657cba149c1845baed4018d0a21295752bff8e060b6b85f79a9bda180ea5",
+      "archive_bytes": 25060,
+      "member_count": 18,
+      "regular_files": 17,
+      "expanded_bytes": 56093,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "donor_id": "D107",
+      "archive": "WindowsCleanerUtility-main(2).zip",
+      "archive_sha256": "8dee4ab1a7adadc7ae166266d99bad84bed61f4d64f05be4da654174ae7a5b7f",
+      "archive_bytes": 16920,
+      "member_count": 4,
+      "regular_files": 3,
+      "expanded_bytes": 47819,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "donor_id": "D108",
+      "archive": "Remove-MS-Store-Apps-master(2).zip",
+      "archive_sha256": "19332d10f9bad179cb3f05f0dad6545279098cd7b777a8c6df13477a4372117a",
+      "archive_bytes": 10179,
+      "member_count": 9,
+      "regular_files": 7,
+      "expanded_bytes": 28544,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "donor_id": "D109",
+      "archive": "windows-master (2).zip",
+      "archive_sha256": "7d05b308b0286a10c96e02b08e80d01d45d0afc5b44f4503a0ed124945b56d5c",
+      "archive_bytes": 210379,
+      "member_count": 72,
+      "regular_files": 60,
+      "expanded_bytes": 578480,
+      "errors": [],
+      "warnings": []
+    }
+  ]
+}

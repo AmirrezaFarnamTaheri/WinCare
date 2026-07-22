@@ -1,0 +1,5 @@
+WinCare 4.1 expert convergence baseline
+Target source: WinCare 4.0.0 cumulative release
+Requested reopened domains: page-file management; expiring Defender/UAC/SmartScreen/Windows Update maintenance; measured TCP experiments; supported process instrumentation and injection-surface defense.
+Authority boundary: no permanent optimization-branded security reduction and no arbitrary process injection.
+Validation boundary: source/evidence/package checks available on Linux; Windows-native execution remains mandatory before production promotion.
