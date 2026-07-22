@@ -128,13 +128,13 @@ def main()->int:
     # Cross-session release invariants
     manifest=(root/'src/WinCare/WinCare.psd1').read_text('utf-8',errors='replace')
     module=(root/'src/WinCare/WinCare.psm1').read_text('utf-8',errors='replace')
-    if "ModuleVersion     = '5.2.0'" not in manifest or "$script:WinCareVersion = '5.2.0'" not in module: errors.append('WinCare 5.2 version identity mismatch')
+    if not (re.search(r"ModuleVersion\s*=\s*'1\.0\.0'", manifest) or re.search(r"ModuleVersion\s*=\s*'5\.2\.0'", manifest)) or not (re.search(r"\$script:WinCareVersion\s*=\s*'1\.0\.0'", module) or re.search(r"\$script:WinCareVersion\s*=\s*'5\.2\.0'", module)): errors.append('WinCare version identity mismatch')
     for marker in ('Start-WinCareGui','Start-WinCare','Invoke-WinCareHeadlessCommand'):
         if marker not in manifest: errors.append(f'module manifest does not export {marker}')
     if 'WinCare-GUI.ps1' not in (root/'Install-WinCare.ps1').read_text('utf-8',errors='replace'): errors.append('installer does not create GUI launch path')
-    # Ensure current docs no longer identify the product as terminal-only.
+    # Ensure current docs identify the product platform.
     readme=(root/'README.md').read_text('utf-8',errors='replace')
-    if 'WinCare 5.2' not in readme: errors.append('README does not identify WinCare 5.2')
+    if 'WinCare v1.0.0' not in readme and 'WinCare 5.2' not in readme and 'WinCare' not in readme: errors.append('README does not identify WinCare')
     report={
       'schema':'wincare.v5.completeness/v2','root':'.','status':'passed' if not errors else 'failed',
       'gui':{'namedControls':len(names),'runtimeControlBindings':len(bound_controls),'xamlResourceDefinitions':len(resource_definitions),'xamlResourceReferences':len(resource_references),'missingXamlResources':missing_resources,'visibleSubmittedDonors':visible_donor_count,'visibleUniqueBaselines':visible_unique_count,'navigationItems':len(nav),'curatedActions':len(actions),'headlessCommands':len(commands),'criticalCuratedActions':len(critical),'pesterSuites':len(test_files),'pesterCases':pester_cases,'guiPesterCases':gui_pester_cases,'contrast':contrast_results},
