@@ -2,11 +2,11 @@
   "schema": "wincare.convergence.validation/v1",
   "root": ".",
   "evidence": {
-    "adoptionMatrix": "docs/convergence/adoption-matrix.csv",
+    "adoptionMatrix": "docs\\convergence\\adoption-matrix.csv",
     "adoptionMatrixSha256": "103985b149becb1e1c5053bb2636207bceec52c40ca7aa6889e8219180a035b7",
-    "surfaceMatrix": "docs/convergence/surface-accountability.csv",
+    "surfaceMatrix": "docs\\convergence\\surface-accountability.csv",
     "surfaceMatrixSha256": "481b526d1bf6428a2f721cf515d535b6bfd4773007162f020ddb994e06989b4a",
-    "donorInventory": "docs/convergence/donor-inventory.json",
+    "donorInventory": "docs\\convergence\\donor-inventory.json",
     "donorInventorySha256": "2218e088b695a0105ed8aacc4e852a31e59ace2fdc7baf29f67515b959cb49b1"
   },
   "counts": {

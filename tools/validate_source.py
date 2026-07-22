@@ -119,8 +119,10 @@ def main()->int:
     if 'Get-WinCareActionContractTable' not in proc or 'HMACSHA256' not in proc or 'FixedTimeEquals' not in proc: errors.append('elevation broker is not contract-derived and authenticated')
     wdac=(root/'src/WinCare/Providers/76-WDAC.ps1').read_text('utf-8')
     if re.search(r'Copy-Item.*CodeIntegrity|Remove-Item.*CodeIntegrity',wdac,re.I): errors.append('WDAC provider writes policy directories directly')
-    all_text='\n'.join(p.read_text('utf-8',errors='replace') for p in files)
-    if re.search(r'(?i)(analytics|telemetry).*(http|invoke-restmethod|invoke-webrequest)',all_text): errors.append('telemetry/network emission detected')
+    for p in files:
+        text=p.read_text('utf-8',errors='replace')
+        if re.search(r'(?i)(analytics|telemetry).*(http|invoke-restmethod|invoke-webrequest)',text):
+            errors.append(f'{p}: telemetry/network emission detected')
     ledger=root/'docs/convergence/adoption-matrix.csv';surface=root/'docs/convergence/surface-accountability.csv'
     if ledger.exists():
         rows=list(csv.DictReader(ledger.open(encoding='utf-8')));ids=[r.get('record_id','') for r in rows]
@@ -130,6 +132,9 @@ def main()->int:
     report={'root':'.','powershellFiles':len(files),'functions':len(funcs),'references':len(refs),'actionContracts':len(contracts),'headlessCommands':len(listed),'menuActions':len(menu),'errors':errors,'warnings':warnings,'status':'passed' if not errors else 'failed'}
     payload=json.dumps(report,indent=2)
     print(payload)
-    if args.json_output: Path(args.json_output).write_text(payload+'\n',encoding='utf-8')
+    if args.json_output:
+        p = Path(args.json_output)
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_text(payload+'\n',encoding='utf-8')
     return 0 if not errors else 1
 if __name__=='__main__': raise SystemExit(main())

@@ -16,7 +16,7 @@ function Show-WinCarePeerUtilitiesScreen {
             [pscustomobject]@{Label='Log snapshot';Description='Tail a file or inspect a Windows Event Log with an optional regex filter';Action='Logs'},
             [pscustomobject]@{Label='PE metadata';Description='Read MZ/PE headers, architecture, hash, version, and signature without execution';Action='Pe'},
             [pscustomobject]@{Label='Container log configuration';Description='Generate strict EventLog/file/ETW-to-stdout configuration under WinCare state';Action='Container'},
-            [pscustomobject]@{Label='Local task board';Description='Private task notes with Todo, Doing, and Done states';Action='Tasks'},
+            [pscustomobject]@{Label='Local task board';Description='Private task notes with Pending, Doing, and Done states';Action='Tasks'},
             [pscustomobject]@{Label='Back';Description='Return to main menu';Action='Back'}
         )
         $choice=Show-WinCareMenu -Title 'Peer utilities and Legacy Unsafe' -Subtitle 'Donor behavior is target-native, policy-gated, previewed, journaled, and recoverable where technically possible' -Items $menu

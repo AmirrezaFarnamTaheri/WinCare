@@ -19,16 +19,20 @@ function Test-WinCareCatalogRule {
         $missing=@($contract.Required|Where-Object{$_ -notin @($parameters.Keys)});if($missing.Count){throw "Rule $($Rule.id) is missing action parameter(s): $($missing -join ', ')"}
         $unknown=@($parameters.Keys|Where-Object{$_ -notin @($contract.Allowed)});if($unknown.Count){throw "Rule $($Rule.id) contains unknown action parameter(s): $($unknown -join ', ')"}
         $plainParameters=@{};foreach($key in $parameters.Keys){$plainParameters[[string]$key]=$parameters[$key]}
-        $candidate=New-WinCareAction -Type ([string]$change.type) -Label "Validate catalog rule $($Rule.id)" -Risk ([string]$Rule.risk) -Parameters $plainParameters -RequiresAdmin ([bool]$Rule.requiresAdmin) -Reversible $false -Verification ([string]$change.verification) -Preconditions @($change.preconditions) -Postconditions @($change.postconditions) -TimeoutSeconds ([Math]::Min(3600,[int]$contract.MaximumTimeout)) -Tags @($Rule.tags) -SourceRecords @($Rule.sourceRecords)
-        if([bool]$Rule.reversible -and -not $change.compensator -and [string]$change.type -notin @('SetRegistryValue','SetOptionalFeatureState','SetCapabilityState','SetDefenderPreference','SetServiceStartMode','SetScheduledTaskState','SetFirewallProfileState','SetLocalUserState','SetPowerScheme')){throw "Rule $($Rule.id) claims reversibility but $($change.type) has no static or provider-derived compensator."}
+        $verif = if ($change.Contains('verification')) { [string]$change.verification } elseif ($change.PSObject.Properties['verification']) { [string]$change.verification } else { '' }
+        $preconds = if ($change.Contains('preconditions')) { @($change.preconditions) } elseif ($change.PSObject.Properties['preconditions']) { @($change.preconditions) } else { @() }
+        $postconds = if ($change.Contains('postconditions')) { @($change.postconditions) } elseif ($change.PSObject.Properties['postconditions']) { @($change.postconditions) } else { @() }
+        $comp = if ($change.Contains('compensator')) { $change.compensator } elseif ($change.PSObject.Properties['compensator']) { $change.compensator } else { $null }
+        $candidate=New-WinCareAction -Type ([string]$change.type) -Label "Validate catalog rule $($Rule.id)" -Risk ([string]$Rule.risk) -Parameters $plainParameters -RequiresAdmin ([bool]$Rule.requiresAdmin) -Reversible $false -Verification $verif -Preconditions $preconds -Postconditions $postconds -TimeoutSeconds ([Math]::Min(3600,[int]$contract.MaximumTimeout)) -Tags @($Rule.tags) -SourceRecords @($Rule.sourceRecords)
+        if([bool]$Rule.reversible -and -not $comp -and [string]$change.type -notin @('SetRegistryValue','SetOptionalFeatureState','SetCapabilityState','SetDefenderPreference','SetServiceStartMode','SetScheduledTaskState','SetFirewallProfileState','SetLocalUserState','SetPowerScheme')){throw "Rule $($Rule.id) claims reversibility but $($change.type) has no static or provider-derived compensator."}
         $candidateValidation=Test-WinCareActionContract -Action $candidate
         if(-not $candidateValidation.Success){throw "Rule $($Rule.id) has invalid $($change.type) semantics: $($candidateValidation.Message)"}
-        if($change.compensator){
-            $null=Test-WinCareStrictObjectKeys -InputObject $change.compensator -AllowedKeys @('Type','Parameters','RequiresAdmin') -Context "compensator in $($Rule.id)"
-            $compensatorContract=Get-WinCareActionContract -Type ([string]$change.compensator.Type)
+        if($comp){
+            $null=Test-WinCareStrictObjectKeys -InputObject $comp -AllowedKeys @('Type','Parameters','RequiresAdmin') -Context "compensator in $($Rule.id)"
+            $compensatorContract=Get-WinCareActionContract -Type ([string]$comp.Type)
             if(-not $compensatorContract){throw "Rule $($Rule.id) contains an unknown compensator type."}
-            $compensatorParameters=ConvertTo-WinCareParameterDictionary $change.compensator.Parameters;$plainCompensator=@{};foreach($key in $compensatorParameters.Keys){$plainCompensator[[string]$key]=$compensatorParameters[$key]}
-            $compensatorAction=New-WinCareAction -Type ([string]$change.compensator.Type) -Label "Validate compensator for $($Rule.id)" -Risk ([string]$compensatorContract.MinimumRisk) -Parameters $plainCompensator -RequiresAdmin ([bool]$change.compensator.RequiresAdmin -or [bool]$compensatorContract.AlwaysAdmin) -TimeoutSeconds ([Math]::Min(3600,[int]$compensatorContract.MaximumTimeout))
+            $compensatorParameters=ConvertTo-WinCareParameterDictionary $comp.Parameters;$plainCompensator=@{};foreach($key in $compensatorParameters.Keys){$plainCompensator[[string]$key]=$compensatorParameters[$key]}
+            $compensatorAction=New-WinCareAction -Type ([string]$comp.Type) -Label "Validate compensator for $($Rule.id)" -Risk ([string]$compensatorContract.MinimumRisk) -Parameters $plainCompensator -RequiresAdmin ([bool]$comp.RequiresAdmin -or [bool]$compensatorContract.AlwaysAdmin) -TimeoutSeconds ([Math]::Min(3600,[int]$compensatorContract.MaximumTimeout))
             $compensatorValidation=Test-WinCareActionContract -Action $compensatorAction
             if(-not $compensatorValidation.Success){throw "Rule $($Rule.id) has an invalid compensator: $($compensatorValidation.Message)"}
         }

@@ -1,6 +1,6 @@
 # WinCare v1.0.0 Enterprise Operations & Diagnostic Workstation
 
-WinCare v1.0.0 is a policy-governed system operations, diagnostic, threat hunting, DPI bypass, and self-healing workstation platform for Windows 10/11.
+WinCare 1.0 (v1.0.0) is a policy-governed system operations, diagnostic, threat hunting, DPI bypass, and self-healing workstation platform for Windows 10/11.
 
 Driven by a single typed engine supporting safe execution, previewing, authorization, journaling, and recovery, WinCare exposes its full capabilities via a native WPF GUI, a Spectre.Console TUI, and a machine-readable REST/JSON API.
 
@@ -112,4 +112,4 @@ If you find WinCare useful and would like to support ongoing development, mainte
 
 ## ⚖️ License & Provenance
 
-WinCare v1.0.0 is released under the **MIT License**. All native components, C# P/Invoke assemblies, Rust FFI libraries, Go micro-services, and PowerShell provider scripts are cleanly authored, verified, and self-contained.
+WinCare v1.0.0 is released under the **Apache License 2.0**. All native components, C# P/Invoke assemblies, Rust FFI libraries, Go micro-services, and PowerShell provider scripts are cleanly authored, verified, and self-contained.

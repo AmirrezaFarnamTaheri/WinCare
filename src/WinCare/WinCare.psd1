@@ -272,7 +272,7 @@
     PrivateData = @{
         PSData = @{
             Tags       = @('Windows','GUI','WPF','TUI','Maintenance','Cleanup','Security','Defender','WinGet','AppX','WDAC','WUA','Provisioning','Automation','Recovery','Hardening','ContextMenu','Widgets','Playbooks','OfflineImage','Bluetooth','PageFile','SmartScreen','UAC','ETW','NetworkExperiments','Instrumentation','PowerSessions','WindowManagement','Color','LocalNotes','Browser','RemoteSupport')
-            LicenseUri = 'https://opensource.org/license/mit'
+            LicenseUri = 'https://www.apache.org/licenses/LICENSE-2.0'
         }
     }
 }

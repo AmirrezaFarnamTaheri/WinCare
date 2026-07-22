@@ -1,8 +1,8 @@
-# WinCare 5.2 architecture
+# WinCare 1.0 Architecture
 
 Architecture
 
-WinCare 5.2 is a layered PowerShell 7 application with one authoritative mutation path. It cumulatively accounts for 166 submitted donor IDs representing 153 unique archive baselines and converges selected semantics into target-native capabilities while keeping UI, automation, extensions, maintenance scheduling, offline servicing, and elevated execution non-authoritative.
+WinCare 1.0 is a policy-governed Windows workstation platform with one authoritative mutation path. It cumulatively accounts for 166 submitted donor IDs representing 153 unique archive baselines and converges selected semantics into target-native capabilities while keeping UI, automation, extensions, maintenance scheduling, offline servicing, and elevated execution non-authoritative.
 
 ## Layers
 

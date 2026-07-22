@@ -1,6 +1,6 @@
 Describe "WinCare Phase 2 Provider Suite" {
     BeforeAll {
-        $providerRoot = "D:\WinCare-5.2.0\WinCare-5.2.0\src\WinCare\Providers"
+        $providerRoot = Join-Path $PSScriptRoot "..\..\..\src\WinCare\Providers"
         . (Join-Path $providerRoot "25-SystemPolicy.ps1")
         . (Join-Path $providerRoot "27-RegistryTree.ps1")
         . (Join-Path $providerRoot "50-Health.ps1")

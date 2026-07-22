@@ -78,7 +78,7 @@ if($analyzer){
     }catch{$failures.Add("PSScriptAnalyzer execution: $($_.Exception.Message)")}
 }elseif($RequirePSScriptAnalyzer){$failures.Add('PSScriptAnalyzer is required but unavailable.')}else{$warnings.Add('PSScriptAnalyzer was unavailable and not required for this invocation.')}
 
-$python=Get-Command python3,python -ErrorAction SilentlyContinue|Select-Object -First 1
+$python=Get-Command 'C:\Program Files\Python311\python.exe',python,python3 -ErrorAction SilentlyContinue|Where-Object{$_.Source -notmatch 'WindowsApps'}|Select-Object -First 1
 if($python){
     foreach($validator in @('validate_source.py','validate_convergence.py')){
         $path=Join-Path $PSScriptRoot $validator

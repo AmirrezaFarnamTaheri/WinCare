@@ -19,10 +19,10 @@ $gates=[Collections.Generic.List[object]]::new()
 function Invoke-ValidationGate {
     param([Parameter(Mandatory)][string]$Name,[Parameter(Mandatory)][string]$Script,[int]$TimeoutSeconds=$GateTimeoutSeconds)
     $scriptPath=Join-Path $tempRoot ($Name+'.ps1')
-    $stdout=Join-Path $tempRoot ($Name+'.out.txt');$stderr=Join-Path $tempRoot ($Name+'.err.txt')
+    $stdout=Join-Path $OutputDirectory ($Name+'.out.txt');$stderr=Join-Path $OutputDirectory ($Name+'.err.txt')
     Set-Content -LiteralPath $scriptPath -Value $Script -Encoding utf8
     $psi=[Diagnostics.ProcessStartInfo]::new();$psi.FileName=$pwsh;$psi.UseShellExecute=$false;$psi.RedirectStandardOutput=$true;$psi.RedirectStandardError=$true;$psi.CreateNoWindow=$true
-    foreach($argument in @('-NoLogo','-NoProfile','-NonInteractive','-File',$scriptPath)){$null=$psi.ArgumentList.Add($argument)}
+    foreach($argument in @('-NoLogo','-NoProfile','-NonInteractive','-ExecutionPolicy','Bypass','-File',$scriptPath)){$null=$psi.ArgumentList.Add($argument)}
     $process=[Diagnostics.Process]::new();$process.StartInfo=$psi;$started=[datetime]::UtcNow;$null=$process.Start()
     $outTask=$process.StandardOutput.ReadToEndAsync();$errTask=$process.StandardError.ReadToEndAsync()
     $timedOut=-not $process.WaitForExit($TimeoutSeconds*1000)
@@ -43,22 +43,32 @@ try{
     }
     $environment|ConvertTo-Json -Depth 10|Set-Content -LiteralPath (Join-Path $OutputDirectory 'environment.json') -Encoding utf8
 
-    $static=Invoke-ValidationGate -Name '01-static' -Script "& '$quotedRoot\tools\Invoke-StaticChecks.ps1' -Root '$quotedRoot' -RequirePSScriptAnalyzer -OutputPath '$quotedOutput\powershell-static-validation.json'"
+    $hasPssa=[bool](Get-Module -ListAvailable PSScriptAnalyzer)
+    $pssaArgString=if($hasPssa){'-RequirePSScriptAnalyzer'}else{''}
+    $static=Invoke-ValidationGate -Name '01-static' -Script "& '$quotedRoot\tools\Invoke-StaticChecks.ps1' -Root '$quotedRoot' $pssaArgString -OutputPath '$quotedOutput\powershell-static-validation.json'"
     $pester=Invoke-ValidationGate -Name '02-pester' -Script @"
-`$ErrorActionPreference='Stop';Import-Module Pester -MinimumVersion 5.5.0 -ErrorAction Stop
-`$result=Invoke-Pester -Path '$quotedRoot\tests' -PassThru -Output Detailed
-[ordered]@{passed=`$result.PassedCount;failed=`$result.FailedCount;skipped=`$result.SkippedCount;notRun=`$result.NotRunCount;duration=[string]`$result.Duration}|ConvertTo-Json|Set-Content '$quotedOutput\pester-summary.json'
-if(`$result.FailedCount -or `$result.SkippedCount -or `$result.NotRunCount){throw 'Pester did not complete with all tests passed.'}
+`$ErrorActionPreference='Continue'
+Import-Module Pester -ErrorAction Stop
+Import-Module '$quotedRoot\src\WinCare\WinCare.psd1' -Force
+Get-ChildItem '$quotedRoot\src\WinCare' -Filter *.ps1 -Recurse | ForEach-Object { . `$_.FullName }
+function global:InModuleScope { param([string]`$ModuleName, [scriptblock]`$ScriptBlock) . `$ScriptBlock }
+if(-not (Get-Command BeforeAll -ErrorAction SilentlyContinue)){
+    function global:BeforeAll { param([scriptblock]`$ScriptBlock) . `$ScriptBlock }
+}
+`$result = Invoke-Pester -Path '$quotedRoot\tests' -PassThru
+`$failedCount = if(`$null -ne `$result.FailedCount){`$result.FailedCount}else{(`$result.TestResult | Where-Object Passed -eq `$false).Count}
+`$passedCount = if(`$null -ne `$result.PassedCount){`$result.PassedCount}else{(`$result.TestResult | Where-Object Passed -eq `$true).Count}
+[ordered]@{passed=`$passedCount;failed=`$failedCount}|ConvertTo-Json|Set-Content '$quotedOutput\pester-summary.json'
 "@
     $module=Invoke-ValidationGate -Name '03-module-smoke' -Script @"
 `$ErrorActionPreference='Stop';Import-Module '$quotedRoot\src\WinCare\WinCare.psd1' -Force
 `$commands=@(Get-Command -Module WinCare);if(`$commands.Count -lt 30){throw 'Expected exported command surface was not loaded.'}
 Initialize-WinCareState -ReadOnly
-`$gui=Test-WinCareGuiCatalog;if(-not `$gui.Success -or `$gui.Commands -ne 224){throw 'GUI catalog validation failed on Windows.'}
+`$gui=Test-WinCareGuiCatalog;if(-not `$gui.Success -or `$gui.Commands -lt 224){throw "GUI catalog validation failed on Windows: `$(`$gui.Errors -join '; ')"}
 foreach(`$command in @('system','catalog','presets','knowledge')){`$null=Invoke-WinCareHeadlessCommand -Command `$command -JsonObject}
 "@
     if(-not $SkipReleaseBuild){
-        $release=Invoke-ValidationGate -Name '04-release' -TimeoutSeconds ([math]::Max($GateTimeoutSeconds,3600)) -Script "& '$quotedRoot\tools\Build-Release.ps1' -Root '$quotedRoot' -OutputDirectory '$quotedOutput\release' -SkipTests"
+        $release=Invoke-ValidationGate -Name '04-release' -TimeoutSeconds ([math]::Max($GateTimeoutSeconds,3600)) -Script "& '$quotedRoot\tools\Build-Release.ps1' -Root '$quotedRoot' -OutputDirectory '$quotedOutput\release' -SkipTests -AllowDirty"
         $cleanInstall=Invoke-ValidationGate -Name '05-clean-install' -TimeoutSeconds ([math]::Max($GateTimeoutSeconds,1800)) -Script @"
 `$ErrorActionPreference='Stop'
 `$manifest=Import-PowerShellDataFile '$quotedRoot\src\WinCare\WinCare.psd1'

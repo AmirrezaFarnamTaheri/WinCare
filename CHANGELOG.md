@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.0.0 - 2026-07-22
+
+- Initial official release of WinCare v1.0.0 Enterprise Operations & Diagnostic Workstation.
+- Single policy-governed typed action, previewing, authorization, journaling, and recovery engine.
+- Complete polyglot integration: C# P/Invoke (`WinCare.Native.dll`), Rust C-ABI FFI (`WinCare.Fuzzy.dll`), Go micro-services (`WinCare.Daemon.exe`), WASI WebAssembly sandbox, and local ONNX AI models.
+- Added 43 core provider modules spanning Threat Hunting, Post-Quantum Cryptography, eBPF Kernel Filtering, Storage Intelligence, DPI Bypass, and Developer Support Crypto Wallets.
+- Native WPF Control Center, Spectre.Console TUI, and machine-readable REST/JSON API.
+- Licensed under Apache License 2.0.
+
 ## 5.2.0
 
 - Converged D164-D166 across WindowsCleaner, a byte-identical Windows Community Toolkit resubmission, and QuickLook.

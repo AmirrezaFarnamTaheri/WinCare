@@ -2,7 +2,7 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
 $script:WinCareModuleRoot = $PSScriptRoot
-$script:WinCareVersion = '5.2.0'
+$script:WinCareVersion = '1.0.0'
 $folders = @('Core','Providers','UI','UI/Gui','UI/Screens')
 foreach ($folder in $folders) {
     $path = Join-Path $PSScriptRoot $folder
