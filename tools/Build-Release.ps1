@@ -18,7 +18,7 @@ if(-not $SkipTests){
     $failedCount = if($null -ne $result.FailedCount){$result.FailedCount}else{($result.TestResult|Where-Object Passed -eq $false).Count}
     if($failedCount -gt 0){throw "Pester gate failed: failed=$failedCount."}
 }
-$python=Get-Command 'C:\Program Files\Python311\python.exe',python,python3 -ErrorAction SilentlyContinue|Where-Object{$_.Source -notmatch 'WindowsApps'}|Select-Object -First 1
+$python=Get-Command python,python3,'C:\Program Files\Python311\python.exe' -ErrorAction SilentlyContinue|Where-Object{$_.Source -notmatch 'WindowsApps'}|Select-Object -First 1
 if(-not $python){throw 'Python 3 is required by the deterministic release builder.'}
 $arguments=@((Join-Path $PSScriptRoot 'build_release.py'),$Root,'--output-directory',$OutputDirectory)
 if($AllowDirty){$arguments+='--allow-dirty'}
