@@ -20,10 +20,11 @@ if(-not $SkipTests){
 }
 $python=Get-Command python,python3,'C:\Program Files\Python311\python.exe' -ErrorAction SilentlyContinue|Where-Object{$_.Source -notmatch 'WindowsApps'}|Select-Object -First 1
 if(-not $python){throw 'Python 3 is required by the deterministic release builder.'}
-$arguments=@((Join-Path $PSScriptRoot 'build_release.py'),$Root,'--output-directory',$OutputDirectory)
+$scriptPath=Join-Path $PSScriptRoot 'build_release.py'
+$arguments=@($scriptPath, $Root, '--output-directory', $OutputDirectory)
 if($AllowDirty){$arguments+='--allow-dirty'}
-$process=Start-Process -FilePath $python.Source -ArgumentList $arguments -WorkingDirectory $Root -Wait -PassThru -NoNewWindow
-if($process.ExitCode -ne 0){throw 'Deterministic release build failed.'}
+& $python.Source @arguments
+if($LASTEXITCODE -ne 0){throw 'Deterministic release build failed.'}
 $version=(Import-PowerShellDataFile (Join-Path $Root 'src\WinCare\WinCare.psd1')).ModuleVersion
 $archive=Join-Path $OutputDirectory "WinCare-$version.zip"
 & (Join-Path $PSScriptRoot 'Test-ReleaseArchive.ps1') -ArchivePath $archive -OutputPath (Join-Path $OutputDirectory "WinCare-$version-archive-validation.json")

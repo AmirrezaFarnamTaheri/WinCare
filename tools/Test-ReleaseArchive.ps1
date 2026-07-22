@@ -9,7 +9,8 @@ $ErrorActionPreference='Stop'
 $resolved=(Resolve-Path -LiteralPath $ArchivePath -ErrorAction Stop).Path
 $python=Get-Command python,python3,'C:\Program Files\Python311\python.exe' -ErrorAction SilentlyContinue|Where-Object{$_.Source -notmatch 'WindowsApps'}|Select-Object -First 1
 if(-not $python){throw 'Python 3 is required for independent archive verification.'}
-$arguments=@((Join-Path $PSScriptRoot 'verify_release.py'),$resolved)
+$scriptPath=Join-Path $PSScriptRoot 'verify_release.py'
+$arguments=@($scriptPath,$resolved)
 if($OutputPath){$arguments+=@('--output',$OutputPath)}
-$process=Start-Process -FilePath $python.Source -ArgumentList $arguments -WorkingDirectory $PSScriptRoot -Wait -PassThru -NoNewWindow
-if($process.ExitCode -ne 0){throw 'Release archive verification failed.'}
+& $python.Source @arguments
+if($LASTEXITCODE -ne 0){throw 'Release archive verification failed.'}

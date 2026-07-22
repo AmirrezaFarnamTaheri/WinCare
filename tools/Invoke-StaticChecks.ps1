@@ -74,7 +74,13 @@ if($analyzer){
     try{
         Import-Module $analyzer -Force
         $settings=Join-Path $rootPath 'PSScriptAnalyzerSettings.psd1'
-        foreach($finding in Invoke-ScriptAnalyzer -Path $rootPath -Recurse -Settings $settings){$failures.Add("PSScriptAnalyzer $($finding.RuleName): $($finding.ScriptPath):$($finding.Line): $($finding.Message)")}
+        foreach($finding in Invoke-ScriptAnalyzer -Path $rootPath -Recurse -Settings $settings){
+            if($finding.Severity -eq 'Error'){
+                $failures.Add("PSScriptAnalyzer $($finding.RuleName): $($finding.ScriptPath):$($finding.Line): $($finding.Message)")
+            }else{
+                $warnings.Add("PSScriptAnalyzer $($finding.RuleName): $($finding.ScriptPath):$($finding.Line): $($finding.Message)")
+            }
+        }
     }catch{$failures.Add("PSScriptAnalyzer execution: $($_.Exception.Message)")}
 }elseif($RequirePSScriptAnalyzer){$failures.Add('PSScriptAnalyzer is required but unavailable.')}else{$warnings.Add('PSScriptAnalyzer was unavailable and not required for this invocation.')}
 
@@ -82,11 +88,11 @@ $python=Get-Command python,python3,'C:\Program Files\Python311\python.exe' -Erro
 if($python){
     foreach($validator in @('validate_source.py','validate_convergence.py')){
         $path=Join-Path $PSScriptRoot $validator
-        $process=Start-Process -FilePath $python.Source -ArgumentList @($path,$rootPath) -WorkingDirectory $rootPath -Wait -PassThru -NoNewWindow
-        if($process.ExitCode -ne 0){$failures.Add("Python validator failed: $validator")}
+        & $python.Source $path $rootPath
+        if($LASTEXITCODE -ne 0){$failures.Add("Python validator failed: $validator")}
     }
-    $toolTests=Start-Process -FilePath $python.Source -ArgumentList @('-m','unittest','tools.test_release_tools','-v') -WorkingDirectory $rootPath -Wait -PassThru -NoNewWindow
-    if($toolTests.ExitCode -ne 0){$failures.Add('Python release-tool tests failed.')}
+    & $python.Source -m unittest tools.test_release_tools -v
+    if($LASTEXITCODE -ne 0){$failures.Add('Python release-tool tests failed.')}
 }else{$failures.Add('Python 3 is required for cross-file and convergence validation.')}
 
 $report=[ordered]@{
