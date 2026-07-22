@@ -11,5 +11,5 @@ $python=Get-Command python,python3,'C:\Program Files\Python311\python.exe' -Erro
 if(-not $python){throw 'Python 3 is required for independent archive verification.'}
 $arguments=@((Join-Path $PSScriptRoot 'verify_release.py'),$resolved)
 if($OutputPath){$arguments+=@('--output',$OutputPath)}
-$process=Start-Process -FilePath $python.Source -ArgumentList $arguments -Wait -PassThru -NoNewWindow
+$process=Start-Process -FilePath $python.Source -ArgumentList $arguments -WorkingDirectory $PSScriptRoot -Wait -PassThru -NoNewWindow
 if($process.ExitCode -ne 0){throw 'Release archive verification failed.'}

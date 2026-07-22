@@ -82,7 +82,7 @@ $python=Get-Command python,python3,'C:\Program Files\Python311\python.exe' -Erro
 if($python){
     foreach($validator in @('validate_source.py','validate_convergence.py')){
         $path=Join-Path $PSScriptRoot $validator
-        $process=Start-Process -FilePath $python.Source -ArgumentList @($path,$rootPath) -Wait -PassThru -NoNewWindow
+        $process=Start-Process -FilePath $python.Source -ArgumentList @($path,$rootPath) -WorkingDirectory $rootPath -Wait -PassThru -NoNewWindow
         if($process.ExitCode -ne 0){$failures.Add("Python validator failed: $validator")}
     }
     $toolTests=Start-Process -FilePath $python.Source -ArgumentList @('-m','unittest','tools.test_release_tools','-v') -WorkingDirectory $rootPath -Wait -PassThru -NoNewWindow
