@@ -5,7 +5,11 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import sys
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from wincare_ps_source import strip_powershell
 
 SCHEMA = "wincare.network-egress-validation/v2"
 BANNED_DIAGNOSTIC_DEFAULTS = (
@@ -31,53 +35,12 @@ BITS_PATTERN = re.compile(r"\bStart-BitsTransfer\b", re.I)
 
 
 def _scrub_powershell(text: str) -> str:
-    output: list[str] = []
-    here_end: str | None = None
-    for line in text.splitlines():
-        stripped = line.lstrip()
-        if here_end is not None:
-            if stripped.startswith(here_end):
-                here_end = None
-            output.append("")
-            continue
-        if re.search(r"@'\s*$", line):
-            here_end = "'@"
-        elif re.search(r'@"\s*$', line):
-            here_end = '"@'
-        result: list[str] = []
-        quote: str | None = None
-        index = 0
-        while index < len(line):
-            char = line[index]
-            if quote is None:
-                if char == "#":
-                    break
-                if char in {"'", '"'}:
-                    quote = char
-                    result.append(" ")
-                else:
-                    result.append(char)
-            elif quote == "'":
-                if char == "'" and index + 1 < len(line) and line[index + 1] == "'":
-                    result.extend((" ", " "))
-                    index += 1
-                elif char == "'":
-                    quote = None
-                    result.append(" ")
-                else:
-                    result.append(" ")
-            else:
-                if char == "`" and index + 1 < len(line):
-                    result.extend((" ", " "))
-                    index += 1
-                elif char == '"':
-                    quote = None
-                    result.append(" ")
-                else:
-                    result.append(" ")
-            index += 1
-        output.append("".join(result))
-    return "\n".join(output)
+    """Blank comments, quoted strings, and here-string bodies while preserving lines.
+
+    Delegates to the shared scrubber (tools/wincare_ps_source.py) so every
+    validator agrees on exactly what counts as code.
+    """
+    return strip_powershell(text)
 
 
 def validate(root: Path) -> dict[str, object]:

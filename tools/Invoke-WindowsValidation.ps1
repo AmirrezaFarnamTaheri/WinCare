@@ -180,7 +180,7 @@ python '$quotedRoot\tools\validate_context_menu_catalog.py' '$quotedRoot' --outp
 if (`$LASTEXITCODE -ne 0) { throw 'Context-menu validation failed.' }
 python '$quotedRoot\tools\validate_test_fixtures.py' '$quotedRoot' --output '$quotedOutput\test-fixture-validation.json'
 if (`$LASTEXITCODE -ne 0) { throw 'Test fixture validation failed.' }
-python -m unittest tools.test_security_invariants tools.test_source_references -v
+python -m unittest tools.test_security_invariants tools.test_source_references tools.test_wincare_ps_source -v
 if (`$LASTEXITCODE -ne 0) { throw 'Security invariant tests failed.' }
 "@
 

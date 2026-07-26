@@ -3,33 +3,18 @@ from __future__ import annotations
 import argparse,csv,json,re,sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from wincare_ps_source import strip_powershell
+
 PSEXT={'.ps1','.psm1','.psd1'}
 
 def strip_ps(text:str)->str:
-    out=[];i=0;state='code'
-    while i<len(text):
-        c=text[i];n=text[i+1] if i+1<len(text) else ''
-        if state=='code':
-            if c=='<' and n=='#': state='block';out.extend('  ');i+=2;continue
-            if c=='#':
-                state='line';out.append(' ');i+=1;continue
-            if c=="'": state='single';out.append(' ');i+=1;continue
-            if c=='"': state='double';out.append(' ');i+=1;continue
-            out.append(c);i+=1
-        elif state=='line':
-            out.append('\n' if c=='\n' else ' ');state='code' if c=='\n' else state;i+=1
-        elif state=='block':
-            if c=='#' and n=='>': state='code';out.extend('  ');i+=2
-            else: out.append('\n' if c=='\n' else ' ');i+=1
-        elif state=='single':
-            if c=="'" and n=="'": out.extend('  ');i+=2
-            elif c=="'": state='code';out.append(' ');i+=1
-            else: out.append('\n' if c=='\n' else ' ');i+=1
-        elif state=='double':
-            if c=='`' and n: out.extend('  ');i+=2
-            elif c=='"': state='code';out.append(' ');i+=1
-            else: out.append('\n' if c=='\n' else ' ');i+=1
-    return ''.join(out)
+    # Delegates to the shared, here-string-aware scrubber (tools/wincare_ps_source.py).
+    # The previous inline state machine had no here-string handling: a single
+    # quote anywhere inside an @'...'@ block (common in embedded help/example
+    # text) prematurely ended the "single-quoted string" state, silently
+    # dropping every function definition that followed from the scanned output.
+    return strip_powershell(text)
 
 def check_balance(path:Path,text:str,errors:list[str]):
     stripped=strip_ps(text);stack=[];pairs={')':'(',']':'[','}':'{'}

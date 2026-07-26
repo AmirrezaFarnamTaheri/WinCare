@@ -46,7 +46,7 @@ jobs:
       - name: Test fixture integrity validation
         run: python tools/validate_test_fixtures.py . --output artifacts/test-fixture-validation.json
       - name: Release, security, GUI, and maintainability tooling tests
-        run: python -m unittest tools.test_release_tools tools.test_maintainability tools.test_security_invariants tools.test_cleaner_preview tools.test_gui tools.test_source_references -v
+        run: python -m unittest tools.test_release_tools tools.test_maintainability tools.test_security_invariants tools.test_cleaner_preview tools.test_gui tools.test_source_references tools.test_wincare_ps_source -v
       - name: Deterministic development package
         run: |
           mkdir -p artifacts

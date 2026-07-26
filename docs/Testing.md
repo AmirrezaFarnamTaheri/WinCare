@@ -22,7 +22,7 @@ python tools/validate_read_only_state.py .
 python tools/validate_context_menu_catalog.py .
 python tools/validate_test_fixtures.py .
 python tools/validate_gui.py .
-python -m unittest tools.test_release_tools tools.test_maintainability tools.test_security_invariants tools.test_cleaner_preview tools.test_gui tools.test_source_references -v
+python -m unittest tools.test_release_tools tools.test_maintainability tools.test_security_invariants tools.test_cleaner_preview tools.test_gui tools.test_source_references tools.test_wincare_ps_source -v
 ```
 
 These checks cover source topology, exports, contracts, public bindings, current-source reference hashes, stubs, resource bounds, process/network authority, read-only state discipline, test fixtures, GUI catalog integrity, deterministic packaging, and adversarial archive cases.

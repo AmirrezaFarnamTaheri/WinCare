@@ -3,7 +3,11 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import sys
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from wincare_ps_source import strip_powershell
 
 SCHEMA = "wincare.external-process-validation/v2"
 SOURCE_ROOTS = ("src/WinCare/Core", "src/WinCare/Providers", "src/WinCare/UI", "src/WinCare/Host", "src/WinCare/Native", "tools")
@@ -25,11 +29,17 @@ READ_TO_END_ASYNC = re.compile(r"\.ReadToEndAsync\s*\(")
 PROCESS_START_INFO = re.compile(r"ProcessStartInfo")
 
 
-def _strip_comments_and_strings(line: str) -> str:
-    line = re.sub(r"#.*$", "", line)
-    line = re.sub(r"'(?:''|[^'])*'", "''", line)
-    line = re.sub(r'"(?:`.|[^"`])*"', '""', line)
-    return line
+def _scrub_powershell(text: str) -> str:
+    """Blank comments, quoted strings, and here-string bodies while preserving lines.
+
+    Delegates to the shared scrubber (tools/wincare_ps_source.py). The previous
+    implementation here scrubbed each line in isolation with no state carried
+    across lines, so multi-line block comments, multi-line quoted strings, and
+    here-string bodies were left fully exposed to the danger-pattern regexes
+    below -- documentation text mentioning e.g. Start-Process inside a
+    <# ... #> block would trip the gate.
+    """
+    return strip_powershell(text)
 
 
 def _files(root: Path) -> list[Path]:
@@ -49,8 +59,8 @@ def validate(root: Path) -> dict[str, object]:
         files_checked += 1
         relative = path.relative_to(root).as_posix()
         text = path.read_text(encoding="utf-8-sig")
-        scrubbed_lines = [_strip_comments_and_strings(line) for line in text.splitlines()]
-        scrubbed = "\n".join(scrubbed_lines)
+        scrubbed = _scrub_powershell(text)
+        scrubbed_lines = scrubbed.splitlines()
         for number, line in enumerate(scrubbed_lines, 1):
             if DIRECT_EXTERNAL.search(line):
                 errors.append({"file": relative, "line": number, "code": "DirectExternalCallOperator"})
