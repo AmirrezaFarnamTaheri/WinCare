@@ -59,12 +59,12 @@
     {
       "id": "SRC:de582ebaf6",
       "path": "Providers/104-OfflineReduction.ps1",
-      "sha256": "29b08c9ec69ed735ee90a8cc2e8e2bbb8d451f32f2d9d44e96e75fbed971654f"
+      "sha256": "71c6bc57770ec753e29fafeeba19cbda35f9d62e5e6ca2ad9914b65e8b148b6a"
     },
     {
       "id": "SRC:62fff6504d",
       "path": "Providers/105-WorkspaceLayouts.ps1",
-      "sha256": "13d2cb38da1c9145bd63fbb228c3a459eaac11fbd88107af52bab7cf17853426"
+      "sha256": "022d8fbbfad8b87ca144e2fab524f70eec163d280d887067fc46398082372353"
     },
     {
       "id": "SRC:f1b9beff21",
@@ -84,7 +84,7 @@
     {
       "id": "SRC:1461504853",
       "path": "Providers/110-ShellHardwareStudio.ps1",
-      "sha256": "58830072882760b55f8499064fdd4d158eef9fc0ff2b7ea347214401358b7006"
+      "sha256": "f488ec54a5e2b2b0a980bac43ee8c6078ee20b5220d55fb1eda37f59250ccab2"
     },
     {
       "id": "SRC:65dbd15e56",

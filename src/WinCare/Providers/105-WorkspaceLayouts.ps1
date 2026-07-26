@@ -117,7 +117,7 @@ function Import-WinCareFancyZonesLayout {
     $importedCount = 0
     if ($exists) {
         try {
-            $json = Get-Content -LiteralPath $path -Raw -ErrorAction SilentlyContinue | ConvertFrom-Json
+            $json = Read-WinCareBoundedJson -LiteralPath $path -MaximumBytes 8388608
             if ($json -and $json.'custom-zone-sets') {
                 $importedCount = @($json.'custom-zone-sets').Count
             }

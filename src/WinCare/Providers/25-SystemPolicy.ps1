@@ -62,7 +62,10 @@ function Assert-WinCareRolePermission {
         $jsonRecord = $auditEntry | ConvertTo-Json -Compress
         Add-Content -LiteralPath $logFile -Value $jsonRecord -ErrorAction SilentlyContinue
 
-        return New-WinCareResult -Success $false -Status Blocked -Code 'BlockedByPolicy' -Message "Role '$RequestedRole' is unauthorized for action '$ActionContractName' (Risk Level $actionRiskLevel > Cap $($roleInfo.AllowedRiskCap)). Step-up elevation signature required." -ExitCode 78 -Data $auditEntry
+        $blockedMessage = "Role '$RequestedRole' is unauthorized for action '$ActionContractName' " +
+            "(Risk Level $actionRiskLevel > Cap $($roleInfo.AllowedRiskCap)). Step-up elevation signature required."
+        return New-WinCareResult -Success $false -Status Blocked -Code 'BlockedByPolicy' `
+            -Message $blockedMessage -ExitCode 78 -Data $auditEntry
     }
 
     return New-WinCareResult -Success $true -Code 'RolePermissionGranted' -Message "Role '$RequestedRole' authorized for action '$ActionContractName'." -Data @{

@@ -107,7 +107,10 @@ function Get-WinCareDefaultPolicy {
         MaximumEstimatedBytes    = 53687091200
         MaintenanceWindow        = ''
         AllowedActionTypes       = @('*')
-        DeniedActionTypes        = @('ReplaceBootLoader','DisableDefender','DisableWindowsUpdateService','DeleteEventLogs','PurgePrefetch','BypassHardwareRequirements','InjectProcess','CreateRemoteThread','WriteProcessMemory','InstallGlobalHook')
+        DeniedActionTypes        = @(
+            'ReplaceBootLoader','DisableDefender','DisableWindowsUpdateService','DeleteEventLogs',
+            'PurgePrefetch','BypassHardwareRequirements','InjectProcess','CreateRemoteThread',
+            'WriteProcessMemory','InstallGlobalHook')
         TrustedExtensionSigners  = @()
         AllowedCatalogRuleIds    = @('*')
         DeniedCatalogRuleIds     = @()
@@ -480,7 +483,10 @@ function Protect-WinCareConfigVault {
                     $vaultEncrypted = $true
                 } elseif (-not $item.PSIsContainer) {
                     try {
-                        $bytes = [System.IO.File]::ReadAllBytes($safe)
+                        # Only the header is inspected below (DPAPI magic plus a 512-byte
+                        # sniff), so read through the bounded reader instead of pulling an
+                        # arbitrarily large vault file into memory.
+                        $bytes = Read-WinCareBoundedFileBytes -LiteralPath $safe -MaximumBytes 1048576
                         if ($bytes.Length -ge 8) {
                             if ($bytes[0] -eq 0x01 -and $bytes[1] -eq 0x00 -and $bytes[2] -eq 0x00 -and $bytes[3] -eq 0x00 -and
                                 $bytes[4] -eq 0xD0 -and $bytes[5] -eq 0x8C -and $bytes[6] -eq 0x9D -and $bytes[7] -eq 0xDF) {

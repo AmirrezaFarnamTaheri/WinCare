@@ -125,5 +125,11 @@ function Enable-WinCareEbpfSocketGovernance {
 }
 
 if ($MyInvocation.MyCommand.ScriptBlock.Module) {
-    Export-ModuleMember -Function Get-WinCareEbpfSocketRedirectCapability, Get-WinCareEbpfProgramInventory, New-WinCareEbpfSocketProgramAdmission, Get-WinCareEbpfSocketBinding, Enable-WinCareEbpfDeepPacketFilter, Enable-WinCareEbpfSocketGovernance
+    Export-ModuleMember -Function `
+        Get-WinCareEbpfSocketRedirectCapability, `
+        Get-WinCareEbpfProgramInventory, `
+        New-WinCareEbpfSocketProgramAdmission, `
+        Get-WinCareEbpfSocketBinding, `
+        Enable-WinCareEbpfDeepPacketFilter, `
+        Enable-WinCareEbpfSocketGovernance
 }

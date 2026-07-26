@@ -25,6 +25,7 @@
         'Core/06-BoundedIO.ps1'
         'Core/06-Safety.ps1'
         'Core/06-SafetyModuleIntegrity.ps1'
+        'Core/06-SafetyStaging.ps1'
         'Core/07-Conditions.ps1'
         'Core/08-Policy.ps1'
         'Core/09-Transactions.ps1'
