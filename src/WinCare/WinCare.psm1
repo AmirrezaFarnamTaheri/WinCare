@@ -376,5 +376,14 @@ Export-ModuleMember -Function @(
     'Get-WinCareRbacMatrix',
     'Assert-WinCareRolePermission',
     'Test-WinCareGpoEntraDrift',
-    'New-WinCareGpoRemediationPlan'
+    'New-WinCareGpoRemediationPlan',
+    'Send-WinCareSiemStream',
+    'Invoke-WinCareDismServicingCleanup',
+    'Get-WinCareStorageHealthTriage',
+    'Enable-WinCareGameStateMode',
+    'Import-WinCareFancyZonesLayout',
+    'Protect-WinCarePqcSignature',
+    'Invoke-WinCareMicroVmSandboxTest',
+    'Get-WinCareVbsDmaState',
+    'Enable-WinCareEbpfSocketGovernance'
 )

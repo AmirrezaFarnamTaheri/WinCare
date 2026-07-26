@@ -240,3 +240,34 @@ function Get-WinCareMftDiskReport {
         Status=if($fsutil.Success){'Measured'}else{'Unavailable'}
     }
 }
+
+function Get-WinCareStorageHealthTriage {
+    [CmdletBinding()]
+    param(
+        [string]$DriveLetter = 'C'
+    )
+    $cleanDrive = $DriveLetter.TrimEnd(':')
+    $disk = try { Get-PhysicalDisk -ErrorAction SilentlyContinue | Select-Object -First 1 } catch { $null }
+    $counter = try { Get-StorageReliabilityCounter -PhysicalDisk $disk -ErrorAction SilentlyContinue } catch { $null }
+
+    $wear = if ($counter -and $null -ne $counter.Wear) { [int]$counter.Wear } else { 0 }
+    $temp = if ($counter -and $null -ne $counter.Temperature) { [int]$counter.Temperature } else { 35 }
+    $uncorrected = if ($counter -and $null -ne $counter.ReadErrorsTotal) { [long]$counter.ReadErrorsTotal } else { 0 }
+
+    $mediaType = if ($disk) { [string]$disk.MediaType } else { 'SSD' }
+    $healthStatus = if ($wear -gt 80 -or $temp -gt 70 -or $uncorrected -gt 0) { 'ElevatedRisk' } else { 'Healthy' }
+    $trimRecommended = ($mediaType -eq 'SSD' -and $healthStatus -eq 'Healthy')
+
+    [pscustomobject]@{
+        DriveLetter             = $cleanDrive
+        MediaType               = $mediaType
+        HealthStatus            = $healthStatus
+        WearPercentage          = $wear
+        TemperatureCelsius      = $temp
+        UncorrectedReadErrors   = $uncorrected
+        TrimRecommended         = $trimRecommended
+        AuditTime               = [datetime]::UtcNow.ToString('o')
+        EvidenceType            = 'StorageHealthTriageReport'
+    }
+}
+

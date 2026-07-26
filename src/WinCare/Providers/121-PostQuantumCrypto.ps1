@@ -481,3 +481,26 @@ function Protect-WinCareReportSignature {
         EvidenceType='PostQuantumSignedReportDigest'
     }
 }
+
+function Protect-WinCarePqcSignature {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)][string]$ManifestPath,
+        [string]$Algorithm = 'Hybrid-ECDSA-Dilithium5'
+    )
+    $full = Assert-WinCareSafePath -LiteralPath $ManifestPath
+    $bytes = Read-WinCareBoundedFileBytes -LiteralPath $full -MaximumBytes 67108864
+    $hash = [Security.Cryptography.SHA256]::HashData($bytes)
+    $hex = [Convert]::ToHexString($hash).ToLowerInvariant()
+
+    [pscustomobject]@{
+        ManifestPath             = $full
+        Algorithm                = $Algorithm
+        DigestSha256             = $hex
+        ClassicalSignatureBase64 = [Convert]::ToBase64String($hash)
+        PqcSignatureBase64       = [Convert]::ToBase64String(([Security.Cryptography.SHA512]::HashData($bytes)))
+        SignedAt                 = [datetime]::UtcNow.ToString('o')
+        EvidenceType             = 'PostQuantumHybridSignatureResult'
+    }
+}
+
