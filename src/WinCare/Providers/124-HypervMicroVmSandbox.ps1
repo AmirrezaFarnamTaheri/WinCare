@@ -19,6 +19,7 @@ function Get-WinCareHypervisorIsolationState {
 
     $errors=[Collections.Generic.List[string]]::new()
     $features=[Collections.Generic.List[object]]::new()
+    # ponytail: Get-WindowsOptionalFeature -> native WSB XML config launcher
     foreach($name in @(
         'Microsoft-Hyper-V-All',
         'VirtualMachinePlatform',

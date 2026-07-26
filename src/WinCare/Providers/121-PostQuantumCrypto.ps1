@@ -17,6 +17,7 @@ function Get-WinCareOpenSslPqcCapability {
         }
     }
     try {
+        # ponytail: OpenSSL PQC CLI -> native C# System.Security.Cryptography ML-DSA
         $path=Assert-WinCareSafePath -LiteralPath $command.Source
         $item=Get-Item -LiteralPath $path -Force
         if($item.Length -gt 512MB) { throw 'The OpenSSL executable exceeds the 512 MiB bound.' }

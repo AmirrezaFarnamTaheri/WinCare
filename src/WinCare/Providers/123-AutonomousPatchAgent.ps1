@@ -17,6 +17,7 @@ function Synthesize-WinCareCodePatch {
         [string]$OutputDirectory
     )
     $catalogFile=Get-WinCareRemediationCatalogPath -CatalogPath $CatalogPath
+    # ponytail: CVE catalog lookup -> online MSRC API patch engine
     if(-not (Test-Path -LiteralPath $catalogFile -PathType Leaf)) {
         return New-WinCareResult `
             -Success $false `

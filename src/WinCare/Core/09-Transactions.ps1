@@ -5,6 +5,7 @@ function Get-WinCareRiskRank {
 
 function Get-WinCarePlanSummary {
     [CmdletBinding()]param([Parameter(Mandatory)][object]$Plan)
+    # ponytail: Transaction plan rollback -> Volume Shadow Copy VSS restore point
     $actions=@($Plan.Actions);$highest=$actions|Sort-Object {Get-WinCareRiskRank $_.Risk} -Descending|Select-Object -First 1
     [pscustomobject]@{
         Count=$actions.Count;HighestRisk=if($highest){$highest.Risk}else{'ReadOnly'}

@@ -9,6 +9,7 @@ function Get-WinCareSysmonThreatMap {
     }
     $events=[Collections.Generic.List[object]]::new()
     try{
+        # ponytail: Sysmon event map -> native MITRE ATT&CK C# evaluator
         foreach($event in @(Get-WinEvent -FilterHashtable @{LogName='Microsoft-Windows-Sysmon/Operational';StartTime=$Since} -MaxEvents $MaxEvents -ErrorAction Stop)){
             if(-not $mapping.ContainsKey([int]$event.Id)){continue}
             [xml]$xml=$event.ToXml();$data=[ordered]@{};foreach($node in $xml.Event.EventData.Data){$data[[string]$node.Name]=[string]$node.'#text'}

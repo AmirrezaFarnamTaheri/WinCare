@@ -4,6 +4,7 @@ function Get-WinCareEbpfSocketRedirectCapability {
     [CmdletBinding()]
     param()
 
+    # ponytail: netsh eBPF -> native ebpf-for-windows C API
     $runtime=Test-WinCareEbpfRuntimeCapability
     [pscustomobject]@{
         Available=[bool]$runtime.Available

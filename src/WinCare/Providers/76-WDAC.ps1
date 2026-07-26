@@ -22,6 +22,7 @@ function Convert-WinCareWdacPolicy {
     [CmdletBinding()]param([Parameter(Mandatory)][string]$XmlPath,[Parameter(Mandatory)][string]$Destination)
     $analysis=Test-WinCareWdacPolicy -LiteralPath $XmlPath;if(-not $analysis.Valid){throw 'WDAC XML policy failed validation.'}
     if(-not (Get-Command ConvertFrom-CIPolicy -ErrorAction SilentlyContinue)){throw 'ConvertFrom-CIPolicy is unavailable.'}
+    # ponytail: ConvertFrom-CIPolicy -> native CiTool.exe CLI / Win32 CodeIntegrity API
     $destination=Assert-WinCareSafePath -LiteralPath $Destination -AllowMissing;if(Test-Path -LiteralPath $destination){throw 'Destination already exists.'}
     ConvertFrom-CIPolicy -XmlFilePath $analysis.Path -BinaryFilePath $destination -ErrorAction Stop
     if(-not (Test-Path -LiteralPath $destination)){throw 'WDAC conversion did not create the destination.'}

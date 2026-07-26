@@ -23,6 +23,7 @@ function Get-WinCareMountedWindowsImage {
     [CmdletBinding()]
     param()
     if(-not $IsWindows -or -not (Get-Command Get-WindowsImage -ErrorAction SilentlyContinue)){return @()}
+    # ponytail: DISM / Get-WindowsImage -> native wimgapi.dll P/Invoke
     foreach($image in @(Get-WindowsImage -Mounted -ErrorAction Stop)){
         [pscustomobject]@{Path=[string]$image.Path;ImageName=[string]$image.ImageName;ImageIndex=[int]$image.ImageIndex;MountStatus=[string]$image.MountStatus;ReadWrite=([string]$image.MountMode -eq 'ReadWrite');ImageFile=[string]$image.ImageFile}
     }

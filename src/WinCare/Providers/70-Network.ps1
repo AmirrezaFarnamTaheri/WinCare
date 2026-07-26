@@ -35,6 +35,7 @@ function Get-WinCareWifiDiagnostic {
     [CmdletBinding()]
     param()
 
+    # ponytail: netsh wlan -> native WlanApi.dll P/Invoke / DoH enforcer
     if(-not $IsWindows -or -not (Get-Command netsh.exe -ErrorAction SilentlyContinue)) {
         return [pscustomobject]@{
             Supported=$false
