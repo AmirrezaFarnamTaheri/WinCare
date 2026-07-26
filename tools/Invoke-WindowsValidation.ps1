@@ -360,7 +360,29 @@ try {
     }
     $reportPath = Join-Path $outputPath 'windows-validation-report.json'
     $report | ConvertTo-Json -Depth 16 | Set-Content -LiteralPath $reportPath -Encoding utf8NoBOM
-    if ($failed.Count) { throw "Windows validation failed in gate(s): $($failed.Name -join ', ')" }
+    if ($failed.Count) {
+        # A failing gate previously reported only its name here: the actual
+        # output lived in artifacts that a reader has to download separately,
+        # which makes a red build undiagnosable from the log alone. Echo a
+        # bounded tail of each failing gate's streams so the cause is visible
+        # in the job output itself.
+        foreach ($record in $failed) {
+            Write-Host ''
+            Write-Host "===== $($record.Name): $($record.Status) (exit $($record.ExitCode)) =====" -ForegroundColor Red
+            foreach ($stream in @(
+                @{ Label = 'stdout'; Path = $record.StdOut },
+                @{ Label = 'stderr'; Path = $record.StdErr }
+            )) {
+                if (-not (Test-Path -LiteralPath $stream.Path -PathType Leaf)) { continue }
+                $lines = @(Get-Content -LiteralPath $stream.Path -Tail 120 -ErrorAction SilentlyContinue)
+                if (-not $lines.Count) { continue }
+                Write-Host "--- $($record.Name) $($stream.Label) (last $($lines.Count) line(s)) ---" -ForegroundColor Yellow
+                foreach ($line in $lines) { Write-Host $line }
+            }
+        }
+        Write-Host ''
+        throw "Windows validation failed in gate(s): $($failed.Name -join ', ')"
+    }
     Write-Host "Windows validation passed: $reportPath" -ForegroundColor Green
 } finally {
     Remove-Item -LiteralPath $tempRoot -Recurse -Force -ErrorAction SilentlyContinue
