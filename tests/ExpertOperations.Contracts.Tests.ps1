@@ -74,7 +74,7 @@ BeforeAll { Import-Module "$((Get-Location).Path)\src\WinCare\WinCare.psd1" -For
       foreach($forbidden in @('InjectProcess','CreateRemoteThread','WriteProcessMemory','InstallGlobalHook')){$contracts.Keys|Should -Not -Contain $forbidden}
       $contracts.Keys|Should -Contain CaptureEtwTrace
       $contracts.Keys|Should -Contain QuarantineInjectionSurface
-      $text=(Get-Content (Join-Path $script:WinCareModuleRoot 'Providers\93-ProcessInstrumentation.ps1') -Raw)
+      $text=(Get-Content (Join-Path $script:WinCareModuleRoot 'Core\00-06-Instrumentation.ps1') -Raw)
       $text|Should -Not -Match 'VirtualAllocEx\s*\('
       $text|Should -Not -Match 'WriteProcessMemory\s*\('
       $text|Should -Not -Match 'CreateRemoteThread\s*\('
@@ -119,7 +119,7 @@ BeforeAll { Import-Module "$((Get-Location).Path)\src\WinCare\WinCare.psd1" -For
       {Test-WinCareInjectionSurfaceSnapshot -Snapshot $snapshot}| Should -Throw
     }
     It 'bounds network experiments and checks cancellation between measurements' {
-      $provider=(Get-Content (Join-Path $script:WinCareModuleRoot 'Providers\92-NetworkExperiments.ps1') -Raw)
+      $provider=(Get-Content (Join-Path $script:WinCareModuleRoot 'Core\00-04-NetworkExperiments.ps1') -Raw)
       $provider|Should -Match 'Test-WinCareOperationCancellationRequested'
       $provider|Should -Match 'Automatic rollback'
       $contract=(Get-WinCareActionContract -Type RunNetworkExperiment)

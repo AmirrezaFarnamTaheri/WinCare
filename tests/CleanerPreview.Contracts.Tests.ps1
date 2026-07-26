@@ -35,7 +35,7 @@ Describe 'Cleaner and preview contracts' {
     It 'admits only bounded FileKey Winapp2 rules' {
         $Provider|Should -Match "\^FileKey\\d\{1,5\}\$"
         $Provider|Should -Match '2 MiB'
-        $Provider|Should -Match '50,000 lines'
+        $Provider|Should -Match '-MaximumLines 50000'
         $Provider|Should -Match '5,000 admitted file rules'
         $Provider|Should -Match 'UnsupportedDirective'
         $Provider|Should -Not -Match 'Invoke-Expression|ScriptBlock::Create'
@@ -106,7 +106,7 @@ Describe 'Cleaner and preview contracts' {
 
     It 'integrates the dedicated TUI and curated GUI surfaces' {
         Test-Path -LiteralPath (Join-Path $root 'src/WinCare/UI/Screens/95-CleanerPreviewStudio.ps1')|Should -Be $true
-        (Get-Content -LiteralPath (Join-Path $root 'src/WinCare/UI/99-Main.ps1') -Raw)|Should -Match "Action='CleanerPreview'"
+        (Get-Content -LiteralPath (Join-Path $root 'src/WinCare/UI/97-CommandPalette.ps1') -Raw)|Should -Match "'CleanerPreview'\{Show-WinCare"
         $actions=Get-Content -LiteralPath (Join-Path $root 'src/WinCare/Data/Gui/actions.json') -Raw|ConvertFrom-Json
         @($actions.id)|Should -Contain 'disk-pressure-cleanup'
         @($actions.id)|Should -Contain 'local-file-preview'

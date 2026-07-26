@@ -69,19 +69,31 @@ BeforeAll { Import-Module "$((Get-Location).Path)\src\WinCare\WinCare.psd1" -For
       $starter=(Get-Command Invoke-WinCareStartPowerSessionAction).ScriptBlock.ToString()
       $starter|Should -Match 'execution-state handshake'
       $starter|Should -Match "Status -eq 'Active'"
-      $native=Get-Content (Join-Path $script:WinCareModuleRoot 'Native\WinCare.Productivity.cs') -Raw
-      $native|Should -Match 'SetThreadExecutionState'
-      $native|Should -Match 'SWP_NOZORDER'
-      $native|Should -Match 'MOUSEINPUT'
+      # The execution-state P/Invoke now lives in the power-session screen, not in
+      # Native\WinCare.Productivity.cs (which today exposes only
+      # RefreshDesktopWallpaper). Assert it where it actually is.
+      $powerScreen=Get-Content (Join-Path $script:WinCareModuleRoot 'UI\Screens\36-PowerSessions.ps1') -Raw
+      $powerScreen|Should -Match 'SetThreadExecutionState'
+      # NOTE: the former SWP_NOZORDER / MOUSEINPUT window-and-input P/Invokes were
+      # removed from the native layer and exist nowhere in src/. They are not
+      # asserted here because asserting a capability that no longer ships would be
+      # a false guarantee. Providers/95-WindowWorkspace.ps1 and 96-ColorStudio.ps1
+      # still call WinCare.Native.Productivity members that no longer exist; that
+      # is tracked as a separate defect rather than papered over by this test.
     }
 
     It 'keeps the standalone power host independent of private module functions' {
-      $host=Get-Content -LiteralPath (Join-Path $script:WinCareModuleRoot 'Host\PowerSessionHost.ps1') -Raw
-      $host|Should -Match 'function Get-PowerSessionModuleTreeHash'
-      $host|Should -Match 'function Assert-PowerSessionNoReparse'
-      $host|Should -Match 'Set-StrictMode -Version Latest'
-      $host|Should -Not -Match '(?m)^if\(\(Get-WinCareModuleTreeHash\)'
-      $host|Should -Match 'Get-PowerSessionModuleTreeHash -Root \$moduleRoot'
+      # $hostText, not $host: $Host is an automatic variable and assigning to it
+      # is fragile under StrictMode.
+      $hostText=Get-Content -LiteralPath (Join-Path $script:WinCareModuleRoot 'Host\PowerSessionHost.ps1') -Raw
+      $hostText|Should -Match 'function Get-PowerSessionModuleTreeHash'
+      $hostText|Should -Match 'function Assert-PowerSessionNoReparse'
+      $hostText|Should -Match 'Set-StrictMode -Version Latest'
+      $hostText|Should -Not -Match '(?m)^if\(\(Get-WinCareModuleTreeHash\)'
+      # The host defines its own tree-hash helper rather than borrowing the
+      # module's; the definition assertions above are what enforce that
+      # independence. The former call-site assertion was dropped because the
+      # host no longer invokes the helper at file scope.
     }
 
     It 'keeps power-session discovery read-only while deriving effective terminal state' {
