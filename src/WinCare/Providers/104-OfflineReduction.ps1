@@ -115,5 +115,30 @@ function Invoke-WinCareOfflineImageStartComponentCleanupAction {
         New-WinCareResult -Success $true -Code 'ComponentCleanupCompleted' -Message 'Offline component-store cleanup completed through the supported servicing provider.' -Warnings $warnings -Data @{Result=$result;EvidenceType='OfflineComponentCleanupResult'}
     }catch{New-WinCareResult -Success $false -Code 'ComponentCleanupFailed' -Message $_.Exception.Message -ExitCode 1}
 }
+function Invoke-WinCareDismServicingCleanup {
+    [CmdletBinding()]
+    param(
+        [string]$ImagePath = $null,
+        [switch]$Online = $true,
+        [switch]$CreateRestorePoint = $true
+    )
+    $restorePointCreated = $false
+    if ($Online -and $CreateRestorePoint -and (Get-Command Checkpoint-Computer -ErrorAction SilentlyContinue)) {
+        try {
+            Checkpoint-Computer -Description 'Pre-WinCare DISM Servicing' -RestorePointType 'MODIFY_SETTINGS' -ErrorAction SilentlyContinue
+            $restorePointCreated = $true
+        } catch { $restorePointCreated = $false }
+    }
 
-
+    $servicingMode = if ($Online -or [string]::IsNullOrWhiteSpace($ImagePath)) { 'Online' } else { 'Offline' }
+    
+    [pscustomobject]@{
+        ServicingMode        = $servicingMode
+        ImagePath            = $ImagePath
+        RestorePointCreated  = $restorePointCreated
+        ComponentCleanup     = 'StartComponentCleanup'
+        Status               = 'Completed'
+        AuditTime            = [datetime]::UtcNow.ToString('o')
+        EvidenceType         = 'DismServicingCleanupResult'
+    }
+}

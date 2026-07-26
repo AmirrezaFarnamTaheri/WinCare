@@ -1,7 +1,8 @@
 
+$modulePath = Join-Path $PSScriptRoot '..\src\WinCare\WinCare.psd1'
+Import-Module $modulePath -Force
+
 Describe 'Versioned action and plan contracts' {
-    #requires -Version 7.2
-BeforeAll { Import-Module "$((Get-Location).Path)\src\WinCare\WinCare.psd1" -Force -Global }
   InModuleScope WinCare {
     BeforeEach { $script:WinCareState=@{ActionContracts=$null;Config=Get-WinCareDefaultConfig;Policy=Get-WinCareDefaultPolicy;Root=$TestDrive;SessionId='0123456789abcdef0123456789abcdef';IsAdmin=$false;Capabilities=@{}};$script:WinCareState.Remove('ActionContracts') }
     It 'has one unique contract for every dispatcher case' {
@@ -60,9 +61,9 @@ BeforeAll { Import-Module "$((Get-Location).Path)\src\WinCare\WinCare.psd1" -For
     It 'binds all execution and recovery fields into the action hash' {
       $a=New-WinCareAction -Type SetStorageSense -Label Sense -Risk Moderate -Parameters @{Enable=$true;Previous=$false} -Reversible $true -Compensator @{Type='SetStorageSense';Parameters=@{Enable=$false;Previous=$true}} -EstimatedBytes 1 -RecoveryDescription 'restore'
       $baseline=Get-WinCareActionStableHash $a
-      $a.EstimatedBytes=2;Get-WinCareActionStableHash $a|Should Not -Be $baseline;$a.EstimatedBytes=1
-      $a.RecoveryDescription='changed';Get-WinCareActionStableHash $a|Should Not -Be $baseline;$a.RecoveryDescription='restore'
-      $a.Compensator.Parameters.Enable=$true;Get-WinCareActionStableHash $a|Should Not -Be $baseline
+      $a.EstimatedBytes=2;Get-WinCareActionStableHash $a|Should Not Be $baseline;$a.EstimatedBytes=1
+      $a.RecoveryDescription='changed';Get-WinCareActionStableHash $a|Should Not Be $baseline;$a.RecoveryDescription='restore'
+      $a.Compensator.Parameters.Enable=$true;Get-WinCareActionStableHash $a|Should Not Be $baseline
     }
     It 'requires an executable compensator for reversible actions' {
       $missing=New-WinCareAction -Type SetStorageSense -Label Sense -Risk Moderate -Parameters @{Enable=$true;Previous=$false} -Reversible $true
@@ -104,5 +105,36 @@ Describe 'Configuration and policy admission' {
       $c=Get-WinCareDefaultConfig;$c.RequirePreviewForChanges='yes';{Test-WinCareConfigObject $c}|Should Throw
       $p=Get-WinCareDefaultPolicy;$p.RequirePreview='yes';{Test-WinCarePolicyObject $p}|Should Throw
     }
+    It 'verifies zero-trust config vault protection' {
+      $vaultPath = Join-Path $TestDrive 'secure_vault.dat'
+      'DPAPI_PROTECTED_DATA' | Set-Content -LiteralPath $vaultPath
+      $res = Protect-WinCareConfigVault -ConfigVaultPath $vaultPath
+      $res.ConfigVaultPath | Should Be (Resolve-WinCareCanonicalPath -LiteralPath $vaultPath)
+      $res.ZeroTrustVaultEncrypted | Should Be $true
+      $res.EvidenceType | Should Be 'ZeroTrustConfigVaultProtection'
+
+      $plainPath = Join-Path $TestDrive 'plain_vault.dat'
+      'UNENCRYPTED_DATA' | Set-Content -LiteralPath $plainPath
+      $resPlain = Protect-WinCareConfigVault -ConfigVaultPath $plainPath
+      $resPlain.ZeroTrustVaultEncrypted | Should Be $false
+    }
+    It 'evaluates RBAC role permissions and logs unauthorized action attempts' {
+      $granted = Assert-WinCareRolePermission -RequestedRole 'HelpdeskAdmin' -ActionContractName 'ClearTemporaryFiles' -UserIdentity 'TestUser'
+      $granted.Success | Should Be $true
+      $granted.Code | Should Be 'RolePermissionGranted'
+
+      $denied = Assert-WinCareRolePermission -RequestedRole 'HelpdeskAdmin' -ActionContractName 'DisableWdac' -UserIdentity 'TestUser'
+      $denied.Success | Should Be $false
+      $denied.Code | Should Be 'BlockedByPolicy'
+      $denied.ExitCode | Should Be 78
+    }
+    It 'evaluates GPO Entra ID drift and synthesizes remediation plans' {
+      $drift = Test-WinCareGpoEntraDrift
+      $drift.EvidenceType | Should Be 'GpoAndAzureAdBaselineDrift'
+      $plan = New-WinCareGpoRemediationPlan -DriftResult $drift
+      $plan.EvidenceType | Should Be 'GpoRemediationPlanDefinition'
+      $plan.PlanSha256.Length | Should Be 64
+    }
   }
 }
+

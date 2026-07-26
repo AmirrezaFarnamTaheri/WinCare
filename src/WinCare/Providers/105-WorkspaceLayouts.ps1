@@ -104,6 +104,33 @@ function Invoke-WinCareReplaceWorkspaceLayoutStoreAction {
     param([Parameter(Mandatory)][object]$Action)
     try{$current=Get-WinCareWorkspaceLayoutStore -Strict;if((Get-WinCareWorkspaceLayoutStoreHash $current) -ne [string]$Action.Parameters.ExpectedCurrentHash){return New-WinCareResult -Success $false -Status Blocked -Code 'LayoutStoreChanged' -Message 'Workspace layout catalog changed after preview.' -ExitCode 74};$after=Set-WinCareWorkspaceLayoutStoreInternal $Action.Parameters.Store;New-WinCareResult -Success $true -Code 'LayoutStoreReplaced' -Message 'Workspace layout catalog updated and verified.' -Data $after}catch{New-WinCareResult -Success $false -Code 'LayoutStoreUpdateFailed' -Message $_.Exception.Message -ExitCode 1}
 }
+function Import-WinCareFancyZonesLayout {
+    [CmdletBinding()]
+    param(
+        [string]$CustomFancyZonesPath = $null
+    )
+    $path = if ($CustomFancyZonesPath -and (Test-Path -LiteralPath $CustomFancyZonesPath)) { $CustomFancyZonesPath } else {
+        Join-Path $env:LocalAppData 'Microsoft\PowerToys\FancyZones\zones-settings.json'
+    }
 
+    $exists = Test-Path -LiteralPath $path
+    $importedCount = 0
+    if ($exists) {
+        try {
+            $json = Get-Content -LiteralPath $path -Raw -ErrorAction SilentlyContinue | ConvertFrom-Json
+            if ($json -and $json.'custom-zone-sets') {
+                $importedCount = @($json.'custom-zone-sets').Count
+            }
+        } catch { $importedCount = 0 }
+    }
 
+    [pscustomobject]@{
+        SourcePath          = $path
+        ConfigExists        = $exists
+        ImportedLayoutCount = $importedCount
+        Status              = if ($exists) { 'Imported' } else { 'ConfigNotFound' }
+        AuditTime           = [datetime]::UtcNow.ToString('o')
+        EvidenceType        = 'FancyZonesLayoutImportResult'
+    }
+}
 

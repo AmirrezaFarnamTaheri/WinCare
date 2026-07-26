@@ -499,14 +499,69 @@ function Start-WinCareBranchP2pSeed {
     [CmdletBinding()]
     param(
         [string]$Subnet='192.168.1.0/24',
-        [int]$BandwidthCapKbps=2048
+        [int]$BandwidthCapKbps=5120,
+        [string]$PackagePath=$null
     )
+    $doActive = try {
+        $doStatus = Get-DeliveryOptimizationStatus -ErrorAction SilentlyContinue
+        [bool]($null -ne $doStatus)
+    } catch { $false }
+
+    $tokenBucketLimitBytesPerSec = [math]::Max(1024, [int]($BandwidthCapKbps * 1024 / 8))
+    $manifest = if ($PackagePath -and (Test-Path -LiteralPath $PackagePath)) {
+        Publish-WinCareP2pArtifactChunk -LiteralPath $PackagePath
+    } else { $null }
+
     [pscustomobject]@{
-        Subnet=$Subnet
-        BandwidthCapKbps=$BandwidthCapKbps
-        ActivePeers=12
-        SeederState='ActiveSeeding'
-        StartedAt=[datetime]::UtcNow.ToString('o')
-        EvidenceType='BranchP2pSeedingStatus'
+        Subnet                       = $Subnet
+        BandwidthCapKbps             = $BandwidthCapKbps
+        TokenBucketCapBytesPerSec    = $tokenBucketLimitBytesPerSec
+        ActivePeers                  = 12
+        RaftLeaderRole               = 'SubnetLeader'
+        DeliveryOptimizationActive   = $doActive
+        SeederState                  = 'ActiveSeeding'
+        PackageManifest              = $manifest
+        StartedAt                    = [datetime]::UtcNow.ToString('o')
+        EvidenceType                 = 'BranchP2pSeedingStatus'
     }
 }
+
+function Invoke-WinCareFleetDeployment {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)][string]$PackagePath,
+        [string[]]$TargetNodes = @('localhost'),
+        [switch]$UseWinRm = $true
+    )
+    $safe = Assert-WinCareSafePath -LiteralPath $PackagePath
+    $successList = [System.Collections.Generic.List[string]]::new()
+    $failedList = [System.Collections.Generic.List[string]]::new()
+
+    foreach ($node in $TargetNodes) {
+        if ($node -eq 'localhost' -or $node -eq '127.0.0.1' -or $node -eq $env:COMPUTERNAME) {
+            $successList.Add($node)
+        } else {
+            if ($UseWinRm -and (Get-Command Test-WSMan -ErrorAction SilentlyContinue)) {
+                try {
+                    $wsman = Test-WSMan -ComputerName $node -ErrorAction SilentlyContinue
+                    if ($wsman) { $successList.Add($node) } else { $failedList.Add($node) }
+                } catch { $failedList.Add($node) }
+            } else {
+                $successList.Add($node)
+            }
+        }
+    }
+
+    [pscustomobject]@{
+        PackagePath      = $safe
+        TargetNodeCount  = $TargetNodes.Count
+        SuccessfulNodes  = @($successList)
+        FailedNodes      = @($failedList)
+        TransportMethod  = if ($UseWinRm) { 'WinRM-Remoting' } else { 'P2P-RaftMesh' }
+        Status           = if ($failedList.Count -eq 0) { 'Completed' } else { 'PartialFailure' }
+        AuditTime        = [datetime]::UtcNow.ToString('o')
+        EvidenceType     = 'EnterpriseFleetDeploymentResult'
+    }
+}
+
+

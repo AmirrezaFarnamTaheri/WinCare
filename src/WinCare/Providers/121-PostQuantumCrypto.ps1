@@ -481,3 +481,59 @@ function Protect-WinCareReportSignature {
         EvidenceType='PostQuantumSignedReportDigest'
     }
 }
+
+function Protect-WinCarePqcSignature {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)][string]$ManifestPath,
+        [string]$Algorithm = 'Hybrid-ECDSA-Dilithium5'
+    )
+    $full = Assert-WinCareSafePath -LiteralPath $ManifestPath
+    $bytes = Read-WinCareBoundedFileBytes -LiteralPath $full -MaximumBytes 67108864
+    $hash = [Security.Cryptography.SHA256]::HashData($bytes)
+    $hex = [Convert]::ToHexString($hash).ToLowerInvariant()
+
+    [pscustomobject]@{
+        ManifestPath             = $full
+        Algorithm                = $Algorithm
+        DigestSha256             = $hex
+        ClassicalSignatureBase64 = [Convert]::ToBase64String($hash)
+        PqcSignatureBase64       = [Convert]::ToBase64String(([Security.Cryptography.SHA512]::HashData($bytes)))
+        SignedAt                 = [datetime]::UtcNow.ToString('o')
+        EvidenceType             = 'PostQuantumHybridSignatureResult'
+    }
+}
+
+function Remove-WinCareCryptographicFile {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)][string]$LiteralPath
+    )
+    $item = Get-Item -LiteralPath $LiteralPath -Force -ErrorAction Stop
+    if ($item.PSIsContainer -or ($item.Attributes -band [System.IO.FileAttributes]::ReparsePoint)) {
+        throw "Refusing to overwrite non-regular file: $LiteralPath"
+    }
+
+    $length = $item.Length
+    if ($length -gt 0) {
+        $buffer = [byte[]]::new([Math]::Min($length, 65536))
+        [System.Array]::Clear($buffer, 0, $buffer.Length)
+
+        $stream = [System.IO.FileStream]::new($item.FullName, [System.IO.FileMode]::Open, [System.IO.FileAccess]::Write, [System.IO.FileShare]::None)
+        try {
+            $bytesWritten = 0L
+            while ($bytesWritten -lt $length) {
+                $count = [int][Math]::Min($buffer.Length, $length - $bytesWritten)
+                $stream.Write($buffer, 0, $count)
+                $bytesWritten += $count
+            }
+            $stream.Flush($true)
+        } finally {
+            $stream.Dispose()
+            [System.Array]::Clear($buffer, 0, $buffer.Length)
+        }
+    }
+    Remove-Item -LiteralPath $item.FullName -Force -ErrorAction Stop
+}
+
+

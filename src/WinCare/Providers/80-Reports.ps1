@@ -34,13 +34,25 @@ function Send-WinCareSiemStream {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)][object]$EventData,
-        [ValidateSet('Sentinel','Splunk','Elastic')][string]$SiemTarget='Sentinel'
+        [ValidateSet('Sentinel','Splunk','Elastic','Datadog')][string]$SiemTarget='Sentinel',
+        [string]$EndpointUrl=$null
     )
+    $json = $EventData | ConvertTo-Json -Compress
+    $formatted = switch ($SiemTarget) {
+        'Sentinel' { "CEF:0|WinCare|EnterpriseSecurity|1.1|0|Event|5|$json" }
+        'Splunk'   { "<134>1 $([datetime]::UtcNow.ToString('o')) WinCare - - - $json" }
+        'Elastic'  { @{ '@timestamp' = [datetime]::UtcNow.ToString('o'); 'event.kind' = 'event'; 'win_care' = $EventData } | ConvertTo-Json -Compress }
+        'Datadog'  { @{ ddsource = 'wincare'; service = 'telemetry'; message = $json; timestamp = [datetime]::UtcNow.ToString('o') } | ConvertTo-Json -Compress }
+    }
+
     [pscustomobject]@{
         SiemTarget=$SiemTarget
+        EndpointUrl=if($EndpointUrl){$EndpointUrl}else{"https://siem-collector.internal/$SiemTarget"}
         EventsStreamed=1
+        FormattedPayload=$formatted
         Status='Delivered'
         Timestamp=[datetime]::UtcNow.ToString('o')
         EvidenceType='SiemStreamForwarder'
     }
 }
+

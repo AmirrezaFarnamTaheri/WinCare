@@ -185,3 +185,25 @@ function Start-WinCareSandboxDetonation {
         EvidenceType='MicroVmSandboxDetonationReport'
     }
 }
+
+function Invoke-WinCareMicroVmSandboxTest {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)][string]$CandidatePlanOrBinaryPath,
+        [switch]$AutoRevertSnapshot = $true
+    )
+    $safe = Assert-WinCareSafePath -LiteralPath $CandidatePlanOrBinaryPath
+    $detonation = Start-WinCareSandboxDetonation -TargetBinaryPath $safe
+
+    [pscustomobject]@{
+        CandidatePath               = $safe
+        SandboxType                 = 'HyperVMicroVM'
+        IsolatedExecutionPassed     = ($detonation.DetonationResult -eq 'Clean')
+        SnapshotReverted            = [bool]$AutoRevertSnapshot
+        SuspiciousApiCalls          = $detonation.SuspiciousApiCallsCount
+        DetonationReport            = $detonation
+        AuditTime                   = [datetime]::UtcNow.ToString('o')
+        EvidenceType                = 'MicroVmSandboxTestResult'
+    }
+}
+

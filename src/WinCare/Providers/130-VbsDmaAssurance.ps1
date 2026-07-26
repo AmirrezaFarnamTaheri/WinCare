@@ -152,3 +152,25 @@ function Test-WinCareMemoryEncryption {
         EvidenceType = 'HardwareMemoryEncryptionAudit'
     }
 }
+
+function Get-WinCareVbsDmaState {
+    [CmdletBinding()]
+    param()
+    $vbsEnclave = Get-WinCareVbsEnclaveState
+    $hvci = Test-WinCareHvciIntegrity
+    $dma = Test-WinCareDmaShield
+
+    $vbsActive = if ($vbsEnclave.Vbs) { [bool]($vbsEnclave.Vbs.Status -eq 1 -or $vbsEnclave.Vbs.Status -eq 2) } else { $false }
+    $riskClass = if ($vbsActive -and $hvci.HvciEnabled -and $dma.KernelDmaProtectionPresent) { 'Low' } elseif ($vbsActive) { 'Elevated' } else { 'Critical' }
+
+    [pscustomobject]@{
+        VbsActive                  = $vbsActive
+        HvciEnforced               = $hvci.HvciEnabled
+        CredentialGuardRunning     = $hvci.CredentialGuardRunning
+        KernelDmaProtectionPresent = $dma.KernelDmaProtectionPresent
+        RiskClassification         = $riskClass
+        AuditedAt                  = [datetime]::UtcNow.ToString('o')
+        EvidenceType               = 'VbsAndDmaCombinedAssuranceReport'
+    }
+}
+

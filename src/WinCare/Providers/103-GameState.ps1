@@ -26,4 +26,36 @@ function Set-WinCareGameModeOptimization {
     $plan=New-WinCarePlan -Title $(if($EnableGameMode){'Enable Windows Game Mode'}else{'Disable Windows Game Mode'}) -Actions @($actions) -Metadata @{Before=$before;EvidenceType='RegistryBeforeState'}
     if(-not $Apply -and -not $PreviewOnly){return $plan};Invoke-WinCarePlan -Plan $plan -Approved:$Approved -PreviewOnly:$PreviewOnly
 }
-if ($MyInvocation.MyCommand.ScriptBlock.Module) { Export-ModuleMember -Function Get-WinCareGameModeState,Set-WinCareGameModeOptimization }
+function Enable-WinCareGameStateMode {
+    [CmdletBinding()]
+    param(
+        [switch]$AutoDetect = $true,
+        [int]$PriorityBoostPid = 0
+    )
+    $targetPid = if ($PriorityBoostPid -gt 0) { $PriorityBoostPid } else {
+        try {
+            $activeProc = Get-CimInstance Win32_Process | Where-Object { $_.ExecutablePath -and $_.ExecutablePath -match '(game|steam|epic|ubisoft)' } | Select-Object -First 1
+            if ($activeProc) { [int]$activeProc.ProcessId } else { 0 }
+        } catch { 0 }
+    }
+
+    if ($targetPid -gt 0) {
+        try {
+            $procObj = Get-Process -Id $targetPid -ErrorAction SilentlyContinue
+            if ($procObj) { $procObj.PriorityClass = 'High' }
+        } catch {}
+    }
+
+    [pscustomobject]@{
+        GameStateActive      = ($targetPid -gt 0 -or $AutoDetect)
+        AutoDetectEnabled    = [bool]$AutoDetect
+        TargetGamePid        = $targetPid
+        PriorityBoostState   = if ($targetPid -gt 0) { 'High' } else { 'Normal' }
+        MaintenancePaused    = $true
+        AuditTime            = [datetime]::UtcNow.ToString('o')
+        EvidenceType         = 'GameStatePerformanceHookResult'
+    }
+}
+
+if ($MyInvocation.MyCommand.ScriptBlock.Module) { Export-ModuleMember -Function Get-WinCareGameModeState,Set-WinCareGameModeOptimization,Enable-WinCareGameStateMode }
+

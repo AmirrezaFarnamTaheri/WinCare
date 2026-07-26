@@ -61,12 +61,40 @@ function Invoke-WinCareFleetPlaybookBroadcast {
 function New-WinCareAutoPlaybook {
     [CmdletBinding()]
     param([string]$TriggerEvent='RecurringDiskPressure')
-    $id = [guid]::NewGuid().ToString('B')
+    
+    $actions = [Collections.Generic.List[object]]::new()
+    switch ($TriggerEvent) {
+        'RecurringDiskPressure' {
+            $actions.Add((New-WinCareBridgeAction -Type 'ClearTemporaryFiles' -Label 'Clean temporary system & user files' -Risk Low -Parameters @{ Path = [System.IO.Path]::GetTempPath() }))
+            $actions.Add((New-WinCareBridgeAction -Type 'ClearRecycleBin' -Label 'Empty Recycle Bin' -Risk Low -Parameters @{}))
+            $actions.Add((New-WinCareBridgeAction -Type 'OptimizeStorage' -Label 'Run storage optimization' -Risk Low -Parameters @{ DriveLetter = 'C' }))
+        }
+        'ElevatedCpuUsage' {
+            $actions.Add((New-WinCareBridgeAction -Type 'TrimMemoryWorkingSets' -Label 'Trim memory working sets' -Risk Low -Parameters @{}))
+            $actions.Add((New-WinCareBridgeAction -Type 'AuditSecurityBaseline' -Label 'Audit suspicious CPU process baseline' -Risk Low -Parameters @{}))
+        }
+        'TelemetryAnomalyDetected' {
+            $actions.Add((New-WinCareBridgeAction -Type 'AuditSecurityBaseline' -Label 'Audit security baseline after telemetry anomaly' -Risk Low -Parameters @{}))
+            $actions.Add((New-WinCareBridgeAction -Type 'TrimMemoryWorkingSets' -Label 'Trim memory working sets' -Risk Low -Parameters @{}))
+        }
+        Default {
+            $actions.Add((New-WinCareBridgeAction -Type 'ClearTemporaryFiles' -Label 'Default temporary file cleanup' -Risk Low -Parameters @{ Path = [System.IO.Path]::GetTempPath() }))
+            $actions.Add((New-WinCareBridgeAction -Type 'TrimMemoryWorkingSets' -Label 'Default memory trim' -Risk Low -Parameters @{}))
+        }
+    }
+
+    $rawText = "${TriggerEvent}:$($actions.Count):" + ([datetime]::UtcNow.ToString('yyyy-MM-dd-HH'))
+    $sha256 = Get-WinCareSha256Text -Text $rawText
+    $id = "playbook-$($sha256.Substring(0, 16))"
+
     [pscustomobject]@{
-        PlaybookId=$id
-        TriggerEvent=$TriggerEvent
-        SynthesizedActionCount=3
-        CreatedAt=[datetime]::UtcNow.ToString('o')
-        EvidenceType='SynthesizedPlaybookDefinition'
+        PlaybookId = $id
+        TriggerEvent = $TriggerEvent
+        Actions = @($actions)
+        SynthesizedActionCount = $actions.Count
+        Sha256 = $sha256
+        CreatedAt = [datetime]::UtcNow.ToString('o')
+        EvidenceType = 'SynthesizedPlaybookDefinition'
     }
 }
+
