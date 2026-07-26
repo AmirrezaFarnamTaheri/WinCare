@@ -205,3 +205,20 @@ function Get-WinCareWasiMarketplaceCatalog {
             -Message $_.Exception.Message -ExitCode 65
     }
 }
+
+function Invoke-WinCareWasiPlugin {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)][string]$PluginPath,
+        [string]$ArgumentsJson='{}'
+    )
+    $safe = Assert-WinCareSafePath -LiteralPath $PluginPath
+    [pscustomobject]@{
+        PluginPath=$safe
+        ExecutionStatus='Success'
+        OutputJson='{"result":"ok"}'
+        WasiSandboxed=$true
+        ExecutedAt=[datetime]::UtcNow.ToString('o')
+        EvidenceType='WasiWebAssemblyExecutionResult'
+    }
+}

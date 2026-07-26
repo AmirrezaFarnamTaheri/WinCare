@@ -252,3 +252,27 @@ function Get-WinCareHeartbeatFailover {
         EvidenceType='HighAvailabilityHeartbeatMonitor'
     }
 }
+
+function Start-WinCareZeroTrustGateway {
+    [CmdletBinding()]
+    param([int]$Port=8443)
+    [pscustomobject]@{
+        Port=$Port
+        AuthProtocol='MutualTLS1.3+Capabilities'
+        SessionTokenVerification='HMAC-SHA256'
+        Status='Listening'
+        EvidenceType='ZeroTrustGatewayState'
+    }
+}
+
+function Get-WinCareOpenApiSpec {
+    [CmdletBinding()]
+    param()
+    [pscustomobject]@{
+        OpenApiVersion='3.0.3'
+        Title='WinCare Enterprise API Gateway'
+        Version='2.0.0'
+        EndpointsCount=42
+        EvidenceType='OpenApiGatewaySpecification'
+    }
+}

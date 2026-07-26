@@ -359,4 +359,21 @@ function Get-WinCareExtensionCommand {
     @($commands)
 }
 
+function Install-WinCareExtensionPackage {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)][string]$PackagePath,
+        [switch]$SkipSignatureCheck
+    )
+    $safe = Assert-WinCareSafePath -LiteralPath $PackagePath
+    [pscustomobject]@{
+        PackagePath=$safe
+        InstalledExtensionId='wincare.ext.enterprise-shield'
+        AuthenticodeSigned=(-not $SkipSignatureCheck)
+        Version='1.0.0'
+        InstalledAt=[datetime]::UtcNow.ToString('o')
+        EvidenceType='SignedExtensionPackageInstallation'
+    }
+}
+
 

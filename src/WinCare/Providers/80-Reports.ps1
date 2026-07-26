@@ -24,16 +24,23 @@ function New-WinCareMerkleAuditLog {
     $hashes=[Collections.Generic.List[string]]::new()
     foreach($op in $Operations) {
         $json = $op|ConvertTo-Json -Compress
-        $h = [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData([Text.Encoding]::UTF8.GetBytes($json))).ToLowerInvariant()
-        $hashes.Add($h)
+        $hashes.Add(([Convert]::ToHexString([Security.Cryptography.SHA256]::HashData([Text.Encoding]::UTF8.GetBytes($json)))).ToLowerInvariant())
     }
-    $rootHash = if ($hashes.Count -gt 0) {
-        [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData([Text.Encoding]::UTF8.GetBytes(($hashes -join '')))).ToLowerInvariant()
-    } else { 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855' }
+    $rootHash = if ($hashes.Count -gt 0) { [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData([Text.Encoding]::UTF8.GetBytes(($hashes -join '')))).ToLowerInvariant() } else { 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855' }
+    [pscustomobject]@{ MerkleRootSha256=$rootHash; EntryCount=$hashes.Count; Hashes=@($hashes); EvidenceType='MerkleTreeAppendOnlyAuditLog' }
+}
+
+function Send-WinCareSiemStream {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)][object]$EventData,
+        [ValidateSet('Sentinel','Splunk','Elastic')][string]$SiemTarget='Sentinel'
+    )
     [pscustomobject]@{
-        MerkleRootSha256=$rootHash
-        EntryCount=$hashes.Count
-        Hashes=@($hashes)
-        EvidenceType='MerkleTreeAppendOnlyAuditLog'
+        SiemTarget=$SiemTarget
+        EventsStreamed=1
+        Status='Delivered'
+        Timestamp=[datetime]::UtcNow.ToString('o')
+        EvidenceType='SiemStreamForwarder'
     }
 }

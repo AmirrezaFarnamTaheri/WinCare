@@ -255,3 +255,29 @@ function Find-WinCareCloudInstances {
         EvidenceType='MultiCloudInstanceDiscovery'
     }
 }
+
+function New-WinCareK8sOperatorManifest {
+    [CmdletBinding()]
+    param([string]$Namespace='wincare-system')
+    @"
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: wincare-node-agent
+  namespace: $Namespace
+spec:
+  selector:
+    matchLabels:
+      app: wincare-node-agent
+  template:
+    metadata:
+      labels:
+        app: wincare-node-agent
+    spec:
+      nodeSelector:
+        kubernetes.io/os: windows
+      containers:
+      - name: wincare-agent
+        image: wincare/node-agent:v2.0.0
+"@
+}

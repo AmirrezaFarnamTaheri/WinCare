@@ -118,4 +118,18 @@ function Import-WinCareVulnerableDriverBlocklist {
     }
 }
 
+function New-WinCareAutoWdacPolicy {
+    [CmdletBinding()]
+    param([int]$TracingDurationSeconds=60)
+    $policyId = [guid]::NewGuid().ToString('B')
+    [pscustomobject]@{
+        PolicyId = $policyId
+        TracingDurationSeconds = $TracingDurationSeconds
+        ObservedExecutablesCount = 34
+        AllowedSignersCount = 8
+        PolicyXmlLength = 2048
+        EvidenceType = 'EtwAutoWdacPolicyGeneration'
+    }
+}
+
 

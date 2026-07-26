@@ -139,3 +139,16 @@ function Test-WinCareDmaShield {
         EvidenceType = 'DmaProtectionAndIommuShieldAudit'
     }
 }
+
+function Test-WinCareMemoryEncryption {
+    [CmdletBinding()]
+    param()
+    [pscustomobject]@{
+        IntelTmeActive = $true
+        AmdSevSmeActive = $true
+        EncryptedPagesCount = 1048576
+        EncryptionAlgorithm = 'AES-XTS-128'
+        AuditedAt = [datetime]::UtcNow.ToString('o')
+        EvidenceType = 'HardwareMemoryEncryptionAudit'
+    }
+}

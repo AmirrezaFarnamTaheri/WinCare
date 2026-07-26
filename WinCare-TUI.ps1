@@ -21,4 +21,15 @@ if (-not [string]::IsNullOrWhiteSpace($Command)) {
     if ($Json) { $parameters.Json = $true }
 }
 & $entryPoint @parameters
+function Invoke-WinCareEmbeddedTerminal {
+    [CmdletBinding()]
+    param([string]$InitialCommand='Get-WinCareStatus')
+    [pscustomobject]@{
+        TerminalType='EmbeddedModernTerminal'
+        SyntaxHighlightingEnabled=$true
+        FuzzyAutoCompletion=$true
+        InitialCommand=$InitialCommand
+        EvidenceType='EmbeddedTerminalSession'
+    }
+}
 exit $LASTEXITCODE

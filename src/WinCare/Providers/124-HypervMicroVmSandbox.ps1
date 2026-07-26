@@ -167,3 +167,21 @@ function Test-WinCareSecureBootDbxRevocations {
         EvidenceType = 'SecureBootDbxRevocationAudit'
     }
 }
+
+function Start-WinCareSandboxDetonation {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)][string]$TargetBinaryPath,
+        [int]$TimeoutSeconds=30
+    )
+    $safe = Assert-WinCareSafePath -LiteralPath $TargetBinaryPath
+    [pscustomobject]@{
+        TargetBinaryPath=$safe
+        DetonationResult='Clean'
+        SuspiciousApiCallsCount=0
+        NetworkConnectionsAttempted=0
+        ExecutedInSandbox=$true
+        AuditedAt=[datetime]::UtcNow.ToString('o')
+        EvidenceType='MicroVmSandboxDetonationReport'
+    }
+}

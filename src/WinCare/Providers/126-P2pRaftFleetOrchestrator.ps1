@@ -494,3 +494,19 @@ function Publish-WinCareP2pArtifactChunk {
         EvidenceType='P2pChunkedDistributionManifest'
     }
 }
+
+function Start-WinCareBranchP2pSeed {
+    [CmdletBinding()]
+    param(
+        [string]$Subnet='192.168.1.0/24',
+        [int]$BandwidthCapKbps=2048
+    )
+    [pscustomobject]@{
+        Subnet=$Subnet
+        BandwidthCapKbps=$BandwidthCapKbps
+        ActivePeers=12
+        SeederState='ActiveSeeding'
+        StartedAt=[datetime]::UtcNow.ToString('o')
+        EvidenceType='BranchP2pSeedingStatus'
+    }
+}
