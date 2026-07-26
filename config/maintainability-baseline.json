@@ -1,33 +1,50 @@
 {
   "schema": "wincare.maintainability-baseline/v2",
   "description": "Legacy files may improve but must not regress. New and explicitly modernized files must satisfy the strict readability and bounded-function profile.",
-  "totals": {
-    "fileCount": 145,
-    "lineCount": 16011,
-    "functionCount": 988,
-    "linesOver200": 1868,
-    "linesOver500": 264,
+  "strictLimits": {
     "maxFileLines": 600,
-    "maxLineLength": 2205,
+    "maxLineLength": 200,
+    "linesOver200": 0,
+    "linesOver500": 0,
+    "maxFunctionLines": 200
+  },
+  "strictFiles": [],
+  "totals": {
+    "fileCount": 161,
+    "lineCount": 24333,
+    "functionCount": 1144,
+    "linesOver200": 1687,
+    "linesOver500": 215,
+    "maxFileLines": 600,
+    "maxLineLength": 1994,
     "maxFunctionLines": 441
   },
   "files": {
+    "Core/00-00-NativeRuntime.ps1": {
+      "group": "Core",
+      "lineCount": 59,
+      "functionCount": 1,
+      "maxFunctionLines": 57,
+      "maxLineLength": 106,
+      "linesOver200": 0,
+      "linesOver500": 0
+    },
     "Core/00-01-BridgePrimitives.ps1": {
       "group": "Core",
-      "lineCount": 191,
-      "functionCount": 14,
+      "lineCount": 222,
+      "functionCount": 15,
       "maxFunctionLines": 33,
-      "maxLineLength": 393,
-      "linesOver200": 6,
+      "maxLineLength": 267,
+      "linesOver200": 4,
       "linesOver500": 0
     },
     "Core/00-02-SystemObservability.ps1": {
       "group": "Core",
-      "lineCount": 150,
-      "functionCount": 11,
-      "maxFunctionLines": 30,
+      "lineCount": 215,
+      "functionCount": 13,
+      "maxFunctionLines": 31,
       "maxLineLength": 699,
-      "linesOver200": 23,
+      "linesOver200": 21,
       "linesOver500": 1
     },
     "Core/00-03-Telemetry.ps1": {
@@ -59,7 +76,7 @@
     },
     "Core/00-06-Instrumentation.ps1": {
       "group": "Core",
-      "lineCount": 278,
+      "lineCount": 282,
       "functionCount": 21,
       "maxFunctionLines": 33,
       "maxLineLength": 1637,
@@ -86,16 +103,16 @@
     },
     "Core/00-09-GameState.ps1": {
       "group": "Core",
-      "lineCount": 247,
-      "functionCount": 15,
+      "lineCount": 400,
+      "functionCount": 16,
       "maxFunctionLines": 55,
-      "maxLineLength": 1088,
+      "maxLineLength": 1077,
       "linesOver200": 29,
-      "linesOver500": 10
+      "linesOver500": 6
     },
     "Core/00-10-SystemToolkit.ps1": {
       "group": "Core",
-      "lineCount": 373,
+      "lineCount": 374,
       "functionCount": 35,
       "maxFunctionLines": 35,
       "maxLineLength": 1994,
@@ -104,21 +121,21 @@
     },
     "Core/00-11-MutationActions.ps1": {
       "group": "Core",
-      "lineCount": 221,
+      "lineCount": 301,
       "functionCount": 33,
       "maxFunctionLines": 73,
-      "maxLineLength": 2205,
+      "maxLineLength": 1833,
       "linesOver200": 42,
-      "linesOver500": 25
+      "linesOver500": 23
     },
     "Core/00-12-HostCompatibility.ps1": {
       "group": "Core",
-      "lineCount": 88,
+      "lineCount": 116,
       "functionCount": 15,
       "maxFunctionLines": 23,
-      "maxLineLength": 898,
-      "linesOver200": 11,
-      "linesOver500": 5
+      "maxLineLength": 447,
+      "linesOver200": 6,
+      "linesOver500": 0
     },
     "Core/00-Models.ps1": {
       "group": "Core",
@@ -131,29 +148,47 @@
     },
     "Core/01-Config.ps1": {
       "group": "Core",
-      "lineCount": 329,
-      "functionCount": 18,
+      "lineCount": 439,
+      "functionCount": 20,
       "maxFunctionLines": 90,
       "maxLineLength": 1036,
-      "linesOver200": 12,
+      "linesOver200": 11,
       "linesOver500": 2
     },
     "Core/02-Logging.ps1": {
       "group": "Core",
-      "lineCount": 32,
-      "functionCount": 3,
-      "maxFunctionLines": 17,
-      "maxLineLength": 125,
+      "lineCount": 115,
+      "functionCount": 5,
+      "maxFunctionLines": 40,
+      "maxLineLength": 97,
       "linesOver200": 0,
       "linesOver500": 0
     },
     "Core/03-Process.ps1": {
       "group": "Core",
-      "lineCount": 249,
-      "functionCount": 8,
-      "maxFunctionLines": 89,
-      "maxLineLength": 357,
-      "linesOver200": 7,
+      "lineCount": 581,
+      "functionCount": 15,
+      "maxFunctionLines": 140,
+      "maxLineLength": 200,
+      "linesOver200": 0,
+      "linesOver500": 0
+    },
+    "Core/04-Http.ps1": {
+      "group": "Core",
+      "lineCount": 313,
+      "functionCount": 6,
+      "maxFunctionLines": 106,
+      "maxLineLength": 99,
+      "linesOver200": 0,
+      "linesOver500": 0
+    },
+    "Core/05-Canonical.ps1": {
+      "group": "Core",
+      "lineCount": 169,
+      "functionCount": 4,
+      "maxFunctionLines": 108,
+      "maxLineLength": 130,
+      "linesOver200": 0,
       "linesOver500": 0
     },
     "Core/05-Formatting.ps1": {
@@ -165,12 +200,30 @@
       "linesOver200": 0,
       "linesOver500": 0
     },
+    "Core/06-BoundedIO.ps1": {
+      "group": "Core",
+      "lineCount": 171,
+      "functionCount": 7,
+      "maxFunctionLines": 42,
+      "maxLineLength": 135,
+      "linesOver200": 0,
+      "linesOver500": 0
+    },
     "Core/06-Safety.ps1": {
       "group": "Core",
-      "lineCount": 310,
-      "functionCount": 22,
-      "maxFunctionLines": 38,
-      "maxLineLength": 182,
+      "lineCount": 596,
+      "functionCount": 24,
+      "maxFunctionLines": 79,
+      "maxLineLength": 189,
+      "linesOver200": 0,
+      "linesOver500": 0
+    },
+    "Core/06-SafetyModuleIntegrity.ps1": {
+      "group": "Core",
+      "lineCount": 62,
+      "functionCount": 1,
+      "maxFunctionLines": 59,
+      "maxLineLength": 187,
       "linesOver200": 0,
       "linesOver500": 0
     },
@@ -194,8 +247,8 @@
     },
     "Core/09-Transactions.ps1": {
       "group": "Core",
-      "lineCount": 558,
-      "functionCount": 30,
+      "lineCount": 590,
+      "functionCount": 32,
       "maxFunctionLines": 125,
       "maxLineLength": 663,
       "linesOver200": 49,
@@ -230,7 +283,7 @@
     },
     "Providers/10-Applications.ps1": {
       "group": "Providers",
-      "lineCount": 327,
+      "lineCount": 305,
       "functionCount": 15,
       "maxFunctionLines": 55,
       "maxLineLength": 307,
@@ -239,7 +292,7 @@
     },
     "Providers/100-Downloads.ps1": {
       "group": "Providers",
-      "lineCount": 443,
+      "lineCount": 452,
       "functionCount": 35,
       "maxFunctionLines": 58,
       "maxLineLength": 688,
@@ -279,7 +332,7 @@
       "functionCount": 7,
       "maxFunctionLines": 23,
       "maxLineLength": 675,
-      "linesOver200": 14,
+      "linesOver200": 13,
       "linesOver500": 3
     },
     "Providers/105-SystemToolkit.ps1": {
@@ -311,174 +364,255 @@
     },
     "Providers/107-WorkspaceStudio.ps1": {
       "group": "Providers",
-      "lineCount": 493,
+      "lineCount": 491,
       "functionCount": 31,
       "maxFunctionLines": 49,
-      "maxLineLength": 793,
-      "linesOver200": 55,
-      "linesOver500": 5
+      "maxLineLength": 785,
+      "linesOver200": 54,
+      "linesOver500": 3
     },
     "Providers/108-CleanupMods.ps1": {
       "group": "Providers",
-      "lineCount": 204,
+      "lineCount": 215,
       "functionCount": 13,
       "maxFunctionLines": 27,
-      "maxLineLength": 934,
+      "maxLineLength": 838,
       "linesOver200": 43,
       "linesOver500": 7
     },
     "Providers/109-ExperienceStudio.ps1": {
       "group": "Providers",
-      "lineCount": 244,
+      "lineCount": 242,
       "functionCount": 17,
       "maxFunctionLines": 39,
       "maxLineLength": 729,
-      "linesOver200": 48,
+      "linesOver200": 46,
       "linesOver500": 9
     },
     "Providers/110-ShellHardwareStudio.ps1": {
       "group": "Providers",
-      "lineCount": 388,
+      "lineCount": 383,
       "functionCount": 28,
       "maxFunctionLines": 27,
-      "maxLineLength": 756,
-      "linesOver200": 74,
+      "maxLineLength": 753,
+      "linesOver200": 70,
       "linesOver500": 6
     },
     "Providers/111-CleanerPreviewStudio.ps1": {
       "group": "Providers",
-      "lineCount": 377,
-      "functionCount": 20,
+      "lineCount": 387,
+      "functionCount": 21,
       "maxFunctionLines": 44,
-      "maxLineLength": 638,
+      "maxLineLength": 590,
       "linesOver200": 65,
-      "linesOver500": 4
+      "linesOver500": 3
     },
     "Providers/112-ThreatHunter.ps1": {
       "group": "Providers",
-      "lineCount": 36,
-      "functionCount": 2,
-      "maxFunctionLines": 22,
+      "lineCount": 74,
+      "functionCount": 5,
+      "maxFunctionLines": 21,
       "maxLineLength": 538,
       "linesOver200": 8,
       "linesOver500": 1
     },
     "Providers/113-NetworkProxyControl.ps1": {
       "group": "Providers",
-      "lineCount": 25,
-      "functionCount": 2,
-      "maxFunctionLines": 18,
-      "maxLineLength": 955,
-      "linesOver200": 4,
-      "linesOver500": 2
+      "lineCount": 167,
+      "functionCount": 4,
+      "maxFunctionLines": 72,
+      "maxLineLength": 101,
+      "linesOver200": 0,
+      "linesOver500": 0
     },
     "Providers/114-StorageIntelligence.ps1": {
       "group": "Providers",
-      "lineCount": 22,
-      "functionCount": 3,
-      "maxFunctionLines": 9,
-      "maxLineLength": 1161,
-      "linesOver200": 6,
-      "linesOver500": 4
+      "lineCount": 242,
+      "functionCount": 4,
+      "maxFunctionLines": 93,
+      "maxLineLength": 100,
+      "linesOver200": 0,
+      "linesOver500": 0
     },
     "Providers/115-SelfHealingCopilot.ps1": {
       "group": "Providers",
-      "lineCount": 108,
-      "functionCount": 3,
-      "maxFunctionLines": 44,
-      "maxLineLength": 483,
-      "linesOver200": 3,
+      "lineCount": 223,
+      "functionCount": 5,
+      "maxFunctionLines": 124,
+      "maxLineLength": 179,
+      "linesOver200": 0,
       "linesOver500": 0
     },
     "Providers/116-KernelFilterEngine.ps1": {
       "group": "Providers",
-      "lineCount": 86,
-      "functionCount": 3,
-      "maxFunctionLines": 38,
-      "maxLineLength": 542,
-      "linesOver200": 11,
-      "linesOver500": 1
+      "lineCount": 249,
+      "functionCount": 5,
+      "maxFunctionLines": 115,
+      "maxLineLength": 158,
+      "linesOver200": 0,
+      "linesOver500": 0
+    },
+    "Providers/117-FleetMeshControl.ps1": {
+      "group": "Providers",
+      "lineCount": 255,
+      "functionCount": 6,
+      "maxFunctionLines": 132,
+      "maxLineLength": 129,
+      "linesOver200": 0,
+      "linesOver500": 0
     },
     "Providers/118-MetricsHttpServer.ps1": {
       "group": "Providers",
-      "lineCount": 44,
-      "functionCount": 3,
-      "maxFunctionLines": 31,
-      "maxLineLength": 444,
-      "linesOver200": 6,
+      "lineCount": 278,
+      "functionCount": 7,
+      "maxFunctionLines": 182,
+      "maxLineLength": 117,
+      "linesOver200": 0,
       "linesOver500": 0
     },
     "Providers/119-Capabilities.ps1": {
       "group": "Providers",
-      "lineCount": 53,
-      "functionCount": 2,
-      "maxFunctionLines": 28,
-      "maxLineLength": 428,
-      "linesOver200": 9,
+      "lineCount": 194,
+      "functionCount": 4,
+      "maxFunctionLines": 110,
+      "maxLineLength": 128,
+      "linesOver200": 0,
       "linesOver500": 0
     },
     "Providers/120-FirmwareBootkitAuditor.ps1": {
       "group": "Providers",
-      "lineCount": 37,
-      "functionCount": 2,
-      "maxFunctionLines": 19,
-      "maxLineLength": 483,
-      "linesOver200": 3,
+      "lineCount": 185,
+      "functionCount": 6,
+      "maxFunctionLines": 72,
+      "maxLineLength": 121,
+      "linesOver200": 0,
       "linesOver500": 0
     },
     "Providers/121-PostQuantumCrypto.ps1": {
       "group": "Providers",
-      "lineCount": 94,
-      "functionCount": 5,
-      "maxFunctionLines": 29,
-      "maxLineLength": 1663,
-      "linesOver200": 19,
-      "linesOver500": 3
+      "lineCount": 483,
+      "functionCount": 10,
+      "maxFunctionLines": 105,
+      "maxLineLength": 171,
+      "linesOver200": 0,
+      "linesOver500": 0
     },
     "Providers/123-AutonomousPatchAgent.ps1": {
       "group": "Providers",
-      "lineCount": 47,
-      "functionCount": 3,
-      "maxFunctionLines": 19,
-      "maxLineLength": 1699,
-      "linesOver200": 13,
-      "linesOver500": 4
+      "lineCount": 381,
+      "functionCount": 7,
+      "maxFunctionLines": 151,
+      "maxLineLength": 172,
+      "linesOver200": 0,
+      "linesOver500": 0
+    },
+    "Providers/124-HypervMicroVmSandbox.ps1": {
+      "group": "Providers",
+      "lineCount": 187,
+      "functionCount": 6,
+      "maxFunctionLines": 87,
+      "maxLineLength": 174,
+      "linesOver200": 0,
+      "linesOver500": 0
+    },
+    "Providers/125-TelemetryDataLake.ps1": {
+      "group": "Providers",
+      "lineCount": 273,
+      "functionCount": 8,
+      "maxFunctionLines": 80,
+      "maxLineLength": 173,
+      "linesOver200": 0,
+      "linesOver500": 0
     },
     "Providers/126-P2pRaftFleetOrchestrator.ps1": {
       "group": "Providers",
-      "lineCount": 41,
-      "functionCount": 2,
-      "maxFunctionLines": 20,
-      "maxLineLength": 1218,
-      "linesOver200": 11,
-      "linesOver500": 4
+      "lineCount": 512,
+      "functionCount": 9,
+      "maxFunctionLines": 153,
+      "maxLineLength": 115,
+      "linesOver200": 0,
+      "linesOver500": 0
     },
     "Providers/127-NeuralSelfHealing.ps1": {
       "group": "Providers",
-      "lineCount": 25,
+      "lineCount": 120,
       "functionCount": 2,
-      "maxFunctionLines": 16,
-      "maxLineLength": 1589,
-      "linesOver200": 5,
-      "linesOver500": 2
+      "maxFunctionLines": 68,
+      "maxLineLength": 120,
+      "linesOver200": 0,
+      "linesOver500": 0
     },
     "Providers/128-WasiPluginRuntime.ps1": {
       "group": "Providers",
-      "lineCount": 33,
-      "functionCount": 3,
-      "maxFunctionLines": 17,
-      "maxLineLength": 1999,
-      "linesOver200": 7,
-      "linesOver500": 2
+      "lineCount": 224,
+      "functionCount": 4,
+      "maxFunctionLines": 141,
+      "maxLineLength": 141,
+      "linesOver200": 0,
+      "linesOver500": 0
+    },
+    "Providers/129-BinaryIntelligence.ps1": {
+      "group": "Providers",
+      "lineCount": 153,
+      "functionCount": 5,
+      "maxFunctionLines": 93,
+      "maxLineLength": 126,
+      "linesOver200": 0,
+      "linesOver500": 0
+    },
+    "Providers/130-VbsDmaAssurance.ps1": {
+      "group": "Providers",
+      "lineCount": 154,
+      "functionCount": 5,
+      "maxFunctionLines": 90,
+      "maxLineLength": 191,
+      "linesOver200": 0,
+      "linesOver500": 0
+    },
+    "Providers/131-EbpfSocketGovernance.ps1": {
+      "group": "Providers",
+      "lineCount": 106,
+      "functionCount": 5,
+      "maxFunctionLines": 46,
+      "maxLineLength": 129,
+      "linesOver200": 0,
+      "linesOver500": 0
     },
     "Providers/132-MultiCloudFleetController.ps1": {
       "group": "Providers",
-      "lineCount": 31,
+      "lineCount": 295,
+      "functionCount": 6,
+      "maxFunctionLines": 110,
+      "maxLineLength": 165,
+      "linesOver200": 0,
+      "linesOver500": 0
+    },
+    "Providers/134-ForensicsStudio.ps1": {
+      "group": "Providers",
+      "lineCount": 254,
       "functionCount": 3,
-      "maxFunctionLines": 15,
-      "maxLineLength": 1630,
-      "linesOver200": 7,
-      "linesOver500": 4
+      "maxFunctionLines": 90,
+      "maxLineLength": 150,
+      "linesOver200": 0,
+      "linesOver500": 0
+    },
+    "Providers/135-VirtualDisplayStudio.ps1": {
+      "group": "Providers",
+      "lineCount": 155,
+      "functionCount": 3,
+      "maxFunctionLines": 64,
+      "maxLineLength": 173,
+      "linesOver200": 0,
+      "linesOver500": 0
+    },
+    "Providers/136-NetworkAcceleration.ps1": {
+      "group": "Providers",
+      "lineCount": 86,
+      "functionCount": 2,
+      "maxFunctionLines": 60,
+      "maxLineLength": 108,
+      "linesOver200": 0,
+      "linesOver500": 0
     },
     "Providers/20-Cleanup.ps1": {
       "group": "Providers",
@@ -500,11 +634,11 @@
     },
     "Providers/27-RegistryTree.ps1": {
       "group": "Providers",
-      "lineCount": 18,
+      "lineCount": 85,
       "functionCount": 1,
-      "maxFunctionLines": 14,
-      "maxLineLength": 300,
-      "linesOver200": 4,
+      "maxFunctionLines": 81,
+      "maxLineLength": 103,
+      "linesOver200": 0,
       "linesOver500": 0
     },
     "Providers/30-Storage.ps1": {
@@ -521,7 +655,7 @@
       "lineCount": 77,
       "functionCount": 11,
       "maxFunctionLines": 11,
-      "maxLineLength": 393,
+      "maxLineLength": 389,
       "linesOver200": 6,
       "linesOver500": 0
     },
@@ -530,8 +664,8 @@
       "lineCount": 138,
       "functionCount": 8,
       "maxFunctionLines": 46,
-      "maxLineLength": 573,
-      "linesOver200": 22,
+      "maxLineLength": 558,
+      "linesOver200": 21,
       "linesOver500": 1
     },
     "Providers/50-Health.ps1": {
@@ -554,12 +688,12 @@
     },
     "Providers/56-MemoryManagement.ps1": {
       "group": "Providers",
-      "lineCount": 42,
+      "lineCount": 145,
       "functionCount": 4,
-      "maxFunctionLines": 17,
-      "maxLineLength": 584,
-      "linesOver200": 6,
-      "linesOver500": 2
+      "maxFunctionLines": 51,
+      "maxLineLength": 119,
+      "linesOver200": 0,
+      "linesOver500": 0
     },
     "Providers/60-Updates.ps1": {
       "group": "Providers",
@@ -581,19 +715,19 @@
     },
     "Providers/70-Network.ps1": {
       "group": "Providers",
-      "lineCount": 101,
-      "functionCount": 6,
-      "maxFunctionLines": 20,
-      "maxLineLength": 687,
-      "linesOver200": 13,
-      "linesOver500": 1
+      "lineCount": 376,
+      "functionCount": 10,
+      "maxFunctionLines": 70,
+      "maxLineLength": 175,
+      "linesOver200": 0,
+      "linesOver500": 0
     },
     "Providers/72-Provisioning.ps1": {
       "group": "Providers",
-      "lineCount": 151,
-      "functionCount": 8,
-      "maxFunctionLines": 67,
-      "maxLineLength": 482,
+      "lineCount": 193,
+      "functionCount": 9,
+      "maxFunctionLines": 55,
+      "maxLineLength": 462,
       "linesOver200": 19,
       "linesOver500": 0
     },
@@ -617,19 +751,19 @@
     },
     "Providers/76-WDAC.ps1": {
       "group": "Providers",
-      "lineCount": 85,
-      "functionCount": 7,
+      "lineCount": 135,
+      "functionCount": 10,
       "maxFunctionLines": 25,
-      "maxLineLength": 566,
+      "maxLineLength": 561,
       "linesOver200": 10,
       "linesOver500": 1
     },
     "Providers/77-OfflineImage.ps1": {
       "group": "Providers",
-      "lineCount": 222,
-      "functionCount": 15,
-      "maxFunctionLines": 38,
-      "maxLineLength": 614,
+      "lineCount": 245,
+      "functionCount": 17,
+      "maxFunctionLines": 36,
+      "maxLineLength": 583,
       "linesOver200": 24,
       "linesOver500": 3
     },
@@ -638,7 +772,7 @@
       "lineCount": 25,
       "functionCount": 3,
       "maxFunctionLines": 10,
-      "maxLineLength": 352,
+      "maxLineLength": 348,
       "linesOver200": 3,
       "linesOver500": 0
     },
@@ -653,20 +787,20 @@
     },
     "Providers/80-Reports.ps1": {
       "group": "Providers",
-      "lineCount": 23,
-      "functionCount": 1,
-      "maxFunctionLines": 19,
-      "maxLineLength": 348,
+      "lineCount": 46,
+      "functionCount": 3,
+      "maxFunctionLines": 16,
+      "maxLineLength": 324,
       "linesOver200": 7,
       "linesOver500": 0
     },
     "Providers/81-Customization.ps1": {
       "group": "Providers",
-      "lineCount": 232,
-      "functionCount": 15,
+      "lineCount": 264,
+      "functionCount": 16,
       "maxFunctionLines": 53,
       "maxLineLength": 611,
-      "linesOver200": 31,
+      "linesOver200": 30,
       "linesOver500": 2
     },
     "Providers/82-Knowledge.ps1": {
@@ -692,7 +826,7 @@
       "lineCount": 66,
       "functionCount": 4,
       "maxFunctionLines": 23,
-      "maxLineLength": 408,
+      "maxLineLength": 392,
       "linesOver200": 4,
       "linesOver500": 0
     },
@@ -716,54 +850,54 @@
     },
     "Providers/87-Playbooks.ps1": {
       "group": "Providers",
-      "lineCount": 37,
-      "functionCount": 1,
-      "maxFunctionLines": 33,
+      "lineCount": 72,
+      "functionCount": 3,
+      "maxFunctionLines": 32,
       "maxLineLength": 245,
       "linesOver200": 1,
       "linesOver500": 0
     },
     "Providers/88-Automation.ps1": {
       "group": "Providers",
-      "lineCount": 144,
+      "lineCount": 143,
       "functionCount": 10,
       "maxFunctionLines": 24,
-      "maxLineLength": 434,
+      "maxLineLength": 391,
       "linesOver200": 9,
       "linesOver500": 0
     },
     "Providers/89-Broker.ps1": {
       "group": "Providers",
-      "lineCount": 126,
-      "functionCount": 9,
-      "maxFunctionLines": 30,
-      "maxLineLength": 335,
-      "linesOver200": 17,
+      "lineCount": 514,
+      "functionCount": 12,
+      "maxFunctionLines": 107,
+      "maxLineLength": 104,
+      "linesOver200": 0,
       "linesOver500": 0
     },
     "Providers/90-Extensions.ps1": {
       "group": "Providers",
-      "lineCount": 183,
-      "functionCount": 14,
+      "lineCount": 379,
+      "functionCount": 17,
       "maxFunctionLines": 53,
-      "maxLineLength": 702,
-      "linesOver200": 28,
-      "linesOver500": 4
+      "maxLineLength": 673,
+      "linesOver200": 23,
+      "linesOver500": 3
     },
     "Providers/91-SecurityMaintenance.ps1": {
       "group": "Providers",
-      "lineCount": 360,
+      "lineCount": 358,
       "functionCount": 19,
       "maxFunctionLines": 46,
-      "maxLineLength": 818,
+      "maxLineLength": 686,
       "linesOver200": 37,
       "linesOver500": 1
     },
     "Providers/92-NetworkExperiments.ps1": {
       "group": "Providers",
-      "lineCount": 40,
+      "lineCount": 39,
       "functionCount": 1,
-      "maxFunctionLines": 36,
+      "maxFunctionLines": 35,
       "maxLineLength": 347,
       "linesOver200": 1,
       "linesOver500": 0
@@ -779,10 +913,10 @@
     },
     "Providers/94-PowerSessions.ps1": {
       "group": "Providers",
-      "lineCount": 249,
+      "lineCount": 247,
       "functionCount": 13,
       "maxFunctionLines": 42,
-      "maxLineLength": 577,
+      "maxLineLength": 540,
       "linesOver200": 19,
       "linesOver500": 1
     },
@@ -793,16 +927,16 @@
       "maxFunctionLines": 35,
       "maxLineLength": 627,
       "linesOver200": 29,
-      "linesOver500": 3
+      "linesOver500": 2
     },
     "Providers/96-ColorStudio.ps1": {
       "group": "Providers",
-      "lineCount": 134,
+      "lineCount": 131,
       "functionCount": 16,
       "maxFunctionLines": 19,
       "maxLineLength": 613,
       "linesOver200": 18,
-      "linesOver500": 2
+      "linesOver500": 1
     },
     "Providers/97-LocalNotes.ps1": {
       "group": "Providers",
@@ -811,7 +945,7 @@
       "maxFunctionLines": 27,
       "maxLineLength": 599,
       "linesOver200": 15,
-      "linesOver500": 2
+      "linesOver500": 1
     },
     "Providers/98-RemoteSupport.ps1": {
       "group": "Providers",
@@ -820,7 +954,7 @@
       "maxFunctionLines": 45,
       "maxLineLength": 599,
       "linesOver200": 40,
-      "linesOver500": 5
+      "linesOver500": 4
     },
     "Providers/99-BrowserWorkspace.ps1": {
       "group": "Providers",
@@ -849,6 +983,15 @@
       "linesOver200": 5,
       "linesOver500": 0
     },
+    "UI/97-AdvancedCapabilities.ps1": {
+      "group": "UI",
+      "lineCount": 226,
+      "functionCount": 4,
+      "maxFunctionLines": 157,
+      "maxLineLength": 129,
+      "linesOver200": 0,
+      "linesOver500": 0
+    },
     "UI/97-CommandPalette.ps1": {
       "group": "UI",
       "lineCount": 86,
@@ -869,10 +1012,10 @@
     },
     "UI/99-Main.ps1": {
       "group": "UI",
-      "lineCount": 31,
+      "lineCount": 32,
       "functionCount": 2,
       "maxFunctionLines": 14,
-      "maxLineLength": 90,
+      "maxLineLength": 87,
       "linesOver200": 0,
       "linesOver500": 0
     },
@@ -885,13 +1028,22 @@
       "linesOver200": 3,
       "linesOver500": 0
     },
+    "UI/Gui/09-GuiAssurance.ps1": {
+      "group": "UI",
+      "lineCount": 161,
+      "functionCount": 6,
+      "maxFunctionLines": 47,
+      "maxLineLength": 114,
+      "linesOver200": 0,
+      "linesOver500": 0
+    },
     "UI/Gui/10-GuiRuntime.ps1": {
       "group": "UI",
-      "lineCount": 427,
-      "functionCount": 27,
+      "lineCount": 501,
+      "functionCount": 29,
       "maxFunctionLines": 54,
       "maxLineLength": 487,
-      "linesOver200": 30,
+      "linesOver200": 29,
       "linesOver500": 0
     },
     "UI/Screens/10-Dashboard.ps1": {
@@ -986,7 +1138,7 @@
     },
     "UI/Screens/40-Storage.ps1": {
       "group": "UI",
-      "lineCount": 88,
+      "lineCount": 96,
       "functionCount": 5,
       "maxFunctionLines": 42,
       "maxLineLength": 384,
@@ -1184,12 +1336,12 @@
     },
     "UI/Screens/82-Knowledge.ps1": {
       "group": "UI",
-      "lineCount": 5,
+      "lineCount": 28,
       "functionCount": 2,
-      "maxFunctionLines": 4,
-      "maxLineLength": 645,
-      "linesOver200": 1,
-      "linesOver500": 1
+      "maxFunctionLines": 21,
+      "maxLineLength": 113,
+      "linesOver200": 0,
+      "linesOver500": 0
     },
     "UI/Screens/83-Widgets.ps1": {
       "group": "UI",
@@ -1220,11 +1372,11 @@
     },
     "UI/Screens/87-Playbooks.ps1": {
       "group": "UI",
-      "lineCount": 18,
+      "lineCount": 64,
       "functionCount": 2,
-      "maxFunctionLines": 17,
-      "maxLineLength": 400,
-      "linesOver200": 1,
+      "maxFunctionLines": 58,
+      "maxLineLength": 104,
+      "linesOver200": 0,
       "linesOver500": 0
     },
     "UI/Screens/88-Automation.ps1": {
@@ -1232,14 +1384,14 @@
       "lineCount": 18,
       "functionCount": 2,
       "maxFunctionLines": 17,
-      "maxLineLength": 1047,
+      "maxLineLength": 1004,
       "linesOver200": 5,
       "linesOver500": 1
     },
     "UI/Screens/90-Reports.ps1": {
       "group": "UI",
-      "lineCount": 47,
-      "functionCount": 3,
+      "lineCount": 59,
+      "functionCount": 4,
       "maxFunctionLines": 29,
       "maxLineLength": 187,
       "linesOver200": 0,
@@ -1269,7 +1421,7 @@
       "functionCount": 2,
       "maxFunctionLines": 123,
       "maxLineLength": 827,
-      "linesOver200": 31,
+      "linesOver200": 29,
       "linesOver500": 7
     },
     "UI/Screens/94-WorkspaceStudio.ps1": {
@@ -1317,45 +1469,5 @@
       "linesOver200": 0,
       "linesOver500": 0
     }
-  },
-  "strictLimits": {
-    "maxFileLines": 600,
-    "maxLineLength": 200,
-    "linesOver200": 0,
-    "linesOver500": 0,
-    "maxFunctionLines": 200
-  },
-  "strictFiles": [
-    "Core/02-Logging.ps1",
-    "Core/03-Process.ps1",
-    "Core/04-Http.ps1",
-    "Core/06-Safety.ps1",
-    "Providers/113-NetworkProxyControl.ps1",
-    "Providers/114-StorageIntelligence.ps1",
-    "Providers/115-SelfHealingCopilot.ps1",
-    "Providers/116-KernelFilterEngine.ps1",
-    "Providers/118-MetricsHttpServer.ps1",
-    "Providers/119-Capabilities.ps1",
-    "Providers/120-FirmwareBootkitAuditor.ps1",
-    "Providers/121-PostQuantumCrypto.ps1",
-    "Providers/123-AutonomousPatchAgent.ps1",
-    "Providers/126-P2pRaftFleetOrchestrator.ps1",
-    "Providers/127-NeuralSelfHealing.ps1",
-    "Providers/128-WasiPluginRuntime.ps1",
-    "Providers/132-MultiCloudFleetController.ps1",
-    "Providers/27-RegistryTree.ps1",
-    "Providers/56-MemoryManagement.ps1",
-    "Providers/70-Network.ps1",
-    "Providers/89-Broker.ps1",
-    "UI/Screens/82-Knowledge.ps1",
-    "UI/Screens/87-Playbooks.ps1"
-  ],
-  "ratchetNotes": {
-    "Core/00-09-GameState.ps1": "Bounded archive stream handling expanded the existing validation function by four readable lines.",
-    "Core/00-11-MutationActions.ps1": "The hosts mutation now includes CAS, atomic replacement, verification, and provider rollback; it remains below the strict 200-line function ceiling.",
-    "Core/01-Config.ps1": "Read-only initialization now computes policy before persistence, avoids state creation, preserves corrupt inputs, suppresses recovery/save, and remains below the strict 200-line ceiling.",
-    "Core/02-Logging.ps1": "Promoted to the strict profile after replacing minified logging with bounded, serialized, structurally redacted writes.",
-    "Providers/72-Provisioning.ps1": "The generated offline runner now validates bounded JSON, exact membership, paths, sizes, and hashes.",
-    "Providers/89-Broker.ps1": "Promoted to the strict profile after replacing line framing with authenticated bounded protocol-v3 frames."
   }
 }

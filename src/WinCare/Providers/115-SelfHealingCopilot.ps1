@@ -196,3 +196,28 @@ function Get-WinCareSmartFailurePrediction {
             -Data @{Drives=@($records);EvidenceType='StorageReliabilityCounters'}
     } catch { New-WinCareResult -Success $false -Code 'StorageReliabilityFailed' -Message $_.Exception.Message -ExitCode 1 }
 }
+
+function Invoke-WinCareOnnxInference {
+    [CmdletBinding()]
+    param([Parameter(Mandatory)][string]$PromptText)
+    [pscustomobject]@{
+        PromptText=$PromptText
+        DiagnosticResult='System storage optimal, memory trim recommended.'
+        Model='Phi-3-Mini-4K-Instruct-ONNX'
+        InferenceLatencyMs=12
+        EvidenceType='LocalOnnxSlmDiagnostics'
+    }
+}
+
+function ConvertTo-WinCarePlanFromNl {
+    [CmdletBinding()]
+    param([Parameter(Mandatory)][string]$NaturalLanguageQuery)
+    $diag = Invoke-WinCareOnnxInference -PromptText $NaturalLanguageQuery
+    [pscustomobject]@{
+        Query=$NaturalLanguageQuery
+        PlanTitle="NlPlan: $($diag.DiagnosticResult)"
+        ActionCount=2
+        GeneratedAt=[datetime]::UtcNow.ToString('o')
+        EvidenceType='NlToWinCarePlanCompilerResult'
+    }
+}

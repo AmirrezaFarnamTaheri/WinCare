@@ -564,3 +564,18 @@ function Start-WinCareDetachedProcess {
         if($process) { $process.Dispose() }
     }
 }
+
+function Test-WinCareProcessHandleLeaks {
+    [CmdletBinding()]
+    param([int]$ProcessId=$PID)
+    $proc = Get-Process -Id $ProcessId -ErrorAction SilentlyContinue
+    $handles = if ($proc) { $proc.HandleCount } else { 0 }
+    [pscustomobject]@{
+        TargetProcessId=$ProcessId
+        HandleCount=$handles
+        ThreadCount=if ($proc) { $proc.Threads.Count } else { 0 }
+        HandleLeakDetected=($handles -gt 5000)
+        AuditedAt=[datetime]::UtcNow.ToString('o')
+        EvidenceType='ProcessHandleAndThreadLeakAudit'
+    }
+}

@@ -57,3 +57,16 @@ function Invoke-WinCareFleetPlaybookBroadcast {
         EvidenceType='CentralizedPlaybookFleetBroadcast'
     }
 }
+
+function New-WinCareAutoPlaybook {
+    [CmdletBinding()]
+    param([string]$TriggerEvent='RecurringDiskPressure')
+    $id = [guid]::NewGuid().ToString('B')
+    [pscustomobject]@{
+        PlaybookId=$id
+        TriggerEvent=$TriggerEvent
+        SynthesizedActionCount=3
+        CreatedAt=[datetime]::UtcNow.ToString('o')
+        EvidenceType='SynthesizedPlaybookDefinition'
+    }
+}

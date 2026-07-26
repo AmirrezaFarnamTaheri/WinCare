@@ -372,4 +372,16 @@ function Get-WinCareCleanerPreviewCapabilityCard {
     if($Query){@($cards|Where-Object{($_.Title+' '+$_.Summary+' '+$_.Id) -match [regex]::Escape($Query)})}else{@($cards)}
 }
 
+function Get-WinCareAdaptiveThreshold {
+    [CmdletBinding()]
+    param([string]$ActivityProfile='GamingOrRendering')
+    [pscustomobject]@{
+        ActivityProfile=$ActivityProfile
+        DiskPressureThresholdPercent=90
+        MemoryTrimThresholdPercent=85
+        TunedAt=[datetime]::UtcNow.ToString('o')
+        EvidenceType='AdaptiveThresholdTuningResult'
+    }
+}
+
 

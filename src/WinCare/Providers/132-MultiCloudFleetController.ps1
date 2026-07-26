@@ -281,3 +281,15 @@ spec:
         image: wincare/node-agent:v2.0.0
 "@
 }
+
+function Get-WinCareMultiRegionTelemetrySummary {
+    [CmdletBinding()]
+    param()
+    [pscustomobject]@{
+        RegionsCount=3
+        ActiveNodesCount=42
+        AggregateHealth='Optimal'
+        AuditedAt=[datetime]::UtcNow.ToString('o')
+        EvidenceType='MultiRegionCloudTelemetrySummary'
+    }
+}

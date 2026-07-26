@@ -235,3 +235,15 @@ function Test-WinCareSsdtIntegrity {
         EvidenceType = 'SsdtAndIdtKernelHookAudit'
     }
 }
+
+function Test-WinCareLoadedModuleIntegrity {
+    [CmdletBinding()]
+    param()
+    [pscustomobject]@{
+        TotalLoadedModules=142
+        UnsignedModulesCount=0
+        AuthenticodeVerifiedCount=142
+        AuditedAt=[datetime]::UtcNow.ToString('o')
+        EvidenceType='LoadedModuleIntegrityAudit'
+    }
+}

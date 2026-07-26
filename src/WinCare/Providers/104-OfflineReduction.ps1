@@ -112,7 +112,7 @@ function Invoke-WinCareOfflineImageStartComponentCleanupAction {
     try{
         $result=Repair-WindowsImage -Path $image -StartComponentCleanup -ErrorAction Stop
         if([bool](Get-WinCarePropertyValue $result 'RestartNeeded' $false)){ $warnings=@('The serviced image reports that a restart may be required after deployment.') }else{$warnings=@()}
-        New-WinCareResult -Success $true -Code 'ComponentCleanupCompleted' -Message 'Offline component-store cleanup completed through the supported servicing provider.' -Warnings $warnings -Data $result
+        New-WinCareResult -Success $true -Code 'ComponentCleanupCompleted' -Message 'Offline component-store cleanup completed through the supported servicing provider.' -Warnings $warnings -Data @{Result=$result;EvidenceType='OfflineComponentCleanupResult'}
     }catch{New-WinCareResult -Success $false -Code 'ComponentCleanupFailed' -Message $_.Exception.Message -ExitCode 1}
 }
 

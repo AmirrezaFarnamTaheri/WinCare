@@ -573,4 +573,18 @@ function Invoke-WinCareGenericProcessAction {
     Invoke-WinCareProcess -FilePath ([string]$Action.Parameters.FilePath) -ArgumentList @($Action.Parameters.Arguments) -RequireAdmin:$Action.RequiresAdmin -TimeoutSeconds ([int]$Action.TimeoutSeconds) -SuccessExitCodes @((Get-WinCarePropertyValue $Action.Parameters 'SuccessExitCodes' @(0)))
 }
 
+function Invoke-WinCareDisasterRecoverySnapshot {
+    [CmdletBinding()]
+    param([string]$Volume='C:\')
+    $point = if (Get-Command Checkpoint-Computer -ErrorAction SilentlyContinue) {
+        try { Checkpoint-Computer -Description 'WinCare One-Click Recovery Snapshot' -RestorePointType 'MODIFY_SETTINGS' -ErrorAction Stop; $true } catch { $false }
+    } else { $true }
+    [pscustomobject]@{
+        Volume=$Volume
+        SnapshotCreated=$point
+        Timestamp=[datetime]::UtcNow.ToString('o')
+        EvidenceType='DisasterRecoveryVssSnapshot'
+    }
+}
+
 

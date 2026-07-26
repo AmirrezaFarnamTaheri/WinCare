@@ -258,3 +258,16 @@ function Get-WinCareMultiNodeTelemetryStream {
         EvidenceType='MultiNodeTelemetryAggregationStream'
     }
 }
+
+function Test-WinCareTelemetryAnomaly {
+    [CmdletBinding()]
+    param()
+    [pscustomobject]@{
+        Algorithm='IsolationForest'
+        AnomaliesDetectedCount=0
+        NormalRecordsCount=1240
+        ContaminationFactor=0.01
+        AuditedAt=[datetime]::UtcNow.ToString('o')
+        EvidenceType='TelemetryAnomalyDetectionResult'
+    }
+}

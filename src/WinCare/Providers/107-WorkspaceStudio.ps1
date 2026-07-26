@@ -15,7 +15,7 @@ function Get-WinCareWorkspaceStudioStore {
     param([ValidateSet('FileWorkspaces','BrightnessSchedules')][string]$Kind)
     $path=Get-WinCareWorkspaceStudioStorePath -Kind $Kind
     if(-not(Test-Path -LiteralPath $path -PathType Leaf)){
-        return [ordered]@{SchemaVersion=1;Revision=0;UpdatedAt=[datetime]::UtcNow.ToString('o');Records=@()}
+        return [ordered]@{SchemaVersion=1;Revision=0;UpdatedAt=[datetime]::UtcNow.ToString('o');Records=@();EvidenceType='WorkspaceStudioStore'}
     }
     $store=Read-WinCareJsonHashtable -LiteralPath $path
     $null=Test-WinCareStrictObjectKeys -InputObject $store -AllowedKeys @('SchemaVersion','Revision','UpdatedAt','Records') -Context "$Kind store"

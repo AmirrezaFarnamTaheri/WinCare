@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-Compatibility entry point for WinCare's typed Windows health-command plans.
+Compatibility entry point for WinCare's typed Windows health-command plans. EvidenceType: SystemRepairCheckPlan
 #>
 function Invoke-WinCareSystemRepairCheck {
     [CmdletBinding()]

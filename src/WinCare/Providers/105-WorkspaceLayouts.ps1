@@ -1,6 +1,6 @@
 function Get-WinCareWorkspaceLayoutRoot { Ensure-WinCareState; Get-WinCareBridgeStateRoot 'WorkspaceLayouts' }
 function Get-WinCareWorkspaceLayoutStorePath { Join-Path (Get-WinCareWorkspaceLayoutRoot) 'layouts.json' }
-function Get-WinCareDefaultWorkspaceLayoutStore { [ordered]@{SchemaVersion=1;Revision=0;UpdatedAt='1970-01-01T00:00:00.0000000Z';Layouts=@()} }
+function Get-WinCareDefaultWorkspaceLayoutStore { [ordered]@{SchemaVersion=1;Revision=0;UpdatedAt='1970-01-01T00:00:00.0000000Z';Layouts=@();EvidenceType='WorkspaceLayoutStore'} }
 function Get-WinCareWorkspaceLayoutStoreHash {param([object]$Store);Get-WinCareCanonicalObjectHash $Store}
 
 function New-WinCareWorkspaceTitleRegex {

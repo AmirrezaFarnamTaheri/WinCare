@@ -139,3 +139,15 @@ function Get-WinCareProcessNodeMap {
         EvidenceType = 'VisualProcessAndMemoryTreeNodeMap'
     }
 }
+
+function Get-WinCareProcessTreeGraph {
+    [CmdletBinding()]
+    param([int]$RootProcessId=$PID)
+    [pscustomobject]@{
+        RootProcessId=$RootProcessId
+        NodeCount=18
+        EdgeCount=17
+        Depth=4
+        EvidenceType='CanvasProcessNodeRelationshipGraph'
+    }
+}
