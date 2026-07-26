@@ -261,13 +261,162 @@ function Get-WinCareMultiNodeTelemetryStream {
 
 function Test-WinCareTelemetryAnomaly {
     [CmdletBinding()]
-    param()
+    param(
+        [datetime]$Since = ((Get-Date).AddDays(-7)),
+        [datetime]$Until = ([datetime]::UtcNow),
+        [double]$ZScoreThreshold = 3.0,
+        [double]$IqrMultiplier = 1.5
+    )
+
+    $query = Get-WinCareTelemetryLakeRecord -Since $Since -Until $Until
+    $records = @($query.Records)
+
+    if ($records.Count -eq 0) {
+        return [pscustomobject]@{
+            Algorithm = 'ZScoreRolling7Day'
+            AnomaliesDetectedCount = 0
+            NormalRecordsCount = 0
+            ContaminationFactor = 0.0
+            AuditedAt = [datetime]::UtcNow.ToString('o')
+            EvidenceType = 'TelemetryAnomalyDetectionResult'
+        }
+    }
+
+    $timestamps = @($records | ForEach-Object { [datetime]$_.Timestamp } | Sort-Object)
+    $hasSufficientHistory = $false
+    if ($timestamps.Count -gt 0) {
+        $oldest = $timestamps[0]
+        $spanHours = ([datetime]::UtcNow - $oldest).TotalHours
+        if ($spanHours -ge 24.0) {
+            $hasSufficientHistory = $true
+        }
+    }
+
+    $extractMetrics = {
+        param($name, $payload)
+        $result = [Collections.Generic.List[pscustomobject]]::new()
+        if ($null -eq $payload) { return $result }
+
+        if ($payload -is [ValueType] -and $payload -isnot [bool] -and $payload -isnot [datetime] -and $payload -isnot [enum]) {
+            $result.Add([pscustomobject]@{ MetricKey = [string]$name; Value = [double]$payload })
+        } elseif ($payload -is [Collections.IDictionary]) {
+            foreach ($key in $payload.Keys) {
+                $val = $payload[$key]
+                if ($null -ne $val -and ($val -is [int] -or $val -is [long] -or $val -is [double] -or $val -is [float] -or $val -is [decimal])) {
+                    $result.Add([pscustomobject]@{ MetricKey = "$name.$key"; Value = [double]$val })
+                }
+            }
+        } elseif ($payload.PSObject) {
+            foreach ($prop in $payload.PSObject.Properties) {
+                $val = $prop.Value
+                if ($null -ne $val -and ($val -is [int] -or $val -is [long] -or $val -is [double] -or $val -is [float] -or $val -is [decimal])) {
+                    $result.Add([pscustomobject]@{ MetricKey = "$name.$($prop.Name)"; Value = [double]$val })
+                }
+            }
+        }
+        return $result
+    }
+
+    $anomaliesCount = 0
+    $normalCount = 0
+
+    if (-not $hasSufficientHistory) {
+        foreach ($rec in $records) {
+            $recName = if ([string]::IsNullOrWhiteSpace($rec.Name)) { 'Telemetry' } else { [string]$rec.Name }
+            $metrics = & $extractMetrics $recName $rec.Record
+            $isAnomalous = $false
+
+            foreach ($m in $metrics) {
+                $k = $m.MetricKey.ToLowerInvariant()
+                $v = $m.Value
+
+                if ($k -match 'cpu|processor|usage|utilization' -and $v -gt 90.0) { $isAnomalous = $true; break }
+                if ($k -match 'memory|ram' -and $v -gt 90.0) { $isAnomalous = $true; break }
+                if ($k -match 'error|fault|threat|failure|exception' -and $v -gt 0.0) { $isAnomalous = $true; break }
+                if ($k -match 'latency|queue|delay' -and $v -gt 1000.0) { $isAnomalous = $true; break }
+                if ($k -match 'temp|temperature' -and $v -gt 85.0) { $isAnomalous = $true; break }
+                if ($v -gt 100.0 -or $v -lt 0.0) { $isAnomalous = $true; break }
+            }
+
+            if ($isAnomalous) { $anomaliesCount++ } else { $normalCount++ }
+        }
+    } else {
+        $allMetrics = [Collections.Generic.List[pscustomobject]]::new()
+        $recordMetrics = [Collections.Generic.List[pscustomobject]]::new()
+
+        foreach ($rec in $records) {
+            $recName = if ([string]::IsNullOrWhiteSpace($rec.Name)) { 'Telemetry' } else { [string]$rec.Name }
+            $metrics = & $extractMetrics $recName $rec.Record
+            $recordMetrics.Add([pscustomobject]@{ Record = $rec; Metrics = $metrics })
+            foreach ($m in $metrics) {
+                $allMetrics.Add($m)
+            }
+        }
+
+        $metricStats = @{}
+        $groups = $allMetrics | Group-Object MetricKey
+
+        foreach ($g in $groups) {
+            $vals = @($g.Group | ForEach-Object { $_.Value } | Sort-Object)
+            $n = $vals.Count
+            if ($n -eq 0) { continue }
+
+            $sum = 0.0
+            foreach ($v in $vals) { $sum += $v }
+            $mean = $sum / $n
+
+            $varianceSum = 0.0
+            foreach ($v in $vals) { $varianceSum += [math]::Pow(($v - $mean), 2) }
+            $stdDev = if ($n -gt 1) { [math]::Sqrt($varianceSum / ($n - 1)) } else { 0.0 }
+
+            $q1Index = [math]::Floor(0.25 * ($n - 1))
+            $q3Index = [math]::Floor(0.75 * ($n - 1))
+            $q1 = [double]$vals[$q1Index]
+            $q3 = [double]$vals[$q3Index]
+            $iqr = $q3 - $q1
+
+            $metricStats[$g.Name] = @{
+                Mean = $mean
+                StdDev = $stdDev
+                Q1 = $q1
+                Q3 = $q3
+                Iqr = $iqr
+                LowerBound = $q1 - ($IqrMultiplier * $iqr)
+                UpperBound = $q3 + ($IqrMultiplier * $iqr)
+            }
+        }
+
+        foreach ($rm in $recordMetrics) {
+            $isAnomalous = $false
+
+            foreach ($m in $rm.Metrics) {
+                $stats = $metricStats[$m.MetricKey]
+                if ($null -eq $stats) { continue }
+
+                $val = $m.Value
+                $zScore = if ($stats.StdDev -gt 0) { [math]::Abs(($val - $stats.Mean) / $stats.StdDev) } else { 0.0 }
+                $exceedsZScore = $zScore -gt $ZScoreThreshold
+                $exceedsIqr = ($val -lt $stats.LowerBound) -or ($val -gt $stats.UpperBound)
+
+                if ($exceedsZScore -or $exceedsIqr) {
+                    $isAnomalous = $true
+                    break
+                }
+            }
+
+            if ($isAnomalous) { $anomaliesCount++ } else { $normalCount++ }
+        }
+    }
+
+    $total = $anomaliesCount + $normalCount
+    $contamination = if ($total -gt 0) { [double][math]::Round($anomaliesCount / $total, 4) } else { 0.0 }
+
     [pscustomobject]@{
-        Algorithm='IsolationForest'
-        AnomaliesDetectedCount=0
-        NormalRecordsCount=1240
-        ContaminationFactor=0.01
-        AuditedAt=[datetime]::UtcNow.ToString('o')
-        EvidenceType='TelemetryAnomalyDetectionResult'
+        Algorithm = 'ZScoreRolling7Day'
+        AnomaliesDetectedCount = [int]$anomaliesCount
+        NormalRecordsCount = [int]$normalCount
+        ContaminationFactor = [double]$contamination
+        AuditedAt = [datetime]::UtcNow.ToString('o')
+        EvidenceType = 'TelemetryAnomalyDetectionResult'
     }
 }

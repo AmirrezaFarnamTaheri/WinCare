@@ -277,6 +277,7 @@
     'Get-WinCareTelemetryLakeAggregate',
     'New-WinCareTelemetryLakeIngestPlan',
     'New-WinCareTelemetryLakeRetentionPlan',
+    'Test-WinCareTelemetryAnomaly',
     'Get-WinCareBinaryBehaviorProfile',
     'Get-WinCareBinaryIntelligenceCapability',
     'Get-WinCareVbsEnclaveState',

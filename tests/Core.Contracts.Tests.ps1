@@ -104,5 +104,18 @@ Describe 'Configuration and policy admission' {
       $c=Get-WinCareDefaultConfig;$c.RequirePreviewForChanges='yes';{Test-WinCareConfigObject $c}|Should Throw
       $p=Get-WinCareDefaultPolicy;$p.RequirePreview='yes';{Test-WinCarePolicyObject $p}|Should Throw
     }
+    It 'verifies zero-trust config vault protection' {
+      $vaultPath = Join-Path $TestDrive 'secure_vault.dat'
+      'DPAPI_PROTECTED_DATA' | Set-Content -LiteralPath $vaultPath
+      $res = Protect-WinCareConfigVault -ConfigVaultPath $vaultPath
+      $res.ConfigVaultPath | Should Be (Resolve-WinCareCanonicalPath -LiteralPath $vaultPath)
+      $res.ZeroTrustVaultEncrypted | Should Be $true
+      $res.EvidenceType | Should Be 'ZeroTrustConfigVaultProtection'
+
+      $plainPath = Join-Path $TestDrive 'plain_vault.dat'
+      'UNENCRYPTED_DATA' | Set-Content -LiteralPath $plainPath
+      $resPlain = Protect-WinCareConfigVault -ConfigVaultPath $plainPath
+      $resPlain.ZeroTrustVaultEncrypted | Should Be $false
+    }
   }
 }
