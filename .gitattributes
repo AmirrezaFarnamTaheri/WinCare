@@ -1,0 +1,22 @@
+* text=auto
+*.ps1 text eol=lf
+*.psm1 text eol=lf
+*.psd1 text eol=lf
+*.cs text eol=lf
+*.csproj text eol=lf
+*.xaml text eol=lf
+*.md text eol=lf
+*.json text eol=lf
+*.py text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.cmd text eol=crlf
+*.bat text eol=crlf
+*.dll -text
+*.exe -text
+*.png -text
+*.jpg -text
+*.jpeg -text
+*.gif -text
+*.ico -text
+*.zip -text

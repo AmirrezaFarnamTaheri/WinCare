@@ -1,0 +1,195 @@
+{
+  "schemaVersion": 1,
+  "topics": [
+    {
+      "id": "disk-full",
+      "title": "Disk is full",
+      "keywords": [
+        "storage",
+        "cleanup"
+      ],
+      "sourceRecords": [
+        "SRC:7c1c59e94b"
+      ],
+      "steps": [
+        "Run Storage overview and compare historical growth.",
+        "Preview safe cleanup; do not select Downloads automatically.",
+        "Review large files and developer caches.",
+        "Enable Storage Sense with explicit retention settings.",
+        "Move user-owned files to another verified volume."
+      ],
+      "warnings": [
+        "Do not delete WinSxS, Installer, DriverStore, recovery partitions, or unknown ProgramData folders manually."
+      ]
+    },
+    {
+      "id": "app-wont-uninstall",
+      "title": "Application will not uninstall",
+      "keywords": [
+        "applications",
+        "msi"
+      ],
+      "sourceRecords": [
+        "SRC:7c1c59e94b"
+      ],
+      "steps": [
+        "Close related processes.",
+        "Try Repair first when available.",
+        "Use the native registered uninstaller or WinGet exact ID.",
+        "For MSI error 1618, wait for the existing Windows Installer transaction.",
+        "Use Microsoft's Program Install and Uninstall troubleshooter for corrupt registrations.",
+        "Review leftovers separately after native uninstall succeeds."
+      ],
+      "warnings": [
+        "Never execute an uninstall string through cmd.exe string concatenation."
+      ]
+    },
+    {
+      "id": "app-wont-start",
+      "title": "Application will not start",
+      "keywords": [
+        "repair",
+        "reset"
+      ],
+      "sourceRecords": [
+        "SRC:7c1c59e94b"
+      ],
+      "steps": [
+        "Check pending restart and available disk space.",
+        "Inspect recent application crash events.",
+        "Repair the package if supported.",
+        "Back up application settings before Reset.",
+        "Reinstall only after inventory and settings export."
+      ],
+      "warnings": [
+        "Reset may remove sign-in state, offline content, and application settings."
+      ]
+    },
+    {
+      "id": "windows-update",
+      "title": "Windows Update problems",
+      "keywords": [
+        "wua",
+        "updates"
+      ],
+      "sourceRecords": [
+        "SRC:7c1c59e94b"
+      ],
+      "steps": [
+        "Check pending restart and Windows Update service status.",
+        "Search with Windows Update Agent and inspect result codes.",
+        "Run DISM image health and SFC only when integrity symptoms exist.",
+        "Retry individual updates rather than a broad service reset.",
+        "Use update history and Code Integrity events to identify conflicts."
+      ],
+      "warnings": [
+        "Do not permanently disable Windows Update services as an optimization."
+      ]
+    },
+    {
+      "id": "slow-startup",
+      "title": "Slow startup",
+      "keywords": [
+        "startup",
+        "performance"
+      ],
+      "sourceRecords": [
+        "SRC:7c1c59e94b"
+      ],
+      "steps": [
+        "Measure startup entries and scheduled logon tasks.",
+        "Disable one reversible third-party entry at a time.",
+        "Review boot and reliability events.",
+        "Check storage health and pending updates.",
+        "Compare before and after measurements."
+      ],
+      "warnings": [
+        "Do not disable services based only on a generic debloat list."
+      ]
+    },
+    {
+      "id": "network",
+      "title": "Network connectivity problems",
+      "keywords": [
+        "dns",
+        "wifi"
+      ],
+      "sourceRecords": [
+        "SRC:7c1c59e94b"
+      ],
+      "steps": [
+        "Verify adapter state, address, gateway, and DNS servers.",
+        "Test gateway then internet reachability then DNS resolution.",
+        "Inspect proxy and VPN configuration.",
+        "Flush DNS only for stale resolver symptoms.",
+        "Use Network Reset only after recording configuration."
+      ],
+      "warnings": [
+        "Network Reset removes and reinstalls adapters and may remove VPN configuration."
+      ]
+    },
+    {
+      "id": "store",
+      "title": "Microsoft Store problems",
+      "keywords": [
+        "wsreset",
+        "store"
+      ],
+      "sourceRecords": [
+        "SRC:7c1c59e94b"
+      ],
+      "steps": [
+        "Run WSReset.",
+        "Repair the Store app package.",
+        "Check time, region, network, and Windows Update.",
+        "Reset only after understanding sign-in and local data effects.",
+        "Re-register packages only as a targeted repair."
+      ],
+      "warnings": [
+        "Broad re-registration scripts can produce noisy errors and should not be the first step."
+      ]
+    },
+    {
+      "id": "boot",
+      "title": "Boot and recovery problems",
+      "keywords": [
+        "bcd",
+        "winre"
+      ],
+      "sourceRecords": [
+        "SRC:7c1c59e94b"
+      ],
+      "steps": [
+        "Export the BCD store before any change.",
+        "Record Secure Boot, firmware mode, and WinRE status.",
+        "Use Windows Startup Repair and recovery media first.",
+        "Make one documented BCD change at a time only in Expert mode.",
+        "Retain a verified recovery path and another bootable device."
+      ],
+      "warnings": [
+        "WinCare never replaces the Windows boot loader or writes raw EFI/NTFS structures."
+      ]
+    },
+    {
+      "id": "security",
+      "title": "Security posture review",
+      "keywords": [
+        "defender",
+        "wdac"
+      ],
+      "sourceRecords": [
+        "SRC:7c1c59e94b"
+      ],
+      "steps": [
+        "Verify Defender, firewall, Secure Boot, TPM, and encryption status.",
+        "Update signatures and run a targeted scan.",
+        "Deploy WDAC policies in Audit Mode first.",
+        "Review Code Integrity events and allow legitimate software deliberately.",
+        "Promote to enforcement only after measured coverage and recovery testing."
+      ],
+      "warnings": [
+        "Do not disable Defender, SmartScreen, UAC, or update services for performance claims."
+      ]
+    }
+  ]
+}

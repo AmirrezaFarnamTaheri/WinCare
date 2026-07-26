@@ -1,0 +1,2521 @@
+{
+  "schemaVersion": 1,
+  "rules": [
+    {
+      "id": "privacy.advertising-id",
+      "title": "Disable the per-user advertising identifier",
+      "description": "Turns off the Windows advertising ID for the current user.",
+      "category": "Privacy",
+      "risk": "Low",
+      "requiresAdmin": false,
+      "reversible": true,
+      "restartPossible": false,
+      "tags": [
+        "privacy",
+        "user"
+      ],
+      "sourceRecords": [
+        "SRC:d4fcae6473"
+      ],
+      "compatibility": {
+        "minBuild": 10240
+      },
+      "recovery": "Restore the previous registry value.",
+      "changes": [
+        {
+          "type": "SetRegistryValue",
+          "parameters": {
+            "Path": "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\AdvertisingInfo",
+            "Name": "Enabled",
+            "Value": 0,
+            "ValueType": "DWord"
+          },
+          "verification": "Registry value equals 0"
+        }
+      ]
+    },
+    {
+      "id": "privacy.tailored-experiences",
+      "title": "Disable tailored experiences",
+      "description": "Prevents diagnostic data from being used for personalized tips and advertisements.",
+      "category": "Privacy",
+      "risk": "Low",
+      "requiresAdmin": false,
+      "reversible": true,
+      "restartPossible": false,
+      "tags": [
+        "privacy",
+        "user"
+      ],
+      "sourceRecords": [
+        "SRC:d4fcae6473"
+      ],
+      "compatibility": {
+        "minBuild": 10240
+      },
+      "recovery": "Restore the previous registry value.",
+      "changes": [
+        {
+          "type": "SetRegistryValue",
+          "parameters": {
+            "Path": "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Privacy",
+            "Name": "TailoredExperiencesWithDiagnosticDataEnabled",
+            "Value": 0,
+            "ValueType": "DWord"
+          }
+        }
+      ]
+    },
+    {
+      "id": "privacy.disable-suggestions",
+      "title": "Disable promoted content suggestions",
+      "description": "Disables common Content Delivery Manager suggestion surfaces without removing Windows components.",
+      "category": "Privacy",
+      "risk": "Low",
+      "requiresAdmin": false,
+      "reversible": true,
+      "restartPossible": false,
+      "tags": [
+        "privacy",
+        "shell"
+      ],
+      "sourceRecords": [
+        "SRC:d4fcae6473"
+      ],
+      "compatibility": {
+        "minBuild": 10240
+      },
+      "recovery": "Restore each prior Content Delivery Manager value.",
+      "changes": [
+        {
+          "type": "SetRegistryValue",
+          "parameters": {
+            "Path": "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager",
+            "Name": "SubscribedContent-338388Enabled",
+            "Value": 0,
+            "ValueType": "DWord"
+          }
+        },
+        {
+          "type": "SetRegistryValue",
+          "parameters": {
+            "Path": "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager",
+            "Name": "SystemPaneSuggestionsEnabled",
+            "Value": 0,
+            "ValueType": "DWord"
+          }
+        },
+        {
+          "type": "SetRegistryValue",
+          "parameters": {
+            "Path": "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager",
+            "Name": "SoftLandingEnabled",
+            "Value": 0,
+            "ValueType": "DWord"
+          }
+        }
+      ]
+    },
+    {
+      "id": "privacy.activity-history",
+      "title": "Disable Activity History publishing",
+      "description": "Applies documented policy values that stop publishing and uploading user activities.",
+      "category": "Privacy",
+      "risk": "Moderate",
+      "requiresAdmin": true,
+      "reversible": true,
+      "restartPossible": true,
+      "tags": [
+        "privacy",
+        "policy"
+      ],
+      "sourceRecords": [
+        "SRC:d4fcae6473"
+      ],
+      "compatibility": {
+        "minBuild": 16299
+      },
+      "recovery": "Restore the previous machine policy values.",
+      "changes": [
+        {
+          "type": "SetRegistryValue",
+          "parameters": {
+            "Path": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\System",
+            "Name": "PublishUserActivities",
+            "Value": 0,
+            "ValueType": "DWord"
+          }
+        },
+        {
+          "type": "SetRegistryValue",
+          "parameters": {
+            "Path": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\System",
+            "Name": "UploadUserActivities",
+            "Value": 0,
+            "ValueType": "DWord"
+          }
+        }
+      ]
+    },
+    {
+      "id": "explorer.show-extensions",
+      "title": "Show known file extensions",
+      "description": "Makes file extensions visible in File Explorer.",
+      "category": "Explorer",
+      "risk": "Low",
+      "requiresAdmin": false,
+      "reversible": true,
+      "restartPossible": false,
+      "tags": [
+        "explorer",
+        "safety"
+      ],
+      "sourceRecords": [
+        "SRC:d4fcae6473"
+      ],
+      "compatibility": {
+        "minBuild": 10240
+      },
+      "recovery": "Restore the previous Explorer setting.",
+      "changes": [
+        {
+          "type": "SetRegistryValue",
+          "parameters": {
+            "Path": "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced",
+            "Name": "HideFileExt",
+            "Value": 0,
+            "ValueType": "DWord"
+          }
+        }
+      ]
+    },
+    {
+      "id": "explorer.show-hidden",
+      "title": "Show hidden files",
+      "description": "Shows hidden files while leaving protected operating-system files hidden.",
+      "category": "Explorer",
+      "risk": "Low",
+      "requiresAdmin": false,
+      "reversible": true,
+      "restartPossible": false,
+      "tags": [
+        "explorer"
+      ],
+      "sourceRecords": [
+        "SRC:d4fcae6473"
+      ],
+      "compatibility": {
+        "minBuild": 10240
+      },
+      "recovery": "Restore the previous Explorer setting.",
+      "changes": [
+        {
+          "type": "SetRegistryValue",
+          "parameters": {
+            "Path": "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced",
+            "Name": "Hidden",
+            "Value": 1,
+            "ValueType": "DWord"
+          }
+        }
+      ]
+    },
+    {
+      "id": "explorer.launch-this-pc",
+      "title": "Open File Explorer to This PC",
+      "description": "Changes the default File Explorer landing page to This PC.",
+      "category": "Explorer",
+      "risk": "Low",
+      "requiresAdmin": false,
+      "reversible": true,
+      "restartPossible": false,
+      "tags": [
+        "explorer"
+      ],
+      "sourceRecords": [
+        "SRC:d4fcae6473"
+      ],
+      "compatibility": {
+        "minBuild": 10240
+      },
+      "recovery": "Restore the previous Explorer setting.",
+      "changes": [
+        {
+          "type": "SetRegistryValue",
+          "parameters": {
+            "Path": "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced",
+            "Name": "LaunchTo",
+            "Value": 1,
+            "ValueType": "DWord"
+          }
+        }
+      ]
+    },
+    {
+      "id": "explorer.compact-mode",
+      "title": "Use compact File Explorer spacing",
+      "description": "Enables compact spacing where supported.",
+      "category": "Explorer",
+      "risk": "Low",
+      "requiresAdmin": false,
+      "reversible": true,
+      "restartPossible": false,
+      "tags": [
+        "explorer",
+        "visual"
+      ],
+      "sourceRecords": [
+        "SRC:d4fcae6473"
+      ],
+      "compatibility": {
+        "minBuild": 22000
+      },
+      "recovery": "Restore the previous Explorer setting.",
+      "changes": [
+        {
+          "type": "SetRegistryValue",
+          "parameters": {
+            "Path": "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced",
+            "Name": "UseCompactMode",
+            "Value": 1,
+            "ValueType": "DWord"
+          }
+        }
+      ]
+    },
+    {
+      "id": "performance.menu-delay",
+      "title": "Reduce menu show delay",
+      "description": "Uses a conservative 200 ms menu delay rather than an extreme zero-delay tweak.",
+      "category": "Performance",
+      "risk": "Low",
+      "requiresAdmin": false,
+      "reversible": true,
+      "restartPossible": true,
+      "tags": [
+        "performance",
+        "ui"
+      ],
+      "sourceRecords": [
+        "SRC:d4fcae6473"
+      ],
+      "compatibility": {
+        "minBuild": 10240
+      },
+      "recovery": "Restore the prior desktop menu delay.",
+      "changes": [
+        {
+          "type": "SetRegistryValue",
+          "parameters": {
+            "Path": "HKCU:\\Control Panel\\Desktop",
+            "Name": "MenuShowDelay",
+            "Value": "200",
+            "ValueType": "String"
+          }
+        }
+      ]
+    },
+    {
+      "id": "performance.visual-balanced",
+      "title": "Use balanced visual effects",
+      "description": "Lets Windows choose visual effects instead of applying destructive blanket performance settings.",
+      "category": "Performance",
+      "risk": "Low",
+      "requiresAdmin": false,
+      "reversible": true,
+      "restartPossible": true,
+      "tags": [
+        "performance",
+        "visual"
+      ],
+      "sourceRecords": [
+        "SRC:d4fcae6473"
+      ],
+      "compatibility": {
+        "minBuild": 10240
+      },
+      "recovery": "Restore the previous visual-effects selection.",
+      "changes": [
+        {
+          "type": "SetRegistryValue",
+          "parameters": {
+            "Path": "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\VisualEffects",
+            "Name": "VisualFXSetting",
+            "Value": 0,
+            "ValueType": "DWord"
+          }
+        }
+      ]
+    },
+    {
+      "id": "gaming.game-mode",
+      "title": "Enable Windows Game Mode",
+      "description": "Enables the supported per-user Game Mode preference.",
+      "category": "Gaming",
+      "risk": "Low",
+      "requiresAdmin": false,
+      "reversible": true,
+      "restartPossible": false,
+      "tags": [
+        "gaming"
+      ],
+      "sourceRecords": [
+        "SRC:d4fcae6473"
+      ],
+      "compatibility": {
+        "minBuild": 15063
+      },
+      "recovery": "Restore the previous Game Mode value.",
+      "changes": [
+        {
+          "type": "SetRegistryValue",
+          "parameters": {
+            "Path": "HKCU:\\Software\\Microsoft\\GameBar",
+            "Name": "AutoGameModeEnabled",
+            "Value": 1,
+            "ValueType": "DWord"
+          }
+        }
+      ]
+    },
+    {
+      "id": "gaming.disable-background-capture",
+      "title": "Disable background game capture",
+      "description": "Disables background Game DVR capture for users who do not use it.",
+      "category": "Gaming",
+      "risk": "Moderate",
+      "requiresAdmin": false,
+      "reversible": true,
+      "restartPossible": false,
+      "tags": [
+        "gaming",
+        "capture"
+      ],
+      "sourceRecords": [
+        "SRC:d4fcae6473"
+      ],
+      "compatibility": {
+        "minBuild": 10240
+      },
+      "recovery": "Restore the previous capture setting.",
+      "changes": [
+        {
+          "type": "SetRegistryValue",
+          "parameters": {
+            "Path": "HKCU:\\System\\GameConfigStore",
+            "Name": "GameDVR_Enabled",
+            "Value": 0,
+            "ValueType": "DWord"
+          }
+        }
+      ]
+    },
+    {
+      "id": "developer.long-paths",
+      "title": "Enable Win32 long paths",
+      "description": "Enables long-path-aware applications to exceed MAX_PATH.",
+      "category": "Developer",
+      "risk": "Moderate",
+      "requiresAdmin": true,
+      "reversible": true,
+      "restartPossible": true,
+      "tags": [
+        "developer",
+        "filesystem"
+      ],
+      "sourceRecords": [
+        "SRC:d4fcae6473"
+      ],
+      "compatibility": {
+        "minBuild": 14393
+      },
+      "recovery": "Restore the prior machine policy value.",
+      "changes": [
+        {
+          "type": "SetRegistryValue",
+          "parameters": {
+            "Path": "HKLM:\\SYSTEM\\CurrentControlSet\\Control\\FileSystem",
+            "Name": "LongPathsEnabled",
+            "Value": 1,
+            "ValueType": "DWord"
+          }
+        }
+      ]
+    },
+    {
+      "id": "developer.developer-mode",
+      "title": "Enable Developer Mode",
+      "description": "Allows development and sideloading features. Apply only on trusted development systems.",
+      "category": "Developer",
+      "risk": "High",
+      "requiresAdmin": true,
+      "reversible": true,
+      "restartPossible": true,
+      "tags": [
+        "developer",
+        "security-impact"
+      ],
+      "sourceRecords": [
+        "SRC:d4fcae6473"
+      ],
+      "compatibility": {
+        "minBuild": 10240
+      },
+      "recovery": "Restore the previous AppModelUnlock policy value.",
+      "changes": [
+        {
+          "type": "SetRegistryValue",
+          "parameters": {
+            "Path": "HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\AppModelUnlock",
+            "Name": "AllowDevelopmentWithoutDevLicense",
+            "Value": 1,
+            "ValueType": "DWord"
+          }
+        }
+      ]
+    },
+    {
+      "id": "developer.wsl",
+      "title": "Enable Windows Subsystem for Linux",
+      "description": "Enables the WSL optional feature without installing a distribution.",
+      "category": "Developer",
+      "risk": "Moderate",
+      "requiresAdmin": true,
+      "reversible": true,
+      "restartPossible": true,
+      "tags": [
+        "developer",
+        "feature"
+      ],
+      "sourceRecords": [
+        "SRC:d4fcae6473"
+      ],
+      "compatibility": {
+        "minBuild": 14393,
+        "requires": [
+          "Get-WindowsOptionalFeature"
+        ]
+      },
+      "recovery": "Disable the optional feature; installed distributions are not deleted.",
+      "changes": [
+        {
+          "type": "SetOptionalFeatureState",
+          "parameters": {
+            "Name": "Microsoft-Windows-Subsystem-Linux",
+            "State": "Enabled"
+          }
+        }
+      ]
+    },
+    {
+      "id": "developer.virtual-machine-platform",
+      "title": "Enable Virtual Machine Platform",
+      "description": "Enables the virtualization platform commonly required by WSL 2.",
+      "category": "Developer",
+      "risk": "Moderate",
+      "requiresAdmin": true,
+      "reversible": true,
+      "restartPossible": true,
+      "tags": [
+        "developer",
+        "feature"
+      ],
+      "sourceRecords": [
+        "SRC:d4fcae6473"
+      ],
+      "compatibility": {
+        "minBuild": 18362,
+        "requires": [
+          "Get-WindowsOptionalFeature"
+        ]
+      },
+      "recovery": "Disable the optional feature.",
+      "changes": [
+        {
+          "type": "SetOptionalFeatureState",
+          "parameters": {
+            "Name": "VirtualMachinePlatform",
+            "State": "Enabled"
+          }
+        }
+      ]
+    },
+    {
+      "id": "security.disable-smb1",
+      "title": "Disable SMB 1.0/CIFS",
+      "description": "Disables the obsolete SMB1 protocol feature where present.",
+      "category": "Security",
+      "risk": "Moderate",
+      "requiresAdmin": true,
+      "reversible": true,
+      "restartPossible": true,
+      "tags": [
+        "security",
+        "feature"
+      ],
+      "sourceRecords": [
+        "SRC:d4fcae6473"
+      ],
+      "compatibility": {
+        "minBuild": 10240,
+        "requires": [
+          "Get-WindowsOptionalFeature"
+        ]
+      },
+      "recovery": "Re-enable the feature only if a legacy dependency requires it.",
+      "changes": [
+        {
+          "type": "SetOptionalFeatureState",
+          "parameters": {
+            "Name": "SMB1Protocol",
+            "State": "Disabled"
+          }
+        }
+      ]
+    },
+    {
+      "id": "security.disable-powershell-v2",
+      "title": "Disable legacy Windows PowerShell 2.0",
+      "description": "Disables the legacy PowerShell v2 feature when present.",
+      "category": "Security",
+      "risk": "Moderate",
+      "requiresAdmin": true,
+      "reversible": true,
+      "restartPossible": true,
+      "tags": [
+        "security",
+        "feature"
+      ],
+      "sourceRecords": [
+        "SRC:d4fcae6473"
+      ],
+      "compatibility": {
+        "minBuild": 10240,
+        "requires": [
+          "Get-WindowsOptionalFeature"
+        ]
+      },
+      "recovery": "Re-enable the optional feature if a verified legacy dependency requires it.",
+      "changes": [
+        {
+          "type": "SetOptionalFeatureState",
+          "parameters": {
+            "Name": "MicrosoftWindowsPowerShellV2Root",
+            "State": "Disabled"
+          }
+        }
+      ]
+    },
+    {
+      "id": "security.pua-protection",
+      "title": "Enable Defender potentially unwanted app protection",
+      "description": "Enables Defender PUA protection through the supported preference cmdlet.",
+      "category": "Security",
+      "risk": "Low",
+      "requiresAdmin": true,
+      "reversible": true,
+      "restartPossible": false,
+      "tags": [
+        "security",
+        "defender"
+      ],
+      "sourceRecords": [
+        "SRC:d4fcae6473"
+      ],
+      "compatibility": {
+        "minBuild": 10240,
+        "requires": [
+          "Get-MpComputerStatus"
+        ]
+      },
+      "recovery": "Restore the previous PUAProtection preference.",
+      "changes": [
+        {
+          "type": "SetDefenderPreference",
+          "parameters": {
+            "Name": "PUAProtection",
+            "Value": 1
+          }
+        }
+      ]
+    },
+    {
+      "id": "updates.no-auto-reboot-user",
+      "title": "Avoid automatic restart while a user is logged on",
+      "description": "Applies the documented Windows Update policy for scheduled installations.",
+      "category": "Updates",
+      "risk": "Moderate",
+      "requiresAdmin": true,
+      "reversible": true,
+      "restartPossible": false,
+      "tags": [
+        "updates",
+        "policy"
+      ],
+      "sourceRecords": [
+        "SRC:d4fcae6473"
+      ],
+      "compatibility": {
+        "minBuild": 10240
+      },
+      "recovery": "Restore the previous Windows Update policy value.",
+      "changes": [
+        {
+          "type": "SetRegistryValue",
+          "parameters": {
+            "Path": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\WindowsUpdate\\AU",
+            "Name": "NoAutoRebootWithLoggedOnUsers",
+            "Value": 1,
+            "ValueType": "DWord"
+          }
+        }
+      ]
+    },
+    {
+      "id": "power.disable-fast-startup",
+      "title": "Disable Fast Startup",
+      "description": "Uses a full shutdown path, useful for dual boot and certain driver or firmware diagnostics.",
+      "category": "Power",
+      "risk": "Moderate",
+      "requiresAdmin": true,
+      "reversible": true,
+      "restartPossible": true,
+      "tags": [
+        "power",
+        "diagnostics"
+      ],
+      "sourceRecords": [
+        "SRC:d4fcae6473"
+      ],
+      "compatibility": {
+        "minBuild": 10240
+      },
+      "recovery": "Restore the prior HiberbootEnabled value.",
+      "changes": [
+        {
+          "type": "SetRegistryValue",
+          "parameters": {
+            "Path": "HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Power",
+            "Name": "HiberbootEnabled",
+            "Value": 0,
+            "ValueType": "DWord"
+          }
+        }
+      ]
+    },
+    {
+      "id": "repair.restore-balanced-power",
+      "title": "Activate the Balanced power scheme",
+      "description": "Restores the built-in Balanced power scheme as a safe default.",
+      "category": "Repair",
+      "risk": "Low",
+      "requiresAdmin": false,
+      "reversible": false,
+      "restartPossible": false,
+      "tags": [
+        "repair",
+        "power"
+      ],
+      "sourceRecords": [
+        "SRC:d4fcae6473"
+      ],
+      "compatibility": {
+        "minBuild": 10240,
+        "requires": [
+          "powercfg.exe"
+        ]
+      },
+      "recovery": "Select a different power plan in Windows Settings.",
+      "changes": [
+        {
+          "type": "SetPowerScheme",
+          "parameters": {
+            "Scheme": "381b4222-f694-41f0-9685-ff5bb260df2e"
+          }
+        }
+      ]
+    },
+    {
+      "id": "privacy.disable-feedback-prompts",
+      "title": "Disable Windows feedback prompts",
+      "description": "Stops periodic feedback prompts for the current user.",
+      "category": "Privacy",
+      "risk": "Low",
+      "requiresAdmin": false,
+      "reversible": true,
+      "restartPossible": false,
+      "tags": [
+        "privacy"
+      ],
+      "sourceRecords": [
+        "SRC:d4fcae6473"
+      ],
+      "compatibility": {
+        "minBuild": 10240
+      },
+      "recovery": "Restore the previous SIUF value.",
+      "changes": [
+        {
+          "type": "SetRegistryValue",
+          "parameters": {
+            "Path": "HKCU:\\Software\\Microsoft\\Siuf\\Rules",
+            "Name": "NumberOfSIUFInPeriod",
+            "Value": 0,
+            "ValueType": "DWord"
+          }
+        }
+      ]
+    },
+    {
+      "id": "explorer.full-path-title",
+      "title": "Show full path in File Explorer title",
+      "description": "Displays the complete current path in the Explorer title bar.",
+      "category": "Explorer",
+      "risk": "Low",
+      "requiresAdmin": false,
+      "reversible": true,
+      "restartPossible": false,
+      "tags": [
+        "explorer",
+        "developer"
+      ],
+      "sourceRecords": [
+        "SRC:d4fcae6473"
+      ],
+      "compatibility": {
+        "minBuild": 10240
+      },
+      "recovery": "Restore the previous CabinetState value.",
+      "changes": [
+        {
+          "type": "SetRegistryValue",
+          "parameters": {
+            "Path": "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\CabinetState",
+            "Name": "FullPath",
+            "Value": 1,
+            "ValueType": "DWord"
+          }
+        }
+      ]
+    },
+    {
+      "id": "privacy.disable-cross-device-clipboard",
+      "title": "Disable cross-device clipboard sync",
+      "description": "Keeps clipboard data local while preserving the local clipboard.",
+      "category": "Privacy",
+      "risk": "Moderate",
+      "requiresAdmin": true,
+      "reversible": true,
+      "restartPossible": true,
+      "tags": [
+        "privacy",
+        "clipboard"
+      ],
+      "sourceRecords": [
+        "SRC:d4fcae6473"
+      ],
+      "compatibility": {
+        "minBuild": 17763
+      },
+      "recovery": "Restore the prior machine policy value.",
+      "changes": [
+        {
+          "type": "SetRegistryValue",
+          "parameters": {
+            "Path": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\System",
+            "Name": "AllowCrossDeviceClipboard",
+            "Value": 0,
+            "ValueType": "DWord"
+          }
+        }
+      ]
+    },
+    {
+      "id": "security.firewall-all-profiles",
+      "title": "Enable Windows Firewall on all profiles",
+      "description": "Ensures Domain, Private, and Public firewall profiles are enabled without replacing existing rules.",
+      "category": "Security",
+      "risk": "High",
+      "requiresAdmin": true,
+      "reversible": true,
+      "restartPossible": false,
+      "tags": [
+        "security",
+        "firewall"
+      ],
+      "sourceRecords": [
+        "SRC:d4fcae6473"
+      ],
+      "compatibility": {
+        "minBuild": 10240,
+        "requires": [
+          "Get-NetFirewallProfile"
+        ]
+      },
+      "recovery": "Restore the prior common firewall profile state.",
+      "changes": [
+        {
+          "type": "SetFirewallProfileState",
+          "parameters": {
+            "Profiles": [
+              "Domain",
+              "Private",
+              "Public"
+            ],
+            "Enabled": true
+          }
+        }
+      ]
+    },
+    {
+      "id": "security.guest-account-disabled",
+      "title": "Disable the built-in Guest account",
+      "description": "Disables the local Guest account while preserving the account and its audit history.",
+      "category": "Security",
+      "risk": "High",
+      "requiresAdmin": true,
+      "reversible": true,
+      "restartPossible": false,
+      "tags": [
+        "security",
+        "identity"
+      ],
+      "sourceRecords": [
+        "SRC:d4fcae6473"
+      ],
+      "compatibility": {
+        "minBuild": 10240,
+        "requires": [
+          "Get-LocalUser"
+        ]
+      },
+      "recovery": "Restore the prior Guest account enabled state.",
+      "changes": [
+        {
+          "type": "SetLocalUserState",
+          "parameters": {
+            "Name": "Guest",
+            "Enabled": false
+          }
+        }
+      ]
+    },
+    {
+      "id": "security.remote-registry-disabled",
+      "title": "Disable Remote Registry startup",
+      "description": "Prevents the Remote Registry service from starting until explicitly restored.",
+      "category": "Security",
+      "risk": "High",
+      "requiresAdmin": true,
+      "reversible": true,
+      "restartPossible": false,
+      "tags": [
+        "security",
+        "service",
+        "remote"
+      ],
+      "sourceRecords": [
+        "SRC:d4fcae6473"
+      ],
+      "compatibility": {
+        "minBuild": 10240
+      },
+      "recovery": "Restore the previous RemoteRegistry startup mode.",
+      "changes": [
+        {
+          "type": "SetServiceStartMode",
+          "parameters": {
+            "Name": "RemoteRegistry",
+            "StartMode": "Disabled"
+          }
+        }
+      ]
+    },
+    {
+      "id": "security.powershell-scriptblock-logging",
+      "title": "Enable PowerShell script block logging",
+      "description": "Enables machine policy logging of PowerShell script blocks for investigation and audit.",
+      "category": "Security",
+      "risk": "Moderate",
+      "requiresAdmin": true,
+      "reversible": true,
+      "restartPossible": false,
+      "tags": [
+        "security",
+        "powershell",
+        "logging"
+      ],
+      "sourceRecords": [
+        "SRC:d4fcae6473"
+      ],
+      "compatibility": {
+        "minBuild": 10240
+      },
+      "recovery": "Restore the prior policy value.",
+      "changes": [
+        {
+          "type": "SetRegistryValue",
+          "parameters": {
+            "Path": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\PowerShell\\ScriptBlockLogging",
+            "Name": "EnableScriptBlockLogging",
+            "Value": 1,
+            "ValueType": "DWord"
+          }
+        }
+      ]
+    },
+    {
+      "id": "security.powershell-module-logging",
+      "title": "Enable PowerShell module logging",
+      "description": "Enables module logging for all modules through machine policy.",
+      "category": "Security",
+      "risk": "Moderate",
+      "requiresAdmin": true,
+      "reversible": true,
+      "restartPossible": false,
+      "tags": [
+        "security",
+        "powershell",
+        "logging"
+      ],
+      "sourceRecords": [
+        "SRC:d4fcae6473"
+      ],
+      "compatibility": {
+        "minBuild": 10240
+      },
+      "recovery": "Restore the prior module logging policy values.",
+      "changes": [
+        {
+          "type": "SetRegistryValue",
+          "parameters": {
+            "Path": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\PowerShell\\ModuleLogging",
+            "Name": "EnableModuleLogging",
+            "Value": 1,
+            "ValueType": "DWord"
+          }
+        },
+        {
+          "type": "SetRegistryValue",
+          "parameters": {
+            "Path": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\PowerShell\\ModuleLogging\\ModuleNames",
+            "Name": "*",
+            "Value": "*",
+            "ValueType": "String"
+          }
+        }
+      ]
+    },
+    {
+      "id": "security.powershell-transcription",
+      "title": "Enable PowerShell transcription",
+      "description": "Enables invocation-header transcription through machine policy; Windows selects the default transcript location.",
+      "category": "Security",
+      "risk": "Moderate",
+      "requiresAdmin": true,
+      "reversible": true,
+      "restartPossible": false,
+      "tags": [
+        "security",
+        "powershell",
+        "logging"
+      ],
+      "sourceRecords": [
+        "SRC:d4fcae6473"
+      ],
+      "compatibility": {
+        "minBuild": 10240
+      },
+      "recovery": "Restore the prior transcription policy values.",
+      "changes": [
+        {
+          "type": "SetRegistryValue",
+          "parameters": {
+            "Path": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\PowerShell\\Transcription",
+            "Name": "EnableTranscripting",
+            "Value": 1,
+            "ValueType": "DWord"
+          }
+        },
+        {
+          "type": "SetRegistryValue",
+          "parameters": {
+            "Path": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\PowerShell\\Transcription",
+            "Name": "EnableInvocationHeader",
+            "Value": 1,
+            "ValueType": "DWord"
+          }
+        }
+      ]
+    },
+    {
+      "id": "security.lsa-protection",
+      "title": "Enable LSA protected process",
+      "description": "Requests protected-process-light operation for LSASS on supported systems.",
+      "category": "Security",
+      "risk": "High",
+      "requiresAdmin": true,
+      "reversible": true,
+      "restartPossible": true,
+      "tags": [
+        "security",
+        "identity",
+        "lsa"
+      ],
+      "sourceRecords": [
+        "SRC:d4fcae6473"
+      ],
+      "compatibility": {
+        "minBuild": 10240
+      },
+      "recovery": "Restore the prior RunAsPPL value; restart is required.",
+      "changes": [
+        {
+          "type": "SetRegistryValue",
+          "parameters": {
+            "Path": "HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Lsa",
+            "Name": "RunAsPPL",
+            "Value": 1,
+            "ValueType": "DWord"
+          }
+        }
+      ]
+    },
+    {
+      "id": "security.wdigest-credential-caching-disabled",
+      "title": "Disable WDigest plaintext credential caching",
+      "description": "Prevents WDigest from retaining reusable plaintext credentials in LSASS.",
+      "category": "Security",
+      "risk": "Moderate",
+      "requiresAdmin": true,
+      "reversible": true,
+      "restartPossible": true,
+      "tags": [
+        "security",
+        "identity",
+        "credentials"
+      ],
+      "sourceRecords": [
+        "SRC:d4fcae6473"
+      ],
+      "compatibility": {
+        "minBuild": 10240
+      },
+      "recovery": "Restore the prior WDigest value.",
+      "changes": [
+        {
+          "type": "SetRegistryValue",
+          "parameters": {
+            "Path": "HKLM:\\SYSTEM\\CurrentControlSet\\Control\\SecurityProviders\\WDigest",
+            "Name": "UseLogonCredential",
+            "Value": 0,
+            "ValueType": "DWord"
+          }
+        }
+      ]
+    },
+    {
+      "id": "security.uac-secure-admin-approval",
+      "title": "Use UAC Admin Approval on secure desktop",
+      "description": "Enables UAC, prompts administrators for consent, and uses the secure desktop.",
+      "category": "Security",
+      "risk": "High",
+      "requiresAdmin": true,
+      "reversible": true,
+      "restartPossible": true,
+      "tags": [
+        "security",
+        "uac"
+      ],
+      "sourceRecords": [
+        "SRC:d4fcae6473"
+      ],
+      "compatibility": {
+        "minBuild": 10240
+      },
+      "recovery": "Restore all prior UAC policy values.",
+      "changes": [
+        {
+          "type": "SetRegistryValue",
+          "parameters": {
+            "Path": "HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System",
+            "Name": "EnableLUA",
+            "Value": 1,
+            "ValueType": "DWord"
+          }
+        },
+        {
+          "type": "SetRegistryValue",
+          "parameters": {
+            "Path": "HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System",
+            "Name": "ConsentPromptBehaviorAdmin",
+            "Value": 5,
+            "ValueType": "DWord"
+          }
+        },
+        {
+          "type": "SetRegistryValue",
+          "parameters": {
+            "Path": "HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System",
+            "Name": "PromptOnSecureDesktop",
+            "Value": 1,
+            "ValueType": "DWord"
+          }
+        }
+      ]
+    },
+    {
+      "id": "security.autoplay-disabled",
+      "title": "Disable AutoPlay and AutoRun",
+      "description": "Disables AutoPlay and AutoRun policy across drive types to reduce removable-media execution risk.",
+      "category": "Security",
+      "risk": "Moderate",
+      "requiresAdmin": true,
+      "reversible": true,
+      "restartPossible": false,
+      "tags": [
+        "security",
+        "removable-media"
+      ],
+      "sourceRecords": [
+        "SRC:d4fcae6473"
+      ],
+      "compatibility": {
+        "minBuild": 10240
+      },
+      "recovery": "Restore the prior Explorer policy values.",
+      "changes": [
+        {
+          "type": "SetRegistryValue",
+          "parameters": {
+            "Path": "HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer",
+            "Name": "NoDriveTypeAutoRun",
+            "Value": 255,
+            "ValueType": "DWord"
+          }
+        },
+        {
+          "type": "SetRegistryValue",
+          "parameters": {
+            "Path": "HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer",
+            "Name": "NoAutorun",
+            "Value": 1,
+            "ValueType": "DWord"
+          }
+        }
+      ]
+    },
+    {
+      "id": "security.llmnr-disabled",
+      "title": "Disable LLMNR name resolution",
+      "description": "Disables multicast name resolution through DNS Client policy to reduce spoofing exposure.",
+      "category": "Security",
+      "risk": "Moderate",
+      "requiresAdmin": true,
+      "reversible": true,
+      "restartPossible": true,
+      "tags": [
+        "security",
+        "network"
+      ],
+      "sourceRecords": [
+        "SRC:d4fcae6473"
+      ],
+      "compatibility": {
+        "minBuild": 10240
+      },
+      "recovery": "Restore the prior DNS Client policy value.",
+      "changes": [
+        {
+          "type": "SetRegistryValue",
+          "parameters": {
+            "Path": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows NT\\DNSClient",
+            "Name": "EnableMulticast",
+            "Value": 0,
+            "ValueType": "DWord"
+          }
+        }
+      ]
+    },
+    {
+      "id": "security.smb-signing-required",
+      "title": "Require SMB signing",
+      "description": "Requires security signatures for both SMB client and server communication.",
+      "category": "Security",
+      "risk": "High",
+      "requiresAdmin": true,
+      "reversible": true,
+      "restartPossible": true,
+      "tags": [
+        "security",
+        "network",
+        "smb"
+      ],
+      "sourceRecords": [
+        "SRC:d4fcae6473"
+      ],
+      "compatibility": {
+        "minBuild": 10240
+      },
+      "recovery": "Restore the prior SMB signing values.",
+      "changes": [
+        {
+          "type": "SetRegistryValue",
+          "parameters": {
+            "Path": "HKLM:\\SYSTEM\\CurrentControlSet\\Services\\LanmanWorkstation\\Parameters",
+            "Name": "RequireSecuritySignature",
+            "Value": 1,
+            "ValueType": "DWord"
+          }
+        },
+        {
+          "type": "SetRegistryValue",
+          "parameters": {
+            "Path": "HKLM:\\SYSTEM\\CurrentControlSet\\Services\\LanmanServer\\Parameters",
+            "Name": "RequireSecuritySignature",
+            "Value": 1,
+            "ValueType": "DWord"
+          }
+        }
+      ]
+    },
+    {
+      "id": "security.vbs-enabled",
+      "title": "Enable virtualization-based security policy",
+      "description": "Enables VBS policy using platform security features when available.",
+      "category": "Security",
+      "risk": "High",
+      "requiresAdmin": true,
+      "reversible": true,
+      "restartPossible": true,
+      "tags": [
+        "security",
+        "vbs"
+      ],
+      "sourceRecords": [
+        "SRC:d4fcae6473"
+      ],
+      "compatibility": {
+        "minBuild": 10240
+      },
+      "recovery": "Restore the prior Device Guard policy values.",
+      "changes": [
+        {
+          "type": "SetRegistryValue",
+          "parameters": {
+            "Path": "HKLM:\\SYSTEM\\CurrentControlSet\\Control\\DeviceGuard",
+            "Name": "EnableVirtualizationBasedSecurity",
+            "Value": 1,
+            "ValueType": "DWord"
+          }
+        },
+        {
+          "type": "SetRegistryValue",
+          "parameters": {
+            "Path": "HKLM:\\SYSTEM\\CurrentControlSet\\Control\\DeviceGuard",
+            "Name": "RequirePlatformSecurityFeatures",
+            "Value": 1,
+            "ValueType": "DWord"
+          }
+        }
+      ]
+    },
+    {
+      "id": "security.credential-guard-enabled",
+      "title": "Enable Credential Guard without UEFI lock",
+      "description": "Enables Credential Guard in a reversible policy mode where supported.",
+      "category": "Security",
+      "risk": "High",
+      "requiresAdmin": true,
+      "reversible": true,
+      "restartPossible": true,
+      "tags": [
+        "security",
+        "vbs",
+        "credentials"
+      ],
+      "sourceRecords": [
+        "SRC:d4fcae6473"
+      ],
+      "compatibility": {
+        "minBuild": 10240
+      },
+      "recovery": "Restore the prior Credential Guard value.",
+      "changes": [
+        {
+          "type": "SetRegistryValue",
+          "parameters": {
+            "Path": "HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Lsa",
+            "Name": "LsaCfgFlags",
+            "Value": 2,
+            "ValueType": "DWord"
+          }
+        }
+      ]
+    },
+    {
+      "id": "security.hvci-enabled",
+      "title": "Enable memory integrity policy",
+      "description": "Enables Hypervisor-protected Code Integrity through the documented Device Guard scenario key.",
+      "category": "Security",
+      "risk": "High",
+      "requiresAdmin": true,
+      "reversible": true,
+      "restartPossible": true,
+      "tags": [
+        "security",
+        "vbs",
+        "code-integrity"
+      ],
+      "sourceRecords": [
+        "SRC:d4fcae6473"
+      ],
+      "compatibility": {
+        "minBuild": 10240
+      },
+      "recovery": "Restore the prior HVCI value.",
+      "changes": [
+        {
+          "type": "SetRegistryValue",
+          "parameters": {
+            "Path": "HKLM:\\SYSTEM\\CurrentControlSet\\Control\\DeviceGuard\\Scenarios\\HypervisorEnforcedCodeIntegrity",
+            "Name": "Enabled",
+            "Value": 1,
+            "ValueType": "DWord"
+          }
+        }
+      ]
+    },
+    {
+      "id": "security.defender-cloud-protection",
+      "title": "Enable advanced Defender cloud protection",
+      "description": "Joins Microsoft Advanced Protection Service for cloud-delivered protection.",
+      "category": "Security",
+      "risk": "Low",
+      "requiresAdmin": true,
+      "reversible": true,
+      "restartPossible": false,
+      "tags": [
+        "security",
+        "defender"
+      ],
+      "sourceRecords": [
+        "SRC:d4fcae6473"
+      ],
+      "compatibility": {
+        "minBuild": 10240,
+        "requires": [
+          "Get-MpComputerStatus"
+        ]
+      },
+      "recovery": "Restore the prior MAPSReporting preference.",
+      "changes": [
+        {
+          "type": "SetDefenderPreference",
+          "parameters": {
+            "Name": "MAPSReporting",
+            "Value": 2
+          }
+        }
+      ]
+    },
+    {
+      "id": "security.defender-safe-samples",
+      "title": "Use safe automatic sample submission",
+      "description": "Allows safe samples to be submitted automatically while continuing to prompt for other samples.",
+      "category": "Security",
+      "risk": "Low",
+      "requiresAdmin": true,
+      "reversible": true,
+      "restartPossible": false,
+      "tags": [
+        "security",
+        "defender"
+      ],
+      "sourceRecords": [
+        "SRC:d4fcae6473"
+      ],
+      "compatibility": {
+        "minBuild": 10240,
+        "requires": [
+          "Get-MpComputerStatus"
+        ]
+      },
+      "recovery": "Restore the prior sample-submission preference.",
+      "changes": [
+        {
+          "type": "SetDefenderPreference",
+          "parameters": {
+            "Name": "SubmitSamplesConsent",
+            "Value": 1
+          }
+        }
+      ]
+    },
+    {
+      "id": "security.defender-block-first-seen",
+      "title": "Enable Defender block-at-first-seen",
+      "description": "Ensures the block-at-first-seen protection path is not disabled.",
+      "category": "Security",
+      "risk": "Low",
+      "requiresAdmin": true,
+      "reversible": true,
+      "restartPossible": false,
+      "tags": [
+        "security",
+        "defender"
+      ],
+      "sourceRecords": [
+        "SRC:d4fcae6473"
+      ],
+      "compatibility": {
+        "minBuild": 10240,
+        "requires": [
+          "Get-MpComputerStatus"
+        ]
+      },
+      "recovery": "Restore the prior preference.",
+      "changes": [
+        {
+          "type": "SetDefenderPreference",
+          "parameters": {
+            "Name": "DisableBlockAtFirstSeen",
+            "Value": false
+          }
+        }
+      ]
+    },
+    {
+      "id": "security.defender-network-audit",
+      "title": "Audit Defender Network Protection",
+      "description": "Places Network Protection in audit mode so compatibility evidence can be collected before enforcement.",
+      "category": "Security",
+      "risk": "Low",
+      "requiresAdmin": true,
+      "reversible": true,
+      "restartPossible": false,
+      "tags": [
+        "security",
+        "defender",
+        "audit"
+      ],
+      "sourceRecords": [
+        "SRC:d4fcae6473"
+      ],
+      "compatibility": {
+        "minBuild": 15063,
+        "requires": [
+          "Get-MpComputerStatus"
+        ]
+      },
+      "recovery": "Restore the prior Network Protection mode.",
+      "changes": [
+        {
+          "type": "SetDefenderPreference",
+          "parameters": {
+            "Name": "EnableNetworkProtection",
+            "Value": 2
+          }
+        }
+      ]
+    },
+    {
+      "id": "security.defender-cfa-audit",
+      "title": "Audit Controlled Folder Access",
+      "description": "Places Controlled Folder Access in audit mode to collect compatibility evidence without blocking applications.",
+      "category": "Security",
+      "risk": "Low",
+      "requiresAdmin": true,
+      "reversible": true,
+      "restartPossible": false,
+      "tags": [
+        "security",
+        "defender",
+        "audit"
+      ],
+      "sourceRecords": [
+        "SRC:d4fcae6473"
+      ],
+      "compatibility": {
+        "minBuild": 16299,
+        "requires": [
+          "Get-MpComputerStatus"
+        ]
+      },
+      "recovery": "Restore the prior Controlled Folder Access mode.",
+      "changes": [
+        {
+          "type": "SetDefenderPreference",
+          "parameters": {
+            "Name": "EnableControlledFolderAccess",
+            "Value": 2
+          }
+        }
+      ]
+    },
+    {
+      "id": "security.defender-cloud-block-high",
+      "title": "Use high cloud blocking level",
+      "description": "Uses Defender high cloud blocking level without selecting zero-tolerance modes.",
+      "category": "Security",
+      "risk": "Low",
+      "requiresAdmin": true,
+      "reversible": true,
+      "restartPossible": false,
+      "tags": [
+        "security",
+        "defender"
+      ],
+      "sourceRecords": [
+        "SRC:d4fcae6473"
+      ],
+      "compatibility": {
+        "minBuild": 15063,
+        "requires": [
+          "Get-MpComputerStatus"
+        ]
+      },
+      "recovery": "Restore the prior cloud block level.",
+      "changes": [
+        {
+          "type": "SetDefenderPreference",
+          "parameters": {
+            "Name": "CloudBlockLevel",
+            "Value": 2
+          }
+        }
+      ]
+    },
+    {
+      "id": "security.defender-signatures-four-hour",
+      "title": "Check Defender signatures every four hours",
+      "description": "Sets a bounded signature update interval for systems that remain online.",
+      "category": "Security",
+      "risk": "Low",
+      "requiresAdmin": true,
+      "reversible": true,
+      "restartPossible": false,
+      "tags": [
+        "security",
+        "defender",
+        "updates"
+      ],
+      "sourceRecords": [
+        "SRC:d4fcae6473"
+      ],
+      "compatibility": {
+        "minBuild": 10240,
+        "requires": [
+          "Get-MpComputerStatus"
+        ]
+      },
+      "recovery": "Restore the prior signature update interval.",
+      "changes": [
+        {
+          "type": "SetDefenderPreference",
+          "parameters": {
+            "Name": "SignatureUpdateInterval",
+            "Value": 4
+          }
+        }
+      ]
+    },
+    {
+      "id": "security.defender-scan-archives",
+      "title": "Enable Defender archive scanning",
+      "description": "Ensures archive scanning is not disabled.",
+      "category": "Security",
+      "risk": "Low",
+      "requiresAdmin": true,
+      "reversible": true,
+      "restartPossible": false,
+      "tags": [
+        "security",
+        "defender"
+      ],
+      "sourceRecords": [
+        "SRC:d4fcae6473"
+      ],
+      "compatibility": {
+        "minBuild": 10240,
+        "requires": [
+          "Get-MpComputerStatus"
+        ]
+      },
+      "recovery": "Restore the prior archive scanning preference.",
+      "changes": [
+        {
+          "type": "SetDefenderPreference",
+          "parameters": {
+            "Name": "DisableArchiveScanning",
+            "Value": false
+          }
+        }
+      ]
+    },
+    {
+      "id": "security.remote-assistance-disabled",
+      "title": "Disable solicited Remote Assistance",
+      "description": "Disables Remote Assistance invitations by machine policy without changing Remote Desktop.",
+      "category": "Security",
+      "risk": "Moderate",
+      "requiresAdmin": true,
+      "reversible": true,
+      "restartPossible": true,
+      "tags": [
+        "security",
+        "remote"
+      ],
+      "sourceRecords": [
+        "SRC:d4fcae6473"
+      ],
+      "compatibility": {
+        "minBuild": 10240
+      },
+      "recovery": "Restore the prior Remote Assistance value.",
+      "changes": [
+        {
+          "type": "SetRegistryValue",
+          "parameters": {
+            "Path": "HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Remote Assistance",
+            "Name": "fAllowToGetHelp",
+            "Value": 0,
+            "ValueType": "DWord"
+          }
+        }
+      ]
+    },
+    {
+      "id": "security.no-lanman-hash",
+      "title": "Do not store LAN Manager password hashes",
+      "description": "Prevents storage of legacy LAN Manager password hashes for future password changes.",
+      "category": "Security",
+      "risk": "Moderate",
+      "requiresAdmin": true,
+      "reversible": true,
+      "restartPossible": true,
+      "tags": [
+        "security",
+        "identity"
+      ],
+      "sourceRecords": [
+        "SRC:d4fcae6473"
+      ],
+      "compatibility": {
+        "minBuild": 10240
+      },
+      "recovery": "Restore the prior NoLMHash value.",
+      "changes": [
+        {
+          "type": "SetRegistryValue",
+          "parameters": {
+            "Path": "HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Lsa",
+            "Name": "NoLMHash",
+            "Value": 1,
+            "ValueType": "DWord"
+          }
+        }
+      ]
+    },
+    {
+      "id": "security.restrict-anonymous-sam",
+      "title": "Restrict anonymous SAM enumeration",
+      "description": "Prevents anonymous users from enumerating local accounts.",
+      "category": "Security",
+      "risk": "Moderate",
+      "requiresAdmin": true,
+      "reversible": true,
+      "restartPossible": true,
+      "tags": [
+        "security",
+        "identity",
+        "network"
+      ],
+      "sourceRecords": [
+        "SRC:d4fcae6473"
+      ],
+      "compatibility": {
+        "minBuild": 10240
+      },
+      "recovery": "Restore the prior RestrictAnonymousSAM value.",
+      "changes": [
+        {
+          "type": "SetRegistryValue",
+          "parameters": {
+            "Path": "HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Lsa",
+            "Name": "RestrictAnonymousSAM",
+            "Value": 1,
+            "ValueType": "DWord"
+          }
+        }
+      ]
+    },
+    {
+      "id": "security.dotnet-strong-crypto",
+      "title": "Use system-default TLS and strong crypto for .NET Framework",
+      "description": "Enables strong cryptography and system-default TLS for 32-bit and 64-bit .NET Framework 4 applications.",
+      "category": "Security",
+      "risk": "Moderate",
+      "requiresAdmin": true,
+      "reversible": true,
+      "restartPossible": true,
+      "tags": [
+        "security",
+        "tls",
+        "dotnet"
+      ],
+      "sourceRecords": [
+        "SRC:d4fcae6473"
+      ],
+      "compatibility": {
+        "minBuild": 10240
+      },
+      "recovery": "Restore the prior .NET Framework values.",
+      "changes": [
+        {
+          "type": "SetRegistryValue",
+          "parameters": {
+            "Path": "HKLM:\\SOFTWARE\\Microsoft\\.NETFramework\\v4.0.30319",
+            "Name": "SchUseStrongCrypto",
+            "Value": 1,
+            "ValueType": "DWord"
+          }
+        },
+        {
+          "type": "SetRegistryValue",
+          "parameters": {
+            "Path": "HKLM:\\SOFTWARE\\Microsoft\\.NETFramework\\v4.0.30319",
+            "Name": "SystemDefaultTlsVersions",
+            "Value": 1,
+            "ValueType": "DWord"
+          }
+        },
+        {
+          "type": "SetRegistryValue",
+          "parameters": {
+            "Path": "HKLM:\\SOFTWARE\\WOW6432Node\\Microsoft\\.NETFramework\\v4.0.30319",
+            "Name": "SchUseStrongCrypto",
+            "Value": 1,
+            "ValueType": "DWord"
+          }
+        },
+        {
+          "type": "SetRegistryValue",
+          "parameters": {
+            "Path": "HKLM:\\SOFTWARE\\WOW6432Node\\Microsoft\\.NETFramework\\v4.0.30319",
+            "Name": "SystemDefaultTlsVersions",
+            "Value": 1,
+            "ValueType": "DWord"
+          }
+        }
+      ]
+    },
+    {
+      "id": "security.tls10-disabled",
+      "title": "Disable TLS 1.0 client and server protocols",
+      "description": "Disables TLS 1.0 in Schannel. Apply only after legacy dependency assessment.",
+      "category": "Security",
+      "risk": "High",
+      "requiresAdmin": true,
+      "reversible": true,
+      "restartPossible": true,
+      "tags": [
+        "security",
+        "tls",
+        "compatibility-impact"
+      ],
+      "sourceRecords": [
+        "SRC:d4fcae6473"
+      ],
+      "compatibility": {
+        "minBuild": 10240
+      },
+      "recovery": "Restore the prior Schannel TLS 1.0 values.",
+      "changes": [
+        {
+          "type": "SetRegistryValue",
+          "parameters": {
+            "Path": "HKLM:\\SYSTEM\\CurrentControlSet\\Control\\SecurityProviders\\SCHANNEL\\Protocols\\TLS 1.0\\Client",
+            "Name": "Enabled",
+            "Value": 0,
+            "ValueType": "DWord"
+          }
+        },
+        {
+          "type": "SetRegistryValue",
+          "parameters": {
+            "Path": "HKLM:\\SYSTEM\\CurrentControlSet\\Control\\SecurityProviders\\SCHANNEL\\Protocols\\TLS 1.0\\Client",
+            "Name": "DisabledByDefault",
+            "Value": 1,
+            "ValueType": "DWord"
+          }
+        },
+        {
+          "type": "SetRegistryValue",
+          "parameters": {
+            "Path": "HKLM:\\SYSTEM\\CurrentControlSet\\Control\\SecurityProviders\\SCHANNEL\\Protocols\\TLS 1.0\\Server",
+            "Name": "Enabled",
+            "Value": 0,
+            "ValueType": "DWord"
+          }
+        },
+        {
+          "type": "SetRegistryValue",
+          "parameters": {
+            "Path": "HKLM:\\SYSTEM\\CurrentControlSet\\Control\\SecurityProviders\\SCHANNEL\\Protocols\\TLS 1.0\\Server",
+            "Name": "DisabledByDefault",
+            "Value": 1,
+            "ValueType": "DWord"
+          }
+        }
+      ]
+    },
+    {
+      "id": "security.tls11-disabled",
+      "title": "Disable TLS 1.1 client and server protocols",
+      "description": "Disables TLS 1.1 in Schannel. Apply only after legacy dependency assessment.",
+      "category": "Security",
+      "risk": "High",
+      "requiresAdmin": true,
+      "reversible": true,
+      "restartPossible": true,
+      "tags": [
+        "security",
+        "tls",
+        "compatibility-impact"
+      ],
+      "sourceRecords": [
+        "SRC:d4fcae6473"
+      ],
+      "compatibility": {
+        "minBuild": 10240
+      },
+      "recovery": "Restore the prior Schannel TLS 1.1 values.",
+      "changes": [
+        {
+          "type": "SetRegistryValue",
+          "parameters": {
+            "Path": "HKLM:\\SYSTEM\\CurrentControlSet\\Control\\SecurityProviders\\SCHANNEL\\Protocols\\TLS 1.1\\Client",
+            "Name": "Enabled",
+            "Value": 0,
+            "ValueType": "DWord"
+          }
+        },
+        {
+          "type": "SetRegistryValue",
+          "parameters": {
+            "Path": "HKLM:\\SYSTEM\\CurrentControlSet\\Control\\SecurityProviders\\SCHANNEL\\Protocols\\TLS 1.1\\Client",
+            "Name": "DisabledByDefault",
+            "Value": 1,
+            "ValueType": "DWord"
+          }
+        },
+        {
+          "type": "SetRegistryValue",
+          "parameters": {
+            "Path": "HKLM:\\SYSTEM\\CurrentControlSet\\Control\\SecurityProviders\\SCHANNEL\\Protocols\\TLS 1.1\\Server",
+            "Name": "Enabled",
+            "Value": 0,
+            "ValueType": "DWord"
+          }
+        },
+        {
+          "type": "SetRegistryValue",
+          "parameters": {
+            "Path": "HKLM:\\SYSTEM\\CurrentControlSet\\Control\\SecurityProviders\\SCHANNEL\\Protocols\\TLS 1.1\\Server",
+            "Name": "DisabledByDefault",
+            "Value": 1,
+            "ValueType": "DWord"
+          }
+        }
+      ]
+    },
+    {
+      "id": "security.tls12-enabled",
+      "title": "Enable TLS 1.2 client and server protocols",
+      "description": "Explicitly enables TLS 1.2 in Schannel.",
+      "category": "Security",
+      "risk": "Moderate",
+      "requiresAdmin": true,
+      "reversible": true,
+      "restartPossible": true,
+      "tags": [
+        "security",
+        "tls"
+      ],
+      "sourceRecords": [
+        "SRC:d4fcae6473"
+      ],
+      "compatibility": {
+        "minBuild": 10240
+      },
+      "recovery": "Restore the prior Schannel TLS 1.2 values.",
+      "changes": [
+        {
+          "type": "SetRegistryValue",
+          "parameters": {
+            "Path": "HKLM:\\SYSTEM\\CurrentControlSet\\Control\\SecurityProviders\\SCHANNEL\\Protocols\\TLS 1.2\\Client",
+            "Name": "Enabled",
+            "Value": 1,
+            "ValueType": "DWord"
+          }
+        },
+        {
+          "type": "SetRegistryValue",
+          "parameters": {
+            "Path": "HKLM:\\SYSTEM\\CurrentControlSet\\Control\\SecurityProviders\\SCHANNEL\\Protocols\\TLS 1.2\\Client",
+            "Name": "DisabledByDefault",
+            "Value": 0,
+            "ValueType": "DWord"
+          }
+        },
+        {
+          "type": "SetRegistryValue",
+          "parameters": {
+            "Path": "HKLM:\\SYSTEM\\CurrentControlSet\\Control\\SecurityProviders\\SCHANNEL\\Protocols\\TLS 1.2\\Server",
+            "Name": "Enabled",
+            "Value": 1,
+            "ValueType": "DWord"
+          }
+        },
+        {
+          "type": "SetRegistryValue",
+          "parameters": {
+            "Path": "HKLM:\\SYSTEM\\CurrentControlSet\\Control\\SecurityProviders\\SCHANNEL\\Protocols\\TLS 1.2\\Server",
+            "Name": "DisabledByDefault",
+            "Value": 0,
+            "ValueType": "DWord"
+          }
+        }
+      ]
+    },
+    {
+      "id": "privacy.diagnostic-data-required-minimum",
+      "title": "Set required diagnostic data policy",
+      "description": "Uses the broadly supported required diagnostic data level rather than unsupported blanket telemetry breakage.",
+      "category": "Privacy",
+      "risk": "Moderate",
+      "requiresAdmin": true,
+      "reversible": true,
+      "restartPossible": true,
+      "tags": [
+        "privacy",
+        "policy"
+      ],
+      "sourceRecords": [
+        "SRC:d4fcae6473"
+      ],
+      "compatibility": {
+        "minBuild": 10240
+      },
+      "recovery": "Restore the prior diagnostic data policy.",
+      "changes": [
+        {
+          "type": "SetRegistryValue",
+          "parameters": {
+            "Path": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\DataCollection",
+            "Name": "AllowTelemetry",
+            "Value": 1,
+            "ValueType": "DWord"
+          }
+        }
+      ]
+    },
+    {
+      "id": "privacy.consumer-features-disabled",
+      "title": "Disable Microsoft consumer experiences",
+      "description": "Disables consumer feature promotion through machine policy without removing Store infrastructure.",
+      "category": "Privacy",
+      "risk": "Moderate",
+      "requiresAdmin": true,
+      "reversible": true,
+      "restartPossible": true,
+      "tags": [
+        "privacy",
+        "policy"
+      ],
+      "sourceRecords": [
+        "SRC:d4fcae6473"
+      ],
+      "compatibility": {
+        "minBuild": 10240
+      },
+      "recovery": "Restore the prior CloudContent policy.",
+      "changes": [
+        {
+          "type": "SetRegistryValue",
+          "parameters": {
+            "Path": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\CloudContent",
+            "Name": "DisableWindowsConsumerFeatures",
+            "Value": 1,
+            "ValueType": "DWord"
+          }
+        }
+      ]
+    },
+    {
+      "id": "privacy.telemetry-security-level",
+      "title": "Set diagnostic telemetry policy to security-only",
+      "description": "Applies the AllowTelemetry=0 machine policy. This level is edition-dependent and can reduce diagnostic supportability.",
+      "category": "Privacy",
+      "risk": "Critical",
+      "requiresAdmin": true,
+      "reversible": true,
+      "restartPossible": true,
+      "tags": [
+        "privacy",
+        "telemetry",
+        "legacy-unsafe"
+      ],
+      "sourceRecords": [
+        "SRC:d4fcae6473"
+      ],
+      "compatibility": {
+        "minBuild": 10240
+      },
+      "recovery": "Restore the prior AllowTelemetry policy value.",
+      "changes": [
+        {
+          "type": "SetRegistryValue",
+          "parameters": {
+            "Path": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\DataCollection",
+            "Name": "AllowTelemetry",
+            "Value": 0,
+            "ValueType": "DWord"
+          }
+        }
+      ]
+    },
+    {
+      "id": "privacy.disable-problem-steps-recorder",
+      "title": "Disable Problem Steps Recorder telemetry",
+      "description": "Disables the Application Compatibility Problem Steps Recorder through machine policy.",
+      "category": "Privacy",
+      "risk": "High",
+      "requiresAdmin": true,
+      "reversible": true,
+      "restartPossible": true,
+      "tags": [
+        "privacy",
+        "telemetry"
+      ],
+      "sourceRecords": [
+        "SRC:d4fcae6473"
+      ],
+      "compatibility": {
+        "minBuild": 10240
+      },
+      "recovery": "Restore the prior DisableUAR value.",
+      "changes": [
+        {
+          "type": "SetRegistryValue",
+          "parameters": {
+            "Path": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\AppCompat",
+            "Name": "DisableUAR",
+            "Value": 1,
+            "ValueType": "DWord"
+          }
+        }
+      ]
+    },
+    {
+      "id": "privacy.disable-application-impact-telemetry",
+      "title": "Disable Application Impact Telemetry",
+      "description": "Disables Application Impact Telemetry collection through machine policy.",
+      "category": "Privacy",
+      "risk": "High",
+      "requiresAdmin": true,
+      "reversible": true,
+      "restartPossible": true,
+      "tags": [
+        "privacy",
+        "telemetry"
+      ],
+      "sourceRecords": [
+        "SRC:d4fcae6473"
+      ],
+      "compatibility": {
+        "minBuild": 10240
+      },
+      "recovery": "Restore the prior AITEnable value.",
+      "changes": [
+        {
+          "type": "SetRegistryValue",
+          "parameters": {
+            "Path": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\AppCompat",
+            "Name": "AITEnable",
+            "Value": 0,
+            "ValueType": "DWord"
+          }
+        }
+      ]
+    },
+    {
+      "id": "privacy.disable-ceip",
+      "title": "Disable Windows CEIP participation",
+      "description": "Disables Windows Customer Experience Improvement Program participation through machine policy.",
+      "category": "Privacy",
+      "risk": "High",
+      "requiresAdmin": true,
+      "reversible": true,
+      "restartPossible": true,
+      "tags": [
+        "privacy",
+        "telemetry"
+      ],
+      "sourceRecords": [
+        "SRC:d4fcae6473"
+      ],
+      "compatibility": {
+        "minBuild": 10240
+      },
+      "recovery": "Restore the prior CEIPEnable value.",
+      "changes": [
+        {
+          "type": "SetRegistryValue",
+          "parameters": {
+            "Path": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\SQMClient\\Windows",
+            "Name": "CEIPEnable",
+            "Value": 0,
+            "ValueType": "DWord"
+          }
+        }
+      ]
+    },
+    {
+      "id": "updates.notify-before-download",
+      "title": "Notify before Windows Update download",
+      "description": "Sets the classic AUOptions policy to notify before download. Modern Windows behavior can vary by edition and management state.",
+      "category": "Updates",
+      "risk": "High",
+      "requiresAdmin": true,
+      "reversible": true,
+      "restartPossible": true,
+      "tags": [
+        "updates",
+        "legacy-unsafe"
+      ],
+      "sourceRecords": [
+        "SRC:d4fcae6473"
+      ],
+      "compatibility": {
+        "minBuild": 10240
+      },
+      "recovery": "Restore the prior AUOptions value.",
+      "changes": [
+        {
+          "type": "SetRegistryValue",
+          "parameters": {
+            "Path": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\WindowsUpdate\\AU",
+            "Name": "AUOptions",
+            "Value": 2,
+            "ValueType": "DWord"
+          }
+        }
+      ]
+    },
+    {
+      "id": "updates.delivery-optimization-http-only",
+      "title": "Restrict Delivery Optimization to HTTP-only mode",
+      "description": "Sets Delivery Optimization download mode to 0, disabling peer delivery.",
+      "category": "Updates",
+      "risk": "Moderate",
+      "requiresAdmin": true,
+      "reversible": true,
+      "restartPossible": true,
+      "tags": [
+        "updates",
+        "delivery-optimization"
+      ],
+      "sourceRecords": [
+        "SRC:d4fcae6473"
+      ],
+      "compatibility": {
+        "minBuild": 10240
+      },
+      "recovery": "Restore the prior DODownloadMode value.",
+      "changes": [
+        {
+          "type": "SetRegistryValue",
+          "parameters": {
+            "Path": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\DeliveryOptimization",
+            "Name": "DODownloadMode",
+            "Value": 0,
+            "ValueType": "DWord"
+          }
+        }
+      ]
+    },
+    {
+      "id": "appearance.dark-mode",
+      "title": "Use dark application and system theme",
+      "description": "Applies the dark-theme registry preferences for the current user.",
+      "category": "Appearance",
+      "risk": "Low",
+      "requiresAdmin": false,
+      "reversible": true,
+      "restartPossible": false,
+      "tags": [
+        "appearance",
+        "theme",
+        "user"
+      ],
+      "sourceRecords": [
+        "SRC:d4fcae6473"
+      ],
+      "compatibility": {
+        "minBuild": 10240
+      },
+      "recovery": "Restore the previous exact registry values.",
+      "changes": [
+        {
+          "type": "SetRegistryValue",
+          "parameters": {
+            "Path": "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize",
+            "Name": "AppsUseLightTheme",
+            "Value": 0,
+            "ValueType": "DWord"
+          },
+          "verification": "Registry value AppsUseLightTheme equals 0"
+        },
+        {
+          "type": "SetRegistryValue",
+          "parameters": {
+            "Path": "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize",
+            "Name": "SystemUsesLightTheme",
+            "Value": 0,
+            "ValueType": "DWord"
+          },
+          "verification": "Registry value SystemUsesLightTheme equals 0"
+        },
+        {
+          "type": "SetRegistryValue",
+          "parameters": {
+            "Path": "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize",
+            "Name": "EnableTransparency",
+            "Value": 1,
+            "ValueType": "DWord"
+          },
+          "verification": "Registry value EnableTransparency equals 1"
+        }
+      ]
+    },
+    {
+      "id": "appearance.disable-spotlight",
+      "title": "Disable Windows Spotlight suggestions",
+      "description": "Disables lock-screen and shell Spotlight suggestion surfaces for the current user.",
+      "category": "Privacy",
+      "risk": "Moderate",
+      "requiresAdmin": false,
+      "reversible": true,
+      "restartPossible": false,
+      "tags": [
+        "appearance",
+        "privacy",
+        "spotlight"
+      ],
+      "sourceRecords": [
+        "SRC:d4fcae6473"
+      ],
+      "compatibility": {
+        "minBuild": 10240
+      },
+      "recovery": "Restore the previous exact registry values.",
+      "changes": [
+        {
+          "type": "SetRegistryValue",
+          "parameters": {
+            "Path": "HKCU:\\SOFTWARE\\Policies\\Microsoft\\Windows\\CloudContent",
+            "Name": "DisableWindowsSpotlightFeatures",
+            "Value": 1,
+            "ValueType": "DWord"
+          },
+          "verification": "Registry value DisableWindowsSpotlightFeatures equals 1"
+        },
+        {
+          "type": "SetRegistryValue",
+          "parameters": {
+            "Path": "HKCU:\\SOFTWARE\\Policies\\Microsoft\\Windows\\CloudContent",
+            "Name": "DisableThirdPartySuggestions",
+            "Value": 1,
+            "ValueType": "DWord"
+          },
+          "verification": "Registry value DisableThirdPartySuggestions equals 1"
+        },
+        {
+          "type": "SetRegistryValue",
+          "parameters": {
+            "Path": "HKCU:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager",
+            "Name": "RotatingLockScreenEnabled",
+            "Value": 0,
+            "ValueType": "DWord"
+          },
+          "verification": "Registry value RotatingLockScreenEnabled equals 0"
+        },
+        {
+          "type": "SetRegistryValue",
+          "parameters": {
+            "Path": "HKCU:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager",
+            "Name": "RotatingLockScreenOverlayEnabled",
+            "Value": 0,
+            "ValueType": "DWord"
+          },
+          "verification": "Registry value RotatingLockScreenOverlayEnabled equals 0"
+        }
+      ]
+    },
+    {
+      "id": "taskbar.hide-meet-now",
+      "title": "Hide Meet Now from the taskbar",
+      "description": "Hides the legacy Meet Now surface.",
+      "category": "Appearance",
+      "risk": "Low",
+      "requiresAdmin": false,
+      "reversible": true,
+      "restartPossible": false,
+      "tags": [
+        "taskbar",
+        "appearance"
+      ],
+      "sourceRecords": [
+        "SRC:d4fcae6473"
+      ],
+      "compatibility": {
+        "minBuild": 10240
+      },
+      "recovery": "Restore the previous exact registry values.",
+      "changes": [
+        {
+          "type": "SetRegistryValue",
+          "parameters": {
+            "Path": "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer",
+            "Name": "HideSCAMeetNow",
+            "Value": 1,
+            "ValueType": "DWord"
+          },
+          "verification": "Registry value HideSCAMeetNow equals 1"
+        }
+      ]
+    },
+    {
+      "id": "taskbar.hide-people",
+      "title": "Hide the People taskbar surface",
+      "description": "Disables and hides the legacy People Bar.",
+      "category": "Appearance",
+      "risk": "Low",
+      "requiresAdmin": false,
+      "reversible": true,
+      "restartPossible": false,
+      "tags": [
+        "taskbar",
+        "appearance"
+      ],
+      "sourceRecords": [
+        "SRC:d4fcae6473"
+      ],
+      "compatibility": {
+        "minBuild": 10240
+      },
+      "recovery": "Restore the previous exact registry values.",
+      "changes": [
+        {
+          "type": "SetRegistryValue",
+          "parameters": {
+            "Path": "HKCU:\\Software\\Policies\\Microsoft\\Windows\\Explorer",
+            "Name": "HidePeopleBar",
+            "Value": 1,
+            "ValueType": "DWord"
+          },
+          "verification": "Registry value HidePeopleBar equals 1"
+        },
+        {
+          "type": "SetRegistryValue",
+          "parameters": {
+            "Path": "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced\\People",
+            "Name": "PeopleBand",
+            "Value": 0,
+            "ValueType": "DWord"
+          },
+          "verification": "Registry value PeopleBand equals 0"
+        }
+      ]
+    },
+    {
+      "id": "taskbar.disable-feeds",
+      "title": "Disable taskbar news and interests",
+      "description": "Disables the legacy taskbar feeds surface.",
+      "category": "Privacy",
+      "risk": "Moderate",
+      "requiresAdmin": true,
+      "reversible": true,
+      "restartPossible": false,
+      "tags": [
+        "taskbar",
+        "privacy",
+        "feeds"
+      ],
+      "sourceRecords": [
+        "SRC:d4fcae6473"
+      ],
+      "compatibility": {
+        "minBuild": 10240
+      },
+      "recovery": "Restore the previous exact registry values.",
+      "changes": [
+        {
+          "type": "SetRegistryValue",
+          "parameters": {
+            "Path": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\Windows Feeds",
+            "Name": "EnableFeeds",
+            "Value": 0,
+            "ValueType": "DWord"
+          },
+          "verification": "Registry value EnableFeeds equals 0"
+        },
+        {
+          "type": "SetRegistryValue",
+          "parameters": {
+            "Path": "HKCU:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Feeds",
+            "Name": "ShellFeedsTaskbarViewMode",
+            "Value": 2,
+            "ValueType": "DWord"
+          },
+          "verification": "Registry value ShellFeedsTaskbarViewMode equals 2"
+        }
+      ]
+    },
+    {
+      "id": "settings.disable-online-tips",
+      "title": "Disable online tips in Settings",
+      "description": "Prevents the Settings application from showing online help content.",
+      "category": "Privacy",
+      "risk": "Moderate",
+      "requiresAdmin": true,
+      "reversible": true,
+      "restartPossible": false,
+      "tags": [
+        "settings",
+        "privacy"
+      ],
+      "sourceRecords": [
+        "SRC:d4fcae6473"
+      ],
+      "compatibility": {
+        "minBuild": 10240
+      },
+      "recovery": "Restore the previous exact registry values.",
+      "changes": [
+        {
+          "type": "SetRegistryValue",
+          "parameters": {
+            "Path": "HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer",
+            "Name": "AllowOnlineTips",
+            "Value": 0,
+            "ValueType": "DWord"
+          },
+          "verification": "Registry value AllowOnlineTips equals 0"
+        }
+      ]
+    }
+  ]
+}

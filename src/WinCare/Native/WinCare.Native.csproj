@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <UseWindowsForms>true</UseWindowsForms>
+    <Deterministic>true</Deterministic>
+    <ContinuousIntegrationBuild Condition="'$(CI)' == 'true'">true</ContinuousIntegrationBuild>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="WinCare.Audio.cs" />
+    <Compile Include="WinCare.CommandLine.cs" />
+    <Compile Include="WinCare.ProcessMemory.cs" />
+    <Compile Include="WinCare.DpiHelper.cs" />
+    <Compile Include="WinCare.FileIntelligence.cs" />
+    <Compile Include="WinCare.PolicyEngine.cs" />
+    <Compile Include="WinCare.Productivity.cs" />
+    <Compile Include="WinCare.SecurityAuditor.cs" />
+    <Compile Include="WinCare.ShellHardware.cs" />
+  </ItemGroup>
+</Project>

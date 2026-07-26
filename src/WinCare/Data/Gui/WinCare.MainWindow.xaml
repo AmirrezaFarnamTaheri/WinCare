@@ -1,0 +1,383 @@
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Name="MainWindow"
+        Title="WinCare"
+        Width="1480" Height="920" MinWidth="1180" MinHeight="720"
+        WindowStartupLocation="CenterScreen"
+        Background="{DynamicResource BackgroundBrush}" Foreground="{DynamicResource TextBrush}"
+        FontFamily="Segoe UI Variable Text, Segoe UI"
+        UseLayoutRounding="True" SnapsToDevicePixels="True">
+    <Window.Resources>
+        <SolidColorBrush x:Key="BackgroundBrush" Color="#0B1020"/>
+        <SolidColorBrush x:Key="SidebarBrush" Color="#0E1526"/>
+        <SolidColorBrush x:Key="SurfaceBrush" Color="#121A2B"/>
+        <SolidColorBrush x:Key="SurfaceRaisedBrush" Color="#1B2740"/>
+        <SolidColorBrush x:Key="SurfaceHoverBrush" Color="#22314F"/>
+        <SolidColorBrush x:Key="BorderBrush" Color="#2B3A58"/>
+        <SolidColorBrush x:Key="AccentBrush" Color="#7C5CFC"/>
+        <SolidColorBrush x:Key="AccentSoftBrush" Color="#2B225A"/>
+        <SolidColorBrush x:Key="CyanBrush" Color="#36C5F0"/>
+        <SolidColorBrush x:Key="SuccessBrush" Color="#2DD4A8"/>
+        <SolidColorBrush x:Key="WarningBrush" Color="#F6C85F"/>
+        <SolidColorBrush x:Key="CriticalBrush" Color="#F97066"/>
+        <SolidColorBrush x:Key="TextBrush" Color="#F4F7FB"/>
+        <SolidColorBrush x:Key="TextMutedBrush" Color="#9AA9C3"/>
+        <SolidColorBrush x:Key="TextDimBrush" Color="#71809C"/>
+        <LinearGradientBrush x:Key="HeroBrush" StartPoint="0,0" EndPoint="1,1">
+            <GradientStop Color="#231C52" Offset="0"/>
+            <GradientStop Color="#132B46" Offset="0.58"/>
+            <GradientStop Color="#10283A" Offset="1"/>
+        </LinearGradientBrush>
+        <DropShadowEffect x:Key="CardShadow" BlurRadius="22" ShadowDepth="4" Opacity="0.22" Color="#000000"/>
+
+        <Style TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+        </Style>
+        <Style x:Key="CaptionText" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
+            <Setter Property="FontSize" Value="12"/>
+        </Style>
+        <Style x:Key="SectionTitle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="20"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Margin" Value="0,0,0,12"/>
+        </Style>
+        <Style x:Key="Card" TargetType="Border">
+            <Setter Property="Background" Value="{DynamicResource SurfaceBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="14"/>
+            <Setter Property="Padding" Value="18"/>
+            <Setter Property="Effect" Value="{StaticResource CardShadow}"/>
+        </Style>
+        <Style x:Key="BaseButton" TargetType="Button">
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource SurfaceRaisedBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="16,9"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="ButtonBorder" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="8" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="ButtonBorder" Property="Background" Value="{DynamicResource SurfaceHoverBrush}"/></Trigger>
+                            <Trigger Property="IsPressed" Value="True"><Setter TargetName="ButtonBorder" Property="Opacity" Value="0.78"/></Trigger>
+                            <Trigger Property="IsEnabled" Value="False"><Setter TargetName="ButtonBorder" Property="Opacity" Value="0.42"/></Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style x:Key="PrimaryButton" TargetType="Button" BasedOn="{StaticResource BaseButton}">
+            <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+        </Style>
+        <Style x:Key="DangerButton" TargetType="Button" BasedOn="{StaticResource BaseButton}">
+            <Setter Property="Background" Value="#512128"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource CriticalBrush}"/>
+        </Style>
+        <Style TargetType="TextBox">
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+            <Setter Property="Background" Value="#0D1424"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="11,8"/>
+            <Setter Property="CaretBrush" Value="{DynamicResource AccentBrush}"/>
+            <Setter Property="SelectionBrush" Value="{DynamicResource AccentBrush}"/>
+        </Style>
+        <Style TargetType="ComboBox">
+            <Setter Property="Foreground" Value="#111827"/>
+            <Setter Property="Background" Value="#F4F7FB"/>
+            <Setter Property="Padding" Value="10,6"/>
+        </Style>
+        <Style TargetType="ListBox">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled"/>
+        </Style>
+        <Style x:Key="NavItemStyle" TargetType="ListBoxItem">
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <Setter Property="Margin" Value="0,2"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListBoxItem">
+                        <Border x:Name="NavBorder" Background="Transparent" CornerRadius="9" Padding="12,10">
+                            <ContentPresenter/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="NavBorder" Property="Background" Value="{DynamicResource SurfaceHoverBrush}"/></Trigger>
+                            <Trigger Property="IsSelected" Value="True"><Setter TargetName="NavBorder" Property="Background" Value="{DynamicResource AccentSoftBrush}"/><Setter Property="Foreground" Value="White"/></Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style x:Key="ActionItemStyle" TargetType="ListBoxItem">
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <Setter Property="Margin" Value="0,0,0,8"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListBoxItem">
+                        <Border x:Name="ActionBorder" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="11" Padding="14">
+                            <ContentPresenter/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="ActionBorder" Property="Background" Value="{DynamicResource SurfaceHoverBrush}"/></Trigger>
+                            <Trigger Property="IsSelected" Value="True"><Setter TargetName="ActionBorder" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/><Setter TargetName="ActionBorder" Property="Background" Value="#1E2850"/></Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style TargetType="DataGrid">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="GridLinesVisibility" Value="Horizontal"/>
+            <Setter Property="HorizontalGridLinesBrush" Value="{DynamicResource BorderBrush}"/>
+            <Setter Property="RowBackground" Value="Transparent"/>
+            <Setter Property="AlternatingRowBackground" Value="#10182A"/>
+            <Setter Property="HeadersVisibility" Value="Column"/>
+            <Setter Property="CanUserAddRows" Value="False"/>
+            <Setter Property="IsReadOnly" Value="True"/>
+            <Setter Property="VirtualizingStackPanel.IsVirtualizing" Value="True"/>
+            <Setter Property="VirtualizingStackPanel.VirtualizationMode" Value="Recycling"/>
+            <Setter Property="EnableRowVirtualization" Value="True"/>
+            <Setter Property="EnableColumnVirtualization" Value="True"/>
+        </Style>
+        <Style TargetType="DataGridColumnHeader">
+            <Setter Property="Background" Value="{DynamicResource SurfaceRaisedBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+            <Setter Property="Padding" Value="10,8"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+        </Style>
+        <Style TargetType="DataGridCell">
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="10,8"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+        </Style>
+    </Window.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions><RowDefinition Height="72"/><RowDefinition Height="*"/><RowDefinition Height="32"/></Grid.RowDefinitions>
+        <Grid.ColumnDefinitions><ColumnDefinition Width="258"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+
+        <Border Grid.RowSpan="3" Background="{DynamicResource SidebarBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,1,0">
+            <Grid Margin="16,18,16,14">
+                <Grid.RowDefinitions><RowDefinition Height="62"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Top">
+                    <Border Width="42" Height="42" CornerRadius="12" Background="{DynamicResource AccentBrush}">
+                        <TextBlock Text="W" FontSize="22" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    <StackPanel Margin="11,2,0,0">
+                        <TextBlock Text="WinCare" FontSize="20" FontWeight="Bold"/>
+                        <TextBlock Text="SYSTEM OPERATIONS" Style="{StaticResource CaptionText}" FontSize="10"/>
+                    </StackPanel>
+                </StackPanel>
+                <ListBox x:Name="NavigationList" Grid.Row="1" ItemContainerStyle="{StaticResource NavItemStyle}" Margin="0,12,0,12" AutomationProperties.Name="Primary navigation">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <Grid>
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="28"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                <TextBlock Text="{Binding Icon}" FontFamily="Segoe Fluent Icons" FontSize="16" Foreground="{DynamicResource TextMutedBrush}" VerticalAlignment="Center"/>
+                                <StackPanel Grid.Column="1">
+                                    <TextBlock Text="{Binding Label}" FontSize="14" FontWeight="SemiBold"/>
+                                </StackPanel>
+                            </Grid>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+                <Border Grid.Row="2" Background="#101A2E" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="10" Padding="12">
+                    <StackPanel>
+                        <TextBlock Text="Safety-first execution" FontWeight="SemiBold"/>
+                        <TextBlock Text="Preview • policy • journal • recovery" Style="{StaticResource CaptionText}" Margin="0,3,0,0" TextWrapping="Wrap"/>
+                        <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                            <Ellipse Width="8" Height="8" Fill="{DynamicResource SuccessBrush}" Margin="0,0,7,0"/>
+                            <TextBlock x:Name="PolicyStatusText" Text="Safe defaults active" Style="{StaticResource CaptionText}"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </Border>
+
+        <Border Grid.Column="1" Background="#0C1221" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1">
+            <Grid Margin="24,12">
+                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="430"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                <StackPanel VerticalAlignment="Center">
+                    <TextBlock x:Name="PageTitleText" Text="Overview" FontSize="25" FontWeight="SemiBold"/>
+                    <TextBlock x:Name="PageSubtitleText" Text="System health, safety posture, and recommended actions" Style="{StaticResource CaptionText}" Margin="0,3,0,0"/>
+                </StackPanel>
+                <TextBox x:Name="GlobalSearchTextBox" Grid.Column="1" Height="40" VerticalContentAlignment="Center" Margin="0,4,12,4" ToolTip="Search actions (Ctrl+K)" AutomationProperties.Name="Search WinCare actions"/>
+                <Button x:Name="RefreshButton" Grid.Column="2" AutomationProperties.Name="Refresh active workspace" Style="{StaticResource BaseButton}" Content="Refresh" Margin="0,4,0,4"/>
+            </Grid>
+        </Border>
+
+        <Grid Grid.Row="1" Grid.Column="1" Margin="24,20,24,18">
+            <Grid x:Name="DashboardPanel">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel>
+                        <Border Style="{StaticResource Card}" Background="{DynamicResource HeroBrush}" Padding="24" Margin="0,0,0,18">
+                            <Grid>
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="380"/></Grid.ColumnDefinitions>
+                                <StackPanel>
+                                    <TextBlock Text="Your Windows control plane" FontSize="30" FontWeight="SemiBold"/>
+                                    <TextBlock Text="One coherent interface for health, security, maintenance, productivity, assurance, and carefully governed high-risk changes." Foreground="#D8E2F5" FontSize="14" TextWrapping="Wrap" Margin="0,10,24,0" MaxWidth="720"/>
+                                    <StackPanel Orientation="Horizontal" Margin="0,18,0,0">
+                                        <Button x:Name="OpenActionsButton" AutomationProperties.Name="Browse all WinCare actions" Style="{StaticResource PrimaryButton}" Content="Browse all actions" Margin="0,0,10,0"/>
+                                        <Button x:Name="OpenAssuranceButton" AutomationProperties.Name="Review build and validation assurance" Style="{StaticResource BaseButton}" Content="Review assurance"/>
+                                    </StackPanel>
+                                </StackPanel>
+                                <Border Grid.Column="1" Background="#44121A2B" BorderBrush="#667C5CFC" BorderThickness="1" CornerRadius="14" Padding="18">
+                                    <StackPanel>
+                                        <TextBlock Text="Current machine" Foreground="#B9C7DE" FontSize="12" FontWeight="SemiBold"/>
+                                        <TextBlock x:Name="HeroMachineText" Text="Scanning…" FontSize="20" FontWeight="SemiBold" Margin="0,8,0,0"/>
+                                        <TextBlock x:Name="HeroBuildText" Text="Windows build" Style="{StaticResource CaptionText}" Margin="0,5,0,0"/>
+                                        <Separator Background="#40506A" Margin="0,13"/>
+                                        <TextBlock x:Name="HeroAdminText" Text="Privilege context" Style="{StaticResource CaptionText}"/>
+                                    </StackPanel>
+                                </Border>
+                            </Grid>
+                        </Border>
+
+                        <UniformGrid Columns="4" Margin="0,0,0,18">
+                            <Border Style="{StaticResource Card}" Margin="0,0,10,0">
+                                <StackPanel><TextBlock Text="SECURITY" Style="{StaticResource CaptionText}"/><TextBlock x:Name="SecurityValueText" Text="Scanning…" FontSize="22" FontWeight="SemiBold" Margin="0,8,0,0"/><TextBlock x:Name="SecurityDetailText" Text="Defender posture" Style="{StaticResource CaptionText}" Margin="0,5,0,0"/></StackPanel>
+                            </Border>
+                            <Border Style="{StaticResource Card}" Margin="4,0,6,0">
+                                <StackPanel><TextBlock Text="STORAGE" Style="{StaticResource CaptionText}"/><TextBlock x:Name="StorageValueText" Text="Scanning…" FontSize="22" FontWeight="SemiBold" Margin="0,8,0,0"/><ProgressBar x:Name="StorageProgress" Minimum="0" Maximum="100" Height="6" Margin="0,10,0,3" Foreground="{DynamicResource CyanBrush}" Background="#263550"/><TextBlock x:Name="StorageDetailText" Text="System volume" Style="{StaticResource CaptionText}"/></StackPanel>
+                            </Border>
+                            <Border Style="{StaticResource Card}" Margin="6,0,4,0">
+                                <StackPanel><TextBlock Text="MEMORY" Style="{StaticResource CaptionText}"/><TextBlock x:Name="MemoryValueText" Text="Scanning…" FontSize="22" FontWeight="SemiBold" Margin="0,8,0,0"/><ProgressBar x:Name="MemoryProgress" Minimum="0" Maximum="100" Height="6" Margin="0,10,0,3" Foreground="{DynamicResource AccentBrush}" Background="#263550"/><TextBlock x:Name="MemoryDetailText" Text="Physical memory" Style="{StaticResource CaptionText}"/></StackPanel>
+                            </Border>
+                            <Border Style="{StaticResource Card}" Margin="10,0,0,0">
+                                <StackPanel><TextBlock Text="RESTART" Style="{StaticResource CaptionText}"/><TextBlock x:Name="RestartValueText" Text="Scanning…" FontSize="22" FontWeight="SemiBold" Margin="0,8,0,0"/><TextBlock x:Name="RestartDetailText" Text="Pending restart state" Style="{StaticResource CaptionText}" Margin="0,5,0,0"/></StackPanel>
+                            </Border>
+                        </UniformGrid>
+
+                        <Grid>
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="1.25*"/><ColumnDefinition Width="0.75*"/></Grid.ColumnDefinitions>
+                            <Border Style="{StaticResource Card}" Margin="0,0,10,0">
+                                <StackPanel>
+                                    <TextBlock Text="Recommended next actions" Style="{StaticResource SectionTitle}"/>
+                                    <ListBox x:Name="QuickActionList" AutomationProperties.Name="Recommended actions" ItemContainerStyle="{StaticResource ActionItemStyle}" MaxHeight="390">
+                                        <ListBox.ItemTemplate>
+                                            <DataTemplate>
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions><ColumnDefinition Width="36"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                                    <TextBlock Text="{Binding Icon}" FontFamily="Segoe Fluent Icons" FontSize="17" Foreground="{DynamicResource CyanBrush}" VerticalAlignment="Top" Margin="0,2,0,0"/>
+                                                    <StackPanel Grid.Column="1"><TextBlock Text="{Binding Title}" FontWeight="SemiBold"/><TextBlock Text="{Binding Description}" Style="{StaticResource CaptionText}" TextWrapping="Wrap" Margin="0,4,14,0"/></StackPanel>
+                                                    <Border Grid.Column="2" Background="{Binding RiskBackground}" CornerRadius="10" Padding="8,3" VerticalAlignment="Top"><TextBlock Text="{Binding Risk}" FontSize="10" FontWeight="SemiBold"/></Border>
+                                                </Grid>
+                                            </DataTemplate>
+                                        </ListBox.ItemTemplate>
+                                    </ListBox>
+                                </StackPanel>
+                            </Border>
+                            <StackPanel Grid.Column="1" Margin="10,0,0,0">
+                                <Border Style="{StaticResource Card}" Margin="0,0,0,16">
+                                    <StackPanel>
+                                        <TextBlock Text="Safety posture" Style="{StaticResource SectionTitle}"/>
+                                        <Grid Margin="0,2"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><TextBlock Text="Critical actions" Style="{StaticResource CaptionText}"/><TextBlock x:Name="CriticalPolicyText" Grid.Column="1" Text="Blocked" Foreground="{DynamicResource SuccessBrush}" FontWeight="SemiBold"/></Grid>
+                                        <Grid Margin="0,8,0,2"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><TextBlock Text="Read-only mode" Style="{StaticResource CaptionText}"/><TextBlock x:Name="ReadOnlyPolicyText" Grid.Column="1" Text="Off" FontWeight="SemiBold"/></Grid>
+                                        <Grid Margin="0,8,0,2"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><TextBlock Text="Preview required" Style="{StaticResource CaptionText}"/><TextBlock x:Name="PreviewPolicyText" Grid.Column="1" Text="Yes" Foreground="{DynamicResource SuccessBrush}" FontWeight="SemiBold"/></Grid>
+                                        <Grid Margin="0,8,0,2"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><TextBlock Text="Evidence gaps" Style="{StaticResource CaptionText}"/><TextBlock Grid.Column="1" Text="0 critical" Foreground="{DynamicResource SuccessBrush}" FontWeight="SemiBold"/></Grid>
+                                    </StackPanel>
+                                </Border>
+                                <Border Style="{StaticResource Card}">
+                                    <StackPanel>
+                                        <TextBlock Text="Session activity" Style="{StaticResource SectionTitle}"/>
+                                        <ListBox x:Name="ActivityList" AutomationProperties.Name="Session activity" MaxHeight="240">
+                                            <ListBox.ItemTemplate><DataTemplate><Grid Margin="0,5"><Grid.ColumnDefinitions><ColumnDefinition Width="72"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><TextBlock Text="{Binding Time}" Style="{StaticResource CaptionText}"/><TextBlock Grid.Column="1" Text="{Binding Title}" TextTrimming="CharacterEllipsis"/><TextBlock Grid.Column="2" Text="{Binding Status}" Foreground="{Binding StatusBrush}" FontWeight="SemiBold"/></Grid></DataTemplate></ListBox.ItemTemplate>
+                                        </ListBox>
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
+                        </Grid>
+                    </StackPanel>
+                </ScrollViewer>
+            </Grid>
+
+            <Grid x:Name="ActionsPanel" Visibility="Collapsed">
+                <Grid.ColumnDefinitions><ColumnDefinition Width="440"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+                <Grid Grid.ColumnSpan="2" Margin="0,0,0,14">
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="190"/><ColumnDefinition Width="150"/></Grid.ColumnDefinitions>
+                    <TextBox x:Name="ActionSearchTextBox" Height="40" VerticalContentAlignment="Center" ToolTip="Search title, command, category, or source record" AutomationProperties.Name="Search action catalog"/>
+                    <ComboBox x:Name="CategoryFilterComboBox" AutomationProperties.Name="Action category filter" Grid.Column="1" Margin="10,0,0,0" Height="40" VerticalContentAlignment="Center"/>
+                    <ComboBox x:Name="RiskFilterComboBox" AutomationProperties.Name="Action risk filter" Grid.Column="2" Margin="10,0,0,0" Height="40" VerticalContentAlignment="Center"/>
+                </Grid>
+                <Border Grid.Row="1" Style="{StaticResource Card}" Margin="0,0,12,0" Padding="12">
+                    <Grid><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                        <Grid Margin="4,0,4,10"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><TextBlock Text="Capabilities" FontSize="17" FontWeight="SemiBold"/><TextBlock x:Name="ActionCountText" Grid.Column="1" Style="{StaticResource CaptionText}"/></Grid>
+                        <ListBox x:Name="ActionList" AutomationProperties.Name="WinCare action catalog" Grid.Row="1" ItemContainerStyle="{StaticResource ActionItemStyle}">
+                            <ListBox.ItemTemplate><DataTemplate><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="38"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><TextBlock Text="{Binding Icon}" FontFamily="Segoe Fluent Icons" FontSize="17" Foreground="{DynamicResource CyanBrush}" VerticalAlignment="Top" Margin="0,2,0,0"/><StackPanel Grid.Column="1"><TextBlock Text="{Binding Title}" FontWeight="SemiBold"/><TextBlock Text="{Binding Description}" Style="{StaticResource CaptionText}" TextWrapping="Wrap" Margin="0,4,12,0" MaxHeight="38"/><TextBlock Text="{Binding Command}" Foreground="{DynamicResource TextDimBrush}" FontSize="10" Margin="0,6,0,0"/></StackPanel><Border Grid.Column="2" Background="{Binding RiskBackground}" CornerRadius="9" Padding="7,3" VerticalAlignment="Top"><TextBlock Text="{Binding Risk}" FontSize="9" FontWeight="SemiBold"/></Border></Grid></DataTemplate></ListBox.ItemTemplate>
+                        </ListBox>
+                        <TextBlock x:Name="CatalogCoverageText" Grid.Row="2" Style="{StaticResource CaptionText}" Margin="4,10,4,0"/>
+                    </Grid>
+                </Border>
+                <Border Grid.Row="1" Grid.Column="1" Style="{StaticResource Card}" Margin="12,0,0,0">
+                    <Grid><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="160"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+                        <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><StackPanel><TextBlock x:Name="ActionTitleText" Text="Select an action" FontSize="24" FontWeight="SemiBold"/><TextBlock x:Name="ActionCommandText" Text="Command" Foreground="{DynamicResource CyanBrush}" FontFamily="Cascadia Mono, Consolas" FontSize="12" Margin="0,6,0,0"/></StackPanel><Border Grid.Column="1" x:Name="ActionRiskBadge" Background="{DynamicResource SurfaceRaisedBrush}" CornerRadius="11" Padding="10,5" VerticalAlignment="Top"><TextBlock x:Name="ActionRiskText" Text="Risk" FontWeight="SemiBold"/></Border></Grid>
+                        <TextBlock x:Name="ActionDescriptionText" Grid.Row="1" Text="Choose a capability from the catalog." Foreground="{DynamicResource TextMutedBrush}" TextWrapping="Wrap" Margin="0,14,0,0"/>
+                        <TextBlock x:Name="ActionSourceText" Grid.Row="2" Text="Evidence" Foreground="{DynamicResource TextDimBrush}" FontSize="11" TextWrapping="Wrap" Margin="0,10,0,0"/>
+                        <TextBlock Grid.Row="3" Text="Arguments (JSON)" FontWeight="SemiBold" Margin="0,18,0,7"/>
+                        <TextBox x:Name="ArgumentsTextBox" Grid.Row="4" FontFamily="Cascadia Mono, Consolas" FontSize="12" AcceptsReturn="True" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" TextWrapping="NoWrap" AutomationProperties.Name="Command arguments JSON"/>
+                        <Grid Grid.Row="5" Margin="0,12,0,12"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><TextBlock x:Name="ArgumentHelpText" Style="{StaticResource CaptionText}" TextWrapping="Wrap" VerticalAlignment="Center" Margin="0,0,12,0"/><Button x:Name="PreviewActionButton" AutomationProperties.Name="Run action preview" Grid.Column="1" Style="{StaticResource BaseButton}" Content="Run preview" Margin="0,0,8,0"/><Button x:Name="ApplyActionButton" AutomationProperties.Name="Apply exact action plan" Grid.Column="2" Style="{StaticResource PrimaryButton}" Content="Apply" IsEnabled="False"/></Grid>
+                        <Border Grid.Row="6" Background="#0A101D" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="9" Padding="12"><Grid><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><TextBlock Text="Result and evidence" FontWeight="SemiBold"/><Button x:Name="CopyOutputButton" AutomationProperties.Name="Copy action result" Grid.Column="1" Style="{StaticResource BaseButton}" Content="Copy" Padding="10,4"/></Grid><TextBox x:Name="ActionOutputTextBox" Grid.Row="1" Margin="0,10,0,0" Background="Transparent" BorderThickness="0" IsReadOnly="True" AcceptsReturn="True" TextWrapping="NoWrap" FontFamily="Cascadia Mono, Consolas" FontSize="11" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" AutomationProperties.Name="Action result"/></Grid></Border>
+                    </Grid>
+                </Border>
+            </Grid>
+
+            <Grid x:Name="AssurancePanel" Visibility="Collapsed">
+                <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+                <UniformGrid Columns="4" Margin="0,0,0,16">
+                    <Border Style="{StaticResource Card}" Margin="0,0,8,0"><StackPanel><TextBlock Text="MODULE FILES" Style="{StaticResource CaptionText}"/><TextBlock x:Name="AssuranceSourceText" Text="—" FontSize="28" FontWeight="SemiBold" Margin="0,8,0,0"/><TextBlock Text="Closed source manifests" Style="{StaticResource CaptionText}"/></StackPanel></Border>
+                    <Border Style="{StaticResource Card}" Margin="4,0"><StackPanel><TextBlock Text="EXPORTED COMMANDS" Style="{StaticResource CaptionText}"/><TextBlock x:Name="AssuranceExportText" Text="—" FontSize="28" FontWeight="SemiBold" Margin="0,8,0,0"/><TextBlock Text="Public module contract" Style="{StaticResource CaptionText}"/></StackPanel></Border>
+                    <Border Style="{StaticResource Card}" Margin="4,0"><StackPanel><TextBlock Text="TEST INVENTORY" Style="{StaticResource CaptionText}"/><TextBlock x:Name="AssuranceTestText" Text="—" FontSize="28" FontWeight="SemiBold" Margin="0,8,0,0"/><TextBlock Text="Cases / suites" Style="{StaticResource CaptionText}"/></StackPanel></Border>
+                    <Border Style="{StaticResource Card}" Margin="8,0,0,0"><StackPanel><TextBlock Text="NATIVE RUNTIME" Style="{StaticResource CaptionText}"/><TextBlock x:Name="AssuranceNativeText" Text="Pending" FontSize="28" FontWeight="SemiBold" Margin="0,8,0,0"/><TextBlock Text="Source-built .NET boundary" Style="{StaticResource CaptionText}"/></StackPanel></Border>
+                </UniformGrid>
+                <Border Grid.Row="1" Style="{StaticResource Card}">
+                    <Grid><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><StackPanel><TextBlock Text="Current assurance" Style="{StaticResource SectionTitle}"/><TextBlock Text="Current source closure, public API, validation inventory, native runtime, and package provenance. Historical research records are intentionally excluded from the product runtime." Style="{StaticResource CaptionText}" TextWrapping="Wrap"/></StackPanel><Button x:Name="OpenAssuranceFolderButton" AutomationProperties.Name="Open WinCare assurance location" Grid.Column="1" Style="{StaticResource BaseButton}" Content="Open assurance location"/></Grid><DataGrid x:Name="AssuranceGrid" AutomationProperties.Name="Current build and validation assurance" Grid.Row="1" Margin="0,16,0,0" AutoGenerateColumns="False"><DataGrid.Columns><DataGridTextColumn Header="Check" Binding="{Binding Check}" Width="220"/><DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="120"/><DataGridTextColumn Header="Scope" Binding="{Binding Scope}" Width="220"/><DataGridTextColumn Header="Detail" Binding="{Binding Detail}" Width="*"/></DataGrid.Columns></DataGrid></Grid>
+                </Border>
+            </Grid>
+
+            <Grid x:Name="SettingsPanel" Visibility="Collapsed">
+                <Grid.ColumnDefinitions><ColumnDefinition Width="1.05*"/><ColumnDefinition Width="0.95*"/></Grid.ColumnDefinitions>
+                <StackPanel Margin="0,0,10,0">
+                    <Border Style="{StaticResource Card}" Margin="0,0,0,16"><StackPanel><TextBlock Text="Interface" Style="{StaticResource SectionTitle}"/><TextBlock Text="The graphical console is an additive presentation layer. The terminal UI and headless JSON interface remain first-class and use the same engine." Style="{StaticResource CaptionText}" TextWrapping="Wrap"/><Grid Margin="0,18,0,0"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="220"/></Grid.ColumnDefinitions><TextBlock Text="Workspace mode" VerticalAlignment="Center"/><ComboBox x:Name="WorkspaceModeComboBox" AutomationProperties.Name="Workspace mode" Grid.Column="1"><ComboBoxItem Content="All"/><ComboBoxItem Content="Maintenance"/><ComboBoxItem Content="Productivity"/><ComboBoxItem Content="Support"/><ComboBoxItem Content="Developer"/><ComboBoxItem Content="Minimal"/></ComboBox></Grid><Grid Margin="0,12,0,0"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="220"/></Grid.ColumnDefinitions><TextBlock Text="Reduced motion" VerticalAlignment="Center"/><CheckBox x:Name="ReducedMotionCheckBox" AutomationProperties.Name="Reduced motion" Grid.Column="1" VerticalAlignment="Center" Foreground="{DynamicResource TextBrush}"/></Grid><Grid Margin="0,12,0,0"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="220"/></Grid.ColumnDefinitions><TextBlock Text="Screen-reader mode" VerticalAlignment="Center"/><CheckBox x:Name="ScreenReaderCheckBox" AutomationProperties.Name="Screen reader mode" Grid.Column="1" VerticalAlignment="Center" Foreground="{DynamicResource TextBrush}"/></Grid><Button x:Name="SaveGuiSettingsButton" AutomationProperties.Name="Save interface settings" Style="{StaticResource PrimaryButton}" Content="Save interface settings" HorizontalAlignment="Right" Margin="0,18,0,0"/></StackPanel></Border>
+                    <Border Style="{StaticResource Card}"><StackPanel><TextBlock Text="Keyboard and accessibility" Style="{StaticResource SectionTitle}"/><TextBlock Text="Ctrl+K" FontWeight="SemiBold"/><TextBlock Text="Focus global action search" Style="{StaticResource CaptionText}" Margin="0,2,0,10"/><TextBlock Text="Ctrl+R" FontWeight="SemiBold"/><TextBlock Text="Refresh the active workspace" Style="{StaticResource CaptionText}" Margin="0,2,0,10"/><TextBlock Text="Escape" FontWeight="SemiBold"/><TextBlock Text="Close confirmation overlays or clear search" Style="{StaticResource CaptionText}" Margin="0,2,0,10"/><TextBlock Text="Tab / Shift+Tab" FontWeight="SemiBold"/><TextBlock Text="Move through all interactive elements" Style="{StaticResource CaptionText}" Margin="0,2,0,0"/></StackPanel></Border>
+                </StackPanel>
+                <StackPanel Grid.Column="1" Margin="10,0,0,0">
+                    <Border Style="{StaticResource Card}" Margin="0,0,0,16"><StackPanel><TextBlock Text="Execution policy" Style="{StaticResource SectionTitle}"/><TextBlock x:Name="PolicyNameText" Text="Built-in safe defaults" FontSize="16" FontWeight="SemiBold"/><TextBlock x:Name="PolicySummaryText" Text="Loading policy state…" Style="{StaticResource CaptionText}" TextWrapping="Wrap" Margin="0,8,0,0"/><TextBlock Text="The GUI cannot enable policy permissions. Edit and validate policy through the existing policy workflow." Foreground="{DynamicResource WarningBrush}" TextWrapping="Wrap" Margin="0,16,0,0"/></StackPanel></Border>
+                    <Border Style="{StaticResource Card}"><StackPanel><TextBlock Text="Build identity" Style="{StaticResource SectionTitle}"/><Grid Margin="0,4"><Grid.ColumnDefinitions><ColumnDefinition Width="160"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions><TextBlock Text="Product" Style="{StaticResource CaptionText}"/><TextBlock x:Name="ProductVersionText" Grid.Column="1" Text="WinCare"/></Grid><Grid Margin="0,8,0,0"><Grid.ColumnDefinitions><ColumnDefinition Width="160"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions><TextBlock Text="Authority path" Style="{StaticResource CaptionText}"/><TextBlock Grid.Column="1" Text="Typed plans + policy + transaction journal" TextWrapping="Wrap"/></Grid><Grid Margin="0,8,0,0"><Grid.ColumnDefinitions><ColumnDefinition Width="160"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions><TextBlock Text="Unsafe phrase" Style="{StaticResource CaptionText}"/><TextBlock Grid.Column="1" Text="I ACCEPT LEGACY UNSAFE MUTATIONS" Foreground="{DynamicResource CriticalBrush}" FontFamily="Cascadia Mono, Consolas" TextWrapping="Wrap"/></Grid></StackPanel></Border>
+                </StackPanel>
+            </Grid>
+        </Grid>
+
+        <Border Grid.Row="2" Grid.Column="1" Background="#0C1221" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0">
+            <Grid Margin="24,0"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><TextBlock x:Name="StatusText" Text="Ready" Style="{StaticResource CaptionText}" VerticalAlignment="Center"/><TextBlock Grid.Column="1" Text="Ctrl+K search" Style="{StaticResource CaptionText}" VerticalAlignment="Center" Margin="0,0,20,0"/><TextBlock x:Name="FooterVersionText" Grid.Column="2" Text="WinCare" Style="{StaticResource CaptionText}" VerticalAlignment="Center"/></Grid>
+        </Border>
+
+        <Grid x:Name="BusyOverlay" Grid.RowSpan="3" Grid.ColumnSpan="2" Background="#AA070B14" Visibility="Collapsed" Panel.ZIndex="100">
+            <Border Width="440" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="16" Padding="24" HorizontalAlignment="Center" VerticalAlignment="Center" Effect="{StaticResource CardShadow}">
+                <StackPanel><TextBlock x:Name="BusyTitleText" Text="Working" FontSize="21" FontWeight="SemiBold"/><TextBlock x:Name="BusyDetailText" Text="WinCare is collecting evidence…" Style="{StaticResource CaptionText}" TextWrapping="Wrap" Margin="0,8,0,16"/><ProgressBar IsIndeterminate="True" Height="6" Foreground="{DynamicResource AccentBrush}" Background="#263550"/></StackPanel>
+            </Border>
+        </Grid>
+
+        <Grid x:Name="ConfirmOverlay" Grid.RowSpan="3" Grid.ColumnSpan="2" Background="#C4070B14" Visibility="Collapsed" Panel.ZIndex="110">
+            <Border Width="590" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource CriticalBrush}" BorderThickness="1" CornerRadius="18" Padding="26" HorizontalAlignment="Center" VerticalAlignment="Center" Effect="{StaticResource CardShadow}">
+                <StackPanel><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><TextBlock x:Name="ConfirmTitleText" Text="Confirm operation" FontSize="23" FontWeight="SemiBold"/><Border Grid.Column="1" Background="#512128" CornerRadius="10" Padding="9,4"><TextBlock x:Name="ConfirmRiskText" Text="Critical" Foreground="{DynamicResource CriticalBrush}" FontWeight="SemiBold"/></Border></Grid><TextBlock x:Name="ConfirmDescriptionText" Text="Review the blast radius before continuing." Foreground="{DynamicResource TextMutedBrush}" TextWrapping="Wrap" Margin="0,14,0,0"/><Border Background="#1A1218" BorderBrush="#6A3035" BorderThickness="1" CornerRadius="10" Padding="14" Margin="0,18,0,0"><StackPanel><TextBlock Text="Execution guarantees" FontWeight="SemiBold"/><TextBlock Text="The apply process regenerates and previews the exact plan, rechecks policy, writes a transaction journal, and runs compensators where supported." Style="{StaticResource CaptionText}" TextWrapping="Wrap" Margin="0,6,0,0"/></StackPanel></Border><StackPanel x:Name="ConfirmPhrasePanel" Margin="0,18,0,0"><TextBlock Text="Type the exact acknowledgement" FontWeight="SemiBold"/><TextBlock Text="I ACCEPT LEGACY UNSAFE MUTATIONS" Foreground="{DynamicResource CriticalBrush}" FontFamily="Cascadia Mono, Consolas" Margin="0,6,0,7"/><TextBox x:Name="ConfirmPhraseTextBox" AutomationProperties.Name="Critical action acknowledgement"/></StackPanel><Grid Margin="0,22,0,0"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><TextBlock Text="Escape cancels" Style="{StaticResource CaptionText}" VerticalAlignment="Center"/><Button x:Name="ConfirmCancelButton" AutomationProperties.Name="Cancel operation" Grid.Column="1" Style="{StaticResource BaseButton}" Content="Cancel" Margin="0,0,9,0"/><Button x:Name="ConfirmExecuteButton" AutomationProperties.Name="Execute exact operation plan" Grid.Column="2" Style="{StaticResource DangerButton}" Content="Execute exact plan" IsEnabled="False"/></Grid></StackPanel>
+            </Border>
+        </Grid>
+
+        <Border x:Name="ToastBorder" Grid.RowSpan="3" Grid.ColumnSpan="2" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,28,48" Background="{DynamicResource SurfaceRaisedBrush}" BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1" CornerRadius="11" Padding="15,11" Visibility="Collapsed" Panel.ZIndex="120" Effect="{StaticResource CardShadow}"><TextBlock x:Name="ToastText" Text="Ready" MaxWidth="420" TextWrapping="Wrap"/></Border>
+    </Grid>
+</Window>

@@ -1,0 +1,1361 @@
+{
+  "schema": "wincare.maintainability-baseline/v2",
+  "description": "Legacy files may improve but must not regress. New and explicitly modernized files must satisfy the strict readability and bounded-function profile.",
+  "totals": {
+    "fileCount": 145,
+    "lineCount": 16011,
+    "functionCount": 988,
+    "linesOver200": 1868,
+    "linesOver500": 264,
+    "maxFileLines": 600,
+    "maxLineLength": 2205,
+    "maxFunctionLines": 441
+  },
+  "files": {
+    "Core/00-01-BridgePrimitives.ps1": {
+      "group": "Core",
+      "lineCount": 191,
+      "functionCount": 14,
+      "maxFunctionLines": 33,
+      "maxLineLength": 393,
+      "linesOver200": 6,
+      "linesOver500": 0
+    },
+    "Core/00-02-SystemObservability.ps1": {
+      "group": "Core",
+      "lineCount": 150,
+      "functionCount": 11,
+      "maxFunctionLines": 30,
+      "maxLineLength": 699,
+      "linesOver200": 23,
+      "linesOver500": 1
+    },
+    "Core/00-03-Telemetry.ps1": {
+      "group": "Core",
+      "lineCount": 117,
+      "functionCount": 9,
+      "maxFunctionLines": 29,
+      "maxLineLength": 703,
+      "linesOver200": 17,
+      "linesOver500": 1
+    },
+    "Core/00-04-NetworkExperiments.ps1": {
+      "group": "Core",
+      "lineCount": 134,
+      "functionCount": 8,
+      "maxFunctionLines": 43,
+      "maxLineLength": 880,
+      "linesOver200": 18,
+      "linesOver500": 2
+    },
+    "Core/00-05-PageFile.ps1": {
+      "group": "Core",
+      "lineCount": 92,
+      "functionCount": 6,
+      "maxFunctionLines": 25,
+      "maxLineLength": 534,
+      "linesOver200": 10,
+      "linesOver500": 2
+    },
+    "Core/00-06-Instrumentation.ps1": {
+      "group": "Core",
+      "lineCount": 278,
+      "functionCount": 21,
+      "maxFunctionLines": 33,
+      "maxLineLength": 1637,
+      "linesOver200": 39,
+      "linesOver500": 11
+    },
+    "Core/00-07-Servicing.ps1": {
+      "group": "Core",
+      "lineCount": 180,
+      "functionCount": 26,
+      "maxFunctionLines": 43,
+      "maxLineLength": 1413,
+      "linesOver200": 30,
+      "linesOver500": 18
+    },
+    "Core/00-08-PolicyAndMonitoring.ps1": {
+      "group": "Core",
+      "lineCount": 120,
+      "functionCount": 12,
+      "maxFunctionLines": 24,
+      "maxLineLength": 1249,
+      "linesOver200": 25,
+      "linesOver500": 9
+    },
+    "Core/00-09-GameState.ps1": {
+      "group": "Core",
+      "lineCount": 247,
+      "functionCount": 15,
+      "maxFunctionLines": 55,
+      "maxLineLength": 1088,
+      "linesOver200": 29,
+      "linesOver500": 10
+    },
+    "Core/00-10-SystemToolkit.ps1": {
+      "group": "Core",
+      "lineCount": 373,
+      "functionCount": 35,
+      "maxFunctionLines": 35,
+      "maxLineLength": 1994,
+      "linesOver200": 67,
+      "linesOver500": 14
+    },
+    "Core/00-11-MutationActions.ps1": {
+      "group": "Core",
+      "lineCount": 221,
+      "functionCount": 33,
+      "maxFunctionLines": 73,
+      "maxLineLength": 2205,
+      "linesOver200": 42,
+      "linesOver500": 25
+    },
+    "Core/00-12-HostCompatibility.ps1": {
+      "group": "Core",
+      "lineCount": 88,
+      "functionCount": 15,
+      "maxFunctionLines": 23,
+      "maxLineLength": 898,
+      "linesOver200": 11,
+      "linesOver500": 5
+    },
+    "Core/00-Models.ps1": {
+      "group": "Core",
+      "lineCount": 147,
+      "functionCount": 5,
+      "maxFunctionLines": 55,
+      "maxLineLength": 136,
+      "linesOver200": 0,
+      "linesOver500": 0
+    },
+    "Core/01-Config.ps1": {
+      "group": "Core",
+      "lineCount": 329,
+      "functionCount": 18,
+      "maxFunctionLines": 90,
+      "maxLineLength": 1036,
+      "linesOver200": 12,
+      "linesOver500": 2
+    },
+    "Core/02-Logging.ps1": {
+      "group": "Core",
+      "lineCount": 32,
+      "functionCount": 3,
+      "maxFunctionLines": 17,
+      "maxLineLength": 125,
+      "linesOver200": 0,
+      "linesOver500": 0
+    },
+    "Core/03-Process.ps1": {
+      "group": "Core",
+      "lineCount": 249,
+      "functionCount": 8,
+      "maxFunctionLines": 89,
+      "maxLineLength": 357,
+      "linesOver200": 7,
+      "linesOver500": 0
+    },
+    "Core/05-Formatting.ps1": {
+      "group": "Core",
+      "lineCount": 38,
+      "functionCount": 4,
+      "maxFunctionLines": 12,
+      "maxLineLength": 96,
+      "linesOver200": 0,
+      "linesOver500": 0
+    },
+    "Core/06-Safety.ps1": {
+      "group": "Core",
+      "lineCount": 310,
+      "functionCount": 22,
+      "maxFunctionLines": 38,
+      "maxLineLength": 182,
+      "linesOver200": 0,
+      "linesOver500": 0
+    },
+    "Core/07-Conditions.ps1": {
+      "group": "Core",
+      "lineCount": 81,
+      "functionCount": 5,
+      "maxFunctionLines": 25,
+      "maxLineLength": 167,
+      "linesOver200": 0,
+      "linesOver500": 0
+    },
+    "Core/08-Policy.ps1": {
+      "group": "Core",
+      "lineCount": 115,
+      "functionCount": 4,
+      "maxFunctionLines": 77,
+      "maxLineLength": 482,
+      "linesOver200": 20,
+      "linesOver500": 0
+    },
+    "Core/09-Transactions.ps1": {
+      "group": "Core",
+      "lineCount": 558,
+      "functionCount": 30,
+      "maxFunctionLines": 125,
+      "maxLineLength": 663,
+      "linesOver200": 49,
+      "linesOver500": 6
+    },
+    "Core/10-Catalog.ps1": {
+      "group": "Core",
+      "lineCount": 188,
+      "functionCount": 13,
+      "maxFunctionLines": 41,
+      "maxLineLength": 588,
+      "linesOver200": 21,
+      "linesOver500": 2
+    },
+    "Core/11-ActionContracts.ps1": {
+      "group": "Core",
+      "lineCount": 600,
+      "functionCount": 5,
+      "maxFunctionLines": 441,
+      "maxLineLength": 557,
+      "linesOver200": 86,
+      "linesOver500": 1
+    },
+    "Core/ScheduledTaskEngine.ps1": {
+      "group": "Core",
+      "lineCount": 18,
+      "functionCount": 2,
+      "maxFunctionLines": 9,
+      "maxLineLength": 371,
+      "linesOver200": 3,
+      "linesOver500": 0
+    },
+    "Providers/10-Applications.ps1": {
+      "group": "Providers",
+      "lineCount": 327,
+      "functionCount": 15,
+      "maxFunctionLines": 55,
+      "maxLineLength": 307,
+      "linesOver200": 4,
+      "linesOver500": 0
+    },
+    "Providers/100-Downloads.ps1": {
+      "group": "Providers",
+      "lineCount": 443,
+      "functionCount": 35,
+      "maxFunctionLines": 58,
+      "maxLineLength": 688,
+      "linesOver200": 50,
+      "linesOver500": 1
+    },
+    "Providers/101-Telemetry.ps1": {
+      "group": "Providers",
+      "lineCount": 48,
+      "functionCount": 2,
+      "maxFunctionLines": 23,
+      "maxLineLength": 470,
+      "linesOver200": 6,
+      "linesOver500": 0
+    },
+    "Providers/102-Launcher.ps1": {
+      "group": "Providers",
+      "lineCount": 131,
+      "functionCount": 10,
+      "maxFunctionLines": 29,
+      "maxLineLength": 536,
+      "linesOver200": 15,
+      "linesOver500": 2
+    },
+    "Providers/103-GameState.ps1": {
+      "group": "Providers",
+      "lineCount": 29,
+      "functionCount": 2,
+      "maxFunctionLines": 15,
+      "maxLineLength": 312,
+      "linesOver200": 4,
+      "linesOver500": 0
+    },
+    "Providers/104-OfflineReduction.ps1": {
+      "group": "Providers",
+      "lineCount": 119,
+      "functionCount": 7,
+      "maxFunctionLines": 23,
+      "maxLineLength": 675,
+      "linesOver200": 14,
+      "linesOver500": 3
+    },
+    "Providers/105-SystemToolkit.ps1": {
+      "group": "Providers",
+      "lineCount": 17,
+      "functionCount": 1,
+      "maxFunctionLines": 13,
+      "maxLineLength": 248,
+      "linesOver200": 1,
+      "linesOver500": 0
+    },
+    "Providers/105-WorkspaceLayouts.ps1": {
+      "group": "Providers",
+      "lineCount": 109,
+      "functionCount": 16,
+      "maxFunctionLines": 22,
+      "maxLineLength": 958,
+      "linesOver200": 20,
+      "linesOver500": 5
+    },
+    "Providers/106-PeerUtilities.ps1": {
+      "group": "Providers",
+      "lineCount": 36,
+      "functionCount": 1,
+      "maxFunctionLines": 32,
+      "maxLineLength": 175,
+      "linesOver200": 0,
+      "linesOver500": 0
+    },
+    "Providers/107-WorkspaceStudio.ps1": {
+      "group": "Providers",
+      "lineCount": 493,
+      "functionCount": 31,
+      "maxFunctionLines": 49,
+      "maxLineLength": 793,
+      "linesOver200": 55,
+      "linesOver500": 5
+    },
+    "Providers/108-CleanupMods.ps1": {
+      "group": "Providers",
+      "lineCount": 204,
+      "functionCount": 13,
+      "maxFunctionLines": 27,
+      "maxLineLength": 934,
+      "linesOver200": 43,
+      "linesOver500": 7
+    },
+    "Providers/109-ExperienceStudio.ps1": {
+      "group": "Providers",
+      "lineCount": 244,
+      "functionCount": 17,
+      "maxFunctionLines": 39,
+      "maxLineLength": 729,
+      "linesOver200": 48,
+      "linesOver500": 9
+    },
+    "Providers/110-ShellHardwareStudio.ps1": {
+      "group": "Providers",
+      "lineCount": 388,
+      "functionCount": 28,
+      "maxFunctionLines": 27,
+      "maxLineLength": 756,
+      "linesOver200": 74,
+      "linesOver500": 6
+    },
+    "Providers/111-CleanerPreviewStudio.ps1": {
+      "group": "Providers",
+      "lineCount": 377,
+      "functionCount": 20,
+      "maxFunctionLines": 44,
+      "maxLineLength": 638,
+      "linesOver200": 65,
+      "linesOver500": 4
+    },
+    "Providers/112-ThreatHunter.ps1": {
+      "group": "Providers",
+      "lineCount": 36,
+      "functionCount": 2,
+      "maxFunctionLines": 22,
+      "maxLineLength": 538,
+      "linesOver200": 8,
+      "linesOver500": 1
+    },
+    "Providers/113-NetworkProxyControl.ps1": {
+      "group": "Providers",
+      "lineCount": 25,
+      "functionCount": 2,
+      "maxFunctionLines": 18,
+      "maxLineLength": 955,
+      "linesOver200": 4,
+      "linesOver500": 2
+    },
+    "Providers/114-StorageIntelligence.ps1": {
+      "group": "Providers",
+      "lineCount": 22,
+      "functionCount": 3,
+      "maxFunctionLines": 9,
+      "maxLineLength": 1161,
+      "linesOver200": 6,
+      "linesOver500": 4
+    },
+    "Providers/115-SelfHealingCopilot.ps1": {
+      "group": "Providers",
+      "lineCount": 108,
+      "functionCount": 3,
+      "maxFunctionLines": 44,
+      "maxLineLength": 483,
+      "linesOver200": 3,
+      "linesOver500": 0
+    },
+    "Providers/116-KernelFilterEngine.ps1": {
+      "group": "Providers",
+      "lineCount": 86,
+      "functionCount": 3,
+      "maxFunctionLines": 38,
+      "maxLineLength": 542,
+      "linesOver200": 11,
+      "linesOver500": 1
+    },
+    "Providers/118-MetricsHttpServer.ps1": {
+      "group": "Providers",
+      "lineCount": 44,
+      "functionCount": 3,
+      "maxFunctionLines": 31,
+      "maxLineLength": 444,
+      "linesOver200": 6,
+      "linesOver500": 0
+    },
+    "Providers/119-Capabilities.ps1": {
+      "group": "Providers",
+      "lineCount": 53,
+      "functionCount": 2,
+      "maxFunctionLines": 28,
+      "maxLineLength": 428,
+      "linesOver200": 9,
+      "linesOver500": 0
+    },
+    "Providers/120-FirmwareBootkitAuditor.ps1": {
+      "group": "Providers",
+      "lineCount": 37,
+      "functionCount": 2,
+      "maxFunctionLines": 19,
+      "maxLineLength": 483,
+      "linesOver200": 3,
+      "linesOver500": 0
+    },
+    "Providers/121-PostQuantumCrypto.ps1": {
+      "group": "Providers",
+      "lineCount": 94,
+      "functionCount": 5,
+      "maxFunctionLines": 29,
+      "maxLineLength": 1663,
+      "linesOver200": 19,
+      "linesOver500": 3
+    },
+    "Providers/123-AutonomousPatchAgent.ps1": {
+      "group": "Providers",
+      "lineCount": 47,
+      "functionCount": 3,
+      "maxFunctionLines": 19,
+      "maxLineLength": 1699,
+      "linesOver200": 13,
+      "linesOver500": 4
+    },
+    "Providers/126-P2pRaftFleetOrchestrator.ps1": {
+      "group": "Providers",
+      "lineCount": 41,
+      "functionCount": 2,
+      "maxFunctionLines": 20,
+      "maxLineLength": 1218,
+      "linesOver200": 11,
+      "linesOver500": 4
+    },
+    "Providers/127-NeuralSelfHealing.ps1": {
+      "group": "Providers",
+      "lineCount": 25,
+      "functionCount": 2,
+      "maxFunctionLines": 16,
+      "maxLineLength": 1589,
+      "linesOver200": 5,
+      "linesOver500": 2
+    },
+    "Providers/128-WasiPluginRuntime.ps1": {
+      "group": "Providers",
+      "lineCount": 33,
+      "functionCount": 3,
+      "maxFunctionLines": 17,
+      "maxLineLength": 1999,
+      "linesOver200": 7,
+      "linesOver500": 2
+    },
+    "Providers/132-MultiCloudFleetController.ps1": {
+      "group": "Providers",
+      "lineCount": 31,
+      "functionCount": 3,
+      "maxFunctionLines": 15,
+      "maxLineLength": 1630,
+      "linesOver200": 7,
+      "linesOver500": 4
+    },
+    "Providers/20-Cleanup.ps1": {
+      "group": "Providers",
+      "lineCount": 91,
+      "functionCount": 2,
+      "maxFunctionLines": 62,
+      "maxLineLength": 408,
+      "linesOver200": 7,
+      "linesOver500": 0
+    },
+    "Providers/25-SystemPolicy.ps1": {
+      "group": "Providers",
+      "lineCount": 14,
+      "functionCount": 1,
+      "maxFunctionLines": 10,
+      "maxLineLength": 347,
+      "linesOver200": 3,
+      "linesOver500": 0
+    },
+    "Providers/27-RegistryTree.ps1": {
+      "group": "Providers",
+      "lineCount": 18,
+      "functionCount": 1,
+      "maxFunctionLines": 14,
+      "maxLineLength": 300,
+      "linesOver200": 4,
+      "linesOver500": 0
+    },
+    "Providers/30-Storage.ps1": {
+      "group": "Providers",
+      "lineCount": 34,
+      "functionCount": 1,
+      "maxFunctionLines": 30,
+      "maxLineLength": 513,
+      "linesOver200": 5,
+      "linesOver500": 1
+    },
+    "Providers/35-DesktopControls.ps1": {
+      "group": "Providers",
+      "lineCount": 77,
+      "functionCount": 11,
+      "maxFunctionLines": 11,
+      "maxLineLength": 393,
+      "linesOver200": 6,
+      "linesOver500": 0
+    },
+    "Providers/40-Startup.ps1": {
+      "group": "Providers",
+      "lineCount": 138,
+      "functionCount": 8,
+      "maxFunctionLines": 46,
+      "maxLineLength": 573,
+      "linesOver200": 22,
+      "linesOver500": 1
+    },
+    "Providers/50-Health.ps1": {
+      "group": "Providers",
+      "lineCount": 30,
+      "functionCount": 1,
+      "maxFunctionLines": 20,
+      "maxLineLength": 115,
+      "linesOver200": 0,
+      "linesOver500": 0
+    },
+    "Providers/55-Internals.ps1": {
+      "group": "Providers",
+      "lineCount": 51,
+      "functionCount": 1,
+      "maxFunctionLines": 47,
+      "maxLineLength": 150,
+      "linesOver200": 0,
+      "linesOver500": 0
+    },
+    "Providers/56-MemoryManagement.ps1": {
+      "group": "Providers",
+      "lineCount": 42,
+      "functionCount": 4,
+      "maxFunctionLines": 17,
+      "maxLineLength": 584,
+      "linesOver200": 6,
+      "linesOver500": 2
+    },
+    "Providers/60-Updates.ps1": {
+      "group": "Providers",
+      "lineCount": 24,
+      "functionCount": 1,
+      "maxFunctionLines": 15,
+      "maxLineLength": 111,
+      "linesOver200": 0,
+      "linesOver500": 0
+    },
+    "Providers/65-WindowsUpdateAgent.ps1": {
+      "group": "Providers",
+      "lineCount": 40,
+      "functionCount": 1,
+      "maxFunctionLines": 36,
+      "maxLineLength": 191,
+      "linesOver200": 0,
+      "linesOver500": 0
+    },
+    "Providers/70-Network.ps1": {
+      "group": "Providers",
+      "lineCount": 101,
+      "functionCount": 6,
+      "maxFunctionLines": 20,
+      "maxLineLength": 687,
+      "linesOver200": 13,
+      "linesOver500": 1
+    },
+    "Providers/72-Provisioning.ps1": {
+      "group": "Providers",
+      "lineCount": 151,
+      "functionCount": 8,
+      "maxFunctionLines": 67,
+      "maxLineLength": 482,
+      "linesOver200": 19,
+      "linesOver500": 0
+    },
+    "Providers/74-SecurityBaseline.ps1": {
+      "group": "Providers",
+      "lineCount": 23,
+      "functionCount": 1,
+      "maxFunctionLines": 19,
+      "maxLineLength": 438,
+      "linesOver200": 8,
+      "linesOver500": 0
+    },
+    "Providers/75-Security.ps1": {
+      "group": "Providers",
+      "lineCount": 21,
+      "functionCount": 1,
+      "maxFunctionLines": 17,
+      "maxLineLength": 251,
+      "linesOver200": 3,
+      "linesOver500": 0
+    },
+    "Providers/76-WDAC.ps1": {
+      "group": "Providers",
+      "lineCount": 85,
+      "functionCount": 7,
+      "maxFunctionLines": 25,
+      "maxLineLength": 566,
+      "linesOver200": 10,
+      "linesOver500": 1
+    },
+    "Providers/77-OfflineImage.ps1": {
+      "group": "Providers",
+      "lineCount": 222,
+      "functionCount": 15,
+      "maxFunctionLines": 38,
+      "maxLineLength": 614,
+      "linesOver200": 24,
+      "linesOver500": 3
+    },
+    "Providers/78-Boot.ps1": {
+      "group": "Providers",
+      "lineCount": 25,
+      "functionCount": 3,
+      "maxFunctionLines": 10,
+      "maxLineLength": 352,
+      "linesOver200": 3,
+      "linesOver500": 0
+    },
+    "Providers/79-Shell.ps1": {
+      "group": "Providers",
+      "lineCount": 39,
+      "functionCount": 4,
+      "maxFunctionLines": 15,
+      "maxLineLength": 558,
+      "linesOver200": 4,
+      "linesOver500": 2
+    },
+    "Providers/80-Reports.ps1": {
+      "group": "Providers",
+      "lineCount": 23,
+      "functionCount": 1,
+      "maxFunctionLines": 19,
+      "maxLineLength": 348,
+      "linesOver200": 7,
+      "linesOver500": 0
+    },
+    "Providers/81-Customization.ps1": {
+      "group": "Providers",
+      "lineCount": 232,
+      "functionCount": 15,
+      "maxFunctionLines": 53,
+      "maxLineLength": 611,
+      "linesOver200": 31,
+      "linesOver500": 2
+    },
+    "Providers/82-Knowledge.ps1": {
+      "group": "Providers",
+      "lineCount": 12,
+      "functionCount": 1,
+      "maxFunctionLines": 12,
+      "maxLineLength": 160,
+      "linesOver200": 0,
+      "linesOver500": 0
+    },
+    "Providers/83-Widgets.ps1": {
+      "group": "Providers",
+      "lineCount": 112,
+      "functionCount": 7,
+      "maxFunctionLines": 52,
+      "maxLineLength": 436,
+      "linesOver200": 17,
+      "linesOver500": 0
+    },
+    "Providers/84-Bluetooth.ps1": {
+      "group": "Providers",
+      "lineCount": 66,
+      "functionCount": 4,
+      "maxFunctionLines": 23,
+      "maxLineLength": 408,
+      "linesOver200": 4,
+      "linesOver500": 0
+    },
+    "Providers/85-Recovery.ps1": {
+      "group": "Providers",
+      "lineCount": 146,
+      "functionCount": 7,
+      "maxFunctionLines": 37,
+      "maxLineLength": 570,
+      "linesOver200": 3,
+      "linesOver500": 1
+    },
+    "Providers/86-Maintenance.ps1": {
+      "group": "Providers",
+      "lineCount": 344,
+      "functionCount": 21,
+      "maxFunctionLines": 39,
+      "maxLineLength": 525,
+      "linesOver200": 25,
+      "linesOver500": 2
+    },
+    "Providers/87-Playbooks.ps1": {
+      "group": "Providers",
+      "lineCount": 37,
+      "functionCount": 1,
+      "maxFunctionLines": 33,
+      "maxLineLength": 245,
+      "linesOver200": 1,
+      "linesOver500": 0
+    },
+    "Providers/88-Automation.ps1": {
+      "group": "Providers",
+      "lineCount": 144,
+      "functionCount": 10,
+      "maxFunctionLines": 24,
+      "maxLineLength": 434,
+      "linesOver200": 9,
+      "linesOver500": 0
+    },
+    "Providers/89-Broker.ps1": {
+      "group": "Providers",
+      "lineCount": 126,
+      "functionCount": 9,
+      "maxFunctionLines": 30,
+      "maxLineLength": 335,
+      "linesOver200": 17,
+      "linesOver500": 0
+    },
+    "Providers/90-Extensions.ps1": {
+      "group": "Providers",
+      "lineCount": 183,
+      "functionCount": 14,
+      "maxFunctionLines": 53,
+      "maxLineLength": 702,
+      "linesOver200": 28,
+      "linesOver500": 4
+    },
+    "Providers/91-SecurityMaintenance.ps1": {
+      "group": "Providers",
+      "lineCount": 360,
+      "functionCount": 19,
+      "maxFunctionLines": 46,
+      "maxLineLength": 818,
+      "linesOver200": 37,
+      "linesOver500": 1
+    },
+    "Providers/92-NetworkExperiments.ps1": {
+      "group": "Providers",
+      "lineCount": 40,
+      "functionCount": 1,
+      "maxFunctionLines": 36,
+      "maxLineLength": 347,
+      "linesOver200": 1,
+      "linesOver500": 0
+    },
+    "Providers/93-ProcessInstrumentation.ps1": {
+      "group": "Providers",
+      "lineCount": 34,
+      "functionCount": 1,
+      "maxFunctionLines": 30,
+      "maxLineLength": 273,
+      "linesOver200": 1,
+      "linesOver500": 0
+    },
+    "Providers/94-PowerSessions.ps1": {
+      "group": "Providers",
+      "lineCount": 249,
+      "functionCount": 13,
+      "maxFunctionLines": 42,
+      "maxLineLength": 577,
+      "linesOver200": 19,
+      "linesOver500": 1
+    },
+    "Providers/95-WindowWorkspace.ps1": {
+      "group": "Providers",
+      "lineCount": 172,
+      "functionCount": 13,
+      "maxFunctionLines": 35,
+      "maxLineLength": 627,
+      "linesOver200": 29,
+      "linesOver500": 3
+    },
+    "Providers/96-ColorStudio.ps1": {
+      "group": "Providers",
+      "lineCount": 134,
+      "functionCount": 16,
+      "maxFunctionLines": 19,
+      "maxLineLength": 613,
+      "linesOver200": 18,
+      "linesOver500": 2
+    },
+    "Providers/97-LocalNotes.ps1": {
+      "group": "Providers",
+      "lineCount": 174,
+      "functionCount": 12,
+      "maxFunctionLines": 27,
+      "maxLineLength": 599,
+      "linesOver200": 15,
+      "linesOver500": 2
+    },
+    "Providers/98-RemoteSupport.ps1": {
+      "group": "Providers",
+      "lineCount": 224,
+      "functionCount": 16,
+      "maxFunctionLines": 45,
+      "maxLineLength": 599,
+      "linesOver200": 40,
+      "linesOver500": 5
+    },
+    "Providers/99-BrowserWorkspace.ps1": {
+      "group": "Providers",
+      "lineCount": 114,
+      "functionCount": 5,
+      "maxFunctionLines": 66,
+      "maxLineLength": 621,
+      "linesOver200": 12,
+      "linesOver500": 1
+    },
+    "UI/00-Console.ps1": {
+      "group": "UI",
+      "lineCount": 90,
+      "functionCount": 6,
+      "maxFunctionLines": 46,
+      "maxLineLength": 137,
+      "linesOver200": 0,
+      "linesOver500": 0
+    },
+    "UI/01-Controls.ps1": {
+      "group": "UI",
+      "lineCount": 181,
+      "functionCount": 5,
+      "maxFunctionLines": 93,
+      "maxLineLength": 403,
+      "linesOver200": 5,
+      "linesOver500": 0
+    },
+    "UI/97-CommandPalette.ps1": {
+      "group": "UI",
+      "lineCount": 86,
+      "functionCount": 5,
+      "maxFunctionLines": 59,
+      "maxLineLength": 1942,
+      "linesOver200": 9,
+      "linesOver500": 1
+    },
+    "UI/98-Headless.ps1": {
+      "group": "UI",
+      "lineCount": 315,
+      "functionCount": 4,
+      "maxFunctionLines": 260,
+      "maxLineLength": 1061,
+      "linesOver200": 84,
+      "linesOver500": 15
+    },
+    "UI/99-Main.ps1": {
+      "group": "UI",
+      "lineCount": 31,
+      "functionCount": 2,
+      "maxFunctionLines": 14,
+      "maxLineLength": 90,
+      "linesOver200": 0,
+      "linesOver500": 0
+    },
+    "UI/Gui/00-GuiCatalog.ps1": {
+      "group": "UI",
+      "lineCount": 119,
+      "functionCount": 6,
+      "maxFunctionLines": 55,
+      "maxLineLength": 439,
+      "linesOver200": 3,
+      "linesOver500": 0
+    },
+    "UI/Gui/10-GuiRuntime.ps1": {
+      "group": "UI",
+      "lineCount": 427,
+      "functionCount": 27,
+      "maxFunctionLines": 54,
+      "maxLineLength": 487,
+      "linesOver200": 30,
+      "linesOver500": 0
+    },
+    "UI/Screens/10-Dashboard.ps1": {
+      "group": "UI",
+      "lineCount": 65,
+      "functionCount": 1,
+      "maxFunctionLines": 65,
+      "maxLineLength": 229,
+      "linesOver200": 1,
+      "linesOver500": 0
+    },
+    "UI/Screens/12-QuickActions.ps1": {
+      "group": "UI",
+      "lineCount": 31,
+      "functionCount": 1,
+      "maxFunctionLines": 31,
+      "maxLineLength": 228,
+      "linesOver200": 2,
+      "linesOver500": 0
+    },
+    "UI/Screens/20-Applications.ps1": {
+      "group": "UI",
+      "lineCount": 90,
+      "functionCount": 4,
+      "maxFunctionLines": 39,
+      "maxLineLength": 342,
+      "linesOver200": 6,
+      "linesOver500": 0
+    },
+    "UI/Screens/24-Profiles.ps1": {
+      "group": "UI",
+      "lineCount": 23,
+      "functionCount": 3,
+      "maxFunctionLines": 20,
+      "maxLineLength": 482,
+      "linesOver200": 3,
+      "linesOver500": 0
+    },
+    "UI/Screens/30-Cleanup.ps1": {
+      "group": "UI",
+      "lineCount": 42,
+      "functionCount": 3,
+      "maxFunctionLines": 26,
+      "maxLineLength": 249,
+      "linesOver200": 2,
+      "linesOver500": 0
+    },
+    "UI/Screens/35-DesktopControls.ps1": {
+      "group": "UI",
+      "lineCount": 28,
+      "functionCount": 1,
+      "maxFunctionLines": 28,
+      "maxLineLength": 275,
+      "linesOver200": 4,
+      "linesOver500": 0
+    },
+    "UI/Screens/36-PowerSessions.ps1": {
+      "group": "UI",
+      "lineCount": 38,
+      "functionCount": 2,
+      "maxFunctionLines": 32,
+      "maxLineLength": 650,
+      "linesOver200": 4,
+      "linesOver500": 1
+    },
+    "UI/Screens/37-WindowWorkspace.ps1": {
+      "group": "UI",
+      "lineCount": 45,
+      "functionCount": 4,
+      "maxFunctionLines": 33,
+      "maxLineLength": 785,
+      "linesOver200": 7,
+      "linesOver500": 1
+    },
+    "UI/Screens/38-ColorStudio.ps1": {
+      "group": "UI",
+      "lineCount": 24,
+      "functionCount": 2,
+      "maxFunctionLines": 23,
+      "maxLineLength": 623,
+      "linesOver200": 4,
+      "linesOver500": 2
+    },
+    "UI/Screens/39-LocalNotes.ps1": {
+      "group": "UI",
+      "lineCount": 95,
+      "functionCount": 3,
+      "maxFunctionLines": 70,
+      "maxLineLength": 333,
+      "linesOver200": 4,
+      "linesOver500": 0
+    },
+    "UI/Screens/40-Storage.ps1": {
+      "group": "UI",
+      "lineCount": 88,
+      "functionCount": 5,
+      "maxFunctionLines": 42,
+      "maxLineLength": 384,
+      "linesOver200": 4,
+      "linesOver500": 0
+    },
+    "UI/Screens/41-BrowserWorkspace.ps1": {
+      "group": "UI",
+      "lineCount": 62,
+      "functionCount": 3,
+      "maxFunctionLines": 54,
+      "maxLineLength": 251,
+      "linesOver200": 2,
+      "linesOver500": 0
+    },
+    "UI/Screens/42-RemoteSupport.ps1": {
+      "group": "UI",
+      "lineCount": 39,
+      "functionCount": 3,
+      "maxFunctionLines": 37,
+      "maxLineLength": 1056,
+      "linesOver200": 9,
+      "linesOver500": 3
+    },
+    "UI/Screens/43-Downloads.ps1": {
+      "group": "UI",
+      "lineCount": 32,
+      "functionCount": 2,
+      "maxFunctionLines": 31,
+      "maxLineLength": 696,
+      "linesOver200": 11,
+      "linesOver500": 2
+    },
+    "UI/Screens/44-Telemetry.ps1": {
+      "group": "UI",
+      "lineCount": 22,
+      "functionCount": 2,
+      "maxFunctionLines": 21,
+      "maxLineLength": 747,
+      "linesOver200": 5,
+      "linesOver500": 1
+    },
+    "UI/Screens/45-Launcher.ps1": {
+      "group": "UI",
+      "lineCount": 19,
+      "functionCount": 2,
+      "maxFunctionLines": 18,
+      "maxLineLength": 470,
+      "linesOver200": 3,
+      "linesOver500": 0
+    },
+    "UI/Screens/46-GameState.ps1": {
+      "group": "UI",
+      "lineCount": 25,
+      "functionCount": 3,
+      "maxFunctionLines": 23,
+      "maxLineLength": 519,
+      "linesOver200": 3,
+      "linesOver500": 1
+    },
+    "UI/Screens/47-WorkspaceLayouts.ps1": {
+      "group": "UI",
+      "lineCount": 22,
+      "functionCount": 2,
+      "maxFunctionLines": 21,
+      "maxLineLength": 645,
+      "linesOver200": 4,
+      "linesOver500": 1
+    },
+    "UI/Screens/50-Startup.ps1": {
+      "group": "UI",
+      "lineCount": 43,
+      "functionCount": 3,
+      "maxFunctionLines": 31,
+      "maxLineLength": 272,
+      "linesOver200": 4,
+      "linesOver500": 0
+    },
+    "UI/Screens/55-Internals.ps1": {
+      "group": "UI",
+      "lineCount": 27,
+      "functionCount": 2,
+      "maxFunctionLines": 26,
+      "maxLineLength": 546,
+      "linesOver200": 7,
+      "linesOver500": 3
+    },
+    "UI/Screens/60-Health.ps1": {
+      "group": "UI",
+      "lineCount": 33,
+      "functionCount": 2,
+      "maxFunctionLines": 22,
+      "maxLineLength": 165,
+      "linesOver200": 0,
+      "linesOver500": 0
+    },
+    "UI/Screens/65-WindowsUpdate.ps1": {
+      "group": "UI",
+      "lineCount": 26,
+      "functionCount": 2,
+      "maxFunctionLines": 25,
+      "maxLineLength": 781,
+      "linesOver200": 5,
+      "linesOver500": 1
+    },
+    "UI/Screens/70-Updates.ps1": {
+      "group": "UI",
+      "lineCount": 38,
+      "functionCount": 1,
+      "maxFunctionLines": 38,
+      "maxLineLength": 186,
+      "linesOver200": 0,
+      "linesOver500": 0
+    },
+    "UI/Screens/72-Provisioning.ps1": {
+      "group": "UI",
+      "lineCount": 21,
+      "functionCount": 2,
+      "maxFunctionLines": 20,
+      "maxLineLength": 685,
+      "linesOver200": 4,
+      "linesOver500": 2
+    },
+    "UI/Screens/73-SecurityBaseline.ps1": {
+      "group": "UI",
+      "lineCount": 24,
+      "functionCount": 1,
+      "maxFunctionLines": 24,
+      "maxLineLength": 484,
+      "linesOver200": 5,
+      "linesOver500": 0
+    },
+    "UI/Screens/75-Security.ps1": {
+      "group": "UI",
+      "lineCount": 77,
+      "functionCount": 3,
+      "maxFunctionLines": 38,
+      "maxLineLength": 226,
+      "linesOver200": 1,
+      "linesOver500": 0
+    },
+    "UI/Screens/76-WDAC.ps1": {
+      "group": "UI",
+      "lineCount": 22,
+      "functionCount": 1,
+      "maxFunctionLines": 22,
+      "maxLineLength": 514,
+      "linesOver200": 6,
+      "linesOver500": 1
+    },
+    "UI/Screens/77-OfflineImage.ps1": {
+      "group": "UI",
+      "lineCount": 37,
+      "functionCount": 2,
+      "maxFunctionLines": 36,
+      "maxLineLength": 1019,
+      "linesOver200": 12,
+      "linesOver500": 2
+    },
+    "UI/Screens/78-Boot.ps1": {
+      "group": "UI",
+      "lineCount": 15,
+      "functionCount": 1,
+      "maxFunctionLines": 15,
+      "maxLineLength": 289,
+      "linesOver200": 3,
+      "linesOver500": 0
+    },
+    "UI/Screens/79-Shell.ps1": {
+      "group": "UI",
+      "lineCount": 14,
+      "functionCount": 2,
+      "maxFunctionLines": 13,
+      "maxLineLength": 331,
+      "linesOver200": 4,
+      "linesOver500": 0
+    },
+    "UI/Screens/80-Network.ps1": {
+      "group": "UI",
+      "lineCount": 53,
+      "functionCount": 4,
+      "maxFunctionLines": 29,
+      "maxLineLength": 281,
+      "linesOver200": 3,
+      "linesOver500": 0
+    },
+    "UI/Screens/81-Customization.ps1": {
+      "group": "UI",
+      "lineCount": 31,
+      "functionCount": 2,
+      "maxFunctionLines": 30,
+      "maxLineLength": 354,
+      "linesOver200": 8,
+      "linesOver500": 0
+    },
+    "UI/Screens/82-Knowledge.ps1": {
+      "group": "UI",
+      "lineCount": 5,
+      "functionCount": 2,
+      "maxFunctionLines": 4,
+      "maxLineLength": 645,
+      "linesOver200": 1,
+      "linesOver500": 1
+    },
+    "UI/Screens/83-Widgets.ps1": {
+      "group": "UI",
+      "lineCount": 22,
+      "functionCount": 2,
+      "maxFunctionLines": 21,
+      "maxLineLength": 459,
+      "linesOver200": 3,
+      "linesOver500": 0
+    },
+    "UI/Screens/84-Bluetooth.ps1": {
+      "group": "UI",
+      "lineCount": 20,
+      "functionCount": 2,
+      "maxFunctionLines": 19,
+      "maxLineLength": 552,
+      "linesOver200": 4,
+      "linesOver500": 1
+    },
+    "UI/Screens/86-Maintenance.ps1": {
+      "group": "UI",
+      "lineCount": 72,
+      "functionCount": 2,
+      "maxFunctionLines": 67,
+      "maxLineLength": 412,
+      "linesOver200": 4,
+      "linesOver500": 0
+    },
+    "UI/Screens/87-Playbooks.ps1": {
+      "group": "UI",
+      "lineCount": 18,
+      "functionCount": 2,
+      "maxFunctionLines": 17,
+      "maxLineLength": 400,
+      "linesOver200": 1,
+      "linesOver500": 0
+    },
+    "UI/Screens/88-Automation.ps1": {
+      "group": "UI",
+      "lineCount": 18,
+      "functionCount": 2,
+      "maxFunctionLines": 17,
+      "maxLineLength": 1047,
+      "linesOver200": 5,
+      "linesOver500": 1
+    },
+    "UI/Screens/90-Reports.ps1": {
+      "group": "UI",
+      "lineCount": 47,
+      "functionCount": 3,
+      "maxFunctionLines": 29,
+      "maxLineLength": 187,
+      "linesOver200": 0,
+      "linesOver500": 0
+    },
+    "UI/Screens/91-ExpertLab.ps1": {
+      "group": "UI",
+      "lineCount": 211,
+      "functionCount": 8,
+      "maxFunctionLines": 47,
+      "maxLineLength": 378,
+      "linesOver200": 16,
+      "linesOver500": 0
+    },
+    "UI/Screens/92-Recovery.ps1": {
+      "group": "UI",
+      "lineCount": 40,
+      "functionCount": 2,
+      "maxFunctionLines": 34,
+      "maxLineLength": 279,
+      "linesOver200": 1,
+      "linesOver500": 0
+    },
+    "UI/Screens/93-PeerUtilities.ps1": {
+      "group": "UI",
+      "lineCount": 128,
+      "functionCount": 2,
+      "maxFunctionLines": 123,
+      "maxLineLength": 827,
+      "linesOver200": 31,
+      "linesOver500": 7
+    },
+    "UI/Screens/94-WorkspaceStudio.ps1": {
+      "group": "UI",
+      "lineCount": 65,
+      "functionCount": 2,
+      "maxFunctionLines": 60,
+      "maxLineLength": 599,
+      "linesOver200": 12,
+      "linesOver500": 1
+    },
+    "UI/Screens/95-CleanerPreviewStudio.ps1": {
+      "group": "UI",
+      "lineCount": 36,
+      "functionCount": 1,
+      "maxFunctionLines": 36,
+      "maxLineLength": 467,
+      "linesOver200": 9,
+      "linesOver500": 0
+    },
+    "UI/Screens/95-Settings.ps1": {
+      "group": "UI",
+      "lineCount": 94,
+      "functionCount": 4,
+      "maxFunctionLines": 41,
+      "maxLineLength": 617,
+      "linesOver200": 22,
+      "linesOver500": 2
+    },
+    "UI/Screens/95-ShellHardwareStudio.ps1": {
+      "group": "UI",
+      "lineCount": 38,
+      "functionCount": 1,
+      "maxFunctionLines": 38,
+      "maxLineLength": 705,
+      "linesOver200": 11,
+      "linesOver500": 1
+    },
+    "UI/Screens/96-Help.ps1": {
+      "group": "UI",
+      "lineCount": 42,
+      "functionCount": 1,
+      "maxFunctionLines": 42,
+      "maxLineLength": 121,
+      "linesOver200": 0,
+      "linesOver500": 0
+    }
+  },
+  "strictLimits": {
+    "maxFileLines": 600,
+    "maxLineLength": 200,
+    "linesOver200": 0,
+    "linesOver500": 0,
+    "maxFunctionLines": 200
+  },
+  "strictFiles": [
+    "Core/02-Logging.ps1",
+    "Core/03-Process.ps1",
+    "Core/04-Http.ps1",
+    "Core/06-Safety.ps1",
+    "Providers/113-NetworkProxyControl.ps1",
+    "Providers/114-StorageIntelligence.ps1",
+    "Providers/115-SelfHealingCopilot.ps1",
+    "Providers/116-KernelFilterEngine.ps1",
+    "Providers/118-MetricsHttpServer.ps1",
+    "Providers/119-Capabilities.ps1",
+    "Providers/120-FirmwareBootkitAuditor.ps1",
+    "Providers/121-PostQuantumCrypto.ps1",
+    "Providers/123-AutonomousPatchAgent.ps1",
+    "Providers/126-P2pRaftFleetOrchestrator.ps1",
+    "Providers/127-NeuralSelfHealing.ps1",
+    "Providers/128-WasiPluginRuntime.ps1",
+    "Providers/132-MultiCloudFleetController.ps1",
+    "Providers/27-RegistryTree.ps1",
+    "Providers/56-MemoryManagement.ps1",
+    "Providers/70-Network.ps1",
+    "Providers/89-Broker.ps1",
+    "UI/Screens/82-Knowledge.ps1",
+    "UI/Screens/87-Playbooks.ps1"
+  ],
+  "ratchetNotes": {
+    "Core/00-09-GameState.ps1": "Bounded archive stream handling expanded the existing validation function by four readable lines.",
+    "Core/00-11-MutationActions.ps1": "The hosts mutation now includes CAS, atomic replacement, verification, and provider rollback; it remains below the strict 200-line function ceiling.",
+    "Core/01-Config.ps1": "Read-only initialization now computes policy before persistence, avoids state creation, preserves corrupt inputs, suppresses recovery/save, and remains below the strict 200-line ceiling.",
+    "Core/02-Logging.ps1": "Promoted to the strict profile after replacing minified logging with bounded, serialized, structurally redacted writes.",
+    "Providers/72-Provisioning.ps1": "The generated offline runner now validates bounded JSON, exact membership, paths, sizes, and hashes.",
+    "Providers/89-Broker.ps1": "Promoted to the strict profile after replacing line framing with authenticated bounded protocol-v3 frames."
+  }
+}

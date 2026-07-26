@@ -1,0 +1,12 @@
+# Release Notes
+
+Only the current supported release is kept here. Git history is the authoritative record for development changes and superseded releases.
+
+## 1.1.0
+
+- Unified graphical, terminal, and headless workflows over one typed, policy-governed transaction engine.
+- Added bounded process, network, filesystem, archive, IPC, elevation, and extension boundaries with explicit evidence and rollback behavior.
+- Moved narrow byte-oriented and Windows-interop primitives into source-built .NET 8 components; retained PowerShell for orchestration and Python for deterministic packaging and verification.
+- Added current fleet, forensic, isolation, VBS/DMA, display, telemetry, binary-intelligence, eBPF, WireGuard, and QUIC capability contracts.
+- Added deterministic source/production packaging, streamed archive verification, SBOMs, build receipts, checksums, and immutable promotion.
+- Removed stale generated reports, speculative planning layers, historical identifiers, obsolete payment-address surfaces, and duplicated version labels.

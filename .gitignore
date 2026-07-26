@@ -1,0 +1,13 @@
+artifacts/
+*.zip
+*.sha256
+.vscode/
+.idea/
+*.user
+*.log
+__pycache__/
+*.py[cod]
+WinCare.exe
+WinCare-GUI.exe
+WinCare-TUI.exe
+scratch/
