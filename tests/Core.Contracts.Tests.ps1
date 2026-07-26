@@ -117,5 +117,23 @@ Describe 'Configuration and policy admission' {
       $resPlain = Protect-WinCareConfigVault -ConfigVaultPath $plainPath
       $resPlain.ZeroTrustVaultEncrypted | Should Be $false
     }
+    It 'evaluates RBAC role permissions and logs unauthorized action attempts' {
+      $granted = Assert-WinCareRolePermission -RequestedRole 'HelpdeskAdmin' -ActionContractName 'ClearTemporaryFiles' -UserIdentity 'TestUser'
+      $granted.Success | Should Be $true
+      $granted.Code | Should Be 'RolePermissionGranted'
+
+      $denied = Assert-WinCareRolePermission -RequestedRole 'HelpdeskAdmin' -ActionContractName 'DisableWdac' -UserIdentity 'TestUser'
+      $denied.Success | Should Be $false
+      $denied.Code | Should Be 'BlockedByPolicy'
+      $denied.ExitCode | Should Be 78
+    }
+    It 'evaluates GPO Entra ID drift and synthesizes remediation plans' {
+      $drift = Test-WinCareGpoEntraDrift
+      $drift.EvidenceType | Should Be 'GpoAndAzureAdBaselineDrift'
+      $plan = New-WinCareGpoRemediationPlan -DriftResult $drift
+      $plan.EvidenceType | Should Be 'GpoRemediationPlanDefinition'
+      $plan.PlanSha256.Length | Should Be 64
+    }
   }
 }
+

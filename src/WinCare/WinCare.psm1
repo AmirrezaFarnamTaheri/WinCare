@@ -372,5 +372,9 @@ Export-ModuleMember -Function @(
     'Get-WinCareWasiMarketplaceCatalog',
     'Send-WinCareMultiCloudTelemetry',
     'Get-WinCareFleetMeshStatus',
-    'Test-WinCareGuiCatalog'
+    'Test-WinCareGuiCatalog',
+    'Get-WinCareRbacMatrix',
+    'Assert-WinCareRolePermission',
+    'Test-WinCareGpoEntraDrift',
+    'New-WinCareGpoRemediationPlan'
 )

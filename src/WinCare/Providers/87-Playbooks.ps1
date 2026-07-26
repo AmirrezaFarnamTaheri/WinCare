@@ -83,7 +83,7 @@ function New-WinCareAutoPlaybook {
         }
     }
 
-    $rawText = "$TriggerEvent:$($actions.Count):" + ([datetime]::UtcNow.ToString('yyyy-MM-dd-HH'))
+    $rawText = "${TriggerEvent}:$($actions.Count):" + ([datetime]::UtcNow.ToString('yyyy-MM-dd-HH'))
     $sha256 = Get-WinCareSha256Text -Text $rawText
     $id = "playbook-$($sha256.Substring(0, 16))"
 
