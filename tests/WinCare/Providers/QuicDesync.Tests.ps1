@@ -3,7 +3,7 @@ Describe 'WinCare QUIC UDP Desync Native Method' {
         $type = [Type]::GetType('WinCare.Native.DpiHelper, WinCare.Native')
         if ($type) {
             $method = $type.GetMethod('SendQuicDesyncDatagram')
-            $method | Should Not Be $null
+            $method | Should -Not -Be $null
         }
     }
 }

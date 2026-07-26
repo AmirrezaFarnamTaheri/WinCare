@@ -193,6 +193,13 @@ Import-Module Pester -RequiredVersion 5.5.0 -ErrorAction Stop
 `$configuration.Output.Verbosity = 'Detailed'
 `$result = Invoke-Pester -Configuration `$configuration
 `$failedCount = if (`$null -ne `$result.FailedCount) { [int]`$result.FailedCount } else { @(`$result.TestResult | Where-Object Passed -eq `$false).Count }
+# A file that fails during Discovery (for example InModuleScope before the module
+# is loaded) books no failed tests at all -- Pester records it under
+# FailedContainersCount/FailedBlocksCount. Counting only FailedCount therefore
+# reports a green gate while whole test files never ran.
+`$failedContainers = if (`$null -ne `$result.FailedContainersCount) { [int]`$result.FailedContainersCount } else { 0 }
+`$failedBlocks = if (`$null -ne `$result.FailedBlocksCount) { [int]`$result.FailedBlocksCount } else { 0 }
+`$failedCount = `$failedCount + `$failedContainers + `$failedBlocks
 `$passedCount = if (`$null -ne `$result.PassedCount) { [int]`$result.PassedCount } else { @(`$result.TestResult | Where-Object Passed -eq `$true).Count }
 [ordered]@{ passed=`$passedCount; failed=`$failedCount; skipped=[int]`$result.SkippedCount; duration=[string]`$result.Duration } | ConvertTo-Json | Set-Content -LiteralPath '$quotedOutput\pester-summary.json' -Encoding utf8NoBOM
 if (`$failedCount -gt 0) { throw "Pester reported `$failedCount failed test(s)." }

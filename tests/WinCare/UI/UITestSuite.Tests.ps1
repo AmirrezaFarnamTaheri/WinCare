@@ -1,3 +1,12 @@
+# Pester 5 executes Describe bodies -- and therefore InModuleScope -- during
+# Discovery, which runs before any BeforeAll. The module must already be loaded
+# at that point, otherwise InModuleScope throws "No modules named 'WinCare' are
+# currently loaded" and the entire container fails without running one test.
+# This import is deliberately at file scope; the BeforeAll imports below remain
+# for run-time state. $PSScriptRoot is used so the path never depends on the
+# caller's working directory.
+Import-Module (Join-Path $PSScriptRoot '../../../src/WinCare/WinCare.psd1') -Force -Global
+
 Describe 'WinCare User Interface Test Suite' {
     BeforeAll {
         $manifestPath = Resolve-Path (Join-Path $PSScriptRoot '..\..\..\src\WinCare\WinCare.psd1')
