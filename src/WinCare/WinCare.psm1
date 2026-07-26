@@ -385,5 +385,7 @@ Export-ModuleMember -Function @(
     'Protect-WinCarePqcSignature',
     'Invoke-WinCareMicroVmSandboxTest',
     'Get-WinCareVbsDmaState',
-    'Enable-WinCareEbpfSocketGovernance'
+    'Enable-WinCareEbpfSocketGovernance',
+    'Start-WinCareWpfDashboardWindow',
+    'Invoke-WinCareFleetDeployment'
 )

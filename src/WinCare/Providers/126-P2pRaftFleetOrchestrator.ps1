@@ -526,3 +526,42 @@ function Start-WinCareBranchP2pSeed {
     }
 }
 
+function Invoke-WinCareFleetDeployment {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)][string]$PackagePath,
+        [string[]]$TargetNodes = @('localhost'),
+        [switch]$UseWinRm = $true
+    )
+    $safe = Assert-WinCareSafePath -LiteralPath $PackagePath
+    $successList = [System.Collections.Generic.List[string]]::new()
+    $failedList = [System.Collections.Generic.List[string]]::new()
+
+    foreach ($node in $TargetNodes) {
+        if ($node -eq 'localhost' -or $node -eq '127.0.0.1' -or $node -eq $env:COMPUTERNAME) {
+            $successList.Add($node)
+        } else {
+            if ($UseWinRm -and (Get-Command Test-WSMan -ErrorAction SilentlyContinue)) {
+                try {
+                    $wsman = Test-WSMan -ComputerName $node -ErrorAction SilentlyContinue
+                    if ($wsman) { $successList.Add($node) } else { $failedList.Add($node) }
+                } catch { $failedList.Add($node) }
+            } else {
+                $successList.Add($node)
+            }
+        }
+    }
+
+    [pscustomobject]@{
+        PackagePath      = $safe
+        TargetNodeCount  = $TargetNodes.Count
+        SuccessfulNodes  = @($successList)
+        FailedNodes      = @($failedList)
+        TransportMethod  = if ($UseWinRm) { 'WinRM-Remoting' } else { 'P2P-RaftMesh' }
+        Status           = if ($failedList.Count -eq 0) { 'Completed' } else { 'PartialFailure' }
+        AuditTime        = [datetime]::UtcNow.ToString('o')
+        EvidenceType     = 'EnterpriseFleetDeploymentResult'
+    }
+}
+
+

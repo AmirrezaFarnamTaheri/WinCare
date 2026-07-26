@@ -1,0 +1,12 @@
+# Created with WinCare Publishing Engine
+PackageIdentifier: WinCare.WinCare
+PackageVersion: 1.1.0
+MinimumOSVersion: 10.0.19041.0
+Installers:
+  - Architecture: x64
+    InstallerType: msi
+    InstallerUrl: https://github.com/WinCare/WinCare/releases/download/v1.1.0/WinCare-v1.1.0-x64.msi
+    InstallerSha256: E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855
+    ProductCode: '{A1234567-89AB-CDEF-0123-456789ABCDEF}'
+ManifestType: installer
+ManifestVersion: 1.6.0

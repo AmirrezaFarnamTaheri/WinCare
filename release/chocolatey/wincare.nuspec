@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2015/06/nuspec.xsd">
+  <metadata>
+    <id>wincare</id>
+    <version>1.1.0</version>
+    <title>WinCare Enterprise Windows Maintenance</title>
+    <authors>WinCare Contributors</authors>
+    <projectUrl>https://github.com/WinCare/WinCare</projectUrl>
+    <licenseUrl>https://github.com/WinCare/WinCare/blob/main/LICENSE</licenseUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <tags>wincare maintenance windows optimization security enterprise</tags>
+    <summary>Utilitarian Enterprise Windows Maintenance, Security & Storage Intelligence Engine.</summary>
+    <description>WinCare is a high-density enterprise Windows optimization, security baseline compliance, and storage intelligence platform built with native PowerShell and OKLCH UI.</description>
+  </metadata>
+  <files>
+    <file src="tools\**" target="tools" />
+  </files>
+</package>
