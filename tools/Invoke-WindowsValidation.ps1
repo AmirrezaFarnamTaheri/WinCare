@@ -202,6 +202,23 @@ Import-Module Pester -RequiredVersion 5.5.0 -ErrorAction Stop
 `$failedCount = `$failedCount + `$failedContainers + `$failedBlocks
 `$passedCount = if (`$null -ne `$result.PassedCount) { [int]`$result.PassedCount } else { @(`$result.TestResult | Where-Object Passed -eq `$true).Count }
 [ordered]@{ passed=`$passedCount; failed=`$failedCount; skipped=[int]`$result.SkippedCount; duration=[string]`$result.Duration } | ConvertTo-Json | Set-Content -LiteralPath '$quotedOutput\pester-summary.json' -Encoding utf8NoBOM
+# Detailed verbosity emits thousands of lines, so individual failures are pushed
+# far outside any bounded log tail. Emit one compact line per failure LAST, and
+# persist the full list, so the reason a run went red is always recoverable.
+`$failures = @(`$result.Tests | Where-Object { `$_.Result -eq 'Failed' })
+if (`$failures.Count) {
+    `$records = foreach (`$test in `$failures) {
+        `$message = [string]`$test.ErrorRecord.Exception.Message
+        if (-not `$message) { `$message = [string]`$test.ErrorRecord }
+        `$message = (`$message -split '\r?\n' | Where-Object { `$_.Trim() } | Select-Object -First 1)
+        if (`$message.Length -gt 220) { `$message = `$message.Substring(0,220) + '...' }
+        [ordered]@{ test=[string]`$test.ExpandedPath; file=[string]`$test.ScriptBlock.File; line=[int]`$test.ErrorRecord.InvocationInfo.ScriptLineNumber; message=`$message }
+    }
+    @(`$records) | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath '$quotedOutput\pester-failures.json' -Encoding utf8NoBOM
+    Write-Host ''
+    Write-Host "===== `$(`$failures.Count) FAILED TEST(S) ====="
+    foreach (`$record in `$records) { Write-Host "FAILED: `$(`$record.test)"; Write-Host "        `$(`$record.message)" }
+}
 if (`$failedCount -gt 0) { throw "Pester reported `$failedCount failed test(s)." }
 "@
 
@@ -380,9 +397,12 @@ try {
                     Read-WinCareToolingBoundedUtf8Text -LiteralPath $stream.Path `
                         -MaximumBytes 4194304 -Purpose "Failed gate $($record.Name) $($stream.Label)"
                 } catch { '' }
-                $lines = @($text -split "`r?`n" | Where-Object { $_ -ne '' })
+                $lines = @($text -split '\r?\n' | Where-Object { $_ -ne '' })
                 if (-not $lines.Count) { continue }
-                $tail = @($lines | Select-Object -Last 120)
+                # 400, not 120: the Pester gate emits a compact one-line-per-failure
+                # list at the very end, and a suite with dozens of failures otherwise
+                # pushes its own summary out of the window.
+                $tail = @($lines | Select-Object -Last 400)
                 Write-Host "--- $($record.Name) $($stream.Label) (last $($tail.Count) of $($lines.Count) line(s)) ---" -ForegroundColor Yellow
                 foreach ($line in $tail) { Write-Host $line }
             }

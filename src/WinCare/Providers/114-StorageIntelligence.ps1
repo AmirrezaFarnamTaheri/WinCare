@@ -145,7 +145,11 @@ function Invoke-WinCareFuzzyDeduplication {
             [pscustomobject]@{
                 Path=$file.FullName
                 Length=[long]$file.Length
-                Sha256=Get-WinCareSha256 -LiteralPath $file.FullName -MaximumBytes $file.Length
+                # Get-WinCareSha256 (Core/06-Safety.ps1) takes only -LiteralPath; it
+                # already streams the file under its own ceiling. Passing
+                # -MaximumBytes raised ParameterBindingException and failed every
+                # exact-duplicate detection call.
+                Sha256=Get-WinCareSha256 -LiteralPath $file.FullName
             }
         }
         foreach($group in $rows|Group-Object Sha256|Where-Object Count -gt 1) {

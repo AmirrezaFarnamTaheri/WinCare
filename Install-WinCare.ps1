@@ -242,6 +242,12 @@ function Invoke-WinCareInstallSmokeTest {
     $start=[Diagnostics.ProcessStartInfo]::new()
     $start.FileName=$pwsh;$start.WorkingDirectory=$Root;$start.UseShellExecute=$false;$start.CreateNoWindow=$true
     $start.RedirectStandardOutput=$true;$start.RedirectStandardError=$true
+    # The staged run's stdout is parsed as JSON. PowerShell 7 may still emit ANSI
+    # colour/decoration bytes into a redirected stream, which makes ConvertFrom-Json
+    # fail at position 0 on the leading ESC. Ask the child for plain text.
+    $start.EnvironmentVariables['NO_COLOR']='1'
+    $start.EnvironmentVariables['TERM']='dumb'
+    $start.EnvironmentVariables['POWERSHELL_UPDATECHECK']='Off'
     foreach($argument in @('-NoLogo','-NoProfile','-NonInteractive','-File',$launcher,'-Command','system','-Json')){[void]$start.ArgumentList.Add($argument)}
     $process=[Diagnostics.Process]::new();$process.StartInfo=$start
     try{
@@ -250,6 +256,10 @@ function Invoke-WinCareInstallSmokeTest {
         if($capture.StdoutTruncated -or $capture.StderrTruncated){throw 'Staged WinCare smoke-test output exceeded the 4 MiB stream ceiling.'}
         $stdout=[string]$capture.StdOut;$stderr=[string]$capture.StdErr
         if($capture.ExitCode -ne 0){throw "Staged WinCare smoke test failed with exit code $($capture.ExitCode): $stderr"}
+        # Strip any residual ANSI/VT sequences before parsing: NO_COLOR is a request,
+        # not a guarantee, and a single leading ESC byte otherwise fails the whole
+        # clean-install gate with "Unexpected character ... Path '', line 0, position 0".
+        $stdout=[regex]::Replace($stdout,"`e\[[0-9;?]*[ -/]*[@-~]",'')
         try{$payload=$stdout|ConvertFrom-Json -Depth 50 -ErrorAction Stop}catch{throw "Staged WinCare smoke test returned invalid JSON: $($_.Exception.Message)"}
         if($null -eq $payload){throw 'Staged WinCare smoke test returned no JSON payload.'}
         [pscustomobject]@{ExitCode=$process.ExitCode;PayloadType=$payload.GetType().FullName;StdoutSha256=([Convert]::ToHexString([Security.Cryptography.SHA256]::HashData([Text.Encoding]::UTF8.GetBytes($stdout))).ToLowerInvariant())}
