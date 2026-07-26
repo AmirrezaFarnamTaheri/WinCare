@@ -31,7 +31,11 @@ jobs:
         shell: pwsh
         run: |
           Set-PSRepository PSGallery -InstallationPolicy Trusted
-          Install-Module Pester -RequiredVersion 5.5.0 -Scope CurrentUser -Force
+          # See ci.yml: Save-Module avoids the runner's preinstalled-Pester publisher-mismatch
+          # without the publisher-check bypass switch that release governance forbids.
+          $userModules = Join-Path ([Environment]::GetFolderPath('MyDocuments')) 'PowerShell/Modules'
+          New-Item -ItemType Directory -Force -Path $userModules | Out-Null
+          Save-Module Pester -RequiredVersion 5.5.0 -Path $userModules -Force
           Install-Module PSScriptAnalyzer -RequiredVersion 1.22.0 -Scope CurrentUser -Force
       - name: Run complete Windows validation and candidate build
         shell: pwsh

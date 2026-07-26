@@ -50,9 +50,9 @@ jobs:
       - name: Deterministic development package
         run: |
           mkdir -p artifacts
-          python tools/build_release.py . --output-directory artifacts
+          python tools/build_release.py . --output-directory artifacts/release
           VERSION=$(python -c "import re,pathlib; print(re.search(r\"ModuleVersion\\s*=\\s*'([^']+)'\", pathlib.Path('src/WinCare/WinCare.psd1').read_text()).group(1))")
-          python tools/verify_release.py "artifacts/WinCare-$VERSION.zip" --output artifacts/archive-validation.json
+          python tools/verify_release.py "artifacts/release/WinCare-$VERSION.zip" --output artifacts/archive-validation.json
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: evidence-and-release
@@ -83,7 +83,14 @@ jobs:
         shell: pwsh
         run: |
           Set-PSRepository PSGallery -InstallationPolicy Trusted
-          Install-Module Pester -RequiredVersion 5.5.0 -Scope CurrentUser -Force
+          # Runners preinstall a newer Pester (AllUsers scope) signed under a rotated DigiCert
+          # root, so Install-Module of the pinned 5.5.0 fails the Authenticode publisher
+          # comparison. Save-Module lays the pinned version into the CurrentUser module path
+          # (which is ahead of AllUsers on PSModulePath) without that comparison and without any
+          # publisher-check bypass switch; Import-Module -RequiredVersion then resolves it.
+          $userModules = Join-Path ([Environment]::GetFolderPath('MyDocuments')) 'PowerShell/Modules'
+          New-Item -ItemType Directory -Force -Path $userModules | Out-Null
+          Save-Module Pester -RequiredVersion 5.5.0 -Path $userModules -Force
           Install-Module PSScriptAnalyzer -RequiredVersion 1.22.0 -Scope CurrentUser -Force
       - name: Static, Pester, module, native, and release gates
         shell: pwsh
