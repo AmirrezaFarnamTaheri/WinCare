@@ -174,3 +174,21 @@ function Get-WinCareCapabilityRegistry {
         EvidenceType='DependencyAndRuntimeCapabilityProbe'
     }
 }
+
+function New-WinCareSignedCapabilityToken {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)][string]$CapabilityId,
+        [Parameter(Mandatory)][string]$SecretKey,
+        [int]$LifetimeSeconds=300
+    )
+    $expires = [datetime]::UtcNow.AddSeconds($LifetimeSeconds).ToString('o')
+    $header = @{alg='HS256';typ='JWT'}|ConvertTo-Json -Compress
+    $payload = @{sub=$CapabilityId;exp=$expires;iss='WinCareFleet'}|ConvertTo-Json -Compress
+    $b64Header = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($header)).TrimEnd('=')
+    $b64Payload = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($payload)).TrimEnd('=')
+    $tokenData = "$b64Header.$b64Payload"
+    $hmac = [Security.Cryptography.HMACSHA256]::new([Text.Encoding]::UTF8.GetBytes($SecretKey))
+    $sig = [Convert]::ToBase64String($hmac.ComputeHash([Text.Encoding]::UTF8.GetBytes($tokenData))).TrimEnd('=')
+    "$tokenData.$sig"
+}

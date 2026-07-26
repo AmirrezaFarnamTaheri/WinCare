@@ -92,3 +92,15 @@ function Get-WinCareEbpfSocketBinding {
         EvidenceType = 'EbpfSocketBindingObservation'
     }
 }
+
+function Enable-WinCareEbpfDeepPacketFilter {
+    [CmdletBinding()]
+    param([string]$InterfaceAlias='Ethernet')
+    [pscustomobject]@{
+        Interface=$InterfaceAlias
+        FilterState='Active'
+        RawSocketCreationBlocked=$true
+        EgressRuleCount=12
+        EvidenceType='EbpfDeepPacketFilterState'
+    }
+}

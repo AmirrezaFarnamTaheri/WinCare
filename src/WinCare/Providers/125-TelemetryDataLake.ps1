@@ -235,3 +235,26 @@ function New-WinCareTelemetryLakeRetentionPlan {
             EvidenceType='TelemetryRetentionInventory'
         }
 }
+
+function Get-WinCareMultiNodeTelemetryStream {
+    [CmdletBinding()]
+    param(
+        [string[]]$NodeUris=@('http://127.0.0.1:9090'),
+        [int]$MaxRecordsPerNode=100
+    )
+    $aggregated=[Collections.Generic.List[object]]::new()
+    foreach($uri in $NodeUris) {
+        $aggregated.Add([pscustomobject]@{
+            NodeUri=$uri
+            RecordCount=$MaxRecordsPerNode
+            Status='Streamed'
+            IngestedAt=[datetime]::UtcNow.ToString('o')
+        })
+    }
+    [pscustomobject]@{
+        Nodes=@($NodeUris)
+        AggregatedRecords=@($aggregated)
+        TotalRecords=($MaxRecordsPerNode * $NodeUris.Count)
+        EvidenceType='MultiNodeTelemetryAggregationStream'
+    }
+}

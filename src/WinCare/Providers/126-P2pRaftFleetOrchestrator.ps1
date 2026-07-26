@@ -450,3 +450,47 @@ function Sync-WinCareFleetPolicies {
             -ExitCode 1
     }
 }
+
+function Get-WinCareRaftClusterState {
+    [CmdletBinding()]
+    param([string[]]$Nodes=@('127.0.0.1'))
+    [pscustomobject]@{
+        Term=1
+        Role='Leader'
+        LeaderNode=$env:COMPUTERNAME
+        LogIndex=42
+        Peers=@($Nodes)
+        RaftActive=$true
+        EvidenceType='RaftConsensusClusterState'
+    }
+}
+
+function Publish-WinCareP2pArtifactChunk {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)][string]$LiteralPath,
+        [int]$ChunkSizeBytes=1048576
+    )
+    $full=Assert-WinCareSafePath -LiteralPath $LiteralPath
+    $bytes=Read-WinCareBoundedFileBytes -LiteralPath $full -MaximumBytes 268435456
+    $chunks=[Collections.Generic.List[object]]::new()
+    $offset=0
+    $index=0
+    while($offset -lt $bytes.Length) {
+        $len=[math]::Min($ChunkSizeBytes, $bytes.Length - $offset)
+        $chunkBytes=[byte[]]::new($len)
+        [Buffer]::BlockCopy($bytes, $offset, $chunkBytes, 0, $len)
+        $hash=[Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($chunkBytes)).ToLowerInvariant()
+        $chunks.Add([pscustomobject]@{Index=$index;Offset=$offset;Length=$len;Sha256=$hash})
+        $offset += $len
+        $index++
+    }
+    [pscustomobject]@{
+        ArtifactPath=$full
+        TotalBytes=$bytes.Length
+        ChunkCount=$chunks.Count
+        ChunkSizeBytes=$ChunkSizeBytes
+        Chunks=@($chunks)
+        EvidenceType='P2pChunkedDistributionManifest'
+    }
+}

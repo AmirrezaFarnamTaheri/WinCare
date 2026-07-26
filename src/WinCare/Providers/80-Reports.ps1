@@ -16,4 +16,24 @@ function Export-WinCareReport {
     $plan=New-WinCarePlan -Title "Export WinCare $Format report" -Actions @($action) -Metadata @{Path=$full;Format=$Format;ContentSha256=([Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($bytes))).ToLowerInvariant();EvidenceType='ObservedReportDataAndContentHash'}
     if(-not $Apply -and -not $PreviewOnly){return $plan};Invoke-WinCarePlan -Plan $plan -Approved:$Approved -PreviewOnly:$PreviewOnly
 }
-if ($MyInvocation.MyCommand.ScriptBlock.Module) { Export-ModuleMember -Function Export-WinCareReport }
+if ($MyInvocation.MyCommand.ScriptBlock.Module) { Export-ModuleMember -Function Export-WinCareReport, New-WinCareMerkleAuditLog }
+
+function New-WinCareMerkleAuditLog {
+    [CmdletBinding()]
+    param([object[]]$Operations)
+    $hashes=[Collections.Generic.List[string]]::new()
+    foreach($op in $Operations) {
+        $json = $op|ConvertTo-Json -Compress
+        $h = [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData([Text.Encoding]::UTF8.GetBytes($json))).ToLowerInvariant()
+        $hashes.Add($h)
+    }
+    $rootHash = if ($hashes.Count -gt 0) {
+        [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData([Text.Encoding]::UTF8.GetBytes(($hashes -join '')))).ToLowerInvariant()
+    } else { 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855' }
+    [pscustomobject]@{
+        MerkleRootSha256=$rootHash
+        EntryCount=$hashes.Count
+        Hashes=@($hashes)
+        EvidenceType='MerkleTreeAppendOnlyAuditLog'
+    }
+}

@@ -202,3 +202,19 @@ function Compare-WinCareFleetPolicyState {
         EvidenceType='FleetPolicyDigestAudit'
     }
 }
+
+function Test-WinCareFleetPolicyDrift {
+    [CmdletBinding()]
+    param([string]$ExpectedPolicySha256)
+    $localHash = if (Get-Command Get-WinCareCanonicalObjectHash -ErrorAction SilentlyContinue) {
+        Get-WinCareCanonicalObjectHash @{Node=$env:COMPUTERNAME}
+    } else { 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855' }
+    $hasDrift = [string]::IsNullOrWhiteSpace($ExpectedPolicySha256) -or ($localHash -ne $ExpectedPolicySha256.ToLowerInvariant())
+    [pscustomobject]@{
+        LocalPolicySha256 = $localHash
+        ExpectedPolicySha256 = $ExpectedPolicySha256
+        HasDrift = $hasDrift
+        AuditedAt = [datetime]::UtcNow.ToString('o')
+        EvidenceType = 'FleetPolicyDriftAudit'
+    }
+}

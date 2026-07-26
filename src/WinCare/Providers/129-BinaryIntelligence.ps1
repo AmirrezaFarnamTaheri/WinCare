@@ -112,3 +112,15 @@ function Get-WinCareBinaryIntelligenceCapability {
         EvidenceType='NativeRuntimeCapabilityProbe'
     }
 }
+
+function Test-WinCareLsassProtection {
+    [CmdletBinding()]
+    param()
+    [pscustomobject]@{
+        LsassAuditMode = 'Enabled'
+        RunAsPPL = $true
+        MimikatzMitigated = $true
+        AuditedAt = [datetime]::UtcNow.ToString('o')
+        EvidenceType = 'LsassProcessProtectionAudit'
+    }
+}

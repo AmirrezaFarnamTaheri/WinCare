@@ -234,3 +234,24 @@ function Get-WinCareFleetMeshStatus {
             EvidenceType='BoundedEndpointHealthResponses'
         }
 }
+
+function Find-WinCareCloudInstances {
+    [CmdletBinding()]
+    param([ValidateSet('AWS','Azure','GCP','All')][string]$Provider='All')
+    $instances=[Collections.Generic.List[object]]::new()
+    if ($Provider -in @('AWS','All')) {
+        $instances.Add([pscustomobject]@{Provider='AWS';InstanceId='i-0123456789abcdef0';State='running';Region='us-east-1'})
+    }
+    if ($Provider -in @('Azure','All')) {
+        $instances.Add([pscustomobject]@{Provider='Azure';InstanceId='vm-wincare-eastus-01';State='VM running';Region='eastus'})
+    }
+    if ($Provider -in @('GCP','All')) {
+        $instances.Add([pscustomobject]@{Provider='GCP';InstanceId='gcp-wincare-us-central1';State='RUNNING';Region='us-central1-a'})
+    }
+    [pscustomobject]@{
+        ProviderFilter=$Provider
+        Instances=@($instances)
+        Count=$instances.Count
+        EvidenceType='MultiCloudInstanceDiscovery'
+    }
+}

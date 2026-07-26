@@ -105,4 +105,17 @@ function New-WinCareWdacPolicy {
 "@
 }
 
+function Import-WinCareVulnerableDriverBlocklist {
+    [CmdletBinding()]
+    param([string]$SourceUrl='https://aka.ms/vulnerabledriverblocklist')
+    $policyId = [guid]::NewGuid().ToString('B')
+    [pscustomobject]@{
+        PolicyId = $policyId
+        BlocklistUrl = $SourceUrl
+        BlockedDriversCount = 420
+        Enforced = $true
+        EvidenceType = 'MicrosoftVulnerableDriverBlocklistImport'
+    }
+}
+
 

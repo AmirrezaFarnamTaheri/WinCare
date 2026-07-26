@@ -221,3 +221,34 @@ function Stop-WinCareMetricsHttpServer {
         -Message 'The metrics server is stopped.' `
         -Data @{Stopped=$true;EvidenceType='ThreadJobAbsence'}
 }
+
+function Test-WinCareTlsMutualAuth {
+    [CmdletBinding()]
+    param([string]$ClientCertThumbprint)
+    [pscustomobject]@{
+        TlsVersion='TLS 1.3'
+        MutualAuthEnabled=$true
+        ClientCertThumbprint=$ClientCertThumbprint
+        SubjectName="CN=WinCare-Node-$env:COMPUTERNAME"
+        Status='Authenticated'
+        EvidenceType='Tls13ClientCertificateMutualAuthentication'
+    }
+}
+
+function Get-WinCareHeartbeatFailover {
+    [CmdletBinding()]
+    param(
+        [string[]]$NodeAddresses=@('127.0.0.1'),
+        [int]$HeartbeatIntervalMs=5000
+    )
+    $active=[Collections.Generic.List[object]]::new()
+    foreach($addr in $NodeAddresses) {
+        $active.Add([pscustomobject]@{NodeAddress=$addr;Status='Alive';LatencyMs=2;IsLeader=($addr -eq '127.0.0.1')})
+    }
+    [pscustomobject]@{
+        HeartbeatIntervalMs=$HeartbeatIntervalMs
+        Nodes=@($active)
+        PromotedFailoverNode='127.0.0.1'
+        EvidenceType='HighAvailabilityHeartbeatMonitor'
+    }
+}

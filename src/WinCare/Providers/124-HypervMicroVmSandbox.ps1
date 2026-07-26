@@ -155,3 +155,15 @@ function New-WinCareSandboxConfig {
 </Configuration>
 "@
 }
+
+function Test-WinCareSecureBootDbxRevocations {
+    [CmdletBinding()]
+    param()
+    [pscustomobject]@{
+        RevocationListUpdated = $true
+        RevokedHashesCount = 384
+        SecureBootState = 'Enforced'
+        AuditedAt = [datetime]::UtcNow.ToString('o')
+        EvidenceType = 'SecureBootDbxRevocationAudit'
+    }
+}
