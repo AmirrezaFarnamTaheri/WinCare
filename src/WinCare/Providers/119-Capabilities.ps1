@@ -78,7 +78,7 @@ function Get-WinCareCapabilityRegistry {
     $hypervisor=Get-WinCareHypervisorIsolationState
     $virtualDisplay=Get-WinCareVirtualDisplayCapability
     $cloudConfig=Join-Path $PSScriptRoot '..\..\..\config\multicloud-targets.json'
-    $onnxHost=Join-Path $PSScriptRoot '..\bin\WinCare.OnnxHost.exe'
+    $onnxHost=Get-WinCarePackageBinaryPath -FileName 'WinCare.OnnxHost.exe'
     $windows=[bool]$IsWindows
 
     $capabilities=@(

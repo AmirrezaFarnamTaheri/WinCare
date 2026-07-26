@@ -439,9 +439,17 @@ class SecurityInvariantTests(unittest.TestCase):
             stripped = line.strip()
             if stripped.startswith("uses:"):
                 target = stripped[len("uses:"):].strip()
-                # Local composite/Docker actions (./path, docker://...) are not pinnable by SHA;
-                # every remote `owner/repo@ref` and every other `@`-bearing ref must be commit-pinned.
+                # Local composite actions (./path, ../path) and container actions
+                # (docker://image@sha256:...) are not GitHub commit refs, so the
+                # 40-hex-SHA rule below cannot apply to them. Container images must
+                # still be digest-pinned rather than tag-pinned.
                 if target.startswith("./") or target.startswith("../"):
+                    continue
+                if target.startswith("docker://"):
+                    self.assertIn(
+                        "@sha256:", target,
+                        f"Container action must be digest-pinned, not tag-pinned: {stripped}",
+                    )
                     continue
                 self.assertIn("@", target, f"Unpinnable non-local action reference: {stripped}")
                 ref = target.split("@", 1)[1]

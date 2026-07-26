@@ -1,26 +1,27 @@
 #requires -Version 7.2
 
-function Resolve-WinCareNativeAssemblyPath {
+function Get-WinCarePackageBinaryPath {
     <#
-        Resolve the trusted location of the source-built native assembly.
+        Resolve a source-built binary that ships in the package 'bin' directory.
 
         Both the developer build (Native/Build-WinCareNativePolyglot.ps1 defaults
         -OutputDirectory to '<repo>/bin') and the shipped package
         (tools/build_release.py writes every native artifact under 'bin/') place
-        WinCare.Native.dll one level above the module directory, not inside it.
+        these binaries one level above the module directory, not inside it.
         $script:WinCareModuleRoot is '<root>/src/WinCare', so the package-relative
         location is '<root>/bin'. A module-local '<root>/src/WinCare/bin' is still
         accepted as a fallback so a side-by-side layout keeps working.
 
         Returns the first candidate that exists; when none exists it returns the
         package-relative path so callers report the canonical expected location.
-        The single resolved path is used both to load the assembly and to verify
-        every resolved type's Assembly.Location, so the trust check stays exact.
     #>
     [CmdletBinding()]
-    param()
+    param([Parameter(Mandatory)][ValidateNotNullOrEmpty()][string]$FileName)
 
-    $relative = 'bin\WinCare.Native.dll'
+    if ([IO.Path]::GetFileName($FileName) -ne $FileName) {
+        throw "Package binary name must not contain a path component: $FileName"
+    }
+    $relative = Join-Path 'bin' $FileName
     $moduleRoot = $script:WinCareModuleRoot
     $candidates = [Collections.Generic.List[string]]::new()
     $packageRoot = Split-Path (Split-Path $moduleRoot -Parent) -Parent
@@ -33,6 +34,14 @@ function Resolve-WinCareNativeAssemblyPath {
         if (Test-Path -LiteralPath $candidate -PathType Leaf) { return $candidate }
     }
     return $candidates[0]
+}
+
+function Resolve-WinCareNativeAssemblyPath {
+    # The single resolved path is used both to load the assembly and to verify
+    # every resolved type's Assembly.Location, so the trust check stays exact.
+    [CmdletBinding()]
+    param()
+    Get-WinCarePackageBinaryPath -FileName 'WinCare.Native.dll'
 }
 
 function Initialize-WinCareNativeRuntime {
