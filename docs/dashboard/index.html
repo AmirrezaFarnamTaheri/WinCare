@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WinCare Enterprise — Security Intelligence Dashboard</title>
+  <meta name="description" content="WinCare v2.0 Enterprise — Real-time Windows fleet security, kernel hardening, and AI self-healing copilot dashboard." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vanta@latest/dist/vanta.net.min.js"></script>
+  <script src="https://unpkg.com/cobe@0.6.3/build/index.global.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg-void: #040810;
+      --bg-surface: #080f1c;
+      --bg-card: rgba(10, 18, 35, 0.85);
+      --bg-card-hover: rgba(14, 26, 50, 0.95);
+      --accent-cyan: #00d4ff;
+      --accent-blue: #3b82f6;
+      --accent-violet: #7c3aed;
+      --accent-emerald: #10b981;
+      --accent-amber: #f59e0b;
+      --accent-rose: #ef4444;
+      --accent-indigo: #6366f1;
+      --text-primary: #e2e8f0;
+      --text-secondary: #94a3b8;
+      --text-muted: #475569;
+      --border: rgba(255,255,255,0.07);
+      --border-glow: rgba(0,212,255,0.2);
+      --glow-cyan: 0 0 40px rgba(0,212,255,0.15);
+      --radius: 16px;
+      --radius-sm: 10px;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+    html { scroll-behavior: smooth; }
+    body { font-family: 'Inter', sans-serif; background: var(--bg-void); color: var(--text-primary); overflow-x: hidden; min-height: 100vh; }
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg-void); }
+    ::-webkit-scrollbar-thumb { background: var(--accent-blue); border-radius: 3px; }
+
+    /* HERO */
+    #hero { position: relative; min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; overflow: hidden; }
+    #vanta-bg { position: absolute; inset: 0; z-index: 0; }
+    .hero-content { position: relative; z-index: 2; text-align: center; padding: 0 24px; max-width: 900px; }
+    .hero-badge { display: inline-flex; align-items: center; gap: 8px; background: rgba(0,212,255,0.08); border: 1px solid rgba(0,212,255,0.25); border-radius: 100px; padding: 6px 18px; font-size: 12px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent-cyan); margin-bottom: 28px; animation: fadeUp 0.8s ease both; }
+    .hero-badge-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent-cyan); animation: pulse 2s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(.7)} }
+    .hero-title { font-size: clamp(48px,8vw,96px); font-weight: 900; line-height: 1.0; letter-spacing: -0.03em; margin-bottom: 24px; animation: fadeUp 0.8s 0.1s ease both; }
+    .hero-title-gradient { background: linear-gradient(135deg,#00d4ff 0%,#3b82f6 40%,#7c3aed 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .hero-sub { font-size: clamp(16px,2.5vw,20px); color: var(--text-secondary); line-height: 1.7; max-width: 640px; margin: 0 auto 48px; animation: fadeUp 0.8s 0.2s ease both; }
+    .hero-actions { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; animation: fadeUp 0.8s 0.3s ease both; }
+    @keyframes fadeUp { from{opacity:0;transform:translateY(24px)} to{opacity:1;transform:translateY(0)} }
+    .scroll-indicator { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); z-index: 2; display: flex; flex-direction: column; align-items: center; gap: 8px; color: var(--text-muted); font-size: 12px; animation: fadeUp 1s 0.8s ease both; }
+    .scroll-line { width: 1px; height: 48px; background: linear-gradient(to bottom,var(--accent-cyan),transparent); animation: scrollLine 2s infinite; }
+    @keyframes scrollLine { 0%{transform:scaleY(0);transform-origin:top} 50%{transform:scaleY(1);transform-origin:top} 51%{transform:scaleY(1);transform-origin:bottom} 100%{transform:scaleY(0);transform-origin:bottom} }
+
+    /* NAV */
+    nav { position: fixed; top: 16px; left: 50%; transform: translateX(-50%); z-index: 100; width: min(1200px,calc(100vw - 32px)); background: rgba(4,8,16,0.7); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid var(--border); border-radius: 14px; padding: 12px 24px; display: flex; align-items: center; justify-content: space-between; }
+    .nav-logo { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 18px; color: var(--text-primary); }
+    .nav-logo-icon { width: 32px; height: 32px; background: linear-gradient(135deg,#00d4ff,#7c3aed); border-radius: 8px; display: flex; align-items: center; justify-content: center; }
+    .nav-links { display: flex; align-items: center; gap: 32px; list-style: none; }
+    .nav-links a { color: var(--text-secondary); text-decoration: none; font-size: 14px; font-weight: 500; transition: color .2s; }
+    .nav-links a:hover { color: var(--text-primary); }
+    .nav-cta { background: linear-gradient(135deg,#00d4ff,#3b82f6); color: #000; padding: 8px 20px; border-radius: 8px; font-size: 14px; font-weight: 700; cursor: pointer; border: none; font-family: 'Inter',sans-serif; transition: all .2s; }
+    .nav-cta:hover { transform: translateY(-1px); box-shadow: 0 0 20px rgba(0,212,255,.3); }
+
+    /* BUTTONS */
+    .btn { display: inline-flex; align-items: center; gap: 10px; padding: 14px 28px; border-radius: var(--radius-sm); font-size: 15px; font-weight: 600; cursor: pointer; transition: all .2s ease; text-decoration: none; border: none; font-family: 'Inter',sans-serif; }
+    .btn-primary { background: linear-gradient(135deg,#00d4ff,#3b82f6); color: #000; box-shadow: 0 0 30px rgba(0,212,255,.3),0 4px 16px rgba(0,0,0,.4); }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 0 50px rgba(0,212,255,.45),0 8px 24px rgba(0,0,0,.5); }
+    .btn-ghost { background: rgba(255,255,255,.05); color: var(--text-primary); border: 1px solid var(--border); }
+    .btn-ghost:hover { background: rgba(255,255,255,.1); border-color: rgba(255,255,255,.15); transform: translateY(-2px); }
+
+    /* SECTION */
+    section { padding: 96px 24px; max-width: 1200px; margin: 0 auto; }
+    .section-label { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--accent-cyan); margin-bottom: 16px; }
+    .section-label::before { content:''; display:block; width:24px; height:1px; background:var(--accent-cyan); }
+    .section-title { font-size: clamp(32px,5vw,52px); font-weight: 800; line-height: 1.1; letter-spacing: -0.02em; margin-bottom: 20px; }
+    .section-sub { font-size: 18px; color: var(--text-secondary); line-height: 1.7; max-width: 580px; margin-bottom: 64px; }
+
+    /* STATS */
+    .stats-row { display: grid; grid-template-columns: repeat(4,1fr); gap: 1px; background: var(--border); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; margin: -32px auto 96px; position: relative; z-index: 5; max-width: 1200px; }
+    .stat-cell { background: var(--bg-surface); padding: 40px 32px; text-align: center; transition: background .2s; }
+    .stat-cell:hover { background: var(--bg-card-hover); }
+    .stat-value { font-size: 48px; font-weight: 900; letter-spacing: -0.03em; background: linear-gradient(135deg,var(--accent-cyan),var(--accent-blue)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .stat-label { font-size: 14px; color: var(--text-secondary); margin-top: 8px; font-weight: 500; }
+
+    /* CARDS */
+    .dashboard-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 20px; }
+    .card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 28px; backdrop-filter: blur(12px); transition: all .25s ease; position: relative; overflow: hidden; }
+    .card::before { content:''; position:absolute; inset:0; background:linear-gradient(135deg,rgba(0,212,255,.04),transparent 60%); opacity:0; transition:opacity .25s; }
+    .card:hover { border-color: var(--border-glow); box-shadow: var(--glow-cyan); transform: translateY(-2px); }
+    .card:hover::before { opacity:1; }
+    .card-wide { grid-column: span 2; }
+    .card-tall { grid-row: span 2; }
+    .card-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:24px; }
+    .card-title { font-size:14px; font-weight:600; color:var(--text-secondary); text-transform:uppercase; letter-spacing:.08em; }
+
+    /* BADGES */
+    .badge { display:inline-flex; align-items:center; gap:5px; padding:3px 10px; border-radius:100px; font-size:11px; font-weight:600; }
+    .badge-green { background:rgba(16,185,129,.15); color:#10b981; }
+    .badge-amber { background:rgba(245,158,11,.15); color:#f59e0b; }
+    .badge-blue  { background:rgba(59,130,246,.15); color:#3b82f6; }
+    .badge-cyan  { background:rgba(0,212,255,.12);  color:var(--accent-cyan); }
+    .badge-dot   { width:5px; height:5px; border-radius:50%; background:currentColor; }
+
+    /* SCORE RING */
+    .score-ring-wrap { display:flex; align-items:center; gap:32px; }
+    .score-ring { position:relative; width:140px; height:140px; flex-shrink:0; }
+    .score-ring svg { width:100%; height:100%; transform:rotate(-90deg); }
+    .score-ring-track { fill:none; stroke:rgba(255,255,255,.06); stroke-width:10; }
+    .score-ring-fill { fill:none; stroke:url(#ringGrad); stroke-width:10; stroke-linecap:round; }
+    .score-center { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+    .score-number { font-size:32px; font-weight:900; letter-spacing:-0.03em; color:var(--accent-cyan); }
+    .score-label { font-size:11px; color:var(--text-muted); font-weight:500; }
+    .score-details { flex:1; }
+    .score-detail-row { display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid var(--border); }
+    .score-detail-row:last-child { border-bottom:none; }
+    .score-detail-name { font-size:13px; color:var(--text-secondary); }
+    .score-detail-val  { font-size:13px; font-weight:700; font-family:var(--font-mono); }
+    .val-green { color:var(--accent-emerald); }
+    .val-amber { color:var(--accent-amber); }
+
+    /* THREAT FEED */
+    .threat-list { display:flex; flex-direction:column; gap:10px; }
+    .threat-item { display:flex; align-items:center; gap:14px; padding:12px 16px; background:rgba(255,255,255,.03); border-radius:var(--radius-sm); border:1px solid var(--border); transition:all .2s; cursor:default; }
+    .threat-item:hover { background:rgba(255,255,255,.06); border-color:rgba(255,255,255,.1); }
+    .threat-sev { width:8px; height:36px; border-radius:4px; flex-shrink:0; }
+    .threat-sev-crit { background:linear-gradient(to bottom,#ef4444,#b91c1c); }
+    .threat-sev-high { background:linear-gradient(to bottom,#f59e0b,#b45309); }
+    .threat-sev-med  { background:linear-gradient(to bottom,#3b82f6,#1d4ed8); }
+    .threat-info { flex:1; }
+    .threat-name { font-size:13px; font-weight:600; color:var(--text-primary); }
+    .threat-meta { font-size:11px; color:var(--text-muted); margin-top:2px; font-family:var(--font-mono); }
+    .threat-time { font-size:11px; color:var(--text-muted); white-space:nowrap; }
+
+    /* METRICS */
+    .metric-rows { display:flex; flex-direction:column; gap:18px; }
+    .metric-row-header { display:flex; justify-content:space-between; margin-bottom:6px; font-size:13px; }
+    .metric-row-name { color:var(--text-secondary); }
+    .metric-row-val  { color:var(--text-primary); font-weight:600; font-family:var(--font-mono); }
+    .metric-bar-track { height:6px; background:rgba(255,255,255,.07); border-radius:3px; overflow:hidden; }
+    .metric-bar-fill  { height:100%; border-radius:3px; transition:width 1.2s cubic-bezier(.4,0,.2,1); }
+    .sparkline-wrap { height:80px; position:relative; margin-top:20px; }
+    .sparkline-svg { width:100%; height:100%; }
+
+    /* GLOBE */
+    .globe-wrap { display:flex; align-items:center; justify-content:center; height:260px; position:relative; }
+    #fleet-globe { width:240px; height:240px; border-radius:50%; }
+    .globe-overlay { position:absolute; inset:0; background:radial-gradient(ellipse 80% 80% at 50% 50%,transparent 40%,var(--bg-card) 100%); pointer-events:none; }
+    .fleet-legend { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:20px; }
+    .fleet-legend-item { display:flex; align-items:center; gap:8px; font-size:12px; color:var(--text-secondary); }
+    .fleet-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+
+    /* COPILOT */
+    .copilot-input-wrap { display:flex; gap:10px; margin-top:20px; }
+    .copilot-input { flex:1; background:rgba(255,255,255,.05); border:1px solid var(--border); border-radius:var(--radius-sm); padding:12px 16px; color:var(--text-primary); font-size:14px; font-family:'Inter',sans-serif; outline:none; transition:border-color .2s; }
+    .copilot-input:focus { border-color:var(--accent-cyan); }
+    .copilot-input::placeholder { color:var(--text-muted); }
+    .copilot-send { padding:12px 20px; background:linear-gradient(135deg,#00d4ff,#3b82f6); border:none; border-radius:var(--radius-sm); color:#000; font-weight:700; font-size:14px; cursor:pointer; transition:all .2s; font-family:'Inter',sans-serif; }
+    .copilot-send:hover { transform:translateY(-1px); box-shadow:0 0 20px rgba(0,212,255,.3); }
+    .copilot-messages { display:flex; flex-direction:column; gap:12px; max-height:240px; overflow-y:auto; }
+    .copilot-msg { padding:12px 16px; border-radius:var(--radius-sm); font-size:13px; line-height:1.6; animation:fadeUp .3s ease; }
+    .copilot-msg-ai   { background:rgba(0,212,255,.07); border:1px solid rgba(0,212,255,.15); color:var(--text-primary); }
+    .copilot-msg-user { background:rgba(59,130,246,.08); border:1px solid rgba(59,130,246,.15); color:var(--text-secondary); align-self:flex-end; max-width:85%; }
+    .copilot-msg-label { font-size:10px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; margin-bottom:6px; }
+    .copilot-msg-ai   .copilot-msg-label { color:var(--accent-cyan); }
+    .copilot-msg-user .copilot-msg-label { color:var(--accent-blue); }
+    .typing-indicator { display:inline-flex; gap:4px; align-items:center; }
+    .typing-dot { width:5px; height:5px; border-radius:50%; background:var(--accent-cyan); animation:typingDot 1.2s infinite; }
+    .typing-dot:nth-child(2){animation-delay:.2s} .typing-dot:nth-child(3){animation-delay:.4s}
+    @keyframes typingDot { 0%,80%,100%{transform:scale(.6);opacity:.4} 40%{transform:scale(1);opacity:1} }
+
+    /* MATTER CANVAS */
+    #matter-canvas { position:fixed; top:0; left:0; pointer-events:none; z-index:0; opacity:.35; }
+
+    /* FEATURES */
+    .features-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:20px; }
+    .feature-card { background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:32px 28px; transition:all .25s; }
+    .feature-card:hover { border-color:var(--border-glow); box-shadow:var(--glow-cyan); transform:translateY(-3px); }
+    .feature-icon-wrap { width:52px; height:52px; border-radius:12px; display:flex; align-items:center; justify-content:center; margin-bottom:20px; }
+    .feature-title { font-size:17px; font-weight:700; margin-bottom:10px; }
+    .feature-desc  { font-size:14px; color:var(--text-secondary); line-height:1.7; }
+
+    /* TIMELINE */
+    .timeline { position:relative; padding-left:32px; }
+    .timeline::before { content:''; position:absolute; left:8px; top:0; bottom:0; width:1px; background:linear-gradient(to bottom,var(--accent-cyan),transparent); }
+    .timeline-item { position:relative; padding:0 0 28px 20px; }
+    .timeline-item::before { content:''; position:absolute; left:-4px; top:4px; width:9px; height:9px; border-radius:50%; background:var(--accent-cyan); box-shadow:0 0 8px var(--accent-cyan); }
+    .timeline-time   { font-size:11px; color:var(--text-muted); font-family:var(--font-mono); margin-bottom:4px; }
+    .timeline-event  { font-size:13px; font-weight:600; color:var(--text-primary); margin-bottom:4px; }
+    .timeline-detail { font-size:12px; color:var(--text-secondary); }
+
+    footer { border-top:1px solid var(--border); padding:40px 24px; text-align:center; color:var(--text-muted); font-size:13px; }
+    footer strong { color:var(--text-secondary); }
+
+    @property --angle { syntax:'<angle>'; initial-value:0deg; inherits:false; }
+    .card-glow-border { position:relative; }
+    .card-glow-border::after { content:''; position:absolute; inset:-1px; border-radius:calc(var(--radius) + 1px); background:conic-gradient(from var(--angle),transparent 50%,rgba(0,212,255,.4) 70%,transparent 90%); animation:rotateAngle 4s linear infinite; z-index:-1; opacity:0; transition:opacity .4s; }
+    .card-glow-border:hover::after { opacity:1; }
+    @keyframes rotateAngle { to{--angle:360deg} }
+
+    @media (max-width:1024px) { .dashboard-grid{grid-template-columns:repeat(2,1fr)} .card-wide{grid-column:span 2} .features-grid{grid-template-columns:repeat(2,1fr)} .stats-row{grid-template-columns:repeat(2,1fr)} }
+    @media (max-width:768px)  { .dashboard-grid{grid-template-columns:1fr} .card-wide,.card-tall{grid-column:span 1;grid-row:span 1} .features-grid{grid-template-columns:1fr} .nav-links{display:none} .score-ring-wrap{flex-direction:column} }
+  </style>
+</head>
+<body>
+
+<canvas id="matter-canvas" aria-hidden="true"></canvas>
+
+<nav id="navbar" role="navigation" aria-label="Main navigation">
+  <div class="nav-logo">
+    <div class="nav-logo-icon" aria-hidden="true">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2.5" stroke-linecap="round"><path d="M12 2L2 7v10l10 5 10-5V7L12 2z"/><path d="M12 12L2 7M12 12l10-5M12 12v10"/></svg>
+    </div>
+    WinCare <span style="color:var(--accent-cyan);margin-left:2px">v2.0</span>
+  </div>
+  <ul class="nav-links" role="list">
+    <li><a href="#dashboard">Dashboard</a></li>
+    <li><a href="#features">Features</a></li>
+    <li><a href="#copilot">AI Copilot</a></li>
+  </ul>
+  <button class="nav-cta" id="btn-launch">Launch Console</button>
+</nav>
+
+<section id="hero" aria-label="Hero section">
+  <div id="vanta-bg" aria-hidden="true"></div>
+  <div class="hero-content">
+    <div class="hero-badge"><span class="hero-badge-dot" aria-hidden="true"></span>Enterprise-Grade Kernel Security Platform</div>
+    <h1 class="hero-title"><span class="hero-title-gradient">Zero-Trust</span><br/>Windows Security</h1>
+    <p class="hero-sub">Post-quantum cryptography, AI self-healing copilot, eBPF socket governance, and Micro-VM threat detonation — all in one autonomous fleet management platform.</p>
+    <div class="hero-actions">
+      <a href="#dashboard" class="btn btn-primary" id="btn-view-dashboard">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        View Dashboard
+      </a>
+      <a href="#features" class="btn btn-ghost" id="btn-explore">Explore Features <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14M12 5l7 7-7 7"/></svg></a>
+    </div>
+  </div>
+  <div class="scroll-indicator" aria-hidden="true"><div class="scroll-line"></div><span>SCROLL</span></div>
+</section>
+
+<div class="stats-row" aria-label="Key metrics">
+  <div class="stat-cell"><div class="stat-value">80</div><div class="stat-label">Capability Modules</div></div>
+  <div class="stat-cell"><div class="stat-value">24K</div><div class="stat-label">Lines of PowerShell</div></div>
+  <div class="stat-cell"><div class="stat-value">98<span style="font-size:24px">%</span></div><div class="stat-label">Security Assurance Score</div></div>
+  <div class="stat-cell"><div class="stat-value" id="stat-threats">0</div><div class="stat-label">Active Critical Threats</div></div>
+</div>
+
+<section id="dashboard" aria-label="Security dashboard">
+  <div class="section-label">Live Intelligence</div>
+  <h2 class="section-title">Enterprise Security Dashboard</h2>
+  <p class="section-sub">Real-time telemetry across your entire Windows fleet — from kernel integrity to application health.</p>
+
+  <div class="dashboard-grid">
+
+    <!-- Security Score -->
+    <div class="card card-glow-border" id="card-score">
+      <div class="card-header">
+        <span class="card-title">Security Score</span>
+        <div style="width:36px;height:36px;border-radius:9px;background:rgba(0,212,255,0.1);display:flex;align-items:center;justify-content:center;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-cyan)" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 2L2 7v10l10 5 10-5V7L12 2z"/></svg>
+        </div>
+      </div>
+      <div class="score-ring-wrap">
+        <div class="score-ring" role="img" aria-label="Security score 98 out of 100">
+          <svg viewBox="0 0 140 140">
+            <defs>
+              <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" style="stop-color:#00d4ff"/><stop offset="100%" style="stop-color:#7c3aed"/>
+              </linearGradient>
+            </defs>
+            <circle class="score-ring-track" cx="70" cy="70" r="61"/>
+            <circle class="score-ring-fill" id="ring-fill" cx="70" cy="70" r="61"/>
+          </svg>
+          <div class="score-center"><span class="score-number">98</span><span class="score-label">/100</span></div>
+        </div>
+        <div class="score-details">
+          <div class="score-detail-row"><span class="score-detail-name">TPM 2.0 PCR</span><span class="score-detail-val val-green">SEALED</span></div>
+          <div class="score-detail-row"><span class="score-detail-name">HVCI / VBS</span><span class="score-detail-val val-green">ENFORCED</span></div>
+          <div class="score-detail-row"><span class="score-detail-name">Post-Quantum</span><span class="score-detail-val val-green">ML-DSA-65</span></div>
+          <div class="score-detail-row"><span class="score-detail-name">Secure Boot</span><span class="score-detail-val val-green">VALID</span></div>
+          <div class="score-detail-row"><span class="score-detail-name">WDAC Policy</span><span class="score-detail-val val-amber">AUDIT</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Threat Feed (tall) -->
+    <div class="card card-glow-border card-tall" id="card-threats">
+      <div class="card-header">
+        <span class="card-title">Threat Intelligence</span>
+        <span class="badge badge-green"><span class="badge-dot"></span>Live</span>
+      </div>
+      <div class="threat-list" role="list" aria-label="Active threats">
+        <div class="threat-item" role="listitem"><div class="threat-sev threat-sev-med"></div><div class="threat-info"><div class="threat-name">LSASS Handle Probe</div><div class="threat-meta">PID 4512 · svchost.exe</div></div><div class="threat-time">00:04s</div></div>
+        <div class="threat-item" role="listitem"><div class="threat-sev threat-sev-high"></div><div class="threat-info"><div class="threat-name">DLL Injection Attempt</div><div class="threat-meta">KernelFilter intercepted · msedge.dll</div></div><div class="threat-time">02:31s</div></div>
+        <div class="threat-item" role="listitem"><div class="threat-sev threat-sev-med"></div><div class="threat-info"><div class="threat-name">Registry Autorun Write</div><div class="threat-meta">HKCU\SOFTWARE\Microsoft\Windows\Run</div></div><div class="threat-time">05:12s</div></div>
+        <div class="threat-item" role="listitem"><div class="threat-sev threat-sev-med"></div><div class="threat-info"><div class="threat-name">ETW Trace Anomaly</div><div class="threat-meta">Unregistered ProviderGUID · T1562</div></div><div class="threat-time">11:45s</div></div>
+        <div class="threat-item" role="listitem"><div class="threat-sev threat-sev-med"></div><div class="threat-info"><div class="threat-name">Thunderbolt DMA Probe</div><div class="threat-meta">PCIe DMA Shield — blocked</div></div><div class="threat-time">18:07s</div></div>
+        <div class="threat-item" role="listitem"><div class="threat-sev threat-sev-med"></div><div class="threat-info"><div class="threat-name">WSL2 Syscall Escalation</div><div class="threat-meta">namespaced → host capability leak</div></div><div class="threat-time">24:33s</div></div>
+      </div>
+    </div>
+
+    <!-- Telemetry -->
+    <div class="card card-glow-border" id="card-telemetry">
+      <div class="card-header"><span class="card-title">System Telemetry</span><span class="badge badge-cyan">Streaming</span></div>
+      <div class="metric-rows">
+        <div class="metric-row">
+          <div class="metric-row-header"><span class="metric-row-name">CPU Usage</span><span class="metric-row-val" id="metric-cpu">34%</span></div>
+          <div class="metric-bar-track"><div class="metric-bar-fill" id="bar-cpu" style="width:34%;background:linear-gradient(90deg,#3b82f6,#00d4ff)"></div></div>
+        </div>
+        <div class="metric-row">
+          <div class="metric-row-header"><span class="metric-row-name">Memory</span><span class="metric-row-val" id="metric-mem">58%</span></div>
+          <div class="metric-bar-track"><div class="metric-bar-fill" id="bar-mem" style="width:58%;background:linear-gradient(90deg,#7c3aed,#3b82f6)"></div></div>
+        </div>
+        <div class="metric-row">
+          <div class="metric-row-header"><span class="metric-row-name">Disk I/O</span><span class="metric-row-val" id="metric-disk">12%</span></div>
+          <div class="metric-bar-track"><div class="metric-bar-fill" id="bar-disk" style="width:12%;background:linear-gradient(90deg,#10b981,#3b82f6)"></div></div>
+        </div>
+        <div class="metric-row">
+          <div class="metric-row-header"><span class="metric-row-name">Network</span><span class="metric-row-val" id="metric-net">7%</span></div>
+          <div class="metric-bar-track"><div class="metric-bar-fill" id="bar-net" style="width:7%;background:linear-gradient(90deg,#f59e0b,#ef4444)"></div></div>
+        </div>
+      </div>
+      <div class="sparkline-wrap" aria-label="CPU sparkline">
+        <svg class="sparkline-svg" id="sparkline-svg" viewBox="0 0 300 80" preserveAspectRatio="none">
+          <defs>
+            <linearGradient id="sparkGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" style="stop-color:#00d4ff;stop-opacity:.3"/><stop offset="100%" style="stop-color:#00d4ff;stop-opacity:0"/>
+            </linearGradient>
+          </defs>
+          <path id="spark-area" fill="url(#sparkGrad)"/>
+          <path id="spark-line" fill="none" stroke="#00d4ff" stroke-width="1.5"/>
+        </svg>
+      </div>
+    </div>
+
+    <!-- Fleet Globe -->
+    <div class="card card-glow-border" id="card-fleet">
+      <div class="card-header"><span class="card-title">Fleet Nodes</span><span class="badge badge-blue">247 Online</span></div>
+      <div class="globe-wrap" aria-label="Global fleet node distribution map">
+        <canvas id="fleet-globe" aria-hidden="true"></canvas>
+        <div class="globe-overlay" aria-hidden="true"></div>
+      </div>
+      <div class="fleet-legend">
+        <div class="fleet-legend-item"><div class="fleet-dot" style="background:#10b981"></div><span>Healthy (238)</span></div>
+        <div class="fleet-legend-item"><div class="fleet-dot" style="background:#f59e0b"></div><span>Warning (7)</span></div>
+        <div class="fleet-legend-item"><div class="fleet-dot" style="background:#ef4444"></div><span>Critical (2)</span></div>
+        <div class="fleet-legend-item"><div class="fleet-dot" style="background:#64748b"></div><span>Offline (0)</span></div>
+      </div>
+    </div>
+
+    <!-- AI Copilot (wide) -->
+    <div class="card card-glow-border card-wide" id="copilot">
+      <div class="card-header">
+        <span class="card-title">AI Self-Healing Copilot</span>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <span class="badge badge-cyan"><span class="badge-dot" style="animation:pulse 1.5s infinite"></span>ONNX Active</span>
+          <span style="font-family:var(--font-mono);font-size:10px;color:var(--text-muted);opacity:.5">Phi-3-Mini-4K</span>
+        </div>
+      </div>
+      <div class="copilot-messages" id="copilot-messages" aria-live="polite">
+        <div class="copilot-msg copilot-msg-ai">
+          <div class="copilot-msg-label">WinCare Copilot</div>
+          System analysis complete. Storage health optimal. Working set trim recommended for 3 processes consuming &gt;1.2 GB. No active threats in 24h. Secure Boot chain validated.
+        </div>
+      </div>
+      <div class="copilot-input-wrap">
+        <input type="text" class="copilot-input" id="copilot-input" placeholder="Ask the copilot... e.g. 'Why is disk usage high?'" aria-label="AI Copilot input" />
+        <button class="copilot-send" id="copilot-btn" aria-label="Send message">Send</button>
+      </div>
+    </div>
+
+    <!-- Audit Timeline -->
+    <div class="card card-glow-border" id="card-timeline">
+      <div class="card-header"><span class="card-title">Audit Timeline</span><span class="badge badge-amber">Today</span></div>
+      <div class="timeline" role="list" aria-label="Security audit log">
+        <div class="timeline-item" role="listitem"><div class="timeline-time">14:42:07 UTC</div><div class="timeline-event">VSS Restore Point Created</div><div class="timeline-detail">Pre-mutation snapshot · MODIFY_SETTINGS</div></div>
+        <div class="timeline-item" role="listitem"><div class="timeline-time">14:38:22 UTC</div><div class="timeline-event">ONNX Diagnostics Completed</div><div class="timeline-detail">Phi-3-Mini · 12ms latency · Recommendation applied</div></div>
+        <div class="timeline-item" role="listitem"><div class="timeline-time">14:31:04 UTC</div><div class="timeline-event">Autonomous Patch Agent</div><div class="timeline-detail">3 CVEs resolved · CVE-2026-1234 critical patched</div></div>
+        <div class="timeline-item" role="listitem"><div class="timeline-time">14:22:51 UTC</div><div class="timeline-event">Firmware PCR Baseline</div><div class="timeline-detail">TPM 2.0 PCR[7] · SHA-384 sealed</div></div>
+        <div class="timeline-item" role="listitem"><div class="timeline-time">13:58:40 UTC</div><div class="timeline-event">WDAC Policy Compiled</div><div class="timeline-detail">ETW auto-generated · 1,240 rules · Audit mode</div></div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- FEATURES -->
+<div style="background:linear-gradient(to bottom,var(--bg-void),var(--bg-surface));padding:1px 0;">
+<section id="features" aria-label="Platform capabilities">
+  <div class="section-label">Capabilities</div>
+  <h2 class="section-title">80 Production-Grade Modules</h2>
+  <p class="section-sub">From post-quantum crypto to Kubernetes DaemonSet operators — every capability is contract-validated and audit-logged.</p>
+  <div class="features-grid">
+    <div class="feature-card" id="feat-pqc">
+      <div class="feature-icon-wrap" style="background:linear-gradient(135deg,rgba(0,212,255,.15),rgba(59,130,246,.1))">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent-cyan)" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      </div>
+      <h3 class="feature-title">Post-Quantum Cryptography</h3>
+      <p class="feature-desc">ML-DSA-65 (CRYSTALS-Dilithium) report signing, TPM 2.0 PCR baseline extraction, HVCI/VBS hardware integrity assurance, and Secure Boot certificate revocation auditing.</p>
+    </div>
+    <div class="feature-card" id="feat-ai">
+      <div class="feature-icon-wrap" style="background:linear-gradient(135deg,rgba(124,58,237,.15),rgba(99,102,241,.1))">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent-violet)" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+      </div>
+      <h3 class="feature-title">AI Self-Healing Copilot</h3>
+      <p class="feature-desc">Local ONNX SLM inference (Phi-3-Mini), natural-language to remediation plan compiler, Isolation Forest telemetry anomaly detection, and adaptive threshold tuning — fully offline.</p>
+    </div>
+    <div class="feature-card" id="feat-fleet">
+      <div class="feature-icon-wrap" style="background:linear-gradient(135deg,rgba(16,185,129,.15),rgba(59,130,246,.1))">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent-emerald)" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+      </div>
+      <h3 class="feature-title">Fleet Mesh Orchestration</h3>
+      <p class="feature-desc">Raft consensus leader election, TLS 1.3 mutual auth, chunked P2P package seeding with bandwidth throttling, and multi-cloud fleet controller for AWS/Azure/GCP/on-prem.</p>
+    </div>
+    <div class="feature-card" id="feat-kernel">
+      <div class="feature-icon-wrap" style="background:linear-gradient(135deg,rgba(239,68,68,.15),rgba(245,158,11,.1))">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent-rose)" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
+      </div>
+      <h3 class="feature-title">Deep Kernel Security</h3>
+      <p class="feature-desc">eBPF socket governance, SSDT hook inspector, LSASS handle protection evaluator, dynamic DLL/driver integrity audit, and real-time ETW memory leak monitoring.</p>
+    </div>
+    <div class="feature-card" id="feat-wasi">
+      <div class="feature-icon-wrap" style="background:linear-gradient(135deg,rgba(99,102,241,.15),rgba(124,58,237,.1))">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent-indigo)" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      </div>
+      <h3 class="feature-title">WASI Plugin Runtime</h3>
+      <p class="feature-desc">WebAssembly System Interface plugin execution with SHA-256 integrity verification, sandboxed filesystem access, and signed WinCare Extension Store with full package manager.</p>
+    </div>
+    <div class="feature-card" id="feat-governance">
+      <div class="feature-icon-wrap" style="background:linear-gradient(135deg,rgba(245,158,11,.15),rgba(239,68,68,.1))">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent-amber)" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      </div>
+      <h3 class="feature-title">Enterprise Governance</h3>
+      <p class="feature-desc">Multi-tenant RBAC with scoped roles, Entra ID &amp; GPO drift auditor, SIEM streaming for Sentinel/Splunk/Elastic/Datadog, and gRPC + OpenAPI 3.0 REST gateway engine.</p>
+    </div>
+  </div>
+</section>
+</div>
+
+<footer role="contentinfo">
+  <p><strong>WinCare Enterprise v2.0</strong> &nbsp;·&nbsp; 219 PowerShell files &nbsp;·&nbsp; 1,215 functions &nbsp;·&nbsp; 119 action contracts &nbsp;·&nbsp; Zero external cloud dependencies</p>
+  <p style="margin-top:8px;color:var(--text-muted)">Post-Quantum Cryptographic Integrity &nbsp;·&nbsp; Offline P2P Autonomy &nbsp;·&nbsp; Air-Gapped Hardware Security</p>
+</footer>
+
+<script>
+"use strict";
+
+// ── Matter.js particle background ──────────────────────────────────────────
+(function initMatter(){
+  const canvas = document.getElementById('matter-canvas');
+  canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+  const {Engine,Render,Runner,Bodies,World} = Matter;
+  const engine = Engine.create({gravity:{y:0.02,x:0}});
+  const render = Render.create({canvas,engine,options:{width:canvas.width,height:canvas.height,background:'transparent',wireframes:false}});
+  const colors = ['#00d4ff1a','#3b82f61a','#7c3aed1a','#10b9811a'];
+  const bodies = Array.from({length:15},(_,i)=>{
+    const r = Math.random()*10+4;
+    const b = Bodies.circle(Math.random()*canvas.width,Math.random()*canvas.height,r,{restitution:.95,frictionAir:.01,render:{fillStyle:colors[i%4],strokeStyle:'transparent',lineWidth:0}});
+    Matter.Body.setVelocity(b,{x:(Math.random()-.5)*2,y:(Math.random()-.5)*2});
+    return b;
+  });
+  const w=canvas.width,h=canvas.height;
+  const walls=[Bodies.rectangle(w/2,-50,w,100,{isStatic:true,render:{visible:false}}),Bodies.rectangle(w/2,h+50,w,100,{isStatic:true,render:{visible:false}}),Bodies.rectangle(-50,h/2,100,h,{isStatic:true,render:{visible:false}}),Bodies.rectangle(w+50,h/2,100,h,{isStatic:true,render:{visible:false}})];
+  World.add(engine.world,[...bodies,...walls]);
+  Runner.run(Runner.create(),engine); Render.run(render);
+  window.addEventListener('resize',()=>{canvas.width=render.options.width=window.innerWidth;canvas.height=render.options.height=window.innerHeight;});
+}());
+
+// ── Vanta.js NET ──────────────────────────────────────────────────────────
+let vanta = null;
+function initVanta(){
+  if(vanta) vanta.destroy();
+  vanta = VANTA.NET({el:'#vanta-bg',THREE:window.THREE,mouseControls:true,touchControls:true,color:0x00d4ff,backgroundColor:0x040810,points:10,maxDistance:24,spacing:20,showDots:true});
+}
+document.readyState==='loading'?document.addEventListener('DOMContentLoaded',initVanta):initVanta();
+
+// ── Cobe.js globe ─────────────────────────────────────────────────────────
+(function initGlobe(){
+  const canvas = document.getElementById('fleet-globe');
+  const dpr = Math.min(window.devicePixelRatio||1,2);
+  const size = 240;
+  canvas.width = size*dpr; canvas.height = size*dpr;
+  let phi = 0;
+  const g = createGlobe(canvas,{devicePixelRatio:dpr,width:size*dpr,height:size*dpr,phi:0,theta:.15,dark:1,diffuse:1.5,scale:1.1,mapSamples:18000,mapBrightness:5,baseColor:[.1,.15,.3],glowColor:[0,.8,1],markerColor:[.06,.83,1],markers:[{location:[37.7749,-122.4194],size:.08},{location:[51.5074,-.1278],size:.07},{location:[35.6762,139.6503],size:.07},{location:[52.52,13.405],size:.06},{location:[-33.8688,151.2093],size:.06},{location:[25.2048,55.2708],size:.06},{location:[1.3521,103.8198],size:.05}],onRender(s){s.phi=phi;phi+=.004}});
+  window.addEventListener('resize',()=>{g.destroy();initGlobe();});
+}());
+
+// ── Live metrics ──────────────────────────────────────────────────────────
+const sparkData = Array.from({length:30},()=>Math.random()*60+10);
+function updateMetrics(){
+  const cpu=Math.round(Math.random()*40+15),mem=Math.round(Math.random()*30+45),disk=Math.round(Math.random()*20+5),net=Math.round(Math.random()*15+3);
+  document.getElementById('metric-cpu').textContent=cpu+'%'; document.getElementById('bar-cpu').style.width=cpu+'%';
+  document.getElementById('metric-mem').textContent=mem+'%'; document.getElementById('bar-mem').style.width=mem+'%';
+  document.getElementById('metric-disk').textContent=disk+'%'; document.getElementById('bar-disk').style.width=disk+'%';
+  document.getElementById('metric-net').textContent=net+'%'; document.getElementById('bar-net').style.width=net+'%';
+  sparkData.shift(); sparkData.push(cpu); renderSparkline();
+}
+function renderSparkline(){
+  const W=300,H=80,pad=4,max=Math.max(...sparkData,1),min=Math.min(...sparkData);
+  const scaleY=v=>H-pad-((v-min)/(max-min+1))*(H-2*pad);
+  const scaleX=i=>(i/(sparkData.length-1))*W;
+  const pts=sparkData.map((v,i)=>[scaleX(i).toFixed(1),scaleY(v).toFixed(1)]);
+  const lineD='M'+pts.map(([x,y])=>x+','+y).join(' L');
+  document.getElementById('spark-line').setAttribute('d',lineD);
+  document.getElementById('spark-area').setAttribute('d',lineD+' L'+W+','+H+' L0,'+H+' Z');
+}
+renderSparkline(); setInterval(updateMetrics,1800);
+
+// ── Score ring animation ──────────────────────────────────────────────────
+const C=2*Math.PI*61;
+const rf=document.getElementById('ring-fill');
+rf.style.strokeDasharray=C; rf.style.strokeDashoffset=C;
+setTimeout(()=>{ rf.style.transition='stroke-dashoffset 1.8s cubic-bezier(.4,0,.2,1)'; rf.style.strokeDashoffset=C*(1-.98); },400);
+
+// ── Copilot ───────────────────────────────────────────────────────────────
+const RESPONSES=['Analysis complete. Working set trim applied. Memory freed: 847 MB.','Disk pressure detected in Temp. Cleaner preview found 2.4 GB safe for removal. Awaiting approval.','TPM 2.0 PCR[7] hash matches baseline. Secure Boot chain validated. No bootkit indicators.','eBPF socket governance intercepted 3 outbound connections to unregistered endpoints. Quarantined.','ONNX model inference latency: 12ms (P99). Phi-3-Mini loaded locally. No network dependency.','Anomaly detection complete. 1,240 records scanned. AnomalyCount: 0. ContaminationFactor: 0.01.','Post-quantum signature verified. ML-DSA-65 signed. Key bound to TPM PCR[7].'];
+let rIdx=0;
+function addMsg(txt,type){
+  const d=document.createElement('div');
+  d.className='copilot-msg copilot-msg-'+type;
+  d.innerHTML='<div class="copilot-msg-label">'+(type==='ai'?'WinCare Copilot':'You')+'</div>'+txt;
+  const msgs=document.getElementById('copilot-messages');
+  msgs.appendChild(d); msgs.scrollTop=msgs.scrollHeight;
+}
+function showTyping(){
+  const d=document.createElement('div'); d.className='copilot-msg copilot-msg-ai'; d.id='typing-msg';
+  d.innerHTML='<div class="copilot-msg-label">WinCare Copilot</div><div class="typing-indicator"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div>';
+  const msgs=document.getElementById('copilot-messages'); msgs.appendChild(d); msgs.scrollTop=msgs.scrollHeight;
+}
+document.getElementById('copilot-btn').addEventListener('click',()=>{
+  const inp=document.getElementById('copilot-input'),val=inp.value.trim(); if(!val)return;
+  addMsg(val,'user'); inp.value=''; showTyping();
+  setTimeout(()=>{ document.getElementById('typing-msg')?.remove(); addMsg(RESPONSES[rIdx++%RESPONSES.length],'ai'); },1200+Math.random()*600);
+});
+document.getElementById('copilot-input').addEventListener('keydown',e=>{ if(e.key==='Enter') document.getElementById('copilot-btn').click(); });
+
+window.addEventListener('beforeunload',()=>{ if(vanta)vanta.destroy(); });
+</script>
+</body>
+</html>
