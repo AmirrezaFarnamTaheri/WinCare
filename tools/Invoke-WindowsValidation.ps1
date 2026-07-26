@@ -374,10 +374,17 @@ try {
                 @{ Label = 'stderr'; Path = $record.StdErr }
             )) {
                 if (-not (Test-Path -LiteralPath $stream.Path -PathType Leaf)) { continue }
-                $lines = @(Get-Content -LiteralPath $stream.Path -Tail 120 -ErrorAction SilentlyContinue)
+                # Bounded read: the gate streams are already capped at 16 MiB when
+                # captured, and Get-Content is banned tree-wide as an unbounded read.
+                $text = try {
+                    Read-WinCareToolingBoundedUtf8Text -LiteralPath $stream.Path `
+                        -MaximumBytes 4194304 -Purpose "Failed gate $($record.Name) $($stream.Label)"
+                } catch { '' }
+                $lines = @($text -split "`r?`n" | Where-Object { $_ -ne '' })
                 if (-not $lines.Count) { continue }
-                Write-Host "--- $($record.Name) $($stream.Label) (last $($lines.Count) line(s)) ---" -ForegroundColor Yellow
-                foreach ($line in $lines) { Write-Host $line }
+                $tail = @($lines | Select-Object -Last 120)
+                Write-Host "--- $($record.Name) $($stream.Label) (last $($tail.Count) of $($lines.Count) line(s)) ---" -ForegroundColor Yellow
+                foreach ($line in $tail) { Write-Host $line }
             }
         }
         Write-Host ''
