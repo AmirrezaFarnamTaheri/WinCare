@@ -106,27 +106,50 @@ function Get-WinCareTelemetryLakeRecord {
         $p=Get-WinCareTelemetryLakeShardPath -Date $date
         if(Test-Path -LiteralPath $p -PathType Leaf) { $shardPaths.Add($p) }
     }
-    foreach($path in $shardPaths) {
-        if($records.Count -ge $MaximumRecords) { break }
-        try {
-            foreach($line in @(Read-WinCareBoundedLines -LiteralPath $path `
-                -MaximumBytes $MaximumShardBytes `
-                -MaximumLines 100000 `
-                -MaximumLineCharacters 1048576)) {
-                if([string]::IsNullOrWhiteSpace($line)) { continue }
-                $record=$line|ConvertFrom-Json -Depth 32 -ErrorAction Stop
-                $timestamp=[datetime]$record.Timestamp
-                if($timestamp -lt $Since -or $timestamp -gt $Until) { continue }
-                if($Name -and [string]$record.Name -ne $Name) { continue }
-                $actual=Get-WinCareCanonicalObjectHash $record.Record
-                if($actual -ne [string]$record.RecordHash) {
-                    throw "Telemetry record integrity mismatch in ${path}."
+    if($shardPaths.Count -gt 1 -and (Get-Command ForEach-Object -ParameterName Parallel -ErrorAction SilentlyContinue)) {
+        $results=$shardPaths | ForEach-Object -Parallel {
+            $path=$_
+            $parsed=[Collections.Generic.List[object]]::new()
+            $errs=[Collections.Generic.List[string]]::new()
+            try {
+                foreach($line in @(Read-WinCareBoundedLines -LiteralPath $path -MaximumBytes $using:MaximumShardBytes -MaximumLines 100000 -MaximumLineCharacters 1048576)) {
+                    if([string]::IsNullOrWhiteSpace($line)) { continue }
+                    $rec=$line|ConvertFrom-Json -Depth 32 -ErrorAction Stop
+                    $ts=[datetime]$rec.Timestamp
+                    if($ts -lt $using:Since -or $ts -gt $using:Until) { continue }
+                    if($using:Name -and [string]$rec.Name -ne $using:Name) { continue }
+                    $parsed.Add($rec)
                 }
-                $records.Add($record)
-                if($records.Count -ge $MaximumRecords) { break }
+            } catch { $errs.Add("${path}: $($_.Exception.Message)") }
+            [pscustomobject]@{Parsed=$parsed;Errors=$errs}
+        } -ThrottleLimit 4
+        foreach($res in $results) {
+            foreach($r in $res.Parsed) { if($records.Count -lt $MaximumRecords) { $records.Add($r) } }
+            foreach($e in $res.Errors) { $errors.Add($e) }
+        }
+    } else {
+        foreach($path in $shardPaths) {
+            if($records.Count -ge $MaximumRecords) { break }
+            try {
+                foreach($line in @(Read-WinCareBoundedLines -LiteralPath $path `
+                    -MaximumBytes $MaximumShardBytes `
+                    -MaximumLines 100000 `
+                    -MaximumLineCharacters 1048576)) {
+                    if([string]::IsNullOrWhiteSpace($line)) { continue }
+                    $record=$line|ConvertFrom-Json -Depth 32 -ErrorAction Stop
+                    $timestamp=[datetime]$record.Timestamp
+                    if($timestamp -lt $Since -or $timestamp -gt $Until) { continue }
+                    if($Name -and [string]$record.Name -ne $Name) { continue }
+                    $actual=Get-WinCareCanonicalObjectHash $record.Record
+                    if($actual -ne [string]$record.RecordHash) {
+                        throw "Telemetry record integrity mismatch in ${path}."
+                    }
+                    $records.Add($record)
+                    if($records.Count -ge $MaximumRecords) { break }
+                }
+            } catch {
+                $errors.Add("${path}: $($_.Exception.Message)")
             }
-        } catch {
-            $errors.Add("${path}: $($_.Exception.Message)")
         }
     }
 

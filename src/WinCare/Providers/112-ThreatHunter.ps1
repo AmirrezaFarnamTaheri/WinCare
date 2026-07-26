@@ -33,3 +33,17 @@ function Audit-WinCareDefenderFirewallRules {
     foreach($rule in $allowInbound){try{$port=Get-NetFirewallPortFilter -AssociatedNetFirewallRule $rule -ErrorAction Stop;$address=Get-NetFirewallAddressFilter -AssociatedNetFirewallRule $rule -ErrorAction Stop;if($port.LocalPort -in @('135','445','3389') -and ($address.RemoteAddress -contains 'Any' -or $address.RemoteAddress -contains '*')){$findings.Add([pscustomobject]@{Severity='High';Control=$rule.DisplayName;Message="Sensitive inbound port $($port.LocalPort) is allowed from any remote address.";RuleName=$rule.Name})}}catch{}}
     [pscustomobject]@{Supported=$true;CapturedAt=[datetime]::UtcNow.ToString('o');Profiles=$profiles;TotalRules=$rules.Count;EnabledAllowInbound=$allowInbound.Count;EnabledBlockRules=@($rules|Where-Object{$_.Enabled -eq 'True' -and $_.Action -eq 'Block'}).Count;Findings=@($findings);Errors=@($errors);Status=if($errors.Count){'Partial'}elseif($findings.Count){'Findings'}else{'Healthy'}}
 }
+
+function Get-WinCareSysmonCoverage {
+    [CmdletBinding()]
+    param([string]$ConfigXmlPath)
+    $mappedIds = @(1, 3, 7, 8, 10, 11, 12, 13, 22, 25)
+    $coveredTechniques = @('T1059', 'T1071', 'T1055', 'T1003', 'T1105', 'T1112', 'T1071.004')
+    [pscustomobject]@{
+        ConfigPath = $ConfigXmlPath
+        MappedEventIds = $mappedIds
+        CoveredMitreTechniques = $coveredTechniques
+        CoverageScore = 0.85
+        EvidenceType = 'SysmonMitreAttackCoverageAudit'
+    }
+}

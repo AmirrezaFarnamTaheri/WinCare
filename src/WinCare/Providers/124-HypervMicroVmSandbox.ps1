@@ -126,8 +126,32 @@ function New-WinCareMicroVmSandboxPlan {
         -EnableClipboard:$EnableClipboard `
         -MemoryInMB $MemoryInMB
     $plan.Title="Create Windows Sandbox micro-VM configuration: $Id"
-    $plan.Description='Creates an isolated, no-auto-launch Windows Sandbox configuration after verifying that the Windows Sandbox feature is already enabled.'
-    $plan.Metadata['IsolationState']=$state
-    $plan.Metadata['EvidenceType']='VerifiedWindowsSandboxConfigurationPlan'
     $plan
+}
+
+function New-WinCareSandboxConfig {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)][string]$HostFolder,
+        [switch]$ReadOnly,
+        [switch]$EnableNetworking,
+        [switch]$EnableClipboard
+    )
+    $folderPath=Assert-WinCareSafePath -LiteralPath $HostFolder
+    $net = if($EnableNetworking){'Enable'}else{'Disable'}
+    $clip = if($EnableClipboard){'Enable'}else{'Disable'}
+    $ro = if($ReadOnly){'true'}else{'false'}
+    @"
+<Configuration>
+  <VGPU>Enable</VGPU>
+  <Networking>$net</Networking>
+  <ClipboardRedirection>$clip</ClipboardRedirection>
+  <MappedFolders>
+    <MappedFolder>
+      <HostFolder>$folderPath</HostFolder>
+      <ReadOnly>$ro</ReadOnly>
+    </MappedFolder>
+  </MappedFolders>
+</Configuration>
+"@
 }

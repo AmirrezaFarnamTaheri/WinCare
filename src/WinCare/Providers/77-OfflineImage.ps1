@@ -219,5 +219,27 @@ function Invoke-WinCareOfflineImageSetFeatureAction {
     }
 }
 
+function Mount-WinCareOfflineImage {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)][string]$ImagePath,
+        [Parameter(Mandatory)][string]$MountPath,
+        [int]$Index=1
+    )
+    $null = Test-WinCareOfflineImagePolicy
+    $fullImage = Assert-WinCareSafePath -LiteralPath $ImagePath
+    $fullMount = Assert-WinCareSafePath -LiteralPath $MountPath
+    $result = Invoke-WinCareProcess -FilePath 'dism.exe' -ArgumentList @('/Mount-Image',"/ImageFile:$fullImage","/Index:$Index","/MountDir:$fullMount") -RequireAdmin -TimeoutSeconds 600
+    New-WinCareResult -Success $result.Success -Message "Mounted image $fullImage to $fullMount" -Data @{ImagePath=$fullImage;MountPath=$fullMount;Result=$result}
+}
+
+function Optimize-WinCareOfflineImage {
+    [CmdletBinding()]
+    param([Parameter(Mandatory)][string]$MountPath)
+    $path = Resolve-WinCareMountedImagePath -ImagePath $MountPath -RequireReadWrite
+    $result = Invoke-WinCareProcess -FilePath 'dism.exe' -ArgumentList @('/Image:',$path,'/Cleanup-Image','/StartComponentCleanup') -RequireAdmin -TimeoutSeconds 1200
+    New-WinCareResult -Success $result.Success -Message "Component cleanup completed on $path" -Data @{MountPath=$path;Result=$result}
+}
+
 
 

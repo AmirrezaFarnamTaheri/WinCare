@@ -17,6 +17,18 @@ function Get-WinCarePlanSummary {
     }
 }
 
+function New-WinCareVssRestorePointAction {
+    [CmdletBinding()]
+    param([string]$Description='WinCare Pre-Mutation Restore Point')
+    New-WinCareAction -Type 'CreateSystemRestorePoint' `
+        -Label "Create VSS restore point: $Description" `
+        -Risk Moderate `
+        -Parameters @{Description=$Description;RestorePointType='MODIFY_SETTINGS'} `
+        -RequiresAdmin $true `
+        -Reversible $true `
+        -TimeoutSeconds 300
+}
+
 function Get-WinCareActionStableHash {
     [CmdletBinding()]param([Parameter(Mandatory)][object]$Action)
     $stable=[ordered]@{

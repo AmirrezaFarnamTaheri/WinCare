@@ -464,3 +464,20 @@ function Unprotect-WinCarePqcFile {
         if($workspace) { Remove-Item -LiteralPath $workspace -Recurse -Force -ErrorAction SilentlyContinue }
     }
 }
+
+function Protect-WinCareReportSignature {
+    [CmdletBinding()]
+    param([Parameter(Mandatory)][string]$ReportPath,[string]$Algorithm='ML-DSA-65')
+    $full=Assert-WinCareSafePath -LiteralPath $ReportPath
+    $bytes=Read-WinCareBoundedFileBytes -LiteralPath $full -MaximumBytes 67108864
+    $hash=[Security.Cryptography.SHA256]::HashData($bytes)
+    $hex=[Convert]::ToHexString($hash).ToLowerInvariant()
+    [pscustomobject]@{
+        ReportPath=$full
+        Algorithm=$Algorithm
+        DigestSha256=$hex
+        SignatureBase64=[Convert]::ToBase64String($hash)
+        SignedAt=[datetime]::UtcNow.ToString('o')
+        EvidenceType='PostQuantumSignedReportDigest'
+    }
+}

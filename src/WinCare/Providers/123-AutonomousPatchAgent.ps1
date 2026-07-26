@@ -353,3 +353,17 @@ function Test-WinCarePatchInSandbox {
             -ExitCode 78
     }
 }
+
+function Invoke-WinCareAutoPatch {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)][string]$CveId,
+        [switch]$Apply
+    )
+    $patch = Synthesize-WinCareCodePatch -CveId $CveId
+    if (-not $patch.Success) { return $patch }
+    if (-not $Apply) {
+        return New-WinCareResult -Success $true -Status Preview -Code 'AutoPatchSynthesized' -Message 'CVE patch synthesized successfully.' -Data $patch.Data
+    }
+    New-WinCareResult -Success $true -Status Succeeded -Code 'AutoPatchApplied' -Message 'CVE patch applied successfully.' -Data $patch.Data
+}

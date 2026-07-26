@@ -79,3 +79,16 @@ function New-WinCareEbpfSocketProgramAdmission {
         EvidenceType='DigestPinnedEbpfAdmissionRecord'
     }
 }
+
+function Get-WinCareEbpfSocketBinding {
+    [CmdletBinding()]
+    param()
+    $cap = Get-WinCareEbpfSocketRedirectCapability
+    $ports = if (Get-Command Get-WinCareListeningPort -ErrorAction SilentlyContinue) { @(Get-WinCareListeningPort) } else { @() }
+    [pscustomobject]@{
+        Capability = $cap
+        ActiveBindings = $ports
+        BoundCount = $ports.Count
+        EvidenceType = 'EbpfSocketBindingObservation'
+    }
+}

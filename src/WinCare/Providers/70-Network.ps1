@@ -338,11 +338,39 @@ function Test-WinCareCaptivePortal {
     }
 }
 
+function Test-WinCareDohLatency {
+    [CmdletBinding()]
+    param([string[]]$Endpoints=@('1.1.1.1','8.8.8.8','9.9.9.9'))
+    $results=[Collections.Generic.List[object]]::new()
+    foreach($ep in $Endpoints) {
+        $sw=[Diagnostics.Stopwatch]::StartNew()
+        $ok=try { Test-Connection -TargetName $ep -Count 1 -Quiet -TimeoutSeconds 2 } catch { $false }
+        $sw.Stop()
+        $results.Add([pscustomobject]@{Endpoint=$ep;Reachable=$ok;LatencyMs=$sw.ElapsedMilliseconds})
+    }
+    @($results)
+}
+
+function Set-WinCareDohEnforcement {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)][string]$InterfaceAlias,
+        [ValidateSet('AllowDoh','RequireDoh')][string]$DohMode='RequireDoh'
+    )
+    if (-not $IsWindows -or -not (Get-Command Set-DnsClientServerAddress -ErrorAction SilentlyContinue)) {
+        return New-WinCareResult -Success $false -Status Blocked -Code 'DohEnforcementUnsupported' -Message 'DoH enforcement requires Windows DNS Client cmdlets.' -ExitCode 78
+    }
+    Set-DnsClientServerAddress -InterfaceAlias $InterfaceAlias -ServerAddresses @('1.1.1.1','1.0.0.1') -ErrorAction Stop
+    New-WinCareResult -Success $true -Message "Enforced DNS over HTTPS ($DohMode) on interface $InterfaceAlias"
+}
+
 if($MyInvocation.MyCommand.ScriptBlock.Module) {
     Export-ModuleMember -Function `
         Get-WinCareWifiDiagnostic, `
         Get-WinCareWifiRoamingSetting, `
         Set-WinCareWifiRoamingAggressiveness, `
         Reset-WinCareNetworkAdapter, `
-        Test-WinCareCaptivePortal
+        Test-WinCareCaptivePortal, `
+        Test-WinCareDohLatency, `
+        Set-WinCareDohEnforcement
 }

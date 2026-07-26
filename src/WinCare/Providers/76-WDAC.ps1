@@ -83,4 +83,26 @@ function Get-WinCareCodeIntegrityEvent {
     @((Get-WinEvent -FilterHashtable @{LogName='Microsoft-Windows-CodeIntegrity/Operational';StartTime=$Since} -MaxEvents $MaxEvents -ErrorAction SilentlyContinue)|ForEach-Object{[pscustomobject]@{TimeCreated=$_.TimeCreated;Id=$_.Id;Level=$_.LevelDisplayName;Provider=$_.ProviderName;Message=$_.Message;RecordId=$_.RecordId}})
 }
 
+function New-WinCareWdacPolicy {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)][string]$PolicyName,
+        [switch]$AuditMode
+    )
+    $policyId = [guid]::NewGuid().ToString('B')
+    $mode = if($AuditMode){'<Option>Enabled:Audit Mode</Option>'}else{''}
+    @"
+<?xml version="1.0" encoding="utf-8"?>
+<SiPolicy xmlns="urn:schemas-microsoft-com:sipolicy">
+  <VersionEx>10.0.0.0</VersionEx>
+  <PolicyID>$policyId</PolicyID>
+  <BasePolicyID>$policyId</BasePolicyID>
+  <Rules>
+    <Rule><Option>Enabled:Unsigned System Integrity Policy</Option></Rule>
+    $mode
+  </Rules>
+</SiPolicy>
+"@
+}
+
 
