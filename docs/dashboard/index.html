@@ -760,9 +760,18 @@
 const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 const isLowPower = (navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 4);
 
+let matterEngine = null;
+let matterRunner = null;
+let matterRender = null;
+let vanta = null;
+let cobeGlobe = null;
+let cobeThrottled = false;
+let cobeFrameCounter = 0;
+let isFpsThrottled = false;
+
 // ── Matter.js particle background (Budget: Max 50 bodies) ─────────────────
-(function initMatter(){
-  if (prefersReducedMotion || isLowPower) return;
+function initMatter(){
+  if (prefersReducedMotion || isLowPower || typeof Matter === 'undefined') return;
   const canvas = document.getElementById('matter-canvas');
   if (!canvas) return;
   canvas.width = window.innerWidth; canvas.height = window.innerHeight;
@@ -770,10 +779,10 @@ const isLowPower = (navigator.hardwareConcurrency && navigator.hardwareConcurren
   
   // Budget limit: max 50 active bodies (here set to 12)
   const MAX_BODIES = Math.min(12, 50);
-  const engine = Engine.create({ gravity: { y: 0.01, x: 0 }, enableSleeping: true });
-  const render = Render.create({
+  matterEngine = Engine.create({ gravity: { y: 0.01, x: 0 }, enableSleeping: true });
+  matterRender = Render.create({
     canvas,
-    engine,
+    engine: matterEngine,
     options: { width: canvas.width, height: canvas.height, background: 'transparent', wireframes: false }
   });
   
@@ -796,21 +805,22 @@ const isLowPower = (navigator.hardwareConcurrency && navigator.hardwareConcurren
     Bodies.rectangle(w+50, h/2, 100, h, { isStatic: true, render: { visible: false } })
   ];
   
-  World.add(engine.world, [...bodies, ...walls]);
-  Runner.run(Runner.create(), engine);
-  Render.run(render);
+  World.add(matterEngine.world, [...bodies, ...walls]);
+  matterRunner = Runner.create();
+  Runner.run(matterRunner, matterEngine);
+  Render.run(matterRender);
   window.addEventListener('resize', () => {
-    canvas.width = render.options.width = window.innerWidth;
-    canvas.height = render.options.height = window.innerHeight;
+    if (!matterRender) return;
+    canvas.width = matterRender.options.width = window.innerWidth;
+    canvas.height = matterRender.options.height = window.innerHeight;
   });
-}());
+}
 
 // ── Vanta.js NET (Budget: Max 500 vertices) ──────────────────────────────
-let vanta = null;
-function initVanta(){
+function initVanta(throttled = false){
   if (prefersReducedMotion || isLowPower || typeof VANTA === 'undefined') return;
   if (vanta) vanta.destroy();
-  // Points: 8, maxDistance: 20 keeps vertex count safely under 500
+  // Points: 8 default (throttled: 4), maxDistance: 20 keeps vertex count safely under 500
   vanta = VANTA.NET({
     el: '#vanta-bg',
     THREE: window.THREE,
@@ -818,17 +828,19 @@ function initVanta(){
     touchControls: false,
     color: 0x00a2f3,
     backgroundColor: 0x0b101d,
-    points: 8,
-    maxDistance: 20,
-    spacing: 25,
+    points: throttled ? 4 : 8,
+    maxDistance: throttled ? 12 : 20,
+    spacing: throttled ? 35 : 25,
     showDots: true
   });
+  if (throttled && vanta && vanta.renderer) {
+    vanta.renderer.setPixelRatio(0.75);
+  }
 }
-document.readyState === 'loading' ? document.addEventListener('DOMContentLoaded', initVanta) : initVanta();
 
 // ── Cobe.js globe (Budget: Max 100 markers) ──────────────────────────────
-(function initGlobe(){
-  if (typeof createGlobe !== 'function') return;
+function initGlobe(){
+  if (typeof createGlobe !== 'function' || prefersReducedMotion) return;
   const canvas = document.getElementById('fleet-globe');
   if (!canvas) return;
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -847,7 +859,7 @@ document.readyState === 'loading' ? document.addEventListener('DOMContentLoaded'
     { location: [1.3521, 103.8198], size: 0.04 }
   ];
   
-  const g = createGlobe(canvas, {
+  cobeGlobe = createGlobe(canvas, {
     devicePixelRatio: dpr,
     width: size * dpr,
     height: size * dpr,
@@ -863,10 +875,81 @@ document.readyState === 'loading' ? document.addEventListener('DOMContentLoaded'
     markerColor: [0, 0.8, 1],
     markers: fleetMarkers,
     onRender(s) {
-      if (!isLowPower) { s.phi = phi; phi += 0.003; }
+      if (prefersReducedMotion) return;
+      if (!isLowPower) {
+        cobeFrameCounter++;
+        // If throttled, lower spin frame rate by updating phi every 3rd frame
+        if (!cobeThrottled || cobeFrameCounter % 3 === 0) {
+          s.phi = phi;
+          phi += cobeThrottled ? 0.0015 : 0.003;
+        }
+      }
     }
   });
-}());
+}
+
+// ── Startup Latency & Automated Performance Guardrail ─────────────────────
+function runWebGLInitializationAndGuardrail() {
+  const initStartTime = performance.now();
+  
+  if (prefersReducedMotion) {
+    console.log('[WinCare Perf] prefers-reduced-motion: reduce active. WebGL animations automatically disabled.');
+  } else {
+    initMatter();
+    initVanta();
+    initGlobe();
+  }
+  
+  const initEndTime = performance.now();
+  const startupLatency = initEndTime - initStartTime;
+  console.log(`[WinCare Perf] WebGL Startup Latency: ${startupLatency.toFixed(2)}ms (Target <50ms)`);
+  
+  startFpsGuardrail();
+}
+
+let fpsFrameCount = 0;
+let windowStartTime = performance.now();
+
+function startFpsGuardrail() {
+  function guardrailLoop(now) {
+    fpsFrameCount++;
+    const elapsed = now - windowStartTime;
+    
+    // Evaluate rolling FPS over 2-second windows
+    if (elapsed >= 2000) {
+      const avgFps = (fpsFrameCount * 1000) / elapsed;
+      
+      if (avgFps < 45 && !isFpsThrottled && !prefersReducedMotion) {
+        isFpsThrottled = true;
+        console.warn(`[WinCare Guardrail] Average FPS (${avgFps.toFixed(1)}) fell below 45 FPS threshold. Activating WebGL throttle controls.`);
+        
+        // 1. Throttle Vanta.js particle count and canvas resolution
+        initVanta(true);
+        
+        // 2. Pause physics body updates in Matter.js when idle
+        if (matterRunner && typeof Matter !== 'undefined') {
+          Matter.Runner.stop(matterRunner);
+        }
+        
+        // 3. Lower Cobe.js spin animation frame rate
+        cobeThrottled = true;
+      }
+      
+      fpsFrameCount = 0;
+      windowStartTime = now;
+    }
+    
+    requestAnimationFrame(guardrailLoop);
+  }
+  
+  requestAnimationFrame(guardrailLoop);
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', runWebGLInitializationAndGuardrail);
+} else {
+  runWebGLInitializationAndGuardrail();
+}
 
 // ── Real Data Integration Hooks for WinCare Backend Telemetry ─────────────
 window.WinCareTelemetry = {
