@@ -46,7 +46,7 @@ function Invoke-WinCareOnnxDiagnosticScan {
     $hostCandidate=if($OnnxHostPath) {
         $OnnxHostPath
     } else {
-        Join-Path $PSScriptRoot '..\Native\WinCare.OnnxHost.exe'
+        Join-Path $PSScriptRoot '..\bin\WinCare.OnnxHost.exe'
     }
     $hasModel=$ModelPath -and (Test-Path -LiteralPath $ModelPath -PathType Leaf)
     $hasHost=Test-Path -LiteralPath $hostCandidate -PathType Leaf

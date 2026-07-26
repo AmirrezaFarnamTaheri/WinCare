@@ -12,18 +12,20 @@ python tools/validate_module_manifest.py .
 python tools/validate_action_bindings.py .
 python tools/validate_powershell_calls.py .
 python tools/validate_test_source_assertions.py .
+python tools/validate_source_references.py .
 python tools/audit_stub_inventory.py .
 python tools/validate_maintainability.py .
 python tools/validate_network_egress.py .
 python tools/validate_external_processes.py .
 python tools/validate_bounded_io.py .
+python tools/validate_read_only_state.py .
 python tools/validate_context_menu_catalog.py .
 python tools/validate_test_fixtures.py .
 python tools/validate_gui.py .
-python -m unittest tools.test_release_tools tools.test_maintainability tools.test_security_invariants tools.test_cleaner_preview tools.test_gui -v
+python -m unittest tools.test_release_tools tools.test_maintainability tools.test_security_invariants tools.test_cleaner_preview tools.test_gui tools.test_source_references -v
 ```
 
-These checks cover source topology, exports, contracts, public bindings, stubs, resource bounds, process/network authority, test fixtures, GUI catalog integrity, deterministic packaging, and adversarial archive cases.
+These checks cover source topology, exports, contracts, public bindings, current-source reference hashes, stubs, resource bounds, process/network authority, read-only state discipline, test fixtures, GUI catalog integrity, deterministic packaging, and adversarial archive cases.
 
 ## Windows gate
 
@@ -31,7 +33,7 @@ These checks cover source topology, exports, contracts, public bindings, stubs, 
 .\tools\Invoke-WindowsValidation.ps1 -OutputDirectory .\artifacts\windows-validation
 ```
 
-The Windows gate must run PSScriptAnalyzer, every Pester suite, module import/export smoke tests, native .NET builds, WPF construction, installation, deterministic packaging, archive verification, and clean uninstall exercises.
+The Windows gate must run PSScriptAnalyzer, every Pester suite, module import/export smoke tests, native .NET builds, GUI catalog and XAML resource validation, installation, deterministic packaging, archive verification, and clean uninstall exercises.
 
 ## Evidence language
 

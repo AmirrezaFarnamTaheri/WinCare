@@ -8,7 +8,7 @@ Structural validators confirm closed module membership, export/definition parity
 
 ## Windows runtime assurance
 
-The mandatory Windows job imports the module normally, runs all Pester suites, executes PSScriptAnalyzer, builds every .NET 8 native project from source, validates WPF construction, and exercises installation, package verification, and uninstallation.
+The mandatory Windows job imports the module normally, runs all Pester suites, executes PSScriptAnalyzer, builds every .NET 8 native project from source, validates the GUI catalog and XAML resource references, and exercises installation, package verification, and uninstallation.
 
 ## Release assurance
 
