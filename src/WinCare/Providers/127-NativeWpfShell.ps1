@@ -35,8 +35,20 @@ function Start-WinCareWpfDashboardWindow {
         }
     }
 
-    if (-not (Test-Path -LiteralPath $targetHtml -PathType Leaf)) {
-        throw "The WinCare dashboard HTML asset is missing: $targetHtml"
+    foreach ($asset in @(
+        @{ Path = $xamlPath; MaximumBytes = 1048576; Name = 'WPF XAML' },
+        @{ Path = $targetHtml; MaximumBytes = 4194304; Name = 'dashboard HTML' }
+    )) {
+        if (-not (Test-Path -LiteralPath $asset.Path -PathType Leaf)) {
+            throw "The WinCare $($asset.Name) asset is missing: $($asset.Path)"
+        }
+        $item = Get-Item -LiteralPath $asset.Path -Force -ErrorAction Stop
+        if (($item.Attributes -band [System.IO.FileAttributes]::ReparsePoint) -ne 0) {
+            throw "The WinCare $($asset.Name) asset must not be a reparse point: $($asset.Path)"
+        }
+        if ([long]$item.Length -gt [long]$asset.MaximumBytes) {
+            throw "The WinCare $($asset.Name) asset exceeds its $($asset.MaximumBytes)-byte ceiling: $($asset.Path)"
+        }
     }
 
     $scriptBlock = {
@@ -44,13 +56,52 @@ function Start-WinCareWpfDashboardWindow {
 
         $ErrorActionPreference = 'Stop'
         Add-Type -AssemblyName PresentationFramework, PresentationCore, WindowsBase
-        $xml = Get-Content -LiteralPath $xamlFile -Raw -ErrorAction Stop
+
+        $xamlItem = Get-Item -LiteralPath $xamlFile -Force -ErrorAction Stop
+        if ($xamlItem.PSIsContainer -or
+            ($xamlItem.Attributes -band [System.IO.FileAttributes]::ReparsePoint) -ne 0 -or
+            [long]$xamlItem.Length -gt 1048576L) {
+            throw 'The WPF XAML asset failed bounded regular-file validation.'
+        }
+
+        $stream = [System.IO.FileStream]::new(
+            $xamlFile,
+            [System.IO.FileMode]::Open,
+            [System.IO.FileAccess]::Read,
+            [System.IO.FileShare]::Read,
+            65536,
+            [System.IO.FileOptions]::SequentialScan
+        )
+        $reader = [System.IO.StreamReader]::new(
+            $stream,
+            [System.Text.UTF8Encoding]::new($false, $true),
+            $true,
+            65536,
+            $false
+        )
+        $builder = [System.Text.StringBuilder]::new([int][Math]::Min([long]$xamlItem.Length, 1048576L))
+        $buffer = [char[]]::new(32768)
+        try {
+            while (($count = $reader.ReadBlock($buffer, 0, $buffer.Length)) -gt 0) {
+                if ($builder.Length + $count -gt 1048576) {
+                    throw 'The WPF XAML asset exceeded its character ceiling while reading.'
+                }
+                $null = $builder.Append($buffer, 0, $count)
+            }
+            $xml = $builder.ToString()
+        } finally {
+            [System.Array]::Clear($buffer, 0, $buffer.Length)
+            $reader.Dispose()
+            $stream.Dispose()
+        }
+
         $stringReader = [System.IO.StringReader]::new($xml)
         $xmlReader = $null
         try {
             $settings = [System.Xml.XmlReaderSettings]::new()
             $settings.DtdProcessing = [System.Xml.DtdProcessing]::Prohibit
             $settings.XmlResolver = $null
+            $settings.MaxCharactersInDocument = 1048576
             $xmlReader = [System.Xml.XmlReader]::Create($stringReader, $settings)
             $window = [System.Windows.Markup.XamlReader]::Load($xmlReader)
         } finally {
