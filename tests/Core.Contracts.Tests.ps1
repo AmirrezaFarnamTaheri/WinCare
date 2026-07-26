@@ -61,9 +61,9 @@ Describe 'Versioned action and plan contracts' {
     It 'binds all execution and recovery fields into the action hash' {
       $a=New-WinCareAction -Type SetStorageSense -Label Sense -Risk Moderate -Parameters @{Enable=$true;Previous=$false} -Reversible $true -Compensator @{Type='SetStorageSense';Parameters=@{Enable=$false;Previous=$true}} -EstimatedBytes 1 -RecoveryDescription 'restore'
       $baseline=Get-WinCareActionStableHash $a
-      $a.EstimatedBytes=2;Get-WinCareActionStableHash $a|Should Not -Be $baseline;$a.EstimatedBytes=1
-      $a.RecoveryDescription='changed';Get-WinCareActionStableHash $a|Should Not -Be $baseline;$a.RecoveryDescription='restore'
-      $a.Compensator.Parameters.Enable=$true;Get-WinCareActionStableHash $a|Should Not -Be $baseline
+      $a.EstimatedBytes=2;Get-WinCareActionStableHash $a|Should Not Be $baseline;$a.EstimatedBytes=1
+      $a.RecoveryDescription='changed';Get-WinCareActionStableHash $a|Should Not Be $baseline;$a.RecoveryDescription='restore'
+      $a.Compensator.Parameters.Enable=$true;Get-WinCareActionStableHash $a|Should Not Be $baseline
     }
     It 'requires an executable compensator for reversible actions' {
       $missing=New-WinCareAction -Type SetStorageSense -Label Sense -Risk Moderate -Parameters @{Enable=$true;Previous=$false} -Reversible $true
