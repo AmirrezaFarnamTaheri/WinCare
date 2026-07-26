@@ -50,43 +50,67 @@ function New-WinCareSystemReportData {
 function Export-WinCareSystemReport {
     [CmdletBinding()]
     param([Parameter(Mandatory)][string]$Path,[ValidateSet('Json','Markdown','Html')][string]$Format='Json')
-    try{
-        $html1='<!doctype html><html><head><meta charset="utf-8"><title>WinCare System Report</title><style>body{font-family:system-ui,sans-serif;margin:2rem}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#f4f4f4;padding:1rem;border-radius:.5rem}</style></head><body><h1>WinCare System Report</h1><p>Generated: '
-        $html2='</p><pre>'
-        $html3='</pre></body></html>'
-        $nl=[Environment]::NewLine
-        $mdHeader='# WinCare System Report' + $nl + $nl + 'Generated: ' + $data.GeneratedAt + $nl + $nl + '```json' + $nl + $json + $nl + '```'
-        $content=switch($Format){
-            'Markdown'{$mdHeader}
-            'Html'{$html1 + [Net.WebUtility]::HtmlEncode([string]$data.GeneratedAt) + $html2 + [Net.WebUtility]::HtmlEncode($json) + $html3}
-            default{$json}
-        }
-        if(-not (Get-Command Write-WinCareAtomicText -ErrorAction SilentlyContinue)){throw 'The WinCare atomic text writer is unavailable.'};Write-WinCareAtomicText -LiteralPath $full -Text $content
-        $success=Test-Path $full -PathType Leaf;$hash=if($success){Get-WinCareSha256 -LiteralPath $full}else{$null};New-WinCareBridgeResult -Success $success -Code $(if($success){'SystemReportExported'}else{'SystemReportExportFailed'}) -Message $(if($success){'System report was exported and file-verified.'}else{'System report file was not created.'}) -Data @{Path=$full;Format=$Format;Sha256=$hash;Bytes=if($success){(Get-Item $full).Length}else{0};EvidenceType='ReportFile'} -ExitCode $(if($success){0}else{74})
-    }catch{New-WinCareBridgeResult -Success $false -Code 'SystemReportExportFailed' -Message $_.Exception.Message -ExitCode 1}
+    try {
+        $full=Resolve-WinCareCanonicalPath -LiteralPath $Path -AllowMissing
+        $parent=Split-Path -Parent $full;if([string]::IsNullOrWhiteSpace($parent)){throw 'System report path must include a parent directory.'}
+        $data=New-WinCareSystemReportData;$json=ConvertTo-WinCareCanonicalJson -InputObject $data -Depth 32;$nl=[Environment]::NewLine
+        $md='# WinCare System Report' + $nl + $nl + 'Generated: ' + $data.GeneratedAt + $nl + $nl + '```json' + $nl + $json + $nl + '```'
+        $html='<!doctype html><html><head><meta charset="utf-8"><title>WinCare System Report</title></head><body><h1>WinCare System Report</h1><p>Generated: ' + [Net.WebUtility]::HtmlEncode([string]$data.GeneratedAt) + '</p><pre>' + [Net.WebUtility]::HtmlEncode($json) + '</pre></body></html>'
+        $content=switch($Format){'Markdown'{$md};'Html'{$html};default{$json}}
+        if(-not (Get-Command Write-WinCareAtomicText -ErrorAction SilentlyContinue)){throw 'The WinCare atomic text writer is unavailable.'}
+        Write-WinCareAtomicText -LiteralPath $full -Text $content
+        $success=Test-Path $full -PathType Leaf;$hash=if($success){Get-WinCareSha256 -LiteralPath $full}else{$null}
+        $code=if($success){'SystemReportExported'}else{'SystemReportExportFailed'}
+        $msg=if($success){'System report was exported and file-verified.'}else{'System report file was not created.'}
+        New-WinCareBridgeResult -Success $success -Code $code -Message $msg -Data @{Path=$full;Format=$Format;Sha256=$hash;Bytes=if($success){(Get-Item $full).Length}else{0};EvidenceType='ReportFile'} -ExitCode $(if($success){0}else{74})
+    } catch { New-WinCareBridgeResult -Success $false -Code 'SystemReportExportFailed' -Message $_.Exception.Message -ExitCode 1 }
 }
 function Test-WinCareDnsHostName {
     [CmdletBinding()]
     param([Parameter(Mandatory)][string]$HostName)
-    if($HostName.Length -gt 253 -or $HostName.EndsWith('.')){$HostName=$HostName.TrimEnd('.')};if($HostName.Length -lt 1 -or $HostName.Length -gt 253){return $false};foreach($label in $HostName.Split('.')){if($label.Length -lt 1 -or $label.Length -gt 63 -or $label -notmatch '^[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?$'){return $false}};return $true
+    if($HostName.Length -gt 253 -or $HostName.EndsWith('.')){$HostName=$HostName.TrimEnd('.')}
+    if($HostName.Length -lt 1 -or $HostName.Length -gt 253){return $false}
+    foreach($label in $HostName.Split('.')){
+        if($label.Length -lt 1 -or $label.Length -gt 63 -or $label -notmatch '^[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?$'){return $false}
+    }
+    return $true
 }
 function Fix-WinCareVulnerability {
     [CmdletBinding()]
     param([Parameter(Mandatory)][string]$Id,[switch]$Approved)
-    $catalogPath=if($script:WinCareModuleRoot){Join-Path $script:WinCareModuleRoot 'Data\Security\vulnerability-remediations.json'}else{''};$catalog=if($catalogPath -and (Test-Path $catalogPath)){@(Read-WinCareBridgeJson $catalogPath)}else{@()};$entry=$catalog|Where-Object{$_.Id -eq $Id}|Select-Object -First 1;if(-not $entry){return New-WinCareBridgeResult -Success $false -Status Blocked -Code 'RemediationNotCataloged' -Message ('No reviewed remediation is cataloged for ' + $Id + '. WinCare will not synthesize or execute an unreviewed fix.') -ExitCode 2 -Data @{CatalogPath=$catalogPath}};$plan=New-WinCarePlaybookPlan -Id $entry.PlaybookId;if(-not $Approved){return New-WinCareBridgeResult -Success $true -Status Preview -Code 'RemediationPlanReady' -Message 'Reviewed remediation plan is ready for explicit approval.' -Data @{Plan=$plan;Vulnerability=$entry}};Invoke-WinCarePlan -Plan $plan -Approved
+    $catalogPath=if($script:WinCareModuleRoot){Join-Path $script:WinCareModuleRoot 'Data\Security\vulnerability-remediations.json'}else{''}
+    $catalog=if($catalogPath -and (Test-Path $catalogPath)){@(Read-WinCareBridgeJson $catalogPath)}else{@()}
+    $entry=$catalog|Where-Object{$_.Id -eq $Id}|Select-Object -First 1
+    if(-not $entry){return New-WinCareBridgeResult -Success $false -Status Blocked -Code 'RemediationNotCataloged' -Message ('No reviewed remediation is cataloged for ' + $Id) -ExitCode 2}
+    $plan=New-WinCarePlaybookPlan -Id $entry.PlaybookId
+    if(-not $Approved){return New-WinCareBridgeResult -Success $true -Status Preview -Code 'RemediationPlanReady' -Message 'Reviewed remediation plan is ready.' -Data @{Plan=$plan;Vulnerability=$entry}}
+    Invoke-WinCarePlan -Plan $plan -Approved
 }
 function Install-WinCare {
     [CmdletBinding()]
     param([string[]]$ArgumentList=@())
-    $scriptPath=[IO.Path]::GetFullPath((Join-Path $script:WinCareModuleRoot '..\..\Install-WinCare.ps1'));if(-not (Test-Path $scriptPath)){return New-WinCareBridgeResult -Success $false -Code 'InstallerNotFound' -Message 'Install-WinCare.ps1 was not found.' -ExitCode 2};$pwsh=Get-WinCareCurrentPowerShellExecutable;Invoke-WinCareBridgeProcess -FilePath $pwsh -ArgumentList @('-NoProfile','-File',$scriptPath)+$ArgumentList -TimeoutSeconds 3600 -SuccessExitCodes @(0)
+    $scriptPath=[IO.Path]::GetFullPath((Join-Path $script:WinCareModuleRoot '..\..\Install-WinCare.ps1'))
+    if(-not (Test-Path $scriptPath)){return New-WinCareBridgeResult -Success $false -Code 'InstallerNotFound' -Message 'Install-WinCare.ps1 was not found.' -ExitCode 2}
+    $pwsh=Get-WinCareCurrentPowerShellExecutable
+    Invoke-WinCareBridgeProcess -FilePath $pwsh -ArgumentList @('-NoProfile','-File',$scriptPath)+$ArgumentList -TimeoutSeconds 3600 -SuccessExitCodes @(0)
 }
 function Uninstall-WinCare {
     [CmdletBinding()]
     param([string[]]$ArgumentList=@())
-    $scriptPath=[IO.Path]::GetFullPath((Join-Path $script:WinCareModuleRoot '..\..\Uninstall-WinCare.ps1'));if(-not (Test-Path $scriptPath)){return New-WinCareBridgeResult -Success $false -Code 'UninstallerNotFound' -Message 'Uninstall-WinCare.ps1 was not found.' -ExitCode 2};$pwsh=Get-WinCareCurrentPowerShellExecutable;Invoke-WinCareBridgeProcess -FilePath $pwsh -ArgumentList @('-NoProfile','-File',$scriptPath)+$ArgumentList -TimeoutSeconds 3600 -SuccessExitCodes @(0)
+    $scriptPath=[IO.Path]::GetFullPath((Join-Path $script:WinCareModuleRoot '..\..\Uninstall-WinCare.ps1'))
+    if(-not (Test-Path $scriptPath)){return New-WinCareBridgeResult -Success $false -Code 'UninstallerNotFound' -Message 'Uninstall-WinCare.ps1 was not found.' -ExitCode 2}
+    $pwsh=Get-WinCareCurrentPowerShellExecutable
+    Invoke-WinCareBridgeProcess -FilePath $pwsh -ArgumentList @('-NoProfile','-File',$scriptPath)+$ArgumentList -TimeoutSeconds 3600 -SuccessExitCodes @(0)
 }
 function Invoke-WinCare {
     [CmdletBinding()]
     param([string]$Command='',[hashtable]$Parameters=@{})
-    if($Command){if(-not (Get-Command Invoke-WinCareHeadlessCommand -ErrorAction SilentlyContinue)){return New-WinCareBridgeResult -Success $false -Code 'HeadlessHostUnavailable' -Message 'Headless command host is unavailable.' -ExitCode 127};return Invoke-WinCareHeadlessCommand -Command $Command -Parameters $Parameters};if(Get-Command Start-WinCare -ErrorAction SilentlyContinue){return Start-WinCare};New-WinCareBridgeResult -Success $false -Code 'WinCareHostUnavailable' -Message 'No WinCare host is available.' -ExitCode 127
+    if($Command){
+        if(-not (Get-Command Invoke-WinCareHeadlessCommand -ErrorAction SilentlyContinue)){
+            return New-WinCareBridgeResult -Success $false -Code 'HeadlessHostUnavailable' -Message 'Headless command host is unavailable.' -ExitCode 127
+        }
+        return Invoke-WinCareHeadlessCommand -Command $Command -Parameters $Parameters
+    }
+    if(Get-Command Start-WinCare -ErrorAction SilentlyContinue){return Start-WinCare}
+    New-WinCareBridgeResult -Success $false -Code 'WinCareHostUnavailable' -Message 'No WinCare host is available.' -ExitCode 127
 }

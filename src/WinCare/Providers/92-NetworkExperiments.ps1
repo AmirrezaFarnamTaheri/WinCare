@@ -14,9 +14,7 @@ function Test-WinCareDpiBypassStrategy {
     $stopwatch = [Diagnostics.Stopwatch]::StartNew()
     try {
         $admission=Assert-WinCareServiceUri -Uri $uri
-        # ponytail: Invoke-WinCareBoundedHttpRequest timeout -> Socket.ConnectAsync with CancellationTokenSource
-        $response=Invoke-WinCareBoundedHttpRequest -Method HEAD -Admission $admission `
-            -TimeoutSeconds $TimeoutSeconds -MaximumResponseBytes 1024
+        $response=Invoke-WinCareBoundedHttpRequest -Method HEAD -Admission $admission -TimeoutSeconds $TimeoutSeconds -MaximumResponseBytes 1024
         $stopwatch.Stop()
         $statusCode = [int]$response.StatusCode
         $matched = $statusCode -eq $ExpectedStatusCode

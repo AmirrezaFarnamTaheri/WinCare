@@ -4,9 +4,7 @@ function Get-WinCareSysmonThreatMap {
     [CmdletBinding()]
     param([datetime]$Since=[datetime]::Now.AddHours(-24),[ValidateRange(1,5000)][int]$MaxEvents=1000)
     if(-not $IsWindows){return @()}
-    $mapping=@{
-        1=@{Rule='ProcessCreation';MitreId='T1059'};3=@{Rule='NetworkConnect';MitreId='T1071'};7=@{Rule='ImageLoaded';MitreId='T1055'};8=@{Rule='CreateRemoteThread';MitreId='T1055'};10=@{Rule='ProcessAccess';MitreId='T1003'};11=@{Rule='FileCreate';MitreId='T1105'};12=@{Rule='RegistryObjectCreateDelete';MitreId='T1112'};13=@{Rule='RegistryValueSet';MitreId='T1112'};22=@{Rule='DnsQuery';MitreId='T1071.004'};25=@{Rule='ProcessTampering';MitreId='T1055'}
-    }
+    $mapping=@{1=@{Rule='ProcessCreation';MitreId='T1059'};3=@{Rule='NetworkConnect';MitreId='T1071'};7=@{Rule='ImageLoaded';MitreId='T1055'};8=@{Rule='CreateRemoteThread';MitreId='T1055'};10=@{Rule='ProcessAccess';MitreId='T1003'};11=@{Rule='FileCreate';MitreId='T1105'};12=@{Rule='RegistryObjectCreateDelete';MitreId='T1112'};13=@{Rule='RegistryValueSet';MitreId='T1112'};22=@{Rule='DnsQuery';MitreId='T1071.004'};25=@{Rule='ProcessTampering';MitreId='T1055'}}
     $events=[Collections.Generic.List[object]]::new()
     try{
         # ponytail: Sysmon event map -> native MITRE ATT&CK C# evaluator
