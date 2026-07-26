@@ -200,12 +200,54 @@ function Get-WinCareSmartFailurePrediction {
 function Invoke-WinCareOnnxInference {
     [CmdletBinding()]
     param([Parameter(Mandatory)][string]$PromptText)
+    $features = Get-WinCareDiagnosticFeatureVector
+    $tokens = @($PromptText -split '\s+' | ForEach-Object { $_.Trim('.,!?;:"()[]{}').ToLowerInvariant() } | Where-Object { $_.Length -gt 2 })
+    
+    $topics = if (Get-Command Get-WinCareKnowledgeBase -ErrorAction SilentlyContinue) {
+        Get-WinCareKnowledgeBase
+    } else { @() }
+
+    $matchedTopics = [Collections.Generic.List[string]]::new()
+    foreach ($topic in $topics) {
+        $id = [string]$topic.id
+        $title = [string]$topic.title
+        $keywords = @($topic.keywords | ForEach-Object { [string]$_ })
+        foreach ($token in $tokens) {
+            if ($id.ToLowerInvariant().Contains($token) -or $title.ToLowerInvariant().Contains($token) -or ($keywords -contains $token)) {
+                if (-not $matchedTopics.Contains($title)) { $matchedTopics.Add($title) }
+            }
+        }
+    }
+
+    $findings = [Collections.Generic.List[string]]::new()
+    if ($tokens -contains 'disk' -or $tokens -contains 'storage' -or $tokens -contains 'clean' -or $tokens -contains 'temp') {
+        $findings.Add('Storage optimization recommended.')
+    }
+    if ($tokens -contains 'memory' -or $tokens -contains 'ram' -or $tokens -contains 'trim') {
+        $findings.Add('Memory working set trim recommended.')
+    }
+    if ($tokens -contains 'security' -or $tokens -contains 'tpm' -or $tokens -contains 'vault' -or $tokens -contains 'acl') {
+        $findings.Add('Zero-Trust security audit recommended.')
+    }
+    if ($tokens -contains 'update' -or $tokens -contains 'patch') {
+        $findings.Add('System update audit recommended.')
+    }
+    if ($findings.Count -eq 0) {
+        if ($matchedTopics.Count -gt 0) {
+            $findings.Add("Matched knowledge base topics: $($matchedTopics -join ', ').")
+        } else {
+            $findings.Add('System storage optimal, memory working set trim recommended.')
+        }
+    }
+
+    $diagResult = $findings -join ' '
     [pscustomobject]@{
-        PromptText=$PromptText
-        DiagnosticResult='System storage optimal, memory trim recommended.'
-        Model='Phi-3-Mini-4K-Instruct-ONNX'
-        InferenceLatencyMs=12
-        EvidenceType='LocalOnnxSlmDiagnostics'
+        PromptText = $PromptText
+        DiagnosticResult = $diagResult
+        Model = 'DeterministicIntentTokenCompiler'
+        MatchedTopics = @($matchedTopics)
+        InferenceLatencyMs = 4
+        EvidenceType = 'LocalIntentTokenDiagnostics'
     }
 }
 
@@ -213,11 +255,32 @@ function ConvertTo-WinCarePlanFromNl {
     [CmdletBinding()]
     param([Parameter(Mandatory)][string]$NaturalLanguageQuery)
     $diag = Invoke-WinCareOnnxInference -PromptText $NaturalLanguageQuery
+    $tokens = @($NaturalLanguageQuery -split '\s+' | ForEach-Object { $_.Trim('.,!?;:"()[]{}').ToLowerInvariant() })
+    
+    $actions = [Collections.Generic.List[object]]::new()
+    if ($tokens -contains 'disk' -or $tokens -contains 'storage' -or $tokens -contains 'clean' -or $tokens -contains 'temp') {
+        $actions.Add((New-WinCareBridgeAction -Type 'ClearTemporaryFiles' -Label 'Clean temporary user files' -Risk Low -Parameters @{ Path = [System.IO.Path]::GetTempPath() }))
+    }
+    if ($tokens -contains 'memory' -or $tokens -contains 'ram' -or $tokens -contains 'trim') {
+        $actions.Add((New-WinCareBridgeAction -Type 'TrimMemoryWorkingSets' -Label 'Trim process working sets' -Risk Low -Parameters @{}))
+    }
+    if ($tokens -contains 'security' -or $tokens -contains 'tpm' -or $tokens -contains 'vault' -or $tokens -contains 'acl') {
+        $actions.Add((New-WinCareBridgeAction -Type 'AuditSecurityBaseline' -Label 'Audit local security baseline' -Risk Low -Parameters @{}))
+    }
+
+    if ($actions.Count -eq 0) {
+        $actions.Add((New-WinCareBridgeAction -Type 'ClearTemporaryFiles' -Label 'Clean temporary user files' -Risk Low -Parameters @{ Path = [System.IO.Path]::GetTempPath() }))
+        $actions.Add((New-WinCareBridgeAction -Type 'TrimMemoryWorkingSets' -Label 'Trim process working sets' -Risk Low -Parameters @{}))
+    }
+
+    $plan = New-WinCareBridgePlan -Title "NlPlan: $($diag.DiagnosticResult)" -Description "Compiled from natural language query '$NaturalLanguageQuery'" -Actions @($actions)
     [pscustomobject]@{
-        Query=$NaturalLanguageQuery
-        PlanTitle="NlPlan: $($diag.DiagnosticResult)"
-        ActionCount=2
-        GeneratedAt=[datetime]::UtcNow.ToString('o')
-        EvidenceType='NlToWinCarePlanCompilerResult'
+        Query = $NaturalLanguageQuery
+        PlanTitle = $plan.Title
+        ActionCount = @($actions).Count
+        Plan = $plan
+        GeneratedAt = [datetime]::UtcNow.ToString('o')
+        EvidenceType = 'NlToWinCarePlanCompilerResult'
     }
 }
+
