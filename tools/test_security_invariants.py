@@ -15,6 +15,13 @@ from tools import validate_read_only_state as read_only_state
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def _workflow_files() -> list[Path]:
+    """All GitHub Actions workflow files. Both .yml and .yaml are honored so a
+    workflow cannot dodge the supply-chain pin/publisher gates by extension alone."""
+    directory = ROOT / ".github/workflows"
+    return sorted(directory.glob("*.yml")) + sorted(directory.glob("*.yaml"))
+
+
 class SecurityInvariantTests(unittest.TestCase):
     def read(self, relative: str) -> str:
         return (ROOT / relative).read_text(encoding="utf-8-sig")
@@ -302,6 +309,51 @@ class SecurityInvariantTests(unittest.TestCase):
         self.assertNotIn("ReadLine", broker)
         self.assertNotIn("StreamReader", broker)
 
+    def _context_menu_report_for(self, command: str) -> dict:
+        with tempfile.TemporaryDirectory() as temp:
+            catalog = Path(temp) / "src/WinCare/Data/Catalog/context-menu-rules.json"
+            catalog.parent.mkdir(parents=True)
+            catalog.write_text(
+                json.dumps(
+                    {
+                        "schemaVersion": 1,
+                        "rules": [
+                            {
+                                "id": "probe",
+                                "trees": [
+                                    {
+                                        "path": "HKCU:\\Software\\Classes\\probe\\command",
+                                        "values": [{"name": "", "value": command, "valueType": "String"}],
+                                    }
+                                ],
+                            }
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            return context_catalog.validate(Path(temp))
+
+    def test_context_menu_gate_catches_case_insensitive_bypasses(self) -> None:
+        # Windows treats shell placeholders and the cmd /c switch case-insensitively; the
+        # gate must not be fooled by lowercase %v or a plain (no .exe) cmd invocation.
+        lowercase_placeholder = self._context_menu_report_for("pwsh.exe -File run.ps1 %v")
+        self.assertEqual("failed", lowercase_placeholder["status"])
+        self.assertTrue(any("placeholder" in error for error in lowercase_placeholder["errors"]))
+
+        plain_cmd = self._context_menu_report_for('cmd /c "del %1"')
+        self.assertEqual("failed", plain_cmd["status"])
+        self.assertTrue(any("shell-evaluation primitive" in error for error in plain_cmd["errors"]))
+
+        quoted_placeholder = self._context_menu_report_for('pwsh.exe -File run.ps1 "%V"')
+        self.assertEqual("passed", quoted_placeholder["status"], quoted_placeholder["errors"])
+
+    def test_workflow_pin_gate_scans_yaml_and_yml(self) -> None:
+        names = {path.name for path in _workflow_files()}
+        self.assertIn("ci.yml", names)
+        # A .yaml workflow must also be enumerated so it cannot dodge the pinning gate.
+        self.assertTrue(all(name.endswith((".yml", ".yaml")) for name in names))
+
     def test_state_root_discovery_is_non_persistent_in_read_only_mode(self) -> None:
         report = read_only_state.validate(ROOT)
         self.assertEqual("passed", report["status"], report["errors"])
@@ -381,12 +433,18 @@ class SecurityInvariantTests(unittest.TestCase):
     def test_workflow_dependencies_are_commit_pinned(self) -> None:
         workflow_text = "\n".join(
             path.read_text(encoding="utf-8")
-            for path in sorted((ROOT / ".github/workflows").glob("*.yml"))
+            for path in sorted(_workflow_files())
         )
         for line in workflow_text.splitlines():
             stripped = line.strip()
             if stripped.startswith("uses:"):
-                ref = stripped.split("@", 1)[1]
+                target = stripped[len("uses:"):].strip()
+                # Local composite/Docker actions (./path, docker://...) are not pinnable by SHA;
+                # every remote `owner/repo@ref` and every other `@`-bearing ref must be commit-pinned.
+                if target.startswith("./") or target.startswith("../"):
+                    continue
+                self.assertIn("@", target, f"Unpinnable non-local action reference: {stripped}")
+                ref = target.split("@", 1)[1]
                 self.assertRegex(ref, r"^[0-9a-f]{40}(?:\s+#.*)?$")
         self.assertNotIn("-MinimumVersion", workflow_text)
         self.assertIn("-RequiredVersion 5.5.0", workflow_text)
@@ -417,7 +475,7 @@ class SecurityInvariantTests(unittest.TestCase):
     def test_release_governance_rejects_publisher_bypass_and_asset_overwrite(self) -> None:
         workflows = "\n".join(
             path.read_text(encoding="utf-8")
-            for path in sorted((ROOT / ".github/workflows").glob("*.yml"))
+            for path in sorted(_workflow_files())
         )
         release = self.read(".github/workflows/release.yml")
         self.assertNotIn("SkipPublisherCheck", workflows)

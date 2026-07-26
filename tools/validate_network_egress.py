@@ -24,7 +24,7 @@ DIRECT_HTTP_PATTERNS = {
     "DuplicateHttpClient": re.compile(r"\b(?:Net\.)?Http\.HttpClient\b|\bSystem\.Net\.Http\.HttpClient\b", re.I),
     "LegacyWebClient": re.compile(r"\b(?:System\.Net\.)?WebClient\b", re.I),
     "LegacyWebRequestFactory": re.compile(r"\bWebRequest\s*::\s*Create(?:Http)?\b", re.I),
-    "ShellHttpClient": re.compile(r"(?:^|[;&|{}]\s*)\b(?:curl|wget)(?:\.exe)?\b", re.I),
+    "ShellHttpClient": re.compile(r"(?im)(?:^|[;&|{}]\s*)\b(?:curl|wget)(?:\.exe)?\b"),
     "BitsAdmin": re.compile(r"\bbitsadmin(?:\.exe)?\b", re.I),
 }
 BITS_PATTERN = re.compile(r"\bStart-BitsTransfer\b", re.I)
