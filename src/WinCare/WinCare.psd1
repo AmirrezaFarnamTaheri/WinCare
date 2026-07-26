@@ -335,7 +335,12 @@
     'Get-WinCareVbsDmaState',
     'Enable-WinCareEbpfSocketGovernance',
     'Start-WinCareWpfDashboardWindow',
-    'Invoke-WinCareFleetDeployment'
+    'Invoke-WinCareFleetDeployment',
+    'New-WinCareIsolatedStagingDirectory',
+    'Remove-WinCareCryptographicFile',
+    'Get-WinCareTerminalCellWidth',
+    'Get-WinCareEbpfTelemetryStream',
+    'Send-WinCareTelemetryEventBusMessage'
     )
     CmdletsToExport   = @()
     VariablesToExport = @()

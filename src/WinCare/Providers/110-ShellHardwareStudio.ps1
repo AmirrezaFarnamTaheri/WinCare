@@ -379,5 +379,37 @@ function Get-WinCareShellHardwareCapabilityCard {
     $cards
 }
 
+function Get-WinCareTerminalCellWidth {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)][string]$Text
+    )
+    $ansiPattern = "\x1B\[[0-9;]*[a-zA-Z]"
+    $cleanText = [System.Text.RegularExpressions.Regex]::Replace($Text, $ansiPattern, '')
+
+    $width = 0
+    $elements = [System.Globalization.StringInfo]::GetTextElementEnumerator($cleanText)
+    while ($elements.MoveNext()) {
+        $grapheme = $elements.GetTextElement()
+        $cp = [char]::ConvertToUtf32($grapheme, 0)
+
+        if (($cp -ge 0x1100 -and $cp -le 0x115F) -or
+            ($cp -ge 0x2E80 -and $cp -le 0xA4CF) -or
+            ($cp -ge 0xAC00 -and $cp -le 0xD7A3) -or
+            ($cp -ge 0xF900 -and $cp -le 0xFAFF) -or
+            ($cp -ge 0xFE10 -and $cp -le 0xFE19) -or
+            ($cp -ge 0x1F300 -and $cp -le 0x1F64F) -or
+            ($cp -ge 0x20000 -and $cp -le 0x2FA1F)) {
+            $width += 2
+        } elseif ($cp -ge 0x0300 -and $cp -le 0x036F) {
+            $width += 0
+        } else {
+            $width += 1
+        }
+    }
+    return $width
+}
+
+
 
 

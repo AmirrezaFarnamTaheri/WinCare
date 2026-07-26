@@ -40,6 +40,7 @@
         'Providers/134-ForensicsStudio.ps1'
         'Providers/135-VirtualDisplayStudio.ps1'
         'Providers/136-NetworkAcceleration.ps1'
+        'Providers/137-UnifiedRoutingCore.ps1'
         'Providers/20-Cleanup.ps1'
         'Providers/25-SystemPolicy.ps1'
         'Providers/27-RegistryTree.ps1'
