@@ -29,6 +29,33 @@ function New-WinCareVssRestorePointAction {
         -TimeoutSeconds 300
 }
 
+function Invoke-WinCareVssRestorePointAction {
+    [CmdletBinding()]
+    param([Parameter(Mandatory)][object]$Action)
+    $desc  = [string]$Action.Parameters.Description
+    $rtype = [string]$Action.Parameters.RestorePointType
+    if([string]::IsNullOrWhiteSpace($desc)){$desc='WinCare Pre-Mutation Restore Point'}
+    if([string]::IsNullOrWhiteSpace($rtype)){$rtype='MODIFY_SETTINGS'}
+    try {
+        $svc = Get-WmiObject -Namespace 'root\default' -Class 'SystemRestore' -ErrorAction Stop
+        $result = $svc.CreateRestorePoint($desc, 12, 100)  # 12=MODIFY_SETTINGS, 100=BEGIN_SYSTEM_CHANGE
+        if($result.ReturnValue -ne 0) {
+            return New-WinCareResult -Success $false -Status Failed `
+                -Code 'VssRestorePointFailed' `
+                -Message "WMI SystemRestore.CreateRestorePoint returned $($result.ReturnValue)" `
+                -ExitCode 1
+        }
+        New-WinCareResult -Success $true -Status Done `
+            -Code 'VssRestorePointCreated' `
+            -Message "VSS restore point created: $desc" `
+            -Data @{Description=$desc;RestorePointType=$rtype;EvidenceType='VssSystemRestorePointCreated'}
+    } catch {
+        New-WinCareResult -Success $false -Status Failed `
+            -Code 'VssRestorePointException' `
+            -Message $_.Exception.Message -ExitCode 1
+    }
+}
+
 function Get-WinCareActionStableHash {
     [CmdletBinding()]param([Parameter(Mandatory)][object]$Action)
     $stable=[ordered]@{
@@ -348,6 +375,7 @@ function Invoke-WinCareActionInternal {
         'OfflineImageRemoveProvisionedAppx'{Invoke-WinCareOfflineImageRemoveProvisionedAppxAction -Action $Action}
         'OfflineImageStartComponentCleanup'{Invoke-WinCareOfflineImageStartComponentCleanupAction -Action $Action}
         'ReplaceWorkspaceLayoutStore'{Invoke-WinCareReplaceWorkspaceLayoutStoreAction -Action $Action}
+        'CreateSystemRestorePoint'{Invoke-WinCareVssRestorePointAction -Action $Action}
         default{New-WinCareResult -Success $false -Status Failed -Code 'UnknownActionType' -Message "Unknown action type: $($Action.Type)" -ExitCode 2}
     }
 }

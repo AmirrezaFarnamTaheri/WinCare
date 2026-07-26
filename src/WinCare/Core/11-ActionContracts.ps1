@@ -124,6 +124,7 @@ function Get-WinCareActionContractTable {
     Add-Contract 'SetMonitorVcpFeature' @('DeviceName','PhysicalIndex','Description','FeatureCode','Value','ExpectedCurrent','ExpectedMaximum') @('DeviceName','PhysicalIndex','Description','FeatureCode','Value','ExpectedCurrent','ExpectedMaximum') 'Low' $false $false 60
     Add-Contract 'OpenExplorerLocation' @('Path','ExpectedPathHash') @('Path','ExpectedPathHash') 'Low' $false $false 60
     Add-Contract 'LaunchAppxApplication' @('Aumid','PackageFullName','ManifestSha256') @('Aumid','PackageFullName','ManifestSha256') 'Low' $false $false 60
+    Add-Contract 'CreateSystemRestorePoint' @('Description','RestorePointType') @('Description','RestorePointType') 'Moderate' $true $true 300
     $script:WinCareState.ActionContracts=$table
     return $table
 }
