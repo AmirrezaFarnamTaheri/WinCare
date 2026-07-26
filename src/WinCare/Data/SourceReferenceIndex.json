@@ -54,22 +54,22 @@
     {
       "id": "SRC:4a9fce4f41",
       "path": "Providers/102-Launcher.ps1",
-      "sha256": "dcc5284fbf285d89d26b1fa7d1e66f6ad752a1e598de6f5768008ae34e92b382"
+      "sha256": "927928be81f3ecf7a6932688ab217fe92060968841eb6967713f2a2f3a1f065f"
     },
     {
       "id": "SRC:de582ebaf6",
       "path": "Providers/104-OfflineReduction.ps1",
-      "sha256": "1fb983c9c413a4bf0cd9308baba83cbf373cfd7f181eb4dc9f174c4113069212"
+      "sha256": "29b08c9ec69ed735ee90a8cc2e8e2bbb8d451f32f2d9d44e96e75fbed971654f"
     },
     {
       "id": "SRC:62fff6504d",
       "path": "Providers/105-WorkspaceLayouts.ps1",
-      "sha256": "9b73099a48197b7e757437243eaa1bd2e3bb8f68e99fd79e61f93d4e9d1affc4"
+      "sha256": "13d2cb38da1c9145bd63fbb228c3a459eaac11fbd88107af52bab7cf17853426"
     },
     {
       "id": "SRC:f1b9beff21",
       "path": "Providers/107-WorkspaceStudio.ps1",
-      "sha256": "7301282e6e30c8f26d35cfe9db72d2021642985a06306fb9925fd56c438d970f"
+      "sha256": "bcbc00398a40ade892942134a6b163bba5efde68b083e35485b57d571e1a889f"
     },
     {
       "id": "SRC:6e8ae24ac4",
@@ -89,7 +89,7 @@
     {
       "id": "SRC:65dbd15e56",
       "path": "Providers/111-CleanerPreviewStudio.ps1",
-      "sha256": "e2ed52c6b19a1fa227daaccffb1f1d6a8c3bbc187d91399e23d28ae3b2cf44a1"
+      "sha256": "2a218560f933a5076bd6d88f6aad50335957da88896e3ce45fdc6a2f18d9fd2a"
     },
     {
       "id": "SRC:bf0bb87122",
@@ -109,12 +109,12 @@
     {
       "id": "SRC:23ed7d97f4",
       "path": "Providers/76-WDAC.ps1",
-      "sha256": "b4c788bcf21e67002c715ed75463eb06d2a6751d97b28d1cb412e7973615d06b"
+      "sha256": "f264b3c4dd0bdeac329c0d73d1caa4c9c8c74b7e8ef85d563c0aa3d84ef10548"
     },
     {
       "id": "SRC:d9c8da5094",
       "path": "Providers/77-OfflineImage.ps1",
-      "sha256": "848ba1bd443aba58f98dc9f453ac3de2421b8ec1056c983640186c577c4a901d"
+      "sha256": "37c86dbb49e8d0d1bc38333ab380bbe1a7bd8b35d35a4aafdea0b0ed04ef7f84"
     },
     {
       "id": "SRC:283330b589",
@@ -154,7 +154,7 @@
     {
       "id": "SRC:c727679ef5",
       "path": "Providers/90-Extensions.ps1",
-      "sha256": "8f8e88f0cbb436ad21042726ebadc378525d1f904c98037d70b3d89a4d4206e7"
+      "sha256": "6228e54e73d4376c05e428e357abd938604dac7aea24860c7397b34522afcd70"
     },
     {
       "id": "SRC:3b617af8c7",

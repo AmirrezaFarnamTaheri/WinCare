@@ -5,6 +5,7 @@ command injection. ParseInput captures parse errors in [ref] params, so a
 process exit-code of 0 means no runtime crash occurred.
 """
 import base64
+import shutil
 import subprocess
 import unittest
 
@@ -15,6 +16,10 @@ def _ps_b64(script: str) -> str:
 
 
 class TestAstParserFuzzer(unittest.TestCase):
+    def setUp(self):
+        if shutil.which("pwsh") is None:
+            self.skipTest("pwsh is not available on this host; AST fuzzing requires PowerShell 7.")
+
     MALFORMED_SNIPPETS = [
         "function test {",
         "$a = ",

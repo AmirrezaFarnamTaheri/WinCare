@@ -340,9 +340,13 @@ function Test-WinCareCaptivePortal {
 
 function Test-WinCareDohLatency {
     [CmdletBinding()]
-    param([string[]]$Endpoints=@('1.1.1.1','8.8.8.8','9.9.9.9'))
+    param([string[]]$Endpoints=@())
+    $resolvedEndpoints=@(Resolve-WinCareNetworkProbeTarget -Targets $Endpoints -IncludeLocalInfrastructure)
+    if($resolvedEndpoints.Count -eq 0){
+        throw 'DoH latency measurement requires explicit -Endpoints or configured NetworkExperimentTargets; WinCare will not silently probe public services.'
+    }
     $results=[Collections.Generic.List[object]]::new()
-    foreach($ep in $Endpoints) {
+    foreach($ep in $resolvedEndpoints) {
         $sw=[Diagnostics.Stopwatch]::StartNew()
         $ok=try { Test-Connection -TargetName $ep -Count 1 -Quiet -TimeoutSeconds 2 } catch { $false }
         $sw.Stop()
@@ -355,13 +359,28 @@ function Set-WinCareDohEnforcement {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)][string]$InterfaceAlias,
+        [Parameter(Mandatory)][ValidateCount(1,8)][string[]]$ServerAddresses,
         [ValidateSet('AllowDoh','RequireDoh')][string]$DohMode='RequireDoh'
     )
     if (-not $IsWindows -or -not (Get-Command Set-DnsClientServerAddress -ErrorAction SilentlyContinue)) {
         return New-WinCareResult -Success $false -Status Blocked -Code 'DohEnforcementUnsupported' -Message 'DoH enforcement requires Windows DNS Client cmdlets.' -ExitCode 78
     }
-    Set-DnsClientServerAddress -InterfaceAlias $InterfaceAlias -ServerAddresses @('1.1.1.1','1.0.0.1') -ErrorAction Stop
-    New-WinCareResult -Success $true -Message "Enforced DNS over HTTPS ($DohMode) on interface $InterfaceAlias"
+    $validated=[Collections.Generic.List[string]]::new()
+    foreach($candidate in $ServerAddresses) {
+        $parsed=[Net.IPAddress]::Any
+        if([string]::IsNullOrWhiteSpace($candidate) -or -not [Net.IPAddress]::TryParse($candidate.Trim(),[ref]$parsed)) {
+            return New-WinCareResult -Success $false -Status Blocked -Code 'DohServerAddressInvalid' `
+                -Message "'$candidate' is not a valid literal IP DNS server address." -ExitCode 22
+        }
+        $validated.Add($parsed.ToString())
+    }
+    Set-DnsClientServerAddress -InterfaceAlias $InterfaceAlias -ServerAddresses @($validated) -ErrorAction Stop
+    New-WinCareResult -Success $true -Message "Enforced DNS over HTTPS ($DohMode) on interface $InterfaceAlias" -Data @{
+        InterfaceAlias=$InterfaceAlias
+        ServerAddresses=@($validated)
+        DohMode=$DohMode
+        EvidenceType='ExplicitOperatorSuppliedDnsServerAssignment'
+    }
 }
 
 if($MyInvocation.MyCommand.ScriptBlock.Module) {

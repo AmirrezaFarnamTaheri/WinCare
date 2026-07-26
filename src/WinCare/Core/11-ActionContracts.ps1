@@ -1,6 +1,5 @@
 function Get-WinCareActionContractTable {
-    [CmdletBinding()]
-    param()
+    [CmdletBinding()]param()
     if($script:WinCareState.ContainsKey('ActionContracts')){return $script:WinCareState.ActionContracts}
     $table=[ordered]@{}
     function Add-Contract([string]$Type,[string[]]$Required,[string[]]$Allowed,[string]$MinimumRisk='Low',[bool]$AlwaysAdmin=$false,[bool]$ElevationAllowed=$true,[int]$MaximumTimeout=21600){
