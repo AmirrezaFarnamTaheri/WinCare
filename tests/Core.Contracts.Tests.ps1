@@ -1,7 +1,8 @@
 
+$modulePath = Join-Path $PSScriptRoot '..\src\WinCare\WinCare.psd1'
+Import-Module $modulePath -Force
+
 Describe 'Versioned action and plan contracts' {
-    #requires -Version 7.2
-BeforeAll { Import-Module "$((Get-Location).Path)\src\WinCare\WinCare.psd1" -Force -Global }
   InModuleScope WinCare {
     BeforeEach { $script:WinCareState=@{ActionContracts=$null;Config=Get-WinCareDefaultConfig;Policy=Get-WinCareDefaultPolicy;Root=$TestDrive;SessionId='0123456789abcdef0123456789abcdef';IsAdmin=$false;Capabilities=@{}};$script:WinCareState.Remove('ActionContracts') }
     It 'has one unique contract for every dispatcher case' {
