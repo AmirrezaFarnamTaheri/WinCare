@@ -150,7 +150,7 @@ function Assert-UninstallIdentity {
     if([string]$marker.ReleaseManifestSha256 -ne $evidence.ManifestSha256 -or [int]$marker.ManifestFileCount -ne [int]$evidence.Files) { throw 'The installed release manifest evidence is inconsistent.' }
     $receiptHash=(Get-FileHash -LiteralPath $receiptPath -Algorithm SHA256).Hash.ToLowerInvariant()
     if([string]$marker.BuildReceiptSha256 -ne $receiptHash) { throw 'The installed build receipt does not match the installation marker.' }
-    if([string]$receipt.schema -ne 'wincare.build.receipt/v1' -or [string]$receipt.packageProfile -ne 'production' -or [bool]$receipt.source.dirty) { throw 'The installed build receipt is not promotable production evidence.' }
+    if([string]$receipt.schema -notin @('wincare.build.receipt/v1','wincare.build.receipt/v2') -or [string]$receipt.packageProfile -ne 'production' -or [bool]$receipt.source.dirty) { throw 'The installed build receipt is not promotable production evidence.' }
     if([string]$receipt.native.status -ne 'source-built-and-verified') { throw 'The installed native artifacts are not source-verified.' }
     [pscustomobject]@{Path=$full;Marker=$marker;Module=$module;Evidence=$evidence;Receipt=$receipt}
 }

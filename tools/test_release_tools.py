@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import re
 import json
 import stat
 import tempfile
@@ -401,6 +402,34 @@ class ReleaseToolTests(unittest.TestCase):
             assert_empty_output_directory(empty, root)
             self.assertTrue(empty.is_dir())
             self.assertFalse(any(empty.iterdir()))
+
+    def test_installer_accepts_the_build_receipt_schema_the_builder_emits(self) -> None:
+        """The packaged BUILD-RECEIPT.json must be installable and uninstallable.
+
+        Regression test for a producer/consumer split that shipped in a single
+        commit and went unnoticed because no gate exercised it: build_release.py
+        emitted 'wincare.build.receipt/v2' while Install-WinCare.ps1 and
+        Uninstall-WinCare.ps1 both hard-required 'wincare.build.receipt/v1',
+        so every production archive threw 'Unsupported build receipt schema.'
+        at install time. tools/verify_release.py deliberately does not inspect
+        receipt['schema'], so archive validation stayed green while the
+        Windows clean-install gate failed.
+        """
+        repo_root = Path(__file__).resolve().parent.parent
+        builder = (repo_root / "tools/build_release.py").read_text(encoding="utf-8")
+        emitted = set(re.findall(r'"schema":\s*"(wincare\.build\.receipt/v\d+)"', builder))
+        self.assertTrue(emitted, "build_release.py no longer emits a recognizable build-receipt schema")
+
+        for script_name in ("Install-WinCare.ps1", "Uninstall-WinCare.ps1"):
+            script = (repo_root / script_name).read_text(encoding="utf-8-sig")
+            accepted = set(re.findall(r"'(wincare\.build\.receipt/v\d+)'", script))
+            self.assertTrue(accepted, f"{script_name} does not gate on a build-receipt schema at all")
+            missing = emitted - accepted
+            self.assertFalse(
+                missing,
+                f"{script_name} rejects build-receipt schema(s) that build_release.py emits: "
+                f"{sorted(missing)} (accepted: {sorted(accepted)})",
+            )
 
 
 if __name__ == "__main__":

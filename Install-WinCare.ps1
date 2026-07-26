@@ -117,7 +117,7 @@ function Read-ReleaseMetadata {
     param([Parameter(Mandatory)][string]$Root)
     $receiptPath=Join-Path $Root 'BUILD-RECEIPT.json'
     $receipt=Read-WinCareInstallerBoundedUtf8Text -LiteralPath $receiptPath -MaximumBytes 1048576 | ConvertFrom-Json -Depth 40
-    if([string]$receipt.schema -ne 'wincare.build.receipt/v1') { throw 'Unsupported build receipt schema.' }
+    if([string]$receipt.schema -notin @('wincare.build.receipt/v1','wincare.build.receipt/v2')) { throw 'Unsupported build receipt schema.' }
     if([string]$receipt.packageProfile -ne 'production') { throw 'Only production-profile packages may be installed.' }
     if([bool]$receipt.source.dirty) { throw 'Dirty-source packages are non-promotable and cannot be installed.' }
     if([string]$receipt.native.status -ne 'source-built-and-verified') { throw 'The package does not contain source-verified native artifacts.' }
