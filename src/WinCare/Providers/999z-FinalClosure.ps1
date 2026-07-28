@@ -135,10 +135,18 @@ ${function:Test-WinCarePlaybookDefinition} = {
         'architectures',
         'requiresAdmin',
         'sourceRecords',
-        'steps') -Context 'playbook'
+        'steps',
+        'SourcePath',
+        'SourceSha256') -Context 'playbook'
     if([string]$p.id -notmatch '^[a-z0-9][a-z0-9.-]{2,80}$' -or [string]::IsNullOrWhiteSpace([string]$p.title)){throw 'Playbook identity is invalid.'}
     if([int]$p.minimumBuild -lt 0 -or [int]$p.maximumBuild -lt [int]$p.minimumBuild){throw 'Playbook build range is invalid.'}
     if($p.requiresAdmin -isnot [bool]){throw 'Playbook requiresAdmin must be Boolean.'}
+    $hasSourcePath=$p.ContainsKey('SourcePath');$hasSourceSha256=$p.ContainsKey('SourceSha256')
+    if($hasSourcePath -xor $hasSourceSha256){throw 'Playbook source metadata is incomplete.'}
+    if($hasSourcePath){
+        if([string]::IsNullOrWhiteSpace([string]$p.SourcePath) -or ([string]$p.SourcePath).Length -gt 32760){throw 'Playbook source path is invalid.'}
+        if([string]$p.SourceSha256 -notmatch '^[a-f0-9]{64}$'){throw 'Playbook source digest is invalid.'}
+    }
     $architectures=@($p.architectures);if($architectures.Count -lt 1 -or @($architectures|Where-Object{[string]$_ -notin @('AMD64','ARM64')}).Count){throw 'Playbook architecture list is invalid.'}
     $steps=@($p.steps);if($steps.Count -lt 1 -or $steps.Count -gt 128){throw 'Playbook must contain 1..128 data-only steps.'}
     foreach($stepValue in $steps){
@@ -166,11 +174,12 @@ ${function:Get-WinCarePlaybook} = {
     $sourceSha256=(Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash.ToLowerInvariant()
     $playbooks=@($document.playbooks|ForEach-Object{
         $playbook=[pscustomobject]$_
+        $null=Test-WinCarePlaybookDefinition $playbook
         $playbook|Add-Member -NotePropertyName SourcePath -NotePropertyValue $path -Force
         $playbook|Add-Member -NotePropertyName SourceSha256 -NotePropertyValue $sourceSha256 -Force
         $playbook
     })
-    foreach($playbook in $playbooks){$null=Test-WinCarePlaybookDefinition $playbook;if(-not $seen.Add([string]$playbook.Id)){throw 'Duplicate playbook ID.'}}
+    foreach($playbook in $playbooks){if(-not $seen.Add([string]$playbook.Id)){throw 'Duplicate playbook ID.'}}
     if($Id){return @($playbooks|Where-Object Id -eq $Id)}
     @($playbooks)
 }

@@ -11,13 +11,36 @@ function ConvertTo-WinCareMaintenanceMap {
     ConvertTo-WinCareParameterDictionary $Value
 }
 
+function ConvertTo-WinCareCanonicalMaintenanceRecord {
+    [CmdletBinding()]
+    param([Parameter(Mandatory)][object]$Record)
+    $map=ConvertTo-WinCareMaintenanceMap $Record
+    $null=Test-WinCareMaintenanceRecord -Record $map
+    [ordered]@{
+        SchemaVersion=[int]$map.SchemaVersion
+        Id=[string]$map.Id
+        Name=[string]$map.Name
+        Description=[string]$map.Description
+        StartAt=([datetimeoffset]::Parse([string]$map.StartAt,[Globalization.CultureInfo]::InvariantCulture,[Globalization.DateTimeStyles]::RoundtripKind)).ToUniversalTime().ToString('o')
+        EndAt=([datetimeoffset]::Parse([string]$map.EndAt,[Globalization.CultureInfo]::InvariantCulture,[Globalization.DateTimeStyles]::RoundtripKind)).ToUniversalTime().ToString('o')
+        NoticeAt=([datetimeoffset]::Parse([string]$map.NoticeAt,[Globalization.CultureInfo]::InvariantCulture,[Globalization.DateTimeStyles]::RoundtripKind)).ToUniversalTime().ToString('o')
+        State=[string]$map.State
+        CreatedAt=([datetimeoffset]::Parse([string]$map.CreatedAt,[Globalization.CultureInfo]::InvariantCulture,[Globalization.DateTimeStyles]::RoundtripKind)).ToUniversalTime().ToString('o')
+        UpdatedAt=([datetimeoffset]::Parse([string]$map.UpdatedAt,[Globalization.CultureInfo]::InvariantCulture,[Globalization.DateTimeStyles]::RoundtripKind)).ToUniversalTime().ToString('o')
+        PlaybookId=[string]$map.PlaybookId
+        Tags=@($map.Tags|ForEach-Object{[string]$_})
+        RequiresRestart=[bool]$map.RequiresRestart
+        Result=if($null -eq $map.Result){$null}else{ConvertTo-WinCareCanonicalValue -Value $map.Result}
+        SourceRecords=@($map.SourceRecords|ForEach-Object{[string]$_})
+    }
+}
+
 function Get-WinCareMaintenanceRecordHash {
     [CmdletBinding()]
     param([AllowNull()][object]$Record)
     if($null -eq $Record){return 'absent'}
-    $map=ConvertTo-WinCareMaintenanceMap $Record
-    $null=Test-WinCareMaintenanceRecord -Record $map
-    Get-WinCareSha256Text -Text (ConvertTo-WinCareCanonicalJson -InputObject $map -Depth 40)
+    $canonical=ConvertTo-WinCareCanonicalMaintenanceRecord -Record $Record
+    Get-WinCareSha256Text -Text (ConvertTo-WinCareCanonicalJson -InputObject $canonical -Depth 40)
 }
 
 function Get-WinCareMaintenanceRecordFromStore {

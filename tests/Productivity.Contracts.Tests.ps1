@@ -179,7 +179,7 @@ BeforeAll { Import-Module "$((Get-Location).Path)\src\WinCare\WinCare.psd1" -For
       $active=New-WinCareRemoteSupportConsentStatePlan -Id $consent.Id -State Active
       $activateResult=Invoke-WinCareReplaceRemoteConsentStoreAction -Action $active.Actions[0]
       $activateResult.Success|Should -Be $true -Because $activateResult.Message
-      $raw=Get-WinCareRemoteConsentStore;$raw.Records[0].ExpiresAt=[datetime]::UtcNow.AddMinutes(-1).ToString('o');$raw.UpdatedAt=[datetime]::UtcNow.ToString('o');$raw.Revision=[long]$raw.Revision+1
+      $raw=Get-WinCareRemoteConsentStore;$expiredAt=[datetime]::UtcNow.AddMinutes(-1);$raw.Records[0].CreatedAt=$expiredAt.AddMinutes(-30).ToString('o');$raw.Records[0].ExpiresAt=$expiredAt.ToString('o');$raw.UpdatedAt=[datetime]::UtcNow.ToString('o');$raw.Revision=[long]$raw.Revision+1
       $null=Set-WinCareRemoteConsentStoreInternal -Store $raw
       (Get-WinCareRemoteSupportConsent -IncludeTerminal|Select-Object -First 1).Status|Should -Be Expired
       {New-WinCareRemoteSupportConsentStatePlan -Id $consent.Id -State Closed}| Should -Throw
