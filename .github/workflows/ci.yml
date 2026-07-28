@@ -30,10 +30,10 @@ jobs:
           base64 -d .github/remediation/residual.patch.gz.b64 | gzip -d > /tmp/wincare-residual.patch
           git apply --check /tmp/wincare-residual.patch
           git apply /tmp/wincare-residual.patch
-          git checkout HEAD^ -- .github/workflows/ci.yml
+          git checkout 8a55394d61b9c9b67007c97c0d0d988e3e3059e6 -- .github/workflows/ci.yml
           git rm .github/remediation/residual.patch.gz.b64 .github/workflows/apply-residual-remediation.yml
           python tools/validate_source_references.py . --write
-      - name: Validate remediated tree
+      - name: Validate remediated source tree
         shell: bash
         run: |
           set -euo pipefail
@@ -54,10 +54,7 @@ jobs:
           python tools/validate_test_fixtures.py . --output artifacts/test-fixture-validation.json
           python tools/validate_gui.py .
           python -m unittest tools.test_release_tools tools.test_maintainability tools.test_security_invariants tools.test_cleaner_preview tools.test_gui tools.test_source_references tools.test_wincare_ps_source -v
-          python tools/build_release.py . --output-directory artifacts/release
-          VERSION=$(python -c "import re,pathlib; print(re.search(r\"ModuleVersion\\s*=\\s*'([^']+)'\", pathlib.Path('src/WinCare/WinCare.psd1').read_text()).group(1))")
-          python tools/verify_release.py "artifacts/release/WinCare-$VERSION.zip" --output artifacts/archive-validation.json
-      - name: Commit clean remediation
+      - name: Create clean local remediation commit
         shell: bash
         run: |
           set -euo pipefail
@@ -66,4 +63,16 @@ jobs:
           git add -A
           git diff --cached --check
           git commit -m 'fix: close residual Windows validation failures'
+      - name: Verify release from committed tree
+        shell: bash
+        run: |
+          set -euo pipefail
+          python tools/build_release.py . --output-directory artifacts/release
+          VERSION=$(python -c "import re,pathlib; print(re.search(r\"ModuleVersion\\s*=\\s*'([^']+)'\", pathlib.Path('src/WinCare/WinCare.psd1').read_text()).group(1))")
+          python tools/verify_release.py "artifacts/release/WinCare-$VERSION.zip" --output artifacts/archive-validation.json
+      - name: Publish clean remediation
+        shell: bash
+        run: |
+          set -euo pipefail
+          git status --short
           git push origin "HEAD:${HEAD_REF}"
