@@ -19,9 +19,9 @@ function Get-WinCareMaintenancePlaybooks {
             PlaybookId = [string]$playbook.Id
             Name = [string]$playbook.Title
             Description = [string]$playbook.Description
-            SourcePath = [string]$playbook.SourcePath
-            SourceSha256 = [string]$playbook.SourceSha256
-            ActionCount = @($playbook.Actions).Count
+            SourcePath = [string](Get-WinCarePropertyValue $playbook 'SourcePath' '')
+            SourceSha256 = [string](Get-WinCarePropertyValue $playbook 'SourceSha256' '')
+            ActionCount = @((Get-WinCarePropertyValue $playbook 'Actions' (Get-WinCarePropertyValue $playbook 'Steps' @()))).Count
             Compatible = [bool](Test-WinCarePlaybookCompatibility -Playbook $playbook)
             TaskName = $taskName
             Scheduled = $null -ne $task

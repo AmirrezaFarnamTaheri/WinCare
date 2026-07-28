@@ -248,7 +248,7 @@ function Invoke-WinCareInstallSmokeTest {
     $start.EnvironmentVariables['NO_COLOR']='1'
     $start.EnvironmentVariables['TERM']='dumb'
     $start.EnvironmentVariables['POWERSHELL_UPDATECHECK']='Off'
-    foreach($argument in @('-NoLogo','-NoProfile','-NonInteractive','-File',$launcher,'-Command','system','-Json')){[void]$start.ArgumentList.Add($argument)}
+    foreach($argument in @('-NoLogo','-NoProfile','-NonInteractive','-File',$launcher,'-Command','system','-Json','-WarningAction','SilentlyContinue','-InformationAction','SilentlyContinue')){[void]$start.ArgumentList.Add($argument)}
     $process=[Diagnostics.Process]::new();$process.StartInfo=$start
     try{
         $capture=Invoke-WinCareInstallerCapturedProcess -Process $process -TimeoutSeconds $TimeoutSeconds -MaximumBytes 4194304

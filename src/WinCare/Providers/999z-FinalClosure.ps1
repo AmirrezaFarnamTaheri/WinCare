@@ -163,7 +163,13 @@ ${function:Get-WinCarePlaybook} = {
     $null=Test-WinCareStrictObjectKeys $document @('schemaVersion','playbooks') 'playbook catalog'
     if([int]$document.schemaVersion -ne 1){throw 'Unsupported playbook catalog schema.'}
     $seen=[Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
-    $playbooks=@($document.playbooks|ForEach-Object{[pscustomobject]$_})
+    $sourceSha256=(Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash.ToLowerInvariant()
+    $playbooks=@($document.playbooks|ForEach-Object{
+        $playbook=[pscustomobject]$_
+        $playbook|Add-Member -NotePropertyName SourcePath -NotePropertyValue $path -Force
+        $playbook|Add-Member -NotePropertyName SourceSha256 -NotePropertyValue $sourceSha256 -Force
+        $playbook
+    })
     foreach($playbook in $playbooks){$null=Test-WinCarePlaybookDefinition $playbook;if(-not $seen.Add([string]$playbook.Id)){throw 'Duplicate playbook ID.'}}
     if($Id){return @($playbooks|Where-Object Id -eq $Id)}
     @($playbooks)

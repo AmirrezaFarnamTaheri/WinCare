@@ -81,7 +81,7 @@ BeforeAll { Import-Module "$((Get-Location).Path)\src\WinCare\WinCare.psd1" -For
     It 'requires runtime-bound cancellation for started downloads' {
       $action=New-WinCareAction -Type StartDownloadTransfer -Label Start -Risk Low -Parameters @{Id='0123456789abcdef0123456789abcdef';ExpectedRecordHash=('a'*64)} -Reversible $true
       (Test-WinCareActionContract $action).Success|Should -Be $true
-      $result=New-WinCareResult -Success $true -Data @{Compensator=@{Type='CancelDownloadTransfer';RequiresAdmin=$false;Parameters=@{Id=$action.Parameters.Id;ExpectedRecordHash=('b'*64)}}}
+      $result=New-WinCareResult -Success $true -Message 'Download started.' -Data @{Compensator=@{Type='CancelDownloadTransfer';RequiresAdmin=$false;Parameters=@{Id=$action.Parameters.Id;ExpectedRecordHash=('b'*64)}}}
       (Resolve-WinCareCompensatorDescriptor -Action $action -Result $result).Type|Should -Be CancelDownloadTransfer
     }
 

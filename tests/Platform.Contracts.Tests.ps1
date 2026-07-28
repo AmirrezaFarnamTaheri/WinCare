@@ -74,7 +74,7 @@ BeforeAll { Import-Module "$((Get-Location).Path)\src\WinCare\WinCare.psd1" -For
       $upsert.Actions[0].Parameters.ExpectedRevision|Should -Be 0
       $upsert.Actions[0].Parameters.ExpectedRecordHash|Should -Be absent
       $upsertResult=Invoke-WinCareUpsertMaintenanceWindowAction -Action $upsert.Actions[0]
-      $upsertResult.Success|Should -Be $true
+      $upsertResult.Success|Should -Be $true -Because $upsertResult.Message
       $upsertResult.Data.Compensator.Type|Should -Be RestoreMaintenanceWindowRecord
       $upsertResult.Data.Compensator.Parameters.ExpectedCurrentHash|Should -Match '^[a-f0-9]{64}$'
       $transition=New-WinCareMaintenanceTransitionPlan -Id $record.Id -State Notice

@@ -139,8 +139,8 @@ function Get-WinCareActionContract {
 function ConvertTo-WinCareParameterDictionary {
     param([object]$Value)
     if($null -eq $Value){return @{}}
-    if($Value -is [Collections.IDictionary]){return $Value}
-    $result=@{};foreach($property in $Value.PSObject.Properties){$result[$property.Name]=$property.Value};$result
+    $result=@{};if($Value -is [Collections.IDictionary]){foreach($key in $Value.Keys){$result[[string]$key]=$Value[$key]};return $result}
+    foreach($property in $Value.PSObject.Properties){$result[$property.Name]=$property.Value};$result
 }
 
 function Test-WinCareActionContract {

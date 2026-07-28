@@ -84,7 +84,7 @@
     {
       "id": "SRC:1461504853",
       "path": "Providers/110-ShellHardwareStudio.ps1",
-      "sha256": "35f2abacf2074b16d3ae43b155a39632c3bcee2c9bde0cbe7fd18eb8350a8b80"
+      "sha256": "f1a54a10b00431e27fc6fbe3a01b0f7c5a9659ba3a057a2f024ecefafcb9ba8b"
     },
     {
       "id": "SRC:65dbd15e56",
@@ -184,7 +184,7 @@
     {
       "id": "SRC:2441cc19b2",
       "path": "Providers/98-RemoteSupport.ps1",
-      "sha256": "aa5a43c1181174dadae2d4cca1455b7a1baf1746656522ca1e1bf51813d8743c"
+      "sha256": "ffeebbe71d371171946e618b4c705da36e542001b67b4f80a36693be05f6597d"
     },
     {
       "id": "SRC:66c214216c",

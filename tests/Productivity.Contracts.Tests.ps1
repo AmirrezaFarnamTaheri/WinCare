@@ -172,11 +172,13 @@ BeforeAll { Import-Module "$((Get-Location).Path)\src\WinCare\WinCare.psd1" -For
     It 'models remote-support consent as a closed expiring lifecycle' {
       $plan=New-WinCareRemoteSupportConsentPlan -ToolId rustdesk -Reason 'Support session' -DurationMinutes 30
       $plan.Actions[0].Type|Should -Be ReplaceRemoteConsentStore
-      (Invoke-WinCareReplaceRemoteConsentStoreAction -Action $plan.Actions[0]).Success|Should -Be $true
+      $createResult=Invoke-WinCareReplaceRemoteConsentStoreAction -Action $plan.Actions[0]
+      $createResult.Success|Should -Be $true -Because $createResult.Message
       $consent=Get-WinCareRemoteSupportConsent|Select-Object -First 1
       $consent.Status|Should -Be Prepared
       $active=New-WinCareRemoteSupportConsentStatePlan -Id $consent.Id -State Active
-      (Invoke-WinCareReplaceRemoteConsentStoreAction -Action $active.Actions[0]).Success|Should -Be $true
+      $activateResult=Invoke-WinCareReplaceRemoteConsentStoreAction -Action $active.Actions[0]
+      $activateResult.Success|Should -Be $true -Because $activateResult.Message
       $raw=Get-WinCareRemoteConsentStore;$raw.Records[0].ExpiresAt=[datetime]::UtcNow.AddMinutes(-1).ToString('o');$raw.UpdatedAt=[datetime]::UtcNow.ToString('o');$raw.Revision=[long]$raw.Revision+1
       $null=Set-WinCareRemoteConsentStoreInternal -Store $raw
       (Get-WinCareRemoteSupportConsent -IncludeTerminal|Select-Object -First 1).Status|Should -Be Expired
