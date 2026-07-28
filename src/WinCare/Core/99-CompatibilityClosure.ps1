@@ -2,7 +2,7 @@
 
 $script:WinCareBaseActionContractTable = ${function:Get-WinCareActionContractTable}
 
-function Get-WinCareActionContractTable {
+${function:Get-WinCareActionContractTable} = {
     [CmdletBinding()]
     param()
     $hasCache = $script:WinCareState.ContainsKey('ActionContracts')
@@ -21,7 +21,7 @@ function Get-WinCareActionContractTable {
     return $cached
 }
 
-function Get-WinCareMainMenuItems {
+${function:Get-WinCareMainMenuItems} = {
     [CmdletBinding()]
     param()
     $definitions = @(
@@ -151,7 +151,7 @@ function Get-WinCareLegacyUnsafeProfileDefinition {
     )
 }
 
-function Get-WinCareLegacyUnsafeProfile {
+${function:Get-WinCareLegacyUnsafeProfile} = {
     [CmdletBinding()]
     param([string]$Id = '')
     $profiles = @(Get-WinCareLegacyUnsafeProfileDefinition)
@@ -200,7 +200,7 @@ function New-WinCareLegacyControlProfilePlan {
         }
 }
 
-function New-WinCareLegacyUnsafeProfilePlan {
+${function:New-WinCareLegacyUnsafeProfilePlan} = {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)][string]$ProfileId,
