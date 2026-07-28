@@ -80,5 +80,6 @@
         'Providers/97-LocalNotes.ps1'
         'Providers/98-RemoteSupport.ps1'
         'Providers/99-BrowserWorkspace.ps1'
+        'Providers/999a-CoreClosure.ps1'
     )
 }
