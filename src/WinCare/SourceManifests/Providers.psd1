@@ -81,5 +81,6 @@
         'Providers/98-RemoteSupport.ps1'
         'Providers/99-BrowserWorkspace.ps1'
         'Providers/999a-CoreClosure.ps1'
+        'Providers/999z-FinalClosure.ps1'
     )
 }
