@@ -142,7 +142,7 @@ jobs:
               "$raw=Get-WinCareRemoteConsentStore;$expiredAt=[datetime]::UtcNow.AddMinutes(-1);$raw.Records[0].CreatedAt=$expiredAt.AddMinutes(-30).ToString('o');$raw.Records[0].ExpiresAt=$expiredAt.ToString('o');$raw.UpdatedAt=[datetime]::UtcNow.ToString('o');$raw.Revision=[long]$raw.Revision+1"
           )
           PY
-          git checkout HEAD^ -- .github/workflows/ci.yml
+          git checkout 7b2d8649fea2abdfa77187adfd9c898a3bc5833d -- .github/workflows/ci.yml
           git rm .github/remediation/final-residual.patch.gz.b64
           python tools/validate_source_references.py . --write
       - name: Validate final source tree
@@ -170,6 +170,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          rm -rf artifacts
+          find . -type d -name __pycache__ -prune -exec rm -rf {} +
+          find . -type f \( -name '*.pyc' -o -name '*.pyo' \) -delete
           git config user.name 'WinCare CI Remediation'
           git config user.email 'ci-remediation@wincare.invalid'
           git add -A
