@@ -31,8 +31,8 @@
         'Core/09-Transactions.ps1'
         'Core/10-Catalog.ps1'
         'Core/11-ActionContracts.ps1'
-        'Core/99-SecurityHardening.ps1'
         'Core/99-CompatibilityClosure.ps1'
+        'Core/99-SecurityHardening.ps1'
         'Core/ScheduledTaskEngine.ps1'
     )
 }
