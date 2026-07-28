@@ -105,18 +105,33 @@ Describe 'Configuration and policy admission' {
       $c=Get-WinCareDefaultConfig;$c.RequirePreviewForChanges='yes';{Test-WinCareConfigObject $c}|Should -Throw
       $p=Get-WinCareDefaultPolicy;$p.RequirePreview='yes';{Test-WinCarePolicyObject $p}|Should -Throw
     }
-    It 'verifies zero-trust config vault protection' {
-      $vaultPath = Join-Path $TestDrive 'secure_vault.dat'
-      'DPAPI_PROTECTED_DATA' | Set-Content -LiteralPath $vaultPath
+    It 'rejects plaintext vault marker spoofing' {
+      $vaultPath = Join-Path $TestDrive 'spoofed_vault.dat'
+      'DPAPI ENCRYPTED ZeroTrustVault AQAAANCMnd8' | Set-Content -LiteralPath $vaultPath
       $res = Protect-WinCareConfigVault -ConfigVaultPath $vaultPath
       $res.ConfigVaultPath | Should -Be (Resolve-WinCareCanonicalPath -LiteralPath $vaultPath)
-      $res.ZeroTrustVaultEncrypted | Should -Be $true
+      $res.ZeroTrustVaultEncrypted | Should -Be $false
       $res.EvidenceType | Should -Be 'ZeroTrustConfigVaultProtection'
-
-      $plainPath = Join-Path $TestDrive 'plain_vault.dat'
-      'UNENCRYPTED_DATA' | Set-Content -LiteralPath $plainPath
-      $resPlain = Protect-WinCareConfigVault -ConfigVaultPath $plainPath
-      $resPlain.ZeroTrustVaultEncrypted | Should -Be $false
+    }
+    It 'verifies a genuine DPAPI vault payload on Windows' -Skip:(-not $IsWindows) {
+      $vaultPath = Join-Path $TestDrive 'secure_vault.dat'
+      $plainBytes = [System.Text.Encoding]::UTF8.GetBytes('WinCare vault contract test')
+      $protectedBytes = $null
+      try {
+        $protectedBytes = [System.Security.Cryptography.ProtectedData]::Protect(
+          $plainBytes,
+          $null,
+          [System.Security.Cryptography.DataProtectionScope]::CurrentUser
+        )
+        [System.IO.File]::WriteAllBytes($vaultPath, $protectedBytes)
+        $res = Protect-WinCareConfigVault -ConfigVaultPath $vaultPath
+        $res.ZeroTrustVaultEncrypted | Should -Be $true
+      } finally {
+        if ($plainBytes.Length -gt 0) { [System.Array]::Clear($plainBytes, 0, $plainBytes.Length) }
+        if ($null -ne $protectedBytes -and $protectedBytes.Length -gt 0) {
+          [System.Array]::Clear($protectedBytes, 0, $protectedBytes.Length)
+        }
+      }
     }
     It 'evaluates RBAC role permissions and logs unauthorized action attempts' {
       $granted = Assert-WinCareRolePermission -RequestedRole 'HelpdeskAdmin' -ActionContractName 'ClearTemporaryFiles' -UserIdentity 'TestUser'
@@ -137,4 +152,3 @@ Describe 'Configuration and policy admission' {
     }
   }
 }
-
