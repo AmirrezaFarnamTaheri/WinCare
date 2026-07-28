@@ -32,6 +32,12 @@ function Get-WinCarePropertyValue {
         [object]$Default=$null
     )
     if ($null -eq $InputObject) { return $Default }
+    if ($InputObject -is [Collections.IDictionary]) {
+        if (-not $InputObject.Contains($Name)) { return $Default }
+        $value = $InputObject[$Name]
+        if ($null -eq $value) { return $Default }
+        return $value
+    }
     $property=$InputObject.PSObject.Properties[$Name]
     if ($null -eq $property -or $null -eq $property.Value) { return $Default }
     return $property.Value
