@@ -1,11 +1,12 @@
-
+Import-Module (Join-Path $PSScriptRoot '../src/WinCare/WinCare.psd1') -Force -Global
 
 Describe 'Workspace and Device Studio contracts' {
     BeforeAll {
-    $root=Split-Path -Parent $PSScriptRoot
-    Import-Module (Join-Path $root 'src/WinCare/WinCare.psd1') -Force
-    Initialize-WinCareState -SkipConfigSave
-}
+        $root=Split-Path -Parent $PSScriptRoot
+        Import-Module (Join-Path $root 'src/WinCare/WinCare.psd1') -Force
+        Initialize-WinCareState -SkipConfigSave
+    }
+
     It 'keeps external and Xbox mutations default-deny' {
         $policy=Get-WinCareDefaultPolicy
         $policy.AllowVerifiedPeerTools | Should -Be $false
@@ -45,8 +46,8 @@ Describe 'Workspace and Device Studio contracts' {
     It 'includes the requested unsafe Xbox one-click mutation with exact evidence values' {
         $source=Get-Content (Join-Path $root 'src/WinCare/Providers/107-WorkspaceStudio.ps1') -Raw
         $source | Should -Match '52580392,50902630,59765208'
-        $source | Should -Match "DeviceForm"
-        $source | Should -Match "Value=if\(\$Enabled\)\{46\}"
+        $source | Should -Match 'DeviceForm'
+        $source | Should -Match 'Value=if\(\$Enabled\)\{46\}'
         $source | Should -Match 'I ACCEPT LEGACY UNSAFE MUTATIONS'
         $source | Should -Match "LegacyUnsafeProfile='xbox-fullscreen-experience'"
     }
@@ -60,5 +61,4 @@ Describe 'Workspace and Device Studio contracts' {
         $source | Should -Match 'FolderIconResourceChanged'
         $source | Should -Match 'IconResourceSha256'
     }
-
 }
