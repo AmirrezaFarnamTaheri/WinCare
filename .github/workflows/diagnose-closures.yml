@@ -1,9 +1,11 @@
 name: diagnose-closures
 
 on:
-  push:
+  pull_request:
     paths:
       - .github/workflows/diagnose-closures.yml
+      - src/WinCare/**
+      - tests/**
   workflow_dispatch:
 
 permissions:
@@ -15,6 +17,18 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - name: Upload exact checked-out source snapshot
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: closure-source-snapshot
+          path: |
+            src
+            tests
+            tools
+            config
+            *.ps1
+            *.json
+          if-no-files-found: error
       - name: Install Pester
         shell: pwsh
         run: |
@@ -27,8 +41,12 @@ jobs:
         run: |
           $core = 'src/WinCare/SourceManifests/Core.psd1'
           $providers = 'src/WinCare/SourceManifests/Providers.psd1'
-          (Get-Content -LiteralPath $core) | Where-Object { $_ -notmatch "Core/99-CompatibilityClosure\.ps1" } | Set-Content -LiteralPath $core -Encoding utf8
-          (Get-Content -LiteralPath $providers) | Where-Object { $_ -notmatch "Providers/999[az]-.*Closure\.ps1" } | Set-Content -LiteralPath $providers -Encoding utf8
+          (Get-Content -LiteralPath $core) |
+            Where-Object { $_ -notmatch "Core/99-CompatibilityClosure\.ps1" } |
+            Set-Content -LiteralPath $core -Encoding utf8
+          (Get-Content -LiteralPath $providers) |
+            Where-Object { $_ -notmatch "Providers/999[az]-.*Closure\.ps1" } |
+            Set-Content -LiteralPath $providers -Encoding utf8
       - name: Run full Pester suite without closures
         id: pester
         continue-on-error: true
@@ -58,7 +76,8 @@ jobs:
                 Error = [string]$_.ErrorRecord
               }
             })
-          } | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath artifacts/closure-diagnostic.json -Encoding utf8
+          } | ConvertTo-Json -Depth 10 |
+            Set-Content -LiteralPath artifacts/closure-diagnostic.json -Encoding utf8
           if ($result.FailedCount -gt 0) { exit 1 }
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: always()
