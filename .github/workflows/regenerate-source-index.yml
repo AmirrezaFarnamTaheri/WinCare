@@ -1,9 +1,7 @@
 name: regenerate-source-index
 
 on:
-  push:
-    branches:
-      - claude/repo-audit-optimization-cobe67
+  pull_request:
 
 permissions:
   contents: read
