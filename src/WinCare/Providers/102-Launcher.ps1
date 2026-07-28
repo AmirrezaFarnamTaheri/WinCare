@@ -125,7 +125,7 @@ function Invoke-WinCareCalculator {
         $ops.Push($op);$expectValue=$true
     }
     if($expectValue){throw 'Calculator expression is incomplete.'};while($ops.Count){if($ops.Peek() -eq '('){throw 'Unbalanced parenthesis.'};Apply-Operator $values $ops};if($values.Count -ne 1){throw 'Calculator expression could not be reduced.'}
-    [pscustomobject]@{Expression=$Expression;Value=$values.Pop();EvidenceType='CalculatorExpressionResult'}
+    $values.Pop()
 }
 
 

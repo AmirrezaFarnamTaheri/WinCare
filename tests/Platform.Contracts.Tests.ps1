@@ -125,7 +125,7 @@ BeforeAll { Import-Module "$((Get-Location).Path)\src\WinCare\WinCare.psd1" -For
       $body=(Get-Command Invoke-WinCareImportLocalGroupPolicyBackupAction).ScriptBlock.ToString()
       $body|Should -Match 'LocalGroupPolicyImportFailedRolledBack'
       $body|Should -Match 'LocalGroupPolicyImportRollbackFailed'
-      $body|Should -Match 'ArgumentList @\(''/g'',\$captured\.Path\)'
+      $body|Should -Match 'ArgumentList @\(''/g'',\$rollbackRoot\)'
     }
     It 'requires healthy read-write mounted images for mutation' {
       $body=(Get-Command Resolve-WinCareMountedImagePath).ScriptBlock.ToString()

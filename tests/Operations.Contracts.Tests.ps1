@@ -31,6 +31,10 @@ BeforeAll { Import-Module "$((Get-Location).Path)\src\WinCare\WinCare.psd1" -For
       $script:WinCareState.Policy.AllowInsecureDownloads=$false
       $script:WinCareState.Policy.AllowOfflineImageReduction=$false
       $script:WinCareState.Policy.AllowGameStateRestore=$false
+      Mock Assert-WinCareServiceUri {
+        param([uri]$Uri,[switch]$AllowPrivateNetwork,[switch]$AllowLoopbackHttp,[switch]$AllowExplicitHttp)
+        [pscustomobject]@{Uri=$Uri}
+      }
     }
 
     It 'registers and dispatches every operations typed action' {

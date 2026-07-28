@@ -293,11 +293,11 @@ function Get-WinCareServicingMediaInfo {
 
 function ConvertTo-WinCareTerminalProfile {
     param([object]$Profile)
-    $commandLine=[string](Get-WinCarePropertyValue $Profile 'commandline' '')
+    $rawCommandLine=[string](Get-WinCarePropertyValue $Profile 'commandline' '')
     $startingDirectory=[string](Get-WinCarePropertyValue $Profile 'startingDirectory' '')
     $executable=''
-    if($commandLine){
-        $trimmed=$commandLine.Trim()
+    if($rawCommandLine){
+        $trimmed=$rawCommandLine.Trim()
         if($trimmed.StartsWith('"')){$closing=$trimmed.IndexOf('"',1);if($closing -gt 1){$executable=$trimmed.Substring(1,$closing-1)}}
         if(-not $executable){$executable=($trimmed -split '\s+',2)[0].Trim('"')}
         try{$executable=[IO.Path]::GetFileName($executable)}catch{$executable=''}
@@ -307,8 +307,8 @@ function ConvertTo-WinCareTerminalProfile {
         Guid=[string](Get-WinCarePropertyValue $Profile 'guid' '')
         Source=[string](Get-WinCarePropertyValue $Profile 'source' '')
         Executable=$executable
-        HasCommandLine=[bool]$commandLine
-        CommandLineSha256=if($commandLine){Get-WinCareSha256Text -Text $commandLine}else{''}
+        HasCommandLine=[bool]$rawCommandLine
+        CommandLineSha256=if($rawCommandLine){Get-WinCareSha256Text -Text $rawCommandLine}else{''}
         HasStartingDirectory=[bool]$startingDirectory
         StartingDirectorySha256=if($startingDirectory){Get-WinCareSha256Text -Text $startingDirectory}else{''}
         Hidden=[bool](Get-WinCarePropertyValue $Profile 'hidden' $false)

@@ -15,7 +15,7 @@ Describe 'WinCare graphical console' {
     }
 
     It 'uses accessible high-contrast design tokens and keyboard affordances' {
-        foreach($color in @('#0B1020','#121A2B','#7C5CFC','#36C5F0','#2DD4A8','#F6C85F','#F97066','#F4F7FB')){$Xaml|Should -Match [regex]::Escape($color)}
+        foreach($color in @('#0B1020','#121A2B','#7C5CFC','#36C5F0','#2DD4A8','#F6C85F','#F97066','#F4F7FB')){$Xaml|Should -Match ([regex]::Escape($color))}
         $Xaml|Should -Match 'AutomationProperties.Name="Search WinCare actions"'
         $Xaml|Should -Match 'AutomationProperties.Name="Critical action acknowledgement"'
         (Get-Content -LiteralPath (Join-Path $Root 'src/WinCare/UI/Gui/10-GuiRuntime.ps1') -Raw)|Should -Match 'ModifierKeys.*Control'
@@ -68,21 +68,21 @@ Describe 'WinCare graphical console' {
         $Runtime|Should -Match '\[Diagnostics\.ProcessStartInfo\]::new\(\)'
         $Runtime|Should -Match '\$psi\.ArgumentList\.Add'
         $Runtime|Should -Match '\$psi\.WorkingDirectory=\$root'
-        $Runtime|Should -Match '24576 characters'
+        $Runtime|Should -Match '24576 bytes'
         $Runtime|Should -Not -Match 'powershell\.exe\s+-Command'
     }
 
     It 'labels generated mutating commands conservatively and critical commands explicitly' {
         $GuiCode=Get-Content -LiteralPath (Join-Path $Root 'src/WinCare/UI/Gui/00-GuiCatalog.ps1') -Raw
         $GuiCode|Should -Match "else\{'High'\}"
-        foreach($command in @('pagefile-set','wua-uninstall','wdac-deploy','injection-surface-quarantine','run-automation','group-policy-import','sysmon-uninstall','offline-package-add')){$GuiCode|Should -Match [regex]::Escape($command)}
+        foreach($command in @('pagefile-set','wua-uninstall','wdac-deploy','injection-surface-quarantine','run-automation','group-policy-import','sysmon-uninstall','offline-package-add')){$GuiCode|Should -Match ([regex]::Escape($command))}
     }
 
     It 'rolls back both installed shortcuts transactionally' {
         $Installer=Get-Content -LiteralPath (Join-Path $Root 'Install-WinCare.ps1') -Raw
         $Uninstaller=Get-Content -LiteralPath (Join-Path $Root 'Uninstall-WinCare.ps1') -Raw
-        foreach($needle in @('shortcutBackup','consoleShortcutBackup','restore previous shortcut','restore previous console shortcut')){$Installer|Should -Match [regex]::Escape($needle)}
-        foreach($needle in @('shortcutBackup','consoleShortcutBackup','restore shortcut','restore console shortcut')){$Uninstaller|Should -Match [regex]::Escape($needle)}
+        foreach($needle in @('shortcutBackup','consoleShortcutBackup','restore previous shortcut','restore previous console shortcut')){$Installer|Should -Match ([regex]::Escape($needle))}
+        foreach($needle in @('shortcutBackup','consoleShortcutBackup','restore shortcut','restore console shortcut')){$Uninstaller|Should -Match ([regex]::Escape($needle))}
     }
 
     It 'preserves graphical, terminal, and headless interfaces in one module authority path' {

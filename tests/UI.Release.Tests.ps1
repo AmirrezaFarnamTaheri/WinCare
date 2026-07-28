@@ -18,7 +18,7 @@ BeforeAll { Import-Module "$((Get-Location).Path)\src\WinCare\WinCare.psd1" -For
       foreach($action in $actions){$routeText|Should -Match ("'"+[regex]::Escape($action)+"'\s*\{")}
     }
     It 'implements every declared headless command' {
-      $text=Get-Content (Join-Path $script:WinCareModuleRoot 'UI\98-Headless.ps1') -Raw
+      $text=(Get-Content (Join-Path $script:WinCareModuleRoot 'UI\98-Headless.ps1') -Raw)+"`n"+(Get-Content (Join-Path $script:WinCareModuleRoot 'UI\97-AdvancedCapabilities.ps1') -Raw)
       foreach($command in Get-WinCareHeadlessCommandName){$text|Should -Match ("'"+[regex]::Escape($command)+"'\s*\{")}
     }
     It 'provides accessibility modes without color-only state' {

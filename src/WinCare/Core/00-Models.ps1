@@ -47,6 +47,18 @@ function New-WinCareCondition {
     }
 }
 
+function Resolve-WinCareActionTimeout {
+    param([Parameter(Mandatory)][string]$Type,[int]$TimeoutSeconds)
+    if($TimeoutSeconds -gt 0){return $TimeoutSeconds}
+    $defaultTimeout=3600
+    try{
+        $contract=(Get-WinCareActionContractTable)[$Type]
+        $maximum=[int](Get-WinCarePropertyValue $contract 'MaximumTimeout' $defaultTimeout)
+        if($maximum -gt 0){return [math]::Min($defaultTimeout,$maximum)}
+    }catch{}
+    return $defaultTimeout
+}
+
 function New-WinCareAction {
     [CmdletBinding()]
     param(
@@ -61,7 +73,7 @@ function New-WinCareAction {
         [object[]]$Preconditions = @(),
         [object[]]$Postconditions = @(),
         [hashtable]$Compensator = @{},
-        [int]$TimeoutSeconds = 3600,
+        [int]$TimeoutSeconds = 0,
         [string]$IdempotencyKey = '',
         [string[]]$Tags = @(),
         [hashtable]$Compatibility = @{},
@@ -92,7 +104,7 @@ function New-WinCareAction {
         Preconditions       = @($Preconditions)
         Postconditions      = @($Postconditions)
         Compensator         = $Compensator
-        TimeoutSeconds      = $TimeoutSeconds
+        TimeoutSeconds      = Resolve-WinCareActionTimeout -Type $Type -TimeoutSeconds $TimeoutSeconds
         IdempotencyKey      = $IdempotencyKey
         Tags                = @($Tags)
         Compatibility       = $Compatibility

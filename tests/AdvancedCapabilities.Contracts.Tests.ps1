@@ -111,7 +111,7 @@ Describe 'Advanced capability contracts' {
             'capabilities','fleet-inventory','fleet-policy-drift','hypervisor-isolation',
             'forensics-timeline','memory-anomalies','vbs-assurance','telemetry-lake-records',
             'telemetry-lake','binary-intelligence','binary-intelligence-capability',
-            'ebpf-capability','ebpf-programs','ebpf-admit','display-pipeline','virtual-display-capability',
+            'ebpf-capability','ebpf-programs','display-pipeline','virtual-display-capability',
             'wireguard-tunnels','quic-capability'
         )) {
             $readOnly|Should -Contain $name

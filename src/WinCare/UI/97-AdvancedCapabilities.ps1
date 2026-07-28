@@ -41,7 +41,6 @@ function Get-WinCareAdvancedBrokerReadOnlyCommandName {
         'binary-intelligence-capability',
         'ebpf-capability',
         'ebpf-programs',
-        'ebpf-admit',
         'display-pipeline',
         'virtual-display-capability',
         'wireguard-tunnels',

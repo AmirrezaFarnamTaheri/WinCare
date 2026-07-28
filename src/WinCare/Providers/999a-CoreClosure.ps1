@@ -112,7 +112,10 @@ ${function:Test-WinCareOperationJournalIntegrity} = {
         if($previous -ne [string]$record.LastEventHash){throw 'Operation record does not match the event chain.'}
         if([string]$record.PlanHash -ne (Get-WinCarePlanStableHash $record.Plan)){throw 'Operation plan no longer matches its recorded hash.'}
         $receiptPresent=Test-Path -LiteralPath $receiptPath -PathType Leaf
-        if([string]$record.State -in @('Succeeded','Failed','Cancelled','Interrupted','FailedWithRollbackWarnings') -and -not $receiptPresent){throw 'Terminal operation journal is missing its authenticated receipt.'}
+        $terminalStates=@('Succeeded','Failed','Cancelled','Interrupted','FailedWithRollbackWarnings')
+        if([string]$record.State -in $terminalStates -and -not $receiptPresent){
+            throw 'Terminal operation journal is missing its authenticated receipt.'
+        }
         if($receiptPresent){
             $receipt=Read-WinCareProtectedJson -LiteralPath $receiptPath -Purpose 'WinCare.OperationReceipt' -AsHashtable
             if([int]$receipt.SchemaVersion -ne 2){throw 'Unsupported operation receipt schema.'}
@@ -129,15 +132,34 @@ ${function:Test-WinCareOperationJournalIntegrity} = {
 
 ${function:Assert-WinCareRolePermission} = {
     [CmdletBinding()]param([Parameter(Mandatory)][string]$RequestedRole,[Parameter(Mandatory)][string]$ActionContractName,[Parameter(Mandatory)][string]$UserIdentity)
-    $validRoles=@('HelpdeskAdmin','SecOpsAdmin','FleetLead');if($RequestedRole -notin $validRoles){return New-WinCareResult -Success $false -Status Blocked -Code 'InvalidRole' -Message "Role '$RequestedRole' is not recognized." -ExitCode 78}
+    $validRoles=@('HelpdeskAdmin','SecOpsAdmin','FleetLead');
+        if($RequestedRole -notin $validRoles){return New-WinCareResult -Success $false -Status Blocked -Code 'InvalidRole' -Message "Role '$RequestedRole' is not recognized." -ExitCode 78}
     $roleInfo=(Get-WinCareRbacMatrix).$RequestedRole
     $highRiskActions=@('DisableWdac','UnloadKernelDriver','ModifyHvci','ForceSystemReboot')
     $mediumRiskActions=@('OptimizeStorage','TrimMemoryWorkingSets','ApplyGroupPolicy')
     $actionRiskLevel=if($ActionContractName -in $highRiskActions){3}elseif($ActionContractName -in $mediumRiskActions){2}else{1}
     if($actionRiskLevel -gt $roleInfo.AllowedRiskCap){
-        $auditEntry=[pscustomobject]@{Timestamp=[datetime]::UtcNow.ToString('o');EventType='UnauthorizedRoleActionAttempt';RequestedRole=$RequestedRole;ActionContractName=$ActionContractName;UserIdentity=$UserIdentity;ActionRiskLevel=$actionRiskLevel;AllowedRiskCap=$roleInfo.AllowedRiskCap;Status='BlockedByPolicy';EvidenceType='UnauthorizedRoleAttemptAuditRecord'}
-        Write-WinCareLog -Level Audit -Message 'Role permission denied.' -Data @{requestedRole=$RequestedRole;action=$ActionContractName;user=$UserIdentity;risk=$actionRiskLevel;cap=$roleInfo.AllowedRiskCap}
-        return New-WinCareResult -Success $false -Status Blocked -Code 'BlockedByPolicy' -Message "Role '$RequestedRole' is unauthorized for action '$ActionContractName'." -ExitCode 78 -Data $auditEntry
+        $auditEntry=[pscustomobject]@{Timestamp=[datetime]::UtcNow.ToString('o');
+            EventType='UnauthorizedRoleActionAttempt';
+            RequestedRole=$RequestedRole;
+            ActionContractName=$ActionContractName;
+            UserIdentity=$UserIdentity;
+            ActionRiskLevel=$actionRiskLevel;
+            AllowedRiskCap=$roleInfo.AllowedRiskCap;
+            Status='BlockedByPolicy';
+            EvidenceType='UnauthorizedRoleAttemptAuditRecord'}
+        Write-WinCareLog -Level Audit -Message 'Role permission denied.' -Data @{requestedRole=$RequestedRole;
+            action=$ActionContractName;
+            user=$UserIdentity;
+            risk=$actionRiskLevel;
+            cap=$roleInfo.AllowedRiskCap}
+        return New-WinCareResult -Success $false -Status Blocked -Code 'BlockedByPolicy' `
+            -Message "Role '$RequestedRole' is unauthorized for action '$ActionContractName'." `
+            -ExitCode 78 -Data $auditEntry
     }
-    New-WinCareResult -Success $true -Code 'RolePermissionGranted' -Message "Role '$RequestedRole' authorized for action '$ActionContractName'." -Data @{RequestedRole=$RequestedRole;ActionContractName=$ActionContractName;UserIdentity=$UserIdentity;ActionRiskLevel=$actionRiskLevel;EvidenceType='RolePermissionAuthorizationRecord'}
+    New-WinCareResult -Success $true -Code 'RolePermissionGranted' -Message "Role '$RequestedRole' authorized for action '$ActionContractName'." -Data @{RequestedRole=$RequestedRole;
+        ActionContractName=$ActionContractName;
+        UserIdentity=$UserIdentity;
+        ActionRiskLevel=$actionRiskLevel;
+        EvidenceType='RolePermissionAuthorizationRecord'}
 }

@@ -79,9 +79,9 @@ Describe 'Provisioning admission and stage separation' {
     It 'separates system and user actions' {
       $b=@{schemaVersion=1;name='Stages';description='';catalogRules=@();removeInstalledAppx=@('Microsoft.Test_1.0.0.0_x64__8wekyb3d8bbwe');removeProvisionedAppx=@();capabilities=@();optionalFeatures=@();wingetPackages=@('Microsoft.PowerToys');userStage=@();systemStage=@();sourceRecords=@('TEST')}
       $system=New-WinCareProvisioningPlan $b -Stage System;$user=New-WinCareProvisioningPlan $b -Stage User
-      @($system.Actions.Type) | Should -Not -Contain RemoveAppxPackage
-      @($user.Actions.Type) | Should -Contain RemoveAppxPackage
-      @($user.Actions.Type) | Should -Contain InstallWingetPackage
+      @($system.Actions|ForEach-Object Type) | Should -Not -Contain RemoveAppxPackage
+      @($user.Actions|ForEach-Object Type) | Should -Contain RemoveAppxPackage
+      @($user.Actions|ForEach-Object Type) | Should -Contain InstallWingetPackage
     }
   }
 }
