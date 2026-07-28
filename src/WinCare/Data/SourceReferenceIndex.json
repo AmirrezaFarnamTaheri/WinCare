@@ -22,7 +22,7 @@
     {"id":"SRC:bf0bb87122","path":"Providers/35-DesktopControls.ps1","sha256":"192cb4e95c912a67d9b0b955c2bedf2478a94f2bd318a0d3ed31956f9eec86a3"},
     {"id":"SRC:d4218ff43e","path":"Providers/40-Startup.ps1","sha256":"3b8d7b873358a54ec34a375ea67b07c186eaf445932c2fcdc35c9059827fe5ec"},
     {"id":"SRC:4e4b1fa0d3","path":"Providers/72-Provisioning.ps1","sha256":"29447fdb36196446c1a97b28e396192720a2cc6eeffdd7e5077ea1c352b58d84"},
-    {"id":"SRC:23ed7d97f4","path":"Providers/76-WDAC.ps1","sha256":"f264b3c4dd0bdeac3290c0aa3d84ef10548"},
+    {"id":"SRC:23ed7d97f4","path":"Providers/76-WDAC.ps1","sha256":"f264b3c4dd0bdeac329c0d73d1caa4c9c8c74b7e8ef85d563c0aa3d84ef10548"},
     {"id":"SRC:d9c8da5094","path":"Providers/77-OfflineImage.ps1","sha256":"37c86dbb49e8d0d1bc38333ab380bbe1a7bd8b35d35a4aafdea0b0ed04ef7f84"},
     {"id":"SRC:283330b589","path":"Providers/78-Boot.ps1","sha256":"dcd8bd42f0a34bd386fcdfc93bb001623fd2a02723dd293355b083d81d79f13c"},
     {"id":"SRC:e9129fcb57","path":"Providers/79-Shell.ps1","sha256":"20dd5eb162dc9b8ed80436ce2e44d38ac12f82b00bc7265b2541de5b9a3b2741"},
