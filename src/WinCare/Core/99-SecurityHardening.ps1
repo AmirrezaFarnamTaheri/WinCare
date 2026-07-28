@@ -157,73 +157,109 @@ $configVaultAuditImplementation = {
     }
 
     $vaultEncrypted = $false
-    if (Test-Path -LiteralPath $safe) {
-        $aclValid = $true
+    if (Test-Path -LiteralPath $safe -PathType Leaf) {
+        $aclValid = -not $IsWindows
         if ($IsWindows) {
             try {
                 $acl = Get-Acl -LiteralPath $safe -ErrorAction Stop
-                foreach ($rule in $acl.Access) {
-                    if ($rule.AccessControlType -ne [System.Security.AccessControl.AccessControlType]::Allow) {
+                if ($null -eq $acl) {
+                    throw 'The vault ACL could not be read.'
+                }
+
+                $allowedSids = [System.Collections.Generic.HashSet[string]]::new(
+                    [System.StringComparer]::OrdinalIgnoreCase
+                )
+                $null = $allowedSids.Add('S-1-5-18')
+                $null = $allowedSids.Add('S-1-5-32-544')
+
+                $currentUserSid = [System.Security.Principal.WindowsIdentity]::GetCurrent().User
+                if ($null -ne $currentUserSid) {
+                    $null = $allowedSids.Add($currentUserSid.Value)
+                }
+
+                $ownerSid = $acl.GetOwner([System.Security.Principal.SecurityIdentifier])
+                if ($null -eq $ownerSid) {
+                    throw 'The vault owner SID could not be resolved.'
+                }
+                $null = $allowedSids.Add($ownerSid.Value)
+
+                $fullControl = [System.Security.AccessControl.FileSystemRights]::FullControl
+                $allow = [System.Security.AccessControl.AccessControlType]::Allow
+                $rules = @($acl.GetAccessRules(
+                    $true,
+                    $true,
+                    [System.Security.Principal.SecurityIdentifier]
+                ))
+                foreach ($rule in $rules) {
+                    if ($rule.AccessControlType -ne $allow) {
                         continue
                     }
-                    $hasFullControl = ($rule.FileSystemRights -band [System.Security.AccessControl.FileSystemRights]::FullControl) -eq
-                        [System.Security.AccessControl.FileSystemRights]::FullControl
-                    if (-not $hasFullControl) {
-                        continue
-                    }
-                    $identity = [string]$rule.IdentityReference.Value
-                    $isPrivileged = ($identity -match '(?i)SYSTEM|Administrators|S-1-5-18|S-1-5-32-544|S-1-5-500') -or
-                        ($acl.Owner -and $identity -eq $acl.Owner)
-                    if (-not $isPrivileged) {
-                        $aclValid = $false
-                        break
+                    $hasFullControl = ($rule.FileSystemRights -band $fullControl) -eq $fullControl
+                    if ($hasFullControl -and -not $allowedSids.Contains($rule.IdentityReference.Value)) {
+                        throw "Vault FullControl is granted to unapproved SID $($rule.IdentityReference.Value)."
                     }
                 }
+                $aclValid = $true
             } catch {
                 $aclValid = $false
             }
         }
 
         if ($aclValid) {
-            $item = Get-Item -LiteralPath $safe -Force -ErrorAction SilentlyContinue
-            if ($item) {
+            try {
+                $item = Get-Item -LiteralPath $safe -Force -ErrorAction Stop
                 if (($item.Attributes -band [System.IO.FileAttributes]::Encrypted) -ne 0) {
                     $vaultEncrypted = $true
-                } elseif (-not $item.PSIsContainer) {
-                    $buffer = [byte[]]::new(512)
-                    $stream = $null
+                } elseif ($IsWindows) {
+                    $blob = $null
+                    $clearText = $null
                     try {
-                        $stream = [System.IO.FileStream]::new(
-                            $safe,
-                            [System.IO.FileMode]::Open,
-                            [System.IO.FileAccess]::Read,
-                            [System.IO.FileShare]::Read,
-                            4096,
-                            [System.IO.FileOptions]::SequentialScan
+                        $blob = Read-WinCareBoundedFileBytes -LiteralPath $safe -MaximumBytes 1048576
+                        $providerHeader = [byte[]](
+                            0x01,0x00,0x00,0x00,
+                            0xD0,0x8C,0x9D,0xDF,0x01,0x15,0xD1,0x11,
+                            0x8C,0x7A,0x00,0xC0,0x4F,0xC2,0x97,0xEB
                         )
-                        $bytesRead = $stream.Read($buffer, 0, $buffer.Length)
-                        if ($bytesRead -ge 8 -and
-                            $buffer[0] -eq 0x01 -and $buffer[1] -eq 0x00 -and
-                            $buffer[2] -eq 0x00 -and $buffer[3] -eq 0x00 -and
-                            $buffer[4] -eq 0xD0 -and $buffer[5] -eq 0x8C -and
-                            $buffer[6] -eq 0x9D -and $buffer[7] -eq 0xDF) {
-                            $vaultEncrypted = $true
-                        }
-                        if (-not $vaultEncrypted -and $bytesRead -gt 0) {
-                            $headerText = [System.Text.Encoding]::UTF8.GetString($buffer, 0, $bytesRead)
-                            if ($headerText -match '(?i)DPAPI|ENCRYPTED|ZeroTrustVault|AQAAANCMnd8') {
-                                $vaultEncrypted = $true
+                        $headerMatches = $blob.Length -ge $providerHeader.Length
+                        for ($index = 0; $headerMatches -and $index -lt $providerHeader.Length; $index++) {
+                            if ($blob[$index] -ne $providerHeader[$index]) {
+                                $headerMatches = $false
                             }
                         }
-                    } catch {
-                        $vaultEncrypted = $false
-                    } finally {
-                        if ($stream) {
-                            $stream.Dispose()
+
+                        if ($headerMatches) {
+                            foreach ($scope in @(
+                                [System.Security.Cryptography.DataProtectionScope]::CurrentUser,
+                                [System.Security.Cryptography.DataProtectionScope]::LocalMachine
+                            )) {
+                                try {
+                                    $clearText = [System.Security.Cryptography.ProtectedData]::Unprotect(
+                                        $blob,
+                                        $null,
+                                        $scope
+                                    )
+                                    if ($null -ne $clearText) {
+                                        $vaultEncrypted = $true
+                                        break
+                                    }
+                                } catch {
+                                    $vaultEncrypted = $false
+                                } finally {
+                                    if ($null -ne $clearText -and $clearText.Length -gt 0) {
+                                        [System.Array]::Clear($clearText, 0, $clearText.Length)
+                                    }
+                                    $clearText = $null
+                                }
+                            }
                         }
-                        [System.Array]::Clear($buffer, 0, $buffer.Length)
+                    } finally {
+                        if ($null -ne $blob -and $blob.Length -gt 0) {
+                            [System.Array]::Clear($blob, 0, $blob.Length)
+                        }
                     }
                 }
+            } catch {
+                $vaultEncrypted = $false
             }
         }
     }
