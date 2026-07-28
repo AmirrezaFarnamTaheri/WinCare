@@ -17,18 +17,6 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
-      - name: Upload exact checked-out source snapshot
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with:
-          name: closure-source-snapshot
-          path: |
-            src
-            tests
-            tools
-            config
-            *.ps1
-            *.json
-          if-no-files-found: error
       - name: Install Pester
         shell: pwsh
         run: |
@@ -36,30 +24,77 @@ jobs:
           $userModules = Join-Path ([Environment]::GetFolderPath('MyDocuments')) 'PowerShell/Modules'
           New-Item -ItemType Directory -Force -Path $userModules | Out-Null
           Save-Module Pester -RequiredVersion 5.5.0 -Path $userModules -Force
-      - name: Exclude late closure files in runner workspace
+      - name: Capture structured contract diagnostics
         shell: pwsh
         run: |
-          $core = 'src/WinCare/SourceManifests/Core.psd1'
-          $providers = 'src/WinCare/SourceManifests/Providers.psd1'
-          (Get-Content -LiteralPath $core) |
-            Where-Object { $_ -notmatch "Core/99-CompatibilityClosure\.ps1" } |
-            Set-Content -LiteralPath $core -Encoding utf8
-          (Get-Content -LiteralPath $providers) |
-            Where-Object { $_ -notmatch "Providers/999[az]-.*Closure\.ps1" } |
-            Set-Content -LiteralPath $providers -Encoding utf8
-      - name: Run full Pester suite without closures
-        id: pester
+          New-Item -ItemType Directory -Force -Path artifacts | Out-Null
+          Import-Module ./src/WinCare/WinCare.psd1 -Force
+          $root = Join-Path $env:RUNNER_TEMP 'wincare-contract-probes'
+          Remove-Item -LiteralPath $root -Recurse -Force -ErrorAction SilentlyContinue
+          New-Item -ItemType Directory -Path $root -Force | Out-Null
+          $probe = & (Get-Module WinCare) {
+            param($root)
+            $script:WinCareState = @{
+              Root = $root
+              Config = Get-WinCareDefaultConfig
+              Policy = Get-WinCareDefaultPolicy
+              SessionId = '0123456789abcdef0123456789abcdef'
+              IsAdmin = $false
+              Capabilities = @{}
+              ActionContracts = $null
+            }
+            foreach ($name in @('Maintenance','ColorStudio','RemoteSupport','Cache','Backups','Journal','Logs','Reports','Extensions')) {
+              New-Item -ItemType Directory -Path (Join-Path $root $name) -Force | Out-Null
+            }
+            $results = [ordered]@{}
+            $record = New-WinCareMaintenanceWindowRecord -Name 'Probe' -StartAt ([datetimeoffset]::Now.AddHours(1)) -EndAt ([datetimeoffset]::Now.AddHours(2))
+            $maintenance = New-WinCareMaintenanceUpsertPlan $record
+            $results.Maintenance = Invoke-WinCareUpsertMaintenanceWindowAction -Action $maintenance.Actions[0]
+            $color = ConvertTo-WinCareColorRecord -Red 18 -Green 52 -Blue 86 -Name 'Probe'
+            $palette = New-WinCareColorPaletteAddPlan -Color $color -Tags @('probe')
+            $results.Palette = Invoke-WinCareReplaceColorPaletteStoreAction -Action $palette.Actions[0]
+            $consent = New-WinCareRemoteSupportConsentPlan -ToolId rustdesk -Reason 'Probe' -DurationMinutes 30
+            $results.RemoteConsent = Invoke-WinCareReplaceRemoteConsentStoreAction -Action $consent.Actions[0]
+            $download = New-WinCareAction -Type StartDownloadTransfer -Label Start -Risk Low -Parameters @{Id='0123456789abcdef0123456789abcdef';ExpectedRecordHash=('a'*64)} -Reversible $true
+            $results.DownloadContract = Test-WinCareActionContract $download
+            $power = New-WinCareAction -Type StartPowerSession -Label Awake -Risk Low -Parameters @{Id='0123456789abcdef0123456789abcdef';Mode='System';PreventDisplay=$false;AwayMode=$false;ExpiresAt=[datetime]::UtcNow.AddMinutes(30).ToString('o');RefreshSeconds=30;Reason='probe'} -Reversible $true
+            $results.PowerContract = Test-WinCareActionContract $power
+            $action = New-WinCareAction -Type ClearClipboard -Label Clear -Risk Moderate
+            $plan = New-WinCarePlan -Title Receipt -Actions @($action)
+            $journal = New-WinCareOperationJournal -Plan $plan -OperationId ([guid]::NewGuid().ToString('N'))
+            Update-WinCareOperationJournal -Journal $journal -State Failed -Patch @{FinishedAt=[datetime]::UtcNow.ToString('o');Success=$false} -Event Failed
+            $results.JournalBeforeReceipt = Test-WinCareOperationJournalIntegrity $journal.Root
+            $null = Complete-WinCareOperationReceipt $journal
+            $results.JournalAfterReceipt = Test-WinCareOperationJournalIntegrity $journal.Root
+            $results.Playbooks = @(Get-WinCarePlaybook | Select-Object -First 2 | ForEach-Object {
+              [ordered]@{Type=$_.GetType().FullName;Properties=@($_.PSObject.Properties.Name);Value=$_}
+            })
+            $results
+          } $root
+          $probe | ConvertTo-Json -Depth 30 | Set-Content artifacts/contract-probes.json -Encoding utf8
+      - name: Run focused failing Pester contracts
         continue-on-error: true
         shell: pwsh
         run: |
           Import-Module Pester -RequiredVersion 5.5.0 -Force
-          New-Item -ItemType Directory -Force -Path artifacts | Out-Null
           $configuration = New-PesterConfiguration
-          $configuration.Run.Path = @('tests')
+          $configuration.Run.Path = @(
+            'tests/AdvancedCapabilities.Contracts.Tests.ps1',
+            'tests/Gui.Contracts.Tests.ps1',
+            'tests/Operations.Contracts.Tests.ps1',
+            'tests/Platform.Contracts.Tests.ps1',
+            'tests/Productivity.Contracts.Tests.ps1',
+            'tests/Providers.Admission.Tests.ps1',
+            'tests/Safety.Recovery.Tests.ps1',
+            'tests/ShellHardware.Contracts.Tests.ps1',
+            'tests/UI.Release.Tests.ps1',
+            'tests/WinCare/Core/ScheduledTaskEngine.Tests.ps1',
+            'tests/WinCare/Providers/Phase2.Tests.ps1'
+          )
           $configuration.Run.PassThru = $true
           $configuration.Output.Verbosity = 'Detailed'
           $configuration.TestResult.Enabled = $true
-          $configuration.TestResult.OutputPath = 'artifacts/closure-diagnostic.xml'
+          $configuration.TestResult.OutputPath = 'artifacts/focused-contracts.xml'
           $configuration.TestResult.OutputFormat = 'NUnitXml'
           $result = Invoke-Pester -Configuration $configuration
           [pscustomobject]@{
@@ -67,21 +102,14 @@ jobs:
             TotalCount = $result.TotalCount
             PassedCount = $result.PassedCount
             FailedCount = $result.FailedCount
-            SkippedCount = $result.SkippedCount
             Failed = @($result.Failed | ForEach-Object {
-              [pscustomobject]@{
-                Name = $_.ExpandedName
-                Path = $_.Path
-                Line = $_.Line
-                Error = [string]$_.ErrorRecord
-              }
+              [ordered]@{Name=$_.ExpandedName;Path=$_.Path;Line=$_.Line;Error=[string]$_.ErrorRecord}
             })
-          } | ConvertTo-Json -Depth 10 |
-            Set-Content -LiteralPath artifacts/closure-diagnostic.json -Encoding utf8
-          if ($result.FailedCount -gt 0) { exit 1 }
+          } | ConvertTo-Json -Depth 12 | Set-Content artifacts/focused-contracts.json -Encoding utf8
+          if ($result.FailedCount -gt 0) { Write-Error "Focused contracts reported $($result.FailedCount) failures." }
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: always()
         with:
           name: closure-diagnostic
-          path: artifacts/closure-diagnostic.*
+          path: artifacts/*
           if-no-files-found: error
