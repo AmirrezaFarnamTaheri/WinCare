@@ -33,7 +33,7 @@
     <PackageReference Include="Microsoft.PowerShell.ConsoleHost" Version="7.4.18" />
   </ItemGroup>
 
-  <Target Name="ValidateAndEmbedWinCarePayload" BeforeTargets="GetAssemblyAttributes;PrepareResourceNames">
+  <Target Name="ValidateAndEmbedWinCarePayload" BeforeTargets="PrepareForBuild">
     <Error Condition="'$(WinCarePayloadPath)' == ''" Text="WinCarePayloadPath is required." />
     <Error Condition="!Exists('$(WinCarePayloadPath)')" Text="WinCarePayloadPath does not identify an existing payload ZIP." />
     <Error Condition="$([System.Text.RegularExpressions.Regex]::IsMatch('$(WinCarePayloadSha256)', '^[0-9A-Fa-f]{64}$')) != 'True'" Text="WinCarePayloadSha256 must be exactly 64 hexadecimal characters." />
