@@ -340,9 +340,13 @@ function Test-WinCareCaptivePortal {
 
 function Test-WinCareDohLatency {
     [CmdletBinding()]
-    param([string[]]$Endpoints=@('1.1.1.1','8.8.8.8','9.9.9.9'))
+    param([string[]]$Endpoints=@())
+    $resolvedEndpoints=@(Resolve-WinCareNetworkProbeTarget -Targets $Endpoints -IncludeLocalInfrastructure)
+    if($resolvedEndpoints.Count -eq 0){
+        throw 'DoH latency measurement requires explicit -Endpoints or configured NetworkExperimentTargets; WinCare will not silently probe public services.'
+    }
     $results=[Collections.Generic.List[object]]::new()
-    foreach($ep in $Endpoints) {
+    foreach($ep in $resolvedEndpoints) {
         $sw=[Diagnostics.Stopwatch]::StartNew()
         $ok=try { Test-Connection -TargetName $ep -Count 1 -Quiet -TimeoutSeconds 2 } catch { $false }
         $sw.Stop()
@@ -355,13 +359,56 @@ function Set-WinCareDohEnforcement {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)][string]$InterfaceAlias,
+        [Parameter(Mandatory)][ValidateCount(1,8)][string[]]$ServerAddresses,
         [ValidateSet('AllowDoh','RequireDoh')][string]$DohMode='RequireDoh'
     )
     if (-not $IsWindows -or -not (Get-Command Set-DnsClientServerAddress -ErrorAction SilentlyContinue)) {
         return New-WinCareResult -Success $false -Status Blocked -Code 'DohEnforcementUnsupported' -Message 'DoH enforcement requires Windows DNS Client cmdlets.' -ExitCode 78
     }
-    Set-DnsClientServerAddress -InterfaceAlias $InterfaceAlias -ServerAddresses @('1.1.1.1','1.0.0.1') -ErrorAction Stop
-    New-WinCareResult -Success $true -Message "Enforced DNS over HTTPS ($DohMode) on interface $InterfaceAlias"
+    $validated=[Collections.Generic.List[string]]::new()
+    foreach($candidate in $ServerAddresses) {
+        $parsed=[Net.IPAddress]::Any
+        if([string]::IsNullOrWhiteSpace($candidate) -or -not [Net.IPAddress]::TryParse($candidate.Trim(),[ref]$parsed)) {
+            return New-WinCareResult -Success $false -Status Blocked -Code 'DohServerAddressInvalid' `
+                -Message "'$candidate' is not a valid literal IP DNS server address." -ExitCode 22
+        }
+        $validated.Add($parsed.ToString())
+    }
+    # Assigning resolvers is NOT the same as enforcing DoH: the DoH transport is
+    # configured per resolver by the DnsClient DoH cmdlets, which exist only on
+    # newer Windows builds. Report exactly which of the two actually happened
+    # instead of claiming enforcement the system may never have applied.
+    $dohConfigurable=[bool](Get-Command Get-DnsClientDohServerAddress -ErrorAction SilentlyContinue)
+    Set-DnsClientServerAddress -InterfaceAlias $InterfaceAlias -ServerAddresses @($validated) -ErrorAction Stop
+    $dohRegistered=@()
+    if($dohConfigurable) {
+        foreach($server in $validated) {
+            $template=@(Get-DnsClientDohServerAddress -ServerAddress $server -ErrorAction SilentlyContinue)
+            if($template.Count) { $dohRegistered+=$server }
+        }
+    }
+    $evidence=@{
+        InterfaceAlias=$InterfaceAlias
+        ServerAddresses=@($validated)
+        RequestedDohMode=$DohMode
+        DohTemplatesAvailable=$dohConfigurable
+        DohCapableServers=@($dohRegistered)
+        DohEnforced=$false
+        EvidenceType='ExplicitOperatorSuppliedDnsServerAssignment'
+    }
+    $assigned="Assigned $($validated.Count) DNS server(s) on interface $InterfaceAlias"
+    if(-not $dohConfigurable) {
+        return New-WinCareResult -Success $true -Status SucceededWithWarnings -Code 'DnsServersAssignedWithoutDoh' `
+            -Message "$assigned. This host exposes no DoH client cmdlets, so the '$DohMode' transport was not applied." `
+            -Warnings @('DNS-over-HTTPS was requested but could not be configured on this host.') -Data $evidence
+    }
+    if($dohRegistered.Count -ne $validated.Count) {
+        return New-WinCareResult -Success $true -Status SucceededWithWarnings -Code 'DnsServersAssignedPartialDohTemplates' `
+            -Message "$assigned. Only $($dohRegistered.Count) of $($validated.Count) have a known DoH template." `
+            -Warnings @('Servers without a DoH template continue to resolve over classic DNS.') -Data $evidence
+    }
+    New-WinCareResult -Success $true -Code 'DnsServersAssignedWithDohTemplates' `
+        -Message "$assigned. All assigned servers have a known DoH template." -Data $evidence
 }
 
 if($MyInvocation.MyCommand.ScriptBlock.Module) {

@@ -19,9 +19,9 @@ function Get-WinCareMaintenancePlaybooks {
             PlaybookId = [string]$playbook.Id
             Name = [string]$playbook.Title
             Description = [string]$playbook.Description
-            SourcePath = [string]$playbook.SourcePath
-            SourceSha256 = [string]$playbook.SourceSha256
-            ActionCount = @($playbook.Actions).Count
+            SourcePath = [string](Get-WinCarePropertyValue $playbook 'SourcePath' '')
+            SourceSha256 = [string](Get-WinCarePropertyValue $playbook 'SourceSha256' '')
+            ActionCount = @((Get-WinCarePropertyValue $playbook 'Actions' (Get-WinCarePropertyValue $playbook 'Steps' @()))).Count
             Compatible = [bool](Test-WinCarePlaybookCompatibility -Playbook $playbook)
             TaskName = $taskName
             Scheduled = $null -ne $task
@@ -29,7 +29,7 @@ function Get-WinCareMaintenancePlaybooks {
             EvidenceType = 'PlaybookCatalogAndTaskSchedulerObservation'
         }
     }
-    New-WinCareResult -Success $true -Code 'MaintenancePlaybooksObserved' -Message 'Playbook catalog and scheduler state were observed.' -Data @{Playbooks=@($items);Count=@($items).Count;EvidenceType='PlaybookCatalogAndTaskSchedulerObservation'}
+    return @($items)
 }
 
 if ($MyInvocation.MyCommand.ScriptBlock.Module) { Export-ModuleMember -Function Get-WinCareMaintenancePlaybooks, Invoke-WinCareFleetPlaybookBroadcast }
@@ -61,12 +61,40 @@ function Invoke-WinCareFleetPlaybookBroadcast {
 function New-WinCareAutoPlaybook {
     [CmdletBinding()]
     param([string]$TriggerEvent='RecurringDiskPressure')
-    $id = [guid]::NewGuid().ToString('B')
+    
+    $actions = [Collections.Generic.List[object]]::new()
+    switch ($TriggerEvent) {
+        'RecurringDiskPressure' {
+            $actions.Add((New-WinCareBridgeAction -Type 'ClearTemporaryFiles' -Label 'Clean temporary system & user files' -Risk Low -Parameters @{ Path = [System.IO.Path]::GetTempPath() }))
+            $actions.Add((New-WinCareBridgeAction -Type 'ClearRecycleBin' -Label 'Empty Recycle Bin' -Risk Low -Parameters @{}))
+            $actions.Add((New-WinCareBridgeAction -Type 'OptimizeStorage' -Label 'Run storage optimization' -Risk Low -Parameters @{ DriveLetter = 'C' }))
+        }
+        'ElevatedCpuUsage' {
+            $actions.Add((New-WinCareBridgeAction -Type 'TrimMemoryWorkingSets' -Label 'Trim memory working sets' -Risk Low -Parameters @{}))
+            $actions.Add((New-WinCareBridgeAction -Type 'AuditSecurityBaseline' -Label 'Audit suspicious CPU process baseline' -Risk Low -Parameters @{}))
+        }
+        'TelemetryAnomalyDetected' {
+            $actions.Add((New-WinCareBridgeAction -Type 'AuditSecurityBaseline' -Label 'Audit security baseline after telemetry anomaly' -Risk Low -Parameters @{}))
+            $actions.Add((New-WinCareBridgeAction -Type 'TrimMemoryWorkingSets' -Label 'Trim memory working sets' -Risk Low -Parameters @{}))
+        }
+        Default {
+            $actions.Add((New-WinCareBridgeAction -Type 'ClearTemporaryFiles' -Label 'Default temporary file cleanup' -Risk Low -Parameters @{ Path = [System.IO.Path]::GetTempPath() }))
+            $actions.Add((New-WinCareBridgeAction -Type 'TrimMemoryWorkingSets' -Label 'Default memory trim' -Risk Low -Parameters @{}))
+        }
+    }
+
+    $rawText = "${TriggerEvent}:$($actions.Count):" + ([datetime]::UtcNow.ToString('yyyy-MM-dd-HH'))
+    $sha256 = Get-WinCareSha256Text -Text $rawText
+    $id = "playbook-$($sha256.Substring(0, 16))"
+
     [pscustomobject]@{
-        PlaybookId=$id
-        TriggerEvent=$TriggerEvent
-        SynthesizedActionCount=3
-        CreatedAt=[datetime]::UtcNow.ToString('o')
-        EvidenceType='SynthesizedPlaybookDefinition'
+        PlaybookId = $id
+        TriggerEvent = $TriggerEvent
+        Actions = @($actions)
+        SynthesizedActionCount = $actions.Count
+        Sha256 = $sha256
+        CreatedAt = [datetime]::UtcNow.ToString('o')
+        EvidenceType = 'SynthesizedPlaybookDefinition'
     }
 }
+

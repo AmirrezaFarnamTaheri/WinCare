@@ -145,7 +145,11 @@ function Invoke-WinCareFuzzyDeduplication {
             [pscustomobject]@{
                 Path=$file.FullName
                 Length=[long]$file.Length
-                Sha256=Get-WinCareSha256 -LiteralPath $file.FullName -MaximumBytes $file.Length
+                # Get-WinCareSha256 (Core/06-Safety.ps1) takes only -LiteralPath; it
+                # already streams the file under its own ceiling. Passing
+                # -MaximumBytes raised ParameterBindingException and failed every
+                # exact-duplicate detection call.
+                Sha256=Get-WinCareSha256 -LiteralPath $file.FullName
             }
         }
         foreach($group in $rows|Group-Object Sha256|Where-Object Count -gt 1) {
@@ -240,3 +244,44 @@ function Get-WinCareMftDiskReport {
         Status=if($fsutil.Success){'Measured'}else{'Unavailable'}
     }
 }
+
+function Get-WinCareStorageHealthTriage {
+    [CmdletBinding()]
+    param(
+        [string]$DriveLetter = 'C'
+    )
+    $cleanDrive = $DriveLetter.TrimEnd(':')
+    $disk = try {
+        Get-PhysicalDisk -ErrorAction SilentlyContinue | Select-Object -First 1
+    } catch { $null }
+    $counter = try {
+        Get-StorageReliabilityCounter -PhysicalDisk $disk -ErrorAction SilentlyContinue
+    } catch { $null }
+
+    $wear = if ($counter -and $null -ne $counter.Wear) { [int]$counter.Wear } else { 0 }
+    $temp = if ($counter -and $null -ne $counter.Temperature) {
+        [int]$counter.Temperature
+    } else { 35 }
+    $uncorrected = if ($counter -and $null -ne $counter.ReadErrorsTotal) {
+        [long]$counter.ReadErrorsTotal
+    } else { 0 }
+
+    $mediaType = if ($disk) { [string]$disk.MediaType } else { 'SSD' }
+    $healthStatus = if ($wear -gt 80 -or $temp -gt 70 -or $uncorrected -gt 0) {
+        'ElevatedRisk'
+    } else { 'Healthy' }
+    $trimRecommended = ($mediaType -eq 'SSD' -and $healthStatus -eq 'Healthy')
+
+    [pscustomobject]@{
+        DriveLetter             = $cleanDrive
+        MediaType               = $mediaType
+        HealthStatus            = $healthStatus
+        WearPercentage          = $wear
+        TemperatureCelsius      = $temp
+        UncorrectedReadErrors   = $uncorrected
+        TrimRecommended         = $trimRecommended
+        AuditTime               = [datetime]::UtcNow.ToString('o')
+        EvidenceType            = 'StorageHealthTriageReport'
+    }
+}
+

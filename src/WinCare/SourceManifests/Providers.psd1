@@ -30,6 +30,7 @@
         'Providers/124-HypervMicroVmSandbox.ps1'
         'Providers/125-TelemetryDataLake.ps1'
         'Providers/126-P2pRaftFleetOrchestrator.ps1'
+        'Providers/127-NativeWpfShell.ps1'
         'Providers/127-NeuralSelfHealing.ps1'
         'Providers/128-WasiPluginRuntime.ps1'
         'Providers/129-BinaryIntelligence.ps1'
@@ -39,6 +40,7 @@
         'Providers/134-ForensicsStudio.ps1'
         'Providers/135-VirtualDisplayStudio.ps1'
         'Providers/136-NetworkAcceleration.ps1'
+        'Providers/137-UnifiedRoutingCore.ps1'
         'Providers/20-Cleanup.ps1'
         'Providers/25-SystemPolicy.ps1'
         'Providers/27-RegistryTree.ps1'
@@ -78,5 +80,7 @@
         'Providers/97-LocalNotes.ps1'
         'Providers/98-RemoteSupport.ps1'
         'Providers/99-BrowserWorkspace.ps1'
+        'Providers/999a-CoreClosure.ps1'
+        'Providers/999z-FinalClosure.ps1'
     )
 }

@@ -30,29 +30,21 @@ function New-WinCareVssRestorePointAction {
 }
 
 function Invoke-WinCareVssRestorePointAction {
-    [CmdletBinding()]
-    param([Parameter(Mandatory)][object]$Action)
-    $desc  = [string]$Action.Parameters.Description
-    $rtype = [string]$Action.Parameters.RestorePointType
-    if([string]::IsNullOrWhiteSpace($desc)){$desc='WinCare Pre-Mutation Restore Point'}
-    if([string]::IsNullOrWhiteSpace($rtype)){$rtype='MODIFY_SETTINGS'}
+    [CmdletBinding()]param([Parameter(Mandatory)][object]$Action)
+    $blocked=Test-WinCareWindowsRequired 'VSS restore point creation';if($blocked){return $blocked}
+    $desc=[string]$Action.Parameters.Description;if([string]::IsNullOrWhiteSpace($desc)){$desc='WinCare Pre-Mutation Restore Point'}
+    $rtype=[string]$Action.Parameters.RestorePointType;if([string]::IsNullOrWhiteSpace($rtype)){$rtype='MODIFY_SETTINGS'}
+    $typeCodes=@{APPLICATION_INSTALL=0;APPLICATION_UNINSTALL=1;DEVICE_DRIVER_INSTALL=10;MODIFY_SETTINGS=12;CANCELLED_OPERATION=13}
+    if(-not $typeCodes.ContainsKey($rtype)){return New-WinCareResult -Success $false -Status Blocked -Code 'VssRestorePointTypeInvalid' -Message "Unsupported restore point type: $rtype" -ExitCode 22}
     try {
-        $svc = Get-WmiObject -Namespace 'root\default' -Class 'SystemRestore' -ErrorAction Stop
-        $result = $svc.CreateRestorePoint($desc, 12, 100)  # 12=MODIFY_SETTINGS, 100=BEGIN_SYSTEM_CHANGE
-        if($result.ReturnValue -ne 0) {
-            return New-WinCareResult -Success $false -Status Failed `
-                -Code 'VssRestorePointFailed' `
-                -Message "WMI SystemRestore.CreateRestorePoint returned $($result.ReturnValue)" `
-                -ExitCode 1
-        }
-        New-WinCareResult -Success $true -Status Done `
-            -Code 'VssRestorePointCreated' `
-            -Message "VSS restore point created: $desc" `
-            -Data @{Description=$desc;RestorePointType=$rtype;EvidenceType='VssSystemRestorePointCreated'}
+        # EventType 100 = BEGIN_SYSTEM_CHANGE; CIM replaces the retired Get-WmiObject pipeline on PowerShell 7.
+        $arguments=@{Description=$desc;RestorePointType=[uint32]$typeCodes[$rtype];EventType=[uint32]100}
+        $result=Invoke-CimMethod -Namespace 'root/default' -ClassName 'SystemRestore' -MethodName 'CreateRestorePoint' -Arguments $arguments -ErrorAction Stop
+        if($result.ReturnValue -ne 0){return New-WinCareResult -Success $false -Code 'VssRestorePointFailed' -Message "SystemRestore.CreateRestorePoint returned $($result.ReturnValue)." -ExitCode 1}
+        $evidence=@{Description=$desc;RestorePointType=$rtype;EvidenceType='VssSystemRestorePointCreated'}
+        New-WinCareResult -Success $true -Code 'VssRestorePointCreated' -Message "VSS restore point created: $desc" -Data $evidence
     } catch {
-        New-WinCareResult -Success $false -Status Failed `
-            -Code 'VssRestorePointException' `
-            -Message $_.Exception.Message -ExitCode 1
+        New-WinCareResult -Success $false -Code 'VssRestorePointException' -Message $_.Exception.Message -ExitCode 1
     }
 }
 
@@ -254,8 +246,7 @@ function Set-WinCareActionApplied {
     Write-WinCareProtectedJson -LiteralPath (Get-WinCareIdempotencyPath $Action.IdempotencyKey) -InputObject $receipt -Purpose 'WinCare.IdempotencyReceipt'
 }
 
-function Invoke-WinCareActionInternal {
-    [CmdletBinding()]param([Parameter(Mandatory)][object]$Action,[Parameter(Mandatory)][string]$OperationId)
+function Invoke-WinCareActionInternal { [CmdletBinding()]param([Parameter(Mandatory)][object]$Action,[Parameter(Mandatory)][string]$OperationId)
     switch([string]$Action.Type){
         'UninstallRegistryApp'{Invoke-WinCareRegistryUninstallAction -Action $Action}
         'RemoveAppxPackage'{Invoke-WinCareAppxRemoveAction -Action $Action}
@@ -600,19 +591,3 @@ function Invoke-WinCareGenericProcessAction {
     param([object]$Action)
     Invoke-WinCareProcess -FilePath ([string]$Action.Parameters.FilePath) -ArgumentList @($Action.Parameters.Arguments) -RequireAdmin:$Action.RequiresAdmin -TimeoutSeconds ([int]$Action.TimeoutSeconds) -SuccessExitCodes @((Get-WinCarePropertyValue $Action.Parameters 'SuccessExitCodes' @(0)))
 }
-
-function Invoke-WinCareDisasterRecoverySnapshot {
-    [CmdletBinding()]
-    param([string]$Volume='C:\')
-    $point = if (Get-Command Checkpoint-Computer -ErrorAction SilentlyContinue) {
-        try { Checkpoint-Computer -Description 'WinCare One-Click Recovery Snapshot' -RestorePointType 'MODIFY_SETTINGS' -ErrorAction Stop; $true } catch { $false }
-    } else { $true }
-    [pscustomobject]@{
-        Volume=$Volume
-        SnapshotCreated=$point
-        Timestamp=[datetime]::UtcNow.ToString('o')
-        EvidenceType='DisasterRecoveryVssSnapshot'
-    }
-}
-
-

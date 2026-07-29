@@ -1,6 +1,5 @@
 function Get-WinCareActionContractTable {
-    [CmdletBinding()]
-    param()
+    [CmdletBinding()]param()
     if($script:WinCareState.ContainsKey('ActionContracts')){return $script:WinCareState.ActionContracts}
     $table=[ordered]@{}
     function Add-Contract([string]$Type,[string[]]$Required,[string[]]$Allowed,[string]$MinimumRisk='Low',[bool]$AlwaysAdmin=$false,[bool]$ElevationAllowed=$true,[int]$MaximumTimeout=21600){
@@ -140,8 +139,8 @@ function Get-WinCareActionContract {
 function ConvertTo-WinCareParameterDictionary {
     param([object]$Value)
     if($null -eq $Value){return @{}}
-    if($Value -is [Collections.IDictionary]){return $Value}
-    $result=@{};foreach($property in $Value.PSObject.Properties){$result[$property.Name]=$property.Value};$result
+    $result=@{};if($Value -is [Collections.IDictionary]){foreach($key in $Value.Keys){$result[[string]$key]=$Value[$key]};return $result}
+    foreach($property in $Value.PSObject.Properties){$result[$property.Name]=$property.Value};$result
 }
 
 function Test-WinCareActionContract {

@@ -1,5 +1,49 @@
 #requires -Version 7.2
 
+function Get-WinCarePackageBinaryPath {
+    <#
+        Resolve a source-built binary that ships in the package 'bin' directory.
+
+        Both the developer build (Native/Build-WinCareNativePolyglot.ps1 defaults
+        -OutputDirectory to '<repo>/bin') and the shipped package
+        (tools/build_release.py writes every native artifact under 'bin/') place
+        these binaries one level above the module directory, not inside it.
+        $script:WinCareModuleRoot is '<root>/src/WinCare', so the package-relative
+        location is '<root>/bin'. A module-local '<root>/src/WinCare/bin' is still
+        accepted as a fallback so a side-by-side layout keeps working.
+
+        Returns the first candidate that exists; when none exists it returns the
+        package-relative path so callers report the canonical expected location.
+    #>
+    [CmdletBinding()]
+    param([Parameter(Mandatory)][ValidateNotNullOrEmpty()][string]$FileName)
+
+    if ([IO.Path]::GetFileName($FileName) -ne $FileName) {
+        throw "Package binary name must not contain a path component: $FileName"
+    }
+    $relative = Join-Path 'bin' $FileName
+    $moduleRoot = $script:WinCareModuleRoot
+    $candidates = [Collections.Generic.List[string]]::new()
+    $packageRoot = Split-Path (Split-Path $moduleRoot -Parent) -Parent
+    if ($packageRoot) {
+        $candidates.Add([IO.Path]::GetFullPath((Join-Path $packageRoot $relative)))
+    }
+    $candidates.Add([IO.Path]::GetFullPath((Join-Path $moduleRoot $relative)))
+
+    foreach ($candidate in $candidates) {
+        if (Test-Path -LiteralPath $candidate -PathType Leaf) { return $candidate }
+    }
+    return $candidates[0]
+}
+
+function Resolve-WinCareNativeAssemblyPath {
+    # The single resolved path is used both to load the assembly and to verify
+    # every resolved type's Assembly.Location, so the trust check stays exact.
+    [CmdletBinding()]
+    param()
+    Get-WinCarePackageBinaryPath -FileName 'WinCare.Native.dll'
+}
+
 function Initialize-WinCareNativeRuntime {
     [CmdletBinding()]
     param(
@@ -12,7 +56,7 @@ function Initialize-WinCareNativeRuntime {
         return $false
     }
 
-    $assemblyPath = [IO.Path]::GetFullPath((Join-Path $script:WinCareModuleRoot 'bin\WinCare.Native.dll'))
+    $assemblyPath = Resolve-WinCareNativeAssemblyPath
     $loadedTypes = @($RequiredTypes | Where-Object { $_ -as [type] })
     if ($loadedTypes.Count -eq $RequiredTypes.Count -and $RequiredTypes.Count -gt 0) {
         foreach ($typeName in $RequiredTypes) {

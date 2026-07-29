@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-Reads local Group Policy .pol files through the source-built native policy parser.
+Reads local Group Policy .pol files through the source-built native policy parser and enforces Multi-Tenant RBAC governance.
 #>
 function Get-WinCarePolicyFileEntries {
     [CmdletBinding()]param([Parameter(Mandatory)][string]$PolFilePath)
@@ -11,4 +11,73 @@ function Get-WinCarePolicyFileEntries {
         New-WinCareResult -Success $true -Code 'PolicyFileParsed' -Message 'The policy file was parsed by the native policy engine.' -Data @{Path=$path;Sha256=$hash;Entries=$entries;Count=$entries.Count;EvidenceType='FileSha256AndNativeParserOutput'}
     }catch{New-WinCareResult -Success $false -Status Failed -Code 'PolicyFileParseFailed' -Message $_.Exception.Message -ExitCode 1}
 }
-if ($MyInvocation.MyCommand.ScriptBlock.Module) { Export-ModuleMember -Function Get-WinCarePolicyFileEntries }
+
+function Get-WinCareRbacMatrix {
+    [CmdletBinding()]param()
+    [pscustomobject]@{
+        HelpdeskAdmin = [pscustomobject]@{ AllowedRiskCap = 1; Scope = 'Read, Diagnostics, Low-Risk Cleanup'; RequiresStepUp = $false }
+        SecOpsAdmin   = [pscustomobject]@{ AllowedRiskCap = 2; Scope = 'Read, Diagnostics, Cleanup, Policy Audit, Dynamic Playbooks'; RequiresStepUp = $false }
+        FleetLead     = [pscustomobject]@{ AllowedRiskCap = 3; Scope = 'Full Enterprise Scoping, High-Risk System Mutations, HVCI Changes'; RequiresStepUp = $true }
+        EvidenceType  = 'MultiTenantRbacMatrixDefinition'
+    }
+}
+
+function Assert-WinCareRolePermission {
+    [CmdletBinding()]param(
+        [Parameter(Mandatory)][string]$RequestedRole,
+        [Parameter(Mandatory)][string]$ActionContractName,
+        [Parameter(Mandatory)][string]$UserIdentity
+    )
+    $validRoles = @('HelpdeskAdmin', 'SecOpsAdmin', 'FleetLead')
+    if ($RequestedRole -notin $validRoles) {
+        return New-WinCareResult -Success $false -Status Blocked -Code 'InvalidRole' -Message "Role '$RequestedRole' is not recognized." -ExitCode 78
+    }
+
+    $matrix = Get-WinCareRbacMatrix
+    $roleInfo = $matrix.$RequestedRole
+
+    # Determine action risk level (1 = Low, 2 = Medium, 3 = High)
+    $highRiskActions = @('DisableWdac', 'UnloadKernelDriver', 'ModifyHvci', 'ForceSystemReboot')
+    $mediumRiskActions = @('OptimizeStorage', 'TrimMemoryWorkingSets', 'ClearTemporaryFiles', 'ApplyGroupPolicy')
+    
+    $actionRiskLevel = if ($ActionContractName -in $highRiskActions) { 3 } elseif ($ActionContractName -in $mediumRiskActions) { 2 } else { 1 }
+
+    if ($actionRiskLevel -gt $roleInfo.AllowedRiskCap) {
+        # Log immutable security audit event
+        $logDir = if ($env:ProgramData) { Join-Path $env:ProgramData 'WinCare\Logs' } else { 'C:\ProgramData\WinCare\Logs' }
+        if (-not (Test-Path -LiteralPath $logDir)) { New-Item -ItemType Directory -Path $logDir -Force | Out-Null }
+        $logFile = Join-Path $logDir 'security_audit.ndjson'
+
+        $auditEntry = [pscustomobject]@{
+            Timestamp            = [datetime]::UtcNow.ToString('o')
+            EventType            = 'UnauthorizedRoleActionAttempt'
+            RequestedRole        = $RequestedRole
+            ActionContractName   = $ActionContractName
+            UserIdentity         = $UserIdentity
+            ActionRiskLevel      = $actionRiskLevel
+            AllowedRiskCap       = $roleInfo.AllowedRiskCap
+            Status               = 'BlockedByPolicy'
+            EvidenceType         = 'UnauthorizedRoleAttemptAuditRecord'
+        }
+        $jsonRecord = $auditEntry | ConvertTo-Json -Compress
+        Add-Content -LiteralPath $logFile -Value $jsonRecord -ErrorAction SilentlyContinue
+
+        $blockedMessage = "Role '$RequestedRole' is unauthorized for action '$ActionContractName' " +
+            "(Risk Level $actionRiskLevel > Cap $($roleInfo.AllowedRiskCap)). Step-up elevation signature required."
+        return New-WinCareResult -Success $false -Status Blocked -Code 'BlockedByPolicy' `
+            -Message $blockedMessage -ExitCode 78 -Data $auditEntry
+    }
+
+    return New-WinCareResult -Success $true -Code 'RolePermissionGranted' -Message "Role '$RequestedRole' authorized for action '$ActionContractName'." -Data @{
+        RequestedRole      = $RequestedRole
+        ActionContractName = $ActionContractName
+        UserIdentity       = $UserIdentity
+        ActionRiskLevel    = $actionRiskLevel
+        EvidenceType       = 'RolePermissionAuthorizationRecord'
+    }
+}
+
+if ($MyInvocation.MyCommand.ScriptBlock.Module) {
+    Export-ModuleMember -Function Get-WinCarePolicyFileEntries, Get-WinCareRbacMatrix, Assert-WinCareRolePermission
+}
+

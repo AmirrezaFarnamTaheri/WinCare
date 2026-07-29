@@ -24,14 +24,22 @@ function ConvertTo-WinCareSafeFileName {
     -join $chars
 }
 
+function Get-WinCareDictionaryValue {
+    param([Collections.IDictionary]$Dictionary,[string]$Name,[object]$Default)
+    if (-not $Dictionary.Contains($Name)) { return $Default }
+    $value=$Dictionary[$Name]
+    if ($null -eq $value) { return $Default }
+    return $value
+}
+
 function Get-WinCarePropertyValue {
     [CmdletBinding()]
-    param(
-        [AllowNull()][object]$InputObject,
-        [Parameter(Mandatory)][string]$Name,
-        [object]$Default=$null
-    )
+    param([AllowNull()][object]$InputObject,
+        [Parameter(Mandatory)][string]$Name,[object]$Default=$null)
     if ($null -eq $InputObject) { return $Default }
+    if ($InputObject -is [Collections.IDictionary]) {
+        return Get-WinCareDictionaryValue $InputObject $Name $Default
+    }
     $property=$InputObject.PSObject.Properties[$Name]
     if ($null -eq $property -or $null -eq $property.Value) { return $Default }
     return $property.Value

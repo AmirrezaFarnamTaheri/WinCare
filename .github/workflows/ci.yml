@@ -16,7 +16,7 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
-          python-version: '3.12.11'
+          python-version: '3.12'
       - name: Cross-file source validation
         run: python tools/validate_source.py . --json-output artifacts/source-validation.json
       - name: Action contract and dispatcher validation
@@ -46,13 +46,13 @@ jobs:
       - name: Test fixture integrity validation
         run: python tools/validate_test_fixtures.py . --output artifacts/test-fixture-validation.json
       - name: Release, security, GUI, and maintainability tooling tests
-        run: python -m unittest tools.test_release_tools tools.test_maintainability tools.test_security_invariants tools.test_cleaner_preview tools.test_gui tools.test_source_references -v
+        run: python -m unittest tools.test_release_tools tools.test_maintainability tools.test_security_invariants tools.test_cleaner_preview tools.test_gui tools.test_source_references tools.test_wincare_ps_source -v
       - name: Deterministic development package
         run: |
           mkdir -p artifacts
-          python tools/build_release.py . --output-directory artifacts
+          python tools/build_release.py . --output-directory artifacts/release
           VERSION=$(python -c "import re,pathlib; print(re.search(r\"ModuleVersion\\s*=\\s*'([^']+)'\", pathlib.Path('src/WinCare/WinCare.psd1').read_text()).group(1))")
-          python tools/verify_release.py "artifacts/WinCare-$VERSION.zip" --output artifacts/archive-validation.json
+          python tools/verify_release.py "artifacts/release/WinCare-$VERSION.zip" --output artifacts/archive-validation.json
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: evidence-and-release
@@ -70,7 +70,7 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
-          python-version: '3.12.11'
+          python-version: '3.12'
       - uses: actions/setup-dotnet@c2fa09f4bde5ebb9d1777cf28262a3eb3db3ced7 # v5.2.0
         with:
           global-json-file: global.json
@@ -83,7 +83,14 @@ jobs:
         shell: pwsh
         run: |
           Set-PSRepository PSGallery -InstallationPolicy Trusted
-          Install-Module Pester -RequiredVersion 5.5.0 -Scope CurrentUser -Force
+          # Runners preinstall a newer Pester (AllUsers scope) signed under a rotated DigiCert
+          # root, so Install-Module of the pinned 5.5.0 fails the Authenticode publisher
+          # comparison. Save-Module lays the pinned version into the CurrentUser module path
+          # (which is ahead of AllUsers on PSModulePath) without that comparison and without any
+          # publisher-check bypass switch; Import-Module -RequiredVersion then resolves it.
+          $userModules = Join-Path ([Environment]::GetFolderPath('MyDocuments')) 'PowerShell/Modules'
+          New-Item -ItemType Directory -Force -Path $userModules | Out-Null
+          Save-Module Pester -RequiredVersion 5.5.0 -Path $userModules -Force
           Install-Module PSScriptAnalyzer -RequiredVersion 1.22.0 -Scope CurrentUser -Force
       - name: Static, Pester, module, native, and release gates
         shell: pwsh

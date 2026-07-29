@@ -54,22 +54,22 @@
     {
       "id": "SRC:4a9fce4f41",
       "path": "Providers/102-Launcher.ps1",
-      "sha256": "dcc5284fbf285d89d26b1fa7d1e66f6ad752a1e598de6f5768008ae34e92b382"
+      "sha256": "4a455bc62b18895c204dc489650616f912a321eb0f4de7619bb7a54e49206c3b"
     },
     {
       "id": "SRC:de582ebaf6",
       "path": "Providers/104-OfflineReduction.ps1",
-      "sha256": "1fb983c9c413a4bf0cd9308baba83cbf373cfd7f181eb4dc9f174c4113069212"
+      "sha256": "71c6bc57770ec753e29fafeeba19cbda35f9d62e5e6ca2ad9914b65e8b148b6a"
     },
     {
       "id": "SRC:62fff6504d",
       "path": "Providers/105-WorkspaceLayouts.ps1",
-      "sha256": "9b73099a48197b7e757437243eaa1bd2e3bb8f68e99fd79e61f93d4e9d1affc4"
+      "sha256": "022d8fbbfad8b87ca144e2fab524f70eec163d280d887067fc46398082372353"
     },
     {
       "id": "SRC:f1b9beff21",
       "path": "Providers/107-WorkspaceStudio.ps1",
-      "sha256": "7301282e6e30c8f26d35cfe9db72d2021642985a06306fb9925fd56c438d970f"
+      "sha256": "bcbc00398a40ade892942134a6b163bba5efde68b083e35485b57d571e1a889f"
     },
     {
       "id": "SRC:6e8ae24ac4",
@@ -84,12 +84,12 @@
     {
       "id": "SRC:1461504853",
       "path": "Providers/110-ShellHardwareStudio.ps1",
-      "sha256": "58830072882760b55f8499064fdd4d158eef9fc0ff2b7ea347214401358b7006"
+      "sha256": "f1a54a10b00431e27fc6fbe3a01b0f7c5a9659ba3a057a2f024ecefafcb9ba8b"
     },
     {
       "id": "SRC:65dbd15e56",
       "path": "Providers/111-CleanerPreviewStudio.ps1",
-      "sha256": "e2ed52c6b19a1fa227daaccffb1f1d6a8c3bbc187d91399e23d28ae3b2cf44a1"
+      "sha256": "2a218560f933a5076bd6d88f6aad50335957da88896e3ce45fdc6a2f18d9fd2a"
     },
     {
       "id": "SRC:bf0bb87122",
@@ -109,12 +109,12 @@
     {
       "id": "SRC:23ed7d97f4",
       "path": "Providers/76-WDAC.ps1",
-      "sha256": "b4c788bcf21e67002c715ed75463eb06d2a6751d97b28d1cb412e7973615d06b"
+      "sha256": "f264b3c4dd0bdeac329c0d73d1caa4c9c8c74b7e8ef85d563c0aa3d84ef10548"
     },
     {
       "id": "SRC:d9c8da5094",
       "path": "Providers/77-OfflineImage.ps1",
-      "sha256": "848ba1bd443aba58f98dc9f453ac3de2421b8ec1056c983640186c577c4a901d"
+      "sha256": "37c86dbb49e8d0d1bc38333ab380bbe1a7bd8b35d35a4aafdea0b0ed04ef7f84"
     },
     {
       "id": "SRC:283330b589",
@@ -144,7 +144,7 @@
     {
       "id": "SRC:652ed31cf6",
       "path": "Providers/86-Maintenance.ps1",
-      "sha256": "21193189c6997cdc64b6243b8999b1ae8db17b643886f29053ce0c41f4469ff6"
+      "sha256": "d21b4b2a4825285826221e1ab5579db49c94dd19cd17ad89ce3a3b4a6c786878"
     },
     {
       "id": "SRC:1e40d19709",
@@ -154,7 +154,7 @@
     {
       "id": "SRC:c727679ef5",
       "path": "Providers/90-Extensions.ps1",
-      "sha256": "8f8e88f0cbb436ad21042726ebadc378525d1f904c98037d70b3d89a4d4206e7"
+      "sha256": "6228e54e73d4376c05e428e357abd938604dac7aea24860c7397b34522afcd70"
     },
     {
       "id": "SRC:3b617af8c7",
@@ -184,7 +184,7 @@
     {
       "id": "SRC:2441cc19b2",
       "path": "Providers/98-RemoteSupport.ps1",
-      "sha256": "16e9dde3a82d0dcb079e82a9d6f060904eeee3c6845bb1bcbc7b13a579c18c0f"
+      "sha256": "ffeebbe71d371171946e618b4c705da36e542001b67b4f80a36693be05f6597d"
     },
     {
       "id": "SRC:66c214216c",

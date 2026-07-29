@@ -27,22 +27,39 @@ function New-WinCareCleanupPlan {
     New-WinCarePlan -Title 'Bounded cleanup' -Description "Deletes files from $($actions.Count) explicitly selected cleanup actions." -Actions @($actions) -StopOnFailure:$true -RollbackOnFailure:$false
 }
 
+function Resolve-WinCareCleanupActionTarget {
+    param([Parameter(Mandatory)][Collections.IDictionary]$Parameters)
+    $id=[string]$Parameters.Id
+    $target=@(Get-WinCareCleanupTarget -Refresh|Where-Object{[string]$_.Id -eq $id})|Select-Object -First 1
+    if($null -eq $target){throw "Unknown cleanup target: $id"}
+    foreach($name in @('Path','Pattern','Kind','MinimumAgeHours')){
+        $actual=[string](Get-WinCarePropertyValue $Parameters $name '')
+        $expected=[string](Get-WinCarePropertyValue $target $name '')
+        if($actual -cne $expected){throw "Cleanup target $id does not match canonical $name."}
+    }
+    $root=Assert-WinCareSafePath -LiteralPath ([string]$target.Path) -AllowedRoots @([string]$target.Path)
+    [pscustomobject]@{Root=$root;Pattern=[string]$target.Pattern;Kind=[string]$target.Kind;MinimumAgeHours=[int]$target.MinimumAgeHours}
+}
+
 function Invoke-WinCareCleanupAction {
-    [CmdletBinding(SupportsShouldProcess, ConfirmImpact='High')]
+    [CmdletBinding()]
     param([Parameter(Mandatory)][object]$Action)
 
     $parameters = ConvertTo-WinCareParameterDictionary $Action.Parameters
-    $root = Assert-WinCareSafePath -LiteralPath ([string]$parameters.Path) -AllowedRoots @([string]$parameters.Path)
+    try{$target=Resolve-WinCareCleanupActionTarget $parameters}catch{
+        return New-WinCareResult -Success $false -Status Blocked -Code 'CleanupTargetRejected' -Message $_.Exception.Message -ExitCode 77
+    }
+    $root=$target.Root
     $pathRoot = [IO.Path]::GetPathRoot($root)
     $comparison = if ($IsWindows) { [StringComparison]::OrdinalIgnoreCase } else { [StringComparison]::Ordinal }
     if ([string]::Equals($root.TrimEnd([IO.Path]::DirectorySeparatorChar), $pathRoot.TrimEnd([IO.Path]::DirectorySeparatorChar), $comparison)) {
         return New-WinCareResult -Success $false -Status Blocked -Code 'CleanupRootDenied' -Message 'Drive and filesystem roots cannot be cleanup targets.' -ExitCode 77
     }
-    $pattern = [string]$parameters.Pattern
+    $pattern=[string]$target.Pattern
     if ([string]::IsNullOrWhiteSpace($pattern)) { $pattern = '*' }
-    $minimumAge = [int]$parameters.MinimumAgeHours
+    $minimumAge=[int]$target.MinimumAgeHours
     $cutoff = [datetime]::UtcNow.AddHours(-$minimumAge)
-    $kind = [string]$parameters.Kind
+    $kind=[string]$target.Kind
     $maximum = [long](Get-WinCarePolicy 'MaximumEstimatedBytes')
     if ($maximum -le 0) { $maximum = 2GB }
 
@@ -66,10 +83,6 @@ function Invoke-WinCareCleanupAction {
     if (-not $candidates.Count) {
         return New-WinCareResult -Success $true -Code 'CleanupAlreadySatisfied' -Message 'No files matched the bounded cleanup target.' -Data @{Root=$root;Pattern=$pattern;MinimumAgeHours=$minimumAge;DeletedFiles=0;DeletedBytes=0;EvidenceType='BoundedCleanupInventory'}
     }
-    if (-not $PSCmdlet.ShouldProcess($root, "Delete $($candidates.Count) files totaling $totalBytes bytes")) {
-        return New-WinCareResult -Success $false -Status Cancelled -Code 'Cancelled' -Message 'Cleanup was cancelled.' -ExitCode 125
-    }
-
     $deleted = 0; $deletedBytes = 0L; $failures = [System.Collections.Generic.List[string]]::new()
     foreach ($candidate in $candidates) {
         try {

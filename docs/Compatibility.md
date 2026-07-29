@@ -37,6 +37,12 @@ Windows Server is not a primary interactive target. Read-only/headless functions
 | Local notes and palettes | Writable `%LOCALAPPDATA%\WinCare` state root | Read-only/degraded view where possible; mutation fails closed |
 | Browser workspace | Local browser processes/profiles/manifests | Missing browsers return empty inventory; no debugging or extension-install fallback |
 | Remote-support governance | Local application/process/service/network inventories | Each inventory degrades independently; no remote session is initiated |
+| Verified downloads | Windows BITS PowerShell module, writable protected state, approved destination root | Queue remains inspectable; mutation returns structured capability failure when BITS is absent |
+| Operations telemetry | CIM, formatted performance classes, Get-NetAdapterStatistics, process APIs | Missing metrics return explicit zero/unavailable observations; no remote collector fallback |
+| Unified launcher | Interactive Windows shell, Start menu, App Paths, Control Panel, Settings URIs | Returns an empty/partial bounded index; arbitrary command execution is never used as fallback |
+| Steam game-state | Local Steam installation and userdata tree | Returns empty inventory; no online Steam credential/API fallback |
+| Offline reduction | AppX/DISM cmdlets and healthy mounted read-write image | Assessment/mutation unavailable; no raw image-file or Registry-hive fallback |
+| Workspace layouts | Interactive desktop and Win32 window/monitor APIs | Catalog remains available; apply returns structured capability failure |
 
 ## Terminal behavior
 
@@ -45,10 +51,3 @@ Wide terminals show denser rows; narrow terminals use truncated single-column la
 ## Localization
 
 The current operator text is English. Provider parsing avoids localized display tables where structured APIs exist. `netsh` text is used only for bounded human-facing summaries and Wi-Fi profile names; it is not an authority-bearing parser for mutating actions.
-
-| Verified downloads | Windows BITS PowerShell module, writable protected state, approved destination root | Queue remains inspectable; mutation returns structured capability failure when BITS is absent |
-| Operations telemetry | CIM, formatted performance classes, Get-NetAdapterStatistics, process APIs | Missing metrics return explicit zero/unavailable observations; no remote collector fallback |
-| Unified launcher | Interactive Windows shell, Start menu, App Paths, Control Panel, Settings URIs | Returns an empty/partial bounded index; arbitrary command execution is never used as fallback |
-| Steam game-state | Local Steam installation and userdata tree | Returns empty inventory; no online Steam credential/API fallback |
-| Offline reduction | AppX/DISM cmdlets and healthy mounted read-write image | Assessment/mutation unavailable; no raw image-file or Registry-hive fallback |
-| Workspace layouts | Interactive desktop and Win32 window/monitor APIs | Catalog remains available; apply returns structured capability failure |

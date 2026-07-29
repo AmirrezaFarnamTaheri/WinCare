@@ -277,6 +277,7 @@
     'Get-WinCareTelemetryLakeAggregate',
     'New-WinCareTelemetryLakeIngestPlan',
     'New-WinCareTelemetryLakeRetentionPlan',
+    'Test-WinCareTelemetryAnomaly',
     'Get-WinCareBinaryBehaviorProfile',
     'Get-WinCareBinaryIntelligenceCapability',
     'Get-WinCareVbsEnclaveState',
@@ -319,7 +320,27 @@
     'Get-WinCareWasiMarketplaceCatalog',
     'Send-WinCareMultiCloudTelemetry',
     'Get-WinCareFleetMeshStatus',
-    'Test-WinCareGuiCatalog'
+    'Test-WinCareGuiCatalog',
+    'Get-WinCareRbacMatrix',
+    'Assert-WinCareRolePermission',
+    'Test-WinCareGpoEntraDrift',
+    'New-WinCareGpoRemediationPlan',
+    'Send-WinCareSiemStream',
+    'Invoke-WinCareDismServicingCleanup',
+    'Get-WinCareStorageHealthTriage',
+    'Enable-WinCareGameStateMode',
+    'Import-WinCareFancyZonesLayout',
+    'Protect-WinCarePqcSignature',
+    'Invoke-WinCareMicroVmSandboxTest',
+    'Get-WinCareVbsDmaState',
+    'Enable-WinCareEbpfSocketGovernance',
+    'Start-WinCareWpfDashboardWindow',
+    'Invoke-WinCareFleetDeployment',
+    'New-WinCareIsolatedStagingDirectory',
+    'Remove-WinCareCryptographicFile',
+    'Get-WinCareTerminalCellWidth',
+    'Get-WinCareEbpfTelemetryStream',
+    'Send-WinCareTelemetryEventBusMessage'
     )
     CmdletsToExport   = @()
     VariablesToExport = @()

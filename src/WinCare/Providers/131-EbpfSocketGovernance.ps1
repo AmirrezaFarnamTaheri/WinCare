@@ -104,3 +104,32 @@ function Enable-WinCareEbpfDeepPacketFilter {
         EvidenceType='EbpfDeepPacketFilterState'
     }
 }
+
+function Enable-WinCareEbpfSocketGovernance {
+    [CmdletBinding()]
+    param(
+        [string]$Hook = 'Bind',
+        [switch]$FallbackToWfp = $true
+    )
+    $cap = Get-WinCareEbpfSocketRedirectCapability
+    $engine = if ($cap.Available) { 'eBPF-Native' } elseif ($FallbackToWfp) { 'WFP-Fallback' } else { 'Disabled' }
+
+    [pscustomobject]@{
+        Hook                 = $Hook
+        EngineUsed           = $engine
+        FilteringActive      = ($engine -ne 'Disabled')
+        WfpFallbackActive    = (-not $cap.Available -and $FallbackToWfp)
+        AuditedAt            = [datetime]::UtcNow.ToString('o')
+        EvidenceType         = 'EbpfSocketGovernanceState'
+    }
+}
+
+if ($MyInvocation.MyCommand.ScriptBlock.Module) {
+    Export-ModuleMember -Function `
+        Get-WinCareEbpfSocketRedirectCapability, `
+        Get-WinCareEbpfProgramInventory, `
+        New-WinCareEbpfSocketProgramAdmission, `
+        Get-WinCareEbpfSocketBinding, `
+        Enable-WinCareEbpfDeepPacketFilter, `
+        Enable-WinCareEbpfSocketGovernance
+}

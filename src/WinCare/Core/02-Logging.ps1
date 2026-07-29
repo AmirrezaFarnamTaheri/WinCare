@@ -75,6 +75,7 @@ function Write-WinCareLog {
     )
 
     if($script:WinCareState -is [Collections.IDictionary] -and
+        $script:WinCareState.Contains('ReadOnlyLocked') -and
         [bool]$script:WinCareState.ReadOnlyLocked) {
         return
     }
@@ -98,6 +99,7 @@ function Remove-WinCareExpiredLogs {
     param()
 
     if($script:WinCareState -is [Collections.IDictionary] -and
+        $script:WinCareState.Contains('ReadOnlyLocked') -and
         [bool]$script:WinCareState.ReadOnlyLocked) {
         return
     }

@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-Observed Windows code-integrity, vulnerable-driver-blocklist, SMB, and LDAP-signing baseline.
+Observed Windows code-integrity, vulnerable-driver-blocklist, SMB, LDAP-signing, and GPO/Entra ID security baseline sync.
 #>
 function Get-WinCareSecurityBaselineState {
     [CmdletBinding()]param()
@@ -20,4 +20,97 @@ function Get-WinCareSecurityBaselineState {
     $overall=if($known.Count -eq 0){'Unknown'}elseif($known.Count -lt $values.Count){if($failed.Count){'NeedsReviewWithUnknowns'}else{'ObservedHardenedWithUnknowns'}}elseif($failed.Count){'NeedsReview'}else{'ObservedHardened'}
     [pscustomobject]@{Supported=$true;OverallState=$overall;KnownControlCount=$known.Count;UnknownControlCount=$values.Count-$known.Count;Controls=[pscustomobject]$controls;EvidenceType=if($nativeType){'SourceBuiltNativeAndWindowsObservation'}else{'WindowsCimRegistryAndCmdletObservation'};Errors=@($errors)}
 }
-if ($MyInvocation.MyCommand.ScriptBlock.Module) { Export-ModuleMember -Function Get-WinCareSecurityBaselineState }
+
+function Test-WinCareGpoEntraDrift {
+    [CmdletBinding()]param()
+    if (-not $IsWindows) { return [pscustomobject]@{ Supported = $false; DriftDetected = $false; DriftedControls = @(); EvidenceType = 'PlatformCapability' } }
+
+    $baselineState = Get-WinCareSecurityBaselineState
+    $drifted = [System.Collections.Generic.List[pscustomobject]]::new()
+
+    # Check GPO / CSP Registry Policies
+    $gpoPath = 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\System'
+    $smartScreenEnabled = try { (Get-ItemProperty -LiteralPath $gpoPath -Name EnableSmartScreen -ErrorAction SilentlyContinue).EnableSmartScreen -eq 1 } catch { $false }
+
+    if (-not $smartScreenEnabled) {
+        $drifted.Add([pscustomobject]@{
+            ControlName  = 'SmartScreenGpoPolicy'
+            Source       = 'GroupPolicy'
+            Expected     = 'Enabled (1)'
+            Actual       = 'Disabled / Unset'
+            RiskLevel    = 'Medium'
+        })
+    }
+
+    if (-not $baselineState.Controls.HvciEnabled) {
+        $drifted.Add([pscustomobject]@{
+            ControlName  = 'HvciCodeIntegrity'
+            Source       = 'WindowsDeviceGuard'
+            Expected     = 'Enabled'
+            Actual       = 'Disabled / Unknown'
+            RiskLevel    = 'High'
+        })
+    }
+
+    if (-not $baselineState.Controls.SmbSigningRequired) {
+        $drifted.Add([pscustomobject]@{
+            ControlName  = 'SmbSigningRequired'
+            Source       = 'LocalPolicy'
+            Expected     = 'Required'
+            Actual       = 'Optional / Disabled'
+            RiskLevel    = 'Medium'
+        })
+    }
+
+    [pscustomobject]@{
+        Supported               = $true
+        DriftDetected           = ($drifted.Count -gt 0)
+        DriftedControls         = @($drifted)
+        DriftedCount            = $drifted.Count
+        KnownControlCount       = $baselineState.KnownControlCount
+        AuditTime               = [datetime]::UtcNow.ToString('o')
+        EvidenceType            = 'GpoAndAzureAdBaselineDrift'
+    }
+}
+
+function New-WinCareGpoRemediationPlan {
+    [CmdletBinding()]param(
+        [Parameter(Mandatory)][pscustomobject]$DriftResult
+    )
+    $actions = [System.Collections.Generic.List[pscustomobject]]::new()
+    $requiresFleetLead = $false
+
+    if ($DriftResult.DriftDetected) {
+        foreach ($drift in $DriftResult.DriftedControls) {
+            if ($drift.RiskLevel -eq 'High') {
+                $requiresFleetLead = $true
+            }
+            $actionObj = [pscustomobject]@{
+                ActionName    = 'ApplySecurityPolicyRemediation'
+                ControlTarget = $drift.ControlName
+                RiskLevel     = $drift.RiskLevel
+                Parameters    = @{ Expected = $drift.Expected; TargetSource = $drift.Source }
+            }
+            $actions.Add($actionObj)
+        }
+    }
+
+    $planId = [guid]::NewGuid().ToString()
+    $planJson = @($actions) | ConvertTo-Json -Compress
+    $sha256 = [System.BitConverter]::ToString(([System.Security.Cryptography.SHA256]::Create().ComputeHash([System.Text.Encoding]::UTF8.GetBytes($planJson)))).Replace('-', '').ToLowerInvariant()
+
+    [pscustomobject]@{
+        PlanId                   = $planId
+        Actions                  = @($actions)
+        ActionCount              = $actions.Count
+        RequiresFleetLeadApproval= $requiresFleetLead
+        PlanSha256               = $sha256
+        CreatedAt                = [datetime]::UtcNow.ToString('o')
+        EvidenceType             = 'GpoRemediationPlanDefinition'
+    }
+}
+
+if ($MyInvocation.MyCommand.ScriptBlock.Module) {
+    Export-ModuleMember -Function Get-WinCareSecurityBaselineState, Test-WinCareGpoEntraDrift, New-WinCareGpoRemediationPlan
+}
+

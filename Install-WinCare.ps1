@@ -117,7 +117,7 @@ function Read-ReleaseMetadata {
     param([Parameter(Mandatory)][string]$Root)
     $receiptPath=Join-Path $Root 'BUILD-RECEIPT.json'
     $receipt=Read-WinCareInstallerBoundedUtf8Text -LiteralPath $receiptPath -MaximumBytes 1048576 | ConvertFrom-Json -Depth 40
-    if([string]$receipt.schema -ne 'wincare.build.receipt/v1') { throw 'Unsupported build receipt schema.' }
+    if([string]$receipt.schema -notin @('wincare.build.receipt/v1','wincare.build.receipt/v2')) { throw 'Unsupported build receipt schema.' }
     if([string]$receipt.packageProfile -ne 'production') { throw 'Only production-profile packages may be installed.' }
     if([bool]$receipt.source.dirty) { throw 'Dirty-source packages are non-promotable and cannot be installed.' }
     if([string]$receipt.native.status -ne 'source-built-and-verified') { throw 'The package does not contain source-verified native artifacts.' }
@@ -242,7 +242,13 @@ function Invoke-WinCareInstallSmokeTest {
     $start=[Diagnostics.ProcessStartInfo]::new()
     $start.FileName=$pwsh;$start.WorkingDirectory=$Root;$start.UseShellExecute=$false;$start.CreateNoWindow=$true
     $start.RedirectStandardOutput=$true;$start.RedirectStandardError=$true
-    foreach($argument in @('-NoLogo','-NoProfile','-NonInteractive','-File',$launcher,'-Command','system','-Json')){[void]$start.ArgumentList.Add($argument)}
+    # The staged run's stdout is parsed as JSON. PowerShell 7 may still emit ANSI
+    # colour/decoration bytes into a redirected stream, which makes ConvertFrom-Json
+    # fail at position 0 on the leading ESC. Ask the child for plain text.
+    $start.EnvironmentVariables['NO_COLOR']='1'
+    $start.EnvironmentVariables['TERM']='dumb'
+    $start.EnvironmentVariables['POWERSHELL_UPDATECHECK']='Off'
+    foreach($argument in @('-NoLogo','-NoProfile','-NonInteractive','-File',$launcher,'-Command','system','-Json','-WarningAction','SilentlyContinue','-InformationAction','SilentlyContinue')){[void]$start.ArgumentList.Add($argument)}
     $process=[Diagnostics.Process]::new();$process.StartInfo=$start
     try{
         $capture=Invoke-WinCareInstallerCapturedProcess -Process $process -TimeoutSeconds $TimeoutSeconds -MaximumBytes 4194304
@@ -250,6 +256,10 @@ function Invoke-WinCareInstallSmokeTest {
         if($capture.StdoutTruncated -or $capture.StderrTruncated){throw 'Staged WinCare smoke-test output exceeded the 4 MiB stream ceiling.'}
         $stdout=[string]$capture.StdOut;$stderr=[string]$capture.StdErr
         if($capture.ExitCode -ne 0){throw "Staged WinCare smoke test failed with exit code $($capture.ExitCode): $stderr"}
+        # Strip any residual ANSI/VT sequences before parsing: NO_COLOR is a request,
+        # not a guarantee, and a single leading ESC byte otherwise fails the whole
+        # clean-install gate with "Unexpected character ... Path '', line 0, position 0".
+        $stdout=[regex]::Replace($stdout,"`e\[[0-9;?]*[ -/]*[@-~]",'')
         try{$payload=$stdout|ConvertFrom-Json -Depth 50 -ErrorAction Stop}catch{throw "Staged WinCare smoke test returned invalid JSON: $($_.Exception.Message)"}
         if($null -eq $payload){throw 'Staged WinCare smoke test returned no JSON payload.'}
         [pscustomobject]@{ExitCode=$process.ExitCode;PayloadType=$payload.GetType().FullName;StdoutSha256=([Convert]::ToHexString([Security.Cryptography.SHA256]::HashData([Text.Encoding]::UTF8.GetBytes($stdout))).ToLowerInvariant())}

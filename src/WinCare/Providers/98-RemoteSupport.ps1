@@ -122,7 +122,7 @@ function Test-WinCareRemoteConsentStore {
     }
     $true
 }
-function Get-WinCareRemoteConsentStore { [CmdletBinding()]param([switch]$Strict);$path=Get-WinCareRemoteConsentPath;if(-not(Test-Path -LiteralPath $path)){return Get-WinCareDefaultRemoteConsentStore};try{$store=Read-WinCareProtectedJson -LiteralPath $path -Purpose 'WinCare.RemoteConsent';$null=Test-WinCareRemoteConsentStore $store;$store}catch{if($Strict){throw};Write-WinCareLog -Level Warning -Message 'Remote-support consent store is invalid.' -Data @{error=$_.Exception.Message};Get-WinCareDefaultRemoteConsentStore} }
+function Get-WinCareRemoteConsentStore { [CmdletBinding()]param([switch]$Strict);$path=Get-WinCareRemoteConsentPath;if(-not(Test-Path -LiteralPath $path)){return Get-WinCareDefaultRemoteConsentStore};try{$store=Read-WinCareProtectedJson -LiteralPath $path -Purpose 'WinCare.RemoteConsent' -AsHashtable;$null=Test-WinCareRemoteConsentStore $store;$store}catch{if($Strict){throw};Write-WinCareLog -Level Warning -Message 'Remote-support consent store is invalid.' -Data @{error=$_.Exception.Message};Get-WinCareDefaultRemoteConsentStore} }
 function Get-WinCareRemoteConsentStoreHash {param([Collections.IDictionary]$Store);Get-WinCareCanonicalObjectHash $Store}
 function Get-WinCareRemoteSupportConsent {
     [CmdletBinding()]param([string]$Id,[switch]$IncludeTerminal)
@@ -220,5 +220,4 @@ function Invoke-WinCareTerminateRemoteSupportProcessAction {
     $process.Kill($true);$process.WaitForExit(10000)
     New-WinCareResult -Success (-not(Get-Process -Id $id -ErrorAction SilentlyContinue)) -Message 'Remote-support process terminated.' -Data @{ProcessId=$id;Name=$p.Name}
 }
-
 

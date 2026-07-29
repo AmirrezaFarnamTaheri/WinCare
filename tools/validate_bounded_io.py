@@ -5,7 +5,11 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import sys
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from wincare_ps_source import strip_powershell
 
 SCHEMA = "wincare.bounded-io-validation/v1"
 SOURCE_ROOTS = (
@@ -32,54 +36,13 @@ PATTERNS = {
 
 
 def scrub_powershell(text: str) -> str:
-    """Blank comments, quoted strings, and here-string bodies while preserving lines."""
-    output: list[str] = []
-    here_end: str | None = None
-    for line in text.splitlines():
-        stripped = line.lstrip()
-        if here_end is not None:
-            if stripped.startswith(here_end):
-                here_end = None
-            output.append("")
-            continue
-        if re.search(r"@'\s*$", line):
-            here_end = "'@"
-        elif re.search(r'@"\s*$', line):
-            here_end = '"@'
-        result: list[str] = []
-        quote: str | None = None
-        index = 0
-        while index < len(line):
-            char = line[index]
-            if quote is None:
-                if char == "#":
-                    break
-                if char in {"'", '"'}:
-                    quote = char
-                    result.append(" ")
-                else:
-                    result.append(char)
-            elif quote == "'":
-                if char == "'" and index + 1 < len(line) and line[index + 1] == "'":
-                    result.extend((" ", " "))
-                    index += 1
-                elif char == "'":
-                    quote = None
-                    result.append(" ")
-                else:
-                    result.append(" ")
-            else:
-                if char == "`" and index + 1 < len(line):
-                    result.extend((" ", " "))
-                    index += 1
-                elif char == '"':
-                    quote = None
-                    result.append(" ")
-                else:
-                    result.append(" ")
-            index += 1
-        output.append("".join(result))
-    return "\n".join(output)
+    """Blank comments, quoted strings, and here-string bodies while preserving lines.
+
+    Delegates to the shared scrubber (tools/wincare_ps_source.py) so every
+    validator agrees on exactly what counts as code. The previous per-file
+    copy of this logic was one of four independently maintained variants.
+    """
+    return strip_powershell(text)
 
 
 def files(root: Path) -> list[Path]:

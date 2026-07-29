@@ -8,7 +8,9 @@ import re
 from pathlib import Path
 
 SHELL_EVAL_FLAGS = re.compile(r"(?i)(?:^|\s)-(?:command|encodedcommand|ec)(?:\s|$)")
-DANGEROUS_TOKENS = re.compile(r"(?i)\b(?:invoke-expression|iex|cmd\.exe\s+/[ck])\b")
+# cmd shell placeholders and the /c /k switches are case-insensitive on Windows, so plain
+# "cmd /c" (no .exe) and mixed-case forms must be caught as readily as "cmd.exe /C".
+DANGEROUS_TOKENS = re.compile(r"(?i)\b(?:invoke-expression|iex|cmd(?:\.exe)?\s+/[ck])\b")
 PLACEHOLDERS = ("%1", "%V", "%L", "%*")
 
 
@@ -57,8 +59,10 @@ def validate(root: Path) -> dict[str, object]:
                     errors.append(f"{rule_id}: registry command invokes a PowerShell command string.")
                 if DANGEROUS_TOKENS.search(command):
                     errors.append(f"{rule_id}: registry command contains a shell-evaluation primitive.")
+                folded_command = command.casefold()
                 for placeholder in PLACEHOLDERS:
-                    if placeholder in command and f'"{placeholder}"' not in command:
+                    folded_placeholder = placeholder.casefold()
+                    if folded_placeholder in folded_command and f'"{folded_placeholder}"' not in folded_command:
                         errors.append(f"{rule_id}: placeholder {placeholder} is not double-quoted.")
                 if command.lower().startswith(("pwsh.exe ", "powershell.exe ")):
                     if "-WorkingDirectory" in command and not re.search(

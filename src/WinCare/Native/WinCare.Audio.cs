@@ -1,3 +1,4 @@
+#nullable enable
 using System;
 using System.Runtime.InteropServices;
 
@@ -80,7 +81,7 @@ namespace WinCare.Native
             }
         }
 
-        private static void ReleaseComObject(object value)
+        private static void ReleaseComObject(object? value)
         {
             if (value is not null && Marshal.IsComObject(value))
             {

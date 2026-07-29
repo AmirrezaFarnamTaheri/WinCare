@@ -567,15 +567,16 @@ function Unprotect-WinCareJsonRecord {
     $null=Test-WinCareStrictObjectKeys -InputObject $Envelope -AllowedKeys @('SchemaVersion','Purpose','PayloadBase64','Signature') -Context 'protected record'
     if([int]$Envelope.SchemaVersion -ne 1 -or [string]$Envelope.Purpose -ne $Purpose){throw 'Protected record schema or purpose is invalid.'}
     if([string]$Envelope.Signature -notmatch '^[a-fA-F0-9]{64}$'){throw 'Protected record signature is invalid.'}
-    if([string]$Envelope.PayloadBase64 -notmatch '^[A-Za-z0-9+/]*={0,2}$' -or [string]$Envelope.PayloadBase64.Length -gt 16777216){throw 'Protected record payload is invalid or oversized.'}
+    $payloadBase64=[string]$Envelope.PayloadBase64
+    if($payloadBase64 -notmatch '^[A-Za-z0-9+/]*={0,2}$' -or $payloadBase64.Length -gt 16777216){throw 'Protected record payload is invalid or oversized.'}
     $key=Get-WinCareLocalIntegrityKey
     try{
         $hmac=[Security.Cryptography.HMACSHA256]::new($key)
-        $text="$Purpose`n$([string]$Envelope.PayloadBase64)"
+        $text="$Purpose`n$payloadBase64"
         $expected=$hmac.ComputeHash([Text.Encoding]::UTF8.GetBytes($text))
         $actual=[Convert]::FromHexString([string]$Envelope.Signature)
         if(-not [Security.Cryptography.CryptographicOperations]::FixedTimeEquals($expected,$actual)){throw 'Protected record authentication failed.'}
-        $json=[Text.Encoding]::UTF8.GetString([Convert]::FromBase64String([string]$Envelope.PayloadBase64))
+        $json=[Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($payloadBase64))
         if($AsHashtable){return $json|ConvertFrom-Json -AsHashtable -Depth 50}
         return $json|ConvertFrom-Json -Depth 50
     }finally{if($hmac){$hmac.Dispose()};[Array]::Clear($key,0,$key.Length)}

@@ -46,3 +46,5 @@ function Set-WinCareTelemetrySuppression {
 }
 
 if ($MyInvocation.MyCommand.ScriptBlock.Module) { Export-ModuleMember -Function Get-WinCareTelemetrySuppressionState,Set-WinCareTelemetrySuppression }
+
+

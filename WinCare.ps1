@@ -13,7 +13,13 @@ param(
 )
 Set-StrictMode -Version Latest
 $ErrorActionPreference='Stop'
-$modulePath=Join-Path $PSScriptRoot 'src/WinCare/WinCare.psd1';Import-Module $modulePath -Force
+if($Json){
+    $WarningPreference='SilentlyContinue'
+    $InformationPreference='SilentlyContinue'
+    $ProgressPreference='SilentlyContinue'
+}
+$modulePath=Join-Path $PSScriptRoot 'src/WinCare/WinCare.psd1'
+Import-Module $modulePath -Force -DisableNameChecking -WarningAction SilentlyContinue
 if($Gui){
     if(-not $IsWindows){throw 'WinCare GUI requires Windows 10 or Windows 11.'}
     if([Threading.Thread]::CurrentThread.GetApartmentState() -ne [Threading.ApartmentState]::STA){

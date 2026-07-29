@@ -56,14 +56,36 @@ function Get-WinCareTelemetryHistory {
 function ConvertTo-WinCarePublicTelemetrySample {
     [CmdletBinding()]
     param([Parameter(Mandatory,ValueFromPipeline)][object]$InputObject)
-    process{[pscustomobject]@{Timestamp=[string](Get-WinCareBridgeProperty $InputObject 'Timestamp' '');CpuUsagePercent=[double](Get-WinCareBridgeProperty $InputObject 'CpuUsagePercent' 0);MemoryTotalBytes=[long](Get-WinCareBridgeProperty $InputObject 'MemoryTotalBytes' 0);MemoryUsedBytes=[long](Get-WinCareBridgeProperty $InputObject 'MemoryUsedBytes' 0);MemoryFreeBytes=[long](Get-WinCareBridgeProperty $InputObject 'MemoryFreeBytes' 0);DiskReadBytesPerSec=[double](Get-WinCareBridgeProperty $InputObject 'DiskReadBytesPerSec' 0);DiskWriteBytesPerSec=[double](Get-WinCareBridgeProperty $InputObject 'DiskWriteBytesPerSec' 0);TopProcesses=@(Get-WinCareBridgeProperty $InputObject 'TopProcesses' @())}}
+    process{
+        $cpu=Get-WinCareBridgeProperty $InputObject 'CpuUsagePercent' $null
+        if($null -eq $cpu){$cpu=Get-WinCareBridgeProperty $InputObject 'CpuPercent' 0}
+        [pscustomobject]@{
+            Timestamp=[string](Get-WinCareBridgeProperty $InputObject 'Timestamp' '')
+            CpuUsagePercent=[double]$cpu
+            MemoryTotalBytes=[long](Get-WinCareBridgeProperty $InputObject 'MemoryTotalBytes' 0)
+            MemoryUsedBytes=[long](Get-WinCareBridgeProperty $InputObject 'MemoryUsedBytes' 0)
+            MemoryFreeBytes=[long](Get-WinCareBridgeProperty $InputObject 'MemoryFreeBytes' 0)
+            DiskReadBytesPerSec=[double](Get-WinCareBridgeProperty $InputObject 'DiskReadBytesPerSec' 0)
+            DiskWriteBytesPerSec=[double](Get-WinCareBridgeProperty $InputObject 'DiskWriteBytesPerSec' 0)
+            TopProcesses=@(Get-WinCareBridgeProperty $InputObject 'TopProcesses' @())
+        }
+    }
 }
 function Test-WinCareTelemetrySeries {
     [CmdletBinding()]
     param([Parameter(Mandatory)][object]$Series)
     $samples=@(Get-WinCareBridgeProperty $Series 'Samples' $Series)
-    if($samples.Count -eq 0){return $false}
-    foreach($sample in $samples){$stamp=[string](Get-WinCareBridgeProperty $sample 'Timestamp' '');$parsed=[datetime]::MinValue;if(-not [datetime]::TryParse($stamp,[ref]$parsed)){return $false};$cpu=[double](Get-WinCareBridgeProperty $sample 'CpuUsagePercent' -1);if($cpu -lt 0 -or $cpu -gt 100){return $false}}
+    if($samples.Count -eq 0){throw 'Telemetry series must contain at least one sample.'}
+    foreach($sample in $samples){
+        $stamp=[string](Get-WinCareBridgeProperty $sample 'Timestamp' '')
+        $parsed=[datetime]::MinValue
+        if(-not [datetime]::TryParse($stamp,[ref]$parsed)){throw 'Telemetry sample timestamp is invalid.'}
+        $cpuValue=Get-WinCareBridgeProperty $sample 'CpuUsagePercent' $null
+        if($null -eq $cpuValue){$cpuValue=Get-WinCareBridgeProperty $sample 'CpuPercent' $null}
+        $cpu=0.0
+        if($null -eq $cpuValue -or -not [double]::TryParse([string]$cpuValue,[ref]$cpu)){throw 'Telemetry sample CPU value is invalid.'}
+        if($cpu -lt 0 -or $cpu -gt 100){throw 'Telemetry sample CPU value is outside 0..100.'}
+    }
     return $true
 }
 function New-WinCareTelemetryCapturePlan {
