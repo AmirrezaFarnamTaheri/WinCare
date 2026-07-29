@@ -1,0 +1,32 @@
+<Project>
+  <PropertyGroup>
+    <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <SelfContained>true</SelfContained>
+    <PublishSingleFile>true</PublishSingleFile>
+    <PublishTrimmed>false</PublishTrimmed>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <UseAppHost>true</UseAppHost>
+    <Deterministic>true</Deterministic>
+    <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
+    <DebugType>none</DebugType>
+    <DebugSymbols>false</DebugSymbols>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+    <ErrorOnDuplicatePublishOutputFiles>true</ErrorOnDuplicatePublishOutputFiles>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="WinCare.Host.cs" />
+    <PackageReference Include="Microsoft.PowerShell.SDK" Version="7.4.17" />
+    <EmbeddedResource Include="$(WinCarePayloadPath)" LogicalName="WinCare.Payload.zip" Condition="Exists('$(WinCarePayloadPath)')" />
+  </ItemGroup>
+  <Target Name="RequireWinCarePayload" BeforeTargets="PrepareForBuild">
+    <Error Condition="'$(WinCarePayloadPath)' == '' Or !Exists('$(WinCarePayloadPath)')" Text="WinCarePayloadPath must identify the verified standalone payload ZIP." />
+  </Target>
+</Project>
