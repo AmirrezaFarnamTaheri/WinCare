@@ -33,6 +33,7 @@ if($Gui){
         try{$process.WaitForExit();exit $process.ExitCode}finally{$process.Dispose()}
     }
     $guiParameters=@{ReadOnly=$ReadOnly};if($Theme){$guiParameters.Theme=$Theme};Start-WinCareGui @guiParameters
+    if($env:WINCARE_STANDALONE_HOST -eq '1'){return}
     exit 0
 }
 if($Command){
@@ -40,7 +41,11 @@ if($Command){
     $arguments=if([string]::IsNullOrWhiteSpace($ArgumentsJson)){@{}}else{$ArgumentsJson|ConvertFrom-Json -AsHashtable -Depth 40}
     $result=Invoke-WinCareHeadlessCommand -Command $Command -Arguments $arguments -Apply:$Apply -JsonObject
     if($Json){$result|ConvertTo-Json -Depth 50}else{$result|Format-List *}
-    if($result -and $result.PSObject.Properties['Success'] -and -not $result.Success){exit 1}
+    if($result -and $result.PSObject.Properties['Success'] -and -not $result.Success){
+        if($env:WINCARE_STANDALONE_HOST -eq '1'){throw "WinCare command failed: $Command"}
+        exit 1
+    }
+    if($env:WINCARE_STANDALONE_HOST -eq '1'){return}
     exit 0
 }
 $startParameters=@{NoLogo=$NoLogo};if($PSBoundParameters.ContainsKey('Ascii')){$startParameters.Ascii=$Ascii};if($PSBoundParameters.ContainsKey('ReadOnly')){$startParameters.ReadOnly=$ReadOnly};if($PSBoundParameters.ContainsKey('Theme')){$startParameters.Theme=$Theme};Start-WinCare @startParameters
