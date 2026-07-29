@@ -137,7 +137,13 @@ try {
     if ($verify.ExitCode -ne 0) { throw 'Final v3 release verification failed.' }
     $validation = [string]$verify.StandardOutput | ConvertFrom-Json -Depth 50 -ErrorAction Stop
     if ($validation.status -ne 'passed') { Exit-WinCareReleaseGroup 'verify-v3' 'failed' @{message='verifier status was not passed'}; throw 'Final v3 release verifier did not report passed.' }
-    Exit-WinCareReleaseGroup 'verify-v3' 'passed' @{message="archiveSha256=$($validation.sha256) members=$($validation.members)"}
+    $archiveSha256 = [string]$validation.details.archiveSha256
+    $verifiedMembers = [int]$validation.details.members
+    if ($archiveSha256 -notmatch '^[0-9a-f]{64}$' -or $verifiedMembers -lt 1) {
+        Exit-WinCareReleaseGroup 'verify-v3' 'failed' @{message='verifier details contract is missing or invalid'}
+        throw 'Final v3 release verifier omitted required archive evidence.'
+    }
+    Exit-WinCareReleaseGroup 'verify-v3' 'passed' @{message="archiveSha256=$archiveSha256 members=$verifiedMembers"}
 
     Enter-WinCareReleaseGroup 'installation-lifecycle'
     & (Join-Path $PSScriptRoot 'Test-InstallationLifecycle.ps1') -ArchivePath $archive -WorkRoot (Join-Path $workRoot 'install-lifecycle')
