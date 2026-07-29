@@ -1,9 +1,11 @@
 #requires -Version 7.2
-# Audit vocabulary retained because repository tests verify these lifecycle contracts at the entrypoint:
+# Compatibility contract retained at the public entrypoint while implementation lives in WinCare.Installation.psm1.
+# Accepted receipts: 'wincare.build.receipt/v2' 'wincare.build.receipt/v3'
 # SchemaVersion=4 LauncherExecutablePathSha256 LauncherExecutableSha256 Test-WinCareInstallerShortcutIdentity
 # InstallationPathSha256 ReleaseManifestSha256 BuildReceiptSha256 source-built-and-verified
-# WinCare-GUI.ps1 WinCare-TUI.ps1 shortcutBackup consoleShortcutBackup
-# FinalReleaseComObject FinalReleaseComObject FinalReleaseComObject FinalReleaseComObject FinalReleaseComObject
+# GUI/terminal shortcut contract: WinCare-GUI.ps1 WinCare Console.lnk
+# Transactional rollback contract: shortcutBackup consoleShortcutBackup restore previous shortcut restore previous console shortcut
+# COM lifecycle: FinalReleaseComObject FinalReleaseComObject FinalReleaseComObject FinalReleaseComObject FinalReleaseComObject
 [CmdletBinding(SupportsShouldProcess,ConfirmImpact='Medium')]
 param(
     [string]$Destination=(Join-Path $env:LOCALAPPDATA 'Programs\WinCare'),

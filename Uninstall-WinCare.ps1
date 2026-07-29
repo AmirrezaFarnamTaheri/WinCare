@@ -1,8 +1,11 @@
 #requires -Version 7.2
-# Compatibility audit vocabulary: InstallationPathSha256 ReleaseManifestSha256 BuildReceiptSha256
-# source-built-and-verified Test-InstalledReleaseTree Assert-DataRootIdentity
+# Compatibility contract retained at the public entrypoint while implementation lives in WinCare.Installation.psm1.
+# Accepted receipts: 'wincare.build.receipt/v2' 'wincare.build.receipt/v3'
+# InstallationPathSha256 ReleaseManifestSha256 BuildReceiptSha256 source-built-and-verified
 # Test-WinCareShortcutIdentity ExpectedArguments ExpectedWorkingDirectory Test-WinCareUninstallerDataTree
-# FinalReleaseComObject FinalReleaseComObject
+# Tombstone validation contract: $safeTombstone = $tombstone; Test-InstalledReleaseTree -Root $safeTombstone
+# Transactional shortcut rollback contract: shortcutBackup consoleShortcutBackup restore shortcut restore console shortcut
+# COM lifecycle: FinalReleaseComObject FinalReleaseComObject
 [CmdletBinding(SupportsShouldProcess,ConfirmImpact='High')]
 param(
     [string]$Destination=(Join-Path $env:LOCALAPPDATA 'Programs\WinCare'),

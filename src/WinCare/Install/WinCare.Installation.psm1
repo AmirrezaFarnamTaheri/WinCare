@@ -1,7 +1,7 @@
 Set-StrictMode -Version Latest
 $ErrorActionPreference='Stop'
 $script:ProductGuid='f43eb775-7d08-42ec-9888-8b1bd79e90a3'
-$script:ReceiptSchema='wincare.build.receipt/v3'
+$script:ReceiptSchemas=@('wincare.build.receipt/v2','wincare.build.receipt/v3')
 $script:MarkerSchema=5
 
 function Get-WinCareCanonicalPathHash {
@@ -69,7 +69,7 @@ function Test-WinCareManagedReleaseTree {
 function Get-WinCareReleaseIdentity {
     param([string]$Root)
     $tree=Test-WinCareManagedReleaseTree $Root;$receiptPath=Join-Path $Root 'BUILD-RECEIPT.json';$receipt=Read-WinCareJson $receiptPath 4194304
-    if($receipt.schema -ne $script:ReceiptSchema -or $receipt.packageProfile -ne 'production' -or [bool]$receipt.source.dirty -or $receipt.native.status -ne 'source-built-and-verified'){throw 'Release receipt is not installable.'}
+    if($receipt.schema -notin $script:ReceiptSchemas -or $receipt.packageProfile -ne 'production' -or [bool]$receipt.source.dirty -or $receipt.native.status -ne 'source-built-and-verified'){throw 'Release receipt is not installable.'}
     $module=Import-PowerShellDataFile (Join-Path $Root 'src\WinCare\WinCare.psd1');if([string]$module.GUID -ne $script:ProductGuid -or [string]$module.ModuleVersion -ne [string]$receipt.version){throw 'Release identity mismatch.'}
     [pscustomobject]@{Tree=$tree;Receipt=$receipt;ReceiptSha256=(Get-WinCareFileHash $receiptPath).Sha256;Module=$module}
 }
