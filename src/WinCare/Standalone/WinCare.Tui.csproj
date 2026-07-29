@@ -1,0 +1,4 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="Directory.Build.props" />
+  <PropertyGroup><AssemblyName>WinCare-TUI</AssemblyName><OutputType>Exe</OutputType></PropertyGroup>
+</Project>
