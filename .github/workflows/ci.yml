@@ -1,88 +1,311 @@
-name: apply-host-string-overload-fix
+name: validate
 
 on:
+  push:
   pull_request:
-    branches:
-      - master
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
-  group: apply-host-string-overload-fix-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: false
+  group: validate-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHONUTF8: '1'
+  PYTHONUNBUFFERED: '1'
 
 jobs:
-  apply:
-    name: Correct and verify host string overloads
-    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository
+  evidence:
+    name: Evidence, contracts, and deterministic tooling
     runs-on: ubuntu-24.04
-    timeout-minutes: 10
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
-          persist-credentials: true
-      - name: Apply exact host overload correction
-        id: patch
+          persist-credentials: false
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: '3.12'
+      - name: Describe validation context
         shell: bash
-        env:
-          TARGET_BRANCH: ${{ github.head_ref }}
         run: |
           set -euo pipefail
-          mkdir -p artifacts/host-fix
-          exec > >(tee artifacts/host-fix/apply.log) 2>&1
-          python3 - <<'PY'
-          from pathlib import Path
-          path=Path('src/WinCare/Standalone/WinCare.Host.cs')
-          text=path.read_text(encoding='utf-8')
-          replacements={
-              "entry.FullName.EndsWith('/', StringComparison.Ordinal)":"entry.FullName.EndsWith(\"/\", StringComparison.Ordinal)",
-              "value.StartsWith('/', StringComparison.Ordinal)":"value.StartsWith(\"/\", StringComparison.Ordinal)",
+          mkdir -p artifacts/evidence/logs
+          python - <<'PY'
+          import json, os, pathlib, platform, subprocess, sys
+          root = pathlib.Path.cwd()
+          def command(*args):
+              return subprocess.run(args, cwd=root, text=True, capture_output=True, check=True).stdout.strip()
+          context = {
+              "schema": "wincare.workflow.context/v1",
+              "job": "evidence",
+              "event": os.environ.get("GITHUB_EVENT_NAME"),
+              "workflow": os.environ.get("GITHUB_WORKFLOW"),
+              "runId": os.environ.get("GITHUB_RUN_ID"),
+              "runAttempt": os.environ.get("GITHUB_RUN_ATTEMPT"),
+              "repository": os.environ.get("GITHUB_REPOSITORY"),
+              "ref": os.environ.get("GITHUB_REF"),
+              "sha": command("git", "rev-parse", "HEAD"),
+              "baseSha": os.environ.get("GITHUB_BASE_REF"),
+              "headRef": os.environ.get("GITHUB_HEAD_REF"),
+              "python": sys.version,
+              "platform": platform.platform(),
+              "trackedFiles": len(command("git", "ls-files").splitlines()),
+              "sourceDateEpoch": os.environ.get("SOURCE_DATE_EPOCH"),
           }
-          for old,new in replacements.items():
-              count=text.count(old)
-              print(f'[host-fix] source={old!r} matches={count}')
-              if count != 1:
-                  raise SystemExit(f'expected exactly one match for {old!r}, found {count}')
-              text=text.replace(old,new)
-          path.write_text(text,encoding='utf-8')
-          for old,new in replacements.items():
-              if old in text or text.count(new) != 1:
-                  raise SystemExit(f'postcondition failed for {new!r}')
-          print('[host-fix] exact replacements verified')
+          path = root / "artifacts/evidence/context.json"
+          path.write_text(json.dumps(context, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+          print(json.dumps(context, indent=2, sort_keys=True))
+          summary = pathlib.Path(os.environ["GITHUB_STEP_SUMMARY"])
+          with summary.open("a", encoding="utf-8") as handle:
+              handle.write("## Evidence job context\n\n")
+              handle.write(f"- Commit: `{context['sha']}`\n")
+              handle.write(f"- Event/ref: `{context['event']}` / `{context['ref']}`\n")
+              handle.write(f"- Python: `{sys.version.split()[0]}`\n")
+              handle.write(f"- Tracked files: `{context['trackedFiles']}`\n\n")
           PY
-          git diff --check
-          git diff -- src/WinCare/Standalone/WinCare.Host.cs | tee artifacts/host-fix/host.patch
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add src/WinCare/Standalone/WinCare.Host.cs
-          git commit -m 'fix standalone host string comparison overloads'
-          commit=$(git rev-parse HEAD)
-          echo "source_commit=$commit" >> "$GITHUB_OUTPUT"
-          [[ -n "$TARGET_BRANCH" ]] || { echo 'TARGET_BRANCH is empty.' >&2; exit 1; }
-          git push origin "HEAD:${TARGET_BRANCH}"
-          echo "[host-fix] pushed branch=${TARGET_BRANCH} commit=${commit}"
-      - name: Publish host-fix diagnosis
+      - name: Run all evidence gates and retain every failure
+        id: evidence_gates
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -uo pipefail
+          mkdir -p artifacts/evidence/logs artifacts/release
+          ledger="artifacts/evidence/gate-ledger.tsv"
+          printf 'id\tdescription\tstatus\texitCode\tdurationMs\tlog\n' > "$ledger"
+          failures=0
+
+          run_gate() {
+            local id="$1"; shift
+            local description="$1"; shift
+            local log="artifacts/evidence/logs/${id}.log"
+            local started ended duration rc status
+            started=$(date +%s%3N)
+            echo "::group::[$id] $description"
+            echo "[gate] id=$id"
+            echo "[gate] description=$description"
+            echo "[gate] command=$*"
+            set +e
+            "$@" 2>&1 | tee "$log"
+            rc=${PIPESTATUS[0]}
+            set -e
+            ended=$(date +%s%3N)
+            duration=$((ended-started))
+            if [[ $rc -eq 0 ]]; then status=passed; else status=failed; failures=$((failures+1)); fi
+            echo "[gate] status=$status exitCode=$rc durationMs=$duration log=$log"
+            echo "::endgroup::"
+            printf '%s\t%s\t%s\t%s\t%s\t%s\n' "$id" "$description" "$status" "$rc" "$duration" "$log" >> "$ledger"
+          }
+
+          run_gate 01-source "Cross-file source validation" python tools/validate_source.py . --json-output artifacts/source-validation.json
+          run_gate 02-actions "Action contract and dispatcher validation" python tools/validate_action_bindings.py . --output artifacts/action-binding-validation.json
+          run_gate 03-test-source "Test-to-source assertion validation" python tools/validate_test_source_assertions.py . --output artifacts/test-source-validation.json
+          run_gate 04-public-calls "Public entry point and UI call validation" python tools/validate_powershell_calls.py . --output artifacts/public-call-bindings.json
+          run_gate 05-module-manifest "Closed module source manifest validation" python tools/validate_module_manifest.py . --output artifacts/module-source-manifest.json
+          run_gate 06-source-references "Current source-reference validation" python tools/validate_source_references.py . --output artifacts/source-reference-validation.json
+          run_gate 07-stubs "Anti-stub and synthetic-success validation" python tools/audit_stub_inventory.py . --output artifacts/stub-inventory.json
+          run_gate 08-maintainability "Maintainability and formatting ratchet" python tools/validate_maintainability.py . --output artifacts/maintainability-validation.json
+          run_gate 09-network "Silent network egress validation" python tools/validate_network_egress.py . --output artifacts/network-egress-validation.json
+          run_gate 10-processes "External process boundary validation" python tools/validate_external_processes.py . --output artifacts/external-process-validation.json
+          run_gate 11-bounded-io "Bounded runtime I/O validation" python tools/validate_bounded_io.py . --output artifacts/bounded-io-validation.json
+          run_gate 12-read-only "Read-only state validation" python tools/validate_read_only_state.py . --output artifacts/read-only-state-validation.json
+          run_gate 13-context-menu "Context-menu command safety validation" python tools/validate_context_menu_catalog.py . --output artifacts/context-menu-validation.json
+          run_gate 14-fixtures "Test fixture integrity validation" python tools/validate_test_fixtures.py . --output artifacts/test-fixture-validation.json
+          run_gate 15-unit-tests "Release, standalone, security, GUI, and maintainability unit tests" \
+            python -m unittest \
+              tools.test_release_tools \
+              tools.test_standalone_release \
+              tools.test_maintainability \
+              tools.test_security_invariants \
+              tools.test_cleaner_preview \
+              tools.test_gui \
+              tools.test_source_references \
+              tools.test_wincare_ps_source -v
+
+          development_package() {
+            set -euo pipefail
+            python tools/build_release.py . --output-directory artifacts/release
+            VERSION=$(python - <<'PY_VERSION'
+          import pathlib, re
+          text = pathlib.Path("src/WinCare/WinCare.psd1").read_text(encoding="utf-8")
+          print(re.search(r"ModuleVersion\s*=\s*'([^']+)'", text).group(1))
+          PY_VERSION
+            )
+            python tools/verify_release.py "artifacts/release/WinCare-$VERSION.zip" --output artifacts/archive-validation.json
+          }
+          run_gate 16-development-package "Deterministic development package and generic archive verification" development_package
+
+          python - <<'PY'
+          import csv, hashlib, json, pathlib
+          root = pathlib.Path("artifacts")
+          with (root / "evidence/gate-ledger.tsv").open(encoding="utf-8") as handle:
+              gates = list(csv.DictReader(handle, delimiter="\t"))
+          files = []
+          for path in sorted((p for p in root.rglob("*") if p.is_file()), key=lambda p: p.as_posix().casefold()):
+              data = path.read_bytes()
+              files.append({"path": path.as_posix(), "bytes": len(data), "sha256": hashlib.sha256(data).hexdigest()})
+          diagnosis = {
+              "schema": "wincare.workflow.diagnostics/v1",
+              "job": "evidence",
+              "status": "failed" if any(g["status"] != "passed" for g in gates) else "passed",
+              "gates": gates,
+              "artifacts": files,
+          }
+          (root / "evidence/diagnostics-index.json").write_text(json.dumps(diagnosis, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+          print(json.dumps(diagnosis, indent=2, sort_keys=True))
+          PY
+          exit "$failures"
+      - name: Publish evidence diagnosis summary
         if: always()
         shell: bash
         run: |
-          {
-            echo '## Standalone host overload correction'
-            echo
-            echo "- Outcome: **${{ steps.patch.outcome }}**"
-            echo "- Trigger commit: \`${GITHUB_SHA}\`"
-            echo "- Source commit: \`${{ steps.patch.outputs.source_commit }}\`"
-          } >> "$GITHUB_STEP_SUMMARY"
-          if [[ '${{ steps.patch.outcome }}' != 'success' && -f artifacts/host-fix/apply.log ]]; then
-            tail -n 200 artifacts/host-fix/apply.log
-          fi
+          set -euo pipefail
+          python - <<'PY'
+          import json, os, pathlib
+          path = pathlib.Path("artifacts/evidence/diagnostics-index.json")
+          summary = pathlib.Path(os.environ["GITHUB_STEP_SUMMARY"])
+          with summary.open("a", encoding="utf-8") as handle:
+              handle.write("## Evidence gate results\n\n")
+              if not path.is_file():
+                  handle.write("Diagnostics index was not produced. The aggregate gate step failed before finalization.\n")
+                  raise SystemExit(0)
+              value = json.loads(path.read_text(encoding="utf-8"))
+              handle.write("| Gate | Description | Status | Exit | Duration | Log |\n")
+              handle.write("|---|---|---:|---:|---:|---|\n")
+              for gate in value["gates"]:
+                  icon = "✅" if gate["status"] == "passed" else "❌"
+                  handle.write(f"| `{gate['id']}` | {gate['description']} | {icon} {gate['status']} | `{gate['exitCode']}` | `{gate['durationMs']} ms` | `{gate['log']}` |\n")
+              handle.write(f"\nOverall status: **{value['status']}**. Captured artifacts: **{len(value['artifacts'])}**.\n")
+          for gate in value["gates"]:
+              if gate["status"] == "passed":
+                  continue
+              log = pathlib.Path(gate["log"])
+              print(f"\n===== FAILED GATE {gate['id']}: {gate['description']} =====")
+              if log.is_file():
+                  lines = log.read_text(encoding="utf-8", errors="replace").splitlines()
+                  print("\n".join(lines[-160:]))
+              else:
+                  print(f"Missing log: {log}")
+          PY
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: always()
         with:
-          name: host-string-overload-fix-diagnostics
-          path: artifacts/host-fix/**
+          name: evidence-and-release
+          path: artifacts/**
           if-no-files-found: error
           retention-days: 14
+      - name: Enforce evidence result
+        if: always()
+        shell: bash
+        run: |
+          if [[ '${{ steps.evidence_gates.outcome }}' != 'success' ]]; then
+            echo 'Evidence gates failed. See the job summary and evidence-and-release artifact for the complete gate ledger and logs.' >&2
+            exit 1
+          fi
+
+  windows:
+    name: Windows ${{ matrix.os }} full lifecycle validation
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-2022, windows-2025]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 100
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-dotnet@6df8cefd1440cf9313e76b8fdb8aaf90cfa745a3 # v6.0.0
+        with:
+          global-json-file: global.json
+      - name: Describe Windows runner context
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          New-Item -ItemType Directory -Path ./artifacts/windows-validation/workflow -Force | Out-Null
+          $dotnet = (& dotnet --version).Trim()
+          $python = (& python --version 2>&1 | Out-String).Trim()
+          $context = [ordered]@{
+            schema='wincare.workflow.context/v1'; job='windows'; runner='${{ matrix.os }}'
+            event='${{ github.event_name }}'; ref='${{ github.ref }}'; sha='${{ github.sha }}'
+            runId='${{ github.run_id }}'; runAttempt='${{ github.run_attempt }}'
+            powershell=$PSVersionTable.PSVersion.ToString(); edition=$PSVersionTable.PSEdition
+            dotnet=$dotnet; python=$python; os=[Environment]::OSVersion.VersionString
+          }
+          $context | ConvertTo-Json -Depth 8 | Set-Content ./artifacts/windows-validation/workflow/context.json -Encoding utf8NoBOM
+          $context | ConvertTo-Json -Depth 8
+          "## Windows ${{ matrix.os }} context`n`n- Commit: ``${{ github.sha }}```n- PowerShell: ``$($context.powershell)```n- .NET SDK: ``$dotnet```n- Python: ``$python```n" | Add-Content $env:GITHUB_STEP_SUMMARY
+      - name: Install validation modules
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          Set-PSRepository PSGallery -InstallationPolicy Trusted
+          $userModules = Join-Path ([Environment]::GetFolderPath('MyDocuments')) 'PowerShell/Modules'
+          New-Item -ItemType Directory -Force -Path $userModules | Out-Null
+          Save-Module Pester -RequiredVersion 5.5.0 -Path $userModules -Force
+          Install-Module PSScriptAnalyzer -RequiredVersion 1.22.0 -Scope CurrentUser -Force
+          Get-Module Pester,PSScriptAnalyzer -ListAvailable | Sort-Object Name,Version -Descending | Select-Object Name,Version,Path | Format-Table -AutoSize
+      - name: Run static, Pester, native, standalone, lifecycle, and release gates
+        id: windows_validation
+        continue-on-error: true
+        shell: pwsh
+        env:
+          WINCARE_DIAGNOSTICS_DIRECTORY: ${{ github.workspace }}\artifacts\windows-validation\workflow
+        run: ./tools/Invoke-WindowsValidation.ps1 -OutputDirectory ./artifacts/windows-validation -GateTimeoutSeconds 3600
+      - name: Publish Windows diagnosis summary
+        if: always()
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Continue'
+          $root=[IO.Path]::GetFullPath('./artifacts/windows-validation')
+          $reportPath=Join-Path $root 'windows-validation-report.json'
+          $records=@()
+          if(Test-Path -LiteralPath $reportPath -PathType Leaf){
+            try{$report=[IO.File]::ReadAllText($reportPath,[Text.UTF8Encoding]::new($false,$true))|ConvertFrom-Json -Depth 50;$records=@($report.gates)}catch{Write-Warning "Could not parse Windows validation report: $_"}
+          }
+          $artifacts=@(Get-ChildItem -LiteralPath $root -File -Recurse -Force -ErrorAction SilentlyContinue | Sort-Object FullName | ForEach-Object {
+            [ordered]@{path=[IO.Path]::GetRelativePath($root,$_.FullName).Replace('\','/');bytes=[long]$_.Length;sha256=(Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()}
+          })
+          $diagnosis=[ordered]@{schema='wincare.workflow.diagnostics/v1';job='windows';runner='${{ matrix.os }}';stepOutcome='${{ steps.windows_validation.outcome }}';status=if('${{ steps.windows_validation.outcome }}' -eq 'success'){'passed'}else{'failed'};gates=@($records);artifacts=@($artifacts)}
+          New-Item -ItemType Directory -Path (Join-Path $root 'workflow') -Force | Out-Null
+          $diagnosis|ConvertTo-Json -Depth 16|Set-Content (Join-Path $root 'workflow/diagnostics-index.json') -Encoding utf8NoBOM
+          Add-Content $env:GITHUB_STEP_SUMMARY "## Windows ${{ matrix.os }} gate results`n"
+          if($records.Count){
+            Add-Content $env:GITHUB_STEP_SUMMARY '| Gate | Status | Exit | Duration | stdout | stderr |'
+            Add-Content $env:GITHUB_STEP_SUMMARY '|---|---:|---:|---:|---|---|'
+            foreach($gate in $records){
+              $icon=if([string]$gate.Status -eq 'passed'){'✅'}else{'❌'}
+              Add-Content $env:GITHUB_STEP_SUMMARY "| $($gate.Name) | $icon $($gate.Status) | $($gate.ExitCode) | $($gate.DurationMilliseconds) ms | $([IO.Path]::GetFileName([string]$gate.StdOut)) | $([IO.Path]::GetFileName([string]$gate.StdErr)) |"
+            }
+          }else{Add-Content $env:GITHUB_STEP_SUMMARY 'No gate records were available; inspect workflow/context.json and runner logs.'}
+          Add-Content $env:GITHUB_STEP_SUMMARY "`nCaptured artifact files: **$($artifacts.Count)**. Validation step outcome: **${{ steps.windows_validation.outcome }}**.`n"
+          foreach($gate in @($records|Where-Object Status -ne 'passed')){
+            Write-Host "`n===== FAILED WINDOWS GATE: $($gate.Name) status=$($gate.Status) exit=$($gate.ExitCode) =====" -ForegroundColor Red
+            foreach($path in @([string]$gate.StdOut,[string]$gate.StdErr)){
+              if(Test-Path -LiteralPath $path -PathType Leaf){
+                $lines=[IO.File]::ReadAllLines($path)
+                foreach($line in @($lines|Select-Object -Last 200)){Write-Host $line}
+              }
+            }
+          }
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with:
+          name: windows-validation-${{ matrix.os }}
+          path: artifacts/windows-validation/**
+          if-no-files-found: error
+          retention-days: 14
+      - name: Enforce Windows validation result
+        if: always()
+        shell: pwsh
+        run: |
+          if ('${{ steps.windows_validation.outcome }}' -ne 'success') {
+            throw 'Windows validation failed. See the job summary and uploaded diagnostics-index.json for every gate and captured artifact.'
+          }
