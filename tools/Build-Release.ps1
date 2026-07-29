@@ -43,7 +43,7 @@ function Assert-WinCareReleaseDirectory {
     if (Test-Path -LiteralPath $full) {
         $item = Get-Item -LiteralPath $full -Force -ErrorAction Stop
         if (-not $item.PSIsContainer -or ($item.Attributes -band [IO.FileAttributes]::ReparsePoint)) { throw "Release output is unsafe: $full" }
-        if (@(Get-ChildItem -LiteralPath $full -Force).Count) { throw "Release output must be empty: $full" }
+        if (@(Get-ChildItem -LiteralPath $full -Force).Count) { throw "Release output must be absent or empty: $full" }
     } else {
         New-Item -ItemType Directory -Path $full -ErrorAction Stop | Out-Null
     }
