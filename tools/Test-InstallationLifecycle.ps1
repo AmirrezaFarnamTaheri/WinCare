@@ -78,7 +78,23 @@ try {
     }
     $ownerPath = Join-Path $shortcutRoot 'WinCare\.wincare-shortcuts.json'
     if (-not (Test-Path -LiteralPath $ownerPath -PathType Leaf)) { throw 'Managed shortcut ownership evidence is missing.' }
-    $owner = [IO.File]::ReadAllText($ownerPath, [Text.UTF8Encoding]::new($false, $true)) | ConvertFrom-Json -Depth 20
+    $ownerItem = Get-Item -LiteralPath $ownerPath -Force -ErrorAction Stop
+    if ($ownerItem.PSIsContainer -or $ownerItem.Length -lt 1 -or $ownerItem.Length -gt 65536) { throw 'Managed shortcut ownership evidence has an invalid size.' }
+    $ownerBytes = [byte[]]::new([int]$ownerItem.Length)
+    $ownerStream = [IO.File]::Open($ownerItem.FullName, [IO.FileMode]::Open, [IO.FileAccess]::Read, [IO.FileShare]::Read)
+    try {
+        $ownerOffset = 0
+        while ($ownerOffset -lt $ownerBytes.Length) {
+            $ownerRead = $ownerStream.Read($ownerBytes, $ownerOffset, $ownerBytes.Length - $ownerOffset)
+            if ($ownerRead -eq 0) { throw 'Managed shortcut ownership evidence ended unexpectedly.' }
+            $ownerOffset += $ownerRead
+        }
+        $owner = [Text.UTF8Encoding]::new($false, $true).GetString($ownerBytes) | ConvertFrom-Json -Depth 20
+    }
+    finally {
+        $ownerStream.Dispose()
+        [Array]::Clear($ownerBytes, 0, $ownerBytes.Length)
+    }
     foreach ($record in @($owner.Shortcuts)) {
         if ($null -eq $record.Arguments -or [string]$record.Arguments -ne '') { throw "Shortcut owner record is missing the empty Arguments contract: $($record.Name)" }
         if ([string]$record.WorkingDirectory -ne $destination) { throw "Shortcut owner record has the wrong working directory: $($record.Name)" }
