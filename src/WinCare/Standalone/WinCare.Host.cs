@@ -1,8 +1,11 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Management.Automation;
+using System.Management.Automation.Runspaces;
 using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
@@ -26,6 +29,9 @@ internal static class WinCareHost
     private sealed record PayloadManifest(Dictionary<string, string> Files, string Sha256);
     private sealed record PreparedPayload(string Root, IReadOnlyDictionary<string, string> Files);
 
+#if WINCARE_GUI
+    [STAThread]
+#endif
     public static int Main(string[] args)
     {
         try
@@ -58,16 +64,6 @@ internal static class WinCareHost
                 throw new InvalidDataException("Embedded WinCare entry script is not present in the verified payload manifest.");
             var scriptText = ReadVerifiedScript(script, expectedScriptHash);
             var invocation = BuildInvocation(scriptText, forwarded);
-            // The host admits only the cryptographically bound embedded closure. The process-local
-            // policy override permits that verified closure to import its verified script modules; it
-            // does not weaken machine/user policy or admit an arbitrary external script path.
-            var shellArguments = new List<string> { "-NoLogo", "-NoProfile", "-ExecutionPolicy", "Bypass" };
-            if (selfTest)
-                shellArguments.Add("-NonInteractive");
-            if (useSta)
-                shellArguments.Add("-STA");
-            shellArguments.Add("-Command");
-            shellArguments.Add(invocation);
 
             var previousDirectory = Environment.CurrentDirectory;
             var previousHostMarker = Environment.GetEnvironmentVariable("WINCARE_STANDALONE_HOST");
@@ -77,7 +73,21 @@ internal static class WinCareHost
                 Environment.CurrentDirectory = root;
                 Environment.SetEnvironmentVariable("WINCARE_STANDALONE_HOST", "1");
                 Environment.SetEnvironmentVariable("WINCARE_STANDALONE_ROOT", root);
+#if WINCARE_GUI
+                return InvokeGuiPowerShell(invocation);
+#else
+                // The host admits only the cryptographically bound embedded closure. The process-local
+                // policy override permits that verified closure to import its verified script modules; it
+                // does not weaken machine/user policy or admit an arbitrary external script path.
+                var shellArguments = new List<string> { "-NoLogo", "-NoProfile", "-ExecutionPolicy", "Bypass" };
+                if (selfTest)
+                    shellArguments.Add("-NonInteractive");
+                if (useSta)
+                    shellArguments.Add("-STA");
+                shellArguments.Add("-Command");
+                shellArguments.Add(invocation);
                 return ConsoleShell.Start(null, null, shellArguments.ToArray());
+#endif
             }
             finally
             {
@@ -88,10 +98,44 @@ internal static class WinCareHost
         }
         catch (Exception error)
         {
-            Console.Error.WriteLine(error.Message);
+            Trace.TraceError(error.ToString());
+            try
+            {
+                Console.Error.WriteLine(error.Message);
+            }
+            catch
+            {
+                // GUI-subsystem executables intentionally have no console error handle.
+            }
             return 1;
         }
     }
+
+#if WINCARE_GUI
+    private static int InvokeGuiPowerShell(string invocation)
+    {
+        var initialSessionState = InitialSessionState.CreateDefault();
+        initialSessionState.ExecutionPolicy = ExecutionPolicy.Bypass;
+        using var runspace = RunspaceFactory.CreateRunspace(initialSessionState);
+        runspace.ApartmentState = ApartmentState.STA;
+        runspace.ThreadOptions = PSThreadOptions.UseCurrentThread;
+        runspace.Open();
+        using var powershell = PowerShell.Create();
+        powershell.Runspace = runspace;
+        powershell.AddScript(invocation, useLocalScope: false);
+        var results = powershell.Invoke();
+        foreach (var result in results)
+        {
+            if (result is not null)
+                Trace.WriteLine(result.ToString());
+        }
+        if (!powershell.HadErrors)
+            return 0;
+        foreach (var error in powershell.Streams.Error)
+            Trace.TraceError(error.ToString());
+        return 1;
+    }
+#endif
 
     private static readonly Dictionary<string, bool> EntrypointParameters = new(PathComparer)
     {
