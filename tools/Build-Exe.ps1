@@ -85,20 +85,27 @@ try {
         $publish = Join-Path $workRoot ([IO.Path]::GetFileNameWithoutExtension($project.Project))
         New-Item -ItemType Directory -Path $publish -ErrorAction Stop | Out-Null
         $projectPath = Join-Path $rootPath ('src\WinCare\Standalone\' + $project.Project)
+        $propertyArguments = @(
+            ("-p:WinCarePayloadPath={0}" -f $payload),
+            ("-p:WinCarePayloadSha256={0}" -f $payloadEvidence.Sha256.ToUpperInvariant()),
+            ("-p:WinCarePayloadManifestSha256={0}" -f $PayloadManifestSha256.ToUpperInvariant()),
+            ("-p:Version={0}" -f $version),
+            ("-p:FileVersion={0}" -f $version),
+            ("-p:InformationalVersion={0}" -f $version)
+        )
+        $invalidPropertyArguments = @($propertyArguments | Where-Object { $_ -notmatch '^-p:[A-Za-z][A-Za-z0-9]*=.+$' })
+        if ($invalidPropertyArguments.Count) {
+            throw "Invalid standalone MSBuild property argument(s): $($invalidPropertyArguments -join ', ')"
+        }
         $arguments = @(
             'publish',$projectPath,
             '--configuration','Release',
             '--runtime','win-x64',
             '--self-contained','true',
             '--output',$publish,
-            '--nologo',
-            '-p:WinCarePayloadPath=' + $payload,
-            '-p:WinCarePayloadSha256=' + $payloadEvidence.Sha256.ToUpperInvariant(),
-            '-p:WinCarePayloadManifestSha256=' + $PayloadManifestSha256.ToUpperInvariant(),
-            '-p:Version=' + $version,
-            '-p:FileVersion=' + $version,
-            '-p:InformationalVersion=' + $version
-        )
+            '--nologo'
+        ) + $propertyArguments
+        Write-WinCareStandaloneTrace -Phase $phase -Status info -Details @{message="dotnetArguments=$($arguments -join ' ')"}
         $result = Invoke-WinCareToolingProcess -Executable $dotnet -Arguments $arguments -TimeoutSeconds 1800 -MaximumCapturedOutputBytes 67108864 -WorkingDirectory $rootPath -WriteCapturedOutput
         if ($result.ExitCode -ne 0) { throw "dotnet publish failed for $($project.Project). ExitCode=$($result.ExitCode)" }
         $files = @(Get-ChildItem -LiteralPath $publish -File -Force -ErrorAction Stop)
