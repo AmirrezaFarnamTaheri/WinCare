@@ -1,0 +1,176 @@
+name: apply-standalone-closure
+
+on:
+  push:
+    branches:
+      - agent/standalone-release-hardening
+    paths:
+      - '.wincare-closure/**'
+      - '.github/workflows/apply-standalone-closure.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: apply-standalone-closure-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  apply:
+    name: Reconstruct, verify, and commit standalone closure
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: '3.12'
+      - name: Describe apply context
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "[context] repository=${GITHUB_REPOSITORY}"
+          echo "[context] ref=${GITHUB_REF}"
+          echo "[context] sha=${GITHUB_SHA}"
+          echo "[context] run=${GITHUB_RUN_ID} attempt=${GITHUB_RUN_ATTEMPT}"
+          echo "[context] python=$(python --version 2>&1)"
+          echo "[context] bundle parts=$(find .wincare-closure -maxdepth 1 -type f -name 'part-*' | wc -l)"
+      - name: Reconstruct and verify closure bundle
+        id: apply
+        shell: bash
+        env:
+          EXPECTED_BUNDLE_SHA256: 710da6ea5e66b54b39f90280181feccfcd69a85bc9ad7c0cfcc4cceb97633fa6
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/closure-apply
+          exec > >(tee artifacts/closure-apply/apply.log) 2>&1
+          echo '::group::Reconstruct bundle'
+          mapfile -t parts < <(find .wincare-closure -maxdepth 1 -type f -name 'part-*' | sort)
+          if [[ ${#parts[@]} -ne 27 ]]; then
+            echo "Expected 27 bundle parts, found ${#parts[@]}" >&2
+            exit 1
+          fi
+          cat "${parts[@]}" > /tmp/wincare-closure.b64
+          base64 --decode /tmp/wincare-closure.b64 > /tmp/wincare-closure.tgz
+          observed=$(sha256sum /tmp/wincare-closure.tgz | awk '{print $1}')
+          echo "[bundle] expectedSha256=${EXPECTED_BUNDLE_SHA256}"
+          echo "[bundle] observedSha256=${observed}"
+          echo "[bundle] bytes=$(stat -c '%s' /tmp/wincare-closure.tgz)"
+          [[ "$observed" == "$EXPECTED_BUNDLE_SHA256" ]]
+          echo '::endgroup::'
+
+          echo '::group::Audit archive membership'
+          python - <<'PY'
+          import json, pathlib, tarfile
+          archive = pathlib.Path('/tmp/wincare-closure.tgz')
+          records = []
+          with tarfile.open(archive, 'r:gz') as value:
+              members = value.getmembers()
+              for member in members:
+                  parts = pathlib.PurePosixPath(member.name).parts
+                  if not parts or member.name.startswith('/') or '..' in parts:
+                      raise SystemExit(f'unsafe archive path: {member.name!r}')
+                  if member.issym() or member.islnk() or member.isdev():
+                      raise SystemExit(f'unsupported archive member type: {member.name!r}')
+                  records.append({'path': member.name, 'bytes': member.size, 'type': 'directory' if member.isdir() else 'file'})
+          pathlib.Path('artifacts/closure-apply/archive-members.json').write_text(
+              json.dumps({'schema':'wincare.closure.archive-members/v1','members':records}, indent=2, sort_keys=True) + '\n',
+              encoding='utf-8'
+          )
+          print(json.dumps({'members': len(records), 'files': sum(r['type']=='file' for r in records)}, sort_keys=True))
+          PY
+          tar -tzvf /tmp/wincare-closure.tgz
+          echo '::endgroup::'
+
+          echo '::group::Extract and verify exact source files'
+          tar -xzf /tmp/wincare-closure.tgz -C .
+          sha256sum -c closure-manifest.sha256 | tee artifacts/closure-apply/source-checksums.log
+          cp closure-manifest.sha256 artifacts/closure-apply/closure-manifest.sha256
+          rm closure-manifest.sha256
+          echo '::endgroup::'
+
+          echo '::group::Run pre-commit structural and adversarial gates'
+          python -m py_compile \
+            tools/prepare_standalone_payload.py \
+            tools/finalize_release.py \
+            tools/verify_release.py \
+            tools/verify_release_v3.py \
+            tools/test_standalone_release.py
+          python -m unittest tools.test_standalone_release -v 2>&1 | tee artifacts/closure-apply/standalone-tests.log
+          python - <<'PY'
+          import json, pathlib, xml.etree.ElementTree as ET
+          import yaml
+          workflows = ['.github/workflows/ci.yml', '.github/workflows/release.yml']
+          for path in workflows:
+              with open(path, encoding='utf-8') as stream:
+                  yaml.safe_load(stream)
+          ET.parse('src/WinCare/Standalone/Directory.Build.props')
+          result = {'schema':'wincare.closure.precommit-validation/v1','status':'passed','yaml':workflows,'xml':['src/WinCare/Standalone/Directory.Build.props']}
+          pathlib.Path('artifacts/closure-apply/precommit-validation.json').write_text(json.dumps(result, indent=2, sort_keys=True)+'\n', encoding='utf-8')
+          print(json.dumps(result, indent=2, sort_keys=True))
+          PY
+          echo '::endgroup::'
+
+          echo '::group::Commit exact closure source set'
+          git status --short | tee artifacts/closure-apply/git-status-before-commit.txt
+          git diff --stat | tee artifacts/closure-apply/diff-stat.txt
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add \
+            .github/workflows/ci.yml \
+            .github/workflows/release.yml \
+            src/WinCare/Standalone/WinCare.Host.cs \
+            tools/Build-Exe.ps1 \
+            tools/Build-Release.ps1 \
+            tools/Test-InstallationLifecycle.ps1 \
+            tools/finalize_release.py \
+            tools/prepare_standalone_payload.py \
+            tools/test_standalone_release.py \
+            tools/verify_release.py \
+            tools/verify_release_v3.py
+          git diff --cached --name-status | tee artifacts/closure-apply/staged-files.txt
+          git commit -m 'complete standalone release graph and diagnostic workflows'
+          commit=$(git rev-parse HEAD)
+          echo "source_commit=${commit}" >> "$GITHUB_OUTPUT"
+          git show --stat --oneline --decorate --no-renames HEAD
+          git push origin "HEAD:${GITHUB_REF_NAME}"
+          echo '::endgroup::'
+
+          echo '::group::Dispatch full validation'
+          gh workflow run ci.yml --ref "${GITHUB_REF_NAME}"
+          echo "[dispatch] workflow=ci.yml ref=${GITHUB_REF_NAME} sourceCommit=${commit}"
+          echo '::endgroup::'
+      - name: Publish apply diagnosis
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo '## Standalone closure application' >> "$GITHUB_STEP_SUMMARY"
+          echo '' >> "$GITHUB_STEP_SUMMARY"
+          echo "- Outcome: **${{ steps.apply.outcome }}**" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Staging commit: \`${GITHUB_SHA}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Source commit: \`${{ steps.apply.outputs.source_commit }}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Bundle SHA-256: \`710da6ea5e66b54b39f90280181feccfcd69a85bc9ad7c0cfcc4cceb97633fa6\`" >> "$GITHUB_STEP_SUMMARY"
+          if [[ -f artifacts/closure-apply/staged-files.txt ]]; then
+            echo '' >> "$GITHUB_STEP_SUMMARY"
+            echo '### Applied files' >> "$GITHUB_STEP_SUMMARY"
+            echo '```text' >> "$GITHUB_STEP_SUMMARY"
+            cat artifacts/closure-apply/staged-files.txt >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+          fi
+          if [[ '${{ steps.apply.outcome }}' != 'success' && -f artifacts/closure-apply/apply.log ]]; then
+            echo '===== APPLY FAILURE LOG TAIL ====='
+            tail -n 240 artifacts/closure-apply/apply.log
+          fi
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with:
+          name: standalone-closure-apply-diagnostics
+          path: artifacts/closure-apply/**
+          if-no-files-found: error
+          retention-days: 14
