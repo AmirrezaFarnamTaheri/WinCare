@@ -1,4 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <Import Project="Directory.Build.props" />
-  <PropertyGroup><AssemblyName>WinCare-GUI</AssemblyName><OutputType>Exe</OutputType></PropertyGroup>
+  <PropertyGroup>
+    <AssemblyName>WinCare-GUI</AssemblyName>
+    <OutputType>WinExe</OutputType>
+    <DefineConstants>$(DefineConstants);WINCARE_GUI</DefineConstants>
+  </PropertyGroup>
 </Project>
