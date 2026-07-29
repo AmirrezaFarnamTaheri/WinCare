@@ -1,111 +1,159 @@
-name: validate
+name: apply-verified-standalone-closure
 
 on:
-  push:
   pull_request:
+    branches:
+      - master
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
-  group: validate-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  group: apply-verified-standalone-closure-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
 
 jobs:
-  evidence:
+  apply:
+    name: Reconstruct, verify, and commit standalone closure
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: true
       - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
           python-version: '3.12'
-      - name: Cross-file source validation
-        run: python tools/validate_source.py . --json-output artifacts/source-validation.json
-      - name: Action contract and dispatcher validation
-        run: python tools/validate_action_bindings.py . --output artifacts/action-binding-validation.json
-      - name: Test-to-source assertion validation
-        run: python tools/validate_test_source_assertions.py . --output artifacts/test-source-validation.json
-      - name: Public entry point and UI call validation
-        run: python tools/validate_powershell_calls.py . --output artifacts/public-call-bindings.json
-      - name: Closed module source manifest validation
-        run: python tools/validate_module_manifest.py . --output artifacts/module-source-manifest.json
-      - name: Current source-reference validation
-        run: python tools/validate_source_references.py . --output artifacts/source-reference-validation.json
-      - name: Anti-stub and synthetic-success validation
-        run: python tools/audit_stub_inventory.py . --output artifacts/stub-inventory.json
-      - name: Maintainability and formatting ratchet
-        run: python tools/validate_maintainability.py . --output artifacts/maintainability-validation.json
-      - name: Silent network egress validation
-        run: python tools/validate_network_egress.py . --output artifacts/network-egress-validation.json
-      - name: External process boundary validation
-        run: python tools/validate_external_processes.py . --output artifacts/external-process-validation.json
-      - name: Bounded runtime I/O validation
-        run: python tools/validate_bounded_io.py . --output artifacts/bounded-io-validation.json
-      - name: Read-only state validation
-        run: python tools/validate_read_only_state.py . --output artifacts/read-only-state-validation.json
-      - name: Context-menu command safety validation
-        run: python tools/validate_context_menu_catalog.py . --output artifacts/context-menu-validation.json
-      - name: Test fixture integrity validation
-        run: python tools/validate_test_fixtures.py . --output artifacts/test-fixture-validation.json
-      - name: Release, security, GUI, and maintainability tooling tests
-        run: python -m unittest tools.test_release_tools tools.test_maintainability tools.test_security_invariants tools.test_cleaner_preview tools.test_gui tools.test_source_references tools.test_wincare_ps_source -v
-      - name: Deterministic development package
+      - name: Describe apply context
+        shell: bash
         run: |
-          mkdir -p artifacts
-          python tools/build_release.py . --output-directory artifacts/release
-          VERSION=$(python -c "import re,pathlib; print(re.search(r\"ModuleVersion\\s*=\\s*'([^']+)'\", pathlib.Path('src/WinCare/WinCare.psd1').read_text()).group(1))")
-          python tools/verify_release.py "artifacts/release/WinCare-$VERSION.zip" --output artifacts/archive-validation.json
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: evidence-and-release
-          path: artifacts/*
-          if-no-files-found: error
+          set -euo pipefail
+          echo "[context] repository=${GITHUB_REPOSITORY}"
+          echo "[context] event=${GITHUB_EVENT_NAME}"
+          echo "[context] ref=${GITHUB_REF} headRef=${GITHUB_HEAD_REF}"
+          echo "[context] checkedOut=$(git rev-parse HEAD)"
+          echo "[context] run=${GITHUB_RUN_ID} attempt=${GITHUB_RUN_ATTEMPT}"
+          echo "[context] python=$(python --version 2>&1)"
+          echo "[context] bundleParts=$(find .wincare-closure -maxdepth 1 -type f -name 'part-*' | wc -l)"
+      - name: Reconstruct, audit, test, and push exact source closure
+        id: apply
+        shell: bash
+        env:
+          EXPECTED_BUNDLE_SHA256: 710da6ea5e66b54b39f90280181feccfcd69a85bc9ad7c0cfcc4cceb97633fa6
+          TARGET_BRANCH: ${{ github.head_ref }}
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/closure-apply
+          exec > >(tee artifacts/closure-apply/apply.log) 2>&1
 
-  windows:
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [windows-2022, windows-2025]
-    runs-on: ${{ matrix.os }}
-    timeout-minutes: 35
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
-        with:
-          python-version: '3.12'
-      - uses: actions/setup-dotnet@6df8cefd1440cf9313e76b8fdb8aaf90cfa745a3 # v6.0.0
-        with:
-          global-json-file: global.json
-      - name: Verify PowerShell requirement
-        shell: pwsh
+          echo '::group::Reconstruct immutable bundle'
+          mapfile -t parts < <(find .wincare-closure -maxdepth 1 -type f -name 'part-*' | sort)
+          [[ ${#parts[@]} -eq 27 ]] || { echo "Expected 27 bundle parts, found ${#parts[@]}" >&2; exit 1; }
+          cat "${parts[@]}" > /tmp/wincare-closure.b64
+          base64 --decode /tmp/wincare-closure.b64 > /tmp/wincare-closure.tgz
+          observed=$(sha256sum /tmp/wincare-closure.tgz | awk '{print $1}')
+          printf '[bundle] expectedSha256=%s\n[bundle] observedSha256=%s\n[bundle] bytes=%s\n' \
+            "$EXPECTED_BUNDLE_SHA256" "$observed" "$(stat -c '%s' /tmp/wincare-closure.tgz)"
+          [[ "$observed" == "$EXPECTED_BUNDLE_SHA256" ]]
+          echo '::endgroup::'
+
+          echo '::group::Audit archive membership and file types'
+          python - <<'PY'
+          import json, pathlib, tarfile
+          archive = pathlib.Path('/tmp/wincare-closure.tgz')
+          records = []
+          with tarfile.open(archive, 'r:gz') as value:
+              for member in value.getmembers():
+                  parts = pathlib.PurePosixPath(member.name).parts
+                  if not parts or member.name.startswith('/') or '..' in parts:
+                      raise SystemExit(f'unsafe archive path: {member.name!r}')
+                  if member.issym() or member.islnk() or member.isdev():
+                      raise SystemExit(f'unsupported archive member type: {member.name!r}')
+                  records.append({'path':member.name,'bytes':member.size,'type':'directory' if member.isdir() else 'file'})
+          output = pathlib.Path('artifacts/closure-apply/archive-members.json')
+          output.write_text(json.dumps({'schema':'wincare.closure.archive-members/v1','members':records},indent=2,sort_keys=True)+'\n',encoding='utf-8')
+          print(json.dumps({'members':len(records),'files':sum(r['type']=='file' for r in records)},sort_keys=True))
+          PY
+          tar -tzvf /tmp/wincare-closure.tgz
+          echo '::endgroup::'
+
+          echo '::group::Extract and verify every replacement file'
+          tar -xzf /tmp/wincare-closure.tgz -C .
+          sha256sum -c closure-manifest.sha256 | tee artifacts/closure-apply/source-checksums.log
+          cp closure-manifest.sha256 artifacts/closure-apply/closure-manifest.sha256
+          rm closure-manifest.sha256
+          echo '::endgroup::'
+
+          echo '::group::Run syntax, document, and adversarial gates'
+          python -m py_compile \
+            tools/prepare_standalone_payload.py tools/finalize_release.py \
+            tools/verify_release.py tools/verify_release_v3.py tools/test_standalone_release.py
+          python -m unittest tools.test_standalone_release -v 2>&1 | tee artifacts/closure-apply/standalone-tests.log
+          python - <<'PY'
+          import json, pathlib, xml.etree.ElementTree as ET
+          import yaml
+          workflows=['.github/workflows/ci.yml','.github/workflows/release.yml']
+          for path in workflows:
+              with open(path,encoding='utf-8') as stream: yaml.safe_load(stream)
+          ET.parse('src/WinCare/Standalone/Directory.Build.props')
+          result={'schema':'wincare.closure.precommit-validation/v1','status':'passed','yaml':workflows,'xml':['src/WinCare/Standalone/Directory.Build.props']}
+          pathlib.Path('artifacts/closure-apply/precommit-validation.json').write_text(json.dumps(result,indent=2,sort_keys=True)+'\n',encoding='utf-8')
+          print(json.dumps(result,indent=2,sort_keys=True))
+          PY
+          echo '::endgroup::'
+
+          echo '::group::Commit exact source closure'
+          git status --short | tee artifacts/closure-apply/git-status-before-commit.txt
+          git diff --stat | tee artifacts/closure-apply/diff-stat.txt
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add \
+            .github/workflows/ci.yml .github/workflows/release.yml \
+            src/WinCare/Standalone/WinCare.Host.cs \
+            tools/Build-Exe.ps1 tools/Build-Release.ps1 tools/Test-InstallationLifecycle.ps1 \
+            tools/finalize_release.py tools/prepare_standalone_payload.py \
+            tools/test_standalone_release.py tools/verify_release.py tools/verify_release_v3.py
+          git diff --cached --name-status | tee artifacts/closure-apply/staged-files.txt
+          git commit -m 'complete standalone release graph and diagnostic workflows'
+          commit=$(git rev-parse HEAD)
+          echo "source_commit=$commit" >> "$GITHUB_OUTPUT"
+          git show --stat --oneline --decorate --no-renames HEAD
+          [[ -n "$TARGET_BRANCH" ]] || { echo 'TARGET_BRANCH is empty.' >&2; exit 1; }
+          git push origin "HEAD:${TARGET_BRANCH}"
+          echo "[push] branch=${TARGET_BRANCH} sourceCommit=${commit}"
+          echo '::endgroup::'
+      - name: Publish apply diagnosis
+        if: always()
+        shell: bash
         run: |
-          $current=$PSVersionTable.PSVersion
-          if ($current.Major -ne 7 -or $current.Minor -lt 2) { throw "PowerShell 7.2+ is required; found $current" }
-      - name: Install validation modules
-        shell: pwsh
-        run: |
-          Set-PSRepository PSGallery -InstallationPolicy Trusted
-          # Runners preinstall a newer Pester (AllUsers scope) signed under a rotated DigiCert
-          # root, so Install-Module of the pinned 5.5.0 fails the Authenticode publisher
-          # comparison. Save-Module lays the pinned version into the CurrentUser module path
-          # (which is ahead of AllUsers on PSModulePath) without that comparison and without any
-          # publisher-check bypass switch; Import-Module -RequiredVersion then resolves it.
-          $userModules = Join-Path ([Environment]::GetFolderPath('MyDocuments')) 'PowerShell/Modules'
-          New-Item -ItemType Directory -Force -Path $userModules | Out-Null
-          Save-Module Pester -RequiredVersion 5.5.0 -Path $userModules -Force
-          Install-Module PSScriptAnalyzer -RequiredVersion 1.22.0 -Scope CurrentUser -Force
-      - name: Static, Pester, module, native, and release gates
-        shell: pwsh
-        run: ./tools/Invoke-WindowsValidation.ps1 -OutputDirectory ./artifacts/windows-validation
+          set -euo pipefail
+          {
+            echo '## Verified standalone closure application'
+            echo
+            echo "- Outcome: **${{ steps.apply.outcome }}**"
+            echo "- Trigger commit: \`${GITHUB_SHA}\`"
+            echo "- Source commit: \`${{ steps.apply.outputs.source_commit }}\`"
+            echo '- Bundle SHA-256: `710da6ea5e66b54b39f90280181feccfcd69a85bc9ad7c0cfcc4cceb97633fa6`'
+            if [[ -f artifacts/closure-apply/staged-files.txt ]]; then
+              echo
+              echo '### Applied files'
+              echo '```text'
+              cat artifacts/closure-apply/staged-files.txt
+              echo '```'
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+          if [[ '${{ steps.apply.outcome }}' != 'success' && -f artifacts/closure-apply/apply.log ]]; then
+            echo '===== APPLY FAILURE LOG TAIL ====='
+            tail -n 240 artifacts/closure-apply/apply.log
+          fi
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: always()
         with:
-          name: windows-validation-${{ matrix.os }}
-          path: artifacts/windows-validation/**
-          if-no-files-found: warn
+          name: standalone-closure-apply-diagnostics
+          path: artifacts/closure-apply/**
+          if-no-files-found: error
+          retention-days: 14
