@@ -14,4 +14,4 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference='Stop'
 if (-not $IsWindows){throw 'WinCare installation is supported only on Windows.'}
 Import-Module (Join-Path $PSScriptRoot 'src\WinCare\Install\WinCare.Installation.psm1') -Force -ErrorAction Stop
-Install-WinCarePackage -SourceRoot $PSScriptRoot -Destination $Destination -NoStartMenuShortcut:$NoStartMenuShortcut -Force:$Force -Repair:$Repair -Confirm:$false
+Install-WinCarePackage -SourceRoot $PSScriptRoot -Destination $Destination -NoStartMenuShortcut:$NoStartMenuShortcut -Force:$Force -Repair:$Repair -WhatIf:$WhatIfPreference -Confirm:($ConfirmPreference -eq 'Low')
