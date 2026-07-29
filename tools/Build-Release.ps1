@@ -53,7 +53,7 @@ function Assert-WinCareReleaseDirectory {
 $rootPath = (Resolve-Path -LiteralPath $Root -ErrorAction Stop).Path
 $outputPath = Assert-WinCareReleaseDirectory -Path $OutputDirectory -RepositoryRoot $rootPath
 $null = Resolve-WinCareToolingSourceDateEpoch -RepositoryRoot $rootPath
-$workRoot = Join-Path $env:TEMP ('WinCare-release-v3-' + [guid]::NewGuid().ToString('N'))
+$workRoot = Join-Path $env:TEMP ('WinCare-release-build-' + [guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $workRoot -ErrorAction Stop | Out-Null
 
 try {
