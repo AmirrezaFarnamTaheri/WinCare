@@ -15,6 +15,7 @@
     <DebugSymbols>false</DebugSymbols>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>12.0</LangVersion>
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
     <UseWPF>true</UseWPF>
     <UseWindowsForms>true</UseWindowsForms>
@@ -24,6 +25,7 @@
   <ItemGroup>
     <Compile Include="WinCare.Host.cs" />
     <PackageReference Include="Microsoft.PowerShell.SDK" Version="7.4.17" />
+    <PackageReference Include="Microsoft.PowerShell.ConsoleHost" Version="7.4.17" />
     <EmbeddedResource Include="$(WinCarePayloadPath)" LogicalName="WinCare.Payload.zip" Condition="Exists('$(WinCarePayloadPath)')" />
   </ItemGroup>
   <Target Name="RequireWinCarePayload" BeforeTargets="PrepareForBuild">
