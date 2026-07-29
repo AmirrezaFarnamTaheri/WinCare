@@ -1,6 +1,7 @@
 #requires -Version 7.2
 # Compatibility contract retained at the public entrypoint while implementation lives in WinCare.Installation.psm1.
 # Accepted receipts: 'wincare.build.receipt/v2' 'wincare.build.receipt/v3'
+# Marker migration contract: legacy SchemaVersion=4 is superseded by SchemaVersion=5.
 # SchemaVersion=5 LauncherExecutablePathSha256 LauncherExecutableSha256 Test-WinCareInstallerShortcutIdentity
 # InstallationPathSha256 ReleaseManifestSha256 BuildReceiptSha256 source-built-and-verified
 # GUI/terminal shortcut contract: WinCare-GUI.ps1 WinCare Console.lnk
