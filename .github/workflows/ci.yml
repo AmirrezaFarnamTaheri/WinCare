@@ -68,6 +68,9 @@ jobs:
           records = []
           with tarfile.open(archive, 'r:gz') as value:
               for member in value.getmembers():
+                  if member.isdir() and member.name in {'.', './'}:
+                      records.append({'path':member.name,'bytes':member.size,'type':'directory'})
+                      continue
                   parts = pathlib.PurePosixPath(member.name).parts
                   if not parts or member.name.startswith('/') or '..' in parts:
                       raise SystemExit(f'unsafe archive path: {member.name!r}')
