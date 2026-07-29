@@ -29,7 +29,7 @@ function Get-WinCareMaintenancePlaybooks {
             EvidenceType = 'PlaybookCatalogAndTaskSchedulerObservation'
         }
     }
-    New-WinCareResult -Success $true -Code 'MaintenancePlaybooksObserved' -Message 'Playbook catalog and scheduler state were observed.' -Data @{Playbooks=@($items);Count=@($items).Count;EvidenceType='PlaybookCatalogAndTaskSchedulerObservation'}
+    return @($items)
 }
 
 if ($MyInvocation.MyCommand.ScriptBlock.Module) { Export-ModuleMember -Function Get-WinCareMaintenancePlaybooks, Invoke-WinCareFleetPlaybookBroadcast }

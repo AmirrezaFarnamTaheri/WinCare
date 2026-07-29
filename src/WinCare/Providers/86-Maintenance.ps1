@@ -193,7 +193,9 @@ function Test-WinCareMaintenanceTransition {
 function New-WinCareMaintenanceUpsertPlan {
     [CmdletBinding()]
     param([Parameter(Mandatory)][object]$Window)
-    $map=ConvertTo-WinCareMaintenanceMap $Window;$null=Test-WinCareMaintenanceRecord $map
+    $map=ConvertTo-WinCareMaintenanceMap $Window
+    $null=Test-WinCareMaintenanceRecord $map
+    $map=ConvertTo-WinCareCanonicalMaintenanceRecord -Record $map
     $store=Read-WinCareMaintenanceStore
     $before=@(Get-WinCareMaintenanceRecordFromStore -Store $store -Id ([string]$map.Id))
     $expectedRecordHash=if($before.Count){Get-WinCareMaintenanceRecordHash -Record $before[0]}else{'absent'}
@@ -220,7 +222,9 @@ function New-WinCareMaintenanceTransitionPlan {
 
 function Invoke-WinCareUpsertMaintenanceWindowAction {
     param([Parameter(Mandatory)][object]$Action)
-    $window=ConvertTo-WinCareMaintenanceMap $Action.Parameters.Window;$null=Test-WinCareMaintenanceRecord $window
+    $window=ConvertTo-WinCareMaintenanceMap $Action.Parameters.Window
+    $null=Test-WinCareMaintenanceRecord $window
+    $window=ConvertTo-WinCareCanonicalMaintenanceRecord -Record $window
     $store=Read-WinCareMaintenanceStore
     if([long]$store.Revision -ne [long]$Action.Parameters.ExpectedRevision){return New-WinCareResult -Success $false -Status Blocked -Code 'MaintenanceStoreChanged' -Message 'Maintenance store revision changed after preview.' -ExitCode 74}
     $before=@(Get-WinCareMaintenanceRecordFromStore -Store $store -Id ([string]$window.Id))
@@ -270,7 +274,7 @@ function Invoke-WinCareSetMaintenanceWindowStateAction {
         if([string]$item.Id -eq $id){
             $map=ConvertTo-WinCareMaintenanceMap $item;$map.State=$state;$map.UpdatedAt=[datetime]::UtcNow.ToString('o')
             if($state -eq 'Completed'){$map.Result=[ordered]@{CompletedAt=$map.UpdatedAt;Message=[string](Get-WinCarePropertyValue $Action.Parameters 'Message' '')}}
-            $null=Test-WinCareMaintenanceRecord -Record $map;$afterRecord=$map;$list.Add($map)
+            $null=Test-WinCareMaintenanceRecord -Record $map;$afterRecord=ConvertTo-WinCareCanonicalMaintenanceRecord -Record $map;$list.Add($afterRecord)
         }else{$list.Add($item)}
     }
     $next=[ordered]@{SchemaVersion=1;Revision=([long]$store.Revision+1);Windows=@($list)}
@@ -300,7 +304,11 @@ function Invoke-WinCareRestoreMaintenanceWindowRecordAction {
     $currentHash=if($current.Count){Get-WinCareMaintenanceRecordHash -Record $current[0]}else{'absent'}
     if($currentHash -ne [string]$Action.Parameters.ExpectedCurrentHash){return New-WinCareResult -Success $false -Status Blocked -Code 'MaintenanceRecoveryConflict' -Message 'Maintenance record changed after the original operation; recovery will not overwrite it.' -ExitCode 74}
     $targetRecord=$null
-    if($exists){$targetRecord=ConvertTo-WinCareMaintenanceMap $Action.Parameters.Record;$null=Test-WinCareMaintenanceRecord -Record $targetRecord}
+    if($exists){
+        $targetRecord=ConvertTo-WinCareMaintenanceMap $Action.Parameters.Record
+        $null=Test-WinCareMaintenanceRecord -Record $targetRecord
+        $targetRecord=ConvertTo-WinCareCanonicalMaintenanceRecord -Record $targetRecord
+    }
     $list=[Collections.Generic.List[object]]::new();foreach($item in @($store.Windows)){if([string]$item.Id -ne $id){$list.Add($item)}};if($exists){$list.Add($targetRecord)}
     $next=[ordered]@{SchemaVersion=1;Revision=([long]$store.Revision+1);Windows=@($list)}
     try{
