@@ -2,100 +2,141 @@
 [CmdletBinding()]
 param(
     [string]$Root = (Split-Path $PSScriptRoot -Parent),
-    [string]$OutputDirectory = (Join-Path (Split-Path $PSScriptRoot -Parent) 'artifacts'),
-    [string]$ZipPackage = '',
-    [string]$NativeDirectory = ''
+    [Parameter(Mandatory)][string]$OutputDirectory,
+    [Parameter(Mandatory)][string]$PayloadPath,
+    [Parameter(Mandatory)][string]$PayloadSha256,
+    [Parameter(Mandatory)][string]$PayloadManifestSha256
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'WinCare.Tooling.ps1')
 
+$diagnosticsDirectory = if ([string]::IsNullOrWhiteSpace($env:WINCARE_DIAGNOSTICS_DIRECTORY)) { $null } else { [IO.Path]::GetFullPath($env:WINCARE_DIAGNOSTICS_DIRECTORY) }
+$tracePath = if ($diagnosticsDirectory) { New-Item -ItemType Directory -Path $diagnosticsDirectory -Force | Out-Null; Join-Path $diagnosticsDirectory 'standalone-publish-trace.jsonl' } else { $null }
+function Write-WinCareStandaloneTrace {
+    param([Parameter(Mandatory)][string]$Phase,[Parameter(Mandatory)][ValidateSet('started','passed','failed','info')][string]$Status,[hashtable]$Details=@{})
+    $record=[ordered]@{schema='wincare.standalone.trace/v1';timestamp=[datetime]::UtcNow.ToString('o');phase=$Phase;status=$Status;details=$Details}
+    $text=$record|ConvertTo-Json -Compress -Depth 12
+    Write-Host "[standalone][$Status][$Phase] $($Details.message)"
+    if($tracePath){[IO.File]::AppendAllText($tracePath,$text+[Environment]::NewLine,[Text.UTF8Encoding]::new($false))}
+}
+
+function Test-WinCareStandalonePe {
+    param(
+        [Parameter(Mandatory)][string]$LiteralPath,
+        [Parameter(Mandatory)][ValidateSet(2,3)][int]$ExpectedSubsystem
+    )
+    $item = Get-Item -LiteralPath $LiteralPath -Force -ErrorAction Stop
+    if ($item.PSIsContainer -or ($item.Attributes -band [IO.FileAttributes]::ReparsePoint)) { throw "Standalone output is not a regular file: $LiteralPath" }
+    if ([long]$item.Length -lt 20971520L) { throw "Standalone executable is unexpectedly small: $LiteralPath" }
+    $stream = [IO.File]::Open($item.FullName,[IO.FileMode]::Open,[IO.FileAccess]::Read,[IO.FileShare]::Read)
+    $reader = [IO.BinaryReader]::new($stream)
+    try {
+        if ($reader.ReadUInt16() -ne 0x5A4D) { throw "Standalone executable is missing an MZ header: $LiteralPath" }
+        $stream.Position = 0x3C
+        $peOffset = $reader.ReadInt32()
+        if ($peOffset -lt 0x40 -or $peOffset + 94 -gt $stream.Length) { throw "Standalone executable has an invalid PE offset: $LiteralPath" }
+        $stream.Position = $peOffset
+        if ($reader.ReadUInt32() -ne 0x00004550) { throw "Standalone executable is missing a PE signature: $LiteralPath" }
+        if ($reader.ReadUInt16() -ne 0x8664) { throw "Standalone executable is not AMD64: $LiteralPath" }
+        $stream.Position = $peOffset + 20
+        $optionalSize = $reader.ReadUInt16()
+        if ($optionalSize -lt 70) { throw "Standalone executable has an invalid optional header: $LiteralPath" }
+        $stream.Position = $peOffset + 24
+        if ($reader.ReadUInt16() -ne 0x020B) { throw "Standalone executable is not PE32+: $LiteralPath" }
+        $stream.Position = $peOffset + 24 + 68
+        $subsystem = $reader.ReadUInt16()
+        if ($subsystem -ne $ExpectedSubsystem) { throw "Standalone executable subsystem mismatch. Expected=$ExpectedSubsystem Actual=$subsystem Path=$LiteralPath" }
+    } finally {
+        $reader.Dispose()
+        $stream.Dispose()
+    }
+}
+
+Write-WinCareStandaloneTrace -Phase 'initialize' -Status started -Details @{message='validating payload and output paths'}
 $rootPath = (Resolve-Path -LiteralPath $Root -ErrorAction Stop).Path
-$epoch = Resolve-WinCareToolingSourceDateEpoch -RepositoryRoot $rootPath
-$nativeBuilder = Join-Path $rootPath 'src\WinCare\Native\Build-WinCareNativePolyglot.ps1'
-$null = Get-WinCareToolingRegularFile -LiteralPath $nativeBuilder -MaximumBytes 1048576L -Purpose 'Native build script'
-
 $outputPath = [IO.Path]::GetFullPath($OutputDirectory)
-if (Test-Path -LiteralPath $outputPath) {
-    $outputItem = Get-Item -LiteralPath $outputPath -Force -ErrorAction Stop
-    if (-not $outputItem.PSIsContainer -or ($outputItem.Attributes -band [IO.FileAttributes]::ReparsePoint)) {
-        throw "Launcher output is unsafe: $outputPath"
-    }
-} else {
-    New-Item -ItemType Directory -Path $outputPath -ErrorAction Stop | Out-Null
-}
+$payload = (Resolve-Path -LiteralPath $PayloadPath -ErrorAction Stop).Path
+$payloadEvidence = Get-WinCareToolingFileSha256 -LiteralPath $payload -MaximumBytes 1073741824L -Purpose 'Standalone payload ZIP'
+if ($payloadEvidence.Sha256 -ne $PayloadSha256.ToLowerInvariant()) { throw 'Standalone payload hash does not match the supplied payload identity.' }
+if ($PayloadManifestSha256 -notmatch '^[0-9a-fA-F]{64}$') { throw 'PayloadManifestSha256 must be a SHA-256 value.' }
+if (-not (Test-Path -LiteralPath $outputPath)) { New-Item -ItemType Directory -Path $outputPath -ErrorAction Stop | Out-Null }
+$outputItem = Get-Item -LiteralPath $outputPath -Force -ErrorAction Stop
+if (-not $outputItem.PSIsContainer -or ($outputItem.Attributes -band [IO.FileAttributes]::ReparsePoint)) { throw "Standalone output directory is unsafe: $outputPath" }
+if (@(Get-ChildItem -LiteralPath $outputPath -Force).Count) { throw "Standalone output directory must be empty: $outputPath" }
 
-$nativeOutput = if ($NativeDirectory) { [IO.Path]::GetFullPath($NativeDirectory) } else { Join-Path $outputPath 'native' }
-$nativeManifestPath = Join-Path $nativeOutput 'WinCare.Native.build.json'
-if (-not (Test-Path -LiteralPath $nativeManifestPath -PathType Leaf)) {
-    & $nativeBuilder -OutputDirectory $nativeOutput -Configuration Release
-}
-$nativeManifest = Read-WinCareToolingJson -LiteralPath $nativeManifestPath -MaximumBytes 1048576 -MaximumDepth 32
-if ([int]$nativeManifest.SchemaVersion -ne 2 -or [string]$nativeManifest.TargetFramework -ne 'net8.0-windows' -or [string]$nativeManifest.Configuration -ne 'Release') {
-    throw 'Unsupported native build manifest.'
-}
-if ([int]$nativeManifest.SourceCount -ne @($nativeManifest.Sources).Count) { throw 'Native source count provenance mismatch.' }
-if ([long]$nativeManifest.TotalSourceBytes -ne [long](@($nativeManifest.Sources | Measure-Object Bytes -Sum).Sum)) { throw 'Native source byte provenance mismatch.' }
-
-$artifactByName = @{}
-$artifactBytes = 0L
-foreach ($artifact in @($nativeManifest.Artifacts)) {
-    $name = [IO.Path]::GetFileName([string]$artifact.Path)
-    if ($name -ne [string]$artifact.Path -or $artifactByName.ContainsKey($name)) { throw "Unsafe or duplicate native artifact path: $($artifact.Path)" }
-    $path = Join-Path $nativeOutput $name
-    $evidence = Get-WinCareToolingFileSha256 -LiteralPath $path -MaximumBytes 268435456L -Purpose 'Native launcher artifact'
-    if ([long]$evidence.Bytes -ne [long]$artifact.Bytes -or $evidence.Sha256 -ne [string]$artifact.Sha256) { throw "Native artifact provenance mismatch: $name" }
-    $artifactBytes += [long]$evidence.Bytes
-    if ($artifactBytes -gt 1073741824L) { throw 'Native launcher artifacts exceed the 1 GiB aggregate limit.' }
-    $artifactByName[$name] = $path
-}
-
-$aliases = @(
-    @{ Source = 'WinCare.Launcher.exe'; Destination = 'WinCare-GUI.exe' },
-    @{ Source = 'WinCare.Launcher.exe'; Destination = 'WinCare.exe' },
-    @{ Source = 'WinCare.TuiLauncher.exe'; Destination = 'WinCare-TUI.exe' }
+$dotnet = Get-Command dotnet -ErrorAction Stop | Select-Object -ExpandProperty Source -First 1
+$version = [string](Import-PowerShellDataFile (Join-Path $rootPath 'src\WinCare\WinCare.psd1')).ModuleVersion
+$projects = @(
+    [pscustomobject]@{ Project='WinCare.csproj'; Name='WinCare.exe'; Subsystem=3 },
+    [pscustomobject]@{ Project='WinCare.Gui.csproj'; Name='WinCare-GUI.exe'; Subsystem=2 },
+    [pscustomobject]@{ Project='WinCare.Tui.csproj'; Name='WinCare-TUI.exe'; Subsystem=3 }
 )
-$copyPlan = [Collections.Generic.List[object]]::new()
-foreach ($alias in $aliases) {
-    if (-not $artifactByName.ContainsKey($alias.Source)) { throw "Expected launcher missing from native manifest: $($alias.Source)" }
-    $copyPlan.Add([pscustomobject]@{ Source=$artifactByName[$alias.Source]; Destination=$alias.Destination })
-}
-foreach ($name in @($artifactByName.Keys | Sort-Object)) {
-    if ($name -in @('WinCare.Launcher.exe','WinCare.TuiLauncher.exe')) { continue }
-    $copyPlan.Add([pscustomobject]@{ Source=$artifactByName[$name]; Destination=$name })
-}
-$copyPlan.Add([pscustomobject]@{ Source=$nativeManifestPath; Destination='WinCare.Native.build.json' })
-foreach ($entry in $copyPlan) {
-    $destination = Join-Path $outputPath $entry.Destination
-    if (Test-Path -LiteralPath $destination) { throw "Launcher output already exists; refusing to overwrite: $destination" }
-    Copy-Item -LiteralPath $entry.Source -Destination $destination -ErrorAction Stop
-}
-
-$sourcePackage = $null
-if ($ZipPackage) {
-    $packagePath = [IO.Path]::GetFullPath($ZipPackage)
-    $packageEvidence = Get-WinCareToolingFileSha256 -LiteralPath $packagePath -MaximumBytes 2147483648L -Purpose 'Source release package'
-    $sourcePackage = [ordered]@{
-        Name = [IO.Path]::GetFileName($packagePath)
-        Sha256 = $packageEvidence.Sha256
-        Bytes = [long]$packageEvidence.Bytes
+$workRoot = Join-Path $env:TEMP ('WinCare-standalone-' + [guid]::NewGuid().ToString('N'))
+New-Item -ItemType Directory -Path $workRoot -ErrorAction Stop | Out-Null
+$records = [Collections.Generic.List[object]]::new()
+Write-WinCareStandaloneTrace -Phase 'initialize' -Status passed -Details @{message="version=$version payloadSha256=$($payloadEvidence.Sha256) payloadManifestSha256=$($PayloadManifestSha256.ToLowerInvariant())"}
+try {
+    foreach ($project in $projects) {
+        $phase='publish-'+[IO.Path]::GetFileNameWithoutExtension($project.Project)
+        if($env:GITHUB_ACTIONS -eq 'true'){Write-Host "::group::standalone/$phase"}
+        Write-WinCareStandaloneTrace -Phase $phase -Status started -Details @{message="project=$($project.Project) output=$($project.Name) subsystem=$($project.Subsystem)"}
+        $publish = Join-Path $workRoot ([IO.Path]::GetFileNameWithoutExtension($project.Project))
+        New-Item -ItemType Directory -Path $publish -ErrorAction Stop | Out-Null
+        $projectPath = Join-Path $rootPath ('src\WinCare\Standalone\' + $project.Project)
+        $arguments = @(
+            'publish',$projectPath,
+            '--configuration','Release',
+            '--runtime','win-x64',
+            '--self-contained','true',
+            '--output',$publish,
+            '--nologo',
+            '-p:WinCarePayloadPath=' + $payload,
+            '-p:WinCarePayloadSha256=' + $payloadEvidence.Sha256.ToUpperInvariant(),
+            '-p:WinCarePayloadManifestSha256=' + $PayloadManifestSha256.ToUpperInvariant(),
+            '-p:Version=' + $version,
+            '-p:FileVersion=' + $version,
+            '-p:InformationalVersion=' + $version
+        )
+        $result = Invoke-WinCareToolingProcess -Executable $dotnet -Arguments $arguments -TimeoutSeconds 1800 -MaximumCapturedOutputBytes 67108864 -WorkingDirectory $rootPath -WriteCapturedOutput
+        if ($result.ExitCode -ne 0) { throw "dotnet publish failed for $($project.Project). ExitCode=$($result.ExitCode)" }
+        $files = @(Get-ChildItem -LiteralPath $publish -File -Force -ErrorAction Stop)
+        $candidate = $files | Where-Object Name -eq $project.Name
+        if (@($candidate).Count -ne 1) { throw "Expected exactly one $($project.Name) output from $($project.Project)." }
+        $unexpected = @($files | Where-Object Name -ne $project.Name)
+        if ($unexpected.Count) { throw "Standalone publish emitted unexpected loose files for $($project.Project): $($unexpected.Name -join ', ')" }
+        Test-WinCareStandalonePe -LiteralPath $candidate.FullName -ExpectedSubsystem $project.Subsystem
+        $destination = Join-Path $outputPath $project.Name
+        Copy-Item -LiteralPath $candidate.FullName -Destination $destination -ErrorAction Stop
+        $selfTest = Invoke-WinCareToolingProcess -Executable $destination -Arguments @('--wincare-self-test') -TimeoutSeconds 180 -MaximumCapturedOutputBytes 16777216 -WorkingDirectory $outputPath -WriteCapturedOutput
+        if ($selfTest.ExitCode -ne 0) { throw "Standalone self-test failed for $($project.Name). ExitCode=$($selfTest.ExitCode)" }
+        $evidence = Get-WinCareToolingFileSha256 -LiteralPath $destination -MaximumBytes 1073741824L -Purpose 'Standalone executable'
+        $records.Add([ordered]@{Name=$project.Name;Sha256=$evidence.Sha256;Bytes=[long]$evidence.Bytes;Subsystem=[int]$project.Subsystem;RuntimeIdentifier='win-x64';SelfTestExitCode=[int]$selfTest.ExitCode})
+        Write-WinCareStandaloneTrace -Phase $phase -Status passed -Details @{message="sha256=$($evidence.Sha256) bytes=$($evidence.Bytes) selfTestExit=$($selfTest.ExitCode)"}
+        if($env:GITHUB_ACTIONS -eq 'true'){Write-Host '::endgroup::'}
     }
-}
-$nativeManifestEvidence = Get-WinCareToolingFileSha256 -LiteralPath $nativeManifestPath -MaximumBytes 1048576L -Purpose 'Native build manifest'
-$manifest = [ordered]@{
-    SchemaVersion = 2
-    BuiltAt = [DateTimeOffset]::FromUnixTimeSeconds($epoch).UtcDateTime.ToString('o')
-    SourcePackage = $sourcePackage
-    NativeManifestSha256 = $nativeManifestEvidence.Sha256
-    NativeSourceTreeSha256 = [string]$nativeManifest.SourceTreeSha256
-    Launchers = foreach ($alias in $aliases) {
-        $path = Join-Path $outputPath $alias.Destination
-        $evidence = Get-WinCareToolingFileSha256 -LiteralPath $path -MaximumBytes 268435456L -Purpose 'Launcher alias'
-        [ordered]@{ Name=$alias.Destination; Sha256=$evidence.Sha256; Bytes=[long]$evidence.Bytes }
+    if (@($records.Sha256 | Select-Object -Unique).Count -ne $records.Count) { throw 'Standalone executables must have independent hashes.' }
+    $manifest = [ordered]@{
+        SchemaVersion = 1
+        Version = $version
+        RuntimeIdentifier = 'win-x64'
+        Configuration = 'Release'
+        SelfContained = $true
+        SingleFile = $true
+        PayloadSha256 = $payloadEvidence.Sha256
+        PayloadManifestSha256 = $PayloadManifestSha256.ToLowerInvariant()
+        Artifacts = @($records)
     }
+    $manifestPath = Join-Path $outputPath 'WinCare.Standalone.build.json'
+    Write-WinCareToolingAtomicJson -LiteralPath $manifestPath -Value $manifest -MaximumBytes 1048576 -Depth 12
+    Write-WinCareStandaloneTrace -Phase 'complete' -Status passed -Details @{message="published $($records.Count) independent executables";artifacts=@($records)}
+    $records|Format-Table Name,Bytes,Sha256,Subsystem,SelfTestExitCode -AutoSize
+    $manifest
+} catch {
+    Write-WinCareStandaloneTrace -Phase 'publish' -Status failed -Details @{message=$_.Exception.Message;type=$_.Exception.GetType().FullName;scriptStackTrace=$_.ScriptStackTrace}
+    if($env:GITHUB_ACTIONS -eq 'true'){Write-Host '::endgroup::'}
+    throw
+} finally {
+    Remove-Item -LiteralPath $workRoot -Recurse -Force -ErrorAction SilentlyContinue
 }
-$manifestPath = Join-Path $outputPath 'WinCare.Launchers.build.json'
-if (Test-Path -LiteralPath $manifestPath) { throw "Launcher manifest already exists; refusing to overwrite: $manifestPath" }
-Write-WinCareToolingAtomicJson -LiteralPath $manifestPath -Value $manifest -MaximumBytes 1048576 -Depth 8
-$manifest
