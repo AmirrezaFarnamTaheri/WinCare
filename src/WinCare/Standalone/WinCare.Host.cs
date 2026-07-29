@@ -1,7 +1,12 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
 using System.IO.Compression;
+using System.Linq;
 using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
+using System.Threading;
 using Microsoft.PowerShell;
 
 internal static class WinCareHost
@@ -19,18 +24,20 @@ internal static class WinCareHost
     };
 
     private sealed record PayloadManifest(Dictionary<string, string> Files, string Sha256);
+    private sealed record PreparedPayload(string Root, IReadOnlyDictionary<string, string> Files);
 
     public static int Main(string[] args)
     {
         try
         {
-            var root = PreparePayload();
+            var prepared = PreparePayload();
+            var root = prepared.Root;
             var selfTest = args.Length > 0 && string.Equals(args[0], "--wincare-self-test", StringComparison.OrdinalIgnoreCase);
 #if WINCARE_GUI
             var scriptName = selfTest ? "WinCare.ps1" : "WinCare-GUI.ps1";
             var useSta = !selfTest;
 #elif WINCARE_TUI
-            var scriptName = selfTest ? "WinCare.ps1" : "WinCare-TUI.ps1";
+            var scriptName = "WinCare.ps1";
             var useSta = false;
 #else
             var scriptName = "WinCare.ps1";
@@ -47,27 +54,36 @@ internal static class WinCareHost
             if (selfTest)
                 forwarded.AddRange(["-Command", "system", "-Json"]);
 
-            var shellArguments = new List<string> { "-NoLogo", "-NoProfile" };
+            if (!prepared.Files.TryGetValue(scriptName, out var expectedScriptHash))
+                throw new InvalidDataException("Embedded WinCare entry script is not present in the verified payload manifest.");
+            var scriptText = ReadVerifiedScript(script, expectedScriptHash);
+            var invocation = BuildInvocation(scriptText, forwarded);
+            // The host admits only the cryptographically bound embedded closure. The process-local
+            // policy override permits that verified closure to import its verified script modules; it
+            // does not weaken machine/user policy or admit an arbitrary external script path.
+            var shellArguments = new List<string> { "-NoLogo", "-NoProfile", "-ExecutionPolicy", "Bypass" };
             if (selfTest)
                 shellArguments.Add("-NonInteractive");
             if (useSta)
                 shellArguments.Add("-STA");
-            shellArguments.Add("-File");
-            shellArguments.Add(script);
-            shellArguments.AddRange(forwarded);
+            shellArguments.Add("-Command");
+            shellArguments.Add(invocation);
 
             var previousDirectory = Environment.CurrentDirectory;
             var previousHostMarker = Environment.GetEnvironmentVariable("WINCARE_STANDALONE_HOST");
+            var previousRootMarker = Environment.GetEnvironmentVariable("WINCARE_STANDALONE_ROOT");
             try
             {
                 Environment.CurrentDirectory = root;
                 Environment.SetEnvironmentVariable("WINCARE_STANDALONE_HOST", "1");
+                Environment.SetEnvironmentVariable("WINCARE_STANDALONE_ROOT", root);
                 return ConsoleShell.Start(null, null, shellArguments.ToArray());
             }
             finally
             {
                 Environment.CurrentDirectory = previousDirectory;
                 Environment.SetEnvironmentVariable("WINCARE_STANDALONE_HOST", previousHostMarker);
+                Environment.SetEnvironmentVariable("WINCARE_STANDALONE_ROOT", previousRootMarker);
             }
         }
         catch (Exception error)
@@ -77,7 +93,123 @@ internal static class WinCareHost
         }
     }
 
-    private static string PreparePayload()
+    private static readonly Dictionary<string, bool> EntrypointParameters = new(PathComparer)
+    {
+        ["NoLogo"] = false,
+        ["Ascii"] = false,
+        ["ReadOnly"] = false,
+        ["Theme"] = true,
+        ["Command"] = true,
+        ["ArgumentsJson"] = true,
+        ["Apply"] = false,
+        ["Json"] = false,
+        ["Gui"] = false,
+        ["Verbose"] = false,
+        ["Debug"] = false,
+        ["ErrorAction"] = true,
+        ["WarningAction"] = true,
+        ["InformationAction"] = true,
+        ["ProgressAction"] = true,
+    };
+
+    private static string ReadVerifiedScript(string path, string expectedHash)
+    {
+        const int maximumScriptBytes = 4 * 1024 * 1024;
+        var item = new FileInfo(path);
+        if (!item.Exists || item.Attributes.HasFlag(FileAttributes.ReparsePoint) || item.Length <= 0 || item.Length > maximumScriptBytes)
+            throw new InvalidDataException("Embedded WinCare entry script is missing, unsafe, or oversized.");
+        var bytes = new byte[(int)item.Length];
+        try
+        {
+            using var stream = new FileStream(item.FullName, FileMode.Open, FileAccess.Read, FileShare.Read, 65536, FileOptions.SequentialScan);
+            var offset = 0;
+            while (offset < bytes.Length)
+            {
+                var read = stream.Read(bytes, offset, bytes.Length - offset);
+                if (read == 0)
+                    throw new EndOfStreamException("Embedded WinCare entry script ended unexpectedly.");
+                offset += read;
+            }
+            if (stream.ReadByte() != -1)
+                throw new InvalidDataException("Embedded WinCare entry script changed while reading.");
+            var observedHash = SHA256.HashData(bytes);
+            try
+            {
+                if (!CryptographicOperations.FixedTimeEquals(observedHash, Convert.FromHexString(expectedHash)))
+                    throw new InvalidDataException("Embedded WinCare entry script hash does not match the verified payload manifest.");
+            }
+            finally
+            {
+                CryptographicOperations.ZeroMemory(observedHash);
+            }
+            return new UTF8Encoding(false, true).GetString(bytes);
+        }
+        finally
+        {
+            CryptographicOperations.ZeroMemory(bytes);
+        }
+    }
+
+    private static string BuildInvocation(string scriptText, IReadOnlyList<string> arguments)
+    {
+        var command = new StringBuilder();
+        command.Append("$ErrorActionPreference='Stop';&([scriptblock]::Create(");
+        AppendPowerShellLiteral(command, scriptText);
+        command.Append("))");
+        for (var index = 0; index < arguments.Count; index++)
+        {
+            var token = arguments[index];
+            if (token is "-?" or "--help")
+            {
+                command.Append(" -?");
+                continue;
+            }
+            if (string.IsNullOrWhiteSpace(token) || !token.StartsWith("-", StringComparison.Ordinal))
+                throw new ArgumentException($"Unexpected positional standalone argument: {token}");
+            var parameter = token.TrimStart('-');
+            string? inlineValue = null;
+            var separator = parameter.IndexOf(':');
+            if (separator >= 0)
+            {
+                inlineValue = parameter[(separator + 1)..];
+                parameter = parameter[..separator];
+            }
+            var canonical = EntrypointParameters.Keys.SingleOrDefault(name => PathComparer.Equals(name, parameter));
+            if (canonical is null)
+                throw new ArgumentException($"Unsupported standalone parameter: {token}");
+            var requiresValue = EntrypointParameters[canonical];
+            command.Append(" -").Append(canonical);
+            if (requiresValue)
+            {
+                var value = inlineValue;
+                if (value is null)
+                {
+                    if (++index >= arguments.Count)
+                        throw new ArgumentException($"Standalone parameter requires a value: -{canonical}");
+                    value = arguments[index];
+                }
+                command.Append(' ');
+                AppendPowerShellLiteral(command, value);
+            }
+            else if (inlineValue is not null)
+            {
+                var normalized = inlineValue.TrimStart('$');
+                if (!bool.TryParse(normalized, out var enabled))
+                    throw new ArgumentException($"Standalone switch has an invalid Boolean value: {token}");
+                command.Append(enabled ? ":$true" : ":$false");
+            }
+        }
+        return command.ToString();
+    }
+
+    private static void AppendPowerShellLiteral(StringBuilder target, string value)
+    {
+        target.Append('\'');
+        target.Append(value.Replace("'", "''", StringComparison.Ordinal));
+        target.Append('\'');
+    }
+
+    private static PreparedPayload PreparePayload()
     {
         var payload = ReadEmbeddedPayload();
         var payloadHash = Convert.ToHexString(SHA256.HashData(payload)).ToLowerInvariant();
@@ -113,7 +245,7 @@ internal static class WinCareHost
                 throw new TimeoutException("Timed out waiting for the WinCare payload cache lock.");
 
             if (ValidateCache(cache, payloadHash, expected))
-                return cache;
+                return new PreparedPayload(cache, expected);
             if (Directory.Exists(cache))
                 DeleteTreeNoFollow(cache);
 
@@ -136,7 +268,7 @@ internal static class WinCareHost
                     DeleteTreeNoFollow(staging);
                 throw;
             }
-            return cache;
+            return new PreparedPayload(cache, expected);
         }
         finally
         {
