@@ -241,7 +241,17 @@ class StandaloneReleaseTests(unittest.TestCase):
         self.assertNotIn("Condition=\"Exists('$(WinCarePayloadPath)')\"", props)
         self.assertIn("global using System.IO;", global_usings)
         self.assertIn("return ConsoleShell.Start", host)
+        self.assertIn("BuildInvocation(scriptText, forwarded)", host)
+        self.assertIn('shellArguments.Add("-Command")', host)
+        self.assertNotIn('shellArguments.Add("-File")', host)
+        self.assertIn('"-ExecutionPolicy", "Bypass"', host)
+        self.assertIn("cryptographically bound embedded closure", host)
+        self.assertIn("FixedTimeEquals(observedHash", host)
         self.assertNotIn("ps.Invoke()", host)
+        for entrypoint in ("WinCare.ps1", "WinCare-GUI.ps1", "WinCare-TUI.ps1"):
+            source = (ROOT / entrypoint).read_text(encoding="utf-8")
+            self.assertIn("WINCARE_STANDALONE_ROOT", source)
+            self.assertIn("$entryRoot", source)
 
 
 if __name__ == "__main__":
