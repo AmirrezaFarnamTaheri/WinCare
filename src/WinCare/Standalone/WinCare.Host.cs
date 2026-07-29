@@ -250,7 +250,7 @@ internal static class WinCareHost
         {
             if (entry.FullName.Contains('\\') || entry.FullName.Contains('\0'))
                 throw new InvalidDataException($"Unsafe embedded payload path: {entry.FullName}");
-            var isDirectory = entry.FullName.EndsWith('/', StringComparison.Ordinal);
+            var isDirectory = entry.FullName.EndsWith("/", StringComparison.Ordinal);
             var full = NormalizeRelativePath(entry.FullName.TrimEnd('/'));
             var components = full.Split('/');
             roots.Add(components[0]);
@@ -371,7 +371,7 @@ internal static class WinCareHost
 
     private static string NormalizeRelativePath(string value)
     {
-        if (string.IsNullOrWhiteSpace(value) || value.StartsWith('/', StringComparison.Ordinal) || value.Contains('\\') || value.Contains(':'))
+        if (string.IsNullOrWhiteSpace(value) || value.StartsWith("/", StringComparison.Ordinal) || value.Contains('\\') || value.Contains(':'))
             throw new InvalidDataException($"Unsafe relative path: {value}");
         var components = value.Split('/');
         if (components.Any(component => component.Length == 0 || component is "." or ".." || component.EndsWith(' ') || component.EndsWith('.')))
