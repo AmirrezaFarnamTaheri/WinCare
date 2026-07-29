@@ -174,3 +174,5 @@ jobs:
           path: artifacts/closure-apply/**
           if-no-files-found: error
           retention-days: 14
+
+# Triggered after workflow registration; bundle bytes remain immutable.
