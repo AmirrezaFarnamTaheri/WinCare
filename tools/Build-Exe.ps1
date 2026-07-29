@@ -118,7 +118,7 @@ try {
     }
     if (@($records.Sha256 | Select-Object -Unique).Count -ne $records.Count) { throw 'Standalone executables must have independent hashes.' }
     $manifest = [ordered]@{
-        SchemaVersion = 1
+        SchemaVersion = 2
         Version = $version
         RuntimeIdentifier = 'win-x64'
         Configuration = 'Release'
