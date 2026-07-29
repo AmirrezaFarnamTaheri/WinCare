@@ -11,6 +11,17 @@ function ConvertTo-WinCareMaintenanceMap {
     ConvertTo-WinCareParameterDictionary $Value
 }
 
+function ConvertTo-WinCareCanonicalMaintenanceTimestamp {
+    [CmdletBinding()]
+    param([Parameter(Mandatory)][object]$Value)
+    $utc=[datetimeoffset]::Parse(
+        [string]$Value,
+        [Globalization.CultureInfo]::InvariantCulture,
+        [Globalization.DateTimeStyles]::RoundtripKind
+    ).ToUniversalTime()
+    $utc.AddTicks(-($utc.Ticks % [timespan]::TicksPerSecond)).ToString('o')
+}
+
 function ConvertTo-WinCareCanonicalMaintenanceRecord {
     [CmdletBinding()]
     param([Parameter(Mandatory)][object]$Record)
@@ -21,12 +32,12 @@ function ConvertTo-WinCareCanonicalMaintenanceRecord {
         Id=[string]$map.Id
         Name=[string]$map.Name
         Description=[string]$map.Description
-        StartAt=([datetimeoffset]::Parse([string]$map.StartAt,[Globalization.CultureInfo]::InvariantCulture,[Globalization.DateTimeStyles]::RoundtripKind)).ToUniversalTime().ToString('o')
-        EndAt=([datetimeoffset]::Parse([string]$map.EndAt,[Globalization.CultureInfo]::InvariantCulture,[Globalization.DateTimeStyles]::RoundtripKind)).ToUniversalTime().ToString('o')
-        NoticeAt=([datetimeoffset]::Parse([string]$map.NoticeAt,[Globalization.CultureInfo]::InvariantCulture,[Globalization.DateTimeStyles]::RoundtripKind)).ToUniversalTime().ToString('o')
+        StartAt=ConvertTo-WinCareCanonicalMaintenanceTimestamp $map.StartAt
+        EndAt=ConvertTo-WinCareCanonicalMaintenanceTimestamp $map.EndAt
+        NoticeAt=ConvertTo-WinCareCanonicalMaintenanceTimestamp $map.NoticeAt
         State=[string]$map.State
-        CreatedAt=([datetimeoffset]::Parse([string]$map.CreatedAt,[Globalization.CultureInfo]::InvariantCulture,[Globalization.DateTimeStyles]::RoundtripKind)).ToUniversalTime().ToString('o')
-        UpdatedAt=([datetimeoffset]::Parse([string]$map.UpdatedAt,[Globalization.CultureInfo]::InvariantCulture,[Globalization.DateTimeStyles]::RoundtripKind)).ToUniversalTime().ToString('o')
+        CreatedAt=ConvertTo-WinCareCanonicalMaintenanceTimestamp $map.CreatedAt
+        UpdatedAt=ConvertTo-WinCareCanonicalMaintenanceTimestamp $map.UpdatedAt
         PlaybookId=[string]$map.PlaybookId
         Tags=@($map.Tags|ForEach-Object{[string]$_})
         RequiresRestart=[bool]$map.RequiresRestart
