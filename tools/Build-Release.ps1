@@ -111,7 +111,7 @@ try {
     $payloadPath = Join-Path $workRoot 'WinCare.Payload.zip'
     $payloadBuild = Invoke-WinCareToolingProcess -Executable $python -Arguments @((Join-Path $PSScriptRoot 'prepare_standalone_payload.py'),$coreArchive,$payloadPath) -TimeoutSeconds 600 -MaximumCapturedOutputBytes 4194304 -WorkingDirectory $rootPath -WriteCapturedOutput
     if ($payloadBuild.ExitCode -ne 0) { throw 'Standalone payload generation failed.' }
-    $payloadReport = [string]$payloadBuild.StdOut | ConvertFrom-Json -Depth 20 -ErrorAction Stop
+    $payloadReport = [string]$payloadBuild.StandardOutput | ConvertFrom-Json -Depth 20 -ErrorAction Stop
     if ($payloadReport.status -ne 'passed' -or [string]$payloadReport.sha256 -notmatch '^[0-9a-f]{64}$' -or [string]$payloadReport.manifestSha256 -notmatch '^[0-9a-f]{64}$') {
         Exit-WinCareReleaseGroup 'standalone-payload' 'failed' @{message='invalid payload report'}
         throw 'Standalone payload report is invalid.'
@@ -133,9 +133,9 @@ try {
     $archive = Join-Path $outputPath "WinCare-$version.zip"
     $validationPath = Join-Path $outputPath "WinCare-$version-validation-v3.json"
     $verify = Invoke-WinCareToolingProcess -Executable $python -Arguments @((Join-Path $PSScriptRoot 'verify_release_v3.py'),$archive,'--asset-directory',$outputPath) -TimeoutSeconds 600 -MaximumCapturedOutputBytes 16777216 -WorkingDirectory $rootPath -WriteCapturedOutput
-    [IO.File]::WriteAllText($validationPath,[string]$verify.StdOut,[Text.UTF8Encoding]::new($false))
+    [IO.File]::WriteAllText($validationPath,[string]$verify.StandardOutput,[Text.UTF8Encoding]::new($false))
     if ($verify.ExitCode -ne 0) { throw 'Final v3 release verification failed.' }
-    $validation = [string]$verify.StdOut | ConvertFrom-Json -Depth 50 -ErrorAction Stop
+    $validation = [string]$verify.StandardOutput | ConvertFrom-Json -Depth 50 -ErrorAction Stop
     if ($validation.status -ne 'passed') { Exit-WinCareReleaseGroup 'verify-v3' 'failed' @{message='verifier status was not passed'}; throw 'Final v3 release verifier did not report passed.' }
     Exit-WinCareReleaseGroup 'verify-v3' 'passed' @{message="archiveSha256=$($validation.sha256) members=$($validation.members)"}
 
