@@ -1,66 +1,134 @@
-name: diagnose-maintenance-persistence
+name: apply-maintenance-timestamp-precision
 
 on:
   pull_request:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  diagnose:
-    runs-on: windows-2022
-    timeout-minutes: 10
+  apply:
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      HEAD_REF: ${{ github.event.pull_request.head.ref }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
-      - name: Compare planned and persisted maintenance records
-        shell: pwsh
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          fetch-depth: 0
+          persist-credentials: true
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: '3.12'
+      - name: Apply whole-second maintenance timestamp contract
+        shell: bash
         run: |
-          $ErrorActionPreference='Stop'
-          Import-Module ./src/WinCare/WinCare.psd1 -Force -DisableNameChecking -WarningAction SilentlyContinue
-          $root=Join-Path $env:RUNNER_TEMP ('WinCare-maintenance-diagnostic-'+[guid]::NewGuid().ToString('N'))
-          New-Item -ItemType Directory -Path (Join-Path $root 'Maintenance') -Force|Out-Null
-          & (Get-Module WinCare) {
-            param($root)
-            $script:WinCareState=@{
-              Config=Get-WinCareDefaultConfig
-              Policy=Get-WinCareDefaultPolicy
-              Root=$root
-              SessionId='0123456789abcdef0123456789abcdef'
-              IsAdmin=$false
-              Capabilities=@{}
-              ActionContracts=$null
-            }
-            $start=[datetimeoffset]::Now.AddHours(1)
-            $record=New-WinCareMaintenanceWindowRecord -Name 'CI' -StartAt $start -EndAt $start.AddHours(1) -Tags @('ci')
-            $plan=New-WinCareMaintenanceUpsertPlan -Window $record
-            $window=ConvertTo-WinCareMaintenanceMap $plan.Actions[0].Parameters.Window
-            $window=ConvertTo-WinCareCanonicalMaintenanceRecord -Record $window
-            $store=Read-WinCareMaintenanceStore
-            $items=[Collections.Generic.List[object]]::new()
-            $items.Add($window)
-            $newStore=[ordered]@{SchemaVersion=1;Revision=1;Windows=@($items)}
-            Write-WinCareMaintenanceStore -Store $newStore
-            $savedStore=Read-WinCareMaintenanceStore
-            $saved=@(Get-WinCareMaintenanceRecordFromStore -Store $savedStore -Id ([string]$window.Id))[0]
-            $expected=ConvertTo-WinCareCanonicalMaintenanceRecord -Record $window
-            $actual=ConvertTo-WinCareCanonicalMaintenanceRecord -Record $saved
-            Write-Host ('EXPECTED_HASH='+(Get-WinCareMaintenanceRecordHash -Record $expected))
-            Write-Host ('ACTUAL_HASH='+(Get-WinCareMaintenanceRecordHash -Record $actual))
-            Write-Host ('EXPECTED_JSON='+(ConvertTo-WinCareCanonicalJson -InputObject $expected -Depth 40))
-            Write-Host ('ACTUAL_JSON='+(ConvertTo-WinCareCanonicalJson -InputObject $actual -Depth 40))
-            foreach($key in $expected.Keys){
-              $left=$expected[$key]
-              $right=$actual[$key]
-              $leftJson=$left|ConvertTo-Json -Compress -Depth 20
-              $rightJson=$right|ConvertTo-Json -Compress -Depth 20
-              $leftType=if($null -eq $left){'<null>'}else{$left.GetType().FullName}
-              $rightType=if($null -eq $right){'<null>'}else{$right.GetType().FullName}
-              if($leftJson -cne $rightJson -or $leftType -ne $rightType){
-                Write-Host ("DELTA[$key] expectedType=$leftType actualType=$rightType expected=$leftJson actual=$rightJson")
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+
+          path=Path('src/WinCare/Providers/86-Maintenance.ps1')
+          text=path.read_text(encoding='utf-8')
+          old="""function ConvertTo-WinCareCanonicalMaintenanceRecord {
+              [CmdletBinding()]
+              param([Parameter(Mandatory)][object]$Record)
+              $map=ConvertTo-WinCareMaintenanceMap $Record
+              $null=Test-WinCareMaintenanceRecord -Record $map
+              [ordered]@{
+                  SchemaVersion=[int]$map.SchemaVersion
+                  Id=[string]$map.Id
+                  Name=[string]$map.Name
+                  Description=[string]$map.Description
+                  StartAt=([datetimeoffset]::Parse([string]$map.StartAt,[Globalization.CultureInfo]::InvariantCulture,[Globalization.DateTimeStyles]::RoundtripKind)).ToUniversalTime().ToString('o')
+                  EndAt=([datetimeoffset]::Parse([string]$map.EndAt,[Globalization.CultureInfo]::InvariantCulture,[Globalization.DateTimeStyles]::RoundtripKind)).ToUniversalTime().ToString('o')
+                  NoticeAt=([datetimeoffset]::Parse([string]$map.NoticeAt,[Globalization.CultureInfo]::InvariantCulture,[Globalization.DateTimeStyles]::RoundtripKind)).ToUniversalTime().ToString('o')
+                  State=[string]$map.State
+                  CreatedAt=([datetimeoffset]::Parse([string]$map.CreatedAt,[Globalization.CultureInfo]::InvariantCulture,[Globalization.DateTimeStyles]::RoundtripKind)).ToUniversalTime().ToString('o')
+                  UpdatedAt=([datetimeoffset]::Parse([string]$map.UpdatedAt,[Globalization.CultureInfo]::InvariantCulture,[Globalization.DateTimeStyles]::RoundtripKind)).ToUniversalTime().ToString('o')
+                  PlaybookId=[string]$map.PlaybookId
+                  Tags=@($map.Tags|ForEach-Object{[string]$_})
+                  RequiresRestart=[bool]$map.RequiresRestart
+                  Result=if($null -eq $map.Result){$null}else{ConvertTo-WinCareCanonicalValue -Value $map.Result}
+                  SourceRecords=@($map.SourceRecords|ForEach-Object{[string]$_})
               }
-            }
-            if((Get-WinCareMaintenanceRecordHash -Record $expected) -eq (Get-WinCareMaintenanceRecordHash -Record $actual)){
-              throw 'Diagnostic unexpectedly found no hash difference.'
-            }
-          } $root
+          }
+          """
+          new="""function ConvertTo-WinCareCanonicalMaintenanceTimestamp {
+              [CmdletBinding()]
+              param([Parameter(Mandatory)][object]$Value)
+              $utc=[datetimeoffset]::Parse(
+                  [string]$Value,
+                  [Globalization.CultureInfo]::InvariantCulture,
+                  [Globalization.DateTimeStyles]::RoundtripKind
+              ).ToUniversalTime()
+              $utc.AddTicks(-($utc.Ticks % [timespan]::TicksPerSecond)).ToString('o')
+          }
+
+          function ConvertTo-WinCareCanonicalMaintenanceRecord {
+              [CmdletBinding()]
+              param([Parameter(Mandatory)][object]$Record)
+              $map=ConvertTo-WinCareMaintenanceMap $Record
+              $null=Test-WinCareMaintenanceRecord -Record $map
+              [ordered]@{
+                  SchemaVersion=[int]$map.SchemaVersion
+                  Id=[string]$map.Id
+                  Name=[string]$map.Name
+                  Description=[string]$map.Description
+                  StartAt=ConvertTo-WinCareCanonicalMaintenanceTimestamp $map.StartAt
+                  EndAt=ConvertTo-WinCareCanonicalMaintenanceTimestamp $map.EndAt
+                  NoticeAt=ConvertTo-WinCareCanonicalMaintenanceTimestamp $map.NoticeAt
+                  State=[string]$map.State
+                  CreatedAt=ConvertTo-WinCareCanonicalMaintenanceTimestamp $map.CreatedAt
+                  UpdatedAt=ConvertTo-WinCareCanonicalMaintenanceTimestamp $map.UpdatedAt
+                  PlaybookId=[string]$map.PlaybookId
+                  Tags=@($map.Tags|ForEach-Object{[string]$_})
+                  RequiresRestart=[bool]$map.RequiresRestart
+                  Result=if($null -eq $map.Result){$null}else{ConvertTo-WinCareCanonicalValue -Value $map.Result}
+                  SourceRecords=@($map.SourceRecords|ForEach-Object{[string]$_})
+              }
+          }
+          """
+          count=text.count(old)
+          if count != 1:
+              raise SystemExit(f'expected one canonical maintenance block, found {count}')
+          path.write_text(text.replace(old,new,1),encoding='utf-8',newline='')
+          PY
+          git checkout e2555bee5e5dd47022cee141564c59533d256188 -- .github/workflows/ci.yml
+          python tools/validate_source_references.py . --write
+      - name: Validate final source tree
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts
+          python tools/validate_source.py . --json-output artifacts/source-validation.json
+          python tools/validate_action_bindings.py . --output artifacts/action-binding-validation.json
+          python tools/validate_test_source_assertions.py . --output artifacts/test-source-validation.json
+          python tools/validate_powershell_calls.py . --output artifacts/public-call-bindings.json
+          python tools/validate_module_manifest.py . --output artifacts/module-source-manifest.json
+          python tools/validate_source_references.py . --output artifacts/source-reference-validation.json
+          python tools/audit_stub_inventory.py . --output artifacts/stub-inventory.json
+          python tools/validate_maintainability.py . --output artifacts/maintainability-validation.json
+          python tools/validate_network_egress.py . --output artifacts/network-egress-validation.json
+          python tools/validate_external_processes.py . --output artifacts/external-process-validation.json
+          python tools/validate_bounded_io.py . --output artifacts/bounded-io-validation.json
+          python tools/validate_read_only_state.py . --output artifacts/read-only-state-validation.json
+          python tools/validate_context_menu_catalog.py . --output artifacts/context-menu-validation.json
+          python tools/validate_test_fixtures.py . --output artifacts/test-fixture-validation.json
+          python tools/validate_gui.py .
+          python -m unittest tools.test_release_tools tools.test_maintainability tools.test_security_invariants tools.test_cleaner_preview tools.test_gui tools.test_source_references tools.test_wincare_ps_source -v
+      - name: Commit and publish clean timestamp fix
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf artifacts
+          find . -type d -name __pycache__ -prune -exec rm -rf {} +
+          find . -type f \( -name '*.pyc' -o -name '*.pyo' \) -delete
+          git config user.name 'WinCare CI Remediation'
+          git config user.email 'ci-remediation@wincare.invalid'
+          git add -A
+          git diff --cached --check
+          git commit -m 'fix: canonicalize maintenance timestamps to storage precision'
+          git push origin "HEAD:${HEAD_REF}"
