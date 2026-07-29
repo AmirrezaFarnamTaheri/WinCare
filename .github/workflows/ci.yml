@@ -66,9 +66,7 @@ jobs:
               'src/WinCare/Providers/86-Maintenance.ps1',
               """            $null=Test-WinCareMaintenanceRecord -Record $map;$afterRecord=$map;$list.Add($map)
           """,
-              """            $null=Test-WinCareMaintenanceRecord -Record $map
-              $afterRecord=ConvertTo-WinCareCanonicalMaintenanceRecord -Record $map
-              $list.Add($afterRecord)
+              """            $null=Test-WinCareMaintenanceRecord -Record $map;$afterRecord=ConvertTo-WinCareCanonicalMaintenanceRecord -Record $map;$list.Add($afterRecord)
           """
           )
 
