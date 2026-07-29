@@ -13,8 +13,11 @@ param(
 )
 Set-StrictMode -Version Latest
 $ErrorActionPreference='Stop'
+$entryRoot = if ([string]::IsNullOrWhiteSpace($PSScriptRoot)) { $env:WINCARE_STANDALONE_ROOT } else { $PSScriptRoot }
+if ([string]::IsNullOrWhiteSpace($entryRoot)) { throw 'WinCare entry root is unavailable.' }
+$entryRoot = [IO.Path]::GetFullPath($entryRoot)
 if($Json){$WarningPreference='SilentlyContinue';$InformationPreference='SilentlyContinue';$ProgressPreference='SilentlyContinue'}
-$modulePath=Join-Path $PSScriptRoot 'src/WinCare/WinCare.psd1'
+$modulePath=Join-Path $entryRoot 'src/WinCare/WinCare.psd1'
 Import-Module $modulePath -Force -DisableNameChecking -WarningAction SilentlyContinue
 if($Gui){
     if(-not $IsWindows){throw 'WinCare GUI requires Windows 10 or Windows 11.'}
@@ -23,7 +26,7 @@ if($Gui){
         if([string]::IsNullOrWhiteSpace($pwsh)){throw 'The current PowerShell executable path is unavailable.'}
         $pwshItem=Get-Item -LiteralPath $pwsh -Force -ErrorAction Stop
         if($pwshItem.PSIsContainer -or ($pwshItem.Attributes -band [IO.FileAttributes]::ReparsePoint)){throw 'The current PowerShell executable is not a regular non-reparse file.'}
-        $start=[Diagnostics.ProcessStartInfo]::new();$start.FileName=$pwshItem.FullName;$start.UseShellExecute=$false;$start.WorkingDirectory=$PSScriptRoot
+        $start=[Diagnostics.ProcessStartInfo]::new();$start.FileName=$pwshItem.FullName;$start.UseShellExecute=$false;$start.WorkingDirectory=$entryRoot
         foreach($arg in @('-NoLogo','-NoProfile','-STA','-File',$PSCommandPath,'-Gui')){[void]$start.ArgumentList.Add($arg)}
         if($ReadOnly){[void]$start.ArgumentList.Add('-ReadOnly')};if($Theme){[void]$start.ArgumentList.Add('-Theme');[void]$start.ArgumentList.Add($Theme)}
         $process=[Diagnostics.Process]::Start($start);if($null -eq $process){throw 'The STA GUI process did not start.'}
