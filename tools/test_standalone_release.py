@@ -233,7 +233,7 @@ class StandaloneReleaseTests(unittest.TestCase):
         props = (ROOT / "src/WinCare/Standalone/Directory.Build.props").read_text(encoding="utf-8")
         host = (ROOT / "src/WinCare/Standalone/WinCare.Host.cs").read_text(encoding="utf-8")
         global_usings = (ROOT / "src/WinCare/Standalone/WinCare.GlobalUsings.cs").read_text(encoding="utf-8")
-        self.assertIn('<Target Name="ValidateAndEmbedWinCarePayload" BeforeTargets="GetAssemblyAttributes;PrepareResourceNames"', props)
+        self.assertIn('<Target Name="ValidateAndEmbedWinCarePayload" BeforeTargets="PrepareForBuild"', props)
         self.assertIn('<GetFileHash Files="$(WinCarePayloadPath)" Algorithm="SHA256">', props)
         self.assertIn('<EmbeddedResource Include="$(WinCarePayloadPath)" LogicalName="WinCare.Payload.zip" />', props)
         self.assertIn('<AssemblyMetadata Include="WinCarePayloadSha256"', props)
