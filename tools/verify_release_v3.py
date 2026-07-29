@@ -17,6 +17,7 @@ EXPECTED_EXES = {
 }
 BUILD_SCHEMA = "wincare.build.receipt/v3"
 VALIDATION_SCHEMA = "wincare.release.validation/v3"
+STANDALONE_SCHEMA_VERSIONS = {1, 2}
 MAX_MEMBERS = 25_000
 MAX_MEMBER_BYTES = 1024 * 1024 * 1024
 MAX_TOTAL_BYTES = 4 * 1024 * 1024 * 1024
@@ -292,8 +293,12 @@ def validate(path: Path, asset_directory: Path | None = None) -> dict[str, objec
         else:
             try:
                 standalone_manifest = json.loads(standalone_manifest_data.decode("utf-8-sig"))
-                if standalone_manifest.get("SchemaVersion") != 1:
+                manifest_schema_version = standalone_manifest.get("SchemaVersion")
+                if manifest_schema_version not in STANDALONE_SCHEMA_VERSIONS:
                     errors.append("invalid standalone build manifest schema")
+                expected_standalone_schema = f"wincare.standalone.build/v{manifest_schema_version}"
+                if isinstance(standalone, dict) and standalone.get("schema") != expected_standalone_schema:
+                    errors.append("standalone receipt schema does not match build manifest")
                 if standalone_manifest.get("RuntimeIdentifier") != "win-x64" or standalone_manifest.get("Configuration") != "Release":
                     errors.append("standalone build manifest configuration mismatch")
                 if standalone_manifest.get("SelfContained") is not True or standalone_manifest.get("SingleFile") is not True:

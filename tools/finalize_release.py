@@ -20,6 +20,7 @@ except ImportError:
 
 BUILD_SCHEMA = "wincare.build.receipt/v3"
 RELEASE_SCHEMA = "wincare.release.receipt/v3"
+STANDALONE_SCHEMA_VERSIONS = {1, 2}
 FIXED_EPOCH = 315532800
 GENERATED = {"SBOM.spdx.json", "BUILD-RECEIPT.json", "RELEASE-MANIFEST.sha256"}
 
@@ -174,7 +175,8 @@ def finalize(core_archive: Path, executable_directory: Path, output_directory: P
         standalone_manifest = json.loads(manifest_bytes.decode("utf-8-sig"))
     except (UnicodeDecodeError, json.JSONDecodeError) as error:
         raise ValueError("standalone build manifest is invalid") from error
-    if not isinstance(standalone_manifest, dict) or standalone_manifest.get("SchemaVersion") != 1:
+    manifest_schema_version = standalone_manifest.get("SchemaVersion") if isinstance(standalone_manifest, dict) else None
+    if manifest_schema_version not in STANDALONE_SCHEMA_VERSIONS:
         raise ValueError("unsupported standalone build manifest schema")
     if standalone_manifest.get("RuntimeIdentifier") != "win-x64" or standalone_manifest.get("Configuration") != "Release":
         raise ValueError("standalone build manifest configuration mismatch")
@@ -248,7 +250,7 @@ def finalize(core_archive: Path, executable_directory: Path, output_directory: P
         "generatedAt": created,
         "native": core_receipt.get("native"),
         "standalone": {
-            "schema": "wincare.standalone.build/v1",
+            "schema": f"wincare.standalone.build/v{manifest_schema_version}",
             "runtimeIdentifier": "win-x64",
             "selfContained": True,
             "singleFile": True,
