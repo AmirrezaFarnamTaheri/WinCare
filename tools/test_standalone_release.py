@@ -11,6 +11,8 @@ import unittest
 import zipfile
 from pathlib import Path
 
+ROOT = Path(__file__).resolve().parents[1]
+
 try:
     from . import finalize_release, prepare_standalone_payload, verify_release_v3
 except ImportError:
@@ -70,8 +72,6 @@ def write_core(path: Path) -> None:
     with zipfile.ZipFile(path, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=9) as archive:
         for name, data in sorted(files.items()):
             archive.writestr(zip_info("WinCare-1.2.3/" + name), data)
-
-
 
 
 def write_standalone_output(directory: Path) -> None:
@@ -194,6 +194,54 @@ class StandaloneReleaseTests(unittest.TestCase):
     def test_verifier_rejects_wrong_pe_subsystem(self) -> None:
         error = verify_release_v3.validate_pe(fake_pe(2, 1), 3)
         self.assertIn("unexpected subsystem", error or "")
+
+    def test_installer_wrappers_forward_only_bound_shouldprocess_parameters(self) -> None:
+        install = (ROOT / "Install-WinCare.ps1").read_text(encoding="utf-8")
+        uninstall = (ROOT / "Uninstall-WinCare.ps1").read_text(encoding="utf-8")
+        for source in (install, uninstall):
+            self.assertIn("$PSBoundParameters.ContainsKey('WhatIf')", source)
+            self.assertIn("$PSBoundParameters.ContainsKey('Confirm')", source)
+            self.assertNotIn("$ConfirmPreference -eq 'Low'", source)
+        self.assertIn("Join-Path $PSScriptRoot 'src\\WinCare\\Install\\WinCare.Installation.psm1'", uninstall)
+        self.assertNotIn("Join-Path $Destination 'src\\WinCare\\Install", uninstall)
+
+    def test_installer_module_closes_reviewed_failure_modes(self) -> None:
+        install_root = ROOT / "src/WinCare/Install"
+        module = "\n".join(
+            path.read_text(encoding="utf-8")
+            for path in [install_root / "WinCare.Installation.psm1", *sorted((install_root / "Private").glob("*.ps1"))]
+        )
+        required = [
+            "Split-Path -LiteralPath $cursor -Parent",
+            "Get-ChildItem -LiteralPath $rootPath -Recurse",
+            "Move-Item -LiteralPath $dest -Destination $backup",
+            "Arguments = ''",
+            "WorkingDirectory = $Destination",
+            "Test-WinCareRecoverableDestination",
+            "Refusing to overwrite an unmanaged destination",
+            "Restore-WinCareShortcutBackup",
+            "Move-WinCareOwnedShortcutsToBackup",
+            "unrecognized data was preserved",
+        ]
+        for token in required:
+            self.assertIn(token, module)
+        self.assertNotIn("Get-ChildItem $rootPath", module)
+        self.assertNotIn("Test-Path $dest", module)
+        self.assertNotIn("Move-Item $dest", module)
+
+    def test_payload_embedding_is_hash_bound_and_atomic(self) -> None:
+        props = (ROOT / "src/WinCare/Standalone/Directory.Build.props").read_text(encoding="utf-8")
+        host = (ROOT / "src/WinCare/Standalone/WinCare.Host.cs").read_text(encoding="utf-8")
+        global_usings = (ROOT / "src/WinCare/Standalone/WinCare.GlobalUsings.cs").read_text(encoding="utf-8")
+        self.assertIn('<Target Name="ValidateAndEmbedWinCarePayload"', props)
+        self.assertIn('<GetFileHash Files="$(WinCarePayloadPath)" Algorithm="SHA256">', props)
+        self.assertIn('<EmbeddedResource Include="$(WinCarePayloadPath)" LogicalName="WinCare.Payload.zip" />', props)
+        self.assertIn('<AssemblyMetadata Include="WinCarePayloadSha256"', props)
+        self.assertIn('<AssemblyMetadata Include="WinCarePayloadManifestSha256"', props)
+        self.assertNotIn("Condition=\"Exists('$(WinCarePayloadPath)')\"", props)
+        self.assertIn("global using System.IO;", global_usings)
+        self.assertIn("return ConsoleShell.Start", host)
+        self.assertNotIn("ps.Invoke()", host)
 
 
 if __name__ == "__main__":
