@@ -22,10 +22,11 @@ New-Item -ItemType Directory -Path $work -ErrorAction Stop | Out-Null
 $extract = Join-Path $work 'extract'
 $destination = Join-Path $work 'installed[1]\WinCare'
 $shortcutRoot = Join-Path $work 'shortcuts[1]'
-New-Item -ItemType Directory -Path $extract,$shortcutRoot -ErrorAction Stop | Out-Null
+New-Item -ItemType Directory -Path $shortcutRoot -ErrorAction Stop | Out-Null
 
 try {
     Write-WinCareLifecyclePhase 'validated-extraction' started 'verifying and extracting the final archive'
+    if (Test-Path -LiteralPath $extract) { throw 'Lifecycle extraction target must not exist before validated extraction.' }
     $python = Get-Command python,python3,'C:\Program Files\Python311\python.exe' -ErrorAction SilentlyContinue |
         Where-Object Source -NotMatch 'WindowsApps' | Select-Object -ExpandProperty Source -First 1
     if (-not $python) { throw 'Python 3 is required by the installation lifecycle validator.' }
