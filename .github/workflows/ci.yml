@@ -120,14 +120,15 @@ jobs:
           git diff --stat | tee artifacts/closure-apply/diff-stat.txt
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          # Workflow files were verified above but are committed separately through the GitHub connector,
+          # because the Actions token intentionally lacks the independent workflows permission.
           git add \
-            .github/workflows/ci.yml .github/workflows/release.yml \
             src/WinCare/Standalone/WinCare.Host.cs \
             tools/Build-Exe.ps1 tools/Build-Release.ps1 tools/Test-InstallationLifecycle.ps1 \
             tools/finalize_release.py tools/prepare_standalone_payload.py \
             tools/test_standalone_release.py tools/verify_release.py tools/verify_release_v3.py
           git diff --cached --name-status | tee artifacts/closure-apply/staged-files.txt
-          git commit -m 'complete standalone release graph and diagnostic workflows'
+          git commit -m 'complete standalone release implementation graph'
           commit=$(git rev-parse HEAD)
           echo "source_commit=$commit" >> "$GITHUB_OUTPUT"
           git show --stat --oneline --decorate --no-renames HEAD
