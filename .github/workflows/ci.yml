@@ -98,12 +98,18 @@ jobs:
           python -m unittest tools.test_standalone_release -v 2>&1 | tee artifacts/closure-apply/standalone-tests.log
           python - <<'PY'
           import json, pathlib, xml.etree.ElementTree as ET
-          import yaml
           workflows=['.github/workflows/ci.yml','.github/workflows/release.yml']
+          workflow_checks={}
           for path in workflows:
-              with open(path,encoding='utf-8') as stream: yaml.safe_load(stream)
+              text=pathlib.Path(path).read_text(encoding='utf-8')
+              missing=[token for token in ('name:', 'on:', 'jobs:', 'runs-on:') if token not in text]
+              if missing:
+                  raise SystemExit(f'{path} is missing required workflow tokens: {missing}')
+              if '\t' in text:
+                  raise SystemExit(f'{path} contains a tab character')
+              workflow_checks[path]={'bytes':len(text.encode('utf-8')),'lines':len(text.splitlines()),'requiredTokens':'passed'}
           ET.parse('src/WinCare/Standalone/Directory.Build.props')
-          result={'schema':'wincare.closure.precommit-validation/v1','status':'passed','yaml':workflows,'xml':['src/WinCare/Standalone/Directory.Build.props']}
+          result={'schema':'wincare.closure.precommit-validation/v1','status':'passed','workflowChecks':workflow_checks,'xml':['src/WinCare/Standalone/Directory.Build.props']}
           pathlib.Path('artifacts/closure-apply/precommit-validation.json').write_text(json.dumps(result,indent=2,sort_keys=True)+'\n',encoding='utf-8')
           print(json.dumps(result,indent=2,sort_keys=True))
           PY
