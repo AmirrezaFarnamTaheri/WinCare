@@ -1,3 +1,4 @@
+# Publisher trigger revision 2
 name: Apply PR 4 remediation
 
 on:
