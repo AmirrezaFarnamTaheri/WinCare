@@ -9,8 +9,18 @@ function Assert-WinCareManagedPath {
     $blocked=@($root,$env:SystemRoot,$env:ProgramFiles,${env:ProgramFiles(x86)},$env:USERPROFILE,$env:LOCALAPPDATA,$env:APPDATA)|Where-Object{$_}|ForEach-Object{[IO.Path]::GetFullPath($_).TrimEnd('\')}
     if($full -in $blocked){throw "Refusing unsafe WinCare path: $full"}
     $cursor=$full
-    while($cursor -and -not(Test-Path -LiteralPath $cursor)){$parent=Split-Path -LiteralPath $cursor -Parent;if(!$parent -or $parent -eq $cursor){break};$cursor=$parent}
-    while($cursor -and (Test-Path -LiteralPath $cursor)){$item=Get-Item -LiteralPath $cursor -Force -ErrorAction Stop;if($item.Attributes -band [IO.FileAttributes]::ReparsePoint){throw "WinCare path traverses a reparse point: $cursor"};$parent=Split-Path -LiteralPath $cursor -Parent;if(!$parent -or $parent -eq $cursor){break};$cursor=$parent}
+    while($cursor -and -not(Test-Path -LiteralPath $cursor)){
+        $parent=[IO.Directory]::GetParent($cursor)
+        if($null -eq $parent -or $parent.FullName -eq $cursor){break}
+        $cursor=$parent.FullName
+    }
+    while($cursor -and (Test-Path -LiteralPath $cursor)){
+        $item=Get-Item -LiteralPath $cursor -Force -ErrorAction Stop
+        if($item.Attributes -band [IO.FileAttributes]::ReparsePoint){throw "WinCare path traverses a reparse point: $cursor"}
+        $parent=[IO.Directory]::GetParent($cursor)
+        if($null -eq $parent -or $parent.FullName -eq $cursor){break}
+        $cursor=$parent.FullName
+    }
     $full
 }
 function Remove-WinCareTree {
