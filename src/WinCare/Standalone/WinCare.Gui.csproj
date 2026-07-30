@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <AssemblyName>WinCare-GUI</AssemblyName>
+    <OutputType>WinExe</OutputType>
+    <DefineConstants>$(DefineConstants);WINCARE_GUI</DefineConstants>
+  </PropertyGroup>
+</Project>

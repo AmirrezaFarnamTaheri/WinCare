@@ -8,8 +8,11 @@ param(
 )
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
+$entryRoot = if ([string]::IsNullOrWhiteSpace($PSScriptRoot)) { $env:WINCARE_STANDALONE_ROOT } else { $PSScriptRoot }
+if ([string]::IsNullOrWhiteSpace($entryRoot)) { throw 'WinCare entry root is unavailable.' }
+$entryRoot = [IO.Path]::GetFullPath($entryRoot)
 # ponytail: TUI launcher -> Terminal.Gui / Spectre.Console fuzzy palette
-$entryPoint = Join-Path $PSScriptRoot 'WinCare.ps1'
+$entryPoint = Join-Path $entryRoot 'WinCare.ps1'
 if (-not (Test-Path -LiteralPath $entryPoint -PathType Leaf)) {
     throw "WinCare entry point not found: $entryPoint"
 }

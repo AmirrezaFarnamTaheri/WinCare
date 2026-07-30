@@ -2,8 +2,7 @@ name: release
 
 on:
   push:
-    tags:
-      - 'v*'
+    tags: ['v*']
   workflow_dispatch:
 
 permissions:
@@ -16,11 +15,21 @@ concurrency:
   group: release-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: false
 
+env:
+  PYTHONUTF8: '1'
+  PYTHONUNBUFFERED: '1'
+  WINCARE_EVENT_NAME: ${{ github.event_name }}
+  WINCARE_REF: ${{ github.ref }}
+  WINCARE_REF_NAME: ${{ github.ref_name }}
+  WINCARE_SHA: ${{ github.sha }}
+  WINCARE_RUN_ID: ${{ github.run_id }}
+  WINCARE_RUN_ATTEMPT: ${{ github.run_attempt }}
+
 jobs:
-  windows-validation:
-    name: Build and validate immutable candidate
+  build-validate:
+    name: Build, diagnose, and seal immutable candidate
     runs-on: windows-2022
-    timeout-minutes: 60
+    timeout-minutes: 110
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -32,64 +41,104 @@ jobs:
       - uses: actions/setup-dotnet@6df8cefd1440cf9313e76b8fdb8aaf90cfa745a3 # v6.0.0
         with:
           global-json-file: global.json
+      - name: Describe release builder context
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          New-Item -ItemType Directory -Path ./artifacts/windows-validation/workflow -Force | Out-Null
+          $context=[ordered]@{
+            schema='wincare.workflow.context/v1';job='release-build-validate';event=$env:WINCARE_EVENT_NAME
+            ref=$env:WINCARE_REF;refName=$env:WINCARE_REF_NAME;sha=$env:WINCARE_SHA
+            runId=$env:WINCARE_RUN_ID;runAttempt=$env:WINCARE_RUN_ATTEMPT
+            powershell=$PSVersionTable.PSVersion.ToString();dotnet=((& dotnet --version).Trim());python=((& python --version 2>&1|Out-String).Trim())
+          }
+          $context|ConvertTo-Json -Depth 8|Set-Content ./artifacts/windows-validation/workflow/context.json -Encoding utf8NoBOM
+          $context|ConvertTo-Json -Depth 8
+          "## Release builder context`n`n- Commit: ``$env:WINCARE_SHA```n- Ref: ``$env:WINCARE_REF```n- PowerShell: ``$($context.powershell)```n- .NET SDK: ``$($context.dotnet)```n- Python: ``$($context.python)```n"|Add-Content $env:GITHUB_STEP_SUMMARY
       - name: Install PowerShell validation modules
         shell: pwsh
         run: |
+          $ErrorActionPreference='Stop'
           Set-PSRepository PSGallery -InstallationPolicy Trusted
-          # See ci.yml: Save-Module avoids the runner's preinstalled-Pester publisher-mismatch
-          # without the publisher-check bypass switch that release governance forbids.
-          $userModules = Join-Path ([Environment]::GetFolderPath('MyDocuments')) 'PowerShell/Modules'
-          New-Item -ItemType Directory -Force -Path $userModules | Out-Null
+          $userModules=Join-Path ([Environment]::GetFolderPath('MyDocuments')) 'PowerShell/Modules'
+          New-Item -ItemType Directory -Force -Path $userModules|Out-Null
           Save-Module Pester -RequiredVersion 5.5.0 -Path $userModules -Force
           Install-Module PSScriptAnalyzer -RequiredVersion 1.22.0 -Scope CurrentUser -Force
+          Get-Module Pester,PSScriptAnalyzer -ListAvailable|Sort-Object Name,Version -Descending|Select-Object Name,Version,Path|Format-Table -AutoSize
       - name: Run complete Windows validation and candidate build
+        id: validation
+        continue-on-error: true
         shell: pwsh
-        run: ./tools/Invoke-WindowsValidation.ps1 -OutputDirectory ./artifacts/windows-validation
-      - name: Seal candidate for exact-byte promotion
+        env:
+          WINCARE_DIAGNOSTICS_DIRECTORY: ${{ github.workspace }}\artifacts\windows-validation\workflow
+        run: ./tools/Invoke-WindowsValidation.ps1 -OutputDirectory ./artifacts/windows-validation -GateTimeoutSeconds 3600
+      - name: Summarize release-build diagnostics
+        if: always()
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Continue'
+          $root=[IO.Path]::GetFullPath('./artifacts/windows-validation')
+          $reportPath=Join-Path $root 'windows-validation-report.json'
+          $gates=@();$reportStatus='missing'
+          if(Test-Path -LiteralPath $reportPath -PathType Leaf){
+            try{$report=[IO.File]::ReadAllText($reportPath,[Text.UTF8Encoding]::new($false,$true))|ConvertFrom-Json -Depth 50;$gates=@($report.gates);$reportStatus=[string]$report.status}catch{Write-Warning "Invalid report: $_"}
+          }
+          $release=Join-Path $root 'release'
+          $assets=@(Get-ChildItem -LiteralPath $release -File -Force -ErrorAction SilentlyContinue|Sort-Object Name|ForEach-Object{[ordered]@{name=$_.Name;bytes=[long]$_.Length;sha256=(Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()}})
+          $files=@(Get-ChildItem -LiteralPath $root -File -Recurse -Force -ErrorAction SilentlyContinue|Sort-Object FullName|ForEach-Object{[ordered]@{path=[IO.Path]::GetRelativePath($root,$_.FullName).Replace('\','/');bytes=[long]$_.Length;sha256=(Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()}})
+          $diagnosis=[ordered]@{schema='wincare.workflow.diagnostics/v1';job='release-build-validate';stepOutcome='${{ steps.validation.outcome }}';reportStatus=$reportStatus;gates=@($gates);releaseAssets=@($assets);artifacts=@($files)}
+          New-Item -ItemType Directory -Path (Join-Path $root 'workflow') -Force|Out-Null
+          $diagnosis|ConvertTo-Json -Depth 16|Set-Content (Join-Path $root 'workflow/diagnostics-index.json') -Encoding utf8NoBOM
+          Add-Content $env:GITHUB_STEP_SUMMARY "## Release build and validation`n"
+          Add-Content $env:GITHUB_STEP_SUMMARY "Validation outcome: **${{ steps.validation.outcome }}**; report status: **$reportStatus**.`n"
+          if($gates.Count){
+            Add-Content $env:GITHUB_STEP_SUMMARY '| Gate | Status | Exit | Duration |'
+            Add-Content $env:GITHUB_STEP_SUMMARY '|---|---:|---:|---:|'
+            foreach($gate in $gates){$icon=if([string]$gate.Status -eq 'passed'){'✅'}else{'❌'};Add-Content $env:GITHUB_STEP_SUMMARY "| $($gate.Name) | $icon $($gate.Status) | $($gate.ExitCode) | $($gate.DurationMilliseconds) ms |"}
+          }
+          Add-Content $env:GITHUB_STEP_SUMMARY "`n### Candidate asset inventory ($($assets.Count))`n"
+          if($assets.Count){Add-Content $env:GITHUB_STEP_SUMMARY '| Asset | Bytes | SHA-256 |';Add-Content $env:GITHUB_STEP_SUMMARY '|---|---:|---|';foreach($asset in $assets){Add-Content $env:GITHUB_STEP_SUMMARY "| ``$($asset.name)`` | $($asset.bytes) | ``$($asset.sha256)`` |"}}
+          foreach($gate in @($gates|Where-Object Status -ne 'passed')){
+            Write-Host "`n===== FAILED RELEASE GATE: $($gate.Name) status=$($gate.Status) exit=$($gate.ExitCode) =====" -ForegroundColor Red
+            foreach($path in @([string]$gate.StdOut,[string]$gate.StdErr)){if(Test-Path -LiteralPath $path -PathType Leaf){foreach($line in @([IO.File]::ReadAllLines($path)|Select-Object -Last 240)){Write-Host $line}}}
+          }
+      - name: Enforce candidate validation result
+        if: always()
+        shell: pwsh
+        run: |
+          if ('${{ steps.validation.outcome }}' -ne 'success') { throw 'Candidate validation failed. Review the gate table, log tails, and diagnostics-index.json before retrying.' }
+      - name: Seal exact candidate assets
         shell: pwsh
         env:
           SOURCE_COMMIT: ${{ github.sha }}
           WORKFLOW_RUN_ID: ${{ github.run_id }}
         run: |
+          $ErrorActionPreference='Stop'
           function Read-BoundedUtf8Text {
             param([Parameter(Mandatory)][string]$LiteralPath,[ValidateRange(1,16777216)][int]$MaximumBytes)
-            $item = Get-Item -LiteralPath $LiteralPath -Force -ErrorAction Stop
-            if ($item.PSIsContainer -or ($item.Attributes -band [IO.FileAttributes]::ReparsePoint) -or [long]$item.Length -gt $MaximumBytes) { throw "Unsafe or oversized evidence file: $LiteralPath" }
-            $stream = [IO.FileStream]::new($item.FullName,[IO.FileMode]::Open,[IO.FileAccess]::Read,[IO.FileShare]::Read,65536,[IO.FileOptions]::SequentialScan)
-            $bytes = [byte[]]::new([int]$item.Length)
-            try { $offset=0; while($offset -lt $bytes.Length){$read=$stream.Read($bytes,$offset,$bytes.Length-$offset);if($read -le 0){break};$offset+=$read}; if($offset -ne $bytes.Length -or $stream.ReadByte() -ne -1){throw "Evidence file changed while reading: $LiteralPath"}; return [Text.UTF8Encoding]::new($false,$true).GetString($bytes) }
-            finally { if($bytes.Length){[Array]::Clear($bytes,0,$bytes.Length)}; $stream.Dispose() }
+            $item=Get-Item -LiteralPath $LiteralPath -Force -ErrorAction Stop
+            if($item.PSIsContainer -or ($item.Attributes -band [IO.FileAttributes]::ReparsePoint) -or [long]$item.Length -gt $MaximumBytes){throw "Unsafe or oversized text file: $LiteralPath"}
+            $bytes=[IO.File]::ReadAllBytes($item.FullName)
+            try{if($bytes.Length -ne [long]$item.Length){throw "Text file changed while reading: $LiteralPath"};[Text.UTF8Encoding]::new($false,$true).GetString($bytes)}finally{if($bytes.Length){[Array]::Clear($bytes,0,$bytes.Length)}}
           }
-          $root = [IO.Path]::GetFullPath('./artifacts/windows-validation')
-          $release = Join-Path $root 'release'
-          $reportPath = Join-Path $root 'windows-validation-report.json'
-          if (-not (Test-Path -LiteralPath $release -PathType Container)) { throw 'Validated release directory is missing.' }
-          if (-not (Test-Path -LiteralPath $reportPath -PathType Leaf)) { throw 'Windows validation report is missing.' }
-          $report = Read-BoundedUtf8Text -LiteralPath $reportPath -MaximumBytes 16777216 | ConvertFrom-Json -Depth 50
-          if ([string]$report.status -ne 'passed') { throw 'Windows validation report is not passed.' }
-          $releaseEntries = @(Get-ChildItem -LiteralPath $release -Force -ErrorAction Stop)
-          if (-not $releaseEntries.Count -or $releaseEntries.Count -gt 100) { throw 'Validated release asset count is outside 1..100.' }
-          $files = [Collections.Generic.List[object]]::new()
-          $totalBytes = 0L
-          foreach ($entry in @($releaseEntries | Sort-Object Name)) {
-            if ($entry.PSIsContainer -or ($entry.Attributes -band [IO.FileAttributes]::ReparsePoint)) { throw "Validated release contains a directory or reparse asset: $($entry.Name)" }
-            if ([long]$entry.Length -gt 2147483648L) { throw "Validated release asset exceeds 2 GiB: $($entry.Name)" }
-            $totalBytes += [long]$entry.Length
-            if ($totalBytes -gt 4294967296L) { throw 'Validated release assets exceed 4 GiB in aggregate.' }
-            $files.Add([ordered]@{ path='release/' + $entry.Name; sha256=(Get-FileHash -LiteralPath $entry.FullName -Algorithm SHA256).Hash.ToLowerInvariant(); bytes=[long]$entry.Length })
-          }
-          $manifest = [ordered]@{
-            schema = 'wincare.promotion-manifest/v1'
-            sourceCommit = $env:SOURCE_COMMIT
-            workflowRunId = $env:WORKFLOW_RUN_ID
-            validationReport = [ordered]@{
-              path = 'windows-validation-report.json'
-              sha256 = (Get-FileHash -LiteralPath $reportPath -Algorithm SHA256).Hash.ToLowerInvariant()
-              status = 'passed'
-            }
-            files = $files
-          }
-          $manifest | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath (Join-Path $root 'promotion-manifest.json') -Encoding utf8NoBOM
+          $root=[IO.Path]::GetFullPath('./artifacts/windows-validation');$release=Join-Path $root 'release';$reportPath=Join-Path $root 'windows-validation-report.json'
+          $report=Read-BoundedUtf8Text $reportPath 16777216|ConvertFrom-Json -Depth 50
+          if([string]$report.status -ne 'passed'){throw 'Windows validation report is not passed.'}
+          $receipts=@(Get-ChildItem -LiteralPath $release -Filter 'WinCare-*-release-receipt.json' -File -Force)
+          if($receipts.Count -ne 1){throw 'Expected exactly one release receipt.'}
+          $receipt=Read-BoundedUtf8Text $receipts[0].FullName 1048576|ConvertFrom-Json -Depth 50
+          if([string]$receipt.schema -ne 'wincare.release.receipt/v3'){throw 'Release receipt schema v3 is required.'}
+          $version=[string]$receipt.release
+          $expectedNames=@("WinCare-$version.zip","WinCare-$version.zip.sha256","WinCare-$version.zip.intoto.jsonl","WinCare-$version-SBOM.spdx.json","WinCare-$version-BUILD-RECEIPT.json","WinCare-$version-release-receipt.json","WinCare-$version-build-result.json",'WinCare.exe','WinCare-GUI.exe','WinCare-TUI.exe','WinCare.Standalone.build.json')
+          $actual=@(Get-ChildItem -LiteralPath $release -File -Force|Sort-Object Name)
+          $missing=@($expectedNames|Where-Object{$_ -notin $actual.Name});$extra=@($actual.Name|Where-Object{$_ -notin $expectedNames})
+          if($actual.Count -ne 11 -or $missing.Count -or $extra.Count){throw "Release asset closure mismatch: missing=$($missing -join ','); extra=$($extra -join ',')"}
+          $files=foreach($entry in $actual){if($entry.Attributes -band [IO.FileAttributes]::ReparsePoint){throw "Release asset is a reparse point: $($entry.Name)"};[ordered]@{path='release/'+$entry.Name;sha256=(Get-FileHash -LiteralPath $entry.FullName -Algorithm SHA256).Hash.ToLowerInvariant();bytes=[long]$entry.Length}}
+          $manifest=[ordered]@{schema='wincare.promotion-manifest/v2';sourceCommit=$env:SOURCE_COMMIT;workflowRunId=$env:WORKFLOW_RUN_ID;version=$version;validationReport=[ordered]@{path='windows-validation-report.json';sha256=(Get-FileHash -LiteralPath $reportPath -Algorithm SHA256).Hash.ToLowerInvariant();status='passed'};files=@($files)}
+          $manifest|ConvertTo-Json -Depth 8|Set-Content (Join-Path $root 'promotion-manifest.json') -Encoding utf8NoBOM
+          Write-Host '===== SEALED RELEASE ASSETS ====='
+          $files|Format-Table path,bytes,sha256 -AutoSize
+          Add-Content $env:GITHUB_STEP_SUMMARY "`nCandidate sealed as promotion manifest v2 for version **$version**, commit ``$env:SOURCE_COMMIT``, with **$($files.Count)** exact assets.`n"
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: win-care-validated-release-candidate
@@ -97,6 +146,7 @@ jobs:
             artifacts/windows-validation/release/**
             artifacts/windows-validation/windows-validation-report.json
             artifacts/windows-validation/promotion-manifest.json
+            artifacts/windows-validation/workflow/**
           if-no-files-found: error
           retention-days: 14
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -108,89 +158,60 @@ jobs:
           retention-days: 30
 
   publish-release:
-    name: Attest and publish validated bytes
-    needs: windows-validation
+    name: Reverify, attest, and publish sealed bytes
+    needs: build-validate
     runs-on: windows-2022
-    timeout-minutes: 20
+    timeout-minutes: 30
     steps:
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: win-care-validated-release-candidate
           path: candidate
+      - name: Inventory downloaded candidate
+        shell: pwsh
+        run: |
+          $files=@(Get-ChildItem -LiteralPath ./candidate -File -Recurse -Force|Sort-Object FullName|ForEach-Object{[ordered]@{path=[IO.Path]::GetRelativePath((Resolve-Path ./candidate).Path,$_.FullName).Replace('\','/');bytes=[long]$_.Length;sha256=(Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()}})
+          Write-Host '===== DOWNLOADED CANDIDATE INVENTORY ====='
+          $files|Format-Table path,bytes,sha256 -AutoSize
+          Add-Content $env:GITHUB_STEP_SUMMARY "## Promotion candidate inventory`n`nDownloaded **$($files.Count)** files for independent re-verification.`n"
       - name: Verify sealed candidate
         id: verify
         shell: pwsh
         env:
           EXPECTED_COMMIT: ${{ github.sha }}
         run: |
+          $ErrorActionPreference='Stop'
           function Read-BoundedUtf8Text {
             param([Parameter(Mandatory)][string]$LiteralPath,[ValidateRange(1,16777216)][int]$MaximumBytes)
-            $item = Get-Item -LiteralPath $LiteralPath -Force -ErrorAction Stop
-            if ($item.PSIsContainer -or ($item.Attributes -band [IO.FileAttributes]::ReparsePoint) -or [long]$item.Length -gt $MaximumBytes) { throw "Unsafe or oversized promoted evidence file: $LiteralPath" }
-            $stream = [IO.FileStream]::new($item.FullName,[IO.FileMode]::Open,[IO.FileAccess]::Read,[IO.FileShare]::Read,65536,[IO.FileOptions]::SequentialScan)
-            $bytes = [byte[]]::new([int]$item.Length)
-            try { $offset=0; while($offset -lt $bytes.Length){$read=$stream.Read($bytes,$offset,$bytes.Length-$offset);if($read -le 0){break};$offset+=$read}; if($offset -ne $bytes.Length -or $stream.ReadByte() -ne -1){throw "Promoted evidence file changed while reading: $LiteralPath"}; return [Text.UTF8Encoding]::new($false,$true).GetString($bytes) }
-            finally { if($bytes.Length){[Array]::Clear($bytes,0,$bytes.Length)}; $stream.Dispose() }
+            $item=Get-Item -LiteralPath $LiteralPath -Force -ErrorAction Stop
+            if($item.PSIsContainer -or ($item.Attributes -band [IO.FileAttributes]::ReparsePoint) -or [long]$item.Length -gt $MaximumBytes){throw "Unsafe or oversized text file: $LiteralPath"}
+            $bytes=[IO.File]::ReadAllBytes($item.FullName)
+            try{if($bytes.Length -ne [long]$item.Length){throw "Text file changed while reading: $LiteralPath"};[Text.UTF8Encoding]::new($false,$true).GetString($bytes)}finally{if($bytes.Length){[Array]::Clear($bytes,0,$bytes.Length)}}
           }
-          $root = [IO.Path]::GetFullPath('./candidate')
-          $manifestPath = Join-Path $root 'promotion-manifest.json'
-          $reportPath = Join-Path $root 'windows-validation-report.json'
-          $manifest = Read-BoundedUtf8Text -LiteralPath $manifestPath -MaximumBytes 1048576 | ConvertFrom-Json -Depth 20
-          if ([string]$manifest.schema -ne 'wincare.promotion-manifest/v1') { throw 'Unsupported promotion manifest.' }
-          if ([string]$manifest.sourceCommit -ne $env:EXPECTED_COMMIT) { throw 'Promotion manifest source commit mismatch.' }
-          if ([string]$manifest.validationReport.status -ne 'passed') { throw 'Promotion manifest does not record passed Windows validation.' }
-          $reportHash = (Get-FileHash -LiteralPath $reportPath -Algorithm SHA256).Hash.ToLowerInvariant()
-          if ($reportHash -ne [string]$manifest.validationReport.sha256) { throw 'Windows validation report hash mismatch.' }
-          $records = @($manifest.files)
-          if ($records.Count -lt 1 -or $records.Count -gt 100) { throw 'Promotion manifest asset count is outside 1..100.' }
-          $expected = [Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
-          $promotedBytes = 0L
-          foreach ($record in $records) {
-            $relative = [string]$record.path
-            if ($relative -notmatch '^release/[A-Za-z0-9][A-Za-z0-9._+-]*$' -or -not $expected.Add($relative)) {
-              throw "Unsafe or duplicate promotion path: $relative"
-            }
-            $path = Join-Path $root $relative
-            $item = Get-Item -LiteralPath $path -Force -ErrorAction Stop
-            if ($item.Attributes -band [IO.FileAttributes]::ReparsePoint) { throw "Promotion file is a reparse point: $relative" }
-            if ([long]$record.bytes -lt 0 -or [long]$record.bytes -gt 2147483648L) { throw "Promotion record size is invalid: $relative" }
-            $promotedBytes += [long]$record.bytes
-            if ($promotedBytes -gt 4294967296L) { throw 'Promoted assets exceed 4 GiB in aggregate.' }
-            if ([long]$item.Length -ne [long]$record.bytes) { throw "Promotion size mismatch: $relative" }
-            if ([string]$record.sha256 -notmatch '^[0-9a-f]{64}$' -or (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash.ToLowerInvariant() -ne [string]$record.sha256) {
-              throw "Promotion hash mismatch: $relative"
-            }
-          }
-          $releaseRoot = Join-Path $root 'release'
-          $allReleaseEntries = @(Get-ChildItem -LiteralPath $releaseRoot -Force -ErrorAction Stop)
-          $unsafeEntries = @($allReleaseEntries | Where-Object { $_.PSIsContainer -or ($_.Attributes -band [IO.FileAttributes]::ReparsePoint) })
-          if ($unsafeEntries.Count) { throw "Promoted release contains unsafe entries: $($unsafeEntries.Name -join ',')" }
-          $actual = @($allReleaseEntries | ForEach-Object { 'release/' + $_.Name })
-          $extra = @($actual | Where-Object { -not $expected.Contains($_) })
-          $missing = @($expected | Where-Object { $_ -notin $actual })
-          if ($extra.Count -or $missing.Count) { throw "Promotion membership mismatch: extra=$($extra -join ','); missing=$($missing -join ',')" }
-          $receipt = Get-ChildItem -LiteralPath (Join-Path $root 'release') -Filter 'WinCare-*-release-receipt.json' -File
-          if (@($receipt).Count -ne 1) { throw 'Expected exactly one release receipt.' }
-          $receiptValue = Read-BoundedUtf8Text -LiteralPath $receipt.FullName -MaximumBytes 1048576 | ConvertFrom-Json -Depth 50
-          $version = [string]$receiptValue.release
-          if ($version -notmatch '^\d+\.\d+\.\d+(?:[-+][A-Za-z0-9.-]+)?$') { throw 'Release receipt contains an invalid version.' }
-          $package = Join-Path $root "release/WinCare-$version.zip"
-          $sidecar = "$package.sha256"
-          if (-not (Test-Path -LiteralPath $package -PathType Leaf) -or -not (Test-Path -LiteralPath $sidecar -PathType Leaf)) { throw 'Package or checksum sidecar is missing.' }
-          $sidecarText = (Read-BoundedUtf8Text -LiteralPath $sidecar -MaximumBytes 4096).Trim()
-          if ($sidecarText -notmatch '^([0-9a-fA-F]{64})(?:\s+\*?[^\r\n]+)?$') { throw 'Release checksum sidecar is malformed.' }
-          $expectedPackageHash = $Matches[1].ToLowerInvariant()
-          if ((Get-FileHash -LiteralPath $package -Algorithm SHA256).Hash.ToLowerInvariant() -ne $expectedPackageHash) { throw 'Release package checksum mismatch.' }
-          if ('${{ github.event_name }}' -eq 'push' -and '${{ github.ref_name }}' -ne "v$version") {
-            throw "Tag/version mismatch: tag=${{ github.ref_name }} module=v$version"
-          }
-          "version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
-          "package=$package" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
-          "release_dir=$(Join-Path $root 'release')" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
-      - name: Attest exact release package
+          $root=[IO.Path]::GetFullPath('./candidate');$manifestPath=Join-Path $root 'promotion-manifest.json';$reportPath=Join-Path $root 'windows-validation-report.json'
+          $manifest=Read-BoundedUtf8Text $manifestPath 1048576|ConvertFrom-Json -Depth 20
+          if([string]$manifest.schema -ne 'wincare.promotion-manifest/v2'){throw 'Unsupported promotion manifest.'}
+          if([string]$manifest.sourceCommit -ne $env:EXPECTED_COMMIT){throw 'Promotion source commit mismatch.'}
+          if([string]$manifest.validationReport.status -ne 'passed'){throw 'Promotion validation status is not passed.'}
+          if((Get-FileHash -LiteralPath $reportPath -Algorithm SHA256).Hash.ToLowerInvariant() -ne [string]$manifest.validationReport.sha256){throw 'Validation report hash mismatch.'}
+          $release=Join-Path $root 'release';$records=@($manifest.files)
+          if($records.Count -ne 11){throw 'Promotion manifest must contain exactly eleven release assets.'}
+          $expected=[Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
+          foreach($record in $records){$relative=[string]$record.path;if($relative -notmatch '^release/[A-Za-z0-9][A-Za-z0-9._+-]*$' -or -not $expected.Add($relative)){throw "Unsafe or duplicate promotion path: $relative"};$path=Join-Path $root $relative;$item=Get-Item -LiteralPath $path -Force -ErrorAction Stop;if($item.PSIsContainer -or ($item.Attributes -band [IO.FileAttributes]::ReparsePoint)){throw "Unsafe promotion asset: $relative"};if([long]$item.Length -ne [long]$record.bytes){throw "Promotion size mismatch: $relative"};if((Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash.ToLowerInvariant() -ne [string]$record.sha256){throw "Promotion hash mismatch: $relative"}}
+          $actual=@(Get-ChildItem -LiteralPath $release -File -Force|ForEach-Object{'release/'+$_.Name})
+          if(@($actual|Where-Object{-not $expected.Contains($_)}).Count -or @($expected|Where-Object{$_ -notin $actual}).Count){throw 'Promotion asset membership mismatch.'}
+          $version=[string]$manifest.version
+          if($env:WINCARE_EVENT_NAME -eq 'push' -and $env:WINCARE_REF_NAME -ne "v$version"){throw "Tag/version mismatch: $env:WINCARE_REF_NAME vs v$version"}
+          $package=Join-Path $release "WinCare-$version.zip"
+          "version=$version"|Out-File $env:GITHUB_OUTPUT -Append
+          "package=$package"|Out-File $env:GITHUB_OUTPUT -Append
+          "release_dir=$release"|Out-File $env:GITHUB_OUTPUT -Append
+          Write-Host "Promotion verification passed for version $version and $($records.Count) exact assets."
+          Add-Content $env:GITHUB_STEP_SUMMARY "Promotion verification passed for version **$version**, commit ``$env:EXPECTED_COMMIT``, and **$($records.Count)** exact assets.`n"
+      - name: Attest all exact release assets
         uses: actions/attest@f7c74d28b9d84cb8768d0b8ca14a4bac6ef463e6 # v4.2.0
         with:
-          subject-path: ${{ steps.verify.outputs.package }}
+          subject-path: ${{ steps.verify.outputs.release_dir }}/*
       - name: Publish exact validated assets
         shell: pwsh
         env:
@@ -198,22 +219,17 @@ jobs:
           GH_REPO: ${{ github.repository }}
           SOURCE_COMMIT: ${{ github.sha }}
         run: |
-          $version = '${{ steps.verify.outputs.version }}'
-          $releaseDirectory = '${{ steps.verify.outputs.release_dir }}'
-          $tag = if ('${{ github.event_name }}' -eq 'push') { '${{ github.ref_name }}' } else { "v$version" }
-          $candidateRoot = Split-Path -Parent $releaseDirectory
-          $assets = @(
-            @(Get-ChildItem -LiteralPath $releaseDirectory -File -Force | Sort-Object Name | ForEach-Object FullName)
-            (Join-Path $candidateRoot 'windows-validation-report.json')
-            (Join-Path $candidateRoot 'promotion-manifest.json')
-          )
-          if ($assets.Count -lt 3) { throw 'Validated release assets or provenance evidence are missing.' }
+          $ErrorActionPreference='Stop'
+          $version='${{ steps.verify.outputs.version }}';$releaseDirectory='${{ steps.verify.outputs.release_dir }}'
+          $tag=if($env:WINCARE_EVENT_NAME -eq 'push'){$env:WINCARE_REF_NAME}else{"v$version"}
+          $candidateRoot=Split-Path -Parent $releaseDirectory
+          $assets=@(@(Get-ChildItem -LiteralPath $releaseDirectory -File -Force|Sort-Object Name|ForEach-Object FullName),(Join-Path $candidateRoot 'windows-validation-report.json'),(Join-Path $candidateRoot 'promotion-manifest.json'))
+          Write-Host "Publishing tag=$tag version=$version sourceCommit=$env:SOURCE_COMMIT assetCount=$($assets.Count)"
+          foreach($asset in $assets){$item=Get-Item -LiteralPath $asset -Force;Write-Host "asset=$($item.Name) bytes=$($item.Length) sha256=$((Get-FileHash -LiteralPath $item.FullName -Algorithm SHA256).Hash.ToLowerInvariant())"}
           & gh release view $tag *> $null
-          if ($LASTEXITCODE -eq 0) { throw "Release $tag already exists; published version bytes are immutable." }
-          $arguments = @('release','create',$tag) + $assets + @(
-            '--title', "WinCare v$version",
-            '--notes', 'Exact-byte Windows-validated release. Deterministic archive verification, SBOM, checksums, native source provenance, validation evidence, and attestations are attached.'
-          )
-          if ('${{ github.event_name }}' -eq 'push') { $arguments += '--verify-tag' } else { $arguments += @('--target',$env:SOURCE_COMMIT) }
+          if($LASTEXITCODE -eq 0){throw "Release $tag already exists; published version bytes are immutable."}
+          $arguments=@('release','create',$tag)+$assets+@('--title',"WinCare v$version",'--notes','Exact-byte Windows-validated standalone release with v3 receipts, SBOM, checksums, native provenance, lifecycle evidence, diagnostic indexes, and attestations.')
+          if($env:WINCARE_EVENT_NAME -eq 'push'){$arguments+='--verify-tag'}else{$arguments+=@('--target',$env:SOURCE_COMMIT)}
           & gh @arguments
-          if ($LASTEXITCODE -ne 0) { throw "GitHub release creation failed with exit code $LASTEXITCODE." }
+          if($LASTEXITCODE -ne 0){throw "GitHub release creation failed with exit code $LASTEXITCODE."}
+          Add-Content $env:GITHUB_STEP_SUMMARY "Published **$tag** with **$($assets.Count)** pre-validated files. No bytes were rebuilt in the promotion job.`n"

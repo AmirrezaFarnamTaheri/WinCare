@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Stream-validate and optionally extract a WinCare release ZIP safely."""
+"""Stream-validate and optionally extract WinCare v2/v3 release ZIPs safely."""
 from __future__ import annotations
 
 import argparse
@@ -14,9 +14,9 @@ import uuid
 import zipfile
 from pathlib import Path, PurePosixPath
 
-MAX_MEMBERS = 5000
-MAX_MEMBER_BYTES = 512 * 1024 * 1024
-MAX_TOTAL_BYTES = 2 * 1024 * 1024 * 1024
+MAX_MEMBERS = 25_000
+MAX_MEMBER_BYTES = 1024 * 1024 * 1024
+MAX_TOTAL_BYTES = 4 * 1024 * 1024 * 1024
 MAX_RATIO = 250
 MAX_MANIFEST_BYTES = 16 * 1024 * 1024
 MAX_SBOM_BYTES = 64 * 1024 * 1024
@@ -24,21 +24,31 @@ MAX_RECEIPT_BYTES = 4 * 1024 * 1024
 COPY_CHUNK_BYTES = 1024 * 1024
 MANIFEST_RE = re.compile(r"^([0-9a-f]{64})  (.+)$")
 ROOT_RE = re.compile(r"WinCare-\d+\.\d+\.\d+(?:[-+][A-Za-z0-9.-]+)?")
+V3_SCHEMA = "wincare.build.receipt/v3"
+V3_EXECUTABLES = {"WinCare.exe", "WinCare-GUI.exe", "WinCare-TUI.exe"}
+WINDOWS_RESERVED = {
+    "con", "prn", "aux", "nul",
+    *(f"com{i}" for i in range(1, 10)),
+    *(f"lpt{i}" for i in range(1, 10)),
+}
 
 
 def sha256_file(path: Path) -> str:
+    """Execute the sha256 file operation with validated inputs."""
     digest = hashlib.sha256()
-    with path.open("rb") as stream:
+    with path.open("rb", buffering=0) as stream:
         for chunk in iter(lambda: stream.read(COPY_CHUNK_BYTES), b""):
             digest.update(chunk)
     return digest.hexdigest()
 
 
 def tree_hash(files: dict[str, bytes]) -> str:
+    """Execute the tree hash operation with validated inputs."""
     return tree_hash_digests({name: hashlib.sha256(data).hexdigest() for name, data in files.items()})
 
 
 def tree_hash_digests(digests: dict[str, str]) -> str:
+    """Execute the tree hash digests operation with validated inputs."""
     result = hashlib.sha256()
     for name in sorted(digests, key=str.casefold):
         result.update(name.encode("utf-8"))
@@ -48,12 +58,38 @@ def tree_hash_digests(digests: dict[str, str]) -> str:
     return result.hexdigest()
 
 
-def read_member_bounded(
-    archive: zipfile.ZipFile,
-    info: zipfile.ZipInfo,
-    maximum_bytes: int,
-) -> bytes:
-    if info.file_size > maximum_bytes:
+def _safe_segment(segment: str) -> None:
+    """Execute the safe segment operation with validated inputs."""
+    if not segment or segment in {".", ".."}:
+        raise ValueError(f"Unsafe member path segment: {segment!r}")
+    if segment[-1] in {" ", "."}:
+        raise ValueError(f"Windows-ambiguous member path segment: {segment!r}")
+    if any(ord(char) < 32 or char in '<>:"|?*' for char in segment):
+        raise ValueError(f"Unsupported member path character in: {segment!r}")
+    if segment.split(".", 1)[0].casefold() in WINDOWS_RESERVED:
+        raise ValueError(f"Windows-reserved member path segment: {segment!r}")
+
+
+def normalize_member(name: str, *, allow_directory: bool = True) -> tuple[str, bool]:
+    """Execute the normalize member operation with validated inputs."""
+    if not name or "\x00" in name or "\\" in name:
+        raise ValueError(f"Unsafe member path: {name}")
+    is_directory = name.endswith("/")
+    if is_directory and not allow_directory:
+        raise ValueError(f"Explicit directory member is not expected: {name}")
+    candidate = name[:-1] if is_directory else name
+    pure = PurePosixPath(candidate)
+    if pure.is_absolute() or not pure.parts or any(part in {"", ".", ".."} for part in pure.parts):
+        raise ValueError(f"Unsafe member path: {name}")
+    for part in pure.parts:
+        _safe_segment(part)
+    normalized = "/".join(pure.parts)
+    return normalized + ("/" if is_directory else ""), is_directory
+
+
+def read_member_bounded(archive: zipfile.ZipFile, info: zipfile.ZipInfo, maximum_bytes: int) -> bytes:
+    """Execute the read member bounded operation with validated inputs."""
+    if info.file_size < 0 or info.file_size > maximum_bytes:
         raise ValueError(f"Archive metadata member exceeds {maximum_bytes} bytes: {info.filename}")
     data = bytearray()
     with archive.open(info, "r") as stream:
@@ -73,6 +109,7 @@ def read_member_bounded(
 
 
 def hash_member(archive: zipfile.ZipFile, info: zipfile.ZipInfo) -> str:
+    """Execute the hash member operation with validated inputs."""
     digest = hashlib.sha256()
     observed = 0
     with archive.open(info, "r") as stream:
@@ -93,29 +130,79 @@ def hash_member(archive: zipfile.ZipFile, info: zipfile.ZipInfo) -> str:
 
 
 def parse_manifest(data: bytes) -> dict[str, str]:
+    """Execute the parse manifest operation with validated inputs."""
+    try:
+        lines = data.decode("ascii").splitlines()
+    except UnicodeDecodeError as error:
+        raise ValueError("Release manifest is not ASCII.") from error
     expected: dict[str, str] = {}
     folded: set[str] = set()
-    for line in data.decode("ascii").splitlines():
+    for line in lines:
         match = MANIFEST_RE.fullmatch(line)
         if not match:
             raise ValueError(f"Malformed manifest line: {line!r}")
         digest, name = match.groups()
-        pure = PurePosixPath(name)
-        if pure.is_absolute() or not pure.parts or ".." in pure.parts or any(part in {"", "."} for part in pure.parts):
-            raise ValueError(f"Unsafe manifest path: {name}")
-        if name in expected or name.casefold() in folded:
+        normalized, is_directory = normalize_member(name)
+        if is_directory:
+            raise ValueError(f"Manifest identifies a directory: {name}")
+        if normalized in expected or normalized.casefold() in folded:
             raise ValueError(f"Duplicate/case-colliding manifest path: {name}")
-        expected[name] = digest
-        folded.add(name.casefold())
+        expected[normalized] = digest
+        folded.add(normalized.casefold())
+    if not expected:
+        raise ValueError("Release manifest is empty.")
     return expected
 
 
+def _validate_sbom(archive: zipfile.ZipFile, relative_infos: dict[str, zipfile.ZipInfo], actual_names: set[str], relative_hashes: dict[str, str], require_hashes: bool, errors: list[str]) -> None:
+    """Execute the validate sbom operation with validated inputs."""
+    try:
+        info = relative_infos.get("SBOM.spdx.json")
+        if info is None:
+            raise ValueError("SBOM member is missing.")
+        value = json.loads(read_member_bounded(archive, info, MAX_SBOM_BYTES).decode("utf-8"))
+        if value.get("spdxVersion") != "SPDX-2.3":
+            errors.append("SBOM is not SPDX-2.3.")
+        records = value.get("files", [])
+        sbom_files: dict[str, str | None] = {}
+        for item in records:
+            if not isinstance(item, dict):
+                continue
+            name = str(item.get("fileName", "")).removeprefix("./")
+            if not name:
+                continue
+            normalized, is_directory = normalize_member(name)
+            if is_directory or normalized.casefold() in {key.casefold() for key in sbom_files}:
+                raise ValueError(f"Duplicate or invalid SBOM file path: {name}")
+            hashes = [
+                str(check.get("checksumValue", "")).lower()
+                for check in item.get("checksums", [])
+                if isinstance(check, dict) and check.get("algorithm") == "SHA256"
+            ]
+            sbom_files[normalized] = hashes[0] if len(hashes) == 1 and re.fullmatch(r"[0-9a-f]{64}", hashes[0]) else None
+        source_names = actual_names - {"SBOM.spdx.json", "BUILD-RECEIPT.json"}
+        if not source_names.issubset(sbom_files):
+            errors.append(f"SBOM omits source files: {sorted(source_names-set(sbom_files))[:20]}")
+        for name in sorted(source_names & set(sbom_files), key=str.casefold):
+            observed = relative_hashes.get(name)
+            declared = sbom_files[name]
+            if declared is None:
+                if require_hashes:
+                    errors.append(f"SBOM checksum is missing or malformed: {name}")
+            elif observed is not None and declared != observed:
+                errors.append(f"SBOM checksum mismatch: {name}")
+    except Exception as error:
+        errors.append(f"Invalid SBOM: {error}")
+
+
 def validate(path: Path) -> dict[str, object]:
+    """Execute the validate operation with validated inputs."""
     errors: list[str] = []
     warnings: list[str] = []
     member_count = 0
     expanded_bytes = 0
     profile: object = None
+    archive_sha256 = ""
     if not path.is_file():
         return {"status": "failed", "errors": [f"Archive does not exist: {path}"]}
     if path.is_symlink():
@@ -132,13 +219,10 @@ def validate(path: Path) -> dict[str, object]:
             roots: set[str] = set()
             safe_infos: dict[str, zipfile.ZipInfo] = {}
             for info in infos:
-                name = info.filename.replace("\\", "/")
-                pure = PurePosixPath(name)
-                unsafe = pure.is_absolute() or not pure.parts or ".." in pure.parts or any(
-                    part in {"", "."} for part in pure.parts
-                )
-                if unsafe:
-                    errors.append(f"Unsafe member path: {name}")
+                try:
+                    name, is_directory = normalize_member(info.filename)
+                except ValueError as error:
+                    errors.append(str(error))
                     continue
                 if name in names:
                     errors.append(f"Duplicate member: {name}")
@@ -146,16 +230,19 @@ def validate(path: Path) -> dict[str, object]:
                     errors.append(f"Case-colliding member: {name}")
                 names.add(name)
                 folded.add(name.casefold())
-                roots.add(pure.parts[0])
+                roots.add(name.rstrip("/").split("/", 1)[0])
                 mode = (info.external_attr >> 16) & 0xFFFF
-                if stat.S_ISLNK(mode):
+                file_type = stat.S_IFMT(mode)
+                if file_type == stat.S_IFLNK:
                     errors.append(f"Symbolic link member: {name}")
-                if info.is_dir() or name.endswith("/"):
+                if is_directory or info.is_dir():
                     errors.append(f"Explicit directory member is not expected: {name}")
                     continue
-                if info.file_size > MAX_MEMBER_BYTES:
+                if file_type not in {0, stat.S_IFREG}:
+                    errors.append(f"Non-regular member: {name}")
+                if info.file_size < 0 or info.file_size > MAX_MEMBER_BYTES:
                     errors.append(f"Oversized member: {name}")
-                expanded_bytes += info.file_size
+                expanded_bytes += max(0, info.file_size)
                 ratio = info.file_size / max(1, info.compress_size)
                 if info.file_size > 1024 * 1024 and ratio > MAX_RATIO:
                     errors.append(f"Suspicious compression ratio: {name}")
@@ -167,18 +254,14 @@ def validate(path: Path) -> dict[str, object]:
             root = next(iter(roots), "")
             if not ROOT_RE.fullmatch(root):
                 errors.append(f"Unexpected top-level directory: {root}")
-
             relative_infos = {
                 name[len(root) + 1 :]: info
                 for name, info in safe_infos.items()
                 if root and name.startswith(root + "/")
             }
             required = {
-                "RELEASE-MANIFEST.sha256",
-                "SBOM.spdx.json",
-                "BUILD-RECEIPT.json",
-                "WinCare.ps1",
-                "src/WinCare/WinCare.psd1",
+                "RELEASE-MANIFEST.sha256", "SBOM.spdx.json", "BUILD-RECEIPT.json",
+                "WinCare.ps1", "src/WinCare/WinCare.psd1",
             }
             missing_required = sorted(required - relative_infos.keys())
             if missing_required:
@@ -191,7 +274,6 @@ def validate(path: Path) -> dict[str, object]:
                     expected = parse_manifest(read_member_bounded(archive, manifest_info, MAX_MANIFEST_BYTES))
                 except Exception as error:
                     errors.append(f"Invalid release manifest: {error}")
-
             relative_hashes: dict[str, str] = {}
             if not errors:
                 for name in sorted(relative_infos, key=str.casefold):
@@ -200,39 +282,32 @@ def validate(path: Path) -> dict[str, object]:
             if expected and set(expected) != actual_names:
                 errors.append(
                     "Manifest membership mismatch: "
-                    f"missing={sorted(actual_names-set(expected))} "
-                    f"extra={sorted(set(expected)-actual_names)}"
+                    f"missing={sorted(actual_names-set(expected))} extra={sorted(set(expected)-actual_names)}"
                 )
             for name, digest in expected.items():
                 observed = relative_hashes.get(name)
                 if observed is not None and observed != digest:
                     errors.append(f"Manifest hash mismatch: {name}")
 
+            require_sbom_hashes = True
             try:
-                sbom_info = relative_infos.get("SBOM.spdx.json")
-                if sbom_info is None:
-                    raise ValueError("SBOM member is missing.")
-                sbom = json.loads(read_member_bounded(archive, sbom_info, MAX_SBOM_BYTES).decode("utf-8"))
-                if sbom.get("spdxVersion") != "SPDX-2.3":
-                    errors.append("SBOM is not SPDX-2.3.")
-                sbom_files = {
-                    item.get("fileName", "").removeprefix("./")
-                    for item in sbom.get("files", [])
-                    if isinstance(item, dict)
-                }
-                source_names = actual_names - {"SBOM.spdx.json", "BUILD-RECEIPT.json"}
-                if not source_names.issubset(sbom_files):
-                    errors.append(f"SBOM omits source files: {sorted(source_names-sbom_files)[:20]}")
-            except Exception as error:
-                errors.append(f"Invalid SBOM: {error}")
+                receipt_preview_info = relative_infos.get("BUILD-RECEIPT.json")
+                if receipt_preview_info is not None:
+                    receipt_preview = json.loads(read_member_bounded(archive, receipt_preview_info, MAX_RECEIPT_BYTES).decode("utf-8"))
+                    if isinstance(receipt_preview, dict):
+                        require_sbom_hashes = (
+                            receipt_preview.get("packageProfile") == "production"
+                            or receipt_preview.get("schema") == V3_SCHEMA
+                        )
+            except (UnicodeDecodeError, json.JSONDecodeError, ValueError):
+                require_sbom_hashes = True
+            _validate_sbom(archive, relative_infos, actual_names, relative_hashes, require_sbom_hashes, errors)
 
             try:
                 receipt_info = relative_infos.get("BUILD-RECEIPT.json")
                 if receipt_info is None:
                     raise ValueError("Build receipt member is missing.")
-                receipt = json.loads(
-                    read_member_bounded(archive, receipt_info, MAX_RECEIPT_BYTES).decode("utf-8")
-                )
+                receipt = json.loads(read_member_bounded(archive, receipt_info, MAX_RECEIPT_BYTES).decode("utf-8"))
                 version = receipt.get("version")
                 if root != f"WinCare-{version}":
                     errors.append("Build receipt version does not match archive root.")
@@ -243,18 +318,22 @@ def validate(path: Path) -> dict[str, object]:
                 if profile == "production":
                     if source_dirty:
                         errors.append("Production archive was built from a dirty source state.")
-                    forbidden_prefixes = (
-                        "tests/", "tools/", "analysis/", ".github/", "src/WinCare/Native/",
-                    )
+                    forbidden_prefixes = ("tests/", "tools/", "analysis/", ".github/", "src/WinCare/Native/")
                     forbidden = sorted(name for name in relative_infos if name.startswith(forbidden_prefixes))
                     if forbidden:
                         errors.append(f"Production archive contains development-only members: {forbidden[:20]}")
-                    required_native = {
-                        "bin/WinCare.Native.dll",
-                        "bin/WinCare.Launcher.exe",
-                        "bin/WinCare.TuiLauncher.exe",
-                        "bin/WinCare.Native.build.json",
-                    }
+                    schema = receipt.get("schema")
+                    required_native = {"bin/WinCare.Native.dll", "bin/WinCare.Native.build.json"}
+                    if schema == V3_SCHEMA:
+                        required_native |= V3_EXECUTABLES
+                        legacy = sorted(
+                            name for name in relative_infos
+                            if PurePosixPath(name).name.casefold().startswith(("wincare.launcher.", "wincare.tuilauncher."))
+                        )
+                        if legacy:
+                            errors.append(f"Production v3 archive retains legacy launcher artifacts: {legacy}")
+                    else:
+                        required_native |= {"bin/WinCare.Launcher.exe", "bin/WinCare.TuiLauncher.exe"}
                     missing_native = sorted(required_native - set(relative_infos))
                     if missing_native:
                         errors.append(f"Production archive omits required native artifacts: {missing_native}")
@@ -283,7 +362,7 @@ def validate(path: Path) -> dict[str, object]:
         errors.append(f"Archive validation failed: {error}")
 
     return {
-        "schema": "wincare.archive.validation/v2",
+        "schema": "wincare.archive.validation/v3",
         "archive": str(path.resolve()),
         "sha256": archive_sha256,
         "members": member_count,
@@ -296,6 +375,7 @@ def validate(path: Path) -> dict[str, object]:
 
 
 def extract_validated(path: Path, destination: Path) -> dict[str, object]:
+    """Execute the extract validated operation with validated inputs."""
     report = validate(path)
     if report["status"] != "passed":
         return report
@@ -315,22 +395,20 @@ def extract_validated(path: Path, destination: Path) -> dict[str, object]:
             infos = archive.infolist()
             if len(infos) > MAX_MEMBERS:
                 raise ValueError(f"Member count {len(infos)} exceeds {MAX_MEMBERS} during extraction.")
+            normalized_infos: list[tuple[zipfile.ZipInfo, str]] = []
             names: set[str] = set()
             folded: set[str] = set()
             total = 0
             for info in infos:
-                name = info.filename.replace("\\", "/")
-                pure = PurePosixPath(name)
-                if pure.is_absolute() or not pure.parts or ".." in pure.parts or any(part in {"", "."} for part in pure.parts):
-                    raise ValueError(f"Unsafe member path during extraction: {name}")
+                name, is_directory = normalize_member(info.filename, allow_directory=False)
                 if name in names or name.casefold() in folded:
                     raise ValueError(f"Duplicate or case-colliding member during extraction: {name}")
                 names.add(name)
                 folded.add(name.casefold())
                 mode = (info.external_attr >> 16) & 0xFFFF
-                if stat.S_ISLNK(mode) or info.is_dir() or name.endswith("/"):
+                if stat.S_IFMT(mode) not in {0, stat.S_IFREG} or is_directory or info.is_dir():
                     raise ValueError(f"Non-regular member during extraction: {name}")
-                if info.file_size > MAX_MEMBER_BYTES:
+                if info.file_size < 0 or info.file_size > MAX_MEMBER_BYTES:
                     raise ValueError(f"Oversized member during extraction: {name}")
                 total += info.file_size
                 if total > MAX_TOTAL_BYTES:
@@ -338,14 +416,14 @@ def extract_validated(path: Path, destination: Path) -> dict[str, object]:
                 ratio = info.file_size / max(1, info.compress_size)
                 if info.file_size > 1024 * 1024 and ratio > MAX_RATIO:
                     raise ValueError(f"Suspicious compression ratio during extraction: {name}")
-            manifest_info = next(
-                info for info in infos if info.filename.replace("\\", "/").endswith("/RELEASE-MANIFEST.sha256")
-            )
-            expected = parse_manifest(read_member_bounded(archive, manifest_info, MAX_MANIFEST_BYTES))
-            root_name = PurePosixPath(manifest_info.filename.replace("\\", "/")).parts[0]
+                normalized_infos.append((info, name))
+            manifest_pair = next((pair for pair in normalized_infos if pair[1].endswith("/RELEASE-MANIFEST.sha256")), None)
+            if manifest_pair is None:
+                raise ValueError("Release manifest is missing during extraction.")
+            expected = parse_manifest(read_member_bounded(archive, manifest_pair[0], MAX_MANIFEST_BYTES))
+            root_name = PurePosixPath(manifest_pair[1]).parts[0]
             observed_relative: set[str] = set()
-            for info in infos:
-                name = info.filename.replace("\\", "/")
+            for info, name in normalized_infos:
                 pure = PurePosixPath(name)
                 target = staging.joinpath(*pure.parts)
                 target_parent = target.parent
@@ -388,30 +466,19 @@ def extract_validated(path: Path, destination: Path) -> dict[str, object]:
         if observed_relative != set(expected):
             raise ValueError(
                 "Extracted manifest membership mismatch: "
-                f"missing={sorted(set(expected)-observed_relative)} "
-                f"extra={sorted(observed_relative-set(expected))}"
+                f"missing={sorted(set(expected)-observed_relative)} extra={sorted(observed_relative-set(expected))}"
             )
         if sha256_file(path) != archive_before:
             raise ValueError("Archive bytes changed during validated extraction.")
         os.replace(staging, destination)
-        return {
-            **report,
-            "extraction": {
-                "destination": str(destination),
-                "bytes": extracted,
-                "status": "passed",
-            },
-        }
+        return {**report, "extraction": {"destination": str(destination), "bytes": extracted, "status": "passed"}}
     except Exception as error:
         shutil.rmtree(staging, ignore_errors=True)
-        return {
-            **report,
-            "status": "failed",
-            "errors": sorted(set([*report["errors"], f"Validated extraction failed: {error}"])),
-        }
+        return {**report, "status": "failed", "errors": sorted(set([*report["errors"], f"Validated extraction failed: {error}"]))}
 
 
 def main() -> int:
+    """Run the command-line entrypoint and return its exit status."""
     parser = argparse.ArgumentParser()
     parser.add_argument("archive", type=Path)
     parser.add_argument("--output", type=Path)
