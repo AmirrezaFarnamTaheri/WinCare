@@ -1,6 +1,31 @@
 # WinCare capability matrix
 
-This matrix is authoritative for the current WinCare source tree. A capability is available only when its implementation and required local dependency are both present. `Get-WinCareCapabilityRegistry` reports the current machine state.
+This matrix is authoritative for the capability areas implemented in the current WinCare source tree. It does not assert that every capability is available on every machine.
+
+A capability is usable only when:
+
+1. its implementation is present in the closed source/module manifests;
+2. the local Windows mechanism or admitted optional dependency is available;
+3. policy, target identity, scope, and required authority permit the request;
+4. the capability can produce the evidence required by its contract.
+
+Inspect the current machine state with:
+
+```powershell
+Import-Module .\src\WinCare\WinCare.psd1 -Force
+Get-WinCareCapabilityRegistry
+```
+
+## Reading the matrix
+
+- **Implementation owner** identifies the layer responsible for the capability, not a blanket authority grant.
+- **Prerequisite** identifies the important local mechanism; providers may impose additional target-specific validation.
+- **Mutation** describes the maximum capability class. Individual routes may be observation-only or plan-only.
+- **Assurance behavior** describes the evidence and non-claims that prevent unavailable or incomplete behavior from being reported as success.
+
+Common runtime states include `Available`, `ReadOnly`, `Blocked`, `Unsupported`, and `Unknown`. See [Compatibility](Compatibility.md) for degradation behavior and [Commands](COMMANDS.md) for invocation patterns.
+
+## Matrix
 
 | Area | Capability | Implementation owner | Prerequisite | Mutation | Assurance behavior |
 |---|---|---|---|---|---|
@@ -32,6 +57,24 @@ This matrix is authoritative for the current WinCare source tree. A capability i
 | Native | Command-line, process-memory, PE/file, audio/display, security, launcher primitives | Source-built C#/.NET 8 | .NET 8 SDK at build time | Narrow OS operations | Exact source set, source-tree hash, artifacts, and toolchain provenance are release-gated |
 | Build | Deterministic packaging and independent archive verification | Python 3 | Python 3 | Generates artifacts | Streamed member verification, clean extraction, SBOM, receipt, checksums, and exact-byte promotion |
 
+## Capability groups for operators
+
+### Broadly available core
+
+The transaction engine, plans, policy, preview, journaling, receipts, and compensation infrastructure form the shared core. Specific Windows actions still depend on their provider and platform requirements.
+
+### Windows-provider capabilities
+
+Applications, Windows Update, servicing, Defender, firewall, storage, ETW, firmware, display, and other system capabilities depend on the corresponding Windows APIs, cmdlets, COM providers, edition, hardware, and session context.
+
+### Source-built compiled capabilities
+
+Static binary intelligence and other narrow primitives depend on release-gated .NET outputs built from the current source closure. A random or stale DLL is not equivalent to the expected native runtime.
+
+### Optional dependency-backed capabilities
+
+ONNX, ML-KEM/OpenSSL, WASI, eBPF, WireGuard, fleet, and cloud adapters require explicitly configured or admitted external mechanisms. WinCare does not silently download or install these dependencies.
+
 ## Explicitly not shipped
 
 - Rust FFI libraries or Go daemons without a demonstrated target requirement.
@@ -42,3 +85,22 @@ This matrix is authoritative for the current WinCare source tree. A capability i
 - Standards-compliant Raft consensus.
 - Packet desynchronization, censorship bypass, covert interception, unsigned-driver installation, or kernel patching.
 - A guaranteed security boundary for process-only validation.
+
+## Maintenance contract
+
+When adding or changing a capability, update this matrix in the same pull request when any of these change:
+
+- implementation owner;
+- prerequisite or compatibility behavior;
+- observation/plan/mutation authority;
+- evidence or postcondition behavior;
+- dependency admission;
+- explicit non-claim.
+
+Also update:
+
+- [Advanced Capabilities](Advanced-Capabilities.md) for dependency-gated or high-impact adapters;
+- [Compatibility](Compatibility.md) for absence/degradation behavior;
+- [Commands](COMMANDS.md) for operator-facing routes;
+- [Security](../SECURITY.md) for new trust or authority boundaries;
+- [Testing](Testing.md) and [Validation](../VALIDATION.md) for new evidence gates.
