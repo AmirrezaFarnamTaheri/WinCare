@@ -36,6 +36,11 @@ internal static class WinCareHost
     {
         try
         {
+            if (args.Any(IsHelpArgument))
+            {
+                PrintUsage();
+                return 0;
+            }
             var prepared = PreparePayload();
             var root = prepared.Root;
             var selfTest = args.Length > 0 && string.Equals(args[0], "--wincare-self-test", StringComparison.OrdinalIgnoreCase);
@@ -137,6 +142,19 @@ internal static class WinCareHost
     }
 #endif
 
+    private static bool IsHelpArgument(string argument)
+    {
+        return string.Equals(argument, "-?", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(argument, "--help", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static void PrintUsage()
+    {
+        Console.Out.WriteLine(
+            "Usage: WinCare[.exe] [-Command <name>] [-ArgumentsJson <json>] " +
+            "[-Theme <name>] [-Apply] [-Json] [-ReadOnly] [-Ascii] [-NoLogo]");
+    }
+
     private static readonly Dictionary<string, bool> EntrypointParameters = new(PathComparer)
     {
         ["NoLogo"] = false,
@@ -203,11 +221,6 @@ internal static class WinCareHost
         for (var index = 0; index < arguments.Count; index++)
         {
             var token = arguments[index];
-            if (token is "-?" or "--help")
-            {
-                command.Append(" -?");
-                continue;
-            }
             if (string.IsNullOrWhiteSpace(token) || !token.StartsWith("-", StringComparison.Ordinal))
                 throw new ArgumentException($"Unexpected positional standalone argument: {token}");
             var parameter = token.TrimStart('-');
@@ -304,7 +317,16 @@ internal static class WinCareHost
                     new UTF8Encoding(false));
                 if (!ValidateCache(staging, payloadHash, expected))
                     throw new InvalidDataException("Extracted WinCare payload failed verification.");
-                Directory.Move(staging, cache);
+                try
+                {
+                    Directory.Move(staging, cache);
+                }
+                catch (IOException) when (Directory.Exists(cache) && ValidateCache(cache, payloadHash, expected))
+                {
+                    DeleteTreeNoFollow(staging);
+                }
+                if (!ValidateCache(cache, payloadHash, expected))
+                    throw new InvalidDataException("Published WinCare payload cache failed verification.");
             }
             catch
             {

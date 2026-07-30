@@ -26,14 +26,17 @@ GENERATED = {"SBOM.spdx.json", "BUILD-RECEIPT.json", "RELEASE-MANIFEST.sha256"}
 
 
 def canonical_json(value: object) -> bytes:
+    """Execute the canonical json operation with validated inputs."""
     return (json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":")) + "\n").encode("utf-8")
 
 
 def pretty_json(value: object) -> bytes:
+    """Execute the pretty json operation with validated inputs."""
     return (json.dumps(value, ensure_ascii=False, indent=2, sort_keys=False) + "\n").encode("utf-8")
 
 
 def tree_hash(files: dict[str, bytes]) -> str:
+    """Execute the tree hash operation with validated inputs."""
     digest = hashlib.sha256()
     for name in sorted(files, key=str.casefold):
         digest.update(name.encode("utf-8"))
@@ -43,15 +46,17 @@ def tree_hash(files: dict[str, bytes]) -> str:
     return digest.hexdigest()
 
 
-def timestamp() -> tuple[str, tuple[int, int, int, int, int, int]]:
+def timestamp() -> tuple[str, tuple[int, int, int, int, int, int], int]:
+    """Execute the timestamp operation with validated inputs."""
     raw = max(int(os.environ.get("SOURCE_DATE_EPOCH", FIXED_EPOCH)), FIXED_EPOCH)
     value = dt.datetime.fromtimestamp(raw, dt.timezone.utc).replace(microsecond=0)
     second = value.second - (value.second % 2)
     created = value.isoformat().replace("+00:00", "Z")
-    return created, (value.year, value.month, value.day, value.hour, value.minute, second)
+    return created, (value.year, value.month, value.day, value.hour, value.minute, second), raw
 
 
 def make_sbom(version: str, created: str, files: dict[str, bytes]) -> dict[str, object]:
+    """Execute the make sbom operation with validated inputs."""
     package_id = "SPDXRef-Package-WinCare"
     entries: list[dict[str, object]] = []
     relationships: list[dict[str, str]] = [
@@ -98,10 +103,12 @@ def make_sbom(version: str, created: str, files: dict[str, bytes]) -> dict[str, 
 
 
 def release_manifest(files: dict[str, bytes]) -> bytes:
+    """Execute the release manifest operation with validated inputs."""
     return ("\n".join(f"{sha256(files[name])}  {name}" for name in sorted(files, key=str.casefold)) + "\n").encode("ascii")
 
 
 def write_zip(path: Path, root: str, files: dict[str, bytes], zip_time: tuple[int, int, int, int, int, int]) -> None:
+    """Execute the write zip operation with validated inputs."""
     path.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.NamedTemporaryFile(prefix=path.name + ".", suffix=".tmp", dir=path.parent, delete=False) as handle:
         temporary = Path(handle.name)
@@ -121,6 +128,7 @@ def write_zip(path: Path, root: str, files: dict[str, bytes], zip_time: tuple[in
 
 
 def read_json(files: dict[str, bytes], name: str) -> dict[str, object]:
+    """Execute the read json operation with validated inputs."""
     try:
         value = json.loads(files[name].decode("utf-8-sig"))
     except (KeyError, UnicodeDecodeError, json.JSONDecodeError) as error:
@@ -131,6 +139,7 @@ def read_json(files: dict[str, bytes], name: str) -> dict[str, object]:
 
 
 def read_regular_file(path: Path, maximum_bytes: int, label: str) -> bytes:
+    """Execute the read regular file operation with validated inputs."""
     if not path.is_file() or path.is_symlink():
         raise ValueError(f"{label} is missing or unsafe: {path.name}")
     before = path.stat(follow_symlinks=False)
@@ -144,6 +153,7 @@ def read_regular_file(path: Path, maximum_bytes: int, label: str) -> bytes:
 
 
 def finalize(core_archive: Path, executable_directory: Path, output_directory: Path) -> dict[str, object]:
+    """Execute the finalize operation with validated inputs."""
     root, core_files = parse_archive(core_archive)
     core_receipt = read_json(core_files, "BUILD-RECEIPT.json")
     if core_receipt.get("schema") not in {"wincare.build.receipt/v2", BUILD_SCHEMA}:
@@ -235,7 +245,7 @@ def finalize(core_archive: Path, executable_directory: Path, output_directory: P
     payload_manifest_sha256 = str(standalone_manifest.get("PayloadManifestSha256", "")).lower()
     if not re.fullmatch(r"[0-9a-f]{64}", payload_sha256) or not re.fullmatch(r"[0-9a-f]{64}", payload_manifest_sha256):
         raise ValueError("standalone build manifest payload identity is invalid")
-    created, zip_time = timestamp()
+    created, zip_time, effective_epoch = timestamp()
     package_hash = tree_hash(package_inputs)
     sbom = make_sbom(version, created, package_inputs)
     sbom_bytes = pretty_json(sbom)
@@ -267,7 +277,7 @@ def finalize(core_archive: Path, executable_directory: Path, output_directory: P
         },
         "reproducibility": {
             "ordering": "case-insensitive relative POSIX path",
-            "timestampEpoch": int(os.environ.get("SOURCE_DATE_EPOCH", FIXED_EPOCH)),
+            "timestampEpoch": effective_epoch,
             "compression": "deflate-9",
             "normalizedModes": "0755 executable content; 0644 other files",
         },
@@ -348,6 +358,7 @@ def finalize(core_archive: Path, executable_directory: Path, output_directory: P
 
 
 def main() -> int:
+    """Run the command-line entrypoint and return its exit status."""
     parser = argparse.ArgumentParser()
     parser.add_argument("core_archive", type=Path)
     parser.add_argument("executable_directory", type=Path)

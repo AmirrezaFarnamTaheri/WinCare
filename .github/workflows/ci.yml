@@ -15,6 +15,12 @@ concurrency:
 env:
   PYTHONUTF8: '1'
   PYTHONUNBUFFERED: '1'
+  WINCARE_EVENT_NAME: ${{ github.event_name }}
+  WINCARE_REF: ${{ github.ref }}
+  WINCARE_REF_NAME: ${{ github.ref_name }}
+  WINCARE_SHA: ${{ github.sha }}
+  WINCARE_RUN_ID: ${{ github.run_id }}
+  WINCARE_RUN_ATTEMPT: ${{ github.run_attempt }}
 
 jobs:
   evidence:
@@ -214,6 +220,8 @@ jobs:
         os: [windows-2022, windows-2025]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 100
+    env:
+      WINCARE_RUNNER_OS: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -233,15 +241,15 @@ jobs:
           $dotnet = (& dotnet --version).Trim()
           $python = (& python --version 2>&1 | Out-String).Trim()
           $context = [ordered]@{
-            schema='wincare.workflow.context/v1'; job='windows'; runner='${{ matrix.os }}'
-            event='${{ github.event_name }}'; ref='${{ github.ref }}'; sha='${{ github.sha }}'
-            runId='${{ github.run_id }}'; runAttempt='${{ github.run_attempt }}'
+            schema='wincare.workflow.context/v1'; job='windows'; runner=$env:WINCARE_RUNNER_OS
+            event=$env:WINCARE_EVENT_NAME; ref=$env:WINCARE_REF; sha=$env:WINCARE_SHA
+            runId=$env:WINCARE_RUN_ID; runAttempt=$env:WINCARE_RUN_ATTEMPT
             powershell=$PSVersionTable.PSVersion.ToString(); edition=$PSVersionTable.PSEdition
             dotnet=$dotnet; python=$python; os=[Environment]::OSVersion.VersionString
           }
           $context | ConvertTo-Json -Depth 8 | Set-Content ./artifacts/windows-validation/workflow/context.json -Encoding utf8NoBOM
           $context | ConvertTo-Json -Depth 8
-          "## Windows ${{ matrix.os }} context`n`n- Commit: ``${{ github.sha }}```n- PowerShell: ``$($context.powershell)```n- .NET SDK: ``$dotnet```n- Python: ``$python```n" | Add-Content $env:GITHUB_STEP_SUMMARY
+          "## Windows $env:WINCARE_RUNNER_OS context`n`n- Commit: ``$env:WINCARE_SHA```n- PowerShell: ``$($context.powershell)```n- .NET SDK: ``$dotnet```n- Python: ``$python```n" | Add-Content $env:GITHUB_STEP_SUMMARY
       - name: Install validation modules
         shell: pwsh
         run: |
@@ -273,10 +281,10 @@ jobs:
           $artifacts=@(Get-ChildItem -LiteralPath $root -File -Recurse -Force -ErrorAction SilentlyContinue | Sort-Object FullName | ForEach-Object {
             [ordered]@{path=[IO.Path]::GetRelativePath($root,$_.FullName).Replace('\','/');bytes=[long]$_.Length;sha256=(Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()}
           })
-          $diagnosis=[ordered]@{schema='wincare.workflow.diagnostics/v1';job='windows';runner='${{ matrix.os }}';stepOutcome='${{ steps.windows_validation.outcome }}';status=if('${{ steps.windows_validation.outcome }}' -eq 'success'){'passed'}else{'failed'};gates=@($records);artifacts=@($artifacts)}
+          $diagnosis=[ordered]@{schema='wincare.workflow.diagnostics/v1';job='windows';runner=$env:WINCARE_RUNNER_OS;stepOutcome='${{ steps.windows_validation.outcome }}';status=if('${{ steps.windows_validation.outcome }}' -eq 'success'){'passed'}else{'failed'};gates=@($records);artifacts=@($artifacts)}
           New-Item -ItemType Directory -Path (Join-Path $root 'workflow') -Force | Out-Null
           $diagnosis|ConvertTo-Json -Depth 16|Set-Content (Join-Path $root 'workflow/diagnostics-index.json') -Encoding utf8NoBOM
-          Add-Content $env:GITHUB_STEP_SUMMARY "## Windows ${{ matrix.os }} gate results`n"
+          Add-Content $env:GITHUB_STEP_SUMMARY "## Windows $env:WINCARE_RUNNER_OS gate results`n"
           if($records.Count){
             Add-Content $env:GITHUB_STEP_SUMMARY '| Gate | Status | Exit | Duration | stdout | stderr |'
             Add-Content $env:GITHUB_STEP_SUMMARY '|---|---:|---:|---:|---|---|'

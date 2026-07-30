@@ -29,10 +29,12 @@ WINDOWS_RESERVED = {
 
 
 def sha256(data: bytes) -> str:
+    """Execute the sha256 operation with validated inputs."""
     return hashlib.sha256(data).hexdigest()
 
 
 def sha256_file(path: Path, maximum_bytes: int = MAX_TOTAL_BYTES) -> str:
+    """Execute the sha256 file operation with validated inputs."""
     if not path.is_file() or path.is_symlink():
         raise ValueError(f"file is missing or unsafe: {path}")
     before = path.stat(follow_symlinks=False)
@@ -56,6 +58,7 @@ def sha256_file(path: Path, maximum_bytes: int = MAX_TOTAL_BYTES) -> str:
 
 
 def safe_segment(segment: str) -> None:
+    """Execute the safe segment operation with validated inputs."""
     if not segment or segment in {".", ".."}:
         raise ValueError(f"unsafe path segment: {segment!r}")
     if segment[-1] in {" ", "."}:
@@ -67,6 +70,7 @@ def safe_segment(segment: str) -> None:
 
 
 def normalize_member(name: str) -> tuple[str, bool]:
+    """Execute the normalize member operation with validated inputs."""
     if not name or "\x00" in name or "\\" in name:
         raise ValueError(f"unsafe ZIP member: {name!r}")
     is_directory = name.endswith("/")
@@ -81,6 +85,7 @@ def normalize_member(name: str) -> tuple[str, bool]:
 
 
 def is_regular(info: zipfile.ZipInfo, is_directory: bool) -> bool:
+    """Execute the is regular operation with validated inputs."""
     if info.create_system != 3:
         return True
     mode = (info.external_attr >> 16) & 0xFFFF
@@ -91,6 +96,7 @@ def is_regular(info: zipfile.ZipInfo, is_directory: bool) -> bool:
 
 
 def parse_archive(path: Path) -> tuple[str, dict[str, bytes]]:
+    """Execute the parse archive operation with validated inputs."""
     files: dict[str, bytes] = {}
     seen: set[str] = set()
     folded: set[str] = set()
@@ -142,6 +148,7 @@ def parse_archive(path: Path) -> tuple[str, dict[str, bytes]]:
 
 
 def parse_manifest(data: bytes) -> dict[str, str]:
+    """Execute the parse manifest operation with validated inputs."""
     try:
         text = data.decode("ascii")
     except UnicodeDecodeError as error:
@@ -166,6 +173,7 @@ def parse_manifest(data: bytes) -> dict[str, str]:
 
 
 def validate_pe(data: bytes, expected_subsystem: int) -> str | None:
+    """Execute the validate pe operation with validated inputs."""
     if len(data) < 20 * 1024 * 1024:
         return "standalone executable is unexpectedly small"
     if data[:2] != b"MZ" or len(data) < 0x40:
@@ -192,6 +200,7 @@ def validate_pe(data: bytes, expected_subsystem: int) -> str | None:
 
 
 def sbom_hashes(value: object) -> dict[str, str]:
+    """Execute the sbom hashes operation with validated inputs."""
     if not isinstance(value, dict) or value.get("spdxVersion") != "SPDX-2.3":
         raise ValueError("invalid SPDX document")
     records = value.get("files")
@@ -223,6 +232,7 @@ def sbom_hashes(value: object) -> dict[str, str]:
 
 
 def validate(path: Path, asset_directory: Path | None = None) -> dict[str, object]:
+    """Execute the validate operation with validated inputs."""
     errors: list[str] = []
     details: dict[str, object] = {}
     try:
@@ -293,6 +303,8 @@ def validate(path: Path, asset_directory: Path | None = None) -> dict[str, objec
         else:
             try:
                 standalone_manifest = json.loads(standalone_manifest_data.decode("utf-8-sig"))
+                if not isinstance(standalone_manifest, dict):
+                    raise ValueError("standalone build manifest root must be a JSON object")
                 manifest_schema_version = standalone_manifest.get("SchemaVersion")
                 if manifest_schema_version not in STANDALONE_SCHEMA_VERSIONS:
                     errors.append("invalid standalone build manifest schema")
@@ -325,7 +337,7 @@ def validate(path: Path, asset_directory: Path | None = None) -> dict[str, objec
                 expected_manifest_hash = standalone.get("manifestSha256") if isinstance(standalone, dict) else None
                 if expected_manifest_hash != sha256(standalone_manifest_data):
                     errors.append("standalone build manifest hash does not match build receipt")
-            except (UnicodeDecodeError, json.JSONDecodeError) as error:
+            except (UnicodeDecodeError, json.JSONDecodeError, ValueError) as error:
                 errors.append(f"standalone build manifest is invalid: {error}")
 
         try:
@@ -443,6 +455,7 @@ def validate(path: Path, asset_directory: Path | None = None) -> dict[str, objec
 
 
 def main() -> int:
+    """Run the command-line entrypoint and return its exit status."""
     parser = argparse.ArgumentParser()
     parser.add_argument("archive", type=Path)
     parser.add_argument("--asset-directory", type=Path)

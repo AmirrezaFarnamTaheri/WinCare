@@ -15,10 +15,35 @@ function Write-WinCareLifecyclePhase {
     if($env:GITHUB_ACTIONS -eq 'true' -and $Status -in @('passed','failed')){Write-Host '::endgroup::'}
 }
 
+function Initialize-WinCareLifecycleWorkRoot {
+    param([Parameter(Mandatory)][string]$Path)
+    $full=[IO.Path]::GetFullPath($Path)
+    $root=[IO.Path]::GetPathRoot($full)
+    $trimmed=$full.TrimEnd([IO.Path]::DirectorySeparatorChar,[IO.Path]::AltDirectorySeparatorChar)
+    $trimmedRoot=$root.TrimEnd([IO.Path]::DirectorySeparatorChar,[IO.Path]::AltDirectorySeparatorChar)
+    if([string]::IsNullOrWhiteSpace($trimmed) -or $trimmed -eq $trimmedRoot){throw "Unsafe lifecycle work root: $full"}
+    $cursor=$full
+    while($cursor){
+        if(Test-Path -LiteralPath $cursor){
+            $item=Get-Item -LiteralPath $cursor -Force -ErrorAction Stop
+            if($item.Attributes -band [IO.FileAttributes]::ReparsePoint){throw "Lifecycle work root traverses a reparse point: $cursor"}
+        }
+        $parent=[IO.Directory]::GetParent($cursor)
+        if($null -eq $parent -or $parent.FullName -eq $cursor){break}
+        $cursor=$parent.FullName
+    }
+    if(Test-Path -LiteralPath $full){
+        $item=Get-Item -LiteralPath $full -Force -ErrorAction Stop
+        if(!$item.PSIsContainer -or ($item.Attributes -band [IO.FileAttributes]::ReparsePoint)){throw "Unsafe lifecycle work root: $full"}
+        if(@(Get-ChildItem -LiteralPath $full -Force -ErrorAction Stop).Count){throw "Lifecycle work root must be absent or empty: $full"}
+    }else{
+        [void][IO.Directory]::CreateDirectory($full)
+    }
+    $full
+}
+
 $archive = (Resolve-Path -LiteralPath $ArchivePath -ErrorAction Stop).Path
-$work = [IO.Path]::GetFullPath($WorkRoot)
-if (Test-Path -LiteralPath $work) { Remove-Item -LiteralPath $work -Recurse -Force -ErrorAction Stop }
-New-Item -ItemType Directory -Path $work -ErrorAction Stop | Out-Null
+$work = Initialize-WinCareLifecycleWorkRoot $WorkRoot
 $extract = Join-Path $work 'extract'
 $destination = Join-Path $work 'installed[1]\WinCare'
 $shortcutRoot = Join-Path $work 'shortcuts[1]'

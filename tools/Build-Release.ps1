@@ -131,7 +131,7 @@ try {
 
     Enter-WinCareReleaseGroup 'verify-v3'
     $archive = Join-Path $outputPath "WinCare-$version.zip"
-    $validationPath = Join-Path $outputPath "WinCare-$version-validation-v3.json"
+    $validationPath = Join-Path $workRoot "WinCare-$version-validation-v3.json"
     $verify = Invoke-WinCareToolingProcess -Executable $python -Arguments @((Join-Path $PSScriptRoot 'verify_release_v3.py'),$archive,'--asset-directory',$outputPath) -TimeoutSeconds 600 -MaximumCapturedOutputBytes 16777216 -WorkingDirectory $rootPath -WriteCapturedOutput
     [IO.File]::WriteAllText($validationPath,[string]$verify.StandardOutput,[Text.UTF8Encoding]::new($false))
     if ($verify.ExitCode -ne 0) { throw 'Final v3 release verification failed.' }

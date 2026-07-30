@@ -8,6 +8,7 @@ import os
 import stat
 import tempfile
 import unittest
+import unittest.mock
 import zipfile
 from pathlib import Path
 
@@ -22,6 +23,7 @@ except ImportError:
 
 
 def zip_info(name: str) -> zipfile.ZipInfo:
+    """Execute the zip info operation with validated inputs."""
     info = zipfile.ZipInfo(name, date_time=(1980, 1, 1, 0, 0, 0))
     info.create_system = 3
     info.external_attr = (stat.S_IFREG | 0o644) << 16
@@ -31,6 +33,7 @@ def zip_info(name: str) -> zipfile.ZipInfo:
 
 @functools.lru_cache(maxsize=8)
 def fake_pe(subsystem: int, marker: int) -> bytes:
+    """Execute the fake pe operation with validated inputs."""
     data = bytearray(random.Random(marker).randbytes(20 * 1024 * 1024 + marker))
     data[:2] = b"MZ"
     pe_offset = 0x80
@@ -46,6 +49,7 @@ def fake_pe(subsystem: int, marker: int) -> bytes:
 
 
 def write_core(path: Path) -> None:
+    """Execute the write core operation with validated inputs."""
     files = {
         "src/WinCare/WinCare.psd1": b"@{ ModuleVersion = '1.2.3'; GUID = 'f43eb775-7d08-42ec-9888-8b1bd79e90a3' }\n",
         "src/WinCare/WinCare.psm1": b"function Start-WinCare {}\n",
@@ -75,6 +79,7 @@ def write_core(path: Path) -> None:
 
 
 def write_standalone_output(directory: Path) -> None:
+    """Execute the write standalone output operation with validated inputs."""
     records = []
     for index, (name, subsystem) in enumerate(verify_release_v3.EXPECTED_EXES.items(), 1):
         data = fake_pe(subsystem, index)
@@ -103,9 +108,13 @@ def write_standalone_output(directory: Path) -> None:
 
 class StandaloneReleaseTests(unittest.TestCase):
     def setUp(self) -> None:
-        os.environ["SOURCE_DATE_EPOCH"] = "315532800"
+        """Prepare isolated state for the current test case."""
+        patcher = unittest.mock.patch.dict(os.environ, {"SOURCE_DATE_EPOCH": "315532800"})
+        patcher.start()
+        self.addCleanup(patcher.stop)
 
     def test_payload_is_deterministic_and_filters_legacy_metadata(self) -> None:
+        """Verify payload is deterministic and filters legacy metadata."""
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             core = root / "core.zip"
@@ -123,6 +132,7 @@ class StandaloneReleaseTests(unittest.TestCase):
             self.assertFalse(any(name.endswith("build-receipt.json") for name in names))
 
     def test_payload_rejects_traversal_backslash_and_case_collisions(self) -> None:
+        """Verify payload rejects traversal backslash and case collisions."""
         bad_names = [
             ["WinCare-1/../escape.txt"],
             ["WinCare-1/dir\\file.txt"],
@@ -138,6 +148,7 @@ class StandaloneReleaseTests(unittest.TestCase):
                     prepare_standalone_payload.read_archive(path)
 
     def test_final_release_closes_legacy_graph_and_verifies(self) -> None:
+        """Verify final release closes legacy graph and verifies."""
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             core = root / "core.zip"
@@ -155,6 +166,7 @@ class StandaloneReleaseTests(unittest.TestCase):
             self.assertEqual(json.loads(files["BUILD-RECEIPT.json"])["schema"], "wincare.build.receipt/v3")
 
     def test_external_asset_tamper_is_rejected(self) -> None:
+        """Verify external asset tamper is rejected."""
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             core = root / "core.zip"
@@ -170,6 +182,7 @@ class StandaloneReleaseTests(unittest.TestCase):
             self.assertTrue(any("differs" in error for error in validation["errors"]))
 
     def test_verifier_rejects_case_variant_legacy_launcher(self) -> None:
+        """Verify verifier rejects case variant legacy launcher."""
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             core = root / "core.zip"
@@ -192,10 +205,12 @@ class StandaloneReleaseTests(unittest.TestCase):
             self.assertTrue(any("legacy launcher" in error for error in validation["errors"]))
 
     def test_verifier_rejects_wrong_pe_subsystem(self) -> None:
+        """Verify verifier rejects wrong pe subsystem."""
         error = verify_release_v3.validate_pe(fake_pe(2, 1), 3)
         self.assertIn("unexpected subsystem", error or "")
 
     def test_installer_wrappers_forward_only_bound_shouldprocess_parameters(self) -> None:
+        """Verify installer wrappers forward only bound shouldprocess parameters."""
         install = (ROOT / "Install-WinCare.ps1").read_text(encoding="utf-8")
         uninstall = (ROOT / "Uninstall-WinCare.ps1").read_text(encoding="utf-8")
         for source in (install, uninstall):
@@ -206,6 +221,7 @@ class StandaloneReleaseTests(unittest.TestCase):
         self.assertNotIn("Join-Path $Destination 'src\\WinCare\\Install", uninstall)
 
     def test_installer_module_closes_reviewed_failure_modes(self) -> None:
+        """Verify installer module closes reviewed failure modes."""
         install_root = ROOT / "src/WinCare/Install"
         module = "\n".join(
             path.read_text(encoding="utf-8")
@@ -233,6 +249,7 @@ class StandaloneReleaseTests(unittest.TestCase):
         self.assertIn("createdShortcutFolder", module)
 
     def test_payload_embedding_is_hash_bound_and_atomic(self) -> None:
+        """Verify payload embedding is hash bound and atomic."""
         props = (ROOT / "src/WinCare/Standalone/Directory.Build.props").read_text(encoding="utf-8")
         host = (ROOT / "src/WinCare/Standalone/WinCare.Host.cs").read_text(encoding="utf-8")
         entrypoint_host = (ROOT / "src/WinCare/Standalone/WinCare.EntryPoint.cs").read_text(encoding="utf-8")
@@ -261,6 +278,33 @@ class StandaloneReleaseTests(unittest.TestCase):
             source = (ROOT / entrypoint).read_text(encoding="utf-8")
             self.assertIn("WINCARE_STANDALONE_ROOT", source)
             self.assertIn("$entryRoot", source)
+
+    def test_remaining_review_hardening_contracts(self) -> None:
+        """Verify remaining review hardening contracts."""
+        release_workflow = (ROOT / ".github/workflows/release.yml").read_text(encoding="utf-8")
+        ci_workflow = (ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8")
+        host = (ROOT / "src/WinCare/Standalone/WinCare.Host.cs").read_text(encoding="utf-8")
+        build_release = (ROOT / "tools/Build-Release.ps1").read_text(encoding="utf-8")
+        lifecycle = (ROOT / "tools/Test-InstallationLifecycle.ps1").read_text(encoding="utf-8")
+        verifier = (ROOT / "tools/verify_release.py").read_text(encoding="utf-8")
+        verifier_v3 = (ROOT / "tools/verify_release_v3.py").read_text(encoding="utf-8")
+        self.assertIn("WINCARE_EVENT_NAME: ${{ github.event_name }}", release_workflow)
+        self.assertIn("WINCARE_RUNNER_OS: ${{ matrix.os }}", ci_workflow)
+        self.assertNotIn("event='${{ github.event_name }}'", release_workflow)
+        self.assertNotIn("runner='${{ matrix.os }}'", ci_workflow)
+        self.assertIn("args.Any(IsHelpArgument)", host)
+        self.assertNotIn('command.Append(" -?")', host)
+        self.assertIn("catch (IOException) when", host)
+        self.assertIn('$validationPath = Join-Path $workRoot', build_release)
+        self.assertIn("Initialize-WinCareLifecycleWorkRoot", lifecycle)
+        self.assertIn("SBOM checksum mismatch", verifier)
+        self.assertIn("standalone build manifest root must be a JSON object", verifier_v3)
+
+    def test_finalizer_reports_the_effective_clamped_epoch(self) -> None:
+        """Verify finalizer reports the effective clamped epoch."""
+        with unittest.mock.patch.dict(os.environ, {"SOURCE_DATE_EPOCH": "1"}):
+            _, _, effective_epoch = finalize_release.timestamp()
+        self.assertEqual(effective_epoch, finalize_release.FIXED_EPOCH)
 
 
 if __name__ == "__main__":

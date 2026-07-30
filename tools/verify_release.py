@@ -34,6 +34,7 @@ WINDOWS_RESERVED = {
 
 
 def sha256_file(path: Path) -> str:
+    """Execute the sha256 file operation with validated inputs."""
     digest = hashlib.sha256()
     with path.open("rb", buffering=0) as stream:
         for chunk in iter(lambda: stream.read(COPY_CHUNK_BYTES), b""):
@@ -42,10 +43,12 @@ def sha256_file(path: Path) -> str:
 
 
 def tree_hash(files: dict[str, bytes]) -> str:
+    """Execute the tree hash operation with validated inputs."""
     return tree_hash_digests({name: hashlib.sha256(data).hexdigest() for name, data in files.items()})
 
 
 def tree_hash_digests(digests: dict[str, str]) -> str:
+    """Execute the tree hash digests operation with validated inputs."""
     result = hashlib.sha256()
     for name in sorted(digests, key=str.casefold):
         result.update(name.encode("utf-8"))
@@ -56,6 +59,7 @@ def tree_hash_digests(digests: dict[str, str]) -> str:
 
 
 def _safe_segment(segment: str) -> None:
+    """Execute the safe segment operation with validated inputs."""
     if not segment or segment in {".", ".."}:
         raise ValueError(f"Unsafe member path segment: {segment!r}")
     if segment[-1] in {" ", "."}:
@@ -67,6 +71,7 @@ def _safe_segment(segment: str) -> None:
 
 
 def normalize_member(name: str, *, allow_directory: bool = True) -> tuple[str, bool]:
+    """Execute the normalize member operation with validated inputs."""
     if not name or "\x00" in name or "\\" in name:
         raise ValueError(f"Unsafe member path: {name}")
     is_directory = name.endswith("/")
@@ -83,6 +88,7 @@ def normalize_member(name: str, *, allow_directory: bool = True) -> tuple[str, b
 
 
 def read_member_bounded(archive: zipfile.ZipFile, info: zipfile.ZipInfo, maximum_bytes: int) -> bytes:
+    """Execute the read member bounded operation with validated inputs."""
     if info.file_size < 0 or info.file_size > maximum_bytes:
         raise ValueError(f"Archive metadata member exceeds {maximum_bytes} bytes: {info.filename}")
     data = bytearray()
@@ -103,6 +109,7 @@ def read_member_bounded(archive: zipfile.ZipFile, info: zipfile.ZipInfo, maximum
 
 
 def hash_member(archive: zipfile.ZipFile, info: zipfile.ZipInfo) -> str:
+    """Execute the hash member operation with validated inputs."""
     digest = hashlib.sha256()
     observed = 0
     with archive.open(info, "r") as stream:
@@ -123,6 +130,7 @@ def hash_member(archive: zipfile.ZipFile, info: zipfile.ZipInfo) -> str:
 
 
 def parse_manifest(data: bytes) -> dict[str, str]:
+    """Execute the parse manifest operation with validated inputs."""
     try:
         lines = data.decode("ascii").splitlines()
     except UnicodeDecodeError as error:
@@ -146,7 +154,8 @@ def parse_manifest(data: bytes) -> dict[str, str]:
     return expected
 
 
-def _validate_sbom(archive: zipfile.ZipFile, relative_infos: dict[str, zipfile.ZipInfo], actual_names: set[str], errors: list[str]) -> None:
+def _validate_sbom(archive: zipfile.ZipFile, relative_infos: dict[str, zipfile.ZipInfo], actual_names: set[str], relative_hashes: dict[str, str], require_hashes: bool, errors: list[str]) -> None:
+    """Execute the validate sbom operation with validated inputs."""
     try:
         info = relative_infos.get("SBOM.spdx.json")
         if info is None:
@@ -174,11 +183,20 @@ def _validate_sbom(archive: zipfile.ZipFile, relative_infos: dict[str, zipfile.Z
         source_names = actual_names - {"SBOM.spdx.json", "BUILD-RECEIPT.json"}
         if not source_names.issubset(sbom_files):
             errors.append(f"SBOM omits source files: {sorted(source_names-set(sbom_files))[:20]}")
+        for name in sorted(source_names & set(sbom_files), key=str.casefold):
+            observed = relative_hashes.get(name)
+            declared = sbom_files[name]
+            if declared is None:
+                if require_hashes:
+                    errors.append(f"SBOM checksum is missing or malformed: {name}")
+            elif observed is not None and declared != observed:
+                errors.append(f"SBOM checksum mismatch: {name}")
     except Exception as error:
         errors.append(f"Invalid SBOM: {error}")
 
 
 def validate(path: Path) -> dict[str, object]:
+    """Execute the validate operation with validated inputs."""
     errors: list[str] = []
     warnings: list[str] = []
     member_count = 0
@@ -271,7 +289,19 @@ def validate(path: Path) -> dict[str, object]:
                 if observed is not None and observed != digest:
                     errors.append(f"Manifest hash mismatch: {name}")
 
-            _validate_sbom(archive, relative_infos, actual_names, errors)
+            require_sbom_hashes = True
+            try:
+                receipt_preview_info = relative_infos.get("BUILD-RECEIPT.json")
+                if receipt_preview_info is not None:
+                    receipt_preview = json.loads(read_member_bounded(archive, receipt_preview_info, MAX_RECEIPT_BYTES).decode("utf-8"))
+                    if isinstance(receipt_preview, dict):
+                        require_sbom_hashes = (
+                            receipt_preview.get("packageProfile") == "production"
+                            or receipt_preview.get("schema") == V3_SCHEMA
+                        )
+            except (UnicodeDecodeError, json.JSONDecodeError, ValueError):
+                require_sbom_hashes = True
+            _validate_sbom(archive, relative_infos, actual_names, relative_hashes, require_sbom_hashes, errors)
 
             try:
                 receipt_info = relative_infos.get("BUILD-RECEIPT.json")
@@ -345,6 +375,7 @@ def validate(path: Path) -> dict[str, object]:
 
 
 def extract_validated(path: Path, destination: Path) -> dict[str, object]:
+    """Execute the extract validated operation with validated inputs."""
     report = validate(path)
     if report["status"] != "passed":
         return report
@@ -447,6 +478,7 @@ def extract_validated(path: Path, destination: Path) -> dict[str, object]:
 
 
 def main() -> int:
+    """Run the command-line entrypoint and return its exit status."""
     parser = argparse.ArgumentParser()
     parser.add_argument("archive", type=Path)
     parser.add_argument("--output", type=Path)

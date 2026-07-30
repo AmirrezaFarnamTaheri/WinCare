@@ -40,10 +40,12 @@ FIXED_EPOCH = 315532800  # 1980-01-01T00:00:00Z, the ZIP minimum.
 
 
 def digest(data: bytes) -> str:
+    """Execute the digest operation with validated inputs."""
     return hashlib.sha256(data).hexdigest()
 
 
 def safe_segment(segment: str) -> None:
+    """Execute the safe segment operation with validated inputs."""
     if not segment or segment in {".", ".."}:
         raise ValueError(f"unsafe ZIP path segment: {segment!r}")
     if segment[-1] in {" ", "."}:
@@ -56,6 +58,7 @@ def safe_segment(segment: str) -> None:
 
 
 def normalize_member(name: str, *, allow_directory: bool = True) -> tuple[str, bool]:
+    """Execute the normalize member operation with validated inputs."""
     if not name or "\x00" in name or "\\" in name:
         raise ValueError(f"unsafe ZIP member name: {name!r}")
     is_directory = name.endswith("/")
@@ -74,6 +77,7 @@ def normalize_member(name: str, *, allow_directory: bool = True) -> tuple[str, b
 
 
 def is_regular_zip_member(info: zipfile.ZipInfo, is_directory: bool) -> bool:
+    """Execute the is regular zip member operation with validated inputs."""
     if info.create_system != 3:
         return True
     mode = (info.external_attr >> 16) & 0xFFFF
@@ -86,6 +90,7 @@ def is_regular_zip_member(info: zipfile.ZipInfo, is_directory: bool) -> bool:
 
 
 def read_archive(path: Path) -> tuple[str, dict[str, bytes]]:
+    """Execute the read archive operation with validated inputs."""
     files: dict[str, bytes] = {}
     full_names: set[str] = set()
     folded_names: set[str] = set()
@@ -141,11 +146,13 @@ def read_archive(path: Path) -> tuple[str, dict[str, bytes]]:
 
 
 def payload_manifest(files: dict[str, bytes]) -> bytes:
+    """Execute the payload manifest operation with validated inputs."""
     lines = [f"{digest(files[name])}  {name}" for name in sorted(files, key=str.casefold)]
     return ("\n".join(lines) + "\n").encode("ascii")
 
 
 def zip_timestamp() -> tuple[int, int, int, int, int, int]:
+    """Execute the zip timestamp operation with validated inputs."""
     raw = int(os.environ.get("SOURCE_DATE_EPOCH", FIXED_EPOCH))
     raw = max(raw, FIXED_EPOCH)
     value = dt.datetime.fromtimestamp(raw, dt.timezone.utc).replace(microsecond=0)
@@ -154,6 +161,7 @@ def zip_timestamp() -> tuple[int, int, int, int, int, int]:
 
 
 def write_payload(path: Path, root: str, files: dict[str, bytes]) -> None:
+    """Execute the write payload operation with validated inputs."""
     path.parent.mkdir(parents=True, exist_ok=True)
     timestamp = zip_timestamp()
     with tempfile.NamedTemporaryFile(prefix=path.name + ".", suffix=".tmp", dir=path.parent, delete=False) as handle:
@@ -179,6 +187,7 @@ def write_payload(path: Path, root: str, files: dict[str, bytes]) -> None:
 
 
 def main() -> int:
+    """Run the command-line entrypoint and return its exit status."""
     parser = argparse.ArgumentParser()
     parser.add_argument("archive", type=Path)
     parser.add_argument("output", type=Path)
