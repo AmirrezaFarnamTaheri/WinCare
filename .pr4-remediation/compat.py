@@ -19,6 +19,9 @@ def replace_once(text: str, old: str, new: str, label: str) -> str:
 def main() -> None:
     """Apply profile-aware SBOM checksum requirements to the transformed verifier."""
     text = PATH.read_text(encoding="utf-8")
+    if "relative_hashes: dict[str, str], require_hashes: bool" in text:
+        print("Profile-aware SBOM checksum compatibility is already applied.")
+        return
     text = replace_once(
         text,
         "def _validate_sbom(archive: zipfile.ZipFile, relative_infos: dict[str, zipfile.ZipInfo], actual_names: set[str], relative_hashes: dict[str, str], errors: list[str]) -> None:\n",
