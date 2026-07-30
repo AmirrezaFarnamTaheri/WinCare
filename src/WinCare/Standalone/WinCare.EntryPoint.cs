@@ -9,6 +9,7 @@ internal static class WinCareEntryPoint
 #endif
     public static int Main(string[] args)
     {
+        // Help must return before payload extraction so it remains fast, side-effect free, and available without PowerShell.
         if (args.Any(argument => string.Equals(argument, "-?", StringComparison.OrdinalIgnoreCase) || string.Equals(argument, "--help", StringComparison.OrdinalIgnoreCase)))
         {
             Console.Out.WriteLine("Usage: WinCare[.exe] [-Command <name>] [-ArgumentsJson <json>] [-Theme <name>] [-Apply] [-Json] [-ReadOnly] [-Ascii] [-NoLogo]");
