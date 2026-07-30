@@ -2,7 +2,6 @@ using System;
 using System.Linq;
 using System.Threading;
 
-// Tree-identical behavior; this comment triggers independent post-remediation validation.
 internal static class WinCareEntryPoint
 {
 #if WINCARE_GUI
