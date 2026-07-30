@@ -23,11 +23,13 @@
     <UseWindowsForms>true</UseWindowsForms>
     <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
     <ErrorOnDuplicatePublishOutputFiles>true</ErrorOnDuplicatePublishOutputFiles>
+    <StartupObject>WinCareEntryPoint</StartupObject>
     <RestoreLockedMode Condition="Exists('$(MSBuildThisFileDirectory)packages.lock.json')">true</RestoreLockedMode>
   </PropertyGroup>
 
   <ItemGroup>
     <Compile Include="WinCare.GlobalUsings.cs" />
+    <Compile Include="WinCare.EntryPoint.cs" />
     <Compile Include="WinCare.Host.cs" />
     <PackageReference Include="Microsoft.PowerShell.SDK" Version="7.4.18" />
     <PackageReference Include="Microsoft.PowerShell.ConsoleHost" Version="7.4.18" />
@@ -39,7 +41,7 @@
     <Error Condition="$([System.Text.RegularExpressions.Regex]::IsMatch('$(WinCarePayloadSha256)', '^[0-9A-Fa-f]{64}$')) != 'True'" Text="WinCarePayloadSha256 must be exactly 64 hexadecimal characters." />
     <Error Condition="$([System.Text.RegularExpressions.Regex]::IsMatch('$(WinCarePayloadManifestSha256)', '^[0-9A-Fa-f]{64}$')) != 'True'" Text="WinCarePayloadManifestSha256 must be exactly 64 hexadecimal characters." />
     <PropertyGroup>
-      <_WinCareExpectedPayloadSha256>$([System.String]::Copy('$(WinCarePayloadSha256)').ToUpperInvariant())</_WinCareExpectedPayloadSha256>
+      <_WinCareExpectedPayloadSha256>$([System.String]::Copy('$(WinCarePayloadSha256)').ToLowerInvariant())</_WinCareExpectedPayloadSha256>
       <_WinCareExpectedManifestSha256>$([System.String]::Copy('$(WinCarePayloadManifestSha256)').ToLowerInvariant())</_WinCareExpectedManifestSha256>
     </PropertyGroup>
     <GetFileHash Files="$(WinCarePayloadPath)" Algorithm="SHA256">

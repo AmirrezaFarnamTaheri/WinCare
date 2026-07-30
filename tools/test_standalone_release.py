@@ -212,7 +212,7 @@ class StandaloneReleaseTests(unittest.TestCase):
             for path in [install_root / "WinCare.Installation.psm1", *sorted((install_root / "Private").glob("*.ps1"))]
         )
         required = [
-            "Split-Path -LiteralPath $cursor -Parent",
+            "Get-WinCareParentPath",
             "Get-ChildItem -LiteralPath $rootPath -Recurse",
             "Move-Item -LiteralPath $dest -Destination $backup",
             "Arguments = ''",
@@ -228,10 +228,14 @@ class StandaloneReleaseTests(unittest.TestCase):
         self.assertNotIn("Get-ChildItem $rootPath", module)
         self.assertNotIn("Test-Path $dest", module)
         self.assertNotIn("Move-Item $dest", module)
+        self.assertNotIn("Split-Path -LiteralPath", module)
+        self.assertIn("Move-WinCareExpectedOwnedShortcutsToBackup", module)
+        self.assertIn("createdShortcutFolder", module)
 
     def test_payload_embedding_is_hash_bound_and_atomic(self) -> None:
         props = (ROOT / "src/WinCare/Standalone/Directory.Build.props").read_text(encoding="utf-8")
         host = (ROOT / "src/WinCare/Standalone/WinCare.Host.cs").read_text(encoding="utf-8")
+        entrypoint_host = (ROOT / "src/WinCare/Standalone/WinCare.EntryPoint.cs").read_text(encoding="utf-8")
         global_usings = (ROOT / "src/WinCare/Standalone/WinCare.GlobalUsings.cs").read_text(encoding="utf-8")
         self.assertIn('<Target Name="ValidateAndEmbedWinCarePayload" BeforeTargets="PrepareForBuild"', props)
         self.assertIn('<GetFileHash Files="$(WinCarePayloadPath)" Algorithm="SHA256">', props)
@@ -248,6 +252,11 @@ class StandaloneReleaseTests(unittest.TestCase):
         self.assertIn("cryptographically bound embedded closure", host)
         self.assertIn("FixedTimeEquals(observedHash", host)
         self.assertNotIn("ps.Invoke()", host)
+        self.assertIn("StartupObject>WinCareEntryPoint", props)
+        self.assertIn("WinCare.Standalone.Launch", entrypoint_host)
+        self.assertIn("return WinCareHost.Main(args)", entrypoint_host)
+        self.assertIn("--help", entrypoint_host)
+        self.assertIn("ToLowerInvariant())</_WinCareExpectedPayloadSha256>", props)
         for entrypoint in ("WinCare.ps1", "WinCare-GUI.ps1", "WinCare-TUI.ps1"):
             source = (ROOT / entrypoint).read_text(encoding="utf-8")
             self.assertIn("WINCARE_STANDALONE_ROOT", source)

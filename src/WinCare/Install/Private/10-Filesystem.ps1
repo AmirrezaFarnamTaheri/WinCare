@@ -3,6 +3,12 @@ function Get-WinCareCanonicalPathHash {
     $canonical=[IO.Path]::GetFullPath($Path).TrimEnd('\').ToLowerInvariant();$bytes=[Text.Encoding]::UTF8.GetBytes($canonical)
     try{[Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($bytes)).ToLowerInvariant()}finally{[Array]::Clear($bytes,0,$bytes.Length)}
 }
+function Get-WinCareParentPath {
+    param([Parameter(Mandatory)][string]$Path)
+    $parent=[IO.Directory]::GetParent([IO.Path]::GetFullPath($Path))
+    if($null -eq $parent){throw "Path has no parent directory: $Path"}
+    $parent.FullName
+}
 function Assert-WinCareManagedPath {
     param([Parameter(Mandatory)][string]$Path)
     $full=[IO.Path]::GetFullPath($Path).TrimEnd('\');$root=[IO.Path]::GetPathRoot($full).TrimEnd('\')

@@ -12,7 +12,7 @@ function Read-WinCareShortcutOwner {
 }
 function Move-WinCareShortcutFolderToBackup {
     param([string]$ShortcutRoot)
-    $folder=Get-WinCareShortcutFolder $ShortcutRoot;if(!(Test-Path -LiteralPath $folder)){return [pscustomobject]@{Folder=$folder;Backup=$null}};[void](Read-WinCareShortcutOwner $folder);$backup=Join-Path (Split-Path -LiteralPath $folder -Parent) ('.WinCare.shortcuts.backup-'+[guid]::NewGuid().ToString('N'));Move-Item -LiteralPath $folder -Destination $backup -ErrorAction Stop;[pscustomobject]@{Folder=$folder;Backup=$backup}
+    $folder=Get-WinCareShortcutFolder $ShortcutRoot;if(!(Test-Path -LiteralPath $folder)){return [pscustomobject]@{Folder=$folder;Backup=$null}};[void](Read-WinCareShortcutOwner $folder);$backup=Join-Path (Get-WinCareParentPath $folder) ('.WinCare.shortcuts.backup-'+[guid]::NewGuid().ToString('N'));Move-Item -LiteralPath $folder -Destination $backup -ErrorAction Stop;[pscustomobject]@{Folder=$folder;Backup=$backup}
 }
 function Restore-WinCareShortcutBackup {
     param([Parameter(Mandatory)]$Transaction)
@@ -36,5 +36,17 @@ function Move-WinCareOwnedShortcutsToBackup {
     $folder=[IO.Path]::GetFullPath([string]$Marker.ShortcutFolder);$expected=[IO.Path]::GetFullPath((Get-WinCareShortcutFolder $ShortcutRoot));if($folder -ne $expected){throw 'Managed shortcut folder does not match the configured shortcut root.'}
     $owner=Read-WinCareShortcutOwner $folder;if($owner.InstallationId -ne $Marker.InstallationId -or $owner.DestinationPathSha256 -ne (Get-WinCareCanonicalPathHash $Destination)){throw 'Managed shortcut ownership does not match the installation marker.'}
     foreach($r in $owner.Shortcuts){$arguments=if($null -eq $r.Arguments){''}else{[string]$r.Arguments};$working=if($r.WorkingDirectory){[string]$r.WorkingDirectory}else{$Destination};if(!(Test-WinCareShortcutIdentity (Join-Path $folder $r.Name) $r.Target $arguments $working)){throw "Managed shortcut identity mismatch: $($r.Name)"}}
-    $backup=Join-Path (Split-Path -LiteralPath $folder -Parent) ('.WinCare.shortcuts.remove-'+[guid]::NewGuid().ToString('N'));Move-Item -LiteralPath $folder -Destination $backup -ErrorAction Stop;[pscustomobject]@{Folder=$folder;Backup=$backup}
+    $backup=Join-Path (Get-WinCareParentPath $folder) ('.WinCare.shortcuts.remove-'+[guid]::NewGuid().ToString('N'));Move-Item -LiteralPath $folder -Destination $backup -ErrorAction Stop;[pscustomobject]@{Folder=$folder;Backup=$backup}
+}
+
+function Move-WinCareExpectedOwnedShortcutsToBackup {
+    param([string]$Destination,[string]$ShortcutRoot)
+    $folder=Get-WinCareShortcutFolder $ShortcutRoot
+    if(!(Test-Path -LiteralPath $folder)){return $null}
+    $owner=Read-WinCareShortcutOwner $folder
+    if($owner.DestinationPathSha256 -ne (Get-WinCareCanonicalPathHash $Destination)){throw 'Managed shortcut ownership does not match the installation destination.'}
+    foreach($r in $owner.Shortcuts){$arguments=if($null -eq $r.Arguments){''}else{[string]$r.Arguments};$working=if($r.WorkingDirectory){[string]$r.WorkingDirectory}else{$Destination};if(!(Test-WinCareShortcutIdentity (Join-Path $folder $r.Name) $r.Target $arguments $working)){throw "Managed shortcut identity mismatch: $($r.Name)"}}
+    $backup=Join-Path (Get-WinCareParentPath $folder) ('.WinCare.shortcuts.remove-'+[guid]::NewGuid().ToString('N'))
+    Move-Item -LiteralPath $folder -Destination $backup -ErrorAction Stop
+    [pscustomobject]@{Folder=$folder;Backup=$backup}
 }

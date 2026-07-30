@@ -1,7 +1,7 @@
 function Get-WinCareFileHash {
     param([Parameter(Mandatory)][string]$Path,[long]$MaximumBytes=2147483648)
     $item=Get-Item -LiteralPath $Path -Force -ErrorAction Stop
-    if($item.PSIsContainer -or ($item.Attributes -band [IO.FileAttributes]::ReparsePoint) -or $item.Length -lt 1 -or $item.Length -gt $MaximumBytes){throw "Unsafe hash input: $Path"}
+    if($item.PSIsContainer -or ($item.Attributes -band [IO.FileAttributes]::ReparsePoint) -or $item.Length -gt $MaximumBytes){throw "Unsafe hash input: $Path"}
     $beforeLength=[long]$item.Length;$beforeTicks=$item.LastWriteTimeUtc.Ticks;$stream=[IO.File]::Open($item.FullName,[IO.FileMode]::Open,[IO.FileAccess]::Read,[IO.FileShare]::Read);$sha=[Security.Cryptography.SHA256]::Create()
     try{$digest=$sha.ComputeHash($stream);$hex=[Convert]::ToHexString($digest).ToLowerInvariant();[Array]::Clear($digest,0,$digest.Length)}finally{$sha.Dispose();$stream.Dispose()}
     $after=Get-Item -LiteralPath $item.FullName -Force -ErrorAction Stop;if($after.Length -ne $beforeLength -or $after.LastWriteTimeUtc.Ticks -ne $beforeTicks){throw "File changed while hashing: $Path"}
