@@ -1,156 +1,272 @@
-# WinCare Enterprise Design System (Utilitarian Specification)
+# WinCare design system
 
-## Overview
+WinCare uses a utilitarian, evidence-first design language for Windows administration and diagnostics. The graphical, terminal, and headless surfaces must present the same operation authority and result semantics even when their visual density differs.
 
-The WinCare Enterprise Design System is a high-density, utilitarian visual and interaction architecture designed for system-level diagnosis, optimization, and administration. It prioritizes operational clarity, deterministic state presentation, and instant responsiveness over visual decoration.
+This document defines interaction and presentation contracts. It does not grant capabilities or mutation authority.
 
----
+## Design objectives
 
-## 1. OKLCH Color System
+WinCare prioritizes:
 
-WinCare uses modern OKLCH color spaces for perceptual uniformity, high-contrast readability, and accurate dark mode rendering.
+1. operational clarity over decoration;
+2. real system evidence over simulated metrics;
+3. risk and authority visibility before action;
+4. dense but readable information presentation;
+5. keyboard, screen-reader, high-contrast, monochrome, and reduced-motion usability;
+6. consistent status semantics across GUI, TUI, logs, and JSON;
+7. stable performance on machines that are already under diagnosis.
 
-### Core Dark Mode Palette
+## Cross-surface hierarchy
 
-| Token Key | OKLCH Value | CSS Variable | Fallback (sRGB Hex) | Usage / Intent |
-| :--- | :--- | :--- | :--- | :--- |
-| **Base Canvas** | `oklch(0.12 0.02 240)` | `--color-bg-base` | `#0b101d` | Application background & outer shell |
-| **Card Background** | `oklch(0.16 0.025 240)` | `--color-bg-card` | `#121828` | Container panels, data cards, inspect surfaces |
-| **Primary Accent** | `oklch(0.68 0.18 210)` | `--color-accent-primary` | `#00a2f3` | Key action buttons, selected navigation, interactive highlights |
-| **Warning Accent** | `oklch(0.75 0.16 75)` | `--color-accent-warning` | `#e59a00` | Cautionary states, non-critical telemetry alerts, pending tasks |
-| **Alert Accent** | `oklch(0.65 0.22 25)` | `--color-accent-alert` | `#ff4d4d` | Destructive actions, system errors, critical risk badges |
+Every surface should answer these questions in order:
 
-### Extended Surface & Text Tokens
+1. **Where am I?** — capability/workspace and target context.
+2. **What is the current state?** — observations and confidence/evidence.
+3. **What can be done?** — available actions constrained by capability/policy.
+4. **What will change?** — preview, affected resources, risk, and reversibility.
+5. **What authority is required?** — apply, approval, elevation, network, or persistence.
+6. **What happened?** — result, postconditions, journal/receipt, and residual state.
 
-| Token Key | OKLCH Value | CSS Variable | Usage |
-| :--- | :--- | :--- | :--- |
-| **Surface Raised** | `oklch(0.20 0.03 240)` | `--color-bg-raised` | Interactive controls, inputs, hovering surfaces |
-| **Border Subdued** | `oklch(0.28 0.03 240)` | `--color-border-subdued` | Container boundaries, grid table dividers (1px sharp) |
-| **Border Active** | `oklch(0.45 0.08 210)` | `--color-border-active` | Focus rings, active tab indicators, selected cards |
-| **Text Primary** | `oklch(0.96 0.01 240)` | `--color-text-primary` | High-emphasis headers, telemetry values, active code |
-| **Text Secondary** | `oklch(0.72 0.02 240)` | `--color-text-secondary` | Labels, table headers, metadata descriptions |
-| **Text Muted** | `oklch(0.52 0.02 240)` | `--color-text-muted` | Disabled elements, timestamp footers, hints |
+Presentation layers must not hide blocked, unsupported, unknown, partial, or failed states merely to simplify the interface.
 
-### CSS Variables Implementation
+## Information architecture
 
-```css
-:root {
-  /* OKLCH Base Palette */
-  --color-bg-base: oklch(0.12 0.02 240);
-  --color-bg-card: oklch(0.16 0.025 240);
-  --color-bg-raised: oklch(0.20 0.03 240);
-  
-  --color-accent-primary: oklch(0.68 0.18 210);
-  --color-accent-warning: oklch(0.75 0.16 75);
-  --color-accent-alert: oklch(0.65 0.22 25);
+The default workstation model is:
 
-  --color-border-subdued: oklch(0.28 0.03 240);
-  --color-border-active: oklch(0.45 0.08 210);
+- **Navigation** — capability areas and workspaces.
+- **Context header** — current machine/target, mode, read-only state, and capability status.
+- **Primary content** — observations, plans, evidence, tables, or forms.
+- **Action area** — preview, apply, cancel, export, or navigation actions.
+- **Evidence/status area** — result state, timestamps, hashes/identities, warnings, postconditions, and recovery information.
 
-  --color-text-primary: oklch(0.96 0.01 240);
-  --color-text-secondary: oklch(0.72 0.02 240);
-  --color-text-muted: oklch(0.52 0.02 240);
-}
-```
+The GUI may use panes, tabs, or cards; the TUI may use sections and tables. Both must preserve the same conceptual order.
 
----
+## Semantic status model
 
-## 2. Typography Scale
+Use consistent labels and iconography:
 
-The typography system strictly uses system-native monospace and clean sans-serif typefaces to guarantee zero webfont load delay and crisp subpixel rendering.
+| Status | Meaning | Visual treatment |
+| --- | --- | --- |
+| `Available` | Capability and prerequisite are present | Neutral-positive, not celebratory |
+| `ReadOnly` | Observation permitted; persistent mutation unavailable or disabled | Informational |
+| `Preview` | Plan exists but has not been applied | Accent/informational |
+| `AwaitingApproval` | Explicit approval/elevation is required | Warning |
+| `Running` | Bounded operation is active | Progress without implying success |
+| `Succeeded` | Required postconditions/evidence passed | Positive |
+| `Partial` | Some work/evidence completed; residual state exists | Warning |
+| `Blocked` | Prerequisite, policy, or environment prevents operation | Warning with reason |
+| `Unsupported` | Capability is not meaningful/implemented in this environment | Neutral-muted with explanation |
+| `Unknown` | Evidence is insufficient to assert state | Neutral-warning; never display as healthy |
+| `Denied` | Policy, approval, identity, or scope rejected the request | Alert |
+| `Failed` | Attempted operation did not satisfy its contract | Alert |
 
-### Font Stacks
+Color must reinforce text and iconography, never carry status alone.
 
-- **Primary Sans**: `Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`
-- **System Monospace**: `"JetBrains Mono", "Cascadia Code", Consolas, "Courier New", monospace`
+## Semantic color roles
 
-### Scale Matrix
+Implementation-specific colors live in WPF resources and terminal theme mappings. All themes must provide these roles:
 
-| Role | Font Size | Line Height | Weight | Font Stack | Target Usage |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| **Display / Title** | 22px (`1.375rem`) | 28px (`1.27`) | 600 (SemiBold) | Sans | Top bar titles, main view headers |
-| **Section Header** | 16px (`1.000rem`) | 22px (`1.37`) | 600 (SemiBold) | Sans | Card section titles, group headers |
-| **Body / Label** | 13px (`0.8125rem`)| 18px (`1.38`) | 400 (Regular)  | Sans | Primary form labels, descriptions |
-| **Dense Data Table**| 12px (`0.750rem`) | 16px (`1.33`) | 400 / 500      | Sans | Enterprise telemetry tables, logs |
-| **Code / Terminal** | 12px (`0.750rem`) | 16px (`1.33`) | 400 (Regular)  | Monospace | Command outputs, paths, JSON args |
-| **Caption / Meta**  | 11px (`0.6875rem`)| 14px (`1.27`) | 500 (Medium)   | Monospace | Timestamps, status pills, IDs |
+| Role | Purpose |
+| --- | --- |
+| Canvas | Main application background |
+| Surface | Panels, tables, forms, and grouped evidence |
+| Raised surface | Active controls, selected rows, dialogs, and temporary layers |
+| Border | Structural separation without heavy shadows |
+| Primary text | Main labels and values |
+| Secondary text | Metadata, descriptions, and supporting context |
+| Muted text | Disabled or low-priority information that remains legible |
+| Accent | Selected navigation and primary non-destructive actions |
+| Information | Read-only, preview, and explanatory states |
+| Warning | approval, blocked, partial, caution, and non-recoverable disclosure |
+| Alert | denied, failed, destructive, or integrity-critical states |
+| Success | verified completion/postcondition success |
+| Focus | keyboard focus and active accessibility target |
 
----
+### Theme requirements
 
-## 3. Grid & Spacing Scale (Compact Enterprise Density)
+- `Normal` may use a dark or system-aligned high-density palette.
+- `HighContrast` must prioritize OS/user contrast semantics over brand colors.
+- `Monochrome` must remain fully usable without hue distinctions.
+- Terminal themes must degrade cleanly when ANSI color is unavailable.
+- Read-only and mutation authority must remain visible in every theme.
 
-WinCare enforces a compact 4px baseline grid tailored for high-density data display.
+## Typography
 
-### Spacing Tokens
+Use Windows/system-installed typefaces; WinCare must not require downloaded fonts.
 
-| Scale | Token | Value | Recommended Usage |
-| :--- | :--- | :--- | :--- |
-| **XS** | `--space-xs` | **4px** | Internal padding between icon and text, micro gap in pills |
-| **SM** | `--space-sm` | **8px** | Dense table cell padding, input internal padding, button gaps |
-| **MD** | `--space-md` | **12px**| Card internal padding, control stack spacing |
-| **LG** | `--space-lg` | **16px**| Grid row gaps, container padding |
-| **XL** | `--space-xl` | **24px**| Main section margins, layout column gaps |
+Recommended roles:
 
-```css
-:root {
-  --space-xs: 4px;
-  --space-sm: 8px;
-  --space-md: 12px;
-  --space-lg: 16px;
-  --space-xl: 24px;
+- UI and body: `Segoe UI` with system fallback;
+- terminal/code/path/hash: `Cascadia Mono`, `Consolas`, or system monospace fallback;
+- headings: the same UI family with weight/size hierarchy rather than a separate decorative family.
 
-  --radius-sm: 4px;
-  --radius-md: 6px;
-  --radius-lg: 8px;
-}
-```
+Text should remain crisp at Windows scaling settings. Avoid all-caps paragraphs, ultra-light weights, and font sizes that sacrifice dense readability.
 
----
+## Spacing and density
 
-## 4. WebGL & Animation Budgets
+Use a 4-pixel conceptual spacing grid:
 
-Interactive WebGL backgrounds and micro-animations must adhere to strict performance constraints to avoid consuming host CPU/GPU resources intended for system management tasks.
+| Token | Typical value | Use |
+| --- | ---: | --- |
+| `xs` | 4 px | icon/text gap, compact metadata |
+| `sm` | 8 px | dense cell/control padding |
+| `md` | 12 px | grouped controls and panel interiors |
+| `lg` | 16 px | section separation |
+| `xl` | 24 px | major workspace separation |
 
-### Performance Constraints
+Density rules:
 
-| Metric / Library | Hard Upper Limit | Enforcement Mechanism |
-| :--- | :--- | :--- |
-| **Target Frame Rate** | **60 fps max** | Clamp rendering with `requestAnimationFrame` delta lock |
-| **Startup Latency** | **< 50 ms budget** | Lazy-initialize WebGL canvas post-DOM Mount |
-| **Vanta.js Limit** | **Max 500 vertices / particles** | Override default mesh complexity; disable on low-power mode |
-| **Cobe.js Limit** | **Max 100 markers** | Limit geo-point render count; disable smooth auto-rotate if CPU > 15% |
-| **Matter.js Limit**| **Max 50 active bodies** | Set aggressive sleeping (`enableSleeping: true`); freeze on idle |
+- prefer scan-friendly tables for comparable evidence;
+- keep labels close to their values;
+- avoid oversized empty cards and decorative whitespace;
+- allow user-resizable columns/panes where data length varies;
+- never truncate the only copy of a critical path, identity, error, or risk disclosure without a way to reveal/copy it.
 
-### Battery & Reduced Motion Policy
+## Controls and actions
 
-```javascript
-// Hardware / Preference Adaptive Guardrail Example
-const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-const isLowPower = navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 4;
+### Primary action
 
-if (prefersReducedMotion || isLowPower) {
-  // Disable WebGL animations completely; fallback to static OKLCH canvas background
-  disableWebGLCanvas();
-}
-```
+Only one primary action should dominate a local context. For mutating workflows, the primary action is normally **Preview** before **Apply** becomes available.
 
----
+### Destructive action
 
-## 5. Anti-Slop Guidelines (Strict Zero AI Slop Rule)
+Destructive actions must:
 
-To prevent visual noise and unmaintainable bloat, all UI components must comply with the WinCare Anti-Slop Standard:
+- use explicit verbs and target names;
+- disclose scope, reversibility, and evidence expectations;
+- avoid being the default focused button when a safer action exists;
+- require the same policy/approval path as non-UI callers;
+- remain distinguishable in high-contrast and monochrome modes.
 
-1. **No Useless Gradients or Blurred Background Blobs**:
-   - *Prohibited*: Decorative purple/pink ambient blurred background circles (`filter: blur(100px)`) that convey zero operational state.
-   - *Allowed*: Solid OKLCH dark canvas with crisp 1px semantic borders.
+### Disabled versus unavailable
 
-2. **No Fake Metrics or Decorative Sparklines**:
-   - *Prohibited*: Decorative random charts, fake progress bars, or placeholder counters that are not connected to real backend telemetry.
-   - *Allowed*: Real-time system metrics directly backed by OS API calls.
+Do not silently disable a control without explanation. Prefer a visible `Blocked`/`Unsupported` state with the prerequisite or policy reason.
 
-3. **No Generic Drop Shadows Without Data Purpose**:
-   - *Prohibited*: Heavy, fuzzy card drop-shadows (`box-shadow: 0 20px 25px rgba(0,0,0,0.5)`).
-   - *Allowed*: 1px solid semantic borders (`border: 1px solid var(--color-border-subdued)`). Elevation must be communicated via OKLCH surface lightness steps, not blur shadows.
+### Confirmation
 
-4. **Information Density Over Whitespace Waste**:
-   - Avoid oversized padding that requires vertical scrolling to view system state. Every pixel must serve data discovery or execution.
+Confirmation is not a replacement for target validation. Use confirmation for human intent while the backend independently enforces identity, scope, policy, and postconditions.
+
+## Plan and preview presentation
+
+A plan view should expose, as applicable:
+
+- operation name and target;
+- current observed state;
+- proposed changes;
+- affected resources;
+- prerequisites and capability status;
+- required authority/elevation;
+- risk and non-recoverable steps;
+- compensation/rollback behavior;
+- expected postconditions;
+- evidence that will be recorded.
+
+The apply control must remain bound to the reviewed plan identity; a materially changed target or plan should require a new preview.
+
+## Evidence presentation
+
+Evidence views should favor structured fields over prose-only summaries. Make it possible to inspect and copy:
+
+- timestamps and duration;
+- target/provider identity;
+- selected arguments;
+- before/after state;
+- hashes, manifests, signatures, or exit codes;
+- verification/postcondition outcome;
+- blocked/unsupported reason;
+- journal, receipt, or artifact location;
+- residual or recovery state.
+
+Do not display fabricated percentages, random sparklines, generic health scores, or decorative telemetry.
+
+## Tables and logs
+
+- freeze or preserve important identity columns when practical;
+- provide sorting/filtering without changing underlying evidence;
+- distinguish empty, unavailable, and error states;
+- use monospaced text for paths, command lines, IDs, hashes, and raw events;
+- bound rendered rows and offer explicit paging/export for large datasets;
+- avoid auto-scrolling that prevents inspection;
+- preserve exact raw values behind formatted summaries.
+
+## Accessibility
+
+All operator surfaces must support the applicable platform capabilities:
+
+- complete keyboard navigation;
+- visible focus indicator;
+- logical focus order;
+- accessible names/descriptions for icon-only controls;
+- status announcements that do not rely on color;
+- screen-reader-compatible tables and form relationships;
+- Windows high-contrast behavior;
+- monochrome and ASCII terminal rendering;
+- reduced or absent nonessential motion;
+- text scaling without clipping critical controls;
+- copyable error and evidence details.
+
+Automation IDs and accessibility labels should be stable enough for UI validation where feasible.
+
+## Motion and performance
+
+WinCare is a diagnostic tool and must not compete with the system being diagnosed.
+
+- avoid continuous background animation;
+- use motion only to communicate state transition or progress;
+- honor reduced-motion preferences;
+- stop progress animation when the operation stops;
+- virtualize/bound large collections;
+- keep expensive evidence collection outside the UI thread;
+- never create decorative GPU workloads or WebGL-like backgrounds.
+
+## Icons and product identity
+
+Product and capability icons must be simple, high-contrast, and recognizable at small Windows sizes.
+
+The WinCare product mark should have:
+
+- one vector source of truth;
+- square icon-safe geometry;
+- transparent-background exports;
+- tested sizes for 16, 20, 24, 32, 48, 64, 128, and 256 pixels;
+- a multi-resolution Windows `.ico` for executable and shortcut use;
+- monochrome/high-contrast fallback treatment;
+- no embedded small text that becomes unreadable in Explorer or the taskbar.
+
+Every standalone executable and installed shortcut should resolve to the approved product icon through the build/install pipeline. Asset generation and executable embedding must be deterministic and validated as part of release assurance.
+
+## Anti-slop rules
+
+Do not add:
+
+- decorative gradients or blurred blobs without operational meaning;
+- fake metrics, placeholder counters, or random charts;
+- heavy shadows as a substitute for hierarchy;
+- gratuitous glass/transparency that reduces readability;
+- oversized marketing-style hero areas inside operational workspaces;
+- animated backgrounds;
+- generic icons that conceal distinct risk levels;
+- success-colored states before postconditions pass;
+- unexplained disabled controls;
+- duplicate panels that present the same evidence differently.
+
+## Review checklist
+
+A UI change is ready when:
+
+- it uses the existing backend contract rather than independent logic;
+- read-only/preview/apply/elevation states are explicit;
+- blocked, unsupported, unknown, partial, and failed states are represented;
+- critical information survives high-contrast, monochrome, and narrow layouts;
+- keyboard and screen-reader paths are considered;
+- large data is bounded or virtualized;
+- no fake or decorative operational data was introduced;
+- UI catalog/XAML/resource tests and relevant Windows launch checks pass;
+- command/capability/security documentation is updated when behavior changed.
+
+## Related documents
+
+- [Architecture](ARCHITECTURE.md)
+- [Commands](COMMANDS.md)
+- [Security](../SECURITY.md)
+- [Testing](Testing.md)
