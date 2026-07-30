@@ -1,82 +1,13 @@
-# Publisher trigger revision 2
-name: Apply PR 4 remediation
+name: Prepare PR 4 final remediation
 
 on:
-  push:
-    branches:
-      - agent/standalone-release-hardening
-    paths:
-      - '.github/workflows/pr4-remediation.yml'
-      - '.pr4-remediation/**'
+  workflow_dispatch:
 
 permissions:
-  contents: write
-
-concurrency:
-  group: pr4-remediation-${{ github.ref }}
-  cancel-in-progress: false
+  contents: read
 
 jobs:
-  apply:
-    if: github.repository == 'AmirrezaFarnamTaheri/WinCare'
+  dormant:
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          fetch-depth: 0
-      - name: Verify, apply, test, commit, and publish remediation
-        shell: bash
-        env:
-          TARGET_BRANCH: agent/standalone-release-hardening
-          ARCHIVE_SHA256: 40c4408ccd11c69873f132a99260eed82ed72fc8c861d61c0060de10c2491e28
-        run: |
-          set -euo pipefail
-          test "$GITHUB_REF_NAME" = "$TARGET_BRANCH"
-          cat .pr4-remediation/part-1 .pr4-remediation/part-2 .pr4-remediation/part-3 .pr4-remediation/part-4 .pr4-remediation/part-5 \
-            | base64 --decode > "$RUNNER_TEMP/pr4-remediation.tar.xz"
-          echo "$ARCHIVE_SHA256  $RUNNER_TEMP/pr4-remediation.tar.xz" | sha256sum --check --strict
-          tar -xJf "$RUNNER_TEMP/pr4-remediation.tar.xz" -C .
-          rm -rf .pr4-remediation .github/workflows/pr4-remediation.yml
-
-          python tools/validate_source.py . --json-output "$RUNNER_TEMP/source-validation.json"
-          python tools/validate_action_bindings.py . --output "$RUNNER_TEMP/action-binding-validation.json"
-          python tools/validate_test_source_assertions.py . --output "$RUNNER_TEMP/test-source-validation.json"
-          python tools/validate_powershell_calls.py . --output "$RUNNER_TEMP/public-call-bindings.json"
-          python tools/validate_module_manifest.py . --output "$RUNNER_TEMP/module-source-manifest.json"
-          python tools/validate_source_references.py . --output "$RUNNER_TEMP/source-reference-validation.json"
-          python tools/audit_stub_inventory.py . --output "$RUNNER_TEMP/stub-inventory.json"
-          python tools/validate_maintainability.py . --output "$RUNNER_TEMP/maintainability-validation.json"
-          python tools/validate_network_egress.py . --output "$RUNNER_TEMP/network-egress-validation.json"
-          python tools/validate_external_processes.py . --output "$RUNNER_TEMP/external-process-validation.json"
-          python tools/validate_bounded_io.py . --output "$RUNNER_TEMP/bounded-io-validation.json"
-          python tools/validate_read_only_state.py . --output "$RUNNER_TEMP/read-only-state-validation.json"
-          python tools/validate_context_menu_catalog.py . --output "$RUNNER_TEMP/context-menu-validation.json"
-          python tools/validate_test_fixtures.py . --output "$RUNNER_TEMP/test-fixture-validation.json"
-          TERM=xterm python -m unittest \
-            tools.test_release_tools \
-            tools.test_standalone_release \
-            tools.test_maintainability \
-            tools.test_security_invariants \
-            tools.test_cleaner_preview \
-            tools.test_gui \
-            tools.test_source_references \
-            tools.test_wincare_ps_source -v
-
-          git diff --check
-          git config user.name 'WinCare Remediation Bot'
-          git config user.email 'actions@users.noreply.github.com'
-          git add -A
-          git diff --cached --check
-          git commit -m 'Complete PR 4 release and verifier hardening'
-
-          rm -rf "$RUNNER_TEMP/release"
-          python tools/build_release.py . --output-directory "$RUNNER_TEMP/release"
-          VERSION=$(python - <<'PY'
-          import pathlib, re
-          text = pathlib.Path('src/WinCare/WinCare.psd1').read_text(encoding='utf-8')
-          print(re.search(r"ModuleVersion\s*=\s*'([^']+)'", text).group(1))
-          PY
-          )
-          python tools/verify_release.py "$RUNNER_TEMP/release/WinCare-$VERSION.zip" --output "$RUNNER_TEMP/archive-validation.json"
-          git push origin "HEAD:refs/heads/$TARGET_BRANCH"
+      - run: echo 'Final remediation publisher is being prepared.'
