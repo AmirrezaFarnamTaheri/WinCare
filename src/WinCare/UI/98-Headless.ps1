@@ -50,7 +50,9 @@ function Get-WinCareBrokerReadOnlyCommandName {
         'shell-hardware-cards','hardware-inventory','monitor-controls','window-search','explorer-session','explorer-session-records','ui-automation-snapshot','appx-runtime','appx-launch-targets','archive-inspect','servicing-media','terminal-environment','gui-resource-audit','fullscreen-shell-assess',
         'cleaner-preview-cards','cleaner-winapp2','cleaner-relocation-profiles','cleaner-relocation-assess','file-preview-profiles','file-preview','preview-handlers',
         'peer-display-overrides','peer-wlan','peer-log-tail','peer-pe','peer-taskboard','deep-clean-profiles','appx-selection-profiles','appx-selection-assess','legacy-unsafe-profiles'
-    ) + @(Get-WinCareAdvancedBrokerReadOnlyCommandName)
+    ) + @(Get-WinCareAdvancedBrokerReadOnlyCommandName) |
+        Where-Object { $_ -ne 'ebpf-admit' } |
+        Sort-Object -Unique
 }
 
 function Invoke-WinCareHeadlessCommand {

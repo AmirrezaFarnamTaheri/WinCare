@@ -161,14 +161,14 @@ function Invoke-WinCareRestoreLocalNoteAction {
 }
 
 function Search-WinCareLocalNote {
-    [CmdletBinding()]
-    param([Parameter(Mandatory)][ValidateLength(1,500)][string]$Query,[ValidateRange(1,10000)][int]$Limit=500,[switch]$IncludePrivateBody)
+    [CmdletBinding()]param([Parameter(Mandatory)][ValidateLength(1,500)][string]$Query,[ValidateRange(1,10000)][int]$Limit=500,[switch]$IncludePrivateBody)
     $results=[Collections.Generic.List[object]]::new()
-    foreach($note in @(Get-WinCareLocalNote -IncludeBody -IncludePrivateBody:$IncludePrivateBody)){
+    foreach($note in @(Get-WinCareLocalNote -IncludeBody -IncludePrivateBody)){
         $haystack=([string]$note.Title+"`n"+(@($note.Tags)-join ' ')+"`n"+[string]$note.Body)
-        if($haystack.IndexOf($Query,[StringComparison]::OrdinalIgnoreCase) -ge 0){$results.Add($note);if($results.Count -ge $Limit){break}}
+        if($haystack.IndexOf($Query,[StringComparison]::OrdinalIgnoreCase) -lt 0){continue}
+        if([bool]$note.Private -and -not $IncludePrivateBody){$note.Body='[PRIVATE NOTE BODY REDACTED]'}
+        $results.Add($note);if($results.Count -ge $Limit){break}
     }
     @($results)
 }
-
 

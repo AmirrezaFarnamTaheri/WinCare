@@ -4,6 +4,12 @@ function Get-WinCareExtensionRoot { Join-Path $script:WinCareState.Root 'Extensi
 
 function Test-WinCareExtensionManifest {
     param([Parameter(Mandatory)][Collections.IDictionary]$Manifest)
+    $normalized=[ordered]@{}
+    foreach($key in $Manifest.Keys){$normalized[[string]$key]=$Manifest[$key]}
+    foreach($name in @('catalogFiles','knowledgeFiles','commandFiles','sourceRecords')){
+        if(-not $normalized.Contains($name) -or $null -eq $normalized[$name]){$normalized[$name]=@()}
+    }
+    $Manifest=$normalized
     $allowed=@('schemaVersion','id','name','version','publisher','description','minimumWinCareVersion','files','catalogFiles','knowledgeFiles','commandFiles','sourceRecords')
     $null=Test-WinCareStrictObjectKeys -InputObject $Manifest -AllowedKeys $allowed -Context 'extension manifest'
     if([int]$Manifest.schemaVersion -ne 1){throw 'Unsupported extension manifest schema.'}

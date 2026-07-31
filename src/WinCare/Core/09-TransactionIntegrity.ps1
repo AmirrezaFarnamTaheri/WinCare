@@ -1,40 +1,6 @@
 #requires -Version 7.2
-# Target-native final convergence closure.
 
-$manifestVersion=(Import-PowerShellDataFile -LiteralPath (Join-Path $script:WinCareModuleRoot 'WinCare.psd1')).ModuleVersion.ToString()
-if([string]$script:WinCareVersion -in @('0.0','0.0.0')){$script:WinCareVersion=$manifestVersion}
-
-${function:Write-WinCareLog} = {
-    [CmdletBinding()]
-    param(
-        [Parameter(Mandatory)]
-        [ValidateSet('Debug', 'Info', 'Warning', 'Error', 'Audit')]
-        [string]$Level,
-        [Parameter(Mandatory)][string]$Message,
-        [hashtable]$Data = @{}
-    )
-
-    if($script:WinCareState -is [Collections.IDictionary] -and
-        $script:WinCareState.Contains('ReadOnlyLocked') -and
-        [bool]$script:WinCareState.ReadOnlyLocked) {
-        return
-    }
-    $safeMessage = ConvertTo-WinCareRedactedScalar -Value $Message
-    $safeData = ConvertTo-WinCareRedactedValue -Value $Data
-    $record = [ordered]@{
-        schemaVersion = 1
-        timestamp = [datetime]::UtcNow.ToString('o')
-        level = $Level
-        sessionId = [string](Get-WinCarePropertyValue $script:WinCareState 'SessionId' '')
-        processId = $PID
-        message = $safeMessage
-        data = $safeData
-    }
-    $json = $record | ConvertTo-Json -Compress -Depth 20
-    Write-WinCareLogLine -LiteralPath (Get-WinCareLogPath) -Line $json
-}
-
-${function:Get-WinCarePlanSummary} = {
+function Get-WinCarePlanSummary {
     [CmdletBinding()]param([Parameter(Mandatory)][object]$Plan)
     $actions=@(Get-WinCarePropertyValue $Plan 'Actions' @());$highest=$actions|Sort-Object {Get-WinCareRiskRank $_.Risk} -Descending|Select-Object -First 1
     $sources=[Collections.Generic.List[string]]::new()
@@ -49,8 +15,7 @@ ${function:Get-WinCarePlanSummary} = {
         SourceRecords=@($sources|Sort-Object -Unique)
     }
 }
-
-${function:Get-WinCarePlanStableHash} = {
+function Get-WinCarePlanStableHash {
     [CmdletBinding()]param([Parameter(Mandatory)][object]$Plan)
     $stable=[ordered]@{
         SchemaVersion=Get-WinCarePropertyValue $Plan 'SchemaVersion' 0
@@ -65,8 +30,7 @@ ${function:Get-WinCarePlanStableHash} = {
     }
     Get-WinCareSha256Text -Text (ConvertTo-WinCareCanonicalJson -InputObject $stable -Depth 40)
 }
-
-${function:Get-WinCareOperationRecordStableHash} = {
+function Get-WinCareOperationRecordStableHash {
     [CmdletBinding()]param([Parameter(Mandatory)][object]$Record)
     $stable=[ordered]@{
         SchemaVersion=Get-WinCarePropertyValue $Record 'SchemaVersion' 0
@@ -91,8 +55,30 @@ ${function:Get-WinCareOperationRecordStableHash} = {
     }
     Get-WinCareSha256Text -Text (ConvertTo-WinCareCanonicalJson -InputObject $stable -Depth 80)
 }
-
-${function:Test-WinCareOperationJournalIntegrity} = {
+function Complete-WinCareOperationReceipt {
+    param([Parameter(Mandatory)][object]$Journal)
+    Write-WinCareAtomicJson -LiteralPath $Journal.RecordPath -InputObject $Journal.Record
+    $record=Read-WinCareBoundedJson -LiteralPath $Journal.RecordPath -MaximumBytes 16777216 -Depth 80 -AsHashtable
+    $recordHash=Get-WinCareOperationRecordStableHash $record
+    $receipt=[ordered]@{SchemaVersion=2;
+        OperationId=$record.OperationId;
+        PlanHash=$record.PlanHash;
+        RecordHash=$recordHash;
+        ModuleTreeHash=$record.ModuleTreeHash;
+        FinalState=$record.State;
+        Success=$record.Success;
+        StartedAt=$record.StartedAt;
+        FinishedAt=$record.FinishedAt;
+        LastEventHash=$record.LastEventHash;
+        ResultCount=@($record.Results).Count;
+        WarningCount=@($record.Warnings).Count}
+    $receipt.ReceiptHash=Get-WinCareOperationReceiptStableHash $receipt
+    Write-WinCareProtectedJson -LiteralPath (Join-Path $Journal.Root 'receipt.json') -InputObject $receipt -Purpose 'WinCare.OperationReceipt'
+    $Journal.Record.ReceiptHash=$receipt.ReceiptHash
+    Write-WinCareAtomicJson -LiteralPath $Journal.RecordPath -InputObject $Journal.Record
+    $receipt.ReceiptHash
+}
+function Test-WinCareOperationJournalIntegrity {
     [CmdletBinding()]param([Parameter(Mandatory)][string]$OperationPath)
     try{
         $root=if((Get-Item -LiteralPath $OperationPath).PSIsContainer){$OperationPath}else{Split-Path -Parent $OperationPath}
@@ -128,38 +114,4 @@ ${function:Test-WinCareOperationJournalIntegrity} = {
         }
         [pscustomobject]@{Valid=$true;OperationId=$record.OperationId;Events=$count;LastEventHash=$previous;State=$record.State;ReceiptPresent=$receiptPresent}
     }catch{[pscustomobject]@{Valid=$false;OperationId=$null;Events=0;Error=$_.Exception.Message}}
-}
-
-${function:Assert-WinCareRolePermission} = {
-    [CmdletBinding()]param([Parameter(Mandatory)][string]$RequestedRole,[Parameter(Mandatory)][string]$ActionContractName,[Parameter(Mandatory)][string]$UserIdentity)
-    $validRoles=@('HelpdeskAdmin','SecOpsAdmin','FleetLead');
-        if($RequestedRole -notin $validRoles){return New-WinCareResult -Success $false -Status Blocked -Code 'InvalidRole' -Message "Role '$RequestedRole' is not recognized." -ExitCode 78}
-    $roleInfo=(Get-WinCareRbacMatrix).$RequestedRole
-    $highRiskActions=@('DisableWdac','UnloadKernelDriver','ModifyHvci','ForceSystemReboot')
-    $mediumRiskActions=@('OptimizeStorage','TrimMemoryWorkingSets','ApplyGroupPolicy')
-    $actionRiskLevel=if($ActionContractName -in $highRiskActions){3}elseif($ActionContractName -in $mediumRiskActions){2}else{1}
-    if($actionRiskLevel -gt $roleInfo.AllowedRiskCap){
-        $auditEntry=[pscustomobject]@{Timestamp=[datetime]::UtcNow.ToString('o');
-            EventType='UnauthorizedRoleActionAttempt';
-            RequestedRole=$RequestedRole;
-            ActionContractName=$ActionContractName;
-            UserIdentity=$UserIdentity;
-            ActionRiskLevel=$actionRiskLevel;
-            AllowedRiskCap=$roleInfo.AllowedRiskCap;
-            Status='BlockedByPolicy';
-            EvidenceType='UnauthorizedRoleAttemptAuditRecord'}
-        Write-WinCareLog -Level Audit -Message 'Role permission denied.' -Data @{requestedRole=$RequestedRole;
-            action=$ActionContractName;
-            user=$UserIdentity;
-            risk=$actionRiskLevel;
-            cap=$roleInfo.AllowedRiskCap}
-        return New-WinCareResult -Success $false -Status Blocked -Code 'BlockedByPolicy' `
-            -Message "Role '$RequestedRole' is unauthorized for action '$ActionContractName'." `
-            -ExitCode 78 -Data $auditEntry
-    }
-    New-WinCareResult -Success $true -Code 'RolePermissionGranted' -Message "Role '$RequestedRole' authorized for action '$ActionContractName'." -Data @{RequestedRole=$RequestedRole;
-        ActionContractName=$ActionContractName;
-        UserIdentity=$UserIdentity;
-        ActionRiskLevel=$actionRiskLevel;
-        EvidenceType='RolePermissionAuthorizationRecord'}
 }

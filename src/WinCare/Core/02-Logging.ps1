@@ -2,6 +2,14 @@ function Get-WinCareLogPath {
     [CmdletBinding()]
     param()
 
+    if (
+    $script:WinCareState -is [Collections.IDictionary] -and
+    $script:WinCareState.Contains('ReadOnlyLocked') -and
+    [bool]$script:WinCareState.ReadOnlyLocked
+) {
+    throw 'A writable log path is unavailable while read-only state is locked.'
+}
+
     $directory = Join-Path $script:WinCareState.Root 'Logs'
     $null = New-Item -ItemType Directory -Path $directory -Force
     $null = Assert-WinCareSafePath -LiteralPath $directory
@@ -68,30 +76,39 @@ function Write-WinCareLog {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
-        [ValidateSet('Debug', 'Info', 'Warning', 'Error', 'Audit')]
+        [ValidateSet('Debug','Info','Warning','Error','Audit')]
         [string]$Level,
         [Parameter(Mandatory)][string]$Message,
         [hashtable]$Data = @{}
     )
 
-    if($script:WinCareState -is [Collections.IDictionary] -and
-        $script:WinCareState.Contains('ReadOnlyLocked') -and
-        [bool]$script:WinCareState.ReadOnlyLocked) {
+    if ($script:WinCareState -isnot [Collections.IDictionary]) { return }
+    if (
+        -not $script:WinCareState.Contains('Root') -or
+        [string]::IsNullOrWhiteSpace([string]$script:WinCareState.Root)
+    ) {
         return
     }
-    $safeMessage = ConvertTo-WinCareRedactedScalar -Value $Message
-    $safeData = ConvertTo-WinCareRedactedValue -Value $Data
+    if (
+        $script:WinCareState.Contains('ReadOnlyLocked') -and
+        [bool]$script:WinCareState.ReadOnlyLocked
+    ) {
+        return
+    }
+
     $record = [ordered]@{
         schemaVersion = 1
         timestamp = [datetime]::UtcNow.ToString('o')
         level = $Level
-        sessionId = [string]$script:WinCareState.SessionId
+        sessionId = [string](
+            Get-WinCarePropertyValue $script:WinCareState 'SessionId' ''
+        )
         processId = $PID
-        message = $safeMessage
-        data = $safeData
+        message = ConvertTo-WinCareRedactedScalar $Message
+        data = ConvertTo-WinCareRedactedValue $Data
     }
-    $json = $record | ConvertTo-Json -Compress -Depth 20
-    Write-WinCareLogLine -LiteralPath (Get-WinCareLogPath) -Line $json
+    $line = $record | ConvertTo-Json -Compress -Depth 20
+    Write-WinCareLogLine -LiteralPath (Get-WinCareLogPath) -Line $line
 }
 
 function Remove-WinCareExpiredLogs {

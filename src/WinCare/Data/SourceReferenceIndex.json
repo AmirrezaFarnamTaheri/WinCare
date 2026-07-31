@@ -4,7 +4,7 @@
     {
       "id": "SRC:1c7d9e2add",
       "path": "Core/00-10-SystemToolkit.ps1",
-      "sha256": "3fab9820965da76bf2afc13399801ad07aac3e635c13dfe0137d4dec379c112f"
+      "sha256": "d367c83242b0a0acb3b54e1e80ae78a9d3bdb766ff39a1c7b710c8db6f2792b3"
     },
     {
       "id": "SRC:4726046a03",
@@ -64,7 +64,7 @@
     {
       "id": "SRC:62fff6504d",
       "path": "Providers/105-WorkspaceLayouts.ps1",
-      "sha256": "022d8fbbfad8b87ca144e2fab524f70eec163d280d887067fc46398082372353"
+      "sha256": "ff59c22130e4ebb99b4f740d5732ec06e86885b87f0471ef7996ec2c41e6d71a"
     },
     {
       "id": "SRC:f1b9beff21",
@@ -144,7 +144,7 @@
     {
       "id": "SRC:652ed31cf6",
       "path": "Providers/86-Maintenance.ps1",
-      "sha256": "d21b4b2a4825285826221e1ab5579db49c94dd19cd17ad89ce3a3b4a6c786878"
+      "sha256": "15edb01ed0ee06c2ce844eb0f0fbeeca8c3b0aa3236bf23eb4900f569a43c923"
     },
     {
       "id": "SRC:1e40d19709",
@@ -154,7 +154,7 @@
     {
       "id": "SRC:c727679ef5",
       "path": "Providers/90-Extensions.ps1",
-      "sha256": "6228e54e73d4376c05e428e357abd938604dac7aea24860c7397b34522afcd70"
+      "sha256": "6b53c356becd53b32a9533da55c3bd857d5d634012b2f4db7db406e6001a0948"
     },
     {
       "id": "SRC:3b617af8c7",
@@ -174,22 +174,22 @@
     {
       "id": "SRC:c4d1981a20",
       "path": "Providers/96-ColorStudio.ps1",
-      "sha256": "3048594e2986df9a918445dde55ac694e17d245d03e7d5d1685dce06d2aabeae"
+      "sha256": "cafd9ce10a7527db19bb778708f5231facde7ce67cf89239ea45a78d938e5ea3"
     },
     {
       "id": "SRC:9ff8a9bd56",
       "path": "Providers/97-LocalNotes.ps1",
-      "sha256": "4abdf8cf0c78507a72e6828264994f1621ea221003322dab7924fc39a4c48d92"
+      "sha256": "cdfe6c477877b13fe183857c0a6ed5e7ca8a79fd22d64a5ff75f2e0bfa5bf931"
     },
     {
       "id": "SRC:2441cc19b2",
       "path": "Providers/98-RemoteSupport.ps1",
-      "sha256": "ffeebbe71d371171946e618b4c705da36e542001b67b4f80a36693be05f6597d"
+      "sha256": "b63eeb510d8cf0c2598df775a7a950fb11bdd2bd1160cad186474a6f8b817c7c"
     },
     {
       "id": "SRC:66c214216c",
       "path": "UI/98-Headless.ps1",
-      "sha256": "33bb43f0ce2d2ffa121ce0e5f483863d32fc49ea33121bbfa8080b75ef017363"
+      "sha256": "195b051aa0f9900bb370c51c0310c724c2b09e31a5f61e13923797b2429a6af1"
     },
     {
       "id": "SRC:ecb10917e9",

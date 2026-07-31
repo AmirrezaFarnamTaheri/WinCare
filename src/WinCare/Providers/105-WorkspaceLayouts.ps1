@@ -61,8 +61,22 @@ function Get-WinCareWorkspaceLayout {[CmdletBinding()]param([string]$Id='');$lay
 function New-WinCareWorkspaceLayoutRecord {
     [CmdletBinding()]param([Parameter(Mandatory)][string]$Name,[string]$Description='',[Parameter(Mandatory)][object[]]$Slot,[string]$Id='')
     if(-not $Id){$Id=[guid]::NewGuid().ToString('N')};$now=[datetime]::UtcNow.ToString('o')
-    $slots=@($Slot|ForEach-Object{$map=ConvertTo-WinCareParameterDictionary $_;[ordered]@{Id=if($map.Id){[string]$map.Id}else{[guid]::NewGuid().ToString('N').Substring(0,16)};ProcessName=[string]$map.ProcessName;TitlePattern=[string](Get-WinCarePropertyValue $map 'TitlePattern' '');MonitorDevice=[string](Get-WinCarePropertyValue $map 'MonitorDevice' '');LeftRatio=[double]$map.LeftRatio;TopRatio=[double]$map.TopRatio;WidthRatio=[double]$map.WidthRatio;HeightRatio=[double]$map.HeightRatio;Required=[bool](Get-WinCarePropertyValue $map 'Required' $true)}})
-    $record=[ordered]@{SchemaVersion=1;Id=$Id;Name=$Name;Description=$Description;CreatedAt=$now;UpdatedAt=$now;Slots=$slots;SourceRecords=@('SRC:62fff6504d')};$null=Test-WinCareWorkspaceLayoutRecord $record;[pscustomobject]$record
+    $slots=@($Slot|ForEach-Object{
+        $map=ConvertTo-WinCareParameterDictionary $_;$slotId=[string](Get-WinCarePropertyValue $map 'Id' '')
+        if(-not $slotId){$slotId=[guid]::NewGuid().ToString('N').Substring(0,16)}
+        [ordered]@{Id=$slotId;
+            ProcessName=[string](Get-WinCarePropertyValue $map 'ProcessName' '');
+            TitlePattern=[string](Get-WinCarePropertyValue $map 'TitlePattern' '');
+            MonitorDevice=[string](Get-WinCarePropertyValue $map 'MonitorDevice' '');
+            LeftRatio=[double](Get-WinCarePropertyValue $map 'LeftRatio' 0);
+            TopRatio=[double](Get-WinCarePropertyValue $map 'TopRatio' 0);
+            WidthRatio=[double](Get-WinCarePropertyValue $map 'WidthRatio' 0);
+            HeightRatio=[double](Get-WinCarePropertyValue $map 'HeightRatio' 0);
+            Required=[bool](Get-WinCarePropertyValue $map 'Required' $true)}
+    })
+    $record=[ordered]@{SchemaVersion=1;Id=$Id;Name=$Name;Description=$Description;CreatedAt=$now;UpdatedAt=$now;Slots=$slots;SourceRecords=@('SRC:62fff6504d')}
+    $null=Test-WinCareWorkspaceLayoutRecord $record
+    [pscustomobject]$record
 }
 
 function New-WinCareWorkspaceLayoutSavePlan {

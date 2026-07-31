@@ -80,8 +80,7 @@
         'Providers/96-ColorStudio.ps1'
         'Providers/97-LocalNotes.ps1'
         'Providers/98-RemoteSupport.ps1'
+        'Providers/98a-RemoteSupportCatalog.ps1'
         'Providers/99-BrowserWorkspace.ps1'
-        'Providers/999a-CoreClosure.ps1'
-        'Providers/999z-FinalClosure.ps1'
     )
 }

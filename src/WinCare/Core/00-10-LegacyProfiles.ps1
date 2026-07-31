@@ -1,66 +1,6 @@
 #requires -Version 7.2
 
-$script:WinCareBaseActionContractTable = ${function:Get-WinCareActionContractTable}
-
-${function:Get-WinCareActionContractTable} = {
-    [CmdletBinding()]
-    param()
-    $hasCache = $script:WinCareState.ContainsKey('ActionContracts')
-    $cached = if ($hasCache) { $script:WinCareState.ActionContracts } else { $null }
-    if ($cached -isnot [Collections.IDictionary]) {
-        if ($hasCache) { $script:WinCareState.Remove('ActionContracts') }
-        $cached = & $script:WinCareBaseActionContractTable
-    }
-    foreach ($contract in $cached.Values) {
-        $contract | Add-Member -NotePropertyName RequiredParameters `
-            -NotePropertyValue @($contract.Required) -Force
-        $contract | Add-Member -NotePropertyName AllowedParameters `
-            -NotePropertyValue @($contract.Allowed) -Force
-    }
-    $script:WinCareState.ActionContracts = $cached
-    return $cached
-}
-
-${function:Get-WinCareMainMenuItems} = {
-    [CmdletBinding()]
-    param()
-    $definitions = @(
-        @('dashboard', 'Dashboard', 'Dashboard'), @('quick', 'Quick actions', 'Quick'),
-        @('applications', 'Applications', 'Applications'), @('cleanup', 'Cleanup', 'Cleanup'),
-        @('storage', 'Storage', 'Storage'), @('profiles', 'Profiles', 'Profiles'),
-        @('desktop', 'Desktop controls', 'Desktop'), @('startup', 'Startup', 'Startup'),
-        @('health', 'Health', 'Health'), @('security', 'Security', 'Security'),
-        @('windows-update', 'Windows Update', 'Wua'), @('updates', 'Updates', 'Updates'),
-        @('network', 'Network', 'Network'), @('internals', 'Internals', 'Internals'),
-        @('expert-lab', 'Expert laboratory', 'ExpertLab'), @('wdac', 'WDAC', 'WDAC'),
-        @('security-baseline', 'Security baseline', 'Baseline'),
-        @('provisioning', 'Provisioning', 'Provisioning'), @('offline', 'Offline image', 'Offline'),
-        @('boot', 'Boot', 'Boot'), @('shell', 'Shell', 'Shell'),
-        @('customization', 'Customization', 'Customization'), @('widgets', 'Widgets', 'Widgets'),
-        @('bluetooth', 'Bluetooth', 'Bluetooth'), @('maintenance', 'Maintenance', 'Maintenance'),
-        @('playbooks', 'Playbooks', 'Playbooks'), @('power', 'Power sessions', 'Power'),
-        @('windows', 'Window workspace', 'Windows'), @('colour', 'Colour studio', 'Color'),
-        @('notes', 'Local notes', 'Notes'), @('browser', 'Browser workspace', 'Browser'),
-        @('remote-support', 'Remote support', 'RemoteSupport'),
-        @('downloads', 'Downloads', 'Downloads'), @('telemetry', 'Telemetry', 'Telemetry'),
-        @('launcher', 'Launcher', 'Launcher'), @('layouts', 'Workspace layouts', 'Layouts'),
-        @('game-state', 'Game state', 'GameState'),
-        @('workspace-studio', 'Workspace and device studio', 'WorkspaceStudio'),
-        @('cleaner-preview', 'Cleaner preview studio', 'CleanerPreview'),
-        @('peer-utilities', 'Advanced utilities', 'PeerUtilities'),
-        @('automation', 'Automation', 'Automation'), @('recovery', 'Recovery', 'Recovery'),
-        @('reports', 'Reports', 'Reports'), @('knowledge', 'Knowledge', 'Knowledge'),
-        @('settings', 'Settings', 'Settings'), @('help', 'Help', 'Help'),
-        @('palette', 'Command palette', 'Palette'), @('exit', 'Exit', 'Exit')
-    )
-    foreach ($definition in $definitions) {
-        [pscustomobject]@{
-            Id = $definition[0]
-            Title = $definition[1]
-            Action = $definition[2]
-        }
-    }
-}
+# Canonical compatibility profiles and governed legacy-control plans.
 
 function New-WinCareLegacyProfileRecord {
     param(
@@ -148,10 +88,20 @@ function Get-WinCareLegacyUnsafeProfileDefinition {
             -Title 'XD-AntiSpy maximum compatibility profile' `
             -Description 'Constrained translation to reviewed privacy controls.' `
             -Controls $compat -SourceRecords @('SRC:xd-antispy-max')
+        New-WinCareLegacyProfileRecord -Id 'optimize-debloat-ultimate' `
+        -Title 'Ultimate cleanup compatibility profile' `
+        -Description 'Routes aggressive donor cleanup intent to the bounded reviewed deep-clean workflow.' `
+        -PlanKind DeepCleanup -TargetId 'windows-cleaner-utility-all' `
+        -SourceRecords @('SRC:6e8ae24ac4')
+    New-WinCareLegacyProfileRecord -Id 'personalization-legacy' `
+        -Title 'Legacy personalization compatibility profile' `
+        -Description 'Routes legacy personalization intent to reviewed reversible appearance controls.' `
+        -Controls @('AdvertisingId','TailoredExperiences','ConsumerFeatures') `
+        -SourceRecords @('SRC:1c7d9e2add')
     )
 }
 
-${function:Get-WinCareLegacyUnsafeProfile} = {
+function Get-WinCareLegacyUnsafeProfile {
     [CmdletBinding()]
     param([string]$Id = '')
     $profiles = @(Get-WinCareLegacyUnsafeProfileDefinition)
@@ -200,7 +150,7 @@ function New-WinCareLegacyControlProfilePlan {
         }
 }
 
-${function:New-WinCareLegacyUnsafeProfilePlan} = {
+function New-WinCareLegacyUnsafeProfilePlan {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)][string]$ProfileId,
