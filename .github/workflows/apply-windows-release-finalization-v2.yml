@@ -1,5 +1,5 @@
 name: Apply corrected Windows release finalization
-# Retry after aligning brand finalization with canonical installer ownership.
+# Retry after preserving embedded source bytes in the canonical brand correction.
 
 on:
   push:
