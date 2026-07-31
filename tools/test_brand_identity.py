@@ -90,27 +90,49 @@ class WinCareBrandIdentityTests(unittest.TestCase):
             self.assertEqual(canonical, read_bounded(path), str(path.relative_to(ROOT)))
 
     def test_executable_projects_reference_the_canonical_icon(self) -> None:
-        references: list[str] = []
+        reference_count = 0
         paths = list(ROOT.rglob("*.csproj")) + list(ROOT.rglob("Directory.Build.props"))
         for path in paths:
             if ".git" in path.parts or "artifacts" in path.parts or path.is_symlink():
                 continue
-            references.extend(
-                re.findall(r"<ApplicationIcon>([^<]+)</ApplicationIcon>", read_text(path), flags=re.IGNORECASE)
-            )
-        self.assertGreaterEqual(len(references), 1)
-        for reference in references:
-            self.assertTrue(reference.strip().lower().endswith("wincare.ico"), reference)
+            text = read_text(path)
+            for reference in re.findall(
+                r"<ApplicationIcon>([^<]+)</ApplicationIcon>",
+                text,
+                flags=re.IGNORECASE,
+            ):
+                reference_count += 1
+                candidate = reference.strip()
+                if candidate.lower().endswith("wincare.ico"):
+                    continue
+                match = re.fullmatch(r"\$\(([A-Za-z][A-Za-z0-9_.-]*)\)", candidate)
+                self.assertIsNotNone(match, candidate)
+                property_name = re.escape(match.group(1))
+                values = re.findall(
+                    rf"<{property_name}>([^<]+)</{property_name}>",
+                    text,
+                    flags=re.IGNORECASE,
+                )
+                self.assertTrue(
+                    any(value.strip().lower().endswith("wincare.ico") for value in values),
+                    candidate,
+                )
+        self.assertGreaterEqual(reference_count, 1)
 
     def test_installer_uses_installed_brand_assets_for_shortcuts(self) -> None:
         installer = read_text(ROOT / "Install-WinCare.ps1")
+        shortcuts = read_text(
+            ROOT / "src" / "WinCare" / "Install" / "Private" / "30-Shortcuts.ps1"
+        )
         self.assertIn("wincare.brand.package-check/v1", installer)
         self.assertIn("design\\WinCare-Brand.manifest.json", installer)
-        self.assertIn(".IconLocation", installer)
-        self.assertIn("Join-Path $Destination 'design\\WinCare.ico'", installer)
+        self.assertIn("wincare.brand.shortcut-icon/v1", shortcuts)
+        self.assertIn(".IconLocation", shortcuts)
+        self.assertIn("Join-Path $Destination 'design\\WinCare.ico'", shortcuts)
+        self.assertIn("ExpectedIconLocation", shortcuts)
 
     def test_release_receipts_include_closed_brand_identity(self) -> None:
-        finalizer = read_text(ROOT / "tools" / "finalize_standalone_release.py")
+        finalizer = read_text(ROOT / "tools" / "finalize_release.py")
         self.assertIn("wincare.brand.integration/v1", finalizer)
         self.assertIn('"schema": "wincare.brand.identity/v1"', finalizer)
         self.assertGreaterEqual(finalizer.count('"brand": brand'), 3)

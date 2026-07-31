@@ -18,6 +18,14 @@ param(
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
+# wincare.brand.package-check/v1
+$brandIconPath = Join-Path $PSScriptRoot 'design\WinCare.ico'
+$brandManifestPath = Join-Path $PSScriptRoot 'design\WinCare-Brand.manifest.json'
+if (-not (Test-Path -LiteralPath $brandIconPath -PathType Leaf) -or
+    -not (Test-Path -LiteralPath $brandManifestPath -PathType Leaf)) {
+    throw 'The WinCare installer package is missing its verified brand identity assets.'
+}
+
 if (-not $IsWindows) { throw 'WinCare installation is supported only on Windows.' }
 
 $module = Join-Path $PSScriptRoot 'src\WinCare\Install\WinCare.Installation.psm1'

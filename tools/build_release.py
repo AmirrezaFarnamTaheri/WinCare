@@ -44,6 +44,14 @@ PRODUCTION_DOC_FILES = {
     "docs/GUI.md", "docs/Safety.md", "docs/Testing.md", "docs/Advanced-Capabilities.md",
     "docs/Source-Reference-Model.md",
 }
+PRODUCTION_BRAND_FILES = {
+    "design/BRAND.md",
+    "design/WinCare-Logo.svg",
+    "design/WinCare-Wordmark.svg",
+    "design/WinCare-Logo-512.png",
+    "design/WinCare.ico",
+    "design/WinCare-Brand.manifest.json",
+}
 MAX_SOURCE_MEMBER_BYTES = 64 * 1024 * 1024
 MAX_SOURCE_TOTAL_BYTES = 256 * 1024 * 1024
 MAX_GIT_OUTPUT_BYTES = 8 * 1024 * 1024
@@ -205,7 +213,7 @@ def iter_source_files(root: Path) -> Iterable[Path]:
 
 
 def is_production_member(relative: str) -> bool:
-    if relative in PRODUCTION_ROOT_FILES or relative in PRODUCTION_CONFIG_FILES or relative in PRODUCTION_DOC_FILES:
+    if relative in PRODUCTION_ROOT_FILES or relative in PRODUCTION_CONFIG_FILES or relative in PRODUCTION_DOC_FILES or relative in PRODUCTION_BRAND_FILES:
         return True
     if relative.startswith("src/WinCare/") and not relative.startswith("src/WinCare/Native/"):
         return True
@@ -237,7 +245,7 @@ def source_files(root: Path, profile: str = "development") -> dict[str, bytes]:
             )
         result[relative] = data
     if profile == "production":
-        required = PRODUCTION_ROOT_FILES | PRODUCTION_CONFIG_FILES | {
+        required = PRODUCTION_ROOT_FILES | PRODUCTION_CONFIG_FILES | PRODUCTION_BRAND_FILES | {
             "src/WinCare/WinCare.psd1", "src/WinCare/WinCare.psm1",
         }
         missing = sorted(required - set(result), key=str.casefold)

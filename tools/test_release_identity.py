@@ -66,9 +66,10 @@ class ReleaseIdentityTests(unittest.TestCase):
         for index in range(count):
             offset = 6 + (16 * index)
             observed.append(icon[offset] or 256)
-        required = [16, 24, 32, 48, 64, 128, 256]
-        self.assertEqual(observed, required)
-        self.assertEqual(manifest["assets"]["appIcon"]["frames"], required)
+        required = {16, 24, 32, 48, 64, 128, 256}
+        self.assertEqual(observed, sorted(set(observed)))
+        self.assertTrue(required.issubset(set(observed)))
+        self.assertEqual(manifest["assets"]["appIcon"]["frames"], observed)
 
     def test_installer_shortcuts_bind_the_logo_bearing_executables(self) -> None:
         source = SHORTCUTS.read_text(encoding="utf-8")

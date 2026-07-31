@@ -102,7 +102,8 @@ def read_archive(path: Path) -> tuple[str, dict[str, bytes]]:
         if len(infos) > MAX_MEMBERS:
             raise ValueError("release archive exceeds the member ceiling")
         for info in infos:
-            normalized, is_directory = normalize_member(info.filename)
+            raw_name = getattr(info, "orig_filename", info.filename)
+            normalized, is_directory = normalize_member(raw_name)
             folded = normalized.casefold()
             if normalized in full_names or folded in folded_names:
                 raise ValueError(f"duplicate or case-colliding ZIP member: {normalized}")
@@ -117,7 +118,8 @@ def read_archive(path: Path) -> tuple[str, dict[str, bytes]]:
         root = next(iter(roots))
 
         for info in infos:
-            normalized, is_directory = normalize_member(info.filename)
+            raw_name = getattr(info, "orig_filename", info.filename)
+            normalized, is_directory = normalize_member(raw_name)
             if is_directory:
                 continue
             parts = PurePosixPath(normalized).parts

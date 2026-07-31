@@ -142,6 +142,11 @@ Describe 'Configuration and policy admission' {
       $denied.Success | Should -Be $false
       $denied.Code | Should -Be 'BlockedByPolicy'
       $denied.ExitCode | Should -Be 78
+
+      $unknown = Assert-WinCareRolePermission -RequestedRole 'FleetLead' -ActionContractName 'UnregisteredMutation' -UserIdentity 'TestUser'
+      $unknown.Success | Should -Be $false
+      $unknown.Code | Should -Be 'UnknownActionContract'
+      $unknown.ExitCode | Should -Be 78
     }
     It 'evaluates GPO Entra ID drift and synthesizes remediation plans' {
       $drift = Test-WinCareGpoEntraDrift

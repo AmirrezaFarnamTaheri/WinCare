@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="design/WinCare-Wordmark.svg" width="520" alt="WinCare" />
+</p>
+
 # WinCare
 
 <p align="center">

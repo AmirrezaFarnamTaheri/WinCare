@@ -3,8 +3,13 @@ $ErrorActionPreference = 'Stop'
 
 $script:WinCareModuleRoot = $PSScriptRoot
 $moduleVersion = $ExecutionContext.SessionState.Module.Version
-if ($null -eq $moduleVersion) {
-    throw 'WinCare must be imported through WinCare.psd1 so the module version is authoritative.'
+if ($null -eq $moduleVersion -or $moduleVersion -eq [version]'0.0') {
+    $moduleManifestPath = Join-Path $PSScriptRoot 'WinCare.psd1'
+    $moduleManifest = Import-PowerShellDataFile -LiteralPath $moduleManifestPath
+    $moduleVersion = [version][string]$moduleManifest.ModuleVersion
+}
+if ($null -eq $moduleVersion -or $moduleVersion -eq [version]'0.0') {
+    throw 'WinCare module version could not be resolved from the module session or manifest.'
 }
 $script:WinCareVersion = $moduleVersion.ToString()
 $script:WinCareSourceManifestFiles = @(

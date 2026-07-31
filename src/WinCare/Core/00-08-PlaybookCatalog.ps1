@@ -6,7 +6,9 @@ function Get-WinCarePlaybook {
     [CmdletBinding()]param([string]$Id='')
     $path=Join-Path $script:WinCareModuleRoot 'Data\Catalog\playbooks.json'
     $document=Read-WinCareJsonHashtable -LiteralPath $path
-    $null=Test-WinCareStrictObjectKeys $document @('schemaVersion','playbooks') 'playbook catalog'
+    $null=Test-WinCareStrictObjectKeys -InputObject $document `
+        -AllowedKeys @('schemaVersion','playbooks') `
+        -RequiredKeys @('schemaVersion','playbooks') -Context 'playbook catalog'
     if([int]$document.schemaVersion -ne 1){throw 'Unsupported playbook catalog schema.'}
     $seen=[Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
     $sourceSha256=(Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash.ToLowerInvariant()
@@ -35,7 +37,11 @@ function Test-WinCarePlaybookDefinition {
         'sourceRecords',
         'steps',
         'SourcePath',
-        'SourceSha256') -Context 'playbook'
+        'SourceSha256') `
+        -RequiredKeys @(
+            'id','title','description','minimumBuild','maximumBuild',
+            'architectures','requiresAdmin','sourceRecords','steps'
+        ) -Context 'playbook'
     if([string]$p.id -notmatch '^[a-z0-9][a-z0-9.-]{2,80}$' -or [string]::IsNullOrWhiteSpace([string]$p.title)){throw 'Playbook identity is invalid.'}
     if([int]$p.minimumBuild -lt 0 -or [int]$p.maximumBuild -lt [int]$p.minimumBuild){throw 'Playbook build range is invalid.'}
     if($p.requiresAdmin -isnot [bool]){throw 'Playbook requiresAdmin must be Boolean.'}
@@ -51,13 +57,38 @@ function Test-WinCarePlaybookDefinition {
         $step=ConvertTo-WinCareParameterDictionary $stepValue;$kind=[string](Get-WinCarePropertyValue $step 'kind' '')
         if($kind -notin @('preset','catalog','context-menu','app-removal')){throw "Unsupported playbook step kind: $kind"}
         switch($kind){
-            'preset'{$null=Test-WinCareStrictObjectKeys $step @('kind','id') 'playbook preset step';
-                if([string]$step.id -notmatch '^[a-z0-9][a-z0-9._-]{2,80}$'){throw 'Playbook preset ID is invalid.'}}
-            'catalog'{$null=Test-WinCareStrictObjectKeys $step @('kind','ids') 'playbook catalog step';if(@($step.ids).Count -lt 1){throw 'Playbook catalog step is empty.'}}
-            'context-menu'{$null=Test-WinCareStrictObjectKeys $step @('kind','id','enable') 'playbook context-menu step';
-                if($step.enable -isnot [bool]){throw 'Playbook context-menu enable must be Boolean.'}}
-            'app-removal'{$null=Test-WinCareStrictObjectKeys $step @('kind','id','includeProvisioned') 'playbook app-removal step';
-                if($step.includeProvisioned -isnot [bool]){throw 'Playbook app-removal flag must be Boolean.'}}
+            'preset'{
+                $null=Test-WinCareStrictObjectKeys -InputObject $step `
+                    -AllowedKeys @('kind','id') -RequiredKeys @('kind','id') `
+                    -Context 'playbook preset step'
+                if([string]$step.id -notmatch '^[a-z0-9][a-z0-9._-]{2,80}$'){
+                    throw 'Playbook preset ID is invalid.'
+                }
+            }
+            'catalog'{
+                $null=Test-WinCareStrictObjectKeys -InputObject $step `
+                    -AllowedKeys @('kind','ids') -RequiredKeys @('kind','ids') `
+                    -Context 'playbook catalog step'
+                if(@($step.ids).Count -lt 1){throw 'Playbook catalog step is empty.'}
+            }
+            'context-menu'{
+                $null=Test-WinCareStrictObjectKeys -InputObject $step `
+                    -AllowedKeys @('kind','id','enable') `
+                    -RequiredKeys @('kind','id','enable') `
+                    -Context 'playbook context-menu step'
+                if($step.enable -isnot [bool]){
+                    throw 'Playbook context-menu enable must be Boolean.'
+                }
+            }
+            'app-removal'{
+                $null=Test-WinCareStrictObjectKeys -InputObject $step `
+                    -AllowedKeys @('kind','id','includeProvisioned') `
+                    -RequiredKeys @('kind','id','includeProvisioned') `
+                    -Context 'playbook app-removal step'
+                if($step.includeProvisioned -isnot [bool]){
+                    throw 'Playbook app-removal flag must be Boolean.'
+                }
+            }
         }
     }
     $true

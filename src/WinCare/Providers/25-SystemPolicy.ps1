@@ -27,9 +27,26 @@ function Assert-WinCareRolePermission {
     $validRoles=@('HelpdeskAdmin','SecOpsAdmin','FleetLead');
         if($RequestedRole -notin $validRoles){return New-WinCareResult -Success $false -Status Blocked -Code 'InvalidRole' -Message "Role '$RequestedRole' is not recognized." -ExitCode 78}
     $roleInfo=(Get-WinCareRbacMatrix).$RequestedRole
-    $highRiskActions=@('DisableWdac','UnloadKernelDriver','ModifyHvci','ForceSystemReboot')
-    $mediumRiskActions=@('OptimizeStorage','TrimMemoryWorkingSets','ClearTemporaryFiles','ApplyGroupPolicy')
-    $actionRiskLevel=if($ActionContractName -in $highRiskActions){3}elseif($ActionContractName -in $mediumRiskActions){2}else{1}
+    $actionRiskLevels=@{
+        ClearTemporaryFiles=1
+        OptimizeStorage=2
+        TrimMemoryWorkingSets=2
+        ApplyGroupPolicy=2
+        DisableWdac=3
+        UnloadKernelDriver=3
+        ModifyHvci=3
+        ForceSystemReboot=3
+    }
+    if(-not $actionRiskLevels.ContainsKey($ActionContractName)){
+        Write-WinCareLog -Level Audit -Message 'Unknown RBAC action contract denied.' -Data @{
+            requestedRole=$RequestedRole;action=$ActionContractName;user=$UserIdentity
+        }
+        return New-WinCareResult -Success $false -Status Blocked -Code 'UnknownActionContract' `
+            -Message "Action contract '$ActionContractName' is not registered for RBAC evaluation." `
+            -ExitCode 78 -Data @{RequestedRole=$RequestedRole;ActionContractName=$ActionContractName;
+                UserIdentity=$UserIdentity;EvidenceType='UnknownRbacActionAuditRecord'}
+    }
+    $actionRiskLevel=[int]$actionRiskLevels[$ActionContractName]
     if($actionRiskLevel -gt $roleInfo.AllowedRiskCap){
         $auditEntry=[pscustomobject]@{Timestamp=[datetime]::UtcNow.ToString('o');
             EventType='UnauthorizedRoleActionAttempt';

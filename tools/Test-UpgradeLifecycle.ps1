@@ -26,11 +26,20 @@ function Expand-WinCareUpgradeArchive {
         Where-Object Source -NotMatch 'WindowsApps' |
         Select-Object -ExpandProperty Source -First 1
     if (-not $python) { throw 'Python 3 is required by the upgrade lifecycle validator.' }
-    & $python (Join-Path $PSScriptRoot 'verify_release.py') $Archive --extract-to $Destination
-    if ($LASTEXITCODE -ne 0) { throw "Validated archive extraction failed: $Archive" }
+    $verificationOutput = @(
+        & $python (Join-Path $PSScriptRoot 'verify_release.py') `
+            $Archive --extract-to $Destination 2>&1
+    )
+    $verificationExitCode = $LASTEXITCODE
+    foreach ($line in $verificationOutput) {
+        Write-Host ([string]$line)
+    }
+    if ($verificationExitCode -ne 0) {
+        throw "Validated archive extraction failed: $Archive"
+    }
     $roots = @(Get-ChildItem -LiteralPath $Destination -Directory -Force -ErrorAction Stop)
     if ($roots.Count -ne 1) { throw 'Upgrade archive must contain exactly one root directory.' }
-    $roots[0].FullName
+    return [string]$roots[0].FullName
 }
 
 $currentArchive = (Resolve-Path -LiteralPath $CurrentArchivePath -ErrorAction Stop).Path
@@ -71,7 +80,7 @@ try {
     $currentInstaller = Join-Path $currentSource 'Install-WinCare.ps1'
     $currentUninstaller = Join-Path $currentSource 'Uninstall-WinCare.ps1'
 
-    & $previousInstaller `
+    $null = & $previousInstaller `
         -Destination $destination `
         -ShortcutRoot $shortcutRoot `
         -NoStartMenuShortcut `
@@ -95,7 +104,7 @@ try {
     [IO.File]::AppendAllText($tamperTarget, "`n# upgrade tamper`n", [Text.UTF8Encoding]::new($false))
     $tamperedRejected = $false
     try {
-        & (Join-Path $tamperedSource 'Install-WinCare.ps1') `
+        $null = & (Join-Path $tamperedSource 'Install-WinCare.ps1') `
             -Destination $destination `
             -ShortcutRoot $shortcutRoot `
             -NoStartMenuShortcut `
@@ -129,12 +138,24 @@ try {
     }
     $UpgradeRollbackVerified = $true
 
-    $result = & $currentInstaller `
-        -Destination $destination `
-        -ShortcutRoot $shortcutRoot `
-        -NoStartMenuShortcut `
-        -Force `
-        -Confirm:$false
+    $currentInstallOutput = @(
+        & $currentInstaller `
+            -Destination $destination `
+            -ShortcutRoot $shortcutRoot `
+            -NoStartMenuShortcut `
+            -Force `
+            -Confirm:$false
+    )
+    $resultCandidates = @(
+        $currentInstallOutput | Where-Object {
+            $null -ne $_ -and
+            $null -ne $_.PSObject.Properties['Operation']
+        }
+    )
+    if ($resultCandidates.Count -ne 1) {
+        throw "Current installer emitted $($resultCandidates.Count) operation verdicts."
+    }
+    $result = $resultCandidates[0]
     if ([string]$result.Operation -ne 'replace') {
         throw "Expected managed replacement during upgrade, got: $($result.Operation)"
     }
@@ -166,7 +187,7 @@ try {
     }
     $UpgradeVerified = $true
 
-    & $currentUninstaller `
+    $null = & $currentUninstaller `
         -Destination $destination `
         -ShortcutRoot $shortcutRoot `
         -Confirm:$false
