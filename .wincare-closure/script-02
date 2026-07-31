@@ -1,0 +1,77 @@
+wer())\n        for token in (\n            "diagnostic-window",\n            "optimize-debloat-ultimate",\n            "personalization-legacy",\n        ):\n            self.assertIn(token, legacy)\n\n    def test_source_manifests_reference_canonical_files_only(self) -> None:\n        core = (SRC / "SourceManifests" / "Core.psd1").read_text(encoding="utf-8")\n        providers = (SRC / "SourceManifests" / "Providers.psd1").read_text(encoding="utf-8")\n        for removed in ("99-CompatibilityClosure.ps1", "99-SecurityHardening.ps1"):\n            self.assertNotIn(removed, core)\n        for removed in ("999a-CoreClosure.ps1", "999z-FinalClosure.ps1"):\n            self.assertNotIn(removed, providers)\n        self.assertIn("Core/01-ConfigVault.ps1", core)\n        self.assertIn("Core/09-TransactionIntegrity.ps1", core)\n\n\nif __name__ == "__main__":\n    unittest.main()\n'
+
+
+def write_test() -> None:
+    (ROOT / 'tools' / 'test_closure_canonicalization.py').write_text(
+        CLOSURE_TEST,
+        encoding='utf-8',
+    )
+
+
+compat = SRC / 'Core' / '99-CompatibilityClosure.ps1'
+hardening = SRC / 'Core' / '99-SecurityHardening.ps1'
+core_closure = SRC / 'Providers' / '999a-CoreClosure.ps1'
+final_closure = SRC / 'Providers' / '999z-FinalClosure.ps1'
+for required in (compat, hardening, core_closure, final_closure):
+    if not required.is_file():
+        raise SystemExit(f'Expected closure source is missing: {required}')
+
+write_test()
+
+remove_function(SRC / 'Core' / '01-Config.ps1', 'Protect-WinCareConfigVault')
+(SRC / 'Core' / '01-ConfigVault.ps1').write_text(
+    '#requires -Version 7.2\n\n' + variable_scriptblock(
+        hardening,
+        'configVaultAuditImplementation',
+        'Protect-WinCareConfigVault',
+    ),
+    encoding='utf-8',
+)
+
+transaction_names = [
+    'Get-WinCarePlanSummary',
+    'Get-WinCarePlanStableHash',
+    'Get-WinCareOperationRecordStableHash',
+    'Test-WinCareOperationJournalIntegrity',
+    'Complete-WinCareOperationReceipt',
+]
+for name in transaction_names:
+    remove_function(SRC / 'Core' / '09-Transactions.ps1', name)
+transaction_blocks = [
+    dynamic_block(core_closure, 'Get-WinCarePlanSummary'),
+    dynamic_block(core_closure, 'Get-WinCarePlanStableHash'),
+    dynamic_block(core_closure, 'Get-WinCareOperationRecordStableHash'),
+    dynamic_block(final_closure, 'Complete-WinCareOperationReceipt'),
+    dynamic_block(core_closure, 'Test-WinCareOperationJournalIntegrity'),
+]
+(SRC / 'Core' / '09-TransactionIntegrity.ps1').write_text(
+    '#requires -Version 7.2\n\n' + '\n'.join(
+        block.rstrip() for block in transaction_blocks
+    ) + '\n',
+    encoding='utf-8',
+)
+
+logging_path = SRC / 'Core' / '02-Logging.ps1'
+logging_text = logging_path.read_text(encoding='utf-8')
+guard_needle = "    $directory = Join-Path $script:WinCareState.Root 'Logs'\n"
+guard = """    if (
+    $script:WinCareState -is [Collections.IDictionary] -and
+    $script:WinCareState.Contains('ReadOnlyLocked') -and
+    [bool]$script:WinCareState.ReadOnlyLocked
+) {
+    throw 'A writable log path is unavailable while read-only state is locked.'
+}
+
+"""
+if guard not in logging_text:
+    if guard_needle not in logging_text:
+        raise ValueError('logging insertion point changed')
+    logging_text = logging_text.replace(guard_needle, guard + guard_needle, 1)
+    logging_path.write_text(logging_text, encoding='utf-8')
+replacement_logger = """function Write-WinCareLog {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)]
+        [ValidateSet('Debug','Info','Warning','Error','Audit')]
+        [string]$Level,
+        [Parameter(Manda
