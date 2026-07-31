@@ -1,4 +1,4 @@
-name: Apply artifact-clean atomic PR 5 remediation
+name: Apply observable artifact-clean PR 5 remediation
 
 on:
   push:
@@ -44,17 +44,7 @@ jobs:
 
       - name: Materialize, validate, and publish the atomic candidate
         run: |
-          python .wincare-finalize/pr5-rbac-fix.py
-          if ($LASTEXITCODE -ne 0) { throw 'Fail-closed RBAC correction failed.' }
-          python .wincare-finalize/pr5-gui-contract-fix.py
-          if ($LASTEXITCODE -ne 0) { throw 'Property-safe GUI critical contract correction failed.' }
-          python .wincare-finalize/pr5-upgrade-lifecycle-fix.py
-          if ($LASTEXITCODE -ne 0) { throw 'Upgrade archive and verdict-stream isolation failed.' }
-          python .wincare-finalize/pr5-build-artifact-hygiene.py
-          if ($LASTEXITCODE -ne 0) { throw 'Deterministic build-artifact hygiene correction failed.' }
-          python .wincare-finalize/repair-pr5-remediator.py
-          if ($LASTEXITCODE -ne 0) { throw 'Remediation process-isolation repair failed.' }
-          & .\.wincare-finalize\pr5-remediate.ps1 -Root $PWD
+          & .\.wincare-finalize\pr5-run.ps1 -Root $PWD
 
       - name: Upload complete remediation evidence
         if: always()
