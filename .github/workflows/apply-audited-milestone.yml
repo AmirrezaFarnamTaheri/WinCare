@@ -1,0 +1,80 @@
+name: Apply audited WinCare milestone
+
+on:
+  push:
+    branches:
+      - agent/documentation-overhaul
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out milestone branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.ref_name }}
+          fetch-depth: 0
+
+      - name: Detect audited payload
+        id: payload
+        shell: bash
+        run: |
+          if [[ -f .wincare-apply/milestone.patch.xz.b64 ]]; then
+            echo 'present=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'present=false' >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Apply, validate, and commit audited milestone
+        if: steps.payload.outputs.present == 'true'
+        shell: bash
+        env:
+          EXPECTED_XZ_SHA256: 2715640f92a5bdb196c6239ad4f12d87898eabb1e5aae74aef85f5e42e10d136
+          EXPECTED_PATCH_SHA256: af7c0f557647a221d0e36f332c144f9ba6ad642d0d8ba42f3b2698924750e993
+        run: |
+          set -euo pipefail
+          base64 --decode .wincare-apply/milestone.patch.xz.b64 > /tmp/wincare.patch.xz
+          echo "$EXPECTED_XZ_SHA256  /tmp/wincare.patch.xz" | sha256sum --check --strict
+          xz --decompress --stdout /tmp/wincare.patch.xz > /tmp/wincare.patch
+          echo "$EXPECTED_PATCH_SHA256  /tmp/wincare.patch" | sha256sum --check --strict
+          git apply --check /tmp/wincare.patch
+          git apply --index /tmp/wincare.patch
+          rm -rf .wincare-apply .wincare-audit-update
+          rm -f .github/workflows/apply-audited-milestone.yml
+          git add -A
+          git diff --cached --check
+
+          validators=(
+            validate_source.py
+            validate_module_manifest.py
+            validate_action_bindings.py
+            validate_powershell_calls.py
+            validate_test_source_assertions.py
+            validate_source_references.py
+            audit_stub_inventory.py
+            validate_maintainability.py
+            validate_network_egress.py
+            validate_external_processes.py
+            validate_bounded_io.py
+            validate_read_only_state.py
+            validate_context_menu_catalog.py
+            validate_test_fixtures.py
+            validate_gui.py
+          )
+          for validator in "${validators[@]}"; do
+            python "tools/$validator" .
+          done
+          python -m unittest discover -s tools -p 'test_*.py' -v
+
+          git config user.name 'wincare-audit-bot'
+          git config user.email 'wincare-audit-bot@users.noreply.github.com'
+          git commit -m 'fix: harden runtime contracts and executable identity'
+          git push origin "HEAD:${GITHUB_REF_NAME}"
+
+      - name: No payload present
+        if: steps.payload.outputs.present != 'true'
+        shell: bash
+        run: echo 'The audited milestone payload has not been staged yet.'
