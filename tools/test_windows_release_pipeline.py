@@ -10,6 +10,7 @@ VALIDATION = ROOT / "tools" / "Invoke-WindowsValidation.ps1"
 BUILD_RELEASE = ROOT / "tools" / "Build-Release.ps1"
 PREVIOUS_FIXTURE = ROOT / "tools" / "Build-PreviousReleaseFixture.ps1"
 LIFECYCLE = ROOT / "tools" / "Test-InstallationLifecycle.ps1"
+UPGRADE = ROOT / "tools" / "Test-UpgradeLifecycle.ps1"
 WORKFLOW = ROOT / ".github" / "workflows" / "windows-release-validation.yml"
 NATIVE_PROJECT = ROOT / "src" / "WinCare" / "Native" / "WinCare.Native.csproj"
 SHELL_HARDWARE = ROOT / "src" / "WinCare" / "Native" / "WinCare.ShellHardware.cs"
@@ -62,18 +63,20 @@ class WindowsReleasePipelineTests(unittest.TestCase):
         self.assertIn("Build-Release.ps1", text)
         self.assertIn("previous-release-fixture.json", text)
 
-    def test_validation_threads_previous_release_into_production_lifecycle(self) -> None:
+    def test_validation_threads_previous_release_into_focused_upgrade_lifecycle(self) -> None:
         validation = VALIDATION.read_text(encoding="utf-8")
         build_release = BUILD_RELEASE.read_text(encoding="utf-8")
         lifecycle = LIFECYCLE.read_text(encoding="utf-8")
+        upgrade = UPGRADE.read_text(encoding="utf-8")
         self.assertIn("[string]$PreviousReleaseArchivePath", validation)
         self.assertIn("-PreviousReleaseArchivePath", validation)
         self.assertIn("[string]$PreviousReleaseArchivePath", build_release)
         self.assertIn("PreviousArchivePath", build_release)
         self.assertIn("[string]$PreviousArchivePath", lifecycle)
-        self.assertIn("'version-upgrade'", lifecycle)
-        self.assertIn("UpgradeVerified = $true", lifecycle)
-        self.assertIn("UpgradeRollbackVerified = $true", lifecycle)
+        self.assertIn("Test-UpgradeLifecycle.ps1", lifecycle)
+        self.assertIn("'version-upgrade'", upgrade)
+        self.assertIn("UpgradeVerified = $true", upgrade)
+        self.assertIn("UpgradeRollbackVerified = $true", upgrade)
 
     def test_native_build_treats_nullable_warnings_as_errors(self) -> None:
         project = NATIVE_PROJECT.read_text(encoding="utf-8")
