@@ -233,3 +233,53 @@ jobs:
           - Result: all deterministic, Windows, Pester, .NET, release, and lifecycle gates passed
           - Transient applicators removed from the published tree
           "@ >> $env:GITHUB_STEP_SUMMARY
+
+      - name: Publish a safe failure locator
+        if: failure()
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $inputSha = '${{ github.sha }}'
+          git reset --hard $inputSha
+          if ($LASTEXITCODE -ne 0) { throw 'Unable to restore the verified input tree.' }
+          git clean -fdx
+          if ($LASTEXITCODE -ne 0) { throw 'Unable to clean unverified candidate files.' }
+
+          $directory = '.wincare-finalize'
+          New-Item -ItemType Directory -Path $directory -Force | Out-Null
+          $receipt = [ordered]@{
+              schema = 'wincare.pr5-remediation.failure/v1'
+              status = 'failed'
+              inputSha = $inputSha
+              runId = '${{ github.run_id }}'
+              runAttempt = '${{ github.run_attempt }}'
+              runUrl = '${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}'
+              workflow = '${{ github.workflow }}'
+              job = '${{ github.job }}'
+              recordedAtUtc = [datetime]::UtcNow.ToString('o')
+          }
+          $receiptPath = Join-Path $directory 'last-remediation-failure.json'
+          [IO.File]::WriteAllText(
+              $receiptPath,
+              (($receipt | ConvertTo-Json -Depth 8) + [Environment]::NewLine),
+              [Text.UTF8Encoding]::new($false)
+          )
+
+          git config user.name 'wincare-remediation-bot'
+          git config user.email 'wincare-remediation-bot@users.noreply.github.com'
+          git add -- $receiptPath
+          git diff --cached --check
+          if ($LASTEXITCODE -ne 0) { throw 'Failure receipt whitespace validation failed.' }
+          git commit -m "chore: record failed PR 5 remediation run ${{ github.run_id }}"
+          if ($LASTEXITCODE -ne 0) { throw 'Failure receipt commit failed.' }
+
+          $remoteLine = git ls-remote origin 'refs/heads/${{ github.ref_name }}'
+          if ($LASTEXITCODE -ne 0 -or -not $remoteLine) {
+              throw 'Unable to resolve the remote PR branch for the failure receipt.'
+          }
+          $remoteSha = ([string]$remoteLine -split '\s+')[0]
+          if ($remoteSha -ne $inputSha) {
+              Write-Warning "Branch advanced; failure receipt not published. Expected $inputSha, observed $remoteSha."
+              exit 0
+          }
+          git push origin 'HEAD:${{ github.ref_name }}'
+          if ($LASTEXITCODE -ne 0) { throw 'Publishing the failure locator failed.' }
