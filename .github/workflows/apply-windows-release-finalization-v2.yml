@@ -38,6 +38,10 @@ jobs:
           if ($LASTEXITCODE -ne 0) {
               throw 'Canonical finalization preparation failed.'
           }
+          python .wincare-finalize/release-boundary-fix.py
+          if ($LASTEXITCODE -ne 0) {
+              throw 'Release boundary convergence failed.'
+          }
           & .\.wincare-finalize\run.ps1 -Root $PWD
 
       - name: Upload complete Windows release evidence
