@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import re
 import unittest
 from pathlib import Path
@@ -15,6 +16,8 @@ FINALIZER = ROOT / "tools" / "finalize_release.py"
 WORKFLOW = ROOT / ".github" / "workflows" / "windows-release-validation.yml"
 NATIVE_PROJECT = ROOT / "src" / "WinCare" / "Native" / "WinCare.Native.csproj"
 SHELL_HARDWARE = ROOT / "src" / "WinCare" / "Native" / "WinCare.ShellHardware.cs"
+BRAND_MANIFEST = ROOT / "src" / "WinCare" / "Data" / "Gui" / "WinCare.Brand.json"
+SHORTCUTS = ROOT / "src" / "WinCare" / "Install" / "Private" / "30-Shortcuts.ps1"
 
 
 class WindowsReleasePipelineTests(unittest.TestCase):
@@ -61,6 +64,22 @@ class WindowsReleasePipelineTests(unittest.TestCase):
         ):
             self.assertIn(required, text)
         self.assertIn("supply-chain-inventory.json", text)
+
+    def test_release_brand_is_closed_across_source_installer_and_binaries(self) -> None:
+        self.assertTrue(BRAND_MANIFEST.is_file())
+        manifest = json.loads(BRAND_MANIFEST.read_text(encoding="utf-8"))
+        self.assertEqual(manifest["schema"], "wincare.brand/v1")
+        self.assertEqual(
+            manifest["assets"]["appIcon"]["frames"],
+            [16, 24, 32, 48, 64, 128, 256],
+        )
+        workflow = WORKFLOW.read_text(encoding="utf-8")
+        self.assertIn("WinCare.Brand.json", workflow)
+        self.assertIn("EmbeddedIconVerified", workflow)
+        self.assertIn("IconSha256", workflow)
+        shortcuts = SHORTCUTS.read_text(encoding="utf-8")
+        self.assertIn("ExpectedIconLocation", shortcuts)
+        self.assertIn("$shortcut.IconLocation", shortcuts)
 
     def test_volatile_branch_evidence_is_excluded_from_release_bytes(self) -> None:
         text = FINALIZER.read_text(encoding="utf-8")
