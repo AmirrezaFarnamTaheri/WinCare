@@ -1,0 +1,19 @@
+name: Windows release contract RED
+
+on:
+  push:
+    branches:
+      - agent/documentation-overhaul
+
+permissions:
+  contents: read
+
+jobs:
+  red:
+    runs-on: windows-2025
+    steps:
+      - name: Check out branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Prove release contracts fail before implementation
+        shell: pwsh
+        run: python -m unittest tools.test_windows_release_pipeline -v
