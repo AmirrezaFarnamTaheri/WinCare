@@ -1,0 +1,167 @@
+name: Apply corrected Windows release finalization
+
+on:
+  push:
+    branches:
+      - agent/documentation-overhaul
+    paths:
+      - .github/workflows/apply-windows-release-finalization-v2.yml
+
+permissions:
+  contents: write
+
+jobs:
+  finalize:
+    runs-on: windows-2025
+    timeout-minutes: 300
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - name: Check out exact PR branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.ref_name }}
+          fetch-depth: 0
+
+      - name: Install pinned .NET SDK
+        uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1
+        with:
+          dotnet-version: 8.0.416
+          cache: false
+
+      - name: Build and validate exact release candidate
+        run: |
+          & .\.wincare-finalize\run.ps1 -Root $PWD
+
+      - name: Upload complete Windows release evidence
+        id: release-evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: wincare-windows-release-${{ env.WINCARE_CANDIDATE_SHA }}
+          path: ${{ env.WINCARE_OUTPUT_DIR }}
+          if-no-files-found: error
+          retention-days: 30
+          compression-level: 9
+
+      - name: Record durable evidence and publish exact candidate
+        run: |
+          $ErrorActionPreference = 'Stop'
+          . .\tools\WinCare.Tooling.ps1
+          $report = Read-WinCareToolingJson `
+              -LiteralPath $env:WINCARE_REPORT_PATH `
+              -MaximumBytes 16777216 `
+              -MaximumDepth 64
+          $inventory = Read-WinCareToolingJson `
+              -LiteralPath $env:WINCARE_INVENTORY_PATH `
+              -MaximumBytes 16777216 `
+              -MaximumDepth 64
+          if ([string]$report.status -ne 'passed' -or [string]$inventory.status -ne 'passed') {
+              throw 'Durable evidence cannot be written for a non-passing candidate.'
+          }
+          $gateRows = @(
+              $report.gates | ForEach-Object {
+                  $seconds = [math]::Round(([double]$_.DurationMilliseconds / 1000), 2)
+                  "| $($_.Name) | $($_.Status) | $seconds s |"
+              }
+          ) -join "`n"
+          $signatureRows = @(
+              $inventory.authenticode | ForEach-Object {
+                  $signer = if ($_.signerSubject) { [string]$_.signerSubject } else { 'None' }
+                  "| $($_.name) | $($_.status) | $signer |"
+              }
+          ) -join "`n"
+          $assetRows = @(
+              $inventory.brand.iconSizes | ForEach-Object { [string]$_ }
+          ) -join ', '
+          $artifactUrl = '${{ steps.release-evidence.outputs.artifact-url }}'
+          $artifactId = '${{ steps.release-evidence.outputs.artifact-id }}'
+          $artifactDigest = '${{ steps.release-evidence.outputs.artifact-digest }}'
+          $runUrl = '${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}'
+          $document = @"
+          # Windows release validation evidence
+
+          ## Verdict
+
+          **Passed for source assurance, Windows PowerShell, Pester, .NET 8 publishing, executable resources, deterministic release construction, installer lifecycle, upgrade rollback, and supply-chain evidence.**
+
+          The exact candidate commit `$env:WINCARE_CANDIDATE_SHA` passed the complete five-phase chain. Authenticode status is disclosed truthfully below; no self-signed identity is presented as production trust.
+
+          ## Reproducible execution
+
+          - Workflow run: $runUrl
+          - Candidate commit: `$env:WINCARE_CANDIDATE_SHA`
+          - Current version: `$env:WINCARE_VERSION`
+          - Verified previous-version fixture: `$env:WINCARE_PREVIOUS_VERSION`
+          - Evidence artifact: $artifactUrl
+          - Artifact ID: `$artifactId`
+          - Artifact SHA-256 digest: `$artifactDigest`
+          - Runner: `windows-2025`
+          - PowerShell: `$($inventory.toolchain.powershell)`
+          - .NET SDK: `$($inventory.toolchain.dotnet)`
+          - Python: `$($inventory.toolchain.python)`
+          - Pester: `$($inventory.toolchain.pester)`
+          - PSScriptAnalyzer: `$($inventory.toolchain.psscriptAnalyzer)`
+
+          ## Gate results
+
+          | Gate | Status | Duration |
+          | --- | --- | ---: |
+          $gateRows
+
+          ## Product identity
+
+          - Brand schema: `$($inventory.brand.schema)`
+          - Brand manifest SHA-256: `$($inventory.brand.manifestSha256)`
+          - Embedded ICO resolutions: $assetRows
+          - Canonical vector mark, wordmark, transparent PNG, and multi-resolution ICO are deterministic and covered by the release receipts and SPDX SBOM.
+          - `WinCare.exe`, `WinCare-GUI.exe`, and `WinCare-TUI.exe` use the canonical icon; installer shortcuts reference the installed icon rather than an extraction path.
+
+          ## Installer lifecycle proof
+
+          The evidence bundle proves clean install, executable self-tests, repair, force recovery, rejected-tamper rollback, lower-version-to-current upgrade, installation-identity preservation, user-data preservation, strict uninstall, and corrupt-install removal.
+
+          ## Supply-chain proof
+
+          The artifact contains the release archive, standalone executables, SHA-256 companion, SPDX 2.3 SBOM, build receipt, release receipt, brand identity manifest, standalone manifest, build-result JSON, SLSA v1 in-toto provenance, RED/GREEN contract evidence, previous-version fixture receipt, and the complete toolchain/dependency/asset inventory.
+
+          ## Authenticode disclosure
+
+          | Executable | Status | Signer |
+          | --- | --- | --- |
+          $signatureRows
+
+          Production Authenticode signing requires an externally governed code-signing identity. This run records the real signature state and relies on closed SHA-256 identities, deterministic manifests, and SLSA provenance; it does not substitute a self-signed certificate for production trust.
+          "@
+          $document = ($document -split "`r?`n" | ForEach-Object { $_ -replace '^          ', '' }) -join [Environment]::NewLine
+          $evidencePath = Join-Path $PWD 'docs\WINDOWS-VALIDATION-EVIDENCE.md'
+          [IO.File]::WriteAllText(
+              $evidencePath,
+              ($document + [Environment]::NewLine),
+              [Text.UTF8Encoding]::new($false)
+          )
+          git add docs/WINDOWS-VALIDATION-EVIDENCE.md
+          git diff --cached --check
+          if ($LASTEXITCODE -ne 0) { throw 'Evidence-document diff validation failed.' }
+          git commit -m 'test: record complete Windows release and brand evidence'
+          if ($LASTEXITCODE -ne 0) { throw 'Evidence commit failed.' }
+          $remoteLine = git ls-remote origin "refs/heads/${{ github.ref_name }}"
+          if ($LASTEXITCODE -ne 0 -or -not $remoteLine) {
+              throw 'Unable to resolve the remote PR branch before publication.'
+          }
+          $remoteSha = ([string]$remoteLine -split "\s+")[0]
+          if ($remoteSha -ne '${{ github.sha }}') {
+              throw "The PR branch advanced during validation: expected ${{ github.sha }}, observed $remoteSha."
+          }
+          git push origin "HEAD:${{ github.ref_name }}"
+          if ($LASTEXITCODE -ne 0) { throw 'Publishing the verified candidate failed.' }
+          @"
+          ## WinCare five-phase finalization
+
+          - Candidate: `$env:WINCARE_CANDIDATE_SHA`
+          - Release: `$env:WINCARE_VERSION`
+          - Previous fixture: `$env:WINCARE_PREVIOUS_VERSION`
+          - Evidence artifact: $artifactUrl
+          - Artifact digest: `$artifactDigest`
+          - Result: passed and published
+          "@ >> $env:GITHUB_STEP_SUMMARY
