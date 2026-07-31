@@ -1,4 +1,4 @@
-name: Apply observable artifact-clean PR 5 remediation
+name: Apply line-safe artifact-clean PR 5 remediation
 
 on:
   push:
