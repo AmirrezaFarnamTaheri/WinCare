@@ -1,5 +1,5 @@
 name: Apply corrected Windows release finalization
-# Retry after converging brand closure on the canonical v3 release finalizer.
+# Retry after normalizing generated documentation and closing the artifact handoff.
 
 on:
   push:
@@ -7,6 +7,7 @@ on:
       - agent/documentation-overhaul
     paths:
       - .github/workflows/apply-windows-release-finalization-v2.yml
+      - .wincare-finalize/**
 
 permissions:
   contents: write
@@ -43,8 +44,8 @@ jobs:
         id: release-evidence
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
-          name: wincare-windows-release-${{ env.WINCARE_CANDIDATE_SHA }}
-          path: ${{ env.WINCARE_OUTPUT_DIR }}
+          name: wincare-windows-release-${{ github.sha }}
+          path: ${{ runner.temp }}/artifacts/windows-validation
           if-no-files-found: error
           retention-days: 30
           compression-level: 9
