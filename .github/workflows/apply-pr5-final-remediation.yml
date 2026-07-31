@@ -1,0 +1,235 @@
+name: Apply atomic PR 5 remediation
+
+on:
+  push:
+    branches:
+      - agent/documentation-overhaul
+    paths:
+      - .github/workflows/apply-pr5-final-remediation.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: win-care-pr5-final-remediation
+  cancel-in-progress: false
+
+jobs:
+  remediate-and-prove:
+    runs-on: windows-2025
+    timeout-minutes: 360
+    defaults:
+      run:
+        shell: pwsh
+
+    steps:
+      - name: Check out exact PR branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.ref_name }}
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Install pinned Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405
+        with:
+          python-version: '3.13'
+          check-latest: false
+
+      - name: Install pinned .NET SDK
+        uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1
+        with:
+          dotnet-version: 8.0.416
+          cache: false
+
+      - name: Ensure governed PowerShell validation modules
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
+          if (-not (Get-Module -ListAvailable Pester | Where-Object Version -eq ([version]'5.9.0'))) {
+              Install-Module Pester -RequiredVersion 5.9.0 -Scope CurrentUser -Force
+          }
+          if (-not (Get-Module -ListAvailable PSScriptAnalyzer | Where-Object Version -eq ([version]'1.24.0'))) {
+              Install-Module PSScriptAnalyzer -RequiredVersion 1.24.0 -Scope CurrentUser -Force
+          }
+          Import-Module Pester -RequiredVersion 5.9.0 -Force -ErrorAction Stop
+          Import-Module PSScriptAnalyzer -RequiredVersion 1.24.0 -Force -ErrorAction Stop
+
+      - name: Materialize the clean production candidate
+        id: candidate
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $expectedHead = '${{ github.sha }}'
+          $observedHead = (git rev-parse HEAD).Trim()
+          if ($observedHead -ne $expectedHead) {
+              throw "Checkout mismatch: expected $expectedHead, observed $observedHead."
+          }
+
+          python .wincare-finalize/apply.py
+          if ($LASTEXITCODE -ne 0) { throw 'Core release transformer failed.' }
+          python .wincare-finalize/prepare-finalization.py
+          if ($LASTEXITCODE -ne 0) { throw 'Canonical brand preparation failed.' }
+          python .wincare-finalize/brand.py
+          if ($LASTEXITCODE -ne 0) { throw 'Canonical brand integration failed.' }
+          python .wincare-finalize/release-boundary-fix.py
+          if ($LASTEXITCODE -ne 0) { throw 'Release-boundary convergence failed.' }
+          python .wincare-finalize/pr5-contract-fixes.py
+          if ($LASTEXITCODE -ne 0) { throw 'Runtime-contract remediation failed.' }
+
+          python tools/validate_source_references.py . --write
+          if ($LASTEXITCODE -ne 0) { throw 'Source-reference refresh failed.' }
+
+          $transientPaths = @(
+              '.wincare-finalize',
+              '.github/workflows/apply-pr5-final-remediation.yml',
+              '.github/workflows/apply-windows-release-brand-finalization.yml',
+              '.github/workflows/apply-windows-release-finalization.yml',
+              '.github/workflows/apply-windows-release-finalization-v2.yml',
+              '.github/workflows/apply-windows-release-finalization-v3.yml',
+              '.github/workflows/windows-release-red.yml'
+          )
+          foreach ($relative in $transientPaths) {
+              if (Test-Path -LiteralPath $relative) {
+                  Remove-Item -LiteralPath $relative -Recurse -Force
+              }
+          }
+
+          git config user.name 'wincare-remediation-bot'
+          git config user.email 'wincare-remediation-bot@users.noreply.github.com'
+          git add -A
+          git diff --cached --check
+          if ($LASTEXITCODE -ne 0) { throw 'Candidate whitespace validation failed.' }
+          git commit -m 'fix: close PR 5 runtime and release regressions'
+          if ($LASTEXITCODE -ne 0) { throw 'Candidate commit failed.' }
+          $candidate = (git rev-parse HEAD).Trim()
+          if ($candidate -notmatch '^[0-9a-f]{40}$') {
+              throw 'Unable to resolve the candidate commit.'
+          }
+          if (@(git status --porcelain).Count) {
+              throw 'Candidate commit left a dirty worktree.'
+          }
+          "sha=$candidate" >> $env:GITHUB_OUTPUT
+          Write-Host "Materialized clean candidate $candidate" -ForegroundColor Cyan
+
+      - name: Run deterministic source and regression gates
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $validators = @(
+              'validate_source.py',
+              'validate_module_manifest.py',
+              'validate_action_bindings.py',
+              'validate_powershell_calls.py',
+              'validate_test_source_assertions.py',
+              'validate_source_references.py',
+              'audit_stub_inventory.py',
+              'validate_maintainability.py',
+              'validate_network_egress.py',
+              'validate_external_processes.py',
+              'validate_bounded_io.py',
+              'validate_read_only_state.py',
+              'validate_context_menu_catalog.py',
+              'validate_test_fixtures.py',
+              'validate_gui.py'
+          )
+          foreach ($validator in $validators) {
+              python (Join-Path tools $validator) .
+              if ($LASTEXITCODE -ne 0) { throw "Validator failed: $validator" }
+          }
+          python -m unittest discover -s tools -p 'test_*.py' -v
+          if ($LASTEXITCODE -ne 0) { throw 'Python regression suite failed.' }
+          git diff --check
+          if ($LASTEXITCODE -ne 0) { throw 'Candidate diff validation failed.' }
+          if (@(git status --porcelain).Count) {
+              throw 'Deterministic validation dirtied the candidate tree.'
+          }
+
+      - name: Build independently verified previous-version fixture
+        id: previous
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $fixtureOutput = Join-Path $env:RUNNER_TEMP 'wincare-previous-release'
+          $fixtureResult = Join-Path $fixtureOutput 'previous-release-fixture.json'
+          & .\tools\Build-PreviousReleaseFixture.ps1 `
+              -Root $PWD `
+              -OutputDirectory $fixtureOutput `
+              -ResultPath $fixtureResult
+          $result = [IO.File]::ReadAllText(
+              $fixtureResult,
+              [Text.UTF8Encoding]::new($false, $true)
+          ) | ConvertFrom-Json -Depth 24
+          if ([string]$result.status -ne 'passed') {
+              throw 'Previous-release fixture did not report success.'
+          }
+          if ([string]$result.archiveSha256 -notmatch '^[a-f0-9]{64}$') {
+              throw 'Previous-release fixture did not report a valid archive digest.'
+          }
+          "archive=$($result.archive)" >> $env:GITHUB_OUTPUT
+          "result=$fixtureResult" >> $env:GITHUB_OUTPUT
+          "version=$($result.previousVersion)" >> $env:GITHUB_OUTPUT
+          if (@(git status --porcelain).Count) {
+              throw 'Previous-version fixture construction dirtied the candidate tree.'
+          }
+
+      - name: Execute complete Windows, Pester, .NET, release, and lifecycle validation
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $output = Join-Path $env:RUNNER_TEMP 'artifacts\windows-validation'
+          & .\tools\Invoke-WindowsValidation.ps1 `
+              -Root $PWD `
+              -OutputDirectory $output `
+              -PreviousReleaseArchivePath '${{ steps.previous.outputs.archive }}' `
+              -GateTimeoutSeconds 7200
+          $reportPath = Join-Path $output 'windows-validation-report.json'
+          $report = [IO.File]::ReadAllText(
+              $reportPath,
+              [Text.UTF8Encoding]::new($false, $true)
+          ) | ConvertFrom-Json -Depth 64
+          if ([string]$report.status -ne 'passed') {
+              throw 'Complete Windows validation report did not pass.'
+          }
+          Copy-Item -LiteralPath '${{ steps.previous.outputs.result }}' `
+              -Destination (Join-Path $output 'previous-release-fixture.json') `
+              -Force
+          if (@(git status --porcelain).Count) {
+              throw 'Complete Windows validation dirtied the candidate tree.'
+          }
+
+      - name: Upload complete remediation evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: pr5-remediation-${{ github.run_id }}
+          path: ${{ runner.temp }}/artifacts/windows-validation
+          if-no-files-found: warn
+          retention-days: 30
+          compression-level: 9
+
+      - name: Publish only the fully verified candidate
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $candidate = '${{ steps.candidate.outputs.sha }}'
+          if ((git rev-parse HEAD).Trim() -ne $candidate) {
+              throw 'Local HEAD changed after candidate validation.'
+          }
+          if (@(git status --porcelain).Count) {
+              throw 'Worktree is dirty before publication.'
+          }
+          $remoteLine = git ls-remote origin 'refs/heads/${{ github.ref_name }}'
+          if ($LASTEXITCODE -ne 0 -or -not $remoteLine) {
+              throw 'Unable to resolve the remote PR branch before publication.'
+          }
+          $remoteSha = ([string]$remoteLine -split '\s+')[0]
+          if ($remoteSha -ne '${{ github.sha }}') {
+              throw "PR branch advanced during validation: expected ${{ github.sha }}, observed $remoteSha."
+          }
+          git push origin 'HEAD:${{ github.ref_name }}'
+          if ($LASTEXITCODE -ne 0) { throw 'Publishing the verified candidate failed.' }
+          @"
+          ## Atomic PR #5 remediation
+
+          - Input head: `${{ github.sha }}`
+          - Verified candidate: `$candidate`
+          - Previous-version fixture: `${{ steps.previous.outputs.version }}`
+          - Result: all deterministic, Windows, Pester, .NET, release, and lifecycle gates passed
+          - Transient applicators removed from the published tree
+          "@ >> $env:GITHUB_STEP_SUMMARY
