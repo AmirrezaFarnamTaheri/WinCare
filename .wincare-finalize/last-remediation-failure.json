@@ -1,0 +1,12 @@
+{
+  "schema": "wincare.pr5-remediation.failure/v1",
+  "status": "failed",
+  "inputSha": "e94267637c306847c69d2a880871d0aa58ed1876",
+  "runId": "30655429609",
+  "runAttempt": "1",
+  "runUrl": "https://github.com/AmirrezaFarnamTaheri/WinCare/actions/runs/30655429609",
+  "workflow": "Apply isolated-module atomic PR 5 remediation",
+  "job": "remediate-and-prove",
+  "message": "Windows validation failed in gate(s): 02-pester, 05-release, 06-clean-install",
+  "recordedAtUtc": "2026-07-31T18:46:30.4539223Z"
+}
