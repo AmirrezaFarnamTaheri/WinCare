@@ -24,6 +24,12 @@ class WindowsReleasePipelineTests(unittest.TestCase):
             self.assertNotIn("Import-Module Pester -RequiredVersion 5.5.0", text, path.name)
             self.assertIn("Import-Module Pester -MinimumVersion 5.5.0", text, path.name)
 
+    def test_production_release_gate_does_not_skip_tests(self) -> None:
+        text = VALIDATION.read_text(encoding="utf-8")
+        start = text.index("$release = Invoke-ValidationGate -Name '05-release'")
+        end = text.index("$cleanInstall = Invoke-ValidationGate", start)
+        self.assertNotIn("-SkipTests", text[start:end])
+
     def test_release_workflow_preserves_a_clean_tree_until_validation_finishes(self) -> None:
         text = WORKFLOW.read_text(encoding="utf-8")
         clean_check = text.index("git status --porcelain")
