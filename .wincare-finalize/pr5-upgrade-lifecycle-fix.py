@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Prevent release-verifier diagnostics from contaminating upgrade source paths."""
+"""Keep upgrade lifecycle diagnostics and command results out of its verdict stream."""
 from __future__ import annotations
 
 import os
@@ -88,6 +88,62 @@ replace_exact(
 )
 
 replace_exact(
+    SOURCE,
+    """    & $previousInstaller `
+""",
+    """    $null = & $previousInstaller `
+""",
+)
+
+replace_exact(
+    SOURCE,
+    """        & (Join-Path $tamperedSource 'Install-WinCare.ps1') `
+""",
+    """        $null = & (Join-Path $tamperedSource 'Install-WinCare.ps1') `
+""",
+)
+
+replace_exact(
+    SOURCE,
+    """    $result = & $currentInstaller `
+        -Destination $destination `
+        -ShortcutRoot $shortcutRoot `
+        -NoStartMenuShortcut `
+        -Force `
+        -Confirm:$false
+    if ([string]$result.Operation -ne 'replace') {
+""",
+    """    $currentInstallOutput = @(
+        & $currentInstaller `
+            -Destination $destination `
+            -ShortcutRoot $shortcutRoot `
+            -NoStartMenuShortcut `
+            -Force `
+            -Confirm:$false
+    )
+    $resultCandidates = @(
+        $currentInstallOutput | Where-Object {
+            $null -ne $_ -and
+            $null -ne $_.PSObject.Properties['Operation']
+        }
+    )
+    if ($resultCandidates.Count -ne 1) {
+        throw \"Current installer emitted $($resultCandidates.Count) operation verdicts.\"
+    }
+    $result = $resultCandidates[0]
+    if ([string]$result.Operation -ne 'replace') {
+""",
+)
+
+replace_exact(
+    SOURCE,
+    """    & $currentUninstaller `
+""",
+    """    $null = & $currentUninstaller `
+""",
+)
+
+replace_exact(
     TEST,
     """        self.assertIn("UpgradeVerified = $true", upgrade)
         self.assertIn("UpgradeRollbackVerified = $true", upgrade)
@@ -108,6 +164,16 @@ replace_exact(
             upgrade,
         )
 
+    def test_upgrade_lifecycle_emits_one_verdict_only(self) -> None:
+        upgrade = UPGRADE.read_text(encoding="utf-8")
+        self.assertIn("$null = & $previousInstaller", upgrade)
+        self.assertIn("$null = & (Join-Path $tamperedSource 'Install-WinCare.ps1')", upgrade)
+        self.assertIn("$currentInstallOutput = @(", upgrade)
+        self.assertIn("$resultCandidates = @(", upgrade)
+        self.assertIn("$resultCandidates.Count -ne 1", upgrade)
+        self.assertIn("$null = & $currentUninstaller", upgrade)
+        self.assertEqual(upgrade.count("Schema = 'wincare.installation.upgrade/v1'"), 1)
+
     def test_native_build_treats_nullable_warnings_as_errors(self) -> None:
 """,
 )
@@ -119,14 +185,21 @@ for marker in (
     "$verificationExitCode = $LASTEXITCODE",
     "Write-Host ([string]$line)",
     "return [string]$roots[0].FullName",
+    "$null = & $previousInstaller",
+    "$null = & (Join-Path $tamperedSource 'Install-WinCare.ps1')",
+    "$currentInstallOutput = @(",
+    "$resultCandidates.Count -ne 1",
+    "$null = & $currentUninstaller",
 ):
     if marker not in source:
         raise RuntimeError(f"upgrade lifecycle postcondition missing: {marker}")
 for marker in (
     "test_upgrade_archive_diagnostics_cannot_contaminate_source_paths",
+    "test_upgrade_lifecycle_emits_one_verdict_only",
     "return [string]$roots[0].FullName",
+    "$resultCandidates.Count -ne 1",
 ):
     if marker not in test:
         raise RuntimeError(f"upgrade lifecycle regression test missing: {marker}")
 
-print("Applied isolated upgrade archive extraction output correction.")
+print("Applied isolated upgrade archive and verdict-stream corrections.")
