@@ -38,10 +38,24 @@ if "def replace_required(" not in brand:
     brand = brand.replace(helper_anchor, helper + helper_anchor, 1)
     brand_source.write_text(brand, encoding="utf-8", newline="\n")
 
-runpy.run_path(
-    str(ROOT / ".wincare-finalize" / "brand-release-fix.py"),
-    run_name="__main__",
+release_fix_path = ROOT / ".wincare-finalize" / "brand-release-fix.py"
+release_fix = release_fix_path.read_text(encoding="utf-8-sig")
+open_delimiter = "release_function = r'''def patch_release_finalizer() -> None:"
+close_delimiter = "    write_text(path, text)\n\n'''\nbrand = regex_once("
+if release_fix.count(open_delimiter) != 1 or release_fix.count(close_delimiter) != 1:
+    raise RuntimeError("The v3 brand release correction has an unexpected delimiter shape.")
+release_fix = release_fix.replace(
+    open_delimiter,
+    'release_function = r"""def patch_release_finalizer() -> None:',
+    1,
+).replace(
+    close_delimiter,
+    '    write_text(path, text)\n\n"""\nbrand = regex_once(',
+    1,
 )
+release_fix_path.write_text(release_fix, encoding="utf-8", newline="\n")
+compile(release_fix, str(release_fix_path), "exec")
+runpy.run_path(str(release_fix_path), run_name="__main__")
 
 for relative in (
     ".github/workflows/apply-windows-release-brand-finalization.yml",
