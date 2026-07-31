@@ -1,12 +1,12 @@
 {
   "schema": "wincare.pr5-remediation.failure/v1",
   "status": "failed",
-  "inputSha": "1f377263e7dc74250baf0c264b0c8fd159762e11",
-  "runId": "30656786965",
+  "inputSha": "fb94d55c50fc77e2dbc5bdf8e7761c76e39daa08",
+  "runId": "30657926893",
   "runAttempt": "1",
-  "runUrl": "https://github.com/AmirrezaFarnamTaheri/WinCare/actions/runs/30656786965",
-  "workflow": "Apply RBAC-complete atomic PR 5 remediation",
+  "runUrl": "https://github.com/AmirrezaFarnamTaheri/WinCare/actions/runs/30657926893",
+  "workflow": "Apply GUI-complete atomic PR 5 remediation",
   "job": "remediate-and-prove",
   "message": "Windows validation failed in gate(s): 05-release, 06-clean-install",
-  "recordedAtUtc": "2026-07-31T19:05:08.4484569Z"
+  "recordedAtUtc": "2026-07-31T19:28:25.6255727Z"
 }
