@@ -52,13 +52,29 @@ jobs:
           python - <<'PY'
           from pathlib import Path
 
-          target = Path('src/WinCare/Providers/114-StorageIntelligence.ps1')
+          source = Path('src/WinCare/Providers/114-StorageIntelligence.ps1')
           marker = 'function Resolve-WinCarePhysicalDiskForDrive {'
-          text = target.read_text(encoding='utf-8')
+          text = source.read_text(encoding='utf-8')
           if marker not in text:
               raise SystemExit('Storage hardening marker is missing from the PR branch.')
+          source.write_text(text[:text.index(marker)].rstrip() + '\n', encoding='utf-8')
+
           block = Path('/tmp/storage-block.ps1').read_text(encoding='utf-8')
-          target.write_text(text[:text.index(marker)] + block, encoding='utf-8')
+          destination = Path('src/WinCare/Providers/115-StorageHealth.ps1')
+          destination.write_text(
+              '#requires -Version 7.2\n\n' + block,
+              encoding='utf-8',
+          )
+
+          manifest = Path('src/WinCare/SourceManifests/Providers.psd1')
+          manifest_text = manifest.read_text(encoding='utf-8')
+          existing = "    'Providers/114-StorageIntelligence.ps1',"
+          addition = existing + "\n    'Providers/115-StorageHealth.ps1',"
+          if "'Providers/115-StorageHealth.ps1'" not in manifest_text:
+              if existing not in manifest_text:
+                  raise SystemExit('Provider manifest insertion point is missing.')
+              manifest_text = manifest_text.replace(existing, addition, 1)
+              manifest.write_text(manifest_text, encoding='utf-8')
           PY
 
           python tools/validate_source_references.py . --write
