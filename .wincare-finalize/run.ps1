@@ -27,7 +27,7 @@ function Assert-CleanTree {
     $changes = @(git status --porcelain)
     if ($LASTEXITCODE -ne 0) { throw "Unable to inspect the Git tree for $Purpose." }
     if ($changes.Count) {
-        throw "The Git tree is dirty after $Purpose: $($changes -join '; ')"
+        throw "The Git tree is dirty after ${Purpose}: $($changes -join '; ')"
     }
 }
 
