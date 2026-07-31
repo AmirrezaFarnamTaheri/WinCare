@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-"""Close WinCare release-brand and raw ZIP-name verification boundaries."""
+"""Close WinCare release-brand, archive-name, and fixture metadata boundaries."""
 from __future__ import annotations
 
+import runpy
 from pathlib import Path
 
 ROOT = Path.cwd().resolve()
@@ -63,4 +64,9 @@ replace_exact(
 
 for path in (verifier, payload):
     compile(path.read_text(encoding="utf-8-sig"), str(path), "exec")
-print("Closed release brand receipt and raw ZIP filename verification boundaries.")
+
+metadata_fix = ROOT / ".wincare-finalize" / "previous-release-metadata-fix.py"
+compile(metadata_fix.read_text(encoding="utf-8-sig"), str(metadata_fix), "exec")
+runpy.run_path(str(metadata_fix), run_name="__main__")
+
+print("Closed release brand, raw ZIP filename, and previous-release metadata boundaries.")
