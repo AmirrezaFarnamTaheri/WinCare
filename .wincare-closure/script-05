@@ -1,0 +1,81 @@
+text(encoding='utf-8')
+legacy_start = compat_text.index('function New-WinCareLegacyProfileRecord')
+legacy_block = compat_text[legacy_start:]
+legacy_block = re.sub(
+    r'(?m)^\$\{function:Get-WinCareLegacyUnsafeProfile\}\s*=\s*\{',
+    'function Get-WinCareLegacyUnsafeProfile {',
+    legacy_block,
+    count=1,
+)
+legacy_block = re.sub(
+    r'(?m)^\$\{function:New-WinCareLegacyUnsafeProfilePlan\}\s*=\s*\{',
+    'function New-WinCareLegacyUnsafeProfilePlan {',
+    legacy_block,
+    count=1,
+)
+insert_before = "    )\n}\n\nfunction Get-WinCareLegacyUnsafeProfile"
+extra_profiles = """        New-WinCareLegacyProfileRecord -Id 'optimize-debloat-ultimate' `
+        -Title 'Ultimate cleanup compatibility profile' `
+        -Description 'Routes aggressive donor cleanup intent to the bounded reviewed deep-clean workflow.' `
+        -PlanKind DeepCleanup -TargetId 'windows-cleaner-utility-all' `
+        -SourceRecords @('SRC:6e8ae24ac4')
+    New-WinCareLegacyProfileRecord -Id 'personalization-legacy' `
+        -Title 'Legacy personalization compatibility profile' `
+        -Description 'Routes legacy personalization intent to reviewed reversible appearance controls.' `
+        -Controls @('AdvertisingId','TailoredExperiences','ConsumerFeatures') `
+        -SourceRecords @('SRC:1c7d9e2add')
+"""
+if insert_before not in legacy_block:
+    raise ValueError('legacy profile insertion point changed')
+legacy_block = legacy_block.replace(insert_before, extra_profiles + insert_before, 1)
+system_path = SRC / 'Core' / '00-10-SystemToolkit.ps1'
+remove_function_if_present(system_path, 'Get-WinCareLegacyUnsafeProfile')
+remove_function_if_present(system_path, 'New-WinCareLegacyUnsafeProfilePlan')
+(SRC / 'Core' / '00-10-LegacyProfiles.ps1').write_text(
+    '#requires -Version 7.2\n\n# Canonical compatibility profiles and governed legacy-control plans.\n\n' +
+    legacy_block.rstrip() + '\n',
+    encoding='utf-8',
+)
+
+config_path = SRC / 'Core' / '01-Config.ps1'
+config_path.write_text(
+    config_path.read_text(encoding='utf-8').rstrip() + '\n',
+    encoding='utf-8',
+)
+
+manifest_changes = (
+    (
+        SRC / 'SourceManifests' / 'Core.psd1',
+        {
+            'Core/00-08-PlaybookCatalog.ps1',
+            'Core/00-10-LegacyProfiles.ps1',
+            'Core/00-12-MainMenu.ps1',
+            'Core/01-ConfigVault.ps1',
+            'Core/09-TransactionIntegrity.ps1',
+        },
+        {'Core/99-CompatibilityClosure.ps1', 'Core/99-SecurityHardening.ps1'},
+    ),
+    (
+        SRC / 'SourceManifests' / 'Providers.psd1',
+        {'Providers/98a-RemoteSupportCatalog.ps1'},
+        {'Providers/999a-CoreClosure.ps1', 'Providers/999z-FinalClosure.ps1'},
+    ),
+)
+for manifest_path, additions, removals in manifest_changes:
+    manifest_text = manifest_path.read_text(encoding='utf-8')
+    entries = re.findall(r"^\s*'([^']+)'\s*$", manifest_text, re.MULTILINE)
+    entries = sorted((set(entries) | additions) - removals, key=str.casefold)
+    start = manifest_text.index('    Files = @(')
+    end = manifest_text.index('    )', start)
+    block = '    Files = @(\n' + ''.join(
+        f"        '{entry}'\n" for entry in entries
+    ) + '    )'
+    manifest_path.write_text(
+        manifest_text[:start] + block + manifest_text[end + 5:],
+        encoding='utf-8',
+    )
+
+for path in (compat, hardening, core_closure, final_closure):
+    path.unlink()
+
+print('closure canonicalization applied')
