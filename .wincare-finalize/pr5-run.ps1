@@ -106,6 +106,8 @@ try {
         -FailureMessage 'Deterministic build-artifact hygiene correction failed'
     Invoke-CheckedCommand -Executable 'python' -Arguments @('.wincare-finalize/repair-pr5-remediator.py') `
         -FailureMessage 'Remediation process-isolation repair failed'
+    Invoke-CheckedCommand -Executable 'python' -Arguments @('.wincare-finalize/pr5-split-workflow-publication.py') `
+        -FailureMessage 'Split workflow publication correction failed'
     & .\.wincare-finalize\pr5-remediate.ps1 -Root $rootPath
 } catch {
     $failure = $_
