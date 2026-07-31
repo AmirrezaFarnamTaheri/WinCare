@@ -18,15 +18,15 @@ jobs:
           ref: ${{ github.ref_name }}
           fetch-depth: 0
 
-      - name: Detect audited payload
+      - name: Detect complete audited payload
         id: payload
         shell: bash
         run: |
-          if [[ -f .wincare-closure/closure.patch.xz.b64 ]]; then
-            echo 'present=true' >> "$GITHUB_OUTPUT"
-          else
-            echo 'present=false' >> "$GITHUB_OUTPUT"
-          fi
+          present=true
+          for part in 00 01 02 03 04 05; do
+            [[ -f ".wincare-closure/part-${part}" ]] || present=false
+          done
+          echo "present=${present}" >> "$GITHUB_OUTPUT"
 
       - name: Apply, validate, and commit closure canonicalization
         if: steps.payload.outputs.present == 'true'
@@ -36,7 +36,7 @@ jobs:
           EXPECTED_PATCH_SHA256: 659173ec3373290dd7aaec8c09888f77f5757a4a0f0ec5928f65df6530461b2e
         run: |
           set -euo pipefail
-          base64 --decode .wincare-closure/closure.patch.xz.b64 > /tmp/closure.patch.xz
+          cat .wincare-closure/part-* | base64 --decode > /tmp/closure.patch.xz
           echo "$EXPECTED_XZ_SHA256  /tmp/closure.patch.xz" | sha256sum --check --strict
           xz --decompress --stdout /tmp/closure.patch.xz > /tmp/closure.patch
           echo "$EXPECTED_PATCH_SHA256  /tmp/closure.patch" | sha256sum --check --strict
@@ -74,7 +74,7 @@ jobs:
           git commit -m 'refactor: canonicalize closure implementations'
           git push origin "HEAD:${GITHUB_REF_NAME}"
 
-      - name: Await payload
+      - name: Await complete payload
         if: steps.payload.outputs.present != 'true'
         shell: bash
-        run: echo 'The audited closure payload has not been staged yet.'
+        run: echo 'The complete segmented closure payload has not been staged yet.'
