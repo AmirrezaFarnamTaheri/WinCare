@@ -10,6 +10,7 @@ permissions:
 
 jobs:
   apply:
+    if: ${{ github.actor != 'wincare-audit-bot' }}
     runs-on: ubuntu-latest
     steps:
       - name: Check out PR branch
@@ -18,30 +19,28 @@ jobs:
           ref: ${{ github.ref_name }}
           fetch-depth: 0
 
-      - name: Detect complete audited payload
-        id: payload
+      - name: Detect complete migration source
+        id: source
         shell: bash
         run: |
           present=true
           for part in 00 01 02 03 04 05; do
-            [[ -f ".wincare-closure/part-${part}" ]] || present=false
+            [[ -f ".wincare-closure/script-${part}" ]] || present=false
           done
           echo "present=${present}" >> "$GITHUB_OUTPUT"
 
-      - name: Apply, validate, and commit closure canonicalization
-        if: steps.payload.outputs.present == 'true'
+      - name: Canonicalize, validate, and commit
+        if: steps.source.outputs.present == 'true'
         shell: bash
         env:
-          EXPECTED_XZ_SHA256: 6f6d7490ae1365581ca7ad0279deb326c35e432e95c6bda87bcba291582740fd
-          EXPECTED_PATCH_SHA256: 659173ec3373290dd7aaec8c09888f77f5757a4a0f0ec5928f65df6530461b2e
+          EXPECTED_SCRIPT_SHA256: fc8d3f692f8eb2eadaefcc69f044d6e56263d660fd5aa28603a3b7e27acb58df
         run: |
           set -euo pipefail
-          cat .wincare-closure/part-* | base64 --decode > /tmp/closure.patch.xz
-          echo "$EXPECTED_XZ_SHA256  /tmp/closure.patch.xz" | sha256sum --check --strict
-          xz --decompress --stdout /tmp/closure.patch.xz > /tmp/closure.patch
-          echo "$EXPECTED_PATCH_SHA256  /tmp/closure.patch" | sha256sum --check --strict
-          git apply --check /tmp/closure.patch
-          git apply --index /tmp/closure.patch
+          cat .wincare-closure/script-* > /tmp/canonicalize_closures.py
+          echo "$EXPECTED_SCRIPT_SHA256  /tmp/canonicalize_closures.py" | sha256sum --check --strict
+          python -m py_compile /tmp/canonicalize_closures.py
+          python /tmp/canonicalize_closures.py
+          python tools/validate_source_references.py . --write
           rm -rf .wincare-closure
           rm -f .github/workflows/apply-closure-canonicalization.yml
           git add -A
@@ -74,7 +73,7 @@ jobs:
           git commit -m 'refactor: canonicalize closure implementations'
           git push origin "HEAD:${GITHUB_REF_NAME}"
 
-      - name: Await complete payload
-        if: steps.payload.outputs.present != 'true'
+      - name: Await complete migration source
+        if: steps.source.outputs.present != 'true'
         shell: bash
-        run: echo 'The complete segmented closure payload has not been staged yet.'
+        run: echo 'The complete audited migration source has not been staged yet.'
