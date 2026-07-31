@@ -1,0 +1,158 @@
+name: WinCare Windows validation bridge
+
+on:
+  push:
+    branches:
+      - agent/documentation-overhaul
+    paths:
+      - .github/workflows/windows-validation-bridge.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: wincare-windows-validation-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    if: ${{ github.actor != 'wincare-validation-bot' }}
+    runs-on: windows-latest
+    timeout-minutes: 120
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - name: Check out PR branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.ref_name }}
+          fetch-depth: 0
+
+      - name: Install the pinned .NET SDK
+        uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1
+        with:
+          dotnet-version: 8.0.416
+
+      - name: Install pinned PowerShell validation modules
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
+          Install-Module -Name Pester -RequiredVersion 5.5.0 -Repository PSGallery -Scope CurrentUser -Force -AllowClobber
+          Install-Module -Name PSScriptAnalyzer -RequiredVersion 1.24.0 -Repository PSGallery -Scope CurrentUser -Force -AllowClobber
+          $pester = Get-Module -ListAvailable Pester | Where-Object Version -eq ([version]'5.5.0') | Select-Object -First 1
+          $analyzer = Get-Module -ListAvailable PSScriptAnalyzer | Where-Object Version -eq ([version]'1.24.0') | Select-Object -First 1
+          if (-not $pester) { throw 'Pester 5.5.0 was not installed.' }
+          if (-not $analyzer) { throw 'PSScriptAnalyzer 1.24.0 was not installed.' }
+          if ((dotnet --version).Trim() -ne '8.0.416') { throw 'The active .NET SDK does not match global.json.' }
+          python --version
+
+      - name: Run the governed Windows validation harness
+        id: validation
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $output = Join-Path $PWD 'artifacts\windows-validation'
+          New-Item -ItemType Directory -Path $output -Force | Out-Null
+          $status = 'passed'
+          $exceptionText = ''
+          try {
+              & .\tools\Invoke-WindowsValidation.ps1 -Root $PWD -OutputDirectory $output -GateTimeoutSeconds 3600
+          } catch {
+              $status = 'failed'
+              $exceptionText = ($_ | Out-String)
+          }
+          Set-Content -LiteralPath (Join-Path $output 'workflow-exception.txt') -Value $exceptionText -Encoding utf8NoBOM
+          "status=$status" >> $env:GITHUB_OUTPUT
+
+      - name: Write evidence and remove the temporary lane
+        if: ${{ always() }}
+        env:
+          VALIDATION_STATUS: ${{ steps.validation.outputs.status }}
+          SOURCE_SHA: ${{ github.sha }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $output = Join-Path $PWD 'artifacts\windows-validation'
+          $reportPath = Join-Path $output 'windows-validation-report.json'
+          $report = $null
+          if (Test-Path -LiteralPath $reportPath -PathType Leaf) {
+              $item = Get-Item -LiteralPath $reportPath -Force
+              if ($item.Length -gt 4194304) { throw 'Windows validation report exceeds 4 MiB.' }
+              $report = [IO.File]::ReadAllText($item.FullName, [Text.UTF8Encoding]::new($false, $true)) | ConvertFrom-Json -Depth 32
+          }
+
+          $pesterVersion = [string]((Get-Module -ListAvailable Pester | Sort-Object Version -Descending | Select-Object -First 1).Version)
+          $analyzerVersion = [string]((Get-Module -ListAvailable PSScriptAnalyzer | Sort-Object Version -Descending | Select-Object -First 1).Version)
+          $dotnetVersion = (dotnet --version).Trim()
+          $lines = [Collections.Generic.List[string]]::new()
+          $lines.Add('# Windows Validation Evidence')
+          $lines.Add('')
+          $lines.Add('This file records the most recent self-cleaning Windows validation run for the pull-request branch. It is generated from the repository-owned validation harness; it is not a substitute for release signing or production promotion evidence.')
+          $lines.Add('')
+          $lines.Add("- **Source commit:** ``$env:SOURCE_SHA``")
+          $lines.Add("- **Workflow run:** $env:RUN_URL")
+          $lines.Add("- **Status:** **$env:VALIDATION_STATUS**")
+          $lines.Add("- **Runner OS:** $env:RUNNER_OS")
+          $lines.Add("- **PowerShell:** $($PSVersionTable.PSVersion)")
+          $lines.Add("- **.NET SDK:** $dotnetVersion")
+          $lines.Add("- **Pester:** $pesterVersion")
+          $lines.Add("- **PSScriptAnalyzer:** $analyzerVersion")
+          $lines.Add('')
+          $lines.Add('## Gate results')
+          $lines.Add('')
+          $lines.Add('| Gate | Status | Exit code | Duration (ms) |')
+          $lines.Add('|---|---:|---:|---:|')
+          if ($report -and $report.gates) {
+              foreach ($gate in @($report.gates)) {
+                  $name = ([string]$gate.Name).Replace('|','\|')
+                  $status = ([string]$gate.Status).Replace('|','\|')
+                  $lines.Add("| $name | $status | $([int]$gate.ExitCode) | $([long]$gate.DurationMilliseconds) |")
+              }
+          } else {
+              $lines.Add('| validation-report | unavailable | -1 | 0 |')
+          }
+          $lines.Add('')
+          if ($report -and $report.environment) {
+              $lines.Add('## Environment')
+              $lines.Add('')
+              $lines.Add("- **Windows:** $([string]$report.environment.os.Caption) $([string]$report.environment.os.Version) (build $([string]$report.environment.os.BuildNumber), $([string]$report.environment.os.OSArchitecture))")
+              $lines.Add("- **Administrator:** $([bool]$report.environment.isAdministrator)")
+              $lines.Add("- **Culture:** $([string]$report.environment.culture)")
+              $lines.Add('')
+          }
+          if ($env:VALIDATION_STATUS -ne 'passed') {
+              $exceptionPath = Join-Path $output 'workflow-exception.txt'
+              if (Test-Path -LiteralPath $exceptionPath -PathType Leaf) {
+                  $exceptionItem = Get-Item -LiteralPath $exceptionPath -Force
+                  if ($exceptionItem.Length -gt 262144) { throw 'Workflow exception text exceeds 256 KiB.' }
+                  $exceptionText = [IO.File]::ReadAllText($exceptionItem.FullName, [Text.UTF8Encoding]::new($false, $false)).Trim()
+                  if ($exceptionText) {
+                      if ($exceptionText.Length -gt 12000) { $exceptionText = $exceptionText.Substring(0,12000) + "`n[truncated]" }
+                      $lines.Add('## Failure summary')
+                      $lines.Add('')
+                      $lines.Add('```text')
+                      foreach ($line in ($exceptionText -split '\r?\n')) { $lines.Add($line) }
+                      $lines.Add('```')
+                      $lines.Add('')
+                  }
+              }
+          }
+          $lines.Add('## Promotion boundary')
+          $lines.Add('')
+          $lines.Add('A passing run validates this source tree on a GitHub-hosted Windows runner. Release promotion still requires the repository-defined signing, provenance, and exact-byte publication controls.')
+          $lines.Add('')
+
+          $evidencePath = Join-Path $PWD 'docs\WINDOWS-VALIDATION-EVIDENCE.md'
+          [IO.File]::WriteAllLines($evidencePath, $lines, [Text.UTF8Encoding]::new($false))
+          Remove-Item -LiteralPath (Join-Path $PWD '.github\workflows\windows-validation-bridge.yml') -Force
+
+          git config user.name 'wincare-validation-bot'
+          git config user.email 'wincare-validation-bot@users.noreply.github.com'
+          git add -- 'docs/WINDOWS-VALIDATION-EVIDENCE.md' '.github/workflows/windows-validation-bridge.yml'
+          git diff --cached --check
+          git commit -m 'test: record Windows validation evidence'
+          git push origin "HEAD:$env:GITHUB_REF_NAME"
+
+      - name: Preserve a failing conclusion
+        if: ${{ always() && steps.validation.outputs.status != 'passed' }}
+        run: throw 'The governed Windows validation harness reported a failure. See docs/WINDOWS-VALIDATION-EVIDENCE.md and the workflow run.'
