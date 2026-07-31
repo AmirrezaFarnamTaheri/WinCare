@@ -1,12 +1,12 @@
 {
   "schema": "wincare.pr5-remediation.failure/v1",
   "status": "failed",
-  "inputSha": "8314b5d98a785d75248ce2154d2931b3eb346af3",
-  "runId": "30659437771",
+  "inputSha": "c72c83a1a9e86781dd86df981bfbb45b94c0f1be",
+  "runId": "30666438252",
   "runAttempt": "1",
-  "runUrl": "https://github.com/AmirrezaFarnamTaheri/WinCare/actions/runs/30659437771",
-  "workflow": "Apply upgrade-complete atomic PR 5 remediation",
+  "runUrl": "https://github.com/AmirrezaFarnamTaheri/WinCare/actions/runs/30666438252",
+  "workflow": "Apply verdict-complete atomic PR 5 remediation",
   "job": "remediate-and-prove",
-  "message": "Windows validation failed in gate(s): 05-release, 06-clean-install",
-  "recordedAtUtc": "2026-07-31T19:52:50.1284231Z"
+  "message": "The Git tree is dirty after complete Windows validation: ?? src/WinCare/Standalone/bin/; ?? src/WinCare/Standalone/obj/",
+  "recordedAtUtc": "2026-07-31T21:43:50.4749117Z"
 }
