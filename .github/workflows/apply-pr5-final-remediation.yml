@@ -1,4 +1,4 @@
-name: Apply diagnostic-safe atomic PR 5 remediation
+name: Apply isolated-module atomic PR 5 remediation
 
 on:
   push:
@@ -45,7 +45,7 @@ jobs:
       - name: Materialize, validate, and publish the atomic candidate
         run: |
           python .wincare-finalize/repair-pr5-remediator.py
-          if ($LASTEXITCODE -ne 0) { throw 'Remediation failure-path hardening failed.' }
+          if ($LASTEXITCODE -ne 0) { throw 'Remediation process-isolation repair failed.' }
           & .\.wincare-finalize\pr5-remediate.ps1 -Root $PWD
 
       - name: Upload complete remediation evidence
