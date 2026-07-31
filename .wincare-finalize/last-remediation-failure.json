@@ -1,12 +1,13 @@
 {
   "schema": "wincare.pr5-remediation.failure/v1",
   "status": "failed",
-  "inputSha": "c72c83a1a9e86781dd86df981bfbb45b94c0f1be",
-  "runId": "30666438252",
+  "phase": "preflight-or-orchestration",
+  "inputSha": "fab004d0aa3c78150d17513adacc3d7e66a215b9",
+  "runId": "30670012286",
   "runAttempt": "1",
-  "runUrl": "https://github.com/AmirrezaFarnamTaheri/WinCare/actions/runs/30666438252",
-  "workflow": "Apply verdict-complete atomic PR 5 remediation",
+  "runUrl": "https://github.com/AmirrezaFarnamTaheri/WinCare/actions/runs/30670012286",
+  "workflow": "Apply observable artifact-clean PR 5 remediation",
   "job": "remediate-and-prove",
-  "message": "The Git tree is dirty after complete Windows validation: ?? src/WinCare/Standalone/bin/; ?? src/WinCare/Standalone/obj/",
-  "recordedAtUtc": "2026-07-31T21:43:50.4749117Z"
+  "message": "Deterministic build-artifact hygiene correction failed (exit 1).",
+  "recordedAtUtc": "2026-07-31T22:28:34.4702639Z"
 }
