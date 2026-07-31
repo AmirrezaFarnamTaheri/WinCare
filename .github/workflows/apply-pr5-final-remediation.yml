@@ -1,4 +1,4 @@
-name: Apply atomic PR 5 remediation
+name: Apply bounded atomic PR 5 remediation
 
 on:
   push:
