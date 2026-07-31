@@ -1,0 +1,200 @@
+name: Windows release validation
+
+on:
+  pull_request:
+    branches:
+      - master
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: wincare-windows-release-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: windows-2025
+    timeout-minutes: 180
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - name: Check out exact source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+
+      - name: Install pinned .NET SDK
+        uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1
+        with:
+          dotnet-version: 8.0.416
+
+      - name: Verify clean source and toolchain
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $dirty = @(git status --porcelain)
+          if ($dirty.Count) { throw "Checkout is dirty before validation: $($dirty -join '; ')" }
+          if ((dotnet --version).Trim() -ne '8.0.416') {
+              throw 'The active .NET SDK does not match global.json.'
+          }
+          $pester = Get-Module -ListAvailable Pester |
+              Where-Object Version -ge ([version]'5.5.0') |
+              Sort-Object Version -Descending |
+              Select-Object -First 1
+          $analyzer = Get-Module -ListAvailable PSScriptAnalyzer |
+              Where-Object Version -ge ([version]'1.24.0') |
+              Sort-Object Version -Descending |
+              Select-Object -First 1
+          if (-not $pester) { throw 'Pester 5.5.0 or newer is required.' }
+          if (-not $analyzer) { throw 'PSScriptAnalyzer 1.24.0 or newer is required.' }
+          Import-Module $pester -Force -ErrorAction Stop
+          Import-Module $analyzer -Force -ErrorAction Stop
+
+      - name: Build verified previous-version fixture
+        id: previous
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $fixtureOutput = Join-Path $env:RUNNER_TEMP 'wincare-previous-release'
+          $fixtureResult = Join-Path $fixtureOutput 'previous-release-fixture.json'
+          & .\tools\Build-PreviousReleaseFixture.ps1 `
+              -Root $PWD `
+              -OutputDirectory $fixtureOutput `
+              -ResultPath $fixtureResult
+          $result = [IO.File]::ReadAllText(
+              $fixtureResult,
+              [Text.UTF8Encoding]::new($false, $true)
+          ) | ConvertFrom-Json -Depth 16
+          if ($result.status -ne 'passed') { throw 'Previous-release fixture did not pass.' }
+          "archive=$($result.archive)" >> $env:GITHUB_OUTPUT
+          "version=$($result.previousVersion)" >> $env:GITHUB_OUTPUT
+
+      - name: Run complete Windows and release validation
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $dirty = @(git status --porcelain)
+          if ($dirty.Count) { throw "Source changed before validation: $($dirty -join '; ')" }
+          $output = Join-Path $env:RUNNER_TEMP 'artifacts/windows-validation'
+          & .\tools\Invoke-WindowsValidation.ps1 `
+              -Root $PWD `
+              -OutputDirectory $output `
+              -PreviousReleaseArchivePath '${{ steps.previous.outputs.archive }}' `
+              -GateTimeoutSeconds 7200
+
+      - name: Verify complete supply-chain evidence
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $output = Join-Path $env:RUNNER_TEMP 'artifacts/windows-validation'
+          $release = Join-Path $output 'release'
+          $version = [string](Import-PowerShellDataFile .\src\WinCare\WinCare.psd1).ModuleVersion
+          $required = @(
+              "WinCare-$version.zip",
+              "WinCare-$version.zip.sha256",
+              "WinCare-$version-SBOM.spdx.json",
+              "WinCare-$version-BUILD-RECEIPT.json",
+              "WinCare-$version-release-receipt.json",
+              "WinCare-$version.zip.intoto.jsonl",
+              "WinCare-$version-build-result.json",
+              'WinCare.Standalone.build.json',
+              'WinCare.exe',
+              'WinCare-GUI.exe',
+              'WinCare-TUI.exe'
+          )
+          foreach ($name in $required) {
+              $path = Join-Path $release $name
+              if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
+                  throw "Required release evidence is missing: $name"
+              }
+              if ((Get-Item -LiteralPath $path -Force).Length -lt 1) {
+                  throw "Required release evidence is empty: $name"
+              }
+          }
+          $assets = @(
+              Get-ChildItem -LiteralPath $release -File -Force |
+                  Sort-Object Name |
+                  ForEach-Object {
+                      [ordered]@{
+                          name = $_.Name
+                          bytes = [long]$_.Length
+                          sha256 = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+                      }
+                  }
+          )
+          $signatures = @(
+              foreach ($name in @('WinCare.exe','WinCare-GUI.exe','WinCare-TUI.exe')) {
+                  $signature = Get-AuthenticodeSignature -LiteralPath (Join-Path $release $name)
+                  [ordered]@{
+                      name = $name
+                      status = [string]$signature.Status
+                      statusMessage = [string]$signature.StatusMessage
+                      signerSubject = if ($signature.SignerCertificate) { [string]$signature.SignerCertificate.Subject } else { $null }
+                      timestampSubject = if ($signature.TimeStamperCertificate) { [string]$signature.TimeStamperCertificate.Subject } else { $null }
+                  }
+              }
+          )
+          $packageReferences = @(
+              foreach ($projectPath in @(Get-ChildItem .\src\WinCare -Filter *.csproj -Recurse -File | Sort-Object FullName)) {
+                  [xml]$project = Get-Content -LiteralPath $projectPath.FullName -Raw -Encoding utf8
+                  foreach ($reference in @($project.Project.ItemGroup.PackageReference)) {
+                      if ($null -eq $reference) { continue }
+                      [ordered]@{
+                          project = [IO.Path]::GetRelativePath($PWD, $projectPath.FullName).Replace('\','/')
+                          name = [string]$reference.Include
+                          version = [string]$reference.Version
+                      }
+                  }
+              }
+          )
+          $moduleManifest = Import-PowerShellDataFile .\src\WinCare\WinCare.psd1
+          $requiredModules = @($moduleManifest.RequiredModules | ForEach-Object { [string]$_ })
+          $inventoryPath = Join-Path $output 'supply-chain-inventory.json'
+          [IO.File]::WriteAllText(
+              $inventoryPath,
+              (([ordered]@{
+                  schema = 'wincare.supply-chain.inventory/v2'
+                  status = 'passed'
+                  version = $version
+                  sourceCommit = '${{ github.sha }}'
+                  previousFixtureVersion = '${{ steps.previous.outputs.version }}'
+                  toolchain = [ordered]@{
+                      operatingSystem = [Environment]::OSVersion.VersionString
+                      powershell = $PSVersionTable.PSVersion.ToString()
+                      dotnet = (dotnet --version).Trim()
+                      python = ((python --version) 2>&1 | Out-String).Trim()
+                      pester = [string](Get-Module Pester).Version
+                      psscriptAnalyzer = [string](Get-Module PSScriptAnalyzer).Version
+                  }
+                  workflowDependencies = @(
+                      [ordered]@{ name='actions/checkout'; commit='3d3c42e5aac5ba805825da76410c181273ba90b1' },
+                      [ordered]@{ name='actions/setup-dotnet'; commit='26b0ec14cb23fa6904739307f278c14f94c95bf1' },
+                      [ordered]@{ name='actions/upload-artifact'; commit='043fb46d1a93c77aae656e7c1c64a875d1fc6a0a' }
+                  )
+                  powershellRequiredModules = $requiredModules
+                  dotnetPackageReferences = $packageReferences
+                  authenticode = $signatures
+                  assets = $assets
+              } | ConvertTo-Json -Depth 20) + [Environment]::NewLine),
+              [Text.UTF8Encoding]::new($false)
+          )
+
+      - name: Upload Windows release evidence
+        id: release-evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: wincare-windows-release-${{ github.sha }}
+          path: ${{ runner.temp }}/artifacts/windows-validation
+          if-no-files-found: error
+          retention-days: 30
+          compression-level: 9
+
+      - name: Publish evidence digest summary
+        run: |
+          @"
+          ## WinCare Windows release validation
+
+          - Source: `${{ github.sha }}`
+          - Previous fixture: `${{ steps.previous.outputs.version }}`
+          - Artifact digest: `${{ steps.release-evidence.outputs.artifact-digest }}`
+          - Artifact ID: `${{ steps.release-evidence.outputs.artifact-id }}`
+          "@ >> $env:GITHUB_STEP_SUMMARY
