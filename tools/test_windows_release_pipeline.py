@@ -11,6 +11,7 @@ BUILD_RELEASE = ROOT / "tools" / "Build-Release.ps1"
 PREVIOUS_FIXTURE = ROOT / "tools" / "Build-PreviousReleaseFixture.ps1"
 LIFECYCLE = ROOT / "tools" / "Test-InstallationLifecycle.ps1"
 UPGRADE = ROOT / "tools" / "Test-UpgradeLifecycle.ps1"
+FINALIZER = ROOT / "tools" / "finalize_release.py"
 WORKFLOW = ROOT / ".github" / "workflows" / "windows-release-validation.yml"
 NATIVE_PROJECT = ROOT / "src" / "WinCare" / "Native" / "WinCare.Native.csproj"
 SHELL_HARDWARE = ROOT / "src" / "WinCare" / "Native" / "WinCare.ShellHardware.cs"
@@ -54,6 +55,10 @@ class WindowsReleasePipelineTests(unittest.TestCase):
         ):
             self.assertIn(required, text)
         self.assertIn("supply-chain-inventory.json", text)
+
+    def test_volatile_branch_evidence_is_excluded_from_release_bytes(self) -> None:
+        text = FINALIZER.read_text(encoding="utf-8")
+        self.assertIn('folded == "docs/windows-validation-evidence.md"', text)
 
     def test_previous_release_fixture_is_isolated_committed_and_verified(self) -> None:
         text = PREVIOUS_FIXTURE.read_text(encoding="utf-8")
