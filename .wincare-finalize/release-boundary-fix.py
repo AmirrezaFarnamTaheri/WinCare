@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Close WinCare release-brand, archive-name, and fixture metadata boundaries."""
+"""Close WinCare release-brand, archive-name, fixture, and package boundaries."""
 from __future__ import annotations
 
 import runpy
@@ -62,11 +62,93 @@ replace_exact(
     expected=2,
 )
 
-for path in (verifier, payload):
+builder = ROOT / "tools" / "build_release.py"
+replace_exact(
+    builder,
+    '''PRODUCTION_DOC_FILES = {
+    "docs/Architecture.md", "docs/CAPABILITY-MATRIX.md", "docs/Compatibility.md",
+    "docs/GUI.md", "docs/Safety.md", "docs/Testing.md", "docs/Advanced-Capabilities.md",
+    "docs/Source-Reference-Model.md",
+}
+MAX_SOURCE_MEMBER_BYTES = 64 * 1024 * 1024
+''',
+    '''PRODUCTION_DOC_FILES = {
+    "docs/Architecture.md", "docs/CAPABILITY-MATRIX.md", "docs/Compatibility.md",
+    "docs/GUI.md", "docs/Safety.md", "docs/Testing.md", "docs/Advanced-Capabilities.md",
+    "docs/Source-Reference-Model.md",
+}
+PRODUCTION_BRAND_FILES = {
+    "design/BRAND.md",
+    "design/WinCare-Logo.svg",
+    "design/WinCare-Wordmark.svg",
+    "design/WinCare-Logo-512.png",
+    "design/WinCare.ico",
+    "design/WinCare-Brand.manifest.json",
+}
+MAX_SOURCE_MEMBER_BYTES = 64 * 1024 * 1024
+''',
+)
+replace_exact(
+    builder,
+    '''    if relative in PRODUCTION_ROOT_FILES or relative in PRODUCTION_CONFIG_FILES or relative in PRODUCTION_DOC_FILES:
+''',
+    '''    if relative in PRODUCTION_ROOT_FILES or relative in PRODUCTION_CONFIG_FILES or relative in PRODUCTION_DOC_FILES or relative in PRODUCTION_BRAND_FILES:
+''',
+)
+replace_exact(
+    builder,
+    '''        required = PRODUCTION_ROOT_FILES | PRODUCTION_CONFIG_FILES | {
+            "src/WinCare/WinCare.psd1", "src/WinCare/WinCare.psm1",
+        }
+''',
+    '''        required = PRODUCTION_ROOT_FILES | PRODUCTION_CONFIG_FILES | PRODUCTION_BRAND_FILES | {
+            "src/WinCare/WinCare.psd1", "src/WinCare/WinCare.psm1",
+        }
+''',
+)
+
+test_path = ROOT / "tools" / "test_windows_release_pipeline.py"
+replace_exact(
+    test_path,
+    '''BUILD_RELEASE = ROOT / "tools" / "Build-Release.ps1"
+PREVIOUS_FIXTURE = ROOT / "tools" / "Build-PreviousReleaseFixture.ps1"
+''',
+    '''BUILD_RELEASE = ROOT / "tools" / "Build-Release.ps1"
+BUILD_RELEASE_PY = ROOT / "tools" / "build_release.py"
+PREVIOUS_FIXTURE = ROOT / "tools" / "Build-PreviousReleaseFixture.ps1"
+''',
+)
+replace_exact(
+    test_path,
+    '''    def test_release_workflow_preserves_a_clean_tree_until_validation_finishes(self) -> None:
+''',
+    '''    def test_production_package_contains_closed_canonical_brand_assets(self) -> None:
+        text = BUILD_RELEASE_PY.read_text(encoding="utf-8")
+        required = {
+            "design/BRAND.md",
+            "design/WinCare-Logo.svg",
+            "design/WinCare-Wordmark.svg",
+            "design/WinCare-Logo-512.png",
+            "design/WinCare.ico",
+            "design/WinCare-Brand.manifest.json",
+        }
+        self.assertIn("PRODUCTION_BRAND_FILES", text)
+        self.assertIn("required = PRODUCTION_ROOT_FILES | PRODUCTION_CONFIG_FILES | PRODUCTION_BRAND_FILES", text)
+        for asset in required:
+            self.assertIn(f'"{asset}"', text)
+
+    def test_release_workflow_preserves_a_clean_tree_until_validation_finishes(self) -> None:
+''',
+)
+
+for path in (verifier, payload, builder, test_path):
     compile(path.read_text(encoding="utf-8-sig"), str(path), "exec")
 
 metadata_fix = ROOT / ".wincare-finalize" / "previous-release-metadata-fix.py"
 compile(metadata_fix.read_text(encoding="utf-8-sig"), str(metadata_fix), "exec")
 runpy.run_path(str(metadata_fix), run_name="__main__")
 
-print("Closed release brand, raw ZIP filename, and previous-release metadata boundaries.")
+print(
+    "Closed release brand, raw ZIP filename, previous-release metadata, "
+    "and production brand package boundaries."
+)
