@@ -150,14 +150,83 @@ replace_exact(
 )
 replace_exact(
     standalone_test,
-    '''                    for name in names:
+    '''def write_standalone_output(directory: Path) -> None:
+    """Execute the write standalone output operation with validated inputs."""
+    records = []
+''',
+    '''def write_standalone_output(directory: Path) -> None:
+    """Execute the write standalone output operation with validated inputs."""
+    icon = ROOT / "design" / "WinCare.ico"
+    if not icon.is_file() or icon.is_symlink():
+        raise FileNotFoundError("missing canonical WinCare icon fixture")
+    icon_sha256 = verify_release_v3.sha256(icon.read_bytes())
+    icon_frames = [16, 20, 24, 32, 40, 48, 64, 128, 256]
+    records = []
+''',
+)
+replace_exact(
+    standalone_test,
+    '''            "RuntimeIdentifier": "win-x64",
+            "SelfTestExitCode": 0,
+''',
+    '''            "RuntimeIdentifier": "win-x64",
+            "SelfTestExitCode": 0,
+            "EmbeddedIconVerified": True,
+            "IconSha256": icon_sha256,
+            "IconFrameSizes": icon_frames,
+''',
+)
+replace_exact(
+    standalone_test,
+    '''        "PayloadManifestSha256": "b" * 64,
+        "Artifacts": records,
+''',
+    '''        "PayloadManifestSha256": "b" * 64,
+        "IconSha256": icon_sha256,
+        "IconFrameSizes": icon_frames,
+        "Artifacts": records,
+''',
+)
+replace_exact(
+    standalone_test,
+    '''
+
+@functools.lru_cache(maxsize=8)
+def fake_pe''',
+    '''
+
+def write_zip_with_raw_names(path: Path, names: list[str]) -> None:
+    """Write malformed names exactly, bypassing Windows zipfile slash normalization."""
+    replacements: list[tuple[bytes, bytes]] = []
+    with zipfile.ZipFile(path, "w") as archive:
+        for name in names:
+            stored_name = name.replace("\\\\", "/")
+            archive.writestr(stored_name, b"x")
+            if "\\\\" in name:
+                replacements.append((stored_name.encode("utf-8"), name.encode("utf-8")))
+    if not replacements:
+        return
+    payload = path.read_bytes()
+    for normalized, raw in replacements:
+        occurrences = payload.count(normalized)
+        if occurrences != 2:
+            raise AssertionError(
+                f"expected local and central ZIP names exactly twice, found {occurrences}"
+            )
+        payload = payload.replace(normalized, raw)
+    path.write_bytes(payload)
+
+
+@functools.lru_cache(maxsize=8)
+def fake_pe''',
+)
+replace_exact(
+    standalone_test,
+    '''                with zipfile.ZipFile(path, "w") as archive:
+                    for name in names:
                         archive.writestr(name, b"x")
 ''',
-    '''                    for name in names:
-                        info = zip_info(name)
-                        info.filename = name
-                        info.orig_filename = name
-                        archive.writestr(info, b"x")
+    '''                write_zip_with_raw_names(path, names)
 ''',
 )
 
