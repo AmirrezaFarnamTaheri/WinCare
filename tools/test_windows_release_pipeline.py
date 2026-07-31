@@ -44,7 +44,7 @@ class WindowsReleasePipelineTests(unittest.TestCase):
         for required in (
             "SBOM.spdx.json",
             "BUILD-RECEIPT.json",
-            "RELEASE-RECEIPT.json",
+            "-release-receipt.json",
             ".zip.sha256",
             ".zip.intoto.jsonl",
             "WinCare.Standalone.build.json",
