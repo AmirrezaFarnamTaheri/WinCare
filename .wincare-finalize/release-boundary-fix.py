@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Close WinCare release-brand, archive-name, fixture, and package boundaries."""
+"""Close WinCare release-brand, archive-name, fixture, package, and clone boundaries."""
 from __future__ import annotations
 
 import runpy
@@ -107,6 +107,13 @@ replace_exact(
 ''',
 )
 
+attributes = ROOT / ".gitattributes"
+replace_exact(
+    attributes,
+    "*.json text eol=lf\n*.py text eol=lf\n",
+    "*.json text eol=lf\n*.svg text eol=lf\n*.py text eol=lf\n",
+)
+
 test_path = ROOT / "tools" / "test_windows_release_pipeline.py"
 replace_exact(
     test_path,
@@ -115,6 +122,7 @@ PREVIOUS_FIXTURE = ROOT / "tools" / "Build-PreviousReleaseFixture.ps1"
 ''',
     '''BUILD_RELEASE = ROOT / "tools" / "Build-Release.ps1"
 BUILD_RELEASE_PY = ROOT / "tools" / "build_release.py"
+GIT_ATTRIBUTES = ROOT / ".gitattributes"
 PREVIOUS_FIXTURE = ROOT / "tools" / "Build-PreviousReleaseFixture.ps1"
 ''',
 )
@@ -137,6 +145,10 @@ replace_exact(
         for asset in required:
             self.assertIn(f'"{asset}"', text)
 
+    def test_brand_vector_assets_are_lf_normalized_across_windows_clones(self) -> None:
+        text = GIT_ATTRIBUTES.read_text(encoding="utf-8")
+        self.assertEqual(text.count("*.svg text eol=lf"), 1)
+
     def test_release_workflow_preserves_a_clean_tree_until_validation_finishes(self) -> None:
 ''',
 )
@@ -150,5 +162,5 @@ runpy.run_path(str(metadata_fix), run_name="__main__")
 
 print(
     "Closed release brand, raw ZIP filename, previous-release metadata, "
-    "and production brand package boundaries."
+    "production brand package, and Windows clone line-ending boundaries."
 )
