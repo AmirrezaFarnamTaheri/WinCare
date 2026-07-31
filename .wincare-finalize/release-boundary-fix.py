@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Close WinCare release-brand, archive-name, fixture, package, and clone boundaries."""
+"""Close WinCare release-brand, archive-name, fixture, package, clone, and timeout boundaries."""
 from __future__ import annotations
 
 import runpy
@@ -114,6 +114,13 @@ replace_exact(
     "*.json text eol=lf\n*.svg text eol=lf\n*.py text eol=lf\n",
 )
 
+windows_validation = ROOT / "tools" / "Invoke-WindowsValidation.ps1"
+replace_exact(
+    windows_validation,
+    "[ValidateRange(1,3600)][int]$TimeoutSeconds,\n",
+    "[ValidateRange(1,7200)][int]$TimeoutSeconds,\n",
+)
+
 test_path = ROOT / "tools" / "test_windows_release_pipeline.py"
 replace_exact(
     test_path,
@@ -123,6 +130,7 @@ PREVIOUS_FIXTURE = ROOT / "tools" / "Build-PreviousReleaseFixture.ps1"
     '''BUILD_RELEASE = ROOT / "tools" / "Build-Release.ps1"
 BUILD_RELEASE_PY = ROOT / "tools" / "build_release.py"
 GIT_ATTRIBUTES = ROOT / ".gitattributes"
+WINDOWS_VALIDATION = ROOT / "tools" / "Invoke-WindowsValidation.ps1"
 PREVIOUS_FIXTURE = ROOT / "tools" / "Build-PreviousReleaseFixture.ps1"
 ''',
 )
@@ -149,6 +157,12 @@ replace_exact(
         text = GIT_ATTRIBUTES.read_text(encoding="utf-8")
         self.assertEqual(text.count("*.svg text eol=lf"), 1)
 
+    def test_windows_validation_timeout_contract_supports_public_maximum(self) -> None:
+        text = WINDOWS_VALIDATION.read_text(encoding="utf-8")
+        self.assertIn("[ValidateRange(60,7200)][int]$GateTimeoutSeconds", text)
+        self.assertIn("[ValidateRange(1,7200)][int]$TimeoutSeconds", text)
+        self.assertNotIn("[ValidateRange(1,3600)][int]$TimeoutSeconds", text)
+
     def test_release_workflow_preserves_a_clean_tree_until_validation_finishes(self) -> None:
 ''',
 )
@@ -162,5 +176,5 @@ runpy.run_path(str(metadata_fix), run_name="__main__")
 
 print(
     "Closed release brand, raw ZIP filename, previous-release metadata, "
-    "production brand package, and Windows clone line-ending boundaries."
+    "production brand package, Windows clone line-ending, and validation timeout boundaries."
 )
