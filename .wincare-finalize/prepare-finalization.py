@@ -36,7 +36,13 @@ if "def replace_required(" not in brand:
     if brand.count(helper_anchor) != 1:
         raise RuntimeError("The WinCare brand installer function has an unexpected shape.")
     brand = brand.replace(helper_anchor, helper + helper_anchor, 1)
-    brand_source.write_text(brand, encoding="utf-8", newline="\n")
+
+whitespace_old = '    write_text(path, text.rstrip() + addition + "\\n")'
+whitespace_new = '    write_text(path, text.rstrip() + addition.rstrip() + "\\n")'
+if brand.count(whitespace_old) != 1:
+    raise RuntimeError("The WinCare release-documentation writer has an unexpected shape.")
+brand = brand.replace(whitespace_old, whitespace_new, 1)
+brand_source.write_text(brand, encoding="utf-8", newline="\n")
 
 release_fix_path = ROOT / ".wincare-finalize" / "brand-release-fix.py"
 release_fix = release_fix_path.read_text(encoding="utf-8-sig")
