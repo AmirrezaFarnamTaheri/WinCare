@@ -1,5 +1,5 @@
 name: Apply corrected Windows release finalization
-# Retry after the fail-closed runner interpolation fix.
+# Retry after aligning brand finalization with canonical installer ownership.
 
 on:
   push:
@@ -33,6 +33,10 @@ jobs:
 
       - name: Build and validate exact release candidate
         run: |
+          python .wincare-finalize/prepare-finalization.py
+          if ($LASTEXITCODE -ne 0) {
+              throw 'Canonical finalization preparation failed.'
+          }
           & .\.wincare-finalize\run.ps1 -Root $PWD
 
       - name: Upload complete Windows release evidence
