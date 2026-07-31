@@ -98,8 +98,8 @@ replace_exact(
     # ignored in the published repository, but the transactional runner also
     # leaves its workspace physically clean before branch publication.
     foreach ($relative in @(
-        'src\\WinCare\\Standalone\\bin',
-        'src\\WinCare\\Standalone\\obj'
+        'src/WinCare/Standalone/bin',
+        'src/WinCare/Standalone/obj'
     )) {
         $generatedPath = Join-Path $rootPath $relative
         if (Test-Path -LiteralPath $generatedPath) {
@@ -125,8 +125,8 @@ for marker in (
         raise RuntimeError(f"generated-artifact regression test missing: {marker}")
 for marker in (
     "Remove only deterministic compiler outputs created by validation",
-    "src\\\\WinCare\\\\Standalone\\\\bin",
-    "src\\\\WinCare\\\\Standalone\\\\obj",
+    "src/WinCare/Standalone/bin",
+    "src/WinCare/Standalone/obj",
     "Remove-Item -LiteralPath $generatedPath -Recurse -Force -ErrorAction Stop",
 ):
     if marker not in remediator:
