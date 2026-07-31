@@ -60,17 +60,26 @@ def replace_exact(relative: str, old: str, new: str) -> None:
     write_text(relative, text.replace(old, new, 1))
 
 
-replace_exact(
-    ".gitignore",
-    """artifacts/
-*.zip
-""",
-    """artifacts/
-**/bin/
-**/obj/
-*.zip
-""",
-)
+def ensure_ignore_rules() -> None:
+    relative = ".gitignore"
+    lines = read_text(relative).splitlines()
+    rules = ("**/bin/", "**/obj/")
+    for rule in rules:
+        count = lines.count(rule)
+        if count > 1:
+            raise RuntimeError(f"duplicate generated-artifact ignore rule: {rule}")
+    missing = [rule for rule in rules if rule not in lines]
+    if not missing:
+        return
+    try:
+        insertion = lines.index("artifacts/") + 1
+    except ValueError as exc:
+        raise RuntimeError(".gitignore is missing the artifacts/ ownership anchor") from exc
+    lines[insertion:insertion] = missing
+    write_text(relative, "\n".join(lines) + "\n")
+
+
+ensure_ignore_rules()
 
 replace_exact(
     "tools/test_windows_release_pipeline.py",
