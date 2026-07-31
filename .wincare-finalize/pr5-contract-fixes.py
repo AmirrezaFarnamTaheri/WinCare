@@ -62,13 +62,13 @@ def replace_exact(relative: str, old: str, new: str, expected: int = 1) -> None:
 
 
 # A deliberately initialized null cache means "not built yet", not "return null".
+# Preserve the historically capped source-file line count.
 replace_exact(
     "src/WinCare/Core/11-ActionContracts.ps1",
     "    if($script:WinCareState.ContainsKey('ActionContracts')){return $script:WinCareState.ActionContracts}\n",
     "    if($script:WinCareState.ContainsKey('ActionContracts') -and "
-    "$script:WinCareState.ActionContracts -is [Collections.IDictionary]){\n"
-    "        return $script:WinCareState.ActionContracts\n"
-    "    }\n",
+    "$script:WinCareState.ActionContracts -is [Collections.IDictionary])"
+    "{return $script:WinCareState.ActionContracts}\n",
 )
 
 # Bind strict-object arguments by name and make required schema fields explicit.
@@ -76,45 +76,70 @@ playbook_path = "src/WinCare/Core/00-08-PlaybookCatalog.ps1"
 replace_exact(
     playbook_path,
     "    $null=Test-WinCareStrictObjectKeys $document @('schemaVersion','playbooks') 'playbook catalog'\n",
-    "    $null=Test-WinCareStrictObjectKeys -InputObject $document "
-    "-AllowedKeys @('schemaVersion','playbooks') "
-    "-RequiredKeys @('schemaVersion','playbooks') -Context 'playbook catalog'\n",
+    "    $null=Test-WinCareStrictObjectKeys -InputObject $document `\n"
+    "        -AllowedKeys @('schemaVersion','playbooks') `\n"
+    "        -RequiredKeys @('schemaVersion','playbooks') -Context 'playbook catalog'\n",
 )
 replace_exact(
     playbook_path,
     "        'SourcePath',\n        'SourceSha256') -Context 'playbook'\n",
-    "        'SourcePath',\n        'SourceSha256') "
-    "-RequiredKeys @('id','title','description','minimumBuild','maximumBuild',"
-    "'architectures','requiresAdmin','sourceRecords','steps') -Context 'playbook'\n",
+    "        'SourcePath',\n"
+    "        'SourceSha256') `\n"
+    "        -RequiredKeys @(\n"
+    "            'id','title','description','minimumBuild','maximumBuild',\n"
+    "            'architectures','requiresAdmin','sourceRecords','steps'\n"
+    "        ) -Context 'playbook'\n",
 )
 replace_exact(
     playbook_path,
-    "            'preset'{$null=Test-WinCareStrictObjectKeys $step @('kind','id') 'playbook preset step';\n",
-    "            'preset'{$null=Test-WinCareStrictObjectKeys -InputObject $step "
-    "-AllowedKeys @('kind','id') -RequiredKeys @('kind','id') "
-    "-Context 'playbook preset step';\n",
+    "            'preset'{$null=Test-WinCareStrictObjectKeys $step @('kind','id') 'playbook preset step';\n"
+    "                if([string]$step.id -notmatch '^[a-z0-9][a-z0-9._-]{2,80}$'){throw 'Playbook preset ID is invalid.'}}\n",
+    "            'preset'{\n"
+    "                $null=Test-WinCareStrictObjectKeys -InputObject $step `\n"
+    "                    -AllowedKeys @('kind','id') -RequiredKeys @('kind','id') `\n"
+    "                    -Context 'playbook preset step'\n"
+    "                if([string]$step.id -notmatch '^[a-z0-9][a-z0-9._-]{2,80}$'){\n"
+    "                    throw 'Playbook preset ID is invalid.'\n"
+    "                }\n"
+    "            }\n",
 )
 replace_exact(
     playbook_path,
     "            'catalog'{$null=Test-WinCareStrictObjectKeys $step @('kind','ids') 'playbook catalog step';if(@($step.ids).Count -lt 1){throw 'Playbook catalog step is empty.'}}\n",
-    "            'catalog'{$null=Test-WinCareStrictObjectKeys -InputObject $step "
-    "-AllowedKeys @('kind','ids') -RequiredKeys @('kind','ids') "
-    "-Context 'playbook catalog step';if(@($step.ids).Count -lt 1){throw 'Playbook catalog step is empty.'}}\n",
+    "            'catalog'{\n"
+    "                $null=Test-WinCareStrictObjectKeys -InputObject $step `\n"
+    "                    -AllowedKeys @('kind','ids') -RequiredKeys @('kind','ids') `\n"
+    "                    -Context 'playbook catalog step'\n"
+    "                if(@($step.ids).Count -lt 1){throw 'Playbook catalog step is empty.'}\n"
+    "            }\n",
 )
 replace_exact(
     playbook_path,
-    "            'context-menu'{$null=Test-WinCareStrictObjectKeys $step @('kind','id','enable') 'playbook context-menu step';\n",
-    "            'context-menu'{$null=Test-WinCareStrictObjectKeys -InputObject $step "
-    "-AllowedKeys @('kind','id','enable') -RequiredKeys @('kind','id','enable') "
-    "-Context 'playbook context-menu step';\n",
+    "            'context-menu'{$null=Test-WinCareStrictObjectKeys $step @('kind','id','enable') 'playbook context-menu step';\n"
+    "                if($step.enable -isnot [bool]){throw 'Playbook context-menu enable must be Boolean.'}}\n",
+    "            'context-menu'{\n"
+    "                $null=Test-WinCareStrictObjectKeys -InputObject $step `\n"
+    "                    -AllowedKeys @('kind','id','enable') `\n"
+    "                    -RequiredKeys @('kind','id','enable') `\n"
+    "                    -Context 'playbook context-menu step'\n"
+    "                if($step.enable -isnot [bool]){\n"
+    "                    throw 'Playbook context-menu enable must be Boolean.'\n"
+    "                }\n"
+    "            }\n",
 )
 replace_exact(
     playbook_path,
-    "            'app-removal'{$null=Test-WinCareStrictObjectKeys $step @('kind','id','includeProvisioned') 'playbook app-removal step';\n",
-    "            'app-removal'{$null=Test-WinCareStrictObjectKeys -InputObject $step "
-    "-AllowedKeys @('kind','id','includeProvisioned') "
-    "-RequiredKeys @('kind','id','includeProvisioned') "
-    "-Context 'playbook app-removal step';\n",
+    "            'app-removal'{$null=Test-WinCareStrictObjectKeys $step @('kind','id','includeProvisioned') 'playbook app-removal step';\n"
+    "                if($step.includeProvisioned -isnot [bool]){throw 'Playbook app-removal flag must be Boolean.'}}\n",
+    "            'app-removal'{\n"
+    "                $null=Test-WinCareStrictObjectKeys -InputObject $step `\n"
+    "                    -AllowedKeys @('kind','id','includeProvisioned') `\n"
+    "                    -RequiredKeys @('kind','id','includeProvisioned') `\n"
+    "                    -Context 'playbook app-removal step'\n"
+    "                if($step.includeProvisioned -isnot [bool]){\n"
+    "                    throw 'Playbook app-removal flag must be Boolean.'\n"
+    "                }\n"
+    "            }\n",
 )
 
 # Keep array concatenation inside the named SourceRecords argument boundary.
@@ -147,6 +172,33 @@ $script:WinCareVersion = $moduleVersion.ToString()
 """,
 )
 
+# The generated previous-release fixture has a byte ceiling but used an
+# unbounded decoded ReadToEnd. Stream and cap the decoded text as well.
+fixture_path = "tools/Build-PreviousReleaseFixture.ps1"
+replace_exact(
+    fixture_path,
+    "            try { $text = $reader.ReadToEnd() } finally { $reader.Dispose() }\n",
+    "            try {\n"
+    "                $builder = [Text.StringBuilder]::new(\n"
+    "                    [int][Math]::Min([long]$entry.Length, 1048576L)\n"
+    "                )\n"
+    "                $buffer = [char[]]::new(4096)\n"
+    "                try {\n"
+    "                    $totalCharacters = 0\n"
+    "                    while (($count = $reader.Read($buffer, 0, $buffer.Length)) -gt 0) {\n"
+    "                        $totalCharacters += $count\n"
+    "                        if ($totalCharacters -gt 1048576) {\n"
+    "                            throw 'The archived module manifest exceeds the permitted decoded length.'\n"
+    "                        }\n"
+    "                        $null = $builder.Append($buffer, 0, $count)\n"
+    "                    }\n"
+    "                    $text = $builder.ToString()\n"
+    "                } finally {\n"
+    "                    [Array]::Clear($buffer, 0, $buffer.Length)\n"
+    "                }\n"
+    "            } finally { $reader.Dispose() }\n",
+)
+
 # Fail the remediation immediately if any known-bad construct survived.
 checks = {
     "src/WinCare/Core/11-ActionContracts.ps1": (
@@ -154,6 +206,8 @@ checks = {
     ),
     playbook_path: (
         "-RequiredKeys @('schemaVersion','playbooks')",
+        "-AllowedKeys @('kind','id','enable')",
+        "-AllowedKeys @('kind','id','includeProvisioned')",
         "-Context 'playbook app-removal step'",
     ),
     "src/WinCare/Providers/72-Provisioning.ps1": (
@@ -163,11 +217,17 @@ checks = {
         "$moduleVersion -eq [version]'0.0'",
         "Import-PowerShellDataFile -LiteralPath $moduleManifestPath",
     ),
+    fixture_path: (
+        "$reader.Read($buffer, 0, $buffer.Length)",
+        "wincare.previous-release.fixture/v2",
+    ),
 }
 for relative, markers in checks.items():
     text = read_text(relative)
     for marker in markers:
         if marker not in text:
             raise RuntimeError(f"postcondition missing from {relative}: {marker}")
+if "ReadToEnd" in read_text(fixture_path):
+    raise RuntimeError("previous-release fixture still contains unbounded ReadToEnd")
 
-print("Applied deterministic PR #5 runtime-contract corrections.")
+print("Applied bounded deterministic PR #5 runtime-contract corrections.")
