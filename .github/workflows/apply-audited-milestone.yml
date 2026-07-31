@@ -18,30 +18,50 @@ jobs:
           ref: ${{ github.ref_name }}
           fetch-depth: 0
 
-      - name: Detect audited payload
+      - name: Detect complete audited payload
         id: payload
         shell: bash
         run: |
-          if [[ -f .wincare-apply/milestone.patch.xz.b64 ]]; then
+          if [[ -f .wincare-apply/milestone.patch.xz.b64 ]] && \
+             [[ -f .wincare-apply/storage-block.ps1.b64 ]]; then
             echo 'present=true' >> "$GITHUB_OUTPUT"
           else
             echo 'present=false' >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Apply, validate, and commit audited milestone
+      - name: Apply, reconcile, validate, and commit audited milestone
         if: steps.payload.outputs.present == 'true'
         shell: bash
         env:
           EXPECTED_XZ_SHA256: 2715640f92a5bdb196c6239ad4f12d87898eabb1e5aae74aef85f5e42e10d136
           EXPECTED_PATCH_SHA256: af7c0f557647a221d0e36f332c144f9ba6ad642d0d8ba42f3b2698924750e993
+          EXPECTED_STORAGE_SHA256: 2a0c7baba9191e028c5b3324d6c92d19dd3077b037398a46e9a7c3e285da046a
         run: |
           set -euo pipefail
           base64 --decode .wincare-apply/milestone.patch.xz.b64 > /tmp/wincare.patch.xz
           echo "$EXPECTED_XZ_SHA256  /tmp/wincare.patch.xz" | sha256sum --check --strict
           xz --decompress --stdout /tmp/wincare.patch.xz > /tmp/wincare.patch
           echo "$EXPECTED_PATCH_SHA256  /tmp/wincare.patch" | sha256sum --check --strict
+
+          base64 --decode .wincare-apply/storage-block.ps1.b64 > /tmp/storage-block.ps1
+          echo "$EXPECTED_STORAGE_SHA256  /tmp/storage-block.ps1" | sha256sum --check --strict
+
           git apply --check /tmp/wincare.patch
           git apply --index /tmp/wincare.patch
+
+          python - <<'PY'
+          from pathlib import Path
+
+          target = Path('src/WinCare/Providers/114-StorageIntelligence.ps1')
+          marker = 'function Resolve-WinCarePhysicalDiskForDrive {'
+          text = target.read_text(encoding='utf-8')
+          if marker not in text:
+              raise SystemExit('Storage hardening marker is missing from the PR branch.')
+          block = Path('/tmp/storage-block.ps1').read_text(encoding='utf-8')
+          target.write_text(text[:text.index(marker)] + block, encoding='utf-8')
+          PY
+
+          python tools/validate_source_references.py . --write
           rm -rf .wincare-apply .wincare-audit-update
           rm -f .github/workflows/apply-audited-milestone.yml
           git add -A
@@ -74,7 +94,7 @@ jobs:
           git commit -m 'fix: harden runtime contracts and executable identity'
           git push origin "HEAD:${GITHUB_REF_NAME}"
 
-      - name: No payload present
+      - name: Await complete payload
         if: steps.payload.outputs.present != 'true'
         shell: bash
-        run: echo 'The audited milestone payload has not been staged yet.'
+        run: echo 'The complete audited milestone payload has not been staged yet.'
