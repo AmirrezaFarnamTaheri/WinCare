@@ -1,5 +1,5 @@
 name: Apply corrected Windows release finalization
-# Retry after injecting the count-checked canonical brand replacement helper.
+# Retry after converging brand closure on the canonical v3 release finalizer.
 
 on:
   push:
