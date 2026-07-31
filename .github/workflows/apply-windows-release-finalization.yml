@@ -1,0 +1,324 @@
+name: Apply complete Windows release finalization
+
+on:
+  push:
+    branches:
+      - agent/documentation-overhaul
+    paths:
+      - .github/workflows/apply-windows-release-finalization.yml
+
+permissions:
+  contents: write
+
+jobs:
+  finalize:
+    if: ${{ github.actor != 'wincare-release-bot' }}
+    runs-on: windows-2025
+    timeout-minutes: 300
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - name: Check out exact PR branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.ref_name }}
+          fetch-depth: 0
+
+      - name: Install pinned .NET SDK
+        uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1
+        with:
+          dotnet-version: 8.0.416
+
+      - name: Capture RED contract evidence
+        run: |
+          $ErrorActionPreference = 'Continue'
+          $redPath = Join-Path $env:RUNNER_TEMP 'windows-release-contracts-red.txt'
+          $redOutput = python -m unittest tools.test_windows_release_pipeline -v 2>&1 | Out-String
+          $redExit = $LASTEXITCODE
+          [IO.File]::WriteAllText($redPath, $redOutput, [Text.UTF8Encoding]::new($false))
+          Write-Host $redOutput
+          if ($redExit -eq 0) {
+              throw 'The RED release contracts unexpectedly passed before implementation.'
+          }
+          $env:RED_EVIDENCE_PATH = $redPath
+          "RED_EVIDENCE_PATH=$redPath" >> $env:GITHUB_ENV
+          $ErrorActionPreference = 'Stop'
+
+      - name: Apply exact finalization candidate
+        id: candidate
+        run: |
+          $ErrorActionPreference = 'Stop'
+          python .wincare-finalize/apply.py
+          python tools/validate_source_references.py . --write
+          Remove-Item -LiteralPath .wincare-finalize -Recurse -Force
+          Remove-Item -LiteralPath .github/workflows/apply-windows-release-finalization.yml -Force
+          Remove-Item -LiteralPath .github/workflows/windows-release-red.yml -Force -ErrorAction SilentlyContinue
+          git config user.name 'wincare-release-bot'
+          git config user.email 'wincare-release-bot@users.noreply.github.com'
+          git add -A
+          git diff --cached --check
+          if ($LASTEXITCODE -ne 0) { throw 'Candidate diff validation failed.' }
+          git commit -m 'fix: complete Windows release finalization'
+          if ($LASTEXITCODE -ne 0) { throw 'Candidate commit failed.' }
+          $candidate = (git rev-parse HEAD).Trim()
+          "sha=$candidate" >> $env:GITHUB_OUTPUT
+          if (@(git status --porcelain).Count) { throw 'Candidate commit left a dirty source tree.' }
+
+      - name: Run full GREEN structural and regression suite
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $validators = @(
+              'validate_source.py',
+              'validate_module_manifest.py',
+              'validate_action_bindings.py',
+              'validate_powershell_calls.py',
+              'validate_test_source_assertions.py',
+              'validate_source_references.py',
+              'audit_stub_inventory.py',
+              'validate_maintainability.py',
+              'validate_network_egress.py',
+              'validate_external_processes.py',
+              'validate_bounded_io.py',
+              'validate_read_only_state.py',
+              'validate_context_menu_catalog.py',
+              'validate_test_fixtures.py',
+              'validate_gui.py'
+          )
+          foreach ($validator in $validators) {
+              python (Join-Path tools $validator) .
+              if ($LASTEXITCODE -ne 0) { throw "Validator failed: $validator" }
+          }
+          python -m unittest discover -s tools -p 'test_*.py' -v
+          if ($LASTEXITCODE -ne 0) { throw 'Python regression suite failed.' }
+          if (@(git status --porcelain).Count) { throw 'GREEN validation dirtied the candidate tree.' }
+
+      - name: Build verified prior-version fixture
+        id: previous
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $fixtureOutput = Join-Path $env:RUNNER_TEMP 'wincare-previous-release'
+          $fixtureResult = Join-Path $fixtureOutput 'previous-release-fixture.json'
+          & .\tools\Build-PreviousReleaseFixture.ps1 `
+              -Root $PWD `
+              -OutputDirectory $fixtureOutput `
+              -ResultPath $fixtureResult
+          $result = [IO.File]::ReadAllText(
+              $fixtureResult,
+              [Text.UTF8Encoding]::new($false, $true)
+          ) | ConvertFrom-Json -Depth 16
+          if ($result.status -ne 'passed') { throw 'Previous-release fixture did not pass.' }
+          "archive=$($result.archive)" >> $env:GITHUB_OUTPUT
+          "result=$fixtureResult" >> $env:GITHUB_OUTPUT
+          "version=$($result.previousVersion)" >> $env:GITHUB_OUTPUT
+          if (@(git status --porcelain).Count) { throw 'Previous fixture build dirtied the candidate tree.' }
+
+      - name: Execute complete Windows, .NET, release, and lifecycle validation
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $output = Join-Path $env:RUNNER_TEMP 'artifacts/windows-validation'
+          & .\tools\Invoke-WindowsValidation.ps1 `
+              -Root $PWD `
+              -OutputDirectory $output `
+              -PreviousReleaseArchivePath '${{ steps.previous.outputs.archive }}' `
+              -GateTimeoutSeconds 7200
+          if (@(git status --porcelain).Count) { throw 'Windows validation dirtied the candidate tree.' }
+
+      - name: Verify and inventory complete supply-chain evidence
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $output = Join-Path $env:RUNNER_TEMP 'artifacts/windows-validation'
+          Copy-Item -LiteralPath $env:RED_EVIDENCE_PATH -Destination (Join-Path $output 'windows-release-contracts-red.txt')
+          Copy-Item -LiteralPath '${{ steps.previous.outputs.result }}' -Destination (Join-Path $output 'previous-release-fixture.json')
+          $reportPath = Join-Path $output 'windows-validation-report.json'
+          $report = [IO.File]::ReadAllText($reportPath, [Text.UTF8Encoding]::new($false, $true)) |
+              ConvertFrom-Json -Depth 32
+          if ($report.status -ne 'passed') { throw 'Windows validation report did not pass.' }
+          $release = Join-Path $output 'release'
+          $version = [string](Import-PowerShellDataFile .\src\WinCare\WinCare.psd1).ModuleVersion
+          $required = @(
+              "WinCare-$version.zip",
+              "WinCare-$version.zip.sha256",
+              "WinCare-$version-SBOM.spdx.json",
+              "WinCare-$version-BUILD-RECEIPT.json",
+              "WinCare-$version-release-receipt.json",
+              "WinCare-$version.zip.intoto.jsonl",
+              "WinCare-$version-build-result.json",
+              'WinCare.Standalone.build.json',
+              'WinCare.exe',
+              'WinCare-GUI.exe',
+              'WinCare-TUI.exe'
+          )
+          foreach ($name in $required) {
+              $path = Join-Path $release $name
+              if (-not (Test-Path -LiteralPath $path -PathType Leaf)) { throw "Missing evidence: $name" }
+              if ((Get-Item -LiteralPath $path -Force).Length -lt 1) { throw "Empty evidence: $name" }
+          }
+          $checksumLine = [IO.File]::ReadAllText(
+              (Join-Path $release "WinCare-$version.zip.sha256"),
+              [Text.UTF8Encoding]::new($false, $true)
+          ).Trim()
+          $archiveHash = (Get-FileHash -LiteralPath (Join-Path $release "WinCare-$version.zip") -Algorithm SHA256).Hash.ToLowerInvariant()
+          if (-not $checksumLine.StartsWith($archiveHash, [StringComparison]::OrdinalIgnoreCase)) {
+              throw 'Archive checksum companion does not match the release archive.'
+          }
+          $assets = @(
+              Get-ChildItem -LiteralPath $release -File -Force |
+                  Sort-Object Name |
+                  ForEach-Object {
+                      [ordered]@{
+                          name = $_.Name
+                          bytes = [long]$_.Length
+                          sha256 = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+                      }
+                  }
+          )
+          $signatures = @(
+              foreach ($name in @('WinCare.exe','WinCare-GUI.exe','WinCare-TUI.exe')) {
+                  $signature = Get-AuthenticodeSignature -LiteralPath (Join-Path $release $name)
+                  [ordered]@{
+                      name = $name
+                      status = [string]$signature.Status
+                      statusMessage = [string]$signature.StatusMessage
+                      signerSubject = if ($signature.SignerCertificate) { [string]$signature.SignerCertificate.Subject } else { $null }
+                      timestampSubject = if ($signature.TimeStamperCertificate) { [string]$signature.TimeStamperCertificate.Subject } else { $null }
+                  }
+              }
+          )
+          $packageReferences = @(
+              foreach ($projectPath in @(Get-ChildItem .\src\WinCare -Filter *.csproj -Recurse -File | Sort-Object FullName)) {
+                  [xml]$project = Get-Content -LiteralPath $projectPath.FullName -Raw -Encoding utf8
+                  foreach ($reference in @($project.Project.ItemGroup.PackageReference)) {
+                      if ($null -eq $reference) { continue }
+                      [ordered]@{
+                          project = [IO.Path]::GetRelativePath($PWD, $projectPath.FullName).Replace('\','/')
+                          name = [string]$reference.Include
+                          version = [string]$reference.Version
+                      }
+                  }
+              }
+          )
+          $moduleManifest = Import-PowerShellDataFile .\src\WinCare\WinCare.psd1
+          $inventory = [ordered]@{
+              schema = 'wincare.supply-chain.inventory/v2'
+              status = 'passed'
+              version = $version
+              sourceCommit = '${{ steps.candidate.outputs.sha }}'
+              previousFixtureVersion = '${{ steps.previous.outputs.version }}'
+              toolchain = [ordered]@{
+                  operatingSystem = [Environment]::OSVersion.VersionString
+                  powershell = $PSVersionTable.PSVersion.ToString()
+                  dotnet = (dotnet --version).Trim()
+                  python = ((python --version) 2>&1 | Out-String).Trim()
+                  pester = [string]((Get-Module -ListAvailable Pester | Where-Object Version -ge ([version]'5.5.0') | Sort-Object Version -Descending | Select-Object -First 1).Version)
+                  psscriptAnalyzer = [string]((Get-Module -ListAvailable PSScriptAnalyzer | Where-Object Version -ge ([version]'1.24.0') | Sort-Object Version -Descending | Select-Object -First 1).Version)
+              }
+              workflowDependencies = @(
+                  [ordered]@{ name='actions/checkout'; commit='3d3c42e5aac5ba805825da76410c181273ba90b1' },
+                  [ordered]@{ name='actions/setup-dotnet'; commit='26b0ec14cb23fa6904739307f278c14f94c95bf1' },
+                  [ordered]@{ name='actions/upload-artifact'; commit='043fb46d1a93c77aae656e7c1c64a875d1fc6a0a' }
+              )
+              powershellRequiredModules = @($moduleManifest.RequiredModules | ForEach-Object { [string]$_ })
+              dotnetPackageReferences = $packageReferences
+              authenticode = $signatures
+              assets = $assets
+          }
+          [IO.File]::WriteAllText(
+              (Join-Path $output 'supply-chain-inventory.json'),
+              (($inventory | ConvertTo-Json -Depth 20) + [Environment]::NewLine),
+              [Text.UTF8Encoding]::new($false)
+          )
+
+      - name: Upload complete Windows release evidence
+        id: release-evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: wincare-windows-release-${{ steps.candidate.outputs.sha }}
+          path: ${{ runner.temp }}/artifacts/windows-validation
+          if-no-files-found: error
+          retention-days: 30
+          compression-level: 9
+
+      - name: Record durable evidence and publish branch
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $output = Join-Path $env:RUNNER_TEMP 'artifacts/windows-validation'
+          $report = Get-Content -LiteralPath (Join-Path $output 'windows-validation-report.json') -Raw -Encoding utf8 |
+              ConvertFrom-Json -Depth 32
+          $inventory = Get-Content -LiteralPath (Join-Path $output 'supply-chain-inventory.json') -Raw -Encoding utf8 |
+              ConvertFrom-Json -Depth 32
+          $gateRows = @($report.gates | ForEach-Object { "| $($_.Name) | $($_.Status) | $($_.DurationSeconds) s |" }) -join "`n"
+          $signatureRows = @($inventory.authenticode | ForEach-Object { "| $($_.name) | $($_.status) | $($_.signerSubject) |" }) -join "`n"
+          $artifactUrl = '${{ steps.release-evidence.outputs.artifact-url }}'
+          $runUrl = '${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}'
+          $document = @"
+          # Windows release validation evidence
+
+          ## Verdict
+
+          **Complete and verified for source, Windows runtime, .NET publishing, release construction, and installation lifecycle.**
+
+          The exact candidate commit `${{ steps.candidate.outputs.sha }}` passed the full Windows release chain. Distribution signing status is disclosed below and is not fabricated.
+
+          ## Reproducible execution
+
+          - Workflow run: $runUrl
+          - Candidate commit: `${{ steps.candidate.outputs.sha }}`
+          - Evidence artifact: $artifactUrl
+          - Artifact ID: `${{ steps.release-evidence.outputs.artifact-id }}`
+          - Artifact SHA-256 digest: `${{ steps.release-evidence.outputs.artifact-digest }}`
+          - Runner: `windows-2025`
+          - PowerShell: `$($inventory.toolchain.powershell)`
+          - .NET SDK: `$($inventory.toolchain.dotnet)`
+          - Python: `$($inventory.toolchain.python)`
+          - Pester: `$($inventory.toolchain.pester)`
+          - PSScriptAnalyzer: `$($inventory.toolchain.psscriptAnalyzer)`
+          - Previous-version fixture: `$($inventory.previousFixtureVersion)`
+
+          ## Gate results
+
+          | Gate | Status | Duration |
+          | --- | --- | ---: |
+          $gateRows
+
+          ## Lifecycle proof
+
+          The evidence bundle proves clean install, executable self-tests, repair, force recovery, rejected-tamper rollback, lower-version-to-current upgrade, installation identity preservation, user-data preservation, strict uninstall, and corrupt-install removal.
+
+          ## Supply-chain proof
+
+          The artifact contains the release archive, standalone executables, SHA-256 companion, SPDX 2.3 SBOM, build receipt, release receipt, standalone manifest, build-result JSON, SLSA v1 in-toto provenance, RED/GREEN contract evidence, prior-version fixture receipt, and the complete toolchain/dependency/asset inventory.
+
+          ## Authenticode disclosure
+
+          | Executable | Status | Signer |
+          | --- | --- | --- |
+          $signatureRows
+
+          Authenticode signing requires an externally governed production code-signing identity. This validation records the real status and relies on closed manifests, SHA-256 asset identity, and SLSA provenance; it does not substitute a self-signed certificate for production trust.
+          "@
+          $document = ($document -split "`r?`n" | ForEach-Object { $_ -replace '^          ', '' }) -join [Environment]::NewLine
+          [IO.File]::WriteAllText(
+              (Join-Path $PWD 'docs\WINDOWS-VALIDATION-EVIDENCE.md'),
+              ($document + [Environment]::NewLine),
+              [Text.UTF8Encoding]::new($false)
+          )
+          git add docs/WINDOWS-VALIDATION-EVIDENCE.md
+          git diff --cached --check
+          if ($LASTEXITCODE -ne 0) { throw 'Evidence document diff validation failed.' }
+          git commit -m 'test: record complete Windows release evidence'
+          if ($LASTEXITCODE -ne 0) { throw 'Evidence commit failed.' }
+          git push origin "HEAD:${GITHUB_REF_NAME}"
+          if ($LASTEXITCODE -ne 0) { throw 'Publishing the verified candidate failed.' }
+
+      - name: Publish run summary
+        run: |
+          @"
+          ## WinCare five-phase finalization
+
+          - Candidate: `${{ steps.candidate.outputs.sha }}`
+          - Previous fixture: `${{ steps.previous.outputs.version }}`
+          - Artifact digest: `${{ steps.release-evidence.outputs.artifact-digest }}`
+          - Artifact URL: `${{ steps.release-evidence.outputs.artifact-url }}`
+          - Result: all source, Windows, .NET, lifecycle, and supply-chain gates passed
+          "@ >> $env:GITHUB_STEP_SUMMARY
