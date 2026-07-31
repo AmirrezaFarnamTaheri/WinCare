@@ -96,6 +96,7 @@ jobs:
               "WinCare-$version-release-receipt.json",
               "WinCare-$version.zip.intoto.jsonl",
               "WinCare-$version-build-result.json",
+              "WinCare-$version-BRAND.json",
               'WinCare.Standalone.build.json',
               'WinCare.exe',
               'WinCare-GUI.exe',
@@ -110,6 +111,37 @@ jobs:
                   throw "Required release evidence is empty: $name"
               }
           }
+          $brandPath = Join-Path $release "WinCare-$version-BRAND.json"
+          $brand = [IO.File]::ReadAllText(
+              $brandPath,
+              [Text.UTF8Encoding]::new($false, $true)
+          ) | ConvertFrom-Json -Depth 24
+          if ([string]$brand.schema -ne 'wincare.brand.identity/v1') {
+              throw 'Release brand manifest schema is invalid.'
+          }
+          $brandIconRecord = @(
+              $brand.assets | Where-Object { [string]$_.path -eq 'design/WinCare.ico' }
+          )
+          if ($brandIconRecord.Count -ne 1) {
+              throw 'Release brand manifest does not contain exactly one canonical icon record.'
+          }
+          $brandIconSha256 = ([string]$brandIconRecord[0].sha256).ToLowerInvariant()
+          $standalone = [IO.File]::ReadAllText(
+              (Join-Path $release 'WinCare.Standalone.build.json'),
+              [Text.UTF8Encoding]::new($false, $true)
+          ) | ConvertFrom-Json -Depth 24
+          if (([string]$standalone.IconSha256).ToLowerInvariant() -ne $brandIconSha256) {
+              throw 'Standalone manifest icon identity does not match the release brand.'
+          }
+          foreach ($artifact in @($standalone.Artifacts)) {
+              if (-not [bool]$artifact.EmbeddedIconVerified) {
+                  throw "Embedded icon was not verified: $($artifact.Name)"
+              }
+              if (([string]$artifact.IconSha256).ToLowerInvariant() -ne $brandIconSha256) {
+                  throw "Embedded icon identity mismatch: $($artifact.Name)"
+              }
+          }
+          $brandManifestSha256 = (Get-FileHash -LiteralPath $brandPath -Algorithm SHA256).Hash.ToLowerInvariant()
           $assets = @(
               Get-ChildItem -LiteralPath $release -File -Force |
                   Sort-Object Name |
@@ -157,13 +189,19 @@ jobs:
                   version = $version
                   sourceCommit = '${{ github.sha }}'
                   previousFixtureVersion = '${{ steps.previous.outputs.version }}'
+                  brand = [ordered]@{
+                      schema = [string]$brand.schema
+                      manifestSha256 = $brandManifestSha256
+                      iconSha256 = $brandIconSha256
+                      iconSizes = @($brand.iconSizes)
+                  }
                   toolchain = [ordered]@{
                       operatingSystem = [Environment]::OSVersion.VersionString
                       powershell = $PSVersionTable.PSVersion.ToString()
                       dotnet = (dotnet --version).Trim()
                       python = ((python --version) 2>&1 | Out-String).Trim()
-                      pester = [string](Get-Module Pester).Version
-                      psscriptAnalyzer = [string](Get-Module PSScriptAnalyzer).Version
+                      pester = [string]((Get-Module -ListAvailable Pester | Where-Object Version -ge ([version]'5.5.0') | Sort-Object Version -Descending | Select-Object -First 1).Version)
+                      psscriptAnalyzer = [string]((Get-Module -ListAvailable PSScriptAnalyzer | Where-Object Version -ge ([version]'1.24.0') | Sort-Object Version -Descending | Select-Object -First 1).Version)
                   }
                   workflowDependencies = @(
                       [ordered]@{ name='actions/checkout'; commit='3d3c42e5aac5ba805825da76410c181273ba90b1' },
