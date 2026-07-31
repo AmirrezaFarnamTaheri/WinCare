@@ -126,7 +126,7 @@ function Invoke-WinCare {
         if(-not (Get-Command Invoke-WinCareHeadlessCommand -ErrorAction SilentlyContinue)){
             return New-WinCareBridgeResult -Success $false -Code 'HeadlessHostUnavailable' -Message 'Headless command host is unavailable.' -ExitCode 127
         }
-        return Invoke-WinCareHeadlessCommand -Command $Command -Parameters $Parameters
+        return Invoke-WinCareHeadlessCommand -Command $Command -Arguments $Parameters
     }
     if(Get-Command Start-WinCare -ErrorAction SilentlyContinue){return Start-WinCare}
     New-WinCareBridgeResult -Success $false -Code 'WinCareHostUnavailable' -Message 'No WinCare host is available.' -ExitCode 127

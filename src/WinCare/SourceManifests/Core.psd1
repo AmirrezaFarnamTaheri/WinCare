@@ -23,6 +23,7 @@
         'Core/05-Canonical.ps1'
         'Core/05-Formatting.ps1'
         'Core/06-BoundedIO.ps1'
+        'Core/06-ObjectValidation.ps1'
         'Core/06-Safety.ps1'
         'Core/06-SafetyModuleIntegrity.ps1'
         'Core/06-SafetyStaging.ps1'

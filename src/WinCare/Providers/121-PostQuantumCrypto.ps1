@@ -34,7 +34,6 @@ function Get-WinCareOpenSslPqcCapability {
             -ArgumentList @('list','-kem-algorithms') `
             -TimeoutSeconds 15 `
             -MaximumCapturedOutputBytes 262144 `
-        -ExpectedSha256 $ExpectedOpenSslSha256 `
             -ExpectedSha256 $sha256
         if(-not $algorithmResult.Success) {
             $algorithmResult=Invoke-WinCareProcess `
@@ -42,7 +41,7 @@ function Get-WinCareOpenSslPqcCapability {
                 -ArgumentList @('list','-public-key-algorithms') `
                 -TimeoutSeconds 15 `
                 -MaximumCapturedOutputBytes 262144 `
-            -ExpectedSha256 $sha256
+                -ExpectedSha256 $sha256
         }
         $algorithms=if($algorithmResult.Success) {
             @($algorithmResult.Data.StdOut -split "`r?`n"|Where-Object{$_ -match '(?i)ML[-_]?KEM|KYBER'})
@@ -121,7 +120,8 @@ function Invoke-WinCareOpenSslPqcCommand {
         -ArgumentList $ArgumentList `
         -TimeoutSeconds $TimeoutSeconds `
         -SuccessExitCodes @(0) `
-        -MaximumCapturedOutputBytes 262144
+        -MaximumCapturedOutputBytes 262144 `
+        -ExpectedSha256 $ExpectedOpenSslSha256
     if(-not $result.Success) {
         $detail=if($result.Data.StdErr) { $result.Data.StdErr.Trim() } else { $result.Message }
         throw "OpenSSL command failed: $detail"

@@ -137,8 +137,9 @@ function Set-WinCareServiceExactState {
     $result=Invoke-WinCareProcess -FilePath sc.exe -ArgumentList @('config',[string]$State.Name,'start=',$mode) -RequireAdmin -TimeoutSeconds 60
     if(-not $result.Success){throw $result.Message}
     $servicePath="HKLM:\SYSTEM\CurrentControlSet\Services\$([string]$State.Name)"
-    $key=Get-WinCareRegistryKey -Path $servicePath -Writable
-    if($key){try{$key.SetValue('DelayedAutoStart',[int](Get-WinCarePropertyValue $State 'DelayedAutoStart' 0),[Microsoft.Win32.RegistryValueKind]::DWord)}finally{$key.Dispose()}}
+    if(Test-Path -LiteralPath $servicePath){
+        New-ItemProperty -LiteralPath $servicePath -Name 'DelayedAutoStart' -Value ([int](Get-WinCarePropertyValue $State 'DelayedAutoStart' 0)) -PropertyType DWord -Force -ErrorAction Stop|Out-Null
+    }
     if([string]$State.State -eq 'Running'){
         Start-Service -Name ([string]$State.Name) -ErrorAction Stop
     }else{
@@ -159,22 +160,18 @@ function Set-WinCareSecurityControlInternal {
         }
         'SmartScreenShell'{
             $path='HKLM:\SOFTWARE\Policies\Microsoft\Windows\System'
-            $key=Get-WinCareRegistryKey -Path $path -Writable -Create
-            try{
-                $key.SetValue('EnableSmartScreen',$(if($Enabled){1}else{0}),[Microsoft.Win32.RegistryValueKind]::DWord)
-                $key.SetValue('ShellSmartScreenLevel',$(if($Enabled){'Warn'}else{'Off'}),[Microsoft.Win32.RegistryValueKind]::String)
-            }finally{$key.Dispose()}
+            $null=New-Item -Path $path -Force -ErrorAction Stop
+            New-ItemProperty -LiteralPath $path -Name 'EnableSmartScreen' -Value $(if($Enabled){1}else{0}) -PropertyType DWord -Force -ErrorAction Stop|Out-Null
+            New-ItemProperty -LiteralPath $path -Name 'ShellSmartScreenLevel' -Value $(if($Enabled){'Warn'}else{'Off'}) -PropertyType String -Force -ErrorAction Stop|Out-Null
         }
         'Uac'{
             $path='HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System'
-            $key=Get-WinCareRegistryKey -Path $path -Writable -Create
-            try{
-                $key.SetValue('EnableLUA',$(if($Enabled){1}else{0}),[Microsoft.Win32.RegistryValueKind]::DWord)
-                if($Enabled){
-                    $key.SetValue('ConsentPromptBehaviorAdmin',5,[Microsoft.Win32.RegistryValueKind]::DWord)
-                    $key.SetValue('PromptOnSecureDesktop',1,[Microsoft.Win32.RegistryValueKind]::DWord)
-                }
-            }finally{$key.Dispose()}
+            $null=New-Item -Path $path -Force -ErrorAction Stop
+            New-ItemProperty -LiteralPath $path -Name 'EnableLUA' -Value $(if($Enabled){1}else{0}) -PropertyType DWord -Force -ErrorAction Stop|Out-Null
+            if($Enabled){
+                New-ItemProperty -LiteralPath $path -Name 'ConsentPromptBehaviorAdmin' -Value 5 -PropertyType DWord -Force -ErrorAction Stop|Out-Null
+                New-ItemProperty -LiteralPath $path -Name 'PromptOnSecureDesktop' -Value 1 -PropertyType DWord -Force -ErrorAction Stop|Out-Null
+            }
         }
         'WindowsUpdateStack'{
             if($Enabled){

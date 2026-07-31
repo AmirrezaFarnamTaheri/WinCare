@@ -74,7 +74,7 @@
     {
       "id": "SRC:6e8ae24ac4",
       "path": "Providers/108-CleanupMods.ps1",
-      "sha256": "84905000b3b4c4c2ea8ad13442b0cc485129e1047dbeea94773c6272205af62f"
+      "sha256": "6ee9a182f26f28606ec01f2a4fbd5cd4c98f603478a0f5098edd42fe1166e8fd"
     },
     {
       "id": "SRC:5287f02b14",
@@ -159,7 +159,7 @@
     {
       "id": "SRC:3b617af8c7",
       "path": "Providers/91-SecurityMaintenance.ps1",
-      "sha256": "0d8412fe1dc0cc162813e831783e4e0592221d3c236d9484a8ccd09c75a93754"
+      "sha256": "0276e5a3fdb9111967e5ff6ce54a87f8bc6ebe9011e85ef77ef62278e893a5f8"
     },
     {
       "id": "SRC:f762344bb0",

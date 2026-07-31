@@ -19,11 +19,41 @@ function Get-WinCareRegistryKey {
 }
 function Get-WinCareRegistryTreeSnapshot {
     [CmdletBinding()]
-    param([Parameter(Mandatory)][string]$Path,[ValidateRange(1,10000)][int]$MaximumKeys=5000)
-    if(-not $IsWindows){return [pscustomobject]@{Path=$Path;Exists=$false;Values=@();SubKeys=@()}};if(-not (Test-Path -LiteralPath $Path)){return [pscustomobject]@{Path=$Path;Exists=$false;Values=@();SubKeys=@()}}
-    $count=0
-    function Read-Node([string]$NodePath){$script:__WinCareRegistrySnapshotCount++;if($script:__WinCareRegistrySnapshotCount -gt $MaximumKeys){throw "Registry snapshot exceeds $MaximumKeys keys."};$key=Get-Item -LiteralPath $NodePath -ErrorAction Stop;$values=[Collections.Generic.List[object]]::new();foreach($name in $key.GetValueNames()){$values.Add([pscustomobject]@{Name=$name;Value=$key.GetValue($name,$null,[Microsoft.Win32.RegistryValueOptions]::DoNotExpandEnvironmentNames);ValueType=$key.GetValueKind($name).ToString()})};$children=[Collections.Generic.List[object]]::new();foreach($child in Get-ChildItem -LiteralPath $NodePath -ErrorAction SilentlyContinue){$children.Add((Read-Node $child.PSPath))};[pscustomobject]@{Name=$key.PSChildName;Path=$NodePath;Exists=$true;Values=@($values|Sort-Object Name);SubKeys=@($children|Sort-Object Name)}}
-    $script:__WinCareRegistrySnapshotCount=0;try{$snapshot=Read-Node $Path;return $snapshot}finally{Remove-Variable __WinCareRegistrySnapshotCount -Scope Script -ErrorAction SilentlyContinue}
+    param(
+        [Parameter(Mandatory)][string]$Path,
+        [Alias('MaximumEntries')][ValidateRange(1,10000)][int]$MaximumKeys=5000,
+        [ValidateRange(0,64)][int]$MaximumDepth=32
+    )
+    if(-not $IsWindows){return [pscustomobject]@{Path=$Path;Exists=$false;Values=@();SubKeys=@()}}
+    if(-not(Test-Path -LiteralPath $Path)){return [pscustomobject]@{Path=$Path;Exists=$false;Values=@();SubKeys=@()}}
+    function Read-Node([string]$NodePath,[int]$Depth){
+        if($Depth -gt $MaximumDepth){throw "Registry snapshot exceeds the maximum depth of $MaximumDepth."}
+        $script:__WinCareRegistrySnapshotCount++
+        if($script:__WinCareRegistrySnapshotCount -gt $MaximumKeys){throw "Registry snapshot exceeds $MaximumKeys keys."}
+        $key=Get-Item -LiteralPath $NodePath -ErrorAction Stop
+        $values=[Collections.Generic.List[object]]::new()
+        foreach($name in $key.GetValueNames()){
+            $values.Add([pscustomobject]@{
+                Name=$name
+                Value=$key.GetValue($name,$null,[Microsoft.Win32.RegistryValueOptions]::DoNotExpandEnvironmentNames)
+                ValueType=$key.GetValueKind($name).ToString()
+            })
+        }
+        $children=[Collections.Generic.List[object]]::new()
+        foreach($child in Get-ChildItem -LiteralPath $NodePath -ErrorAction SilentlyContinue){
+            $children.Add((Read-Node -NodePath $child.PSPath -Depth ($Depth+1)))
+        }
+        [pscustomobject]@{
+            Name=$key.PSChildName
+            Path=$NodePath
+            Exists=$true
+            Values=@($values|Sort-Object Name)
+            SubKeys=@($children|Sort-Object Name)
+        }
+    }
+    $script:__WinCareRegistrySnapshotCount=0
+    try{return Read-Node -NodePath $Path -Depth 0}
+    finally{Remove-Variable __WinCareRegistrySnapshotCount -Scope Script -ErrorAction SilentlyContinue}
 }
 function Test-WinCareRegistryTreeSnapshot {
     [CmdletBinding()]
@@ -242,20 +272,40 @@ function Remove-WinCareEmptyDirectory {
 }
 function New-WinCareManagedFileWriteAction {
     [CmdletBinding()]
-    param([Parameter(Mandatory)][string]$Path,[Parameter(Mandatory)][AllowEmptyString()][string]$Content,[string[]]$AllowedRoots=@())
+    param(
+        [Parameter(Mandatory)][string]$Path,
+        [Parameter(Mandatory)][AllowNull()][object]$Content,
+        [string[]]$AllowedRoots=@(),
+        [string]$Label='',
+        [string[]]$SourceRecords=@()
+    )
     $full=[IO.Path]::GetFullPath($Path)
-    $contentBytes=[Text.Encoding]::UTF8.GetBytes($Content)
-    if($contentBytes.Length -gt 67108864){throw 'Managed file content exceeds 64 MiB.'}
-    if($AllowedRoots.Count -eq 0){$AllowedRoots=@((Split-Path -Parent $full))}
-    $beforeHash=if(Test-Path $full){Get-WinCareSha256 -LiteralPath $full}else{''}
-    New-WinCareBridgeAction -Type 'WriteManagedFile' `
-        -Label "Write managed file $([IO.Path]::GetFileName($full))" -Risk High `
-        -Parameters @{
-            Path=$full
-            ContentBase64=[Convert]::ToBase64String($contentBytes)
-            ExpectedBeforeHash=$beforeHash
-            AllowedRoots=@($AllowedRoots)
-        } -Reversible $true -Verification 'The file SHA-256 must match the planned content.'
+    $contentBytes=if($Content -is [byte[]]){
+        [byte[]]$Content.Clone()
+    }elseif($Content -is [string]){
+        [Text.Encoding]::UTF8.GetBytes([string]$Content)
+    }else{
+        throw 'Managed file content must be a string or byte array.'
+    }
+    try{
+        if($contentBytes.Length -gt 67108864){throw 'Managed file content exceeds 64 MiB.'}
+        if($AllowedRoots.Count -eq 0){$AllowedRoots=@((Split-Path -Parent $full))}
+        $beforeHash=if(Test-Path $full){Get-WinCareSha256 -LiteralPath $full -MaximumBytes 67108864}else{''}
+        $actionLabel=if([string]::IsNullOrWhiteSpace($Label)){
+            "Write managed file $([IO.Path]::GetFileName($full))"
+        }else{$Label}
+        return New-WinCareBridgeAction -Type 'WriteManagedFile' `
+            -Label $actionLabel -Risk High `
+            -Parameters @{
+                Path=$full
+                ContentBase64=[Convert]::ToBase64String($contentBytes)
+                ExpectedBeforeHash=$beforeHash
+                AllowedRoots=@($AllowedRoots)
+            } -Reversible $true -SourceRecords @($SourceRecords) `
+            -Verification 'The file SHA-256 must match the planned content.'
+    }finally{
+        if($contentBytes.Length){[Array]::Clear($contentBytes,0,$contentBytes.Length)}
+    }
 }
 function Invoke-WinCareWriteManagedFileAction {
     [CmdletBinding()]

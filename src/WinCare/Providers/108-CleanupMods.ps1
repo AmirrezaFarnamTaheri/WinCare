@@ -197,7 +197,7 @@ function Invoke-WinCareClearWindowsUpdateDownloadCacheAction {
             $files=[Collections.Generic.List[IO.FileInfo]]::new()
             foreach($file in Get-WinCareBoundedTreeEntry -LiteralPath $root -MaximumEntries 100000 -EntryType File){$files.Add($file)}
             foreach($file in $files){try{$length=[long]$file.Length;Remove-Item -LiteralPath $file.FullName -Force -ErrorAction Stop;$removed++;$bytes+=$length}catch{$failed++}}
-            Remove-WinCareEmptyDirectory -Root $root
+            Remove-WinCareEmptyDirectory -Path $root -Recurse
         }
     }catch{$failed++;$primary=$_.Exception.Message}
     finally{foreach($name in @($serviceStates.Keys)){try{switch([string]$serviceStates[$name]){'Running'{Start-Service -Name $name -ErrorAction Stop};'Paused'{Start-Service -Name $name -ErrorAction Stop;Suspend-Service -Name $name -ErrorAction Stop}}}catch{$failed++}}}

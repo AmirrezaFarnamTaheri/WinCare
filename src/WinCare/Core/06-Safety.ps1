@@ -1,11 +1,17 @@
 function Get-WinCareSha256 {
     [CmdletBinding()]
-    param([Parameter(Mandatory)][string]$LiteralPath)
+    param(
+        [Parameter(Mandatory)][string]$LiteralPath,
+        [ValidateRange(1,1099511627776)][long]$MaximumBytes=1099511627776
+    )
     if(-not (Test-Path -LiteralPath $LiteralPath -PathType Leaf)) { return $null }
     $path=Assert-WinCareSafePath -LiteralPath $LiteralPath
     $before=Get-Item -LiteralPath $path -Force -ErrorAction Stop
     if($before.PSIsContainer -or ($before.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) {
         throw "SHA-256 inputs must be regular non-reparse files: $path"
+    }
+    if([long]$before.Length -gt $MaximumBytes) {
+        throw "SHA-256 input exceeds the $MaximumBytes-byte ceiling: $path"
     }
     $stream=[IO.FileStream]::new(
         $path,
@@ -23,6 +29,7 @@ function Get-WinCareSha256 {
             $after.PSIsContainer -or
             ($after.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0 -or
             [long]$after.Length -ne [long]$before.Length -or
+            [long]$after.Length -gt $MaximumBytes -or
             $after.LastWriteTimeUtc -ne $before.LastWriteTimeUtc
         ) { throw "SHA-256 input changed while hashing: $path" }
         try { return [Convert]::ToHexString($hash).ToLowerInvariant() }
@@ -306,15 +313,6 @@ function Write-WinCareAtomicText {
         [AllowEmptyString()][Parameter(Mandatory)][string]$Text
     )
     Write-WinCareAtomicBytes -LiteralPath $LiteralPath -Bytes ([Text.UTF8Encoding]::new($false).GetBytes($Text))
-}
-
-function Test-WinCareStrictObjectKeys {
-    [CmdletBinding()]
-    param([Parameter(Mandatory)][object]$InputObject,[Parameter(Mandatory)][string[]]$AllowedKeys,[string]$Context='object')
-    $keys=if ($InputObject -is [Collections.IDictionary]) {@($InputObject.Keys)} else {@($InputObject.PSObject.Properties.Name)}
-    $unknown=@($keys | Where-Object { $_ -notin $AllowedKeys })
-    if ($unknown.Count -gt 0) { throw "Unknown $Context field(s): $($unknown -join ', ')" }
-    return $true
 }
 
 function Test-WinCareSensitivePropertyName {

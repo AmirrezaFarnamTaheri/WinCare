@@ -19,6 +19,7 @@
         'Providers/112-ThreatHunter.ps1'
         'Providers/113-NetworkProxyControl.ps1'
         'Providers/114-StorageIntelligence.ps1'
+        'Providers/114a-StorageHealth.ps1'
         'Providers/115-SelfHealingCopilot.ps1'
         'Providers/116-KernelFilterEngine.ps1'
         'Providers/117-FleetMeshControl.ps1'

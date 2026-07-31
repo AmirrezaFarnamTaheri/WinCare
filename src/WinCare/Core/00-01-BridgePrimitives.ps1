@@ -58,10 +58,16 @@ function New-WinCareBridgeAction {
         [hashtable]$Compensator=@{},
         [int]$TimeoutSeconds=3600,
         [string[]]$Tags=@('Implemented'),
+        [string[]]$SourceRecords=@(),
         [string]$Verification='Provider-specific verification is required.'
     )
     if(-not (Get-Command New-WinCareAction -ErrorAction SilentlyContinue)){throw 'WinCare action model is unavailable.'}
-    New-WinCareAction -Type $Type -Label $Label -Risk $Risk -Parameters $Parameters -RequiresAdmin $RequiresAdmin -Reversible $Reversible -Postconditions $Postconditions -Compensator $Compensator -TimeoutSeconds $TimeoutSeconds -Tags $Tags -Verification $Verification
+    New-WinCareAction `
+        -Type $Type -Label $Label -Risk $Risk -Parameters $Parameters `
+        -RequiresAdmin $RequiresAdmin -Reversible $Reversible `
+        -Postconditions $Postconditions -Compensator $Compensator `
+        -TimeoutSeconds $TimeoutSeconds -Tags $Tags `
+        -SourceRecords $SourceRecords -Verification $Verification
 }
 function New-WinCareBridgePlan {
     [CmdletBinding()]
