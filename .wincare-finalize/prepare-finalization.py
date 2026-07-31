@@ -38,6 +38,11 @@ if "def replace_required(" not in brand:
     brand = brand.replace(helper_anchor, helper + helper_anchor, 1)
     brand_source.write_text(brand, encoding="utf-8", newline="\n")
 
+runpy.run_path(
+    str(ROOT / ".wincare-finalize" / "brand-release-fix.py"),
+    run_name="__main__",
+)
+
 for relative in (
     ".github/workflows/apply-windows-release-brand-finalization.yml",
     "tools/Generate-WinCareBrand.ps1",
