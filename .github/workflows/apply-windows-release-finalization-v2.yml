@@ -1,5 +1,5 @@
 name: Apply corrected Windows release finalization
-# Retry after preserving embedded source bytes in the canonical brand correction.
+# Retry after injecting the count-checked canonical brand replacement helper.
 
 on:
   push:
