@@ -48,29 +48,31 @@ function Get-WinCareInjectionQuarantineRecord {
 }
 function Test-WinCareInjectionSurfaceSnapshot {
     [CmdletBinding()]param([Parameter(Mandatory)][object]$Snapshot)
-    $map=ConvertTo-WinCareParameterDictionary $Snapshot
-    $surface=if($map.Contains('Surface')){ConvertTo-WinCareParameterDictionary $map.Surface}else{$map}
-    $path=[string](Get-WinCarePropertyValue $surface 'Path' '')
-    $name=[string](Get-WinCarePropertyValue $surface 'Name' '')
-    if([string]::IsNullOrWhiteSpace($path) -or [string]::IsNullOrWhiteSpace($name)){throw 'Injection-surface snapshot is missing its target identity.'}
-    $exact=@('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Windows',
-        'HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows NT\CurrentVersion\Windows',
-        'HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\AppCertDlls')
-    $ifeo=@('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\','HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\')
-    $allowed=($path -in $exact) -or [bool](@($ifeo|Where-Object{$path.StartsWith($_,[StringComparison]::OrdinalIgnoreCase)})|Select-Object -First 1)
-    if(-not $allowed){throw 'Injection-surface snapshot targets an unapproved registry root.'}
-    if($name -notmatch '^[^\\/:*?"<>|]{1,255}$'){throw 'Injection-surface value name is invalid.'}
-    if($map.Contains('Values')){
-        foreach($value in @($map.Values)){
-            $entry=ConvertTo-WinCareParameterDictionary $value
-            $entryPath=[string](Get-WinCarePropertyValue $entry 'Path' '')
-            $entryName=[string](Get-WinCarePropertyValue $entry 'Name' '')
-            if($entryPath -ne $path -or $entryName -ne $name){
-                throw 'Injection-surface recovery values do not match the declared target.'
+    try{
+        $map=ConvertTo-WinCareParameterDictionary $Snapshot
+        $surface=if($map.Contains('Surface')){ConvertTo-WinCareParameterDictionary $map['Surface']}else{$map}
+        $path=[string](Get-WinCarePropertyValue $surface 'Path' '')
+        $name=[string](Get-WinCarePropertyValue $surface 'Name' '')
+        if([string]::IsNullOrWhiteSpace($path) -or [string]::IsNullOrWhiteSpace($name)){return $false}
+        $exact=@('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Windows',
+            'HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows NT\CurrentVersion\Windows',
+            'HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\AppCertDlls')
+        $ifeo=@('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\','HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\')
+        $allowed=($path -in $exact) -or [bool](@($ifeo|Where-Object{$path.StartsWith($_,[StringComparison]::OrdinalIgnoreCase)})|Select-Object -First 1)
+        if(-not $allowed){return $false}
+        if($name -notmatch '^[^\\/:*?"<>|]{1,255}$'){return $false}
+        if($map.Contains('Values')){
+            foreach($value in @($map['Values'])){
+                $entry=ConvertTo-WinCareParameterDictionary $value
+                $entryPath=[string](Get-WinCarePropertyValue $entry 'Path' '')
+                $entryName=[string](Get-WinCarePropertyValue $entry 'Name' '')
+                if($entryPath -ne $path -or $entryName -ne $name){return $false}
             }
-        }
-    }elseif($null -eq (Get-WinCarePropertyValue $surface 'Exists' $null)){throw 'Injection-surface snapshot is missing its existence state.'}
-    $true
+        }elseif($null -eq (Get-WinCarePropertyValue $surface 'Exists' $null)){return $false}
+        return $true
+    }catch{
+        return $false
+    }
 }
 
 function New-WinCareInjectionSurfaceQuarantinePlan {
