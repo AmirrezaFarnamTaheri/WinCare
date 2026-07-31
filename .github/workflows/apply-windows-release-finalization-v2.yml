@@ -1,4 +1,5 @@
 name: Apply corrected Windows release finalization
+# Retry after the fail-closed runner interpolation fix.
 
 on:
   push:
