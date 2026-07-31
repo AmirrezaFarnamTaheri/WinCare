@@ -1,4 +1,4 @@
-name: Apply upgrade-complete atomic PR 5 remediation
+name: Apply verdict-complete atomic PR 5 remediation
 
 on:
   push:
@@ -49,7 +49,7 @@ jobs:
           python .wincare-finalize/pr5-gui-contract-fix.py
           if ($LASTEXITCODE -ne 0) { throw 'Property-safe GUI critical contract correction failed.' }
           python .wincare-finalize/pr5-upgrade-lifecycle-fix.py
-          if ($LASTEXITCODE -ne 0) { throw 'Upgrade archive output isolation failed.' }
+          if ($LASTEXITCODE -ne 0) { throw 'Upgrade archive and verdict-stream isolation failed.' }
           python .wincare-finalize/repair-pr5-remediator.py
           if ($LASTEXITCODE -ne 0) { throw 'Remediation process-isolation repair failed.' }
           & .\.wincare-finalize\pr5-remediate.ps1 -Root $PWD
