@@ -8,6 +8,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 VALIDATION = ROOT / "tools" / "Invoke-WindowsValidation.ps1"
 BUILD_RELEASE = ROOT / "tools" / "Build-Release.ps1"
+PREVIOUS_FIXTURE = ROOT / "tools" / "Build-PreviousReleaseFixture.ps1"
 LIFECYCLE = ROOT / "tools" / "Test-InstallationLifecycle.ps1"
 WORKFLOW = ROOT / ".github" / "workflows" / "windows-release-validation.yml"
 NATIVE_PROJECT = ROOT / "src" / "WinCare" / "Native" / "WinCare.Native.csproj"
@@ -52,6 +53,14 @@ class WindowsReleasePipelineTests(unittest.TestCase):
         ):
             self.assertIn(required, text)
         self.assertIn("supply-chain-inventory.json", text)
+
+    def test_previous_release_fixture_is_isolated_committed_and_verified(self) -> None:
+        text = PREVIOUS_FIXTURE.read_text(encoding="utf-8")
+        self.assertIn("git clone --no-hardlinks", text)
+        self.assertIn("validate_source_references.py", text)
+        self.assertIn("git commit", text)
+        self.assertIn("Build-Release.ps1", text)
+        self.assertIn("previous-release-fixture.json", text)
 
     def test_validation_threads_previous_release_into_production_lifecycle(self) -> None:
         validation = VALIDATION.read_text(encoding="utf-8")
