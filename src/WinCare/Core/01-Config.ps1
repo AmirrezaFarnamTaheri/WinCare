@@ -322,13 +322,19 @@ function Initialize-WinCareState {
             $config=Convert-WinCareConfigToCurrent -Config $loaded
             $null=Test-WinCareConfigObject -Config $config
         } catch {
+            # T3.1 (security): surface corrupt config instead of silently swallowing it.
+            # Write-Warning works before $script:WinCareState is set; Write-WinCareLog does not.
+            $configError = $_.Exception.Message
             if($readOnlyLocked) {
-                $initializationWarnings.Add('Stored configuration is invalid; read-only defaults are active and the file was not changed.')
+                $warnMsg = "WinCare: settings.json is invalid and could not be repaired (read-only mode). Using safe defaults. Error: $configError"
+                $initializationWarnings.Add($warnMsg)
+                Write-Warning $warnMsg
             } else {
                 $corrupt="$configPath.corrupt.$([datetime]::UtcNow.ToString('yyyyMMddHHmmssfff')).$([guid]::NewGuid().ToString('N'))"
                 $null=Assert-WinCareSafePath -LiteralPath $configPath
                 $null=Assert-WinCareSafePath -LiteralPath $corrupt -AllowMissing
                 [IO.File]::Move($configPath,$corrupt,$false)
+                Write-Warning "WinCare: settings.json was invalid and has been quarantined to '$corrupt'. Using safe defaults. Error: $configError"
             }
             $config=Get-WinCareDefaultConfig
         }
