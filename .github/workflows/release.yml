@@ -292,8 +292,14 @@ jobs:
         run: |
           $ErrorActionPreference='Stop'
           $tag=$env:RELEASE_TAG
-          $result=& gh release view $tag --json tagName 2>&1
-          $exitCode=$LASTEXITCODE
+          $nativeErrorPreference=$PSNativeCommandUseErrorActionPreference
+          try{
+            $PSNativeCommandUseErrorActionPreference=$false
+            $result=& gh release view $tag --json tagName 2>&1
+            $exitCode=$LASTEXITCODE
+          }finally{
+            $PSNativeCommandUseErrorActionPreference=$nativeErrorPreference
+          }
           if($exitCode -eq 0){
             "exists=true"|Out-File $env:GITHUB_OUTPUT -Append
             Add-Content $env:GITHUB_STEP_SUMMARY "Release **$env:RELEASE_TAG** already exists. Its immutable product bytes will be independently compared with this candidate.`n"
