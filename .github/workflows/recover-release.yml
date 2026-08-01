@@ -62,7 +62,8 @@ jobs:
           if($env:EXPECTED_COMMIT -notmatch '^[0-9a-fA-F]{40}$'){throw 'Recovery source commit must be a full SHA-1.'}
           if($env:SOURCE_RUN_ID -notmatch '^[1-9]\d*$'){throw 'Recovery run ID must be a positive integer.'}
 
-          . './tools/Invoke-BoundedFileRead.ps1'
+          function Read-BoundedUtf8Text{param([string]$LiteralPath,[int]$MaximumBytes)$item=Get-Item -LiteralPath $LiteralPath -Force -ErrorAction Stop;if($item.PSIsContainer -or ($item.Attributes -band [IO.FileAttributes]::ReparsePoint) -or [long]$item.Length -gt $MaximumBytes){throw "Unsafe or oversized file: $LiteralPath"};$stream=[IO.FileStream]::new($item.FullName,[IO.FileMode]::Open,[IO.FileAccess]::Read,[IO.FileShare]::None,4096,[IO.FileOptions]::SequentialScan);try{if($stream.Length -lt 1 -or $stream.Length -gt $MaximumBytes){throw "File length out of bounds: $LiteralPath"};$bytes=[byte[]]::new([int]$stream.Length);$offset=0;while($offset -lt $bytes.Length){$read=$stream.Read($bytes,$offset,$bytes.Length-$offset);if($read -le 0){throw "File ended unexpectedly: $LiteralPath"};$offset+=$read};try{$idx=0;$cnt=$bytes.Length;if($cnt -ge 3 -and $bytes[0] -eq 0xEF -and $bytes[1] -eq 0xBB -and $bytes[2] -eq 0xBF){$idx=3;$cnt-=3};[Text.UTF8Encoding]::new($false,$true).GetString($bytes,$idx,$cnt)}finally{[Array]::Clear($bytes,0,$bytes.Length)}}finally{$stream.Dispose()}}
+
 
           $tagRef=& gh api "repos/$env:GH_REPO/git/ref/tags/$env:EXPECTED_TAG"|ConvertFrom-Json -Depth 20
           if($LASTEXITCODE -ne 0){throw "Unable to resolve tag $env:EXPECTED_TAG."}

@@ -47,7 +47,13 @@ function Read-BoundedUtf8Text {
             $offset += $read
         }
         try {
-            [Text.UTF8Encoding]::new($false, $true).GetString($bytes)
+            $index = 0
+            $count = $bytes.Length
+            if ($bytes.Length -ge 3 -and $bytes[0] -eq 0xEF -and $bytes[1] -eq 0xBB -and $bytes[2] -eq 0xBF) {
+                $index = 3
+                $count -= 3
+            }
+            [Text.UTF8Encoding]::new($false, $true).GetString($bytes, $index, $count)
         } finally {
             [Array]::Clear($bytes, 0, $bytes.Length)
         }

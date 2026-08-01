@@ -40,11 +40,20 @@ try {
                 $manifestPath = Join-Path $PSScriptRoot ([string]$group.Manifest)
                 $item = Get-Item -LiteralPath $manifestPath -Force -ErrorAction Stop
                 $stored = $receipt.Fingerprints.($group.Name)
-                $mergedFile = Join-Path $PSScriptRoot ([string]($receipt.MergedFiles.($group.Name)))
+
+                # Deterministic path construction: ignore arbitrary path strings from receipt JSON to prevent path traversal/tampering.
+                $mergedFile = Join-Path $PSScriptRoot ".wincare-merged-$($group.Name).ps1"
+
                 if ($null -eq $stored -or
                     [long]$stored.Ticks  -ne $item.LastWriteTimeUtc.Ticks -or
                     [long]$stored.Length -ne $item.Length -or
                     -not (Test-Path -LiteralPath $mergedFile -PathType Leaf)) {
+                    $fingerprintsMatch = $false
+                    break
+                }
+                # Check for safe, non-reparse leaf file
+                $mergedItem = Get-Item -LiteralPath $mergedFile -Force -ErrorAction Stop
+                if ($mergedItem.PSIsContainer -or ($mergedItem.Attributes -band [IO.FileAttributes]::ReparsePoint)) {
                     $fingerprintsMatch = $false
                     break
                 }
@@ -108,6 +117,7 @@ if (-not $receiptHit) {
         # h05: Merge group files into a single cached .ps1 for fast warm loads.
         $mergedRelative = ".wincare-merged-$($group.Name).ps1"
         $mergedAbs      = Join-Path $PSScriptRoot $mergedRelative
+        $mergedTmp      = $mergedAbs + '.tmp'
         try {
             $sb = [Text.StringBuilder]::new(1048576)
             foreach ($rel in $declared) {
@@ -115,9 +125,12 @@ if (-not $receiptHit) {
                 $null = $sb.AppendLine("# --- merged: $rel ---")
                 $null = $sb.AppendLine([IO.File]::ReadAllText($srcPath, [Text.Encoding]::UTF8))
             }
-            [IO.File]::WriteAllText($mergedAbs, $sb.ToString(), [Text.Encoding]::UTF8)
+            # Atomic file creation: write to temp file then replace target file
+            [IO.File]::WriteAllText($mergedTmp, $sb.ToString(), [Text.Encoding]::UTF8)
+            [IO.File]::Move($mergedTmp, $mergedAbs, $true)
             $newMergedFiles[$group.Name] = $mergedRelative
         } catch {
+            Remove-Item -LiteralPath $mergedTmp -Force -ErrorAction SilentlyContinue
             # Merge write failure: fall back to individual dot-source for this group.
             Write-Verbose "WinCare: could not write merged cache for $($group.Name) ($($_.Exception.Message)); using individual files."
             $newMergedFiles[$group.Name] = $null
@@ -133,18 +146,20 @@ if (-not $receiptHit) {
         . $sourcePath
     }
 
-    # Write receipt v3.
-    try {
-        $receiptObj = [ordered]@{
-            SchemaVersion = 3
-            ModuleVersion = $script:WinCareVersion
-            WrittenUtc    = [datetime]::UtcNow.ToString('o')
-            Fingerprints  = $newFingerprints
-            MergedFiles   = $newMergedFiles
+    # Write receipt v3 ONLY if all group merges succeeded (no null entries).
+    if ($newMergedFiles.Values -notcontains $null) {
+        try {
+            $receiptObj = [ordered]@{
+                SchemaVersion = 3
+                ModuleVersion = $script:WinCareVersion
+                WrittenUtc    = [datetime]::UtcNow.ToString('o')
+                Fingerprints  = $newFingerprints
+                MergedFiles   = $newMergedFiles
+            }
+            [IO.File]::WriteAllText($receiptPath, ($receiptObj | ConvertTo-Json -Depth 5 -Compress), [Text.Encoding]::UTF8)
+        } catch {
+            Write-Verbose "WinCare: could not write load receipt ($($_.Exception.Message))."
         }
-        [IO.File]::WriteAllText($receiptPath, ($receiptObj | ConvertTo-Json -Depth 5 -Compress), [Text.Encoding]::UTF8)
-    } catch {
-        Write-Verbose "WinCare: could not write load receipt ($($_.Exception.Message))."
     }
 } else {
     # Warm path: dot-source 3 merged files instead of 172 individual files.

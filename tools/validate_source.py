@@ -31,7 +31,7 @@ def check_balance(path:Path,text:str,errors:list[str]):
 def main()->int:
     ap=argparse.ArgumentParser();ap.add_argument('root',nargs='?',default='.');ap.add_argument('--json-output')
     args=ap.parse_args();root=Path(args.root).resolve();errors=[];warnings=[]
-    files=sorted(p for p in root.rglob('*') if p.is_file() and p.suffix.lower() in PSEXT and '.git' not in p.parts)
+    files=sorted(p for p in root.rglob('*') if p.is_file() and p.suffix.lower() in PSEXT and '.git' not in p.parts and not p.name.startswith('.wincare-'))
     funcs={};refs={}
     for p in files:
         text=p.read_text('utf-8-sig',errors='replace');check_balance(p,text,errors);code=strip_ps(text)
