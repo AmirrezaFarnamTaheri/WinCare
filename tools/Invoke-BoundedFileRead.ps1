@@ -23,13 +23,33 @@ function Read-BoundedUtf8Text {
         [long]$item.Length -gt $MaximumBytes) {
         throw "Unsafe or oversized text file: $LiteralPath"
     }
-    $bytes = [IO.File]::ReadAllBytes($item.FullName)
+    # Use a bounded FileStream rather than File::ReadAllBytes so the
+    # validate_bounded_io gate accepts this file, and so that length is
+    # re-verified atomically at open time rather than relying on the
+    # pre-open Get-Item check surviving a TOCTOU window.
+    $stream = [IO.FileStream]::new(
+        $item.FullName,
+        [IO.FileMode]::Open,
+        [IO.FileAccess]::Read,
+        [IO.FileShare]::None,
+        4096,
+        [IO.FileOptions]::SequentialScan
+    )
     try {
-        if ($bytes.Length -ne [long]$item.Length) {
-            throw "Text file changed while reading: $LiteralPath"
+        if ($stream.Length -lt 1 -or $stream.Length -gt $MaximumBytes) {
+            throw "File length is outside 1..$MaximumBytes bytes: $LiteralPath"
         }
-        [Text.UTF8Encoding]::new($false, $true).GetString($bytes)
-    } finally {
-        if ($bytes.Length) { [Array]::Clear($bytes, 0, $bytes.Length) }
-    }
+        $bytes = [byte[]]::new([int]$stream.Length)
+        $offset = 0
+        while ($offset -lt $bytes.Length) {
+            $read = $stream.Read($bytes, $offset, $bytes.Length - $offset)
+            if ($read -le 0) { throw "File ended unexpectedly: $LiteralPath" }
+            $offset += $read
+        }
+        try {
+            [Text.UTF8Encoding]::new($false, $true).GetString($bytes)
+        } finally {
+            [Array]::Clear($bytes, 0, $bytes.Length)
+        }
+    } finally { $stream.Dispose() }
 }
