@@ -113,7 +113,11 @@ function Read-WinCareBridgeJson {
     param([Parameter(Mandatory)][string]$LiteralPath,[AllowNull()][object]$Default=$null,[ValidateRange(1,67108864)][long]$MaximumBytes=16777216)
     if(-not (Test-Path -LiteralPath $LiteralPath -PathType Leaf)){return $Default}
     try{return Read-WinCareBoundedJson -LiteralPath $LiteralPath -MaximumBytes $MaximumBytes -Depth 80}
-    catch{return $Default}
+    catch{
+        # T3.2: surface parse failure in -Verbose mode; return Default is the documented resilient contract.
+        Write-Verbose "Read-WinCareBridgeJson: failed to parse '$LiteralPath' — $($_.Exception.Message)"
+        return $Default
+    }
 }
 function Write-WinCareBridgeJson {
     [CmdletBinding()]
