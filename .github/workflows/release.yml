@@ -300,13 +300,14 @@ jobs:
           }
           $encodedTag=[Uri]::EscapeDataString($tag)
           $uri="https://api.github.com/repos/$env:GH_REPO/releases/tags/$encodedTag"
-          $response=Invoke-WebRequest -Method Get -Uri $uri -Headers $headers -SkipHttpErrorCheck -StatusCodeVariable statusCode
-          if([int]$statusCode -eq 200){
+          $response=Invoke-WebRequest -Method Get -Uri $uri -Headers $headers -SkipHttpErrorCheck
+          $statusCode=[int]$response.StatusCode
+          if($statusCode -eq 200){
             $release=$response.Content|ConvertFrom-Json -Depth 20
             if([string]$release.tag_name -ne $tag){throw "Release lookup returned tag $($release.tag_name) instead of $tag."}
             "exists=true"|Out-File $env:GITHUB_OUTPUT -Append
             Add-Content $env:GITHUB_STEP_SUMMARY "Release **$tag** already exists. Its immutable product bytes will be independently compared with this candidate.`n"
-          }elseif([int]$statusCode -eq 404){
+          }elseif($statusCode -eq 404){
             "exists=false"|Out-File $env:GITHUB_OUTPUT -Append
           }else{
             $body=([string]$response.Content).Trim()
