@@ -5,27 +5,34 @@
 # ============================================================================
 
 function Get-WinCareTcpSettingTokenMap {
-    [CmdletBinding()]
-    param()
-    [ordered]@{AutoTuningLevel='autotuninglevel';EcnCapability='ecncapability';Rss='rss';Rsc='rsc';Timestamps='timestamps';InitialRto='initialrto';MinRto='minrto';MaxSynRetransmissions='maxsynretransmissions'}
+    [ordered]@{
+        AutoTuningLevel='autotuninglevel'
+        EcnCapability='ecncapability'
+        ReceiveSideScaling='rss'
+        ReceiveSegmentCoalescing='rsc'
+    }
 }
+
 function Get-WinCareTcpAllowedValue {
-    [CmdletBinding()]
-    param([Parameter(Mandatory)][Alias('Setting')][string]$Key)
+    [CmdletBinding()]param([Parameter(Mandatory)][Alias('Setting')][string]$Key)
     switch($Key){
         'AutoTuningLevel'{@('disabled','highlyrestricted','restricted','normal','experimental')}
         'EcnCapability'{@('disabled','enabled','default')}
-        'Rss'{@('disabled','enabled','default')}
-        'Rsc'{@('disabled','enabled','default')}
-        'Timestamps'{@('disabled','enabled','allowed')}
-        'InitialRto'{@(2000,3000)}
+        'ReceiveSideScaling'{@('disabled','enabled','default')}
+        'ReceiveSegmentCoalescing'{@('disabled','enabled','default')}
         default{@()}
     }
 }
+
 function Get-WinCareTcpGlobalState {
-    [CmdletBinding()]
-    param()
-    $state=[ordered]@{Supported=$false;AutoTuningLevel='Unknown';EcnCapability='Unknown';Rss='Unknown';Rsc='Unknown';Timestamps='Unknown';Raw=@();CapturedAt=[datetime]::UtcNow.ToString('o')}
+    [CmdletBinding()]param()
+    $state=[ordered]@{Supported=$false;
+        AutoTuningLevel='Unknown';
+        EcnCapability='Unknown';
+        ReceiveSideScaling='Unknown';
+        ReceiveSegmentCoalescing='Unknown';
+        Raw=@();
+        CapturedAt=[datetime]::UtcNow.ToString('o')}
     if(-not $IsWindows){return [pscustomobject]$state}
     $result=Invoke-WinCareBridgeProcess -FilePath 'netsh.exe' -ArgumentList @('interface','tcp','show','global') -TimeoutSeconds 30
     if(-not $result.Success){$state.Error=$result.Message;return [pscustomobject]$state}
@@ -33,12 +40,12 @@ function Get-WinCareTcpGlobalState {
     foreach($line in $lines){
         if($line -match '(?i)Receive Window Auto-Tuning Level\s*:\s*(\S+)'){$state.AutoTuningLevel=$Matches[1].ToLowerInvariant()}
         elseif($line -match '(?i)ECN Capability\s*:\s*(\S+)'){$state.EcnCapability=$Matches[1].ToLowerInvariant()}
-        elseif($line -match '(?i)Receive-Side Scaling State\s*:\s*(\S+)'){$state.Rss=$Matches[1].ToLowerInvariant()}
-        elseif($line -match '(?i)Receive Segment Coalescing State\s*:\s*(\S+)'){$state.Rsc=$Matches[1].ToLowerInvariant()}
-        elseif($line -match '(?i)RFC 1323 Timestamps\s*:\s*(\S+)'){$state.Timestamps=$Matches[1].ToLowerInvariant()}
+        elseif($line -match '(?i)Receive-Side Scaling State\s*:\s*(\S+)'){$state.ReceiveSideScaling=$Matches[1].ToLowerInvariant()}
+        elseif($line -match '(?i)Receive Segment Coalescing State\s*:\s*(\S+)'){$state.ReceiveSegmentCoalescing=$Matches[1].ToLowerInvariant()}
     }
     [pscustomobject]$state
 }
+
 function Measure-WinCareNetworkEndpoint {
     [CmdletBinding()]
     param(

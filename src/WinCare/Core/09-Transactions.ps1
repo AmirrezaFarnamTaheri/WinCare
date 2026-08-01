@@ -3,20 +3,6 @@ function Get-WinCareRiskRank {
     switch ($Risk) {'ReadOnly'{0};'Low'{1};'Moderate'{2};'High'{3};'Critical'{4};default{99}}
 }
 
-function Get-WinCarePlanSummary {
-    [CmdletBinding()]param([Parameter(Mandatory)][object]$Plan)
-    # ponytail: Transaction plan rollback -> Volume Shadow Copy VSS restore point
-    $actions=@($Plan.Actions);$highest=$actions|Sort-Object {Get-WinCareRiskRank $_.Risk} -Descending|Select-Object -First 1
-    [pscustomobject]@{
-        Count=$actions.Count;HighestRisk=if($highest){$highest.Risk}else{'ReadOnly'}
-        RequiresAdmin=[bool]($actions|Where-Object RequiresAdmin|Select-Object -First 1)
-        Reversible=@($actions|Where-Object Reversible).Count
-        EstimatedBytes=[long](($actions|Measure-Object EstimatedBytes -Sum).Sum)
-        RestartPossible=[bool]($actions|Where-Object RestartPossible|Select-Object -First 1)
-        SourceRecords=@($Plan.SourceRecords+@($actions.SourceRecords)|Where-Object{$_}|Sort-Object -Unique)
-    }
-}
-
 function New-WinCareVssRestorePointAction {
     [CmdletBinding()]
     param([string]$Description='WinCare Pre-Mutation Restore Point')
@@ -58,23 +44,6 @@ function Get-WinCareActionStableHash {
         RecoveryDescription=$Action.RecoveryDescription;RestartPossible=$Action.RestartPossible
     }
     Get-WinCareSha256Text -Text (ConvertTo-WinCareCanonicalJson -InputObject $stable -Depth 40)
-}
-
-function Get-WinCarePlanStableHash {
-    [CmdletBinding()]param([Parameter(Mandatory)][object]$Plan)
-    $stable=[ordered]@{SchemaVersion=$Plan.SchemaVersion;Id=$Plan.Id;Title=$Plan.Title;Description=$Plan.Description;Actions=@($Plan.Actions|ForEach-Object{Get-WinCareActionStableHash $_});StopOnFailure=$Plan.StopOnFailure;RollbackOnFailure=$Plan.RollbackOnFailure;Metadata=$Plan.Metadata;SourceRecords=@($Plan.SourceRecords)}
-    Get-WinCareSha256Text -Text (ConvertTo-WinCareCanonicalJson -InputObject $stable -Depth 40)
-}
-
-function Get-WinCareOperationRecordStableHash {
-    [CmdletBinding()]param([Parameter(Mandatory)][object]$Record)
-    $stable=[ordered]@{
-        SchemaVersion=$Record.SchemaVersion;OperationId=$Record.OperationId;SessionId=$Record.SessionId;PlanId=$Record.PlanId;PlanHash=$Record.PlanHash
-        Title=$Record.Title;Description=$Record.Description;State=$Record.State;Revision=$Record.Revision;StartedAt=$Record.StartedAt;FinishedAt=$Record.FinishedAt
-        Success=$Record.Success;RollbackState=$Record.RollbackState;ModuleTreeHash=$Record.ModuleTreeHash;Plan=$Record.Plan;Results=@($Record.Results)
-        Warnings=@($Record.Warnings);SourceRecords=@($Record.SourceRecords);LastEventHash=$Record.LastEventHash
-    }
-    Get-WinCareSha256Text -Text (ConvertTo-WinCareCanonicalJson -InputObject $stable -Depth 80)
 }
 
 function Get-WinCareOperationReceiptStableHash {
@@ -132,49 +101,6 @@ function Update-WinCareOperationJournal {
     foreach($key in $Patch.Keys){$record[$key]=$Patch[$key]}
     $null=Add-WinCareJournalEvent -Journal $Journal -Event $Event -State $State -Data $Patch
     Write-WinCareAtomicJson -LiteralPath $Journal.RecordPath -InputObject $record
-}
-
-function Complete-WinCareOperationReceipt {
-    param([Parameter(Mandatory)][object]$Journal)
-    $record=$Journal.Record
-    $recordHash=Get-WinCareOperationRecordStableHash $record
-    $receipt=[ordered]@{SchemaVersion=2;OperationId=$record.OperationId;PlanHash=$record.PlanHash;RecordHash=$recordHash;ModuleTreeHash=$record.ModuleTreeHash;FinalState=$record.State;Success=$record.Success;StartedAt=$record.StartedAt;FinishedAt=$record.FinishedAt;LastEventHash=$record.LastEventHash;ResultCount=@($record.Results).Count;WarningCount=@($record.Warnings).Count}
-    $receiptHash=Get-WinCareOperationReceiptStableHash $receipt;$receipt.ReceiptHash=$receiptHash
-    Write-WinCareProtectedJson -LiteralPath (Join-Path $Journal.Root 'receipt.json') -InputObject $receipt -Purpose 'WinCare.OperationReceipt'
-    $record.ReceiptHash=$receiptHash;Write-WinCareAtomicJson -LiteralPath $Journal.RecordPath -InputObject $record
-    return $receiptHash
-}
-
-function Test-WinCareOperationJournalIntegrity {
-    [CmdletBinding()]param([Parameter(Mandatory)][string]$OperationPath)
-    try{
-        $root=if((Get-Item -LiteralPath $OperationPath).PSIsContainer){$OperationPath}else{Split-Path -Parent $OperationPath}
-        $recordPath=Join-Path $root 'operation.json';$eventsPath=Join-Path $root 'events.jsonl';$receiptPath=Join-Path $root 'receipt.json'
-        $record=Read-WinCareBoundedJson -LiteralPath $recordPath -MaximumBytes 16777216 -Depth 50
-        $eventsItem=Get-Item -LiteralPath $eventsPath -Force -ErrorAction Stop
-        $unsafeEvents=$eventsItem.PSIsContainer -or `
-            ($eventsItem.Attributes -band [IO.FileAttributes]::ReparsePoint) -or `
-            [long]$eventsItem.Length -gt 67108864
-        if($unsafeEvents){throw 'Operation event log is not a bounded regular file.'}
-        $previous='0'*64;$count=0
-        foreach($line in [IO.File]::ReadLines($eventsPath,[Text.UTF8Encoding]::new($false,$true))){if([string]::IsNullOrWhiteSpace($line)){continue};$event=$line|ConvertFrom-Json -AsHashtable -Depth 50;$hash=[string]$event.eventHash;$event.Remove('eventHash');$bodyJson=ConvertTo-WinCareCanonicalJson -InputObject $event -Depth 40;$expected=Get-WinCareSha256Text -Text ($previous+"`n"+$bodyJson);if($expected -ne $hash -or [string]$event.previousEventHash -ne $previous){throw "Event chain mismatch at event $count."};$previous=$hash;$count++}
-        if($previous -ne [string]$record.LastEventHash){throw 'Operation record does not match the event chain.'}
-        if([string]$record.PlanHash -ne (Get-WinCarePlanStableHash $record.Plan)){throw 'Operation plan no longer matches its recorded hash.'}
-        $receiptPresent=Test-Path -LiteralPath $receiptPath -PathType Leaf
-        $terminalStates=@('Succeeded','Failed','Cancelled','Interrupted','FailedWithRollbackWarnings')
-        if([string]$record.State -in $terminalStates -and -not $receiptPresent){throw 'Terminal operation journal is missing its authenticated receipt.'}
-        if($receiptPresent){
-            $receipt=Read-WinCareProtectedJson -LiteralPath $receiptPath -Purpose 'WinCare.OperationReceipt'
-            if([int]$receipt.SchemaVersion -ne 2){throw 'Unsupported operation receipt schema. Legacy receipts are not trusted for automatic recovery.'}
-            if([string]$receipt.LastEventHash -ne $previous -or [string]$receipt.OperationId -ne [string]$record.OperationId){throw 'Operation receipt does not match the journal.'}
-            if([string]$receipt.PlanHash -ne [string]$record.PlanHash){throw 'Operation receipt plan hash does not match the journal.'}
-            if([string]$receipt.RecordHash -ne (Get-WinCareOperationRecordStableHash $record)){throw 'Operation record was modified after receipt creation.'}
-            if([string]$receipt.ReceiptHash -ne (Get-WinCareOperationReceiptStableHash $receipt)){throw 'Operation receipt content hash is invalid.'}
-            if([string]$record.ReceiptHash -ne [string]$receipt.ReceiptHash){throw 'Operation record receipt reference is invalid.'}
-            if([int]$receipt.ResultCount -ne @($record.Results).Count -or [int]$receipt.WarningCount -ne @($record.Warnings).Count){throw 'Operation receipt counts do not match the journal.'}
-        }
-        [pscustomobject]@{Valid=$true;OperationId=$record.OperationId;Events=$count;LastEventHash=$previous;State=$record.State;ReceiptPresent=$receiptPresent}
-    }catch{[pscustomobject]@{Valid=$false;OperationId=$null;Events=0;Error=$_.Exception.Message}}
 }
 
 function Repair-WinCareInterruptedOperation {

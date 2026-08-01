@@ -116,7 +116,7 @@ BeforeAll { Import-Module "$((Get-Location).Path)\src\WinCare\WinCare.psd1" -For
     }
     It 'rejects injection recovery descriptors outside exact remediable roots' {
       $snapshot=@{Surface=@{Kind='IFEO.Debugger';Path='HKLM:\SOFTWARE\Unexpected\victim.exe';Name='Debugger'};Values=@(@{Path='HKLM:\SOFTWARE\Unexpected\victim.exe';Name='Debugger';Exists=$true;Value='debugger.exe';Kind='String';ValueType='String'})}
-      {Test-WinCareInjectionSurfaceSnapshot -Snapshot $snapshot}| Should -Throw
+      Test-WinCareInjectionSurfaceSnapshot -Snapshot $snapshot | Should -BeFalse
     }
     It 'bounds network experiments and checks cancellation between measurements' {
       $provider=(Get-Content (Join-Path $script:WinCareModuleRoot 'Core\00-04-NetworkExperiments.ps1') -Raw)

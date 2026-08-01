@@ -1,0 +1,43 @@
+{
+  "assets": {
+    "appIcon": {
+      "bytes": 15972,
+      "frames": [
+        16,
+        20,
+        24,
+        32,
+        40,
+        48,
+        64,
+        128,
+        256
+      ],
+      "path": "WinCare.ico",
+      "sha256": "5c3b130e9af0cce40175f7023c5d46cb1271d9192f0731b3e6567372b83ebd3c"
+    },
+    "appPng": {
+      "bytes": 6019,
+      "path": "WinCare.App.png",
+      "sha256": "4a0db18aaf87eda21b17e68c1cbc0ffbec774eb5f45c30833d52e54432ddb7d9"
+    },
+    "logoPng": {
+      "bytes": 11223,
+      "path": "WinCare.Logo.png",
+      "sha256": "4dc978af062d3b8e4e5bfe6c3e7afb6de8db76b682ceaebd0e23cc1f6704a6f9"
+    },
+    "logoSvg": {
+      "bytes": 1205,
+      "path": "WinCare.Logo.svg",
+      "sha256": "b5dde0e88ad2f6754eddf3d807eb0a6fcd82a6fe72aa1713b8343e6e9b46aa21"
+    },
+    "markSvg": {
+      "bytes": 1028,
+      "path": "WinCare.Mark.svg",
+      "sha256": "aa87d2ec33498c2691d0078a1104b4287c955119e5eb2f14bc8ee27dcdc9eaf7"
+    }
+  },
+  "canonicalManifest": "design/WinCare-Brand.manifest.json",
+  "name": "WinCare",
+  "schema": "wincare.brand/v1"
+}

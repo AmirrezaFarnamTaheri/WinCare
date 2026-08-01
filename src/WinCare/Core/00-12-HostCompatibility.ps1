@@ -23,24 +23,7 @@ function Wait-WinCareKey {[CmdletBinding()]param();Write-Host 'Press any key to 
 function Show-WinCareMessage {[CmdletBinding()]param([Parameter(Mandatory)][string]$Message,[ValidateSet('Info','Warning','Error')][string]$Level='Info');$color=switch($Level){'Error'{'Red'}'Warning'{'Yellow'}default{'Cyan'}};Write-Host $Message -ForegroundColor $color}
 function Show-WinCareResult {[CmdletBinding()]param([Parameter(Mandatory)][object]$Result);$color=if($Result.Success){'Green'}elseif($Result.Status -eq 'Blocked'){'Yellow'}else{'Red'};Write-Host ("[{0}] {1}: {2}" -f $Result.Status,$Result.Code,$Result.Message) -ForegroundColor $color;if($Result.Data){$Result.Data|Format-List|Out-Host}}
 function Show-WinCareTextPage {[CmdletBinding()]param([Parameter(Mandatory)][string]$Text,[string]$Title='');if($Title){Write-Host $Title -ForegroundColor Cyan;Write-WinCareFooter};Write-Host $Text}
-function Get-WinCareMainMenuItems {
-    # Each item carries an Action that matches a screen route in
-    # UI/97-CommandPalette.ps1. The palette filters candidates with
-    # "$item.Action -notin @((Get-WinCareMainMenuItems).Action)" whenever
-    # WorkspaceMode is not 'All', so an item without an Action makes that set
-    # empty and silently hides every palette entry.
-    [CmdletBinding()]param()
-    @(
-        [pscustomobject]@{Id='dashboard';Title='Dashboard';Action='Dashboard'}
-        [pscustomobject]@{Id='security';Title='Security';Action='Security'}
-        [pscustomobject]@{Id='cleanup';Title='Cleanup';Action='Cleanup'}
-        [pscustomobject]@{Id='storage';Title='Storage';Action='Storage'}
-        [pscustomobject]@{Id='network';Title='Network';Action='Network'}
-        [pscustomobject]@{Id='updates';Title='Updates';Action='Updates'}
-        [pscustomobject]@{Id='reports';Title='Reports';Action='Reports'}
-        [pscustomobject]@{Id='exit';Title='Exit';Action='Exit'}
-    )
-}
+
 function New-WinCareSystemReportData {
     [CmdletBinding()]
     param()
@@ -126,7 +109,7 @@ function Invoke-WinCare {
         if(-not (Get-Command Invoke-WinCareHeadlessCommand -ErrorAction SilentlyContinue)){
             return New-WinCareBridgeResult -Success $false -Code 'HeadlessHostUnavailable' -Message 'Headless command host is unavailable.' -ExitCode 127
         }
-        return Invoke-WinCareHeadlessCommand -Command $Command -Parameters $Parameters
+        return Invoke-WinCareHeadlessCommand -Command $Command -Arguments $Parameters
     }
     if(Get-Command Start-WinCare -ErrorAction SilentlyContinue){return Start-WinCare}
     New-WinCareBridgeResult -Success $false -Code 'WinCareHostUnavailable' -Message 'No WinCare host is available.' -ExitCode 127

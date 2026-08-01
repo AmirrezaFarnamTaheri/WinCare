@@ -1,9 +1,9 @@
 function Get-WinCareActionContractTable {
     [CmdletBinding()]param()
-    if($script:WinCareState.ContainsKey('ActionContracts')){return $script:WinCareState.ActionContracts}
+    if($script:WinCareState.ContainsKey('ActionContracts') -and $script:WinCareState.ActionContracts -is [Collections.IDictionary]){return $script:WinCareState.ActionContracts}
     $table=[ordered]@{}
     function Add-Contract([string]$Type,[string[]]$Required,[string[]]$Allowed,[string]$MinimumRisk='Low',[bool]$AlwaysAdmin=$false,[bool]$ElevationAllowed=$true,[int]$MaximumTimeout=21600){
-        $table[$Type]=[pscustomobject]@{Type=$Type;Required=@($Required);Allowed=@($Allowed);MinimumRisk=$MinimumRisk;AlwaysAdmin=$AlwaysAdmin;ElevationAllowed=$ElevationAllowed;MaximumTimeout=$MaximumTimeout}
+        $table[$Type]=[pscustomobject]@{Type=$Type;Required=@($Required);Allowed=@($Allowed);RequiredParameters=@($Required);AllowedParameters=@($Allowed);MinimumRisk=$MinimumRisk;AlwaysAdmin=$AlwaysAdmin;ElevationAllowed=$ElevationAllowed;MaximumTimeout=$MaximumTimeout}
     }
     Add-Contract 'UninstallRegistryApp' @('ApplicationId','Name','FilePath','Arguments','SuccessExitCodes') @('ApplicationId','Name','FilePath','Arguments','SuccessExitCodes') 'Moderate' $false $true
     Add-Contract 'RemoveAppxPackage' @('PackageFullName') @('PackageFullName','Name') 'Moderate' $false $true
@@ -361,7 +361,7 @@ function Test-WinCareActionContract {
                 if([double]$parameters.MinimumImprovementPercent -lt 0 -or [double]$parameters.MinimumImprovementPercent -gt 100){throw 'Minimum improvement is outside 0..100 percent.'}
                 if([double]$parameters.MaximumRegressionPercent -lt 0 -or [double]$parameters.MaximumRegressionPercent -gt 100){throw 'Maximum regression is outside 0..100 percent.'}
                 $hosts=@($parameters.TargetHosts);if($hosts.Count -lt 1 -or $hosts.Count -gt 8){throw 'Network experiment requires 1..8 target hosts.'}
-                foreach($hostName in $hosts){if(-not(Test-WinCareDnsHostName -Name ([string]$hostName))){throw 'Network experiment target host is invalid.'}}
+                foreach($hostName in $hosts){if(-not(Test-WinCareDnsHostName -HostName ([string]$hostName))){throw 'Network experiment target host is invalid.'}}
                 $worstCaseSeconds=[math]::Ceiling(($hosts.Count*[int]$parameters.SampleCount*((3*[int]$parameters.TimeoutMilliseconds)+100)*2)/1000.0)+15
                 if($worstCaseSeconds -gt 1500){throw 'Network experiment exceeds the 25-minute provider bound.'}
                 if($null -eq $parameters.Baseline){throw 'Network experiment baseline is required.'}

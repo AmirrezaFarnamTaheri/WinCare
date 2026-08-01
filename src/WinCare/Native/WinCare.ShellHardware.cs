@@ -8,9 +8,9 @@ namespace WinCare.Native
 {
     public sealed class MonitorVcpRecord
     {
-        public string DeviceName { get; set; }
+        public string DeviceName { get; set; } = string.Empty;
         public int PhysicalIndex { get; set; }
-        public string Description { get; set; }
+        public string Description { get; set; } = string.Empty;
         public byte FeatureCode { get; set; }
         public uint CurrentValue { get; set; }
         public uint MaximumValue { get; set; }
@@ -21,7 +21,7 @@ namespace WinCare.Native
     public sealed class ProcessPackageRecord
     {
         public int ProcessId { get; set; }
-        public string PackageFullName { get; set; }
+        public string PackageFullName { get; set; } = string.Empty;
         public int Win32Error { get; set; }
     }
 
@@ -83,7 +83,7 @@ namespace WinCare.Native
         private static extern bool CloseHandle(IntPtr handle);
 
         [DllImport("kernel32.dll", CharSet = CharSet.Unicode)]
-        private static extern int GetPackageFullName(IntPtr process, ref int packageFullNameLength, StringBuilder packageFullName);
+        private static extern int GetPackageFullName(IntPtr process, ref int packageFullNameLength, StringBuilder? packageFullName);
 
         [ComImport, Guid("45BA127D-10A8-46EA-8AB7-56EA9078943C")]
         private class ApplicationActivationManagerClass { }
@@ -93,7 +93,7 @@ namespace WinCare.Native
         {
             [PreserveSig]
             int ActivateApplication([MarshalAs(UnmanagedType.LPWStr)] string appUserModelId,
-                [MarshalAs(UnmanagedType.LPWStr)] string arguments, uint options, out uint processId);
+                [MarshalAs(UnmanagedType.LPWStr)] string? arguments, uint options, out uint processId);
             [PreserveSig]
             int ActivateForFile([MarshalAs(UnmanagedType.LPWStr)] string appUserModelId, IntPtr itemArray,
                 [MarshalAs(UnmanagedType.LPWStr)] string verb, out uint processId);
@@ -105,7 +105,7 @@ namespace WinCare.Native
         private sealed class LogicalMonitor
         {
             public IntPtr Handle;
-            public string DeviceName;
+            public string DeviceName = string.Empty;
         }
 
         private static System.Collections.Generic.List<LogicalMonitor> EnumerateLogicalMonitors()

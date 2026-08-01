@@ -26,8 +26,11 @@ Describe 'WinCare graphical console' {
         $Runtime|Should -Match 'I ACCEPT LEGACY UNSAFE MUTATIONS'
         $Runtime|Should -Match 'Invoke-WinCareHeadlessCommand|WinCare.ps1'
         $Runtime|Should -Not -Match 'Invoke-WinCarePlan\s+-Plan'
-        @($Catalog|Where-Object critical).Count|Should -BeGreaterThan 0
-        foreach($item in @($Catalog|Where-Object critical)){$item.risk|Should -Be 'Critical'}
+        $CriticalCatalogItems=@($Catalog|Where-Object {
+            $_.PSObject.Properties['critical'] -and [bool]$_.critical
+        })
+        $CriticalCatalogItems.Count|Should -BeGreaterThan 0
+        foreach($item in $CriticalCatalogItems){$item.risk|Should -Be 'Critical'}
     }
 
     It 'exposes every headless command through curated or generated catalog coverage' {

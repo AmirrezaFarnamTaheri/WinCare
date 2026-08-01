@@ -31,6 +31,28 @@ def zip_info(name: str) -> zipfile.ZipInfo:
     return info
 
 
+def write_zip_with_raw_names(path: Path, names: list[str]) -> None:
+    """Write malformed names exactly, bypassing Windows zipfile slash normalization."""
+    replacements: list[tuple[bytes, bytes]] = []
+    with zipfile.ZipFile(path, "w") as archive:
+        for name in names:
+            stored_name = name.replace("\\", "/")
+            archive.writestr(stored_name, b"x")
+            if "\\" in name:
+                replacements.append((stored_name.encode("utf-8"), name.encode("utf-8")))
+    if not replacements:
+        return
+    payload = path.read_bytes()
+    for normalized, raw in replacements:
+        occurrences = payload.count(normalized)
+        if occurrences != 2:
+            raise AssertionError(
+                f"expected local and central ZIP names exactly twice, found {occurrences}"
+            )
+        payload = payload.replace(normalized, raw)
+    path.write_bytes(payload)
+
+
 @functools.lru_cache(maxsize=8)
 def fake_pe(subsystem: int, marker: int) -> bytes:
     """Execute the fake pe operation with validated inputs."""
@@ -61,6 +83,18 @@ def write_core(path: Path) -> None:
         "bin/WinCare.Native.dll": b"native-runtime",
         "bin/WinCare.Native.build.json": b"{\"SchemaVersion\":2}",
     }
+    for relative in (
+        "design/WinCare-Logo.svg",
+        "design/WinCare-Wordmark.svg",
+        "design/WinCare-Logo-512.png",
+        "design/WinCare.ico",
+        "design/WinCare-Brand.manifest.json",
+        "design/BRAND.md",
+    ):
+        asset = ROOT / relative
+        if not asset.is_file() or asset.is_symlink():
+            raise FileNotFoundError(f"missing canonical brand fixture: {relative}")
+        files[relative] = asset.read_bytes()
     receipt = {
         "schema": "wincare.build.receipt/v2",
         "product": "WinCare",
@@ -80,6 +114,11 @@ def write_core(path: Path) -> None:
 
 def write_standalone_output(directory: Path) -> None:
     """Execute the write standalone output operation with validated inputs."""
+    icon = ROOT / "design" / "WinCare.ico"
+    if not icon.is_file() or icon.is_symlink():
+        raise FileNotFoundError("missing canonical WinCare icon fixture")
+    icon_sha256 = verify_release_v3.sha256(icon.read_bytes())
+    icon_frames = [16, 20, 24, 32, 40, 48, 64, 128, 256]
     records = []
     for index, (name, subsystem) in enumerate(verify_release_v3.EXPECTED_EXES.items(), 1):
         data = fake_pe(subsystem, index)
@@ -91,6 +130,9 @@ def write_standalone_output(directory: Path) -> None:
             "Subsystem": subsystem,
             "RuntimeIdentifier": "win-x64",
             "SelfTestExitCode": 0,
+            "EmbeddedIconVerified": True,
+            "IconSha256": icon_sha256,
+            "IconFrameSizes": icon_frames,
         })
     manifest = {
         "SchemaVersion": 1,
@@ -101,6 +143,8 @@ def write_standalone_output(directory: Path) -> None:
         "SingleFile": True,
         "PayloadSha256": "a" * 64,
         "PayloadManifestSha256": "b" * 64,
+        "IconSha256": icon_sha256,
+        "IconFrameSizes": icon_frames,
         "Artifacts": records,
     }
     (directory / "WinCare.Standalone.build.json").write_text(json.dumps(manifest), encoding="utf-8")
@@ -141,9 +185,7 @@ class StandaloneReleaseTests(unittest.TestCase):
         for names in bad_names:
             with self.subTest(names=names), tempfile.TemporaryDirectory() as directory:
                 path = Path(directory) / "bad.zip"
-                with zipfile.ZipFile(path, "w") as archive:
-                    for name in names:
-                        archive.writestr(name, b"x")
+                write_zip_with_raw_names(path, names)
                 with self.assertRaises(ValueError):
                     prepare_standalone_payload.read_archive(path)
 

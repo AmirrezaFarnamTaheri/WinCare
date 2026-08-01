@@ -23,58 +23,54 @@ function Get-WinCareRbacMatrix {
 }
 
 function Assert-WinCareRolePermission {
-    [CmdletBinding()]param(
-        [Parameter(Mandatory)][string]$RequestedRole,
-        [Parameter(Mandatory)][string]$ActionContractName,
-        [Parameter(Mandatory)][string]$UserIdentity
-    )
-    $validRoles = @('HelpdeskAdmin', 'SecOpsAdmin', 'FleetLead')
-    if ($RequestedRole -notin $validRoles) {
-        return New-WinCareResult -Success $false -Status Blocked -Code 'InvalidRole' -Message "Role '$RequestedRole' is not recognized." -ExitCode 78
+    [CmdletBinding()]param([Parameter(Mandatory)][string]$RequestedRole,[Parameter(Mandatory)][string]$ActionContractName,[Parameter(Mandatory)][string]$UserIdentity)
+    $validRoles=@('HelpdeskAdmin','SecOpsAdmin','FleetLead');
+        if($RequestedRole -notin $validRoles){return New-WinCareResult -Success $false -Status Blocked -Code 'InvalidRole' -Message "Role '$RequestedRole' is not recognized." -ExitCode 78}
+    $roleInfo=(Get-WinCareRbacMatrix).$RequestedRole
+    $actionRiskLevels=@{
+        ClearTemporaryFiles=1
+        OptimizeStorage=2
+        TrimMemoryWorkingSets=2
+        ApplyGroupPolicy=2
+        DisableWdac=3
+        UnloadKernelDriver=3
+        ModifyHvci=3
+        ForceSystemReboot=3
     }
-
-    $matrix = Get-WinCareRbacMatrix
-    $roleInfo = $matrix.$RequestedRole
-
-    # Determine action risk level (1 = Low, 2 = Medium, 3 = High)
-    $highRiskActions = @('DisableWdac', 'UnloadKernelDriver', 'ModifyHvci', 'ForceSystemReboot')
-    $mediumRiskActions = @('OptimizeStorage', 'TrimMemoryWorkingSets', 'ClearTemporaryFiles', 'ApplyGroupPolicy')
-    
-    $actionRiskLevel = if ($ActionContractName -in $highRiskActions) { 3 } elseif ($ActionContractName -in $mediumRiskActions) { 2 } else { 1 }
-
-    if ($actionRiskLevel -gt $roleInfo.AllowedRiskCap) {
-        # Log immutable security audit event
-        $logDir = if ($env:ProgramData) { Join-Path $env:ProgramData 'WinCare\Logs' } else { 'C:\ProgramData\WinCare\Logs' }
-        if (-not (Test-Path -LiteralPath $logDir)) { New-Item -ItemType Directory -Path $logDir -Force | Out-Null }
-        $logFile = Join-Path $logDir 'security_audit.ndjson'
-
-        $auditEntry = [pscustomobject]@{
-            Timestamp            = [datetime]::UtcNow.ToString('o')
-            EventType            = 'UnauthorizedRoleActionAttempt'
-            RequestedRole        = $RequestedRole
-            ActionContractName   = $ActionContractName
-            UserIdentity         = $UserIdentity
-            ActionRiskLevel      = $actionRiskLevel
-            AllowedRiskCap       = $roleInfo.AllowedRiskCap
-            Status               = 'BlockedByPolicy'
-            EvidenceType         = 'UnauthorizedRoleAttemptAuditRecord'
+    if(-not $actionRiskLevels.ContainsKey($ActionContractName)){
+        Write-WinCareLog -Level Audit -Message 'Unknown RBAC action contract denied.' -Data @{
+            requestedRole=$RequestedRole;action=$ActionContractName;user=$UserIdentity
         }
-        $jsonRecord = $auditEntry | ConvertTo-Json -Compress
-        Add-Content -LiteralPath $logFile -Value $jsonRecord -ErrorAction SilentlyContinue
-
-        $blockedMessage = "Role '$RequestedRole' is unauthorized for action '$ActionContractName' " +
-            "(Risk Level $actionRiskLevel > Cap $($roleInfo.AllowedRiskCap)). Step-up elevation signature required."
+        return New-WinCareResult -Success $false -Status Blocked -Code 'UnknownActionContract' `
+            -Message "Action contract '$ActionContractName' is not registered for RBAC evaluation." `
+            -ExitCode 78 -Data @{RequestedRole=$RequestedRole;ActionContractName=$ActionContractName;
+                UserIdentity=$UserIdentity;EvidenceType='UnknownRbacActionAuditRecord'}
+    }
+    $actionRiskLevel=[int]$actionRiskLevels[$ActionContractName]
+    if($actionRiskLevel -gt $roleInfo.AllowedRiskCap){
+        $auditEntry=[pscustomobject]@{Timestamp=[datetime]::UtcNow.ToString('o');
+            EventType='UnauthorizedRoleActionAttempt';
+            RequestedRole=$RequestedRole;
+            ActionContractName=$ActionContractName;
+            UserIdentity=$UserIdentity;
+            ActionRiskLevel=$actionRiskLevel;
+            AllowedRiskCap=$roleInfo.AllowedRiskCap;
+            Status='BlockedByPolicy';
+            EvidenceType='UnauthorizedRoleAttemptAuditRecord'}
+        Write-WinCareLog -Level Audit -Message 'Role permission denied.' -Data @{requestedRole=$RequestedRole;
+            action=$ActionContractName;
+            user=$UserIdentity;
+            risk=$actionRiskLevel;
+            cap=$roleInfo.AllowedRiskCap}
         return New-WinCareResult -Success $false -Status Blocked -Code 'BlockedByPolicy' `
-            -Message $blockedMessage -ExitCode 78 -Data $auditEntry
+            -Message "Role '$RequestedRole' is unauthorized for action '$ActionContractName'." `
+            -ExitCode 78 -Data $auditEntry
     }
-
-    return New-WinCareResult -Success $true -Code 'RolePermissionGranted' -Message "Role '$RequestedRole' authorized for action '$ActionContractName'." -Data @{
-        RequestedRole      = $RequestedRole
-        ActionContractName = $ActionContractName
-        UserIdentity       = $UserIdentity
-        ActionRiskLevel    = $actionRiskLevel
-        EvidenceType       = 'RolePermissionAuthorizationRecord'
-    }
+    New-WinCareResult -Success $true -Code 'RolePermissionGranted' -Message "Role '$RequestedRole' authorized for action '$ActionContractName'." -Data @{RequestedRole=$RequestedRole;
+        ActionContractName=$ActionContractName;
+        UserIdentity=$UserIdentity;
+        ActionRiskLevel=$actionRiskLevel;
+        EvidenceType='RolePermissionAuthorizationRecord'}
 }
 
 if ($MyInvocation.MyCommand.ScriptBlock.Module) {

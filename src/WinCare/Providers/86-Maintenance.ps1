@@ -8,7 +8,10 @@ function Get-WinCareMaintenanceEventPath {
 
 function ConvertTo-WinCareMaintenanceMap {
     param([Parameter(Mandatory)][object]$Value)
-    ConvertTo-WinCareParameterDictionary $Value
+    $map=@{}
+    if($Value -is [Collections.IDictionary]){foreach($key in $Value.Keys){$map[[string]$key]=$Value[$key]}}
+    else{foreach($property in $Value.PSObject.Properties){$map[$property.Name]=$property.Value}}
+    $map
 }
 
 function ConvertTo-WinCareCanonicalMaintenanceTimestamp {

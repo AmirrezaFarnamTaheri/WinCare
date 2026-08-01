@@ -47,25 +47,34 @@ function Get-WinCareInjectionQuarantineRecord {
     return $records
 }
 function Test-WinCareInjectionSurfaceSnapshot {
-    [CmdletBinding()]
-    param([Parameter(Mandatory)][object]$Snapshot)
-    $path=[string](Get-WinCareBridgeProperty $Snapshot 'Path' '')
-    $name=[string](Get-WinCareBridgeProperty $Snapshot 'Name' '')
-    if([string]::IsNullOrWhiteSpace($path) -or [string]::IsNullOrWhiteSpace($name)){return $false}
-    $allowedExact=@(
-        'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Windows',
-        'HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows NT\CurrentVersion\Windows',
-        'HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\AppCertDlls'
-    )
-    $allowedIfeo=@(
-        'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\',
-        'HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\'
-    )
-    $pathAllowed=($allowedExact -contains $path) -or (@($allowedIfeo|Where-Object{$path.StartsWith($_,[StringComparison]::OrdinalIgnoreCase)}).Count -gt 0)
-    if(-not $pathAllowed){return $false}
-    if($name -notmatch '^[^\\/:*?"<>|]{1,255}$'){return $false}
-    return $null -ne (Get-WinCareBridgeProperty $Snapshot 'Exists' $null)
+    [CmdletBinding()]param([Parameter(Mandatory)][object]$Snapshot)
+    try{
+        $map=ConvertTo-WinCareParameterDictionary $Snapshot
+        $surface=if($map.Contains('Surface')){ConvertTo-WinCareParameterDictionary $map['Surface']}else{$map}
+        $path=[string](Get-WinCarePropertyValue $surface 'Path' '')
+        $name=[string](Get-WinCarePropertyValue $surface 'Name' '')
+        if([string]::IsNullOrWhiteSpace($path) -or [string]::IsNullOrWhiteSpace($name)){return $false}
+        $exact=@('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Windows',
+            'HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows NT\CurrentVersion\Windows',
+            'HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\AppCertDlls')
+        $ifeo=@('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\','HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\')
+        $allowed=($path -in $exact) -or [bool](@($ifeo|Where-Object{$path.StartsWith($_,[StringComparison]::OrdinalIgnoreCase)})|Select-Object -First 1)
+        if(-not $allowed){return $false}
+        if($name -notmatch '^[^\\/:*?"<>|]{1,255}$'){return $false}
+        if($map.Contains('Values')){
+            foreach($value in @($map['Values'])){
+                $entry=ConvertTo-WinCareParameterDictionary $value
+                $entryPath=[string](Get-WinCarePropertyValue $entry 'Path' '')
+                $entryName=[string](Get-WinCarePropertyValue $entry 'Name' '')
+                if($entryPath -ne $path -or $entryName -ne $name){return $false}
+            }
+        }elseif($null -eq (Get-WinCarePropertyValue $surface 'Exists' $null)){return $false}
+        return $true
+    }catch{
+        return $false
+    }
 }
+
 function New-WinCareInjectionSurfaceQuarantinePlan {
     [CmdletBinding()]
     param([Parameter(Mandatory)][string[]]$SurfaceId)

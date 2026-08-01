@@ -2,6 +2,7 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory)][string]$ArchivePath,
+    [string]$PreviousArchivePath,
     [string]$WorkRoot = (Join-Path $env:TEMP ('WinCare-install-lifecycle-' + [guid]::NewGuid().ToString('N')))
 )
 
@@ -179,6 +180,17 @@ try {
     if (Test-Path -LiteralPath $destination) { throw 'Corrupt-installation removal left the installation directory behind.' }
     Write-WinCareLifecyclePhase 'corrupt-installation-removal' passed 'strict rejection, trusted module loading, and explicit corrupt removal all passed'
 
+    $upgrade = $null
+    if (-not [string]::IsNullOrWhiteSpace($PreviousArchivePath)) {
+        $upgrade = & (Join-Path $PSScriptRoot 'Test-UpgradeLifecycle.ps1') `
+            -CurrentArchivePath $archive `
+            -PreviousArchivePath $PreviousArchivePath `
+            -WorkRoot (Join-Path $work 'upgrade-lifecycle')
+        if ($upgrade.Status -ne 'passed' -or -not $upgrade.UpgradeVerified -or -not $upgrade.UpgradeRollbackVerified) {
+            throw 'Version-upgrade lifecycle validation did not report complete success.'
+        }
+    }
+
     [pscustomobject]@{
         Schema = 'wincare.installation.lifecycle/v1'
         Status = 'passed'
@@ -193,6 +205,10 @@ try {
         TrustedUninstallerModuleVerified = $true
         UnrecognizedDataPreserved = $true
         CorruptRemovalVerified = $true
+        UpgradeVerified = [bool]($upgrade -and $upgrade.UpgradeVerified)
+        UpgradeRollbackVerified = [bool]($upgrade -and $upgrade.UpgradeRollbackVerified)
+        PreviousVersion = if ($upgrade) { [string]$upgrade.PreviousVersion } else { $null }
+        CurrentVersion = if ($upgrade) { [string]$upgrade.CurrentVersion } else { $null }
     } | ConvertTo-Json -Depth 8
 } catch {
     Write-WinCareLifecyclePhase 'lifecycle' failed $_.Exception.Message

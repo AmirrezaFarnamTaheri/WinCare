@@ -4,6 +4,7 @@ param(
     [string]$Root = (Split-Path $PSScriptRoot -Parent),
     [string]$OutputDirectory = (Join-Path (Split-Path $PSScriptRoot -Parent) 'artifacts'),
     [switch]$SkipTests,
+    [string]$PreviousReleaseArchivePath,
     [switch]$AllowDirty
 )
 
@@ -66,7 +67,7 @@ try {
 
     if (-not $SkipTests) {
         Enter-WinCareReleaseGroup 'pester'
-        Import-Module Pester -RequiredVersion 5.5.0 -ErrorAction Stop
+        Import-Module Pester -MinimumVersion 5.5.0 -ErrorAction Stop
         $pester = Invoke-Pester -Path (Join-Path $rootPath 'tests') -PassThru
         $failedTests = if ($null -ne $pester.FailedCount) { [int]$pester.FailedCount } else { @($pester.TestResult | Where-Object Passed -eq $false).Count }
         $failedBlocks = if ($null -ne $pester.FailedBlocksCount) { [int]$pester.FailedBlocksCount } else { 0 }
@@ -146,7 +147,14 @@ try {
     Exit-WinCareReleaseGroup 'verify-v3' 'passed' @{message="archiveSha256=$archiveSha256 members=$verifiedMembers"}
 
     Enter-WinCareReleaseGroup 'installation-lifecycle'
-    & (Join-Path $PSScriptRoot 'Test-InstallationLifecycle.ps1') -ArchivePath $archive -WorkRoot (Join-Path $workRoot 'install-lifecycle')
+    $lifecycleParameters = @{
+        ArchivePath = $archive
+        WorkRoot = (Join-Path $workRoot 'install-lifecycle')
+    }
+    if (-not [string]::IsNullOrWhiteSpace($PreviousReleaseArchivePath)) {
+        $lifecycleParameters.PreviousArchivePath = (Resolve-Path -LiteralPath $PreviousReleaseArchivePath -ErrorAction Stop).Path
+    }
+    & (Join-Path $PSScriptRoot 'Test-InstallationLifecycle.ps1') @lifecycleParameters
     Exit-WinCareReleaseGroup 'installation-lifecycle'
 
     $unexpectedDirectories = @(Get-ChildItem -LiteralPath $outputPath -Directory -Force -ErrorAction Stop)

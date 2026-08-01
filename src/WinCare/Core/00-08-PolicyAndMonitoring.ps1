@@ -4,23 +4,6 @@
 # Mutating handlers must return typed, observable evidence and fail closed.
 # ============================================================================
 
-function Get-WinCarePlaybook {
-    [CmdletBinding()]
-    param([string]$Id='')
-    $roots=@();if($script:WinCareModuleRoot){$roots+=Join-Path $script:WinCareModuleRoot 'Data\Playbooks'};$roots+=Join-Path (Get-WinCareBridgeStateRoot 'Playbooks') 'Definitions';$items=[Collections.Generic.List[object]]::new()
-    foreach($root in $roots|Select-Object -Unique){if(-not (Test-Path $root)){continue};foreach($file in Get-ChildItem -LiteralPath $root -Filter '*.json' -File -ErrorAction SilentlyContinue){$definition=Read-WinCareBridgeJson -LiteralPath $file.FullName;if($definition -and (Test-WinCarePlaybookDefinition $definition)){$definition|Add-Member -NotePropertyName SourcePath -NotePropertyValue $file.FullName -Force;$definition|Add-Member -NotePropertyName SourceSha256 -NotePropertyValue ((Get-FileHash -LiteralPath $file.FullName -Algorithm SHA256).Hash.ToLowerInvariant()) -Force;$items.Add($definition)}}}
-    if($Id){return @($items|Where-Object{[string]$_.Id -eq $Id})};return @($items)
-}
-function Test-WinCarePlaybookDefinition {
-    [CmdletBinding()]
-    param([Parameter(Mandatory)][object]$Playbook)
-    $id=[string](Get-WinCareBridgeProperty $Playbook 'Id' '');$title=[string](Get-WinCareBridgeProperty $Playbook 'Title' '');$actions=@(Get-WinCareBridgeProperty $Playbook 'Actions' @());if($id -notmatch '^[A-Za-z0-9._-]{1,100}$' -or [string]::IsNullOrWhiteSpace($title) -or $actions.Count -eq 0){return $false};foreach($a in $actions){if([string]::IsNullOrWhiteSpace([string](Get-WinCareBridgeProperty $a 'Type' '')) -or $null -eq (Get-WinCareBridgeProperty $a 'Parameters' $null)){return $false}};return $true
-}
-function Test-WinCarePlaybookCompatibility {
-    [CmdletBinding()]
-    param([Parameter(Mandatory)][object]$Playbook)
-    if(-not (Test-WinCarePlaybookDefinition $Playbook)){return $false};$minBuild=[int](Get-WinCareBridgeProperty (Get-WinCareBridgeProperty $Playbook 'Compatibility' @{}) 'MinimumBuild' 0);$maxBuild=[int](Get-WinCareBridgeProperty (Get-WinCareBridgeProperty $Playbook 'Compatibility' @{}) 'MaximumBuild' 0);$build=if($IsWindows){[Environment]::OSVersion.Version.Build}else{0};if($minBuild -gt 0 -and $build -lt $minBuild){return $false};if($maxBuild -gt 0 -and $build -gt $maxBuild){return $false};return $true
-}
 function New-WinCarePlaybookPlan {
     [CmdletBinding()]
     param([Parameter(Mandatory)][Alias('PlaybookId')][string]$Id)

@@ -74,7 +74,7 @@ function Add-WinCareProvisioningCatalogRules {
 function New-WinCareProvisioningPlan {
     [CmdletBinding()]param([Parameter(Mandatory)][Collections.IDictionary]$Blueprint,[ValidateSet('All','System','User')][string]$Stage='All')
     $null=Test-WinCareProvisioningBlueprint -Blueprint $Blueprint
-    $plan=New-WinCarePlan -Title ("{0} [{1}]" -f [string]$Blueprint.name,$Stage) -Description ([string]$Blueprint.description) -SourceRecords @($Blueprint.sourceRecords)+@('SRC:4e4b1fa0d3')
+    $plan=New-WinCarePlan -Title ("{0} [{1}]" -f [string]$Blueprint.name,$Stage) -Description ([string]$Blueprint.description) -SourceRecords (@($Blueprint.sourceRecords)+@('SRC:4e4b1fa0d3'))
     Add-WinCareProvisioningCatalogRules -Plan $plan -RuleId @($Blueprint.catalogRules) -Title 'Provisioning common configuration'
     if($Stage -in @('All','System')){
         Add-WinCareProvisioningCatalogRules -Plan $plan -RuleId @($Blueprint.systemStage) -Title 'Provisioning system-stage configuration'

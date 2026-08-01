@@ -173,11 +173,69 @@ def finalize(core_archive: Path, executable_directory: Path, output_directory: P
     for name, data in core_files.items():
         folded = name.casefold()
         base = Path(name).name.casefold()
+        if folded == "docs/windows-validation-evidence.md":
+            continue
         if name in GENERATED or base in {item.casefold() for item in EXPECTED_EXES}:
             continue
         if base.startswith("wincare.launcher.") or base.startswith("wincare.tuilauncher."):
             continue
         package_inputs[name] = data
+
+    # wincare.brand.integration/v1
+    brand_asset_names = (
+        "design/WinCare-Logo.svg",
+        "design/WinCare-Wordmark.svg",
+        "design/WinCare-Logo-512.png",
+        "design/WinCare.ico",
+        "design/BRAND.md",
+        "design/WinCare-Brand.manifest.json",
+    )
+    missing_brand_assets = [name for name in brand_asset_names if name not in package_inputs]
+    if missing_brand_assets:
+        raise ValueError("release omits canonical brand assets: " + ", ".join(missing_brand_assets))
+    brand_manifest_bytes = package_inputs["design/WinCare-Brand.manifest.json"]
+    try:
+        brand_manifest = json.loads(brand_manifest_bytes.decode("utf-8-sig"))
+    except (UnicodeDecodeError, json.JSONDecodeError) as error:
+        raise ValueError("WinCare brand manifest is invalid") from error
+    if not isinstance(brand_manifest, dict) or brand_manifest.get("schema") != "wincare.brand.identity/v1":
+        raise ValueError("unsupported WinCare brand manifest schema")
+    if brand_manifest.get("product") != "WinCare":
+        raise ValueError("WinCare brand manifest product mismatch")
+    icon_sizes = brand_manifest.get("iconSizes")
+    if icon_sizes != [16, 20, 24, 32, 40, 48, 64, 128, 256]:
+        raise ValueError("WinCare brand manifest icon-size contract mismatch")
+    manifest_records = brand_manifest.get("assets")
+    if not isinstance(manifest_records, list):
+        raise ValueError("WinCare brand manifest asset records are missing")
+    record_by_path = {
+        str(record.get("path")): record
+        for record in manifest_records
+        if isinstance(record, dict) and isinstance(record.get("path"), str)
+    }
+    expected_manifest_assets = set(brand_asset_names) - {"design/WinCare-Brand.manifest.json"}
+    if set(record_by_path) != expected_manifest_assets or len(record_by_path) != len(manifest_records):
+        raise ValueError("WinCare brand manifest membership mismatch")
+    closed_brand_assets = []
+    for name in sorted(expected_manifest_assets, key=str.casefold):
+        data = package_inputs[name]
+        record = record_by_path[name]
+        observed_hash = sha256(data)
+        if record.get("bytes") != len(data) or str(record.get("sha256", "")).lower() != observed_hash:
+            raise ValueError(f"WinCare brand manifest evidence mismatch: {name}")
+        closed_brand_assets.append({"path": name, "bytes": len(data), "sha256": observed_hash})
+    brand_icon_sha256 = str(record_by_path["design/WinCare.ico"]["sha256"]).lower()
+    brand = {
+        "schema": "wincare.brand.identity/v1",
+        "manifest": {
+            "path": "design/WinCare-Brand.manifest.json",
+            "sha256": sha256(brand_manifest_bytes),
+            "bytes": len(brand_manifest_bytes),
+        },
+        "iconSizes": icon_sizes,
+        "iconSha256": brand_icon_sha256,
+        "assets": closed_brand_assets,
+    }
 
     manifest_path = executable_directory / "WinCare.Standalone.build.json"
     manifest_bytes = read_regular_file(manifest_path, 1024 * 1024, "standalone build manifest")
@@ -202,6 +260,13 @@ def finalize(core_archive: Path, executable_directory: Path, output_directory: P
     }
     if set(record_by_name) != set(EXPECTED_EXES) or len(record_by_name) != len(manifest_records):
         raise ValueError("standalone build manifest artifact membership mismatch")
+    if str(standalone_manifest.get("IconSha256", "")).lower() != brand_icon_sha256:
+        raise ValueError("standalone build manifest icon identity does not match the canonical brand")
+    for name, record in record_by_name.items():
+        if record.get("EmbeddedIconVerified") is not True:
+            raise ValueError(f"standalone executable icon was not verified: {name}")
+        if str(record.get("IconSha256", "")).lower() != brand_icon_sha256:
+            raise ValueError(f"standalone executable icon identity mismatch: {name}")
     expected_directory_entries = set(EXPECTED_EXES) | {"WinCare.Standalone.build.json"}
     actual_directory_entries = {entry.name for entry in executable_directory.iterdir()}
     if actual_directory_entries != expected_directory_entries:
@@ -257,6 +322,7 @@ def finalize(core_archive: Path, executable_directory: Path, output_directory: P
         "source": core_receipt.get("source"),
         "packageProfile": "production",
         "packageInputs": {"treeSha256": package_hash, "members": len(package_inputs)},
+        "brand": brand,
         "generatedAt": created,
         "native": core_receipt.get("native"),
         "standalone": {
@@ -274,6 +340,7 @@ def finalize(core_archive: Path, executable_directory: Path, output_directory: P
             "archiveIntegrity": "verified-by-v3-verifier",
             "windowsNative": (core_receipt.get("native") or {}).get("status"),
             "standaloneHosts": "source-built-and-verified",
+            "brandIdentity": "verified",
         },
         "reproducibility": {
             "ordering": "case-insensitive relative POSIX path",
@@ -299,6 +366,7 @@ def finalize(core_archive: Path, executable_directory: Path, output_directory: P
     for name in EXPECTED_EXES:
         (output_directory / name).write_bytes(package_inputs[name])
     (output_directory / "WinCare.Standalone.build.json").write_bytes(manifest_bytes)
+    (output_directory / f"WinCare-{version}-BRAND.json").write_bytes(brand_manifest_bytes)
     (output_directory / f"WinCare-{version}-SBOM.spdx.json").write_bytes(sbom_bytes)
     (output_directory / f"WinCare-{version}-BUILD-RECEIPT.json").write_bytes(build_receipt_bytes)
     checksum_path = output_directory / f"WinCare-{version}.zip.sha256"
@@ -309,6 +377,7 @@ def finalize(core_archive: Path, executable_directory: Path, output_directory: P
         "release": version,
         "source": core_receipt.get("source"),
         "packageProfile": "production",
+        "brand": brand,
         "archive": {"path": archive_path.name, "sha256": archive_hash, "members": len(packaged), "bytes": len(archive_bytes)},
         "standalone": standalone_records,
         "generatedAt": created,
@@ -323,7 +392,11 @@ def finalize(core_archive: Path, executable_directory: Path, output_directory: P
         "predicate": {
             "buildDefinition": {
                 "buildType": "urn:wincare:build:standalone-release:v3",
-                "externalParameters": {"version": version, "runtimeIdentifier": "win-x64"},
+                "externalParameters": {
+                    "version": version,
+                    "runtimeIdentifier": "win-x64",
+                    "brandManifestSha256": brand["manifest"]["sha256"],
+                },
                 "resolvedDependencies": [
                     {"uri": f"git+https://github.com/AmirrezaFarnamTaheri/WinCare.git@{(core_receipt.get('source') or {}).get('gitCommit', 'unknown')}", "digest": {"sha256": (core_receipt.get('source') or {}).get('treeSha256', package_hash)}}
                 ],
@@ -341,6 +414,7 @@ def finalize(core_archive: Path, executable_directory: Path, output_directory: P
         "schema": "wincare.release.build-result/v3",
         "status": "passed",
         "version": version,
+        "brand": brand,
         "archive": str(archive_path),
         "archiveSha256": archive_hash,
         "checksum": str(checksum_path),
@@ -349,6 +423,7 @@ def finalize(core_archive: Path, executable_directory: Path, output_directory: P
         "sbom": str(output_directory / f"WinCare-{version}-SBOM.spdx.json"),
         "buildReceipt": str(output_directory / f"WinCare-{version}-BUILD-RECEIPT.json"),
         "standaloneManifest": str(output_directory / "WinCare.Standalone.build.json"),
+        "brandManifest": str(output_directory / f"WinCare-{version}-BRAND.json"),
         "standalone": standalone_records,
         "members": len(packaged),
     }

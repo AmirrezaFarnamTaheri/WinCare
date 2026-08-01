@@ -321,20 +321,7 @@ function New-WinCareTaskPlan {
     $normalized=switch -Regex ($State){'^(Open|T[o]do|TaskT[o]do)$'{'Open';break}'^(InProgress|Doing|TaskDoing)$'{'InProgress';break}'^(Blocked|TaskBlocked)$'{'Blocked';break}'^(Done|Completed|TaskDone)$'{'Done';break}default{throw "Unsupported task state: $State"}}
     $tasks=[Collections.Generic.List[object]]::new();foreach($task in Get-WinCareTaskBoard){if($task.Id -ne $Id){$tasks.Add($task)}};$record=[ordered]@{Id=$Id;Title=$Title;Description=$Description;State=$normalized;Pinned=[bool]$Pinned;Tags=@($Tags);DueAt=if($DueAt){$DueAt.Value.ToUniversalTime().ToString('o')}else{$null};UpdatedAt=[datetime]::UtcNow.ToString('o')};$tasks.Add([pscustomobject]$record);$path=Join-Path (Get-WinCareBridgeStateRoot 'Tasks') 'taskboard.json';$content=[Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes((@($tasks)|ConvertTo-Json -Depth 10)));$action=New-WinCareBridgeAction -Type 'WriteManagedFile' -Label "Save task $Id" -Risk Low -Parameters @{Path=$path;ContentBase64=$content;ExpectedBeforeHash=if(Test-Path $path){(Get-FileHash $path -Algorithm SHA256).Hash.ToLowerInvariant()}else{''};AllowedRoots=@((Get-WinCareBridgeStateRoot 'Tasks'))} -Reversible $true -Verification 'The task board must contain the requested record after write.';New-WinCareBridgePlan -Title "Save task: $Title" -Actions @($action)
 }
-function Get-WinCareLegacyUnsafeProfile {
-    [CmdletBinding()]
-    param([string]$Id='')
-    $profiles=@(
-        [pscustomobject]@{Id='diagnostic-window';Title='Time-boxed diagnostic security relaxation';Description='Temporarily disables one selected security control for a declared diagnostic window and records automatic recovery data.';Controls=@('RealTimeProtection','FirewallPublic');MaximumDurationMinutes=30;Risk='Critical'},
-        [pscustomobject]@{Id='winhance-maximum';Title='Compatibility-focused legacy profile';Description='Disables selected telemetry and consumer features but does not disable Defender, firewall, UAC, Secure Boot, or update services.';Controls=@('AdvertisingId','TailoredExperiences','ConsumerFeatures');MaximumDurationMinutes=0;Risk='Critical'}
-    );if($Id){return @($profiles|Where-Object{$_.Id -eq $Id})};return $profiles
-}
-function New-WinCareLegacyUnsafeProfilePlan {
-    [CmdletBinding()]
-    param([Parameter(Mandatory)][string]$ProfileId,[int]$DurationMinutes=15,[string]$Reason='Explicitly approved diagnostic operation',[switch]$IncludeProvisionedAppx)
-    if($IncludeProvisionedAppx){throw 'Provisioned AppX removal is intentionally not implied by a legacy security profile. Use the explicit offline or installed-AppX selection workflow with package patterns and a reviewed preview.'}
-    $profile=Get-WinCareLegacyUnsafeProfile -Id $ProfileId|Select-Object -First 1;if(-not $profile){throw "Unknown legacy profile: $ProfileId"};if($profile.MaximumDurationMinutes -gt 0 -and ($DurationMinutes -lt 1 -or $DurationMinutes -gt $profile.MaximumDurationMinutes)){throw "Duration must be between 1 and $($profile.MaximumDurationMinutes) minutes."};$actions=[Collections.Generic.List[object]]::new();foreach($control in $profile.Controls){$before=Get-WinCareLegacySecurityControlSnapshot -Control $control;$actions.Add((New-WinCareBridgeAction -Type 'SetLegacySecurityControlState' -Label "Set legacy control $control" -Risk Critical -RequiresAdmin $true -Reversible $true -Parameters @{Control=$control;Enabled=$false;BeforeHash=$before.Hash;ProfileId=$ProfileId;DurationMinutes=$DurationMinutes;Reason=$Reason} -Compensator @{Type='RestoreLegacySecurityControlState';Parameters=@{Control=$control;Snapshot=$before;ExpectedCurrentHash=''};RequiresAdmin=$true} -Verification 'The exact control state must be observed and a recovery snapshot must be included.'))};New-WinCareBridgePlan -Title $profile.Title -Description $profile.Description -Actions @($actions) -Metadata @{ProfileId=$ProfileId;DurationMinutes=$DurationMinutes;Reason=$Reason;ProvisionedAppxIncluded=$false}
-}
+
 function Get-WinCareLegacySecurityControlSnapshot {
     param([Parameter(Mandatory)][string]$Control)
     switch($Control){

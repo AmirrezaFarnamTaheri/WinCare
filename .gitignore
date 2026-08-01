@@ -1,4 +1,6 @@
 artifacts/
+**/bin/
+**/obj/
 *.zip
 *.sha256
 .vscode/

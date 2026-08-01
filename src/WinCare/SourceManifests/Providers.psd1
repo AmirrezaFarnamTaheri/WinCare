@@ -19,6 +19,7 @@
         'Providers/112-ThreatHunter.ps1'
         'Providers/113-NetworkProxyControl.ps1'
         'Providers/114-StorageIntelligence.ps1'
+        'Providers/114a-StorageHealth.ps1'
         'Providers/115-SelfHealingCopilot.ps1'
         'Providers/116-KernelFilterEngine.ps1'
         'Providers/117-FleetMeshControl.ps1'
@@ -79,8 +80,7 @@
         'Providers/96-ColorStudio.ps1'
         'Providers/97-LocalNotes.ps1'
         'Providers/98-RemoteSupport.ps1'
+        'Providers/98a-RemoteSupportCatalog.ps1'
         'Providers/99-BrowserWorkspace.ps1'
-        'Providers/999a-CoreClosure.ps1'
-        'Providers/999z-FinalClosure.ps1'
     )
 }

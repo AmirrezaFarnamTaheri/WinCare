@@ -27,7 +27,8 @@ function Get-WinCareColorPaletteStore {
     [CmdletBinding()]param([switch]$Strict)
     $path=Get-WinCareColorPalettePath
     if(-not(Test-Path -LiteralPath $path -PathType Leaf)){return Get-WinCareDefaultColorPaletteStore}
-    try{$store=Read-WinCareProtectedJson -LiteralPath $path -Purpose 'WinCare.ColorPalette';$null=Test-WinCareColorPaletteStore -Store $store;return $store}catch{if($Strict){throw};Write-WinCareLog -Level Warning -Message 'Color palette is invalid; returning an empty in-memory view.' -Data @{error=$_.Exception.Message};return Get-WinCareDefaultColorPaletteStore}
+    try{$store=Read-WinCareProtectedJson -LiteralPath $path -Purpose 'WinCare.ColorPalette' -AsHashtable;$null=Test-WinCareColorPaletteStore $store;$store}
+    catch{if($Strict){throw};Write-WinCareLog Warning 'Color palette is invalid; returning an empty in-memory view.' @{error=$_.Exception.Message};Get-WinCareDefaultColorPaletteStore}
 }
 
 function Get-WinCareColorPaletteStoreHash {param([Collections.IDictionary]$Store);Get-WinCareCanonicalObjectHash -InputObject $Store}

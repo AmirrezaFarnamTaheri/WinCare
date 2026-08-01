@@ -372,6 +372,7 @@ def validate(path: Path, asset_directory: Path | None = None) -> dict[str, objec
                     f"WinCare-{version}-BUILD-RECEIPT.json",
                     f"WinCare-{version}-release-receipt.json",
                     f"WinCare-{version}-build-result.json",
+                    f"WinCare-{version}-BRAND.json",
                     "WinCare.Standalone.build.json",
                     *EXPECTED_EXES.keys(),
                 }
@@ -395,6 +396,14 @@ def validate(path: Path, asset_directory: Path | None = None) -> dict[str, objec
                     errors.append("loose standalone build manifest is missing")
                 elif standalone_manifest_data is not None and sha256_file(loose_manifest, 4 * 1024 * 1024) != sha256(standalone_manifest_data):
                     errors.append("loose standalone build manifest differs from archive")
+                brand_manifest_data = files.get("design/WinCare-Brand.manifest.json")
+                loose_brand = asset_directory / f"WinCare-{version}-BRAND.json"
+                if not loose_brand.is_file() or loose_brand.is_symlink():
+                    errors.append("loose brand identity manifest is missing")
+                elif brand_manifest_data is None:
+                    errors.append("archive brand identity manifest is missing")
+                elif sha256_file(loose_brand, 4 * 1024 * 1024) != sha256(brand_manifest_data):
+                    errors.append("loose brand identity manifest differs from archive")
                 for member_name, asset_name in (
                     ("SBOM.spdx.json", f"WinCare-{version}-SBOM.spdx.json"),
                     ("BUILD-RECEIPT.json", f"WinCare-{version}-BUILD-RECEIPT.json"),

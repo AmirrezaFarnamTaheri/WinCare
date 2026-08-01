@@ -4,6 +4,7 @@ param(
     [string]$Root = (Split-Path $PSScriptRoot -Parent),
     [string]$OutputDirectory = (Join-Path (Split-Path $PSScriptRoot -Parent) 'artifacts\windows-validation'),
     [ValidateRange(60,7200)][int]$GateTimeoutSeconds = 1800,
+    [string]$PreviousReleaseArchivePath,
     [switch]$SkipReleaseBuild
 )
 
@@ -25,7 +26,7 @@ $gates = [Collections.Generic.List[object]]::new()
 function Invoke-WinCareValidationCapturedProcess {
     param(
         [Parameter(Mandatory)][Diagnostics.Process]$Process,
-        [ValidateRange(1,3600)][int]$TimeoutSeconds,
+        [ValidateRange(1,7200)][int]$TimeoutSeconds,
         [ValidateRange(1024,16777216)][int]$MaximumBytes=4194304
     )
     $stdout=[IO.MemoryStream]::new($MaximumBytes);$stderr=[IO.MemoryStream]::new($MaximumBytes)
@@ -186,7 +187,7 @@ if (`$LASTEXITCODE -ne 0) { throw 'Security invariant tests failed.' }
 
     $pester = Invoke-ValidationGate -Name '02-pester' -Script @"
 `$ErrorActionPreference = 'Stop'
-Import-Module Pester -RequiredVersion 5.5.0 -ErrorAction Stop
+Import-Module Pester -MinimumVersion 5.5.0 -ErrorAction Stop
 `$configuration = New-PesterConfiguration
 `$configuration.Run.Path = '$quotedRoot\tests'
 `$configuration.Run.PassThru = `$true
@@ -333,7 +334,13 @@ if (`$unexpected.Count) { throw "Native output contains unexpected entries: `$(`
 "@
 
     if (-not $SkipReleaseBuild) {
-        $release = Invoke-ValidationGate -Name '05-release' -TimeoutSeconds ([math]::Max($GateTimeoutSeconds, 3600)) -Script "& '$quotedRoot\tools\Build-Release.ps1' -Root '$quotedRoot' -OutputDirectory '$quotedOutput\release' -SkipTests"
+        $previousReleaseArgument = ''
+        if (-not [string]::IsNullOrWhiteSpace($PreviousReleaseArchivePath)) {
+            $resolvedPreviousRelease = (Resolve-Path -LiteralPath $PreviousReleaseArchivePath -ErrorAction Stop).Path
+            $quotedPreviousRelease = $resolvedPreviousRelease.Replace("'", "''")
+            $previousReleaseArgument = " -PreviousReleaseArchivePath '$quotedPreviousRelease'"
+        }
+        $release = Invoke-ValidationGate -Name '05-release' -TimeoutSeconds ([math]::Max($GateTimeoutSeconds, 3600)) -Script "& '$quotedRoot\tools\Build-Release.ps1' -Root '$quotedRoot' -OutputDirectory '$quotedOutput\release'$previousReleaseArgument"
         $cleanInstall = Invoke-ValidationGate -Name '06-clean-install' -TimeoutSeconds ([math]::Max($GateTimeoutSeconds, 1800)) -Script @"
 `$ErrorActionPreference = 'Stop'
 `$manifest = Import-PowerShellDataFile '$quotedRoot\src\WinCare\WinCare.psd1'

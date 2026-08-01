@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate named parameters on WinCare calls from public entry points and UI routes."""
+"""Validate named parameters on WinCare calls across runtime source and public entry points."""
 from __future__ import annotations
 
 import argparse
@@ -21,12 +21,27 @@ FUNCTION_DEF_RE = re.compile(r'(?im)^\s*function\s+([A-Za-z][A-Za-z0-9_-]*)\s*\{
 
 
 def call_files(root: Path):
-    fixed = [root / 'WinCare.ps1', root / 'WinCare-GUI.ps1', root / 'WinCare-TUI.ps1', root / 'Install-WinCare.ps1', root / 'Uninstall-WinCare.ps1']
+    fixed = [
+        root / 'WinCare.ps1',
+        root / 'WinCare-GUI.ps1',
+        root / 'WinCare-TUI.ps1',
+        root / 'Install-WinCare.ps1',
+        root / 'Uninstall-WinCare.ps1',
+    ]
+    seen: set[Path] = set()
     for path in fixed:
         if path.is_file():
-            yield path
-    for path in sorted((root / 'src' / 'WinCare' / 'UI').rglob('*.ps1')):
-        yield path
+            resolved = path.resolve()
+            if resolved not in seen:
+                seen.add(resolved)
+                yield path
+    source_root = root / 'src' / 'WinCare'
+    for directory in ('Core', 'Providers', 'Host', 'Install', 'UI'):
+        for path in sorted((source_root / directory).rglob('*.ps1')):
+            resolved = path.resolve()
+            if resolved not in seen:
+                seen.add(resolved)
+                yield path
 
 
 def statement_tail(code: str, start: int) -> str:
@@ -50,8 +65,9 @@ def statement_tail(code: str, start: int) -> str:
     return code[start:end]
 
 
-def direct_parameters(tail: str) -> list[str]:
-    parameters: set[str] = set()
+def direct_parameters(tail: str) -> tuple[list[str], list[str]]:
+    parameters: dict[str, str] = {}
+    counts: dict[str, int] = {}
     depth = 0
     index = 0
     while index < len(tail):
@@ -67,11 +83,19 @@ def direct_parameters(tail: str) -> list[str]:
         if depth == 0 and char == '-' and (index == 0 or not (tail[index - 1].isalnum() or tail[index - 1] == '_')):
             match = re.match(r'-([A-Z][A-Za-z0-9_]*)\b', tail[index:])
             if match:
-                parameters.add(match.group(1))
+                name = match.group(1)
+                key = name.casefold()
+                parameters.setdefault(key, name)
+                counts[key] = counts.get(key, 0) + 1
                 index += len(match.group(0))
                 continue
         index += 1
-    return sorted(parameters, key=str.casefold)
+    unique = sorted(parameters.values(), key=str.casefold)
+    duplicates = sorted(
+        (parameters[key] for key, count in counts.items() if count > 1),
+        key=str.casefold,
+    )
+    return unique, duplicates
 
 
 def validate(root: Path) -> dict[str, object]:
@@ -102,8 +126,15 @@ def validate(root: Path) -> dict[str, object]:
                 continue
             calls += 1
             tail = statement_tail(code, match.end())
-            passed = direct_parameters(tail)
+            passed, duplicates = direct_parameters(tail)
             checked_parameters += len(passed)
+            if duplicates:
+                errors.append({
+                    'path': path.relative_to(root).as_posix(),
+                    'line': code[:match.start()].count('\n') + 1,
+                    'command': name,
+                    'duplicateParameters': duplicates,
+                })
             accepted = {item.casefold() for item in definition['params']} | COMMON_PARAMETERS
             unsupported = [item for item in passed if item.casefold() not in accepted]
             if unsupported:
