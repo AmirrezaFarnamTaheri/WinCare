@@ -4,6 +4,17 @@ on:
   push:
     tags: ['v*']
   workflow_dispatch:
+    inputs:
+      bump:
+        description: Semantic version increment. Auto uses Conventional Commit messages since the latest release tag.
+        required: true
+        default: auto
+        type: choice
+        options:
+          - auto
+          - patch
+          - minor
+          - major
 
 permissions:
   contents: write
@@ -12,7 +23,7 @@ permissions:
   artifact-metadata: write
 
 concurrency:
-  group: release-${{ github.workflow }}-${{ github.ref }}
+  group: release-${{ github.repository }}
   cancel-in-progress: false
 
 env:
@@ -27,9 +38,13 @@ env:
 
 jobs:
   build-validate:
-    name: Build, diagnose, and seal immutable candidate
+    name: Version, build, diagnose, and seal immutable candidate
     runs-on: windows-2022
     timeout-minutes: 110
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      tag: ${{ steps.version.outputs.tag }}
+      source_commit: ${{ steps.version.outputs.source_commit }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -41,20 +56,65 @@ jobs:
       - uses: actions/setup-dotnet@6df8cefd1440cf9313e76b8fdb8aaf90cfa745a3 # v6.0.0
         with:
           global-json-file: global.json
+      - name: Test automatic release versioning
+        shell: pwsh
+        run: python -m unittest tools/test_resolve_release_version.py -v
+      - name: Resolve immutable release identity
+        id: version
+        shell: pwsh
+        env:
+          REQUESTED_BUMP: ${{ inputs.bump || 'auto' }}
+        run: |
+          $ErrorActionPreference='Stop'
+          & git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          & git config user.name 'github-actions[bot]'
+          & python tools/resolve_release_version.py `
+            --repo . `
+            --event-name $env:WINCARE_EVENT_NAME `
+            --ref-name $env:WINCARE_REF_NAME `
+            --bump $env:REQUESTED_BUMP `
+            --github-output $env:GITHUB_OUTPUT
+          if($LASTEXITCODE -ne 0){throw "Release identity resolution failed with exit code $LASTEXITCODE."}
+      - name: Materialize immutable release tag
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $ErrorActionPreference='Stop'
+          $tag='${{ steps.version.outputs.tag }}'
+          $sourceCommit='${{ steps.version.outputs.source_commit }}'
+          $created='${{ steps.version.outputs.created }}'
+          if($created -eq 'true'){
+            $basic=[Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes("x-access-token:$env:GH_TOKEN"))
+            & git -c "http.https://github.com/.extraheader=AUTHORIZATION: basic $basic" push origin "refs/tags/$tag"
+            if($LASTEXITCODE -ne 0){throw "Failed to reserve release tag $tag."}
+          }else{
+            & git checkout --detach $sourceCommit
+            if($LASTEXITCODE -ne 0){throw "Failed to check out resolved release commit $sourceCommit."}
+          }
+          $actualCommit=(& git rev-parse HEAD).Trim()
+          $tagCommit=(& git rev-list -n 1 "$tag^{}").Trim()
+          if($actualCommit -ne $sourceCommit -or $tagCommit -ne $sourceCommit){
+            throw "Release identity mismatch: HEAD=$actualCommit tag=$tagCommit expected=$sourceCommit"
+          }
+          Add-Content $env:GITHUB_STEP_SUMMARY "## Automated release identity`n`n- Version: **${{ steps.version.outputs.version }}**`n- Tag: ``$tag```n- Source commit: ``$sourceCommit```n- Mode: **${{ steps.version.outputs.mode }}**`n- Increment: **${{ steps.version.outputs.bump }}**`n"
       - name: Describe release builder context
         shell: pwsh
+        env:
+          RELEASE_COMMIT: ${{ steps.version.outputs.source_commit }}
+          RELEASE_TAG: ${{ steps.version.outputs.tag }}
         run: |
           $ErrorActionPreference='Stop'
           New-Item -ItemType Directory -Path ./artifacts/windows-validation/workflow -Force | Out-Null
           $context=[ordered]@{
             schema='wincare.workflow.context/v1';job='release-build-validate';event=$env:WINCARE_EVENT_NAME
-            ref=$env:WINCARE_REF;refName=$env:WINCARE_REF_NAME;sha=$env:WINCARE_SHA
+            ref=$env:WINCARE_REF;refName=$env:WINCARE_REF_NAME;sha=$env:RELEASE_COMMIT;tag=$env:RELEASE_TAG
             runId=$env:WINCARE_RUN_ID;runAttempt=$env:WINCARE_RUN_ATTEMPT
             powershell=$PSVersionTable.PSVersion.ToString();dotnet=((& dotnet --version).Trim());python=((& python --version 2>&1|Out-String).Trim())
           }
           $context|ConvertTo-Json -Depth 8|Set-Content ./artifacts/windows-validation/workflow/context.json -Encoding utf8NoBOM
           $context|ConvertTo-Json -Depth 8
-          "## Release builder context`n`n- Commit: ``$env:WINCARE_SHA```n- Ref: ``$env:WINCARE_REF```n- PowerShell: ``$($context.powershell)```n- .NET SDK: ``$($context.dotnet)```n- Python: ``$($context.python)```n"|Add-Content $env:GITHUB_STEP_SUMMARY
+          "## Release builder context`n`n- Commit: ``$env:RELEASE_COMMIT```n- Tag: ``$env:RELEASE_TAG```n- Ref: ``$env:WINCARE_REF```n- PowerShell: ``$($context.powershell)```n- .NET SDK: ``$($context.dotnet)```n- Python: ``$($context.python)```n"|Add-Content $env:GITHUB_STEP_SUMMARY
       - name: Install PowerShell validation modules
         shell: pwsh
         run: |
@@ -94,7 +154,7 @@ jobs:
           if($gates.Count){
             Add-Content $env:GITHUB_STEP_SUMMARY '| Gate | Status | Exit | Duration |'
             Add-Content $env:GITHUB_STEP_SUMMARY '|---|---:|---:|---:|'
-            foreach($gate in $gates){$icon=if([string]$gate.Status -eq 'passed'){'✅'}else{'❌'};Add-Content $env:GITHUB_STEP_SUMMARY "| $($gate.Name) | $icon $($gate.Status) | $($gate.ExitCode) | $($gate.DurationMilliseconds) ms |"}
+            foreach($gate in $gates){$icon=if([string]$gate.Status -eq 'passed'){'passed'}else{'failed'};Add-Content $env:GITHUB_STEP_SUMMARY "| $($gate.Name) | $icon $($gate.Status) | $($gate.ExitCode) | $($gate.DurationMilliseconds) ms |"}
           }
           Add-Content $env:GITHUB_STEP_SUMMARY "`n### Candidate asset inventory ($($assets.Count))`n"
           if($assets.Count){Add-Content $env:GITHUB_STEP_SUMMARY '| Asset | Bytes | SHA-256 |';Add-Content $env:GITHUB_STEP_SUMMARY '|---|---:|---|';foreach($asset in $assets){Add-Content $env:GITHUB_STEP_SUMMARY "| ``$($asset.name)`` | $($asset.bytes) | ``$($asset.sha256)`` |"}}
@@ -110,7 +170,7 @@ jobs:
       - name: Seal exact candidate assets
         shell: pwsh
         env:
-          SOURCE_COMMIT: ${{ github.sha }}
+          SOURCE_COMMIT: ${{ steps.version.outputs.source_commit }}
           WORKFLOW_RUN_ID: ${{ github.run_id }}
         run: |
           $ErrorActionPreference='Stop'
@@ -129,16 +189,17 @@ jobs:
           $receipt=Read-BoundedUtf8Text $receipts[0].FullName 1048576|ConvertFrom-Json -Depth 50
           if([string]$receipt.schema -ne 'wincare.release.receipt/v3'){throw 'Release receipt schema v3 is required.'}
           $version=[string]$receipt.release
+          if($version -ne '${{ steps.version.outputs.version }}'){throw "Resolved version ${{ steps.version.outputs.version }} does not match built version $version."}
           $expectedNames=@("WinCare-$version.zip","WinCare-$version.zip.sha256","WinCare-$version.zip.intoto.jsonl","WinCare-$version-SBOM.spdx.json","WinCare-$version-BUILD-RECEIPT.json","WinCare-$version-release-receipt.json","WinCare-$version-build-result.json","WinCare-$version-BRAND.json",'WinCare.exe','WinCare-GUI.exe','WinCare-TUI.exe','WinCare.Standalone.build.json')
           $actual=@(Get-ChildItem -LiteralPath $release -File -Force|Sort-Object Name)
           $missing=@($expectedNames|Where-Object{$_ -notin $actual.Name});$extra=@($actual.Name|Where-Object{$_ -notin $expectedNames})
           if($actual.Count -ne $expectedNames.Count -or $missing.Count -or $extra.Count){throw "Release asset closure mismatch: missing=$($missing -join ','); extra=$($extra -join ',')"}
           $files=foreach($entry in $actual){if($entry.Attributes -band [IO.FileAttributes]::ReparsePoint){throw "Release asset is a reparse point: $($entry.Name)"};[ordered]@{path='release/'+$entry.Name;sha256=(Get-FileHash -LiteralPath $entry.FullName -Algorithm SHA256).Hash.ToLowerInvariant();bytes=[long]$entry.Length}}
-          $manifest=[ordered]@{schema='wincare.promotion-manifest/v2';sourceCommit=$env:SOURCE_COMMIT;workflowRunId=$env:WORKFLOW_RUN_ID;version=$version;validationReport=[ordered]@{path='windows-validation-report.json';sha256=(Get-FileHash -LiteralPath $reportPath -Algorithm SHA256).Hash.ToLowerInvariant();status='passed'};files=@($files)}
+          $manifest=[ordered]@{schema='wincare.promotion-manifest/v2';sourceCommit=$env:SOURCE_COMMIT;workflowRunId=$env:WORKFLOW_RUN_ID;version=$version;tag='${{ steps.version.outputs.tag }}';validationReport=[ordered]@{path='windows-validation-report.json';sha256=(Get-FileHash -LiteralPath $reportPath -Algorithm SHA256).Hash.ToLowerInvariant();status='passed'};files=@($files)}
           $manifest|ConvertTo-Json -Depth 8|Set-Content (Join-Path $root 'promotion-manifest.json') -Encoding utf8NoBOM
           Write-Host '===== SEALED RELEASE ASSETS ====='
           $files|Format-Table path,bytes,sha256 -AutoSize
-          Add-Content $env:GITHUB_STEP_SUMMARY "`nCandidate sealed as promotion manifest v2 for version **$version**, commit ``$env:SOURCE_COMMIT``, with **$($files.Count)** exact assets.`n"
+          Add-Content $env:GITHUB_STEP_SUMMARY "`nCandidate sealed as promotion manifest v2 for version **$version**, tag **${{ steps.version.outputs.tag }}**, commit ``$env:SOURCE_COMMIT``, with **$($files.Count)** exact assets.`n"
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: win-care-validated-release-candidate
@@ -178,7 +239,11 @@ jobs:
         id: verify
         shell: pwsh
         env:
-          EXPECTED_COMMIT: ${{ github.sha }}
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          EXPECTED_COMMIT: ${{ needs.build-validate.outputs.source_commit }}
+          EXPECTED_TAG: ${{ needs.build-validate.outputs.tag }}
+          EXPECTED_VERSION: ${{ needs.build-validate.outputs.version }}
         run: |
           $ErrorActionPreference='Stop'
           function Read-BoundedUtf8Text {
@@ -188,10 +253,22 @@ jobs:
             $bytes=[IO.File]::ReadAllBytes($item.FullName)
             try{if($bytes.Length -ne [long]$item.Length){throw "Text file changed while reading: $LiteralPath"};[Text.UTF8Encoding]::new($false,$true).GetString($bytes)}finally{if($bytes.Length){[Array]::Clear($bytes,0,$bytes.Length)}}
           }
+          $tagRef=& gh api "repos/$env:GH_REPO/git/ref/tags/$env:EXPECTED_TAG"|ConvertFrom-Json -Depth 20
+          if($LASTEXITCODE -ne 0){throw "Unable to resolve tag $env:EXPECTED_TAG."}
+          $tagObjectType=[string]$tagRef.object.type
+          $tagCommit=[string]$tagRef.object.sha
+          if($tagObjectType -eq 'tag'){
+            $annotatedTag=& gh api "repos/$env:GH_REPO/git/tags/$tagCommit"|ConvertFrom-Json -Depth 20
+            if($LASTEXITCODE -ne 0){throw "Unable to resolve annotated tag object $tagCommit."}
+            $tagObjectType=[string]$annotatedTag.object.type
+            $tagCommit=[string]$annotatedTag.object.sha
+          }
+          if($tagObjectType -ne 'commit' -or $tagCommit -ne $env:EXPECTED_COMMIT){throw "Tag $env:EXPECTED_TAG resolves to $tagObjectType $tagCommit instead of commit $env:EXPECTED_COMMIT."}
           $root=[IO.Path]::GetFullPath('./candidate');$manifestPath=Join-Path $root 'promotion-manifest.json';$reportPath=Join-Path $root 'windows-validation-report.json'
           $manifest=Read-BoundedUtf8Text $manifestPath 1048576|ConvertFrom-Json -Depth 20
           if([string]$manifest.schema -ne 'wincare.promotion-manifest/v2'){throw 'Unsupported promotion manifest.'}
           if([string]$manifest.sourceCommit -ne $env:EXPECTED_COMMIT){throw 'Promotion source commit mismatch.'}
+          if([string]$manifest.tag -ne $env:EXPECTED_TAG -or [string]$manifest.version -ne $env:EXPECTED_VERSION){throw 'Promotion release identity mismatch.'}
           if([string]$manifest.validationReport.status -ne 'passed'){throw 'Promotion validation status is not passed.'}
           if((Get-FileHash -LiteralPath $reportPath -Algorithm SHA256).Hash.ToLowerInvariant() -ne [string]$manifest.validationReport.sha256){throw 'Validation report hash mismatch.'}
           $release=Join-Path $root 'release';$records=@($manifest.files)
@@ -200,36 +277,106 @@ jobs:
           foreach($record in $records){$relative=[string]$record.path;if($relative -notmatch '^release/[A-Za-z0-9][A-Za-z0-9._+-]*$' -or -not $expected.Add($relative)){throw "Unsafe or duplicate promotion path: $relative"};$path=Join-Path $root $relative;$item=Get-Item -LiteralPath $path -Force -ErrorAction Stop;if($item.PSIsContainer -or ($item.Attributes -band [IO.FileAttributes]::ReparsePoint)){throw "Unsafe promotion asset: $relative"};if([long]$item.Length -ne [long]$record.bytes){throw "Promotion size mismatch: $relative"};if((Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash.ToLowerInvariant() -ne [string]$record.sha256){throw "Promotion hash mismatch: $relative"}}
           $actual=@(Get-ChildItem -LiteralPath $release -File -Force|ForEach-Object{'release/'+$_.Name})
           if(@($actual|Where-Object{-not $expected.Contains($_)}).Count -or @($expected|Where-Object{$_ -notin $actual}).Count){throw 'Promotion asset membership mismatch.'}
-          $version=[string]$manifest.version
-          if($env:WINCARE_EVENT_NAME -eq 'push' -and $env:WINCARE_REF_NAME -ne "v$version"){throw "Tag/version mismatch: $env:WINCARE_REF_NAME vs v$version"}
-          $package=Join-Path $release "WinCare-$version.zip"
-          "version=$version"|Out-File $env:GITHUB_OUTPUT -Append
-          "package=$package"|Out-File $env:GITHUB_OUTPUT -Append
           "release_dir=$release"|Out-File $env:GITHUB_OUTPUT -Append
-          Write-Host "Promotion verification passed for version $version and $($records.Count) exact assets."
-          Add-Content $env:GITHUB_STEP_SUMMARY "Promotion verification passed for version **$version**, commit ``$env:EXPECTED_COMMIT``, and **$($records.Count)** exact assets.`n"
-      - name: Attest all exact release assets
-        uses: actions/attest@f7c74d28b9d84cb8768d0b8ca14a4bac6ef463e6 # v4.2.0
-        with:
-          subject-path: ${{ steps.verify.outputs.release_dir }}/*
-      - name: Publish exact validated assets
+          "manifest_path=$manifestPath"|Out-File $env:GITHUB_OUTPUT -Append
+          "report_path=$reportPath"|Out-File $env:GITHUB_OUTPUT -Append
+          Write-Host "Promotion verification passed for version $env:EXPECTED_VERSION and $($records.Count) exact assets."
+          Add-Content $env:GITHUB_STEP_SUMMARY "Promotion verification passed for version **$env:EXPECTED_VERSION**, tag **$env:EXPECTED_TAG**, commit ``$env:EXPECTED_COMMIT``, and **$($records.Count)** exact assets.`n"
+      - name: Inspect publication state
+        id: publication
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
-          SOURCE_COMMIT: ${{ github.sha }}
+          RELEASE_TAG: ${{ needs.build-validate.outputs.tag }}
         run: |
           $ErrorActionPreference='Stop'
-          $version='${{ steps.verify.outputs.version }}';$releaseDirectory='${{ steps.verify.outputs.release_dir }}'
-          $tag=if($env:WINCARE_EVENT_NAME -eq 'push'){$env:WINCARE_REF_NAME}else{"v$version"}
+          $tag=$env:RELEASE_TAG
+          $result=& gh release view $tag --json tagName 2>&1
+          $exitCode=$LASTEXITCODE
+          if($exitCode -eq 0){
+            "exists=true"|Out-File $env:GITHUB_OUTPUT -Append
+            Add-Content $env:GITHUB_STEP_SUMMARY "Release **$env:RELEASE_TAG** already exists. Its immutable product bytes will be independently compared with this candidate.`n"
+          }elseif(($result|Out-String) -match '(?i)release not found|HTTP 404'){
+            "exists=false"|Out-File $env:GITHUB_OUTPUT -Append
+          }else{
+            throw "Unable to determine publication state for $env:RELEASE_TAG`: $($result|Out-String)"
+          }
+      - name: Attest all exact release assets
+        if: steps.publication.outputs.exists != 'true'
+        uses: actions/attest@f7c74d28b9d84cb8768d0b8ca14a4bac6ef463e6 # v4.2.0
+        with:
+          subject-path: ${{ steps.verify.outputs.release_dir }}/*
+      - name: Publish exact validated assets
+        id: publish
+        if: steps.publication.outputs.exists != 'true'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ needs.build-validate.outputs.tag }}
+          RELEASE_VERSION: ${{ needs.build-validate.outputs.version }}
+          SOURCE_COMMIT: ${{ needs.build-validate.outputs.source_commit }}
+        run: |
+          $ErrorActionPreference='Stop'
+          $releaseDirectory='${{ steps.verify.outputs.release_dir }}'
           $candidateRoot=Split-Path -Parent $releaseDirectory
-          $assets=@(@(Get-ChildItem -LiteralPath $releaseDirectory -File -Force|Sort-Object Name|ForEach-Object FullName),(Join-Path $candidateRoot 'windows-validation-report.json'),(Join-Path $candidateRoot 'promotion-manifest.json'))
-          Write-Host "Publishing tag=$tag version=$version sourceCommit=$env:SOURCE_COMMIT assetCount=$($assets.Count)"
+          $assets=@(
+            Get-ChildItem -LiteralPath $releaseDirectory -File -Force|Sort-Object Name|ForEach-Object FullName
+            Join-Path $candidateRoot 'windows-validation-report.json'
+            Join-Path $candidateRoot 'promotion-manifest.json'
+          )
+          if($assets.Count -ne 14){throw "Expected fourteen publication files, found $($assets.Count)."}
+          $tag=$env:RELEASE_TAG
+          Write-Host "Publishing tag=$tag version=$env:RELEASE_VERSION sourceCommit=$env:SOURCE_COMMIT assetCount=$($assets.Count)"
           foreach($asset in $assets){$item=Get-Item -LiteralPath $asset -Force;Write-Host "asset=$($item.Name) bytes=$($item.Length) sha256=$((Get-FileHash -LiteralPath $item.FullName -Algorithm SHA256).Hash.ToLowerInvariant())"}
-          & gh release view $tag *> $null
-          if($LASTEXITCODE -eq 0){throw "Release $tag already exists; published version bytes are immutable."}
-          $arguments=@('release','create',$tag)+$assets+@('--title',"WinCare v$version",'--notes','Exact-byte Windows-validated standalone release with v3 receipts, SBOM, checksums, native provenance, lifecycle evidence, diagnostic indexes, and attestations.')
+          $arguments=@('release','create',$tag)+$assets+@('--title',"WinCare v$env:RELEASE_VERSION",'--notes','Exact-byte Windows-validated standalone release with v3 receipts, SBOM, checksums, native provenance, lifecycle evidence, diagnostic indexes, and attestations.')
           if($env:WINCARE_EVENT_NAME -eq 'push'){$arguments+='--verify-tag'}else{$arguments+=@('--target',$env:SOURCE_COMMIT)}
           & gh @arguments
           if($LASTEXITCODE -ne 0){throw "GitHub release creation failed with exit code $LASTEXITCODE."}
-          Add-Content $env:GITHUB_STEP_SUMMARY "Published **$tag** with **$($assets.Count)** pre-validated files. No bytes were rebuilt in the promotion job.`n"
+          Add-Content $env:GITHUB_STEP_SUMMARY "Published **$env:RELEASE_TAG** with **$($assets.Count)** pre-validated files. No bytes were rebuilt in the promotion job.`n"
+      - name: Verify published or pre-existing immutable release
+        if: always() && (steps.publication.outputs.exists == 'true' || steps.publish.outcome == 'success')
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ needs.build-validate.outputs.tag }}
+          RELEASE_VERSION: ${{ needs.build-validate.outputs.version }}
+          SOURCE_COMMIT: ${{ needs.build-validate.outputs.source_commit }}
+        run: |
+          $ErrorActionPreference='Stop'
+          function Read-BoundedUtf8Text {
+            param([Parameter(Mandatory)][string]$LiteralPath,[ValidateRange(1,16777216)][int]$MaximumBytes)
+            $item=Get-Item -LiteralPath $LiteralPath -Force -ErrorAction Stop
+            if($item.PSIsContainer -or ($item.Attributes -band [IO.FileAttributes]::ReparsePoint) -or [long]$item.Length -gt $MaximumBytes){throw "Unsafe or oversized text file: $LiteralPath"}
+            $bytes=[IO.File]::ReadAllBytes($item.FullName)
+            try{if($bytes.Length -ne [long]$item.Length){throw "Text file changed while reading: $LiteralPath"};[Text.UTF8Encoding]::new($false,$true).GetString($bytes)}finally{if($bytes.Length){[Array]::Clear($bytes,0,$bytes.Length)}}
+          }
+          $published=[IO.Path]::GetFullPath('./published-release')
+          New-Item -ItemType Directory -Path $published -Force|Out-Null
+          & gh release download $env:RELEASE_TAG --dir $published
+          if($LASTEXITCODE -ne 0){throw "Failed to download published release $env:RELEASE_TAG."}
+          $allPublished=@(Get-ChildItem -LiteralPath $published -File -Force)
+          if($allPublished.Count -ne 14){throw "Published release must contain exactly fourteen files; found $($allPublished.Count)."}
+          $publishedManifestPath=Join-Path $published 'promotion-manifest.json'
+          $publishedReportPath=Join-Path $published 'windows-validation-report.json'
+          $publishedManifest=Read-BoundedUtf8Text $publishedManifestPath 1048576|ConvertFrom-Json -Depth 20
+          if([string]$publishedManifest.schema -ne 'wincare.promotion-manifest/v2'){throw 'Published promotion manifest schema mismatch.'}
+          if([string]$publishedManifest.sourceCommit -ne $env:SOURCE_COMMIT -or [string]$publishedManifest.version -ne $env:RELEASE_VERSION){throw 'Published release identity mismatch.'}
+          if($publishedManifest.PSObject.Properties.Name -contains 'tag' -and [string]$publishedManifest.tag -ne $env:RELEASE_TAG){throw 'Published release tag mismatch.'}
+          if((Get-FileHash -LiteralPath $publishedReportPath -Algorithm SHA256).Hash.ToLowerInvariant() -ne [string]$publishedManifest.validationReport.sha256){throw 'Published validation report hash mismatch.'}
+          $candidateRelease='${{ steps.verify.outputs.release_dir }}'
+          $records=@($publishedManifest.files)
+          if($records.Count -ne 12){throw 'Published promotion manifest must contain exactly twelve release assets.'}
+          foreach($record in $records){
+            $name=[IO.Path]::GetFileName([string]$record.path)
+            $candidatePath=Join-Path $candidateRelease $name
+            $publishedPath=Join-Path $published $name
+            foreach($path in @($candidatePath,$publishedPath)){if(-not(Test-Path -LiteralPath $path -PathType Leaf)){throw "Missing release asset: $path"}}
+            $candidateHash=(Get-FileHash -LiteralPath $candidatePath -Algorithm SHA256).Hash.ToLowerInvariant()
+            $publishedHash=(Get-FileHash -LiteralPath $publishedPath -Algorithm SHA256).Hash.ToLowerInvariant()
+            if($candidateHash -ne [string]$record.sha256 -or $publishedHash -ne [string]$record.sha256){throw "Immutable release byte mismatch: $name"}
+            if((Get-Item -LiteralPath $candidatePath).Length -ne [long]$record.bytes -or (Get-Item -LiteralPath $publishedPath).Length -ne [long]$record.bytes){throw "Immutable release size mismatch: $name"}
+          }
+          Add-Content $env:GITHUB_STEP_SUMMARY "Re-downloaded and verified **$env:RELEASE_TAG**: 12 immutable product assets match the sealed candidate and published promotion manifest exactly.`n"
