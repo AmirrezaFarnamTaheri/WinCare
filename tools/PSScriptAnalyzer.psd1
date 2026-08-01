@@ -1,13 +1,13 @@
 @{
     # T5.1 - PSScriptAnalyzer settings for WinCare
-    # Ban semicolon-chained statements — the codebase has pervasive one-line
-    # minification (e.g. "if($x){$a=1};$b=2") that reduces readability and
-    # makes diff review harder. Enforce multi-line statement style in Core first.
+    # Ban trailing semicolons that terminate statements — the codebase has pervasive
+    # statement-terminating semicolons (e.g. "$a=1;$b=2") that reduce readability and
+    # make diff review harder. Enforce clean multi-line statement style.
     #
     # Usage: Invoke-ScriptAnalyzer -Path src/WinCare/Core -Settings tools/PSScriptAnalyzer.psd1
     IncludeRules = @(
-        # Semicolon ban — new rule, enforced as error
-        'PSAvoidSemicolonsAsStatementSeparators'
+        # Semicolon ban — built-in rule, enforced as error
+        'PSAvoidSemicolonsAsLineTerminators'
 
         # Standard rules enabled as warnings (pre-existing; not newly breaking)
         'PSAvoidUsingWriteHost'
@@ -27,13 +27,13 @@
     )
 
     Rules = @{
-        PSAvoidSemicolonsAsStatementSeparators = @{
-            # WHY: Semicolon-chaining compresses multiple statements onto one line,
-            # making code review, diffing, and debugging harder. This is the primary
-            # readability issue identified in the T5.1 coding standards audit.
+        PSAvoidSemicolonsAsLineTerminators = @{
+            # WHY: Semicolons used as line or statement terminators compress multiple
+            # statements onto lines, making code review, diffing, and debugging harder.
             Enable   = $true
             Severity = 'Error'
         }
+
         PSAvoidUsingWriteHost = @{
             Enable   = $true
             Severity = 'Warning'

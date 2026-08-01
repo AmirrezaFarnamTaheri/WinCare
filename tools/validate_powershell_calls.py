@@ -38,10 +38,13 @@ def call_files(root: Path):
     source_root = root / 'src' / 'WinCare'
     for directory in ('Core', 'Providers', 'Host', 'Install', 'UI'):
         for path in sorted((source_root / directory).rglob('*.ps1')):
+            if path.name.startswith('.wincare-'):
+                continue
             resolved = path.resolve()
             if resolved not in seen:
                 seen.add(resolved)
                 yield path
+
 
 
 def statement_tail(code: str, start: int) -> str:
