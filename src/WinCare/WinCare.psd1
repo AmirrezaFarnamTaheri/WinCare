@@ -1,6 +1,6 @@
 @{
     RootModule        = 'WinCare.psm1'
-    ModuleVersion     = '1.1.0'
+    ModuleVersion     = '2.0.2'
     GUID              = 'f43eb775-7d08-42ec-9888-8b1bd79e90a3'
     Author            = 'Amirreza "Farnam" Taheri'
     CompanyName       = 'AmirrezaFarnamTaheri'
