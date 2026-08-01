@@ -129,10 +129,10 @@ jobs:
           $receipt=Read-BoundedUtf8Text $receipts[0].FullName 1048576|ConvertFrom-Json -Depth 50
           if([string]$receipt.schema -ne 'wincare.release.receipt/v3'){throw 'Release receipt schema v3 is required.'}
           $version=[string]$receipt.release
-          $expectedNames=@("WinCare-$version.zip","WinCare-$version.zip.sha256","WinCare-$version.zip.intoto.jsonl","WinCare-$version-SBOM.spdx.json","WinCare-$version-BUILD-RECEIPT.json","WinCare-$version-release-receipt.json","WinCare-$version-build-result.json",'WinCare.exe','WinCare-GUI.exe','WinCare-TUI.exe','WinCare.Standalone.build.json')
+          $expectedNames=@("WinCare-$version.zip","WinCare-$version.zip.sha256","WinCare-$version.zip.intoto.jsonl","WinCare-$version-SBOM.spdx.json","WinCare-$version-BUILD-RECEIPT.json","WinCare-$version-release-receipt.json","WinCare-$version-build-result.json","WinCare-$version-BRAND.json",'WinCare.exe','WinCare-GUI.exe','WinCare-TUI.exe','WinCare.Standalone.build.json')
           $actual=@(Get-ChildItem -LiteralPath $release -File -Force|Sort-Object Name)
           $missing=@($expectedNames|Where-Object{$_ -notin $actual.Name});$extra=@($actual.Name|Where-Object{$_ -notin $expectedNames})
-          if($actual.Count -ne 11 -or $missing.Count -or $extra.Count){throw "Release asset closure mismatch: missing=$($missing -join ','); extra=$($extra -join ',')"}
+          if($actual.Count -ne $expectedNames.Count -or $missing.Count -or $extra.Count){throw "Release asset closure mismatch: missing=$($missing -join ','); extra=$($extra -join ',')"}
           $files=foreach($entry in $actual){if($entry.Attributes -band [IO.FileAttributes]::ReparsePoint){throw "Release asset is a reparse point: $($entry.Name)"};[ordered]@{path='release/'+$entry.Name;sha256=(Get-FileHash -LiteralPath $entry.FullName -Algorithm SHA256).Hash.ToLowerInvariant();bytes=[long]$entry.Length}}
           $manifest=[ordered]@{schema='wincare.promotion-manifest/v2';sourceCommit=$env:SOURCE_COMMIT;workflowRunId=$env:WORKFLOW_RUN_ID;version=$version;validationReport=[ordered]@{path='windows-validation-report.json';sha256=(Get-FileHash -LiteralPath $reportPath -Algorithm SHA256).Hash.ToLowerInvariant();status='passed'};files=@($files)}
           $manifest|ConvertTo-Json -Depth 8|Set-Content (Join-Path $root 'promotion-manifest.json') -Encoding utf8NoBOM
@@ -195,7 +195,7 @@ jobs:
           if([string]$manifest.validationReport.status -ne 'passed'){throw 'Promotion validation status is not passed.'}
           if((Get-FileHash -LiteralPath $reportPath -Algorithm SHA256).Hash.ToLowerInvariant() -ne [string]$manifest.validationReport.sha256){throw 'Validation report hash mismatch.'}
           $release=Join-Path $root 'release';$records=@($manifest.files)
-          if($records.Count -ne 11){throw 'Promotion manifest must contain exactly eleven release assets.'}
+          if($records.Count -ne 12){throw 'Promotion manifest must contain exactly twelve release assets.'}
           $expected=[Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
           foreach($record in $records){$relative=[string]$record.path;if($relative -notmatch '^release/[A-Za-z0-9][A-Za-z0-9._+-]*$' -or -not $expected.Add($relative)){throw "Unsafe or duplicate promotion path: $relative"};$path=Join-Path $root $relative;$item=Get-Item -LiteralPath $path -Force -ErrorAction Stop;if($item.PSIsContainer -or ($item.Attributes -band [IO.FileAttributes]::ReparsePoint)){throw "Unsafe promotion asset: $relative"};if([long]$item.Length -ne [long]$record.bytes){throw "Promotion size mismatch: $relative"};if((Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash.ToLowerInvariant() -ne [string]$record.sha256){throw "Promotion hash mismatch: $relative"}}
           $actual=@(Get-ChildItem -LiteralPath $release -File -Force|ForEach-Object{'release/'+$_.Name})
