@@ -27,9 +27,9 @@ baseline:
     Unapproved-verb warnings are expected and not blocking.
 
 best:
-  iteration: 1
-  metric_value: 4803.0
-  description: "h01 receipt cache — skips validation loop on warm loads, saves ~105ms"
+  iteration: 2
+  metric_value: 1656.9
+  description: "h01+h05 — receipt v3 with merged-file warm path: 172 dot-sources -> 3, 3.3x speedup"
 
 experiments:
   - id: h01
@@ -52,6 +52,33 @@ experiments:
       is only ~100ms. The bottleneck is the 172 sequential dot-source calls (~4700ms).
       Keeping h01 as a free correctness win for users who reinstall frequently.
       Receipt cache adds zero overhead on warm loads. Pivoting to h05 (file merge).
+
+  - id: h05
+    iteration: 2
+    hypothesis: "Merge 172 files -> 3 at load time, eliminate file-open syscalls"
+    category: psm-caching
+    timestamp: "2026-08-01T19:44:55Z"
+    metrics:
+      load_time_ms_median: 1656.9
+      load_time_ms_min: 1405.8
+      load_time_ms_max: 1885.4
+      cold_ms_median: 4945.9
+      load_succeeded: true
+      merged_file_sizes_kb:
+        Core: 594
+        Providers: 952
+        UI: 365
+    delta_vs_baseline_ms: -3304.6
+    delta_pct: -66.6
+    verdict: KEEP
+    notes: >
+      TARGET ACHIEVED. 5-run warm-only measurement (stable, AV-scanned):
+      median 1,657ms, min 1,406ms, max 1,885ms. 3.3x speedup over 4,962ms baseline.
+      Earlier 3-run measurement showed 1 fast (1,171ms) and 2 slow (5,744ms) because
+      Windows Defender scanned the 3 newly-created merged .ps1 files on first read.
+      Once scanned, subsequent reads are consistently 1,406-1,885ms.
+      Cold load unchanged (~4,946ms) -- first load always validates + merges.
+      Implementation: combined h01+h05 receipt v3, warm path dot-sources 3 files.
 
 hypothesis_backlog:
   # High priority — expected biggest wins

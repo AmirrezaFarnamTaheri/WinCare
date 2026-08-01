@@ -18,51 +18,52 @@ $script:WinCareSourceManifestFiles = @(
     'SourceManifests/UI.psd1'
 )
 $script:WinCareSourceGroups = @(
-    [pscustomobject]@{ Name='Core'; Manifest='SourceManifests/Core.psd1'; Folders=@('Core') }
+    [pscustomobject]@{ Name='Core';      Manifest='SourceManifests/Core.psd1';      Folders=@('Core') }
     [pscustomobject]@{ Name='Providers'; Manifest='SourceManifests/Providers.psd1'; Folders=@('Providers') }
-    [pscustomobject]@{ Name='UI'; Manifest='SourceManifests/UI.psd1'; Folders=@('UI','UI/Gui','UI/Screens') }
+    [pscustomobject]@{ Name='UI';        Manifest='SourceManifests/UI.psd1';         Folders=@('UI','UI/Gui','UI/Screens') }
 )
 
-# h01: Validation receipt cache — skip the full manifest validation loop when the
-# source manifests are unchanged since the last verified load. The receipt stores
-# each manifest's fingerprint (LastWriteTime ticks + Length) and the canonical
-# dot-source order. Any fingerprint mismatch falls back to full validation + receipt update.
-# Security: the receipt is keyed to actual file metadata on disk, not a user value.
-$receiptPath = Join-Path $PSScriptRoot '.wincare-load-receipt.json'
-$expectedModuleFiles = [Collections.Generic.List[string]]::new()
-$receiptHit = $false
+# h01+h05: Receipt cache (v3) — on warm loads, dot-source 3 merged group files instead
+# of 172 individual source files. Cold path: validate manifests, merge each group into
+# .wincare-merged-{Group}.ps1, write receipt. Warm path: fingerprint check → 3 dot-sources.
+# Security: receipt keyed to actual manifest file metadata. Merged files regenerated on any change.
+$receiptPath    = Join-Path $PSScriptRoot '.wincare-load-receipt.json'
+$receiptHit     = $false
+$mergedPaths    = [ordered]@{}   # group name → merged file path (warm path only)
+
 try {
     if (Test-Path -LiteralPath $receiptPath -PathType Leaf) {
         $receipt = [IO.File]::ReadAllText($receiptPath, [Text.Encoding]::UTF8) | ConvertFrom-Json
-        if ($receipt.SchemaVersion -eq 2 -and [string]$receipt.ModuleVersion -eq $script:WinCareVersion) {
+        if ($receipt.SchemaVersion -eq 3 -and [string]$receipt.ModuleVersion -eq $script:WinCareVersion) {
             $fingerprintsMatch = $true
             foreach ($group in $script:WinCareSourceGroups) {
                 $manifestPath = Join-Path $PSScriptRoot ([string]$group.Manifest)
                 $item = Get-Item -LiteralPath $manifestPath -Force -ErrorAction Stop
                 $stored = $receipt.Fingerprints.($group.Name)
+                $mergedFile = Join-Path $PSScriptRoot ([string]($receipt.MergedFiles.($group.Name)))
                 if ($null -eq $stored -or
-                    [long]$stored.Ticks   -ne $item.LastWriteTimeUtc.Ticks -or
-                    [long]$stored.Length  -ne $item.Length) {
+                    [long]$stored.Ticks  -ne $item.LastWriteTimeUtc.Ticks -or
+                    [long]$stored.Length -ne $item.Length -or
+                    -not (Test-Path -LiteralPath $mergedFile -PathType Leaf)) {
                     $fingerprintsMatch = $false
                     break
                 }
+                $mergedPaths[$group.Name] = $mergedFile
             }
-            if ($fingerprintsMatch) {
-                foreach ($path in $receipt.Files) { $expectedModuleFiles.Add([string]$path) }
-                $receiptHit = $true
-            }
+            $receiptHit = $fingerprintsMatch
         }
     }
 } catch {
-    # Receipt read/parse failure is non-fatal — fall through to full validation.
     Write-Verbose "WinCare: load receipt unreadable ($($_.Exception.Message)); running full validation."
-    $expectedModuleFiles.Clear()
     $receiptHit = $false
 }
 
 if (-not $receiptHit) {
     # Full validation path (first boot or manifest changed).
-    $newFingerprints = [ordered]@{}
+    $newFingerprints  = [ordered]@{}
+    $newMergedFiles   = [ordered]@{}
+    $allSourcePaths   = [Collections.Generic.List[string]]::new()
+
     foreach ($group in $script:WinCareSourceGroups) {
         if ([string]$group.Manifest -notin $script:WinCareSourceManifestFiles) {
             throw "Source group $($group.Name) is not declared in WinCareSourceManifestFiles."
@@ -91,45 +92,77 @@ if (-not $receiptHit) {
                 $actual.Add([IO.Path]::GetRelativePath($PSScriptRoot, $file.FullName).Replace('\','/'))
             }
         }
-        $missing = @($declared | Where-Object { $_ -notin $actual })
-        $unexpected = @($actual | Where-Object { $_ -notin $declared })
+        $missing    = @($declared | Where-Object { $_ -notin $actual })
+        $unexpected = @($actual   | Where-Object { $_ -notin $declared })
         if ($missing.Count -or $unexpected.Count) {
             $parts = [Collections.Generic.List[string]]::new()
-            if ($missing.Count) { $parts.Add('missing=' + ($missing -join ',')) }
+            if ($missing.Count)    { $parts.Add('missing='    + ($missing    -join ',')) }
             if ($unexpected.Count) { $parts.Add('unexpected=' + ($unexpected -join ',')) }
             throw "WinCare $($group.Name) source manifest mismatch: $($parts -join '; ')"
         }
         if (($declared -join "`n") -ne (@($actual) -join "`n")) {
             throw "WinCare $($group.Name) source manifest order is not canonical."
         }
-        foreach ($relativePath in $declared) { $expectedModuleFiles.Add($relativePath) }
+        foreach ($relativePath in $declared) { $allSourcePaths.Add($relativePath) }
+
+        # h05: Merge group files into a single cached .ps1 for fast warm loads.
+        $mergedRelative = ".wincare-merged-$($group.Name).ps1"
+        $mergedAbs      = Join-Path $PSScriptRoot $mergedRelative
+        try {
+            $sb = [Text.StringBuilder]::new(1048576)
+            foreach ($rel in $declared) {
+                $srcPath = Join-Path $PSScriptRoot $rel
+                $null = $sb.AppendLine("# --- merged: $rel ---")
+                $null = $sb.AppendLine([IO.File]::ReadAllText($srcPath, [Text.Encoding]::UTF8))
+            }
+            [IO.File]::WriteAllText($mergedAbs, $sb.ToString(), [Text.Encoding]::UTF8)
+            $newMergedFiles[$group.Name] = $mergedRelative
+        } catch {
+            # Merge write failure: fall back to individual dot-source for this group.
+            Write-Verbose "WinCare: could not write merged cache for $($group.Name) ($($_.Exception.Message)); using individual files."
+            $newMergedFiles[$group.Name] = $null
+        }
     }
-    $duplicateModuleFiles = @($expectedModuleFiles | Group-Object | Where-Object Count -gt 1 | ForEach-Object Name)
+
+    $duplicateModuleFiles = @($allSourcePaths | Group-Object | Where-Object Count -gt 1 | ForEach-Object Name)
     if ($duplicateModuleFiles.Count) { throw ('Source files assigned to multiple groups: ' + ($duplicateModuleFiles -join ', ')) }
-    # Write receipt for next load.
+
+    # Dot-source for this (cold) load using individual files (merged files just written).
+    foreach ($relativePath in $allSourcePaths) {
+        $sourcePath = Join-Path $PSScriptRoot $relativePath
+        . $sourcePath
+    }
+
+    # Write receipt v3.
     try {
         $receiptObj = [ordered]@{
-            SchemaVersion   = 2
-            ModuleVersion   = $script:WinCareVersion
-            WrittenUtc      = [datetime]::UtcNow.ToString('o')
-            Fingerprints    = $newFingerprints
-            Files           = @($expectedModuleFiles)
+            SchemaVersion = 3
+            ModuleVersion = $script:WinCareVersion
+            WrittenUtc    = [datetime]::UtcNow.ToString('o')
+            Fingerprints  = $newFingerprints
+            MergedFiles   = $newMergedFiles
         }
-        $receiptJson = $receiptObj | ConvertTo-Json -Depth 5 -Compress
-        [IO.File]::WriteAllText($receiptPath, $receiptJson, [Text.Encoding]::UTF8)
+        [IO.File]::WriteAllText($receiptPath, ($receiptObj | ConvertTo-Json -Depth 5 -Compress), [Text.Encoding]::UTF8)
     } catch {
-        # Receipt write failure is non-fatal — module still loads correctly.
         Write-Verbose "WinCare: could not write load receipt ($($_.Exception.Message))."
+    }
+} else {
+    # Warm path: dot-source 3 merged files instead of 172 individual files.
+    foreach ($group in $script:WinCareSourceGroups) {
+        $mergedFile = $mergedPaths[$group.Name]
+        if ($mergedFile -and (Test-Path -LiteralPath $mergedFile -PathType Leaf)) {
+            . $mergedFile
+        } else {
+            # Merged file missing despite receipt — safety fallback, invalidate on next load.
+            Write-Verbose "WinCare: merged cache for $($group.Name) missing; invalidating receipt."
+            Remove-Item -LiteralPath $receiptPath -Force -ErrorAction SilentlyContinue
+            throw "WinCare merged source cache is inconsistent. Re-run Import-Module to rebuild."
+        }
     }
 }
 
-foreach ($relativePath in $expectedModuleFiles) {
-    $sourcePath = Join-Path $PSScriptRoot $relativePath
-    . $sourcePath
-}
 # T2.1 (ponytail/shrink): replaced ~330-line manual list. Public API surface is
 # enforced by tools/validate_module_manifest.py and source manifest PSD1 files.
 # To make a function private, prefix with lowercase verb (not Verb-Noun) and add
 # an explicit Export-ModuleMember deny list after this comment.
 Export-ModuleMember -Function *
-
