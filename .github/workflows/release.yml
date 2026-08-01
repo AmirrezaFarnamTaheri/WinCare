@@ -174,13 +174,7 @@ jobs:
           WORKFLOW_RUN_ID: ${{ github.run_id }}
         run: |
           $ErrorActionPreference='Stop'
-          function Read-BoundedUtf8Text {
-            param([Parameter(Mandatory)][string]$LiteralPath,[ValidateRange(1,16777216)][int]$MaximumBytes)
-            $item=Get-Item -LiteralPath $LiteralPath -Force -ErrorAction Stop
-            if($item.PSIsContainer -or ($item.Attributes -band [IO.FileAttributes]::ReparsePoint) -or [long]$item.Length -gt $MaximumBytes){throw "Unsafe or oversized text file: $LiteralPath"}
-            $bytes=[IO.File]::ReadAllBytes($item.FullName)
-            try{if($bytes.Length -ne [long]$item.Length){throw "Text file changed while reading: $LiteralPath"};[Text.UTF8Encoding]::new($false,$true).GetString($bytes)}finally{if($bytes.Length){[Array]::Clear($bytes,0,$bytes.Length)}}
-          }
+          . './tools/Invoke-BoundedFileRead.ps1'
           $root=[IO.Path]::GetFullPath('./artifacts/windows-validation');$release=Join-Path $root 'release';$reportPath=Join-Path $root 'windows-validation-report.json'
           $report=Read-BoundedUtf8Text $reportPath 16777216|ConvertFrom-Json -Depth 50
           if([string]$report.status -ne 'passed'){throw 'Windows validation report is not passed.'}
@@ -246,13 +240,7 @@ jobs:
           EXPECTED_VERSION: ${{ needs.build-validate.outputs.version }}
         run: |
           $ErrorActionPreference='Stop'
-          function Read-BoundedUtf8Text {
-            param([Parameter(Mandatory)][string]$LiteralPath,[ValidateRange(1,16777216)][int]$MaximumBytes)
-            $item=Get-Item -LiteralPath $LiteralPath -Force -ErrorAction Stop
-            if($item.PSIsContainer -or ($item.Attributes -band [IO.FileAttributes]::ReparsePoint) -or [long]$item.Length -gt $MaximumBytes){throw "Unsafe or oversized text file: $LiteralPath"}
-            $bytes=[IO.File]::ReadAllBytes($item.FullName)
-            try{if($bytes.Length -ne [long]$item.Length){throw "Text file changed while reading: $LiteralPath"};[Text.UTF8Encoding]::new($false,$true).GetString($bytes)}finally{if($bytes.Length){[Array]::Clear($bytes,0,$bytes.Length)}}
-          }
+          . './tools/Invoke-BoundedFileRead.ps1'
           $tagRef=& gh api "repos/$env:GH_REPO/git/ref/tags/$env:EXPECTED_TAG"|ConvertFrom-Json -Depth 20
           if($LASTEXITCODE -ne 0){throw "Unable to resolve tag $env:EXPECTED_TAG."}
           $tagObjectType=[string]$tagRef.object.type
@@ -358,13 +346,7 @@ jobs:
           SOURCE_COMMIT: ${{ needs.build-validate.outputs.source_commit }}
         run: |
           $ErrorActionPreference='Stop'
-          function Read-BoundedUtf8Text {
-            param([Parameter(Mandatory)][string]$LiteralPath,[ValidateRange(1,16777216)][int]$MaximumBytes)
-            $item=Get-Item -LiteralPath $LiteralPath -Force -ErrorAction Stop
-            if($item.PSIsContainer -or ($item.Attributes -band [IO.FileAttributes]::ReparsePoint) -or [long]$item.Length -gt $MaximumBytes){throw "Unsafe or oversized text file: $LiteralPath"}
-            $bytes=[IO.File]::ReadAllBytes($item.FullName)
-            try{if($bytes.Length -ne [long]$item.Length){throw "Text file changed while reading: $LiteralPath"};[Text.UTF8Encoding]::new($false,$true).GetString($bytes)}finally{if($bytes.Length){[Array]::Clear($bytes,0,$bytes.Length)}}
-          }
+          . './tools/Invoke-BoundedFileRead.ps1'
           $published=[IO.Path]::GetFullPath('./published-release')
           New-Item -ItemType Directory -Path $published -Force|Out-Null
           & gh release download $env:RELEASE_TAG --dir $published

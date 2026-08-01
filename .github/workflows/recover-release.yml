@@ -62,13 +62,7 @@ jobs:
           if($env:EXPECTED_COMMIT -notmatch '^[0-9a-fA-F]{40}$'){throw 'Recovery source commit must be a full SHA-1.'}
           if($env:SOURCE_RUN_ID -notmatch '^[1-9]\d*$'){throw 'Recovery run ID must be a positive integer.'}
 
-          function Read-BoundedUtf8Text {
-            param([Parameter(Mandatory)][string]$LiteralPath,[ValidateRange(1,16777216)][int]$MaximumBytes)
-            $item=Get-Item -LiteralPath $LiteralPath -Force -ErrorAction Stop
-            if($item.PSIsContainer -or ($item.Attributes -band [IO.FileAttributes]::ReparsePoint) -or [long]$item.Length -gt $MaximumBytes){throw "Unsafe or oversized text file: $LiteralPath"}
-            $bytes=[IO.File]::ReadAllBytes($item.FullName)
-            try{if($bytes.Length -ne [long]$item.Length){throw "Text file changed while reading: $LiteralPath"};[Text.UTF8Encoding]::new($false,$true).GetString($bytes)}finally{if($bytes.Length){[Array]::Clear($bytes,0,$bytes.Length)}}
-          }
+          . './tools/Invoke-BoundedFileRead.ps1'
 
           $tagRef=& gh api "repos/$env:GH_REPO/git/ref/tags/$env:EXPECTED_TAG"|ConvertFrom-Json -Depth 20
           if($LASTEXITCODE -ne 0){throw "Unable to resolve tag $env:EXPECTED_TAG."}
@@ -180,13 +174,7 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference='Stop'
-          function Read-BoundedUtf8Text {
-            param([Parameter(Mandatory)][string]$LiteralPath,[ValidateRange(1,16777216)][int]$MaximumBytes)
-            $item=Get-Item -LiteralPath $LiteralPath -Force -ErrorAction Stop
-            if($item.PSIsContainer -or ($item.Attributes -band [IO.FileAttributes]::ReparsePoint) -or [long]$item.Length -gt $MaximumBytes){throw "Unsafe or oversized text file: $LiteralPath"}
-            $bytes=[IO.File]::ReadAllBytes($item.FullName)
-            try{if($bytes.Length -ne [long]$item.Length){throw "Text file changed while reading: $LiteralPath"};[Text.UTF8Encoding]::new($false,$true).GetString($bytes)}finally{if($bytes.Length){[Array]::Clear($bytes,0,$bytes.Length)}}
-          }
+          . './tools/Invoke-BoundedFileRead.ps1'
 
           $published=[IO.Path]::GetFullPath('./published-release')
           New-Item -ItemType Directory -Path $published -Force|Out-Null
