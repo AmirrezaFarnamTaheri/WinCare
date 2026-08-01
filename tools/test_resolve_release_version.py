@@ -123,5 +123,37 @@ class RepositoryResolutionTests(unittest.TestCase):
             module.resolve_tag_push(repo, 'v1.2.0')
 
 
+class ReleaseWorkflowTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.workflow = (Path(__file__).resolve().parents[1] / '.github/workflows/release.yml').read_text(encoding='utf-8')
+
+    def test_manual_dispatch_exposes_automatic_and_explicit_bumps(self) -> None:
+        for value in ('auto', 'patch', 'minor', 'major'):
+            self.assertIn(f'          - {value}', self.workflow)
+        self.assertIn("REQUESTED_BUMP: ${{ inputs.bump || 'auto' }}", self.workflow)
+
+    def test_release_identity_is_resolved_before_validation(self) -> None:
+        resolver = self.workflow.index('Resolve immutable release identity')
+        validation = self.workflow.index('Run complete Windows validation and candidate build')
+        self.assertLess(resolver, validation)
+        self.assertIn('tools/resolve_release_version.py', self.workflow)
+        self.assertIn('SOURCE_COMMIT: ${{ steps.version.outputs.source_commit }}', self.workflow)
+
+    def test_release_runs_are_globally_serialized(self) -> None:
+        self.assertIn('group: release-${{ github.repository }}', self.workflow)
+        self.assertNotIn('group: release-${{ github.workflow }}-${{ github.ref }}', self.workflow)
+
+    def test_publication_asset_list_is_flat_and_complete(self) -> None:
+        self.assertNotIn('$assets=@(@(', self.workflow)
+        self.assertIn('if($assets.Count -ne 14)', self.workflow)
+        self.assertIn("Join-Path $candidateRoot 'promotion-manifest.json'", self.workflow)
+
+    def test_existing_release_is_verified_instead_of_republished(self) -> None:
+        self.assertIn("if: steps.publication.outputs.exists != 'true'", self.workflow)
+        self.assertIn('Verify published or pre-existing immutable release', self.workflow)
+        self.assertIn('Immutable release byte mismatch', self.workflow)
+        self.assertIn('gh release download $env:RELEASE_TAG', self.workflow)
+
+
 if __name__ == '__main__':
     unittest.main()
