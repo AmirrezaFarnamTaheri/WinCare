@@ -112,13 +112,20 @@ def main()->int:
             if hardcoded and hardcoded!={product_version}: errors.append(f'CI contains stale hardcoded release versions: {sorted(hardcoded)}')
             if 'Invoke-WindowsValidation.ps1' not in ci_text or 'tools/verify_release.py' not in ci_text:
                 errors.append('CI does not include Windows-native and independent archive validation gates')
-    exports=set(re.findall(r"(?m)^\s*'([A-Za-z][A-Za-z0-9_-]+)'[,]?\s*$",psm[psm.find('Export-ModuleMember'):]))
+    # T2.1: psm1 now uses Export-ModuleMember -Function * (wildcard).
+    # In wildcard mode the psm1 carries no redundant explicit list; the psd1
+    # FunctionsToExport array is the sole contract. Skip the psm-vs-psd diff
+    # and validate only the psd1 list against the actual function definitions.
+    psm_wildcard=bool(re.search(r'Export-ModuleMember\s+-Function\s+\*',psm))
+    exports=set() if psm_wildcard else set(re.findall(r"(?m)^\s*'([A-Za-z][A-Za-z0-9_-]+)'[,]?\s*$",psm[psm.find('Export-ModuleMember'):]))
     psd_export_match=re.search(r'FunctionsToExport\s*=\s*@\((.*?)\)\s*CmdletsToExport',psd,re.S)
     psd_exports=set(re.findall(r"'([A-Za-z][A-Za-z0-9_-]+)'",psd_export_match.group(1))) if psd_export_match else set()
     if not psd_export_match: errors.append('module manifest FunctionsToExport block was not found')
-    elif exports!=psd_exports: errors.append(f'module export mismatch: psm-only {sorted(exports-psd_exports)}; psd-only {sorted(psd_exports-exports)}')
+    elif not psm_wildcard and exports!=psd_exports: errors.append(f'module export mismatch: psm-only {sorted(exports-psd_exports)}; psd-only {sorted(psd_exports-exports)}')
     if 'Invoke-WinCarePlan' in exports or 'Invoke-WinCarePlan' in psd_exports: errors.append('unrestricted internal plan executor must not be exported')
-    missing_defs=sorted(x for x in exports|psd_exports if x.lower() not in funcs)
+    # Use psd1 as the contract in both explicit and wildcard modes.
+    contract_exports=psd_exports
+    missing_defs=sorted(x for x in contract_exports if x.lower() not in funcs)
     if missing_defs: errors.append(f'exports without functions: {missing_defs}')
     proc=(root/'src/WinCare/Core/03-Process.ps1').read_text('utf-8-sig')
     if 'Get-WinCareActionContractTable' not in proc or 'HMACSHA256' not in proc or 'FixedTimeEquals' not in proc: errors.append('elevation broker is not contract-derived and authenticated')
