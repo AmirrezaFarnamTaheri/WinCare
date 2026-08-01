@@ -55,15 +55,15 @@ jobs:
               raise SystemExit(f'Expected one obsolete assertion block, found {text.count(old)}')
           path.write_text(text.replace(old, new), encoding='utf-8', newline='\n')
           PY
+          git rm .github/workflows/apply-release-invariant-fix.yml
       - name: Verify focused and complete security invariants
         shell: bash
         run: |
           python3 -m unittest tools.test_security_invariants.SecurityInvariantTests.test_release_governance_rejects_publisher_bypass_and_asset_overwrite -v
           python3 -m unittest tools.test_security_invariants -v
-      - name: Remove one-shot workflow and commit verified fix
+      - name: Commit verified fix
         shell: bash
         run: |
-          git rm .github/workflows/apply-release-invariant-fix.yml
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git config user.name 'github-actions[bot]'
           git add tools/test_security_invariants.py
