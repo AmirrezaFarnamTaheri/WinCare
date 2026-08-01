@@ -6,12 +6,15 @@ on:
       - fix/release-governance-rest-invariant
     paths:
       - .github/workflows/apply-release-invariant-fix.yml
+  pull_request:
+    types: [opened, synchronize]
 
 permissions:
   contents: write
 
 jobs:
   patch-and-verify:
+    if: github.event_name == 'push' || github.head_ref == 'fix/release-governance-rest-invariant'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
