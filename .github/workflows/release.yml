@@ -292,21 +292,26 @@ jobs:
         run: |
           $ErrorActionPreference='Stop'
           $tag=$env:RELEASE_TAG
-          $nativeErrorPreference=$PSNativeCommandUseErrorActionPreference
-          try{
-            $PSNativeCommandUseErrorActionPreference=$false
-            $result=& gh release view $tag --json tagName 2>&1
-            $exitCode=$LASTEXITCODE
-          }finally{
-            $PSNativeCommandUseErrorActionPreference=$nativeErrorPreference
+          $headers=@{
+            Accept='application/vnd.github+json'
+            Authorization="Bearer $env:GH_TOKEN"
+            'X-GitHub-Api-Version'='2022-11-28'
+            'User-Agent'='WinCare-release-workflow'
           }
-          if($exitCode -eq 0){
+          $encodedTag=[Uri]::EscapeDataString($tag)
+          $uri="https://api.github.com/repos/$env:GH_REPO/releases/tags/$encodedTag"
+          $response=Invoke-WebRequest -Method Get -Uri $uri -Headers $headers -SkipHttpErrorCheck -StatusCodeVariable statusCode
+          if([int]$statusCode -eq 200){
+            $release=$response.Content|ConvertFrom-Json -Depth 20
+            if([string]$release.tag_name -ne $tag){throw "Release lookup returned tag $($release.tag_name) instead of $tag."}
             "exists=true"|Out-File $env:GITHUB_OUTPUT -Append
-            Add-Content $env:GITHUB_STEP_SUMMARY "Release **$env:RELEASE_TAG** already exists. Its immutable product bytes will be independently compared with this candidate.`n"
-          }elseif(($result|Out-String) -match '(?i)release not found|HTTP 404'){
+            Add-Content $env:GITHUB_STEP_SUMMARY "Release **$tag** already exists. Its immutable product bytes will be independently compared with this candidate.`n"
+          }elseif([int]$statusCode -eq 404){
             "exists=false"|Out-File $env:GITHUB_OUTPUT -Append
           }else{
-            throw "Unable to determine publication state for $env:RELEASE_TAG`: $($result|Out-String)"
+            $body=([string]$response.Content).Trim()
+            if($body.Length -gt 2048){$body=$body.Substring(0,2048)}
+            throw "Unable to determine publication state for $tag`: GitHub API returned HTTP $statusCode. $body"
           }
       - name: Attest all exact release assets
         if: steps.publication.outputs.exists != 'true'
