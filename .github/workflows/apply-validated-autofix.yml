@@ -38,9 +38,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          base64 --decode .autofix/wincare-fixes.patch.gz.b64 | gzip -dc > /tmp/wincare-fixes.patch
-          test "$(wc -c < /tmp/wincare-fixes.patch)" -gt 1000
-          sha256sum /tmp/wincare-fixes.patch
+          cat .autofix/wincare-fixes.patch.gz.b64.part-* | base64 --decode | gzip -dc > /tmp/wincare-fixes.patch
+          echo 'a2f0ac6ab4d57836d332d4b3f3ad0e8ff5d18a0a8bb05aacc2c787fed0ad5408  /tmp/wincare-fixes.patch' | sha256sum --check --strict
           git apply --check /tmp/wincare-fixes.patch
       - name: Apply consolidated repair
         shell: bash
