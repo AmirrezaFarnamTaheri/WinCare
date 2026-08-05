@@ -19,7 +19,7 @@ on:
 
 permissions:
   actions: write
-  contents: read
+  contents: write
 
 concurrency:
   group: release-dispatch-${{ github.repository }}
@@ -34,11 +34,35 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
+      - name: Pin immutable release source
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          SOURCE_SHA: ${{ github.sha }}
+          RELEASE_REF: release-dispatch/${{ github.sha }}
+        run: |
+          set -euo pipefail
+          existing_sha="$(
+            gh api "repos/$GH_REPO/git/ref/tags/$RELEASE_REF" \
+              --jq '.object.sha' 2>/dev/null || true
+          )"
+          if [[ -n "$existing_sha" ]]; then
+            if [[ "$existing_sha" != "$SOURCE_SHA" ]]; then
+              echo "Immutable dispatch tag $RELEASE_REF points to $existing_sha, expected $SOURCE_SHA." >&2
+              exit 1
+            fi
+          else
+            gh api --method POST "repos/$GH_REPO/git/refs" \
+              --field ref="refs/tags/$RELEASE_REF" \
+              --field sha="$SOURCE_SHA" >/dev/null
+          fi
+
       - name: Dispatch hardened release workflow
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
-          RELEASE_REF: master
+          SOURCE_SHA: ${{ github.sha }}
+          RELEASE_REF: release-dispatch/${{ github.sha }}
           RELEASE_BUMP: ${{ inputs.bump || 'auto' }}
         run: |
           set -euo pipefail
@@ -50,7 +74,8 @@ jobs:
             echo "## Production release dispatched"
             echo
             echo "- Workflow: \`release.yml\`"
-            echo "- Ref: \`$RELEASE_REF\`"
+            echo "- Source commit: \`$SOURCE_SHA\`"
+            echo "- Immutable ref: \`$RELEASE_REF\`"
             echo "- Bump: \`$RELEASE_BUMP\`"
             echo "- Trigger: \`${{ github.event_name }}\`"
           } >> "$GITHUB_STEP_SUMMARY"
