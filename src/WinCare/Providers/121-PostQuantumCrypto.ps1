@@ -504,6 +504,8 @@ function Protect-WinCarePqcSignature {
     }
 }
 
+
+
 function Remove-WinCareCryptographicFile {
     [CmdletBinding()]
     param(

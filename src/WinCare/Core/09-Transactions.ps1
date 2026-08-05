@@ -3,6 +3,7 @@ function Get-WinCareRiskRank {
     switch ($Risk) {'ReadOnly'{0};'Low'{1};'Moderate'{2};'High'{3};'Critical'{4};default{99}}
 }
 
+<<<<<<< HEAD
 function New-WinCareVssRestorePointAction {
     [CmdletBinding()]
     param([string]$Description='WinCare Pre-Mutation Restore Point')
@@ -33,6 +34,23 @@ function Invoke-WinCareVssRestorePointAction {
         New-WinCareResult -Success $false -Code 'VssRestorePointException' -Message $_.Exception.Message -ExitCode 1
     }
 }
+=======
+function Get-WinCarePlanSummary {
+    [CmdletBinding()]param([Parameter(Mandatory)][object]$Plan)
+    # ponytail: Transaction plan rollback -> Volume Shadow Copy VSS restore point
+    $actions=@($Plan.Actions);$highest=$actions|Sort-Object {Get-WinCareRiskRank $_.Risk} -Descending|Select-Object -First 1
+    [pscustomobject]@{
+        Count=$actions.Count;HighestRisk=if($highest){$highest.Risk}else{'ReadOnly'}
+        RequiresAdmin=[bool]($actions|Where-Object RequiresAdmin|Select-Object -First 1)
+        Reversible=@($actions|Where-Object Reversible).Count
+        EstimatedBytes=[long](($actions|Measure-Object EstimatedBytes -Sum).Sum)
+        RestartPossible=[bool]($actions|Where-Object RestartPossible|Select-Object -First 1)
+        SourceRecords=@($Plan.SourceRecords+@($actions.SourceRecords)|Where-Object{$_}|Sort-Object -Unique)
+    }
+}
+
+
+>>>>>>> 4e721bf (feat(core): complete Phase 4 core decomposition, zero-copy IPC fabric, TPM 2.0 key binding and pre-commit AST linter)
 
 function Get-WinCareActionStableHash {
     [CmdletBinding()]param([Parameter(Mandatory)][object]$Action)

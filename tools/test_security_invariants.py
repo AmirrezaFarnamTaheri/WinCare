@@ -98,7 +98,7 @@ class SecurityInvariantTests(unittest.TestCase):
         self.assertIn("RaftImplemented=$false", fleet)
 
     def test_safety_layer_uses_structural_redaction_atomic_replace_and_key_lock(self) -> None:
-        source = self.read("src/WinCare/Core/06-Safety.ps1")
+        source = self.read("src/WinCare/Core/06-Safety.ps1") + self.read("src/WinCare/Core/06-SafetyRules.ps1")
         self.assertIn("ConvertTo-WinCareRedactedValue", source)
         self.assertNotIn("$json=[regex]::Replace", source)
         self.assertIn("[IO.File]::Replace", source)

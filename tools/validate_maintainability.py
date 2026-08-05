@@ -49,14 +49,22 @@ def source_files(root: Path) -> list[tuple[str, str]]:
 def file_metrics(path: Path, group: str) -> dict[str, object]:
     text = path.read_text(encoding="utf-8-sig")
     lines = text.splitlines()
+    function_matches = list(re.finditer(r"(?m)^function\s+([A-Za-z0-9_-]+)\s*\{", text))
     function_starts = [
         text[: match.start()].count("\n") + 1
-        for match in re.finditer(r"(?m)^function\s+[A-Za-z][A-Za-z0-9_-]*\s*\{", text)
+        for match in function_matches
     ]
     function_lengths: list[int] = []
     for index, start in enumerate(function_starts):
         next_start = function_starts[index + 1] if index + 1 < len(function_starts) else len(lines) + 1
         function_lengths.append(max(1, next_start - start))
+
+    forbidden_invoke = bool(re.search(r"(?i)\bInvoke-Expression\s+|\b[i]ex\s+|\[scriptblock\]::Create\(", text))
+    invalid_function_names = [
+        match.group(1) for match in function_matches
+        if not re.match(r"^[A-Z][a-zA-Z0-9]+-(?:WinCare[A-Z][a-zA-Z0-9]+|[A-Z][a-zA-Z0-9]+)$", match.group(1))
+    ]
+
     return {
         "group": group,
         "lineCount": len(lines),
@@ -65,6 +73,8 @@ def file_metrics(path: Path, group: str) -> dict[str, object]:
         "maxLineLength": max((len(line) for line in lines), default=0),
         "linesOver200": sum(len(line) > 200 for line in lines),
         "linesOver500": sum(len(line) > 500 for line in lines),
+        "forbiddenInvoke": forbidden_invoke,
+        "invalidFunctionNames": invalid_function_names,
     }
 
 
@@ -148,6 +158,12 @@ def validate(root: Path, baseline_path: Path) -> dict[str, object]:
         errors.append(f"Strict maintainability file is not present in the module manifest: {relative}")
 
     for relative, item in current.items():
+        if item.get("forbiddenInvoke"):
+            errors.append(f"Forbidden dynamic invocation (Invoke-Expression/iex/[scriptblock]::Create) in {relative}")
+        if item.get("invalidFunctionNames"):
+            names = ", ".join(item["invalidFunctionNames"])
+            errors.append(f"Non-standard function naming in {relative}: {names}")
+
         previous = baseline_files.get(relative)
         strict = previous is None or relative in strict_files
         if strict:
