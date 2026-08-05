@@ -48,7 +48,7 @@ function Get-WinCarePreloadGroupSourceHash {
     $builder=[Text.StringBuilder]::new()
     foreach($relative in $Declared){
         $info=Get-WinCarePreloadFileFingerprint -LiteralPath (Join-Path $PSScriptRoot $relative)
-        $null=$builder.Append($relative.Replace('\\','/')).Append("`n").Append($info.Length).Append("`n").Append($info.Sha256).Append("`n")
+        $null=$builder.Append($relative.Replace('\','/')).Append("`n").Append($info.Length).Append("`n").Append($info.Sha256).Append("`n")
     }
     $bytes=[Text.UTF8Encoding]::new($false,$true).GetBytes($builder.ToString())
     try{[Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($bytes)).ToLowerInvariant()}finally{[Array]::Clear($bytes,0,$bytes.Length)}
@@ -74,7 +74,7 @@ try{
                 $manifestInfo=Get-WinCarePreloadFileFingerprint -LiteralPath $manifestPath -MaximumBytes 1048576
                 $sourceManifest=Import-PowerShellDataFile -LiteralPath $manifestInfo.Path
                 if([int]$sourceManifest.SchemaVersion -ne 1 -or [string]$sourceManifest.Group -ne [string]$group.Name){$fingerprintsMatch=$false;break}
-                $declared=@($sourceManifest.Files|ForEach-Object{([string]$_).Replace('\\','/')})
+                $declared=@($sourceManifest.Files|ForEach-Object{([string]$_).Replace('\','/')})
                 $stored=$receipt.Fingerprints.($group.Name)
                 $mergedFile=Join-Path $PSScriptRoot ".wincare-merged-$($group.Name).ps1"
                 $mergedInfo=Get-WinCarePreloadFileFingerprint -LiteralPath $mergedFile -MaximumBytes 33554432
@@ -100,14 +100,14 @@ if(-not $receiptHit){
         $manifestInfo=Get-WinCarePreloadFileFingerprint -LiteralPath $manifestPath -MaximumBytes 1048576
         $sourceManifest=Import-PowerShellDataFile -LiteralPath $manifestInfo.Path
         if([int]$sourceManifest.SchemaVersion -ne 1 -or [string]$sourceManifest.Group -ne [string]$group.Name){throw "Source manifest identity is invalid: $($group.Manifest)"}
-        $declared=@($sourceManifest.Files|ForEach-Object{([string]$_).Replace('\\','/')})
+        $declared=@($sourceManifest.Files|ForEach-Object{([string]$_).Replace('\','/')})
         $duplicates=@($declared|Group-Object|Where-Object Count -gt 1|ForEach-Object Name)
         if($duplicates.Count){throw "Duplicate source entries in $($group.Manifest): $($duplicates -join ', ')"}
         $actual=[Collections.Generic.List[string]]::new()
         foreach($folder in @($group.Folders)){
             $folderPath=Join-Path $PSScriptRoot ([string]$folder)
             if(-not(Test-Path -LiteralPath $folderPath -PathType Container)){throw "Required module source directory is missing: $folder"}
-            foreach($file in Get-ChildItem -LiteralPath $folderPath -Filter '*.ps1' -File|Sort-Object Name){$actual.Add([IO.Path]::GetRelativePath($PSScriptRoot,$file.FullName).Replace('\\','/'))}
+            foreach($file in Get-ChildItem -LiteralPath $folderPath -Filter '*.ps1' -File|Sort-Object Name){$actual.Add([IO.Path]::GetRelativePath($PSScriptRoot,$file.FullName).Replace('\','/'))}
         }
         $missing=@($declared|Where-Object{$_ -notin $actual});$unexpected=@($actual|Where-Object{$_ -notin $declared})
         if($missing.Count -or $unexpected.Count){throw "WinCare $($group.Name) source manifest mismatch: missing=$($missing -join ','); unexpected=$($unexpected -join ',')"}
