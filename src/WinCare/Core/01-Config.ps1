@@ -172,6 +172,15 @@ function Test-WinCareConfigObject {
     return $true
 }
 
+function Test-WinCareConfigSourceObject {
+    param([Parameter(Mandatory)][Collections.IDictionary]$Config)
+    $defaults=Get-WinCareDefaultConfig
+    $null=Test-WinCareStrictObjectKeys -InputObject $Config -AllowedKeys @($defaults.Keys) -Context 'source configuration'
+    if(-not $Config.Contains('SchemaVersion')){throw 'Source configuration is missing SchemaVersion.'}
+    if([int]$Config.SchemaVersion -notin @(1,2,3,4,5,6,7,8)){throw 'Unsupported source configuration schema.'}
+    return $true
+}
+
 function Convert-WinCareConfigToCurrent {
     param([Parameter(Mandatory)][Collections.IDictionary]$Config)
     $result=Get-WinCareDefaultConfig
@@ -299,6 +308,7 @@ function Get-WinCareInitialConfig {
     if (Test-Path -LiteralPath $ConfigPath) {
         try {
             $loaded = Read-WinCareJsonHashtable -LiteralPath $ConfigPath
+            $null   = Test-WinCareConfigSourceObject -Config $loaded
             $config = Convert-WinCareConfigToCurrent -Config $loaded
             $null   = Test-WinCareConfigObject -Config $config
         } catch {
@@ -442,88 +452,3 @@ function Initialize-WinCareCapabilities {
 }
 
 function Test-WinCareCapability { [CmdletBinding()]param([Parameter(Mandatory)][string]$Name); return [bool]$script:WinCareState.Capabilities[$Name] }
-
-function Protect-WinCareConfigVault {
-    [CmdletBinding()]
-    param([Parameter(Mandatory)][string]$ConfigVaultPath)
-    $safe = Assert-WinCareSafePath -LiteralPath $ConfigVaultPath -AllowMissing
-    $tpmEnforced = $false
-    try {
-        $tpm = Get-CimInstance Win32_Tpm -ErrorAction SilentlyContinue
-        if (-not $tpm -and $IsWindows) {
-            $tpm = Get-CimInstance -Namespace 'root\cimv2\Security\MicrosoftTpm' -ClassName Win32_Tpm -ErrorAction SilentlyContinue
-        }
-        if ($tpm) {
-            if ($null -ne $tpm.IsEnabled_InitialValue) {
-                $tpmEnforced = [bool]$tpm.IsEnabled_InitialValue
-            } elseif ($tpm.PSObject.Properties['IsEnabled']) {
-                $tpmEnforced = [bool]$tpm.IsEnabled
-            } else {
-                $tpmEnforced = $true
-            }
-        }
-    } catch {
-        $tpmEnforced = $false
-    }
-    $vaultEncrypted = $false
-    if (Test-Path -LiteralPath $safe) {
-        $aclValid = $true
-        if ($IsWindows) {
-            try {
-                $acl = Get-Acl -LiteralPath $safe -ErrorAction SilentlyContinue
-                if ($acl) {
-                    foreach ($rule in $acl.Access) {
-                        if ($rule.AccessControlType -eq [System.Security.AccessControl.AccessControlType]::Allow) {
-                            $hasFullControl = ($rule.FileSystemRights -band [System.Security.AccessControl.FileSystemRights]::FullControl) -eq [System.Security.AccessControl.FileSystemRights]::FullControl
-                            if ($hasFullControl) {
-                                $identity = [string]$rule.IdentityReference.Value
-                                $isPrivileged = ($identity -match '(?i)SYSTEM|Administrators|S-1-5-18|S-1-5-32-544|S-1-5-500') -or
-                                                ($acl.Owner -and $identity -eq $acl.Owner)
-                                if (-not $isPrivileged) {
-                                    $aclValid = $false
-                                    break
-                                }
-                            }
-                        }
-                    }
-                }
-            } catch {
-                $aclValid = $false
-            }
-        }
-        if ($aclValid) {
-            $item = Get-Item -LiteralPath $safe -Force -ErrorAction SilentlyContinue
-            if ($item) {
-                if (($item.Attributes -band [System.IO.FileAttributes]::Encrypted) -ne 0) {
-                    $vaultEncrypted = $true
-                } elseif (-not $item.PSIsContainer) {
-                    try {
-                        $bytes = Read-WinCareBoundedFileBytes -LiteralPath $safe
-                        if ($bytes.Length -ge 8) {
-                            if ($bytes[0] -eq 0x01 -and $bytes[1] -eq 0x00 -and $bytes[2] -eq 0x00 -and $bytes[3] -eq 0x00 -and
-                                $bytes[4] -eq 0xD0 -and $bytes[5] -eq 0x8C -and $bytes[6] -eq 0x9D -and $bytes[7] -eq 0xDF) {
-                                $vaultEncrypted = $true
-                            }
-                        }
-                        if (-not $vaultEncrypted -and $bytes.Length -gt 0) {
-                            $maxLen = [Math]::Min($bytes.Length, 512)
-                            $headerText = [System.Text.Encoding]::UTF8.GetString($bytes, 0, $maxLen)
-                            if ($headerText -match '(?i)DPAPI|ENCRYPTED|ZeroTrustVault|AQAAANCMnd8') {
-                                $vaultEncrypted = $true
-                            }
-                        }
-                    } catch {
-                        $vaultEncrypted = $false
-                    }
-                }
-            }
-        }
-    }
-    [pscustomobject]@{
-        ConfigVaultPath = $safe
-        TpmBindingEnforced = [bool]$tpmEnforced
-        ZeroTrustVaultEncrypted = [bool]$vaultEncrypted
-        AuditedAt = [datetime]::UtcNow.ToString('o')
-        EvidenceType = 'ZeroTrustConfigVaultProtection'
-    }
-}

@@ -143,88 +143,44 @@ function Start-WinCareIpcServer {
     [CmdletBinding()]
     param(
         [string]$PipeName = 'WinCareIpcStream',
-        [int]$TimeoutMs = 5000,
+        [ValidateRange(100,300000)][int]$TimeoutMs = 5000,
         [scriptblock]$Handler = $null
     )
 
-    if (-not $IsWindows) {
-        throw "IPC Named Pipe Server requires Windows OS."
-    }
+    if (-not $IsWindows) { throw 'IPC named-pipe server requires Windows.' }
+    if ($PipeName -notmatch '^[A-Za-z0-9._-]{8,160}$') { throw 'Invalid IPC pipe name.' }
 
     $pipeSecurity = [System.IO.Pipes.PipeSecurity]::new()
     $userSid = [System.Security.Principal.WindowsIdentity]::GetCurrent().User
-    $systemSid = New-Object System.Security.Principal.SecurityIdentifier([System.Security.Principal.WellKnownSidType]::LocalSystemSid)
-
+    $systemSid = [System.Security.Principal.SecurityIdentifier]::new([System.Security.Principal.WellKnownSidType]::LocalSystemSid, $null)
     $fullControl = [System.IO.Pipes.PipeAccessRights]::FullControl
     $allow = [System.Security.AccessControl.AccessControlType]::Allow
-
-    $pipeSecurity.AddAccessRule((New-Object System.IO.Pipes.PipeAccessRule($userSid, $fullControl, $allow)))
-    $pipeSecurity.AddAccessRule((New-Object System.IO.Pipes.PipeAccessRule($systemSid, $fullControl, $allow)))
+    $pipeSecurity.AddAccessRule([System.IO.Pipes.PipeAccessRule]::new($userSid, $fullControl, $allow))
+    $pipeSecurity.AddAccessRule([System.IO.Pipes.PipeAccessRule]::new($systemSid, $fullControl, $allow))
 
     $server = [System.IO.Pipes.NamedPipeServerStreamAcl]::Create(
-        $PipeName,
-        [System.IO.Pipes.PipeDirection]::InOut,
-        1,
+        $PipeName, [System.IO.Pipes.PipeDirection]::InOut, 1,
         [System.IO.Pipes.PipeTransmissionMode]::Byte,
         [System.IO.Pipes.PipeOptions]::Asynchronous,
-        4096,
-        4096,
-        $pipeSecurity
+        65536, 65536, $pipeSecurity
     )
-
+    $timeoutSeconds = [Math]::Max(1, [int][Math]::Ceiling($TimeoutMs / 1000.0))
     try {
-        $asyncResult = $server.BeginWaitForConnection($null, $null)
-        if (-not $asyncResult.AsyncWaitHandle.WaitOne($TimeoutMs)) {
-            $server.Close()
-            return [pscustomobject]@{
-                Status       = 'Timeout'
-                PipeName     = $PipeName
-                EvidenceType = 'WinCareIpcServerStatus'
-            }
+        $wait = $server.WaitForConnectionAsync()
+        if (-not $wait.Wait($TimeoutMs)) {
+            return [pscustomobject]@{Status='Timeout';PipeName=$PipeName;EvidenceType='WinCareIpcServerStatus'}
         }
-        $server.EndWaitForConnection($asyncResult)
-
-        $reader = [System.IO.StreamReader]::new($server, [System.Text.UTF8Encoding]::new($false, $true))
-        $writer = [System.IO.StreamWriter]::new($server, [System.Text.UTF8Encoding]::new($false, $true))
-        $writer.AutoFlush = $true
-
-        try {
-            $line = $reader.ReadLine()
-            if ($line -and $line.Length -gt 65536) {
-                throw "IPC message length exceeds 64 KiB ceiling."
-            }
-
-            $response = if ($Handler -and -not [string]::IsNullOrWhiteSpace($line)) {
-                & $Handler $line
-            } elseif (-not [string]::IsNullOrWhiteSpace($line)) {
-                $msg = $line | ConvertFrom-Json -AsHashtable -Depth 24
-                [ordered]@{
-                    Status    = 'Received'
-                    Command   = $msg.Command
-                    Payload   = $msg.Payload
-                    Timestamp = [datetime]::UtcNow.ToString('o')
-                } | ConvertTo-Json -Compress -Depth 24
-            } else {
-                '{"Status":"EmptyInput"}'
-            }
-
-            $writer.WriteLine($response)
-            $server.WaitForPipeDrain()
-            
-            return [pscustomobject]@{
-                Status       = 'Success'
-                PipeName     = $PipeName
-                InputMessage = $line
-                Response     = $response
-                EvidenceType = 'WinCareIpcServerStatus'
-            }
-        } finally {
-            $writer.Dispose()
-            $reader.Dispose()
-        }
-    } finally {
-        $server.Dispose()
-    }
+        $line = Read-WinCareBrokerFrame -Stream $server -MaximumBytes 65536 -TimeoutSeconds $timeoutSeconds
+        $response = if ($Handler -and -not [string]::IsNullOrWhiteSpace($line)) {
+            [string](& $Handler $line)
+        } elseif (-not [string]::IsNullOrWhiteSpace($line)) {
+            $msg = $line | ConvertFrom-Json -AsHashtable -Depth 24
+            [ordered]@{Status='Received';Command=$msg.Command;Payload=$msg.Payload;Timestamp=[datetime]::UtcNow.ToString('o')} | ConvertTo-Json -Compress -Depth 24
+        } else { '{"Status":"EmptyInput"}' }
+        Write-WinCareBrokerFrame -Stream $server -Text $response -MaximumBytes 65536 -TimeoutSeconds $timeoutSeconds
+        $server.WaitForPipeDrain()
+        [pscustomobject]@{Status='Success';PipeName=$PipeName;InputMessage=$line;Response=$response;EvidenceType='WinCareIpcServerStatus'}
+    } finally { $server.Dispose() }
 }
 
 function Send-WinCareIpcMessage {
@@ -233,38 +189,17 @@ function Send-WinCareIpcMessage {
         [string]$PipeName = 'WinCareIpcStream',
         [Parameter(Mandatory)][string]$Command,
         [hashtable]$Payload = @{},
-        [int]$TimeoutMs = 5000
+        [ValidateRange(100,300000)][int]$TimeoutMs = 5000
     )
-
-    $client = [System.IO.Pipes.NamedPipeClientStream]::new('.', $PipeName, [System.IO.Pipes.PipeDirection]::InOut)
+    if ($PipeName -notmatch '^[A-Za-z0-9._-]{8,160}$') { throw 'Invalid IPC pipe name.' }
+    $client = [System.IO.Pipes.NamedPipeClientStream]::new('.', $PipeName, [System.IO.Pipes.PipeDirection]::InOut, [System.IO.Pipes.PipeOptions]::Asynchronous)
+    $timeoutSeconds = [Math]::Max(1, [int][Math]::Ceiling($TimeoutMs / 1000.0))
     try {
         $client.Connect($TimeoutMs)
-        $writer = [System.IO.StreamWriter]::new($client, [System.Text.UTF8Encoding]::new($false, $true))
-        $reader = [System.IO.StreamReader]::new($client, [System.Text.UTF8Encoding]::new($false, $true))
-        $writer.AutoFlush = $true
-
-        try {
-            $message = [ordered]@{
-                Command   = $Command
-                Payload   = $Payload
-                Timestamp = [datetime]::UtcNow.ToString('o')
-            } | ConvertTo-Json -Compress -Depth 24
-
-            $writer.WriteLine($message)
-            $client.WaitForPipeDrain()
-
-            $reply = $reader.ReadLine()
-            if ($reply -and $reply.Length -gt 65536) {
-                throw "IPC reply length exceeds 64 KiB ceiling."
-            }
-            return $reply
-        } finally {
-            $writer.Dispose()
-            $reader.Dispose()
-        }
-    } finally {
-        $client.Dispose()
-    }
+        $message = [ordered]@{Command=$Command;Payload=$Payload;Timestamp=[datetime]::UtcNow.ToString('o')} | ConvertTo-Json -Compress -Depth 24
+        Write-WinCareBrokerFrame -Stream $client -Text $message -MaximumBytes 65536 -TimeoutSeconds $timeoutSeconds
+        Read-WinCareBrokerFrame -Stream $client -MaximumBytes 65536 -TimeoutSeconds $timeoutSeconds
+    } finally { $client.Dispose() }
 }
 
 function Write-WinCareSharedMemoryBuffer {

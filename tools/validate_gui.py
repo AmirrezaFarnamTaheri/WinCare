@@ -161,9 +161,9 @@ def main() -> int:
         errors.append("GUI bypasses the headless/typed authority path")
 
     pairs = [
-        ("#F4F7FB", "#0B1020", 4.5), ("#9AA9C3", "#121A2B", 4.5),
-        ("#F97066", "#512128", 4.5), ("#36C5F0", "#173B46", 4.5),
-        ("#2DD4A8", "#173D35", 4.5), ("#F6C85F", "#3D3520", 4.5),
+        ("#E6EDF3", "#0B1020", 4.5), ("#8B949E", "#121A2B", 4.5),
+        ("#F85149", "#3D141B", 4.5), ("#34D6E9", "#173B46", 4.5),
+        ("#3FB950", "#173D35", 4.5), ("#D29922", "#3D3520", 4.5),
     ]
     contrast_results = []
     for foreground, background, minimum in pairs:

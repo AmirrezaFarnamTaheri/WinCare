@@ -117,37 +117,3 @@ function Read-WinCareProtectedJson {
     $envelope=Read-WinCareBoundedJson -LiteralPath $path -MaximumBytes 16777216 -Depth 50 -AsHashtable
     Unprotect-WinCareJsonRecord -Envelope $envelope -Purpose $Purpose -AsHashtable:$AsHashtable
 }
-
-function New-WinCareIsolatedStagingDirectory {
-    [CmdletBinding()]
-    param(
-        [Parameter(Mandatory)][string]$Prefix
-    )
-    $parent = [System.IO.Path]::GetTempPath()
-    $folderName = "$Prefix-$([System.Guid]::NewGuid().ToString('N'))"
-    $fullPath = [System.IO.Path]::Combine($parent, $folderName)
-
-    $dirInfo = [System.IO.Directory]::CreateDirectory($fullPath)
-    if ($IsWindows) {
-        try {
-            $acl = $dirInfo.GetAccessControl()
-            $acl.SetAccessRuleProtection($true, $false)
-
-            $currentUser = [System.Security.Principal.WindowsIdentity]::GetCurrent().User
-            $systemUser = New-Object System.Security.Principal.SecurityIdentifier([System.Security.Principal.WellKnownSidType]::LocalSystemSid)
-            $adminUser = New-Object System.Security.Principal.SecurityIdentifier([System.Security.Principal.WellKnownSidType]::BuiltinAdministratorsSid)
-
-            $fullControl = [System.Security.AccessControl.FileSystemRights]::FullControl
-            $inheritFlags = [System.Security.AccessControl.InheritanceFlags]::ContainerInherit -bor [System.Security.AccessControl.InheritanceFlags]::ObjectInherit
-            $propFlags = [System.Security.AccessControl.PropagationFlags]::None
-            $allow = [System.Security.AccessControl.AccessControlType]::Allow
-
-            $acl.AddAccessRule((New-Object System.Security.AccessControl.FileSystemAccessRule($currentUser, $fullControl, $inheritFlags, $propFlags, $allow)))
-            $acl.AddAccessRule((New-Object System.Security.AccessControl.FileSystemAccessRule($systemUser, $fullControl, $inheritFlags, $propFlags, $allow)))
-            $acl.AddAccessRule((New-Object System.Security.AccessControl.FileSystemAccessRule($adminUser, $fullControl, $inheritFlags, $propFlags, $allow)))
-
-            $dirInfo.SetAccessControl($acl)
-        } catch {}
-    }
-    return $fullPath
-}
