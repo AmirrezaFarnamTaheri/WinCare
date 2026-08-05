@@ -6,7 +6,7 @@ Describe 'Cleaner and preview contracts' {
     Import-Module (Join-Path $root 'src/WinCare/WinCare.psd1') -Force
     Initialize-WinCareState -SkipConfigSave
     $Provider=Get-Content -LiteralPath (Join-Path $root 'src/WinCare/Providers/111-CleanerPreviewStudio.ps1') -Raw
-    $Contracts=Get-Content -LiteralPath (Join-Path $root 'src/WinCare/Core/11-ActionContracts.ps1') -Raw
+    $Contracts=Get-Content -LiteralPath (Join-Path $root 'src/WinCare/Core/11-ActionContractsSchema.ps1') -Raw
     $Dispatch=Get-Content -LiteralPath (Join-Path $root 'src/WinCare/Core/09-Transactions.ps1') -Raw
     $Headless=Get-Content -LiteralPath (Join-Path $root 'src/WinCare/UI/98-Headless.ps1') -Raw
 }
