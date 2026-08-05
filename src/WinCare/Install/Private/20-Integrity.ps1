@@ -32,7 +32,13 @@ function Test-WinCareManagedReleaseTree {
     $rootPath=[IO.Path]::GetFullPath($Root).TrimEnd('\');$rootItem=Get-Item -LiteralPath $rootPath -Force -ErrorAction Stop
     if(!$rootItem.PSIsContainer -or ($rootItem.Attributes -band [IO.FileAttributes]::ReparsePoint)){throw 'Unsafe release root.'}
     $manifestPath=Join-Path $rootPath 'RELEASE-MANIFEST.sha256';$entries=Get-WinCareManifest $manifestPath;$actual=[Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase);$count=0;$total=0L
-    foreach($item in Get-ChildItem -LiteralPath $rootPath -Recurse -Force -ErrorAction Stop){$count++;if($count -gt 10000){throw 'Release tree exceeds entry ceiling.'};if($item.Attributes -band [IO.FileAttributes]::ReparsePoint){throw "Release tree contains a reparse point: $($item.FullName)"};if($item.PSIsContainer){continue};$rel=[IO.Path]::GetRelativePath($rootPath,$item.FullName);if($rel -eq 'RELEASE-MANIFEST.sha256' -or ($AllowInstallMarker -and $rel -eq '.wincare-install.json')){continue};$total+=$item.Length;if($total -gt 2147483648){throw 'Release tree exceeds byte ceiling.'};if(!$entries.Contains($rel) -or !$actual.Add($rel)){throw "Unmanifested or duplicate file: $rel"};if((Get-WinCareFileHash $item.FullName).Sha256 -ne $entries[$rel]){throw "Release hash mismatch: $rel"}}
+    $moduleLoadCacheLimits=[ordered]@{
+        'src\WinCare\.wincare-load-receipt.json'=1048576L
+        'src\WinCare\.wincare-merged-Core.ps1'=33554432L
+        'src\WinCare\.wincare-merged-Providers.ps1'=33554432L
+        'src\WinCare\.wincare-merged-UI.ps1'=33554432L
+    }
+    foreach($item in Get-ChildItem -LiteralPath $rootPath -Recurse -Force -ErrorAction Stop){$count++;if($count -gt 10000){throw 'Release tree exceeds entry ceiling.'};if($item.Attributes -band [IO.FileAttributes]::ReparsePoint){throw "Release tree contains a reparse point: $($item.FullName)"};if($item.PSIsContainer){continue};$rel=[IO.Path]::GetRelativePath($rootPath,$item.FullName);if($rel -eq 'RELEASE-MANIFEST.sha256' -or ($AllowInstallMarker -and $rel -eq '.wincare-install.json')){continue};if($AllowInstallMarker -and $moduleLoadCacheLimits.Contains($rel)){$limit=[long]$moduleLoadCacheLimits[$rel];if([long]$item.Length -lt 1 -or [long]$item.Length -gt $limit){throw "Unsafe module load cache: $rel"};$total+=$item.Length;if($total -gt 2147483648){throw 'Release tree exceeds byte ceiling.'};continue};$total+=$item.Length;if($total -gt 2147483648){throw 'Release tree exceeds byte ceiling.'};if(!$entries.Contains($rel) -or !$actual.Add($rel)){throw "Unmanifested or duplicate file: $rel"};if((Get-WinCareFileHash $item.FullName).Sha256 -ne $entries[$rel]){throw "Release hash mismatch: $rel"}}
     foreach($rel in $entries.Keys){if(!$actual.Contains($rel)){throw "Manifested file missing: $rel"}}
     [pscustomobject]@{Verified=$true;Files=$entries.Count;ManifestSha256=(Get-WinCareFileHash $manifestPath).Sha256;Root=$rootPath}
 }
