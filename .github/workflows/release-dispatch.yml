@@ -1,0 +1,81 @@
+name: release-dispatch
+
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: Semantic version increment forwarded to the hardened release workflow.
+        required: true
+        default: auto
+        type: choice
+        options:
+          - auto
+          - patch
+          - minor
+          - major
+
+permissions:
+  actions: write
+  contents: write
+
+concurrency:
+  group: release-dispatch-${{ github.repository }}
+  cancel-in-progress: false
+
+jobs:
+  dispatch:
+    name: Dispatch production release
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      contains(github.event.head_commit.message, '[release]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Pin immutable release source
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          SOURCE_SHA: ${{ github.sha }}
+          RELEASE_REF: release-dispatch/${{ github.sha }}
+        run: |
+          set -euo pipefail
+          existing_sha="$(
+            gh api "repos/$GH_REPO/git/ref/tags/$RELEASE_REF" \
+              --jq '.object.sha' 2>/dev/null || true
+          )"
+          if [[ -n "$existing_sha" ]]; then
+            if [[ "$existing_sha" != "$SOURCE_SHA" ]]; then
+              echo "Immutable dispatch tag $RELEASE_REF points to $existing_sha, expected $SOURCE_SHA." >&2
+              exit 1
+            fi
+          else
+            gh api --method POST "repos/$GH_REPO/git/refs" \
+              --field ref="refs/tags/$RELEASE_REF" \
+              --field sha="$SOURCE_SHA" >/dev/null
+          fi
+
+      - name: Dispatch hardened release workflow
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          SOURCE_SHA: ${{ github.sha }}
+          RELEASE_REF: release-dispatch/${{ github.sha }}
+          RELEASE_BUMP: ${{ inputs.bump || 'auto' }}
+        run: |
+          set -euo pipefail
+          gh workflow run release.yml \
+            --repo "$GH_REPO" \
+            --ref "$RELEASE_REF" \
+            --field bump="$RELEASE_BUMP"
+          {
+            echo "## Production release dispatched"
+            echo
+            echo "- Workflow: \`release.yml\`"
+            echo "- Source commit: \`$SOURCE_SHA\`"
+            echo "- Immutable ref: \`$RELEASE_REF\`"
+            echo "- Bump: \`$RELEASE_BUMP\`"
+            echo "- Trigger: \`${{ github.event_name }}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
