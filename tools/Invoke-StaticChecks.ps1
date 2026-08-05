@@ -86,7 +86,7 @@ if($analyzer){
         $settings=Join-Path $rootPath 'tools\PSScriptAnalyzer.psd1'
         if(-not (Test-Path -LiteralPath $settings)){$settings=Join-Path $rootPath 'PSScriptAnalyzerSettings.psd1'}
 
-        foreach($finding in Invoke-ScriptAnalyzer -Path @($files.FullName) -Settings $settings){
+        foreach($finding in ($files.FullName | Invoke-ScriptAnalyzer -Settings $settings)){
             if($finding.Severity -eq 'Error'){
                 $failures.Add("PSScriptAnalyzer $($finding.RuleName): $($finding.ScriptPath):$($finding.Line): $($finding.Message)")
             }else{
