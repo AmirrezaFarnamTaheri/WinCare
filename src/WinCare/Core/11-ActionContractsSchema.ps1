@@ -1,7 +1,7 @@
 function Get-WinCareActionContractTable {
     [CmdletBinding()]
     param()
-    if($script:WinCareState.ContainsKey('ActionContracts')){return $script:WinCareState.ActionContracts}
+    if($script:WinCareState.ContainsKey('ActionContracts') -and $script:WinCareState.ActionContracts -is [Collections.IDictionary]){return $script:WinCareState.ActionContracts}
     $table=[ordered]@{}
     function Add-Contract([string]$Type,[string[]]$Required,[string[]]$Allowed,[string]$MinimumRisk='Low',[bool]$AlwaysAdmin=$false,[bool]$ElevationAllowed=$true,[int]$MaximumTimeout=21600){
         $table[$Type]=[pscustomobject]@{Type=$Type;Required=@($Required);Allowed=@($Allowed);RequiredParameters=@($Required);AllowedParameters=@($Allowed);MinimumRisk=$MinimumRisk;AlwaysAdmin=$AlwaysAdmin;ElevationAllowed=$ElevationAllowed;MaximumTimeout=$MaximumTimeout}
@@ -96,7 +96,7 @@ function Get-WinCareActionContractTable {
     Add-Contract 'StartPowerSession' @('Id','Mode','PreventDisplay','AwayMode','ExpiresAt','RefreshSeconds','Reason') @('Id','Mode','PreventDisplay','AwayMode','ExpiresAt','RefreshSeconds','Reason') 'Low' $false $false 120
     Add-Contract 'StopPowerSession' @('Id','ExpectedHostProcessId','ExpectedHostProcessStartTime') @('Id','ExpectedHostProcessId','ExpectedHostProcessStartTime') 'Low' $false $false 60
     Add-Contract 'SetWindowBounds' @('WindowHandle','ProcessId','ProcessStartTime','ExpectedTitleHash','ExpectedCurrentLeft','ExpectedCurrentTop','ExpectedCurrentWidth','ExpectedCurrentHeight','Left','Top','Width','Height') @('WindowHandle','ProcessId','ProcessStartTime','ExpectedTitleHash','ExpectedCurrentLeft','ExpectedCurrentTop','ExpectedCurrentWidth','ExpectedCurrentHeight','Left','Top','Width','Height','MonitorDevice','ExpectedMonitorWorkLeft','ExpectedMonitorWorkTop','ExpectedMonitorWorkWidth','ExpectedMonitorWorkHeight') 'Low' $false $false 60
-    Add-Contract 'SetWindowTopmost' @('WindowHandle','ProcessId','ProcessStartTime','ExpectedTitleHash','ExpectedCurrentTopmost','Topmost') @('WindowHandle','ProcessId','ProcessStartTime','ExpectedTitleHash','ExpectedCurrentTopmost','Topmost') 'Low' $false $false 60
+    Add-Contract 'SetWindowTopmost' @('WindowHandle','ProcessId','ProcessStartTime','ExpectedTitleHash','ExpectedCurrentTopmost','Topmost') @('WindowHandle','ProcessId','ProcessStartTime','ExpectedTitleHash','ExpectedCurrentTopmost','ExpectedCurrentTopmost','Topmost') 'Low' $false $false 60
     Add-Contract 'ActivateWindow' @('WindowHandle','ProcessId','ProcessStartTime','ExpectedTitleHash') @('WindowHandle','ProcessId','ProcessStartTime','ExpectedTitleHash') 'Low' $false $false 30
     Add-Contract 'ReleaseLocalInput' @() @() 'Low' $false $false 30
     Add-Contract 'ReplaceColorPaletteStore' @('Store','ExpectedCurrentHash') @('Store','ExpectedCurrentHash') 'Low' $false $false 60
