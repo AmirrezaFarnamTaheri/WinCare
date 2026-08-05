@@ -174,13 +174,7 @@ jobs:
           WORKFLOW_RUN_ID: ${{ github.run_id }}
         run: |
           $ErrorActionPreference='Stop'
-          function Read-BoundedUtf8Text {
-            param([Parameter(Mandatory)][string]$LiteralPath,[ValidateRange(1,16777216)][int]$MaximumBytes)
-            $item=Get-Item -LiteralPath $LiteralPath -Force -ErrorAction Stop
-            if($item.PSIsContainer -or ($item.Attributes -band [IO.FileAttributes]::ReparsePoint) -or [long]$item.Length -gt $MaximumBytes){throw "Unsafe or oversized text file: $LiteralPath"}
-            $bytes=[IO.File]::ReadAllBytes($item.FullName)
-            try{if($bytes.Length -ne [long]$item.Length){throw "Text file changed while reading: $LiteralPath"};[Text.UTF8Encoding]::new($false,$true).GetString($bytes)}finally{if($bytes.Length){[Array]::Clear($bytes,0,$bytes.Length)}}
-          }
+          . './tools/Invoke-BoundedFileRead.ps1'
           $root=[IO.Path]::GetFullPath('./artifacts/windows-validation');$release=Join-Path $root 'release';$reportPath=Join-Path $root 'windows-validation-report.json'
           $report=Read-BoundedUtf8Text $reportPath 16777216|ConvertFrom-Json -Depth 50
           if([string]$report.status -ne 'passed'){throw 'Windows validation report is not passed.'}
@@ -221,8 +215,6 @@ jobs:
   publish-release:
     name: Reverify, attest, and publish sealed bytes
     needs: build-validate
-    runs-on: windows-2022
-    timeout-minutes: 30
     steps:
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
@@ -246,13 +238,8 @@ jobs:
           EXPECTED_VERSION: ${{ needs.build-validate.outputs.version }}
         run: |
           $ErrorActionPreference='Stop'
-          function Read-BoundedUtf8Text {
-            param([Parameter(Mandatory)][string]$LiteralPath,[ValidateRange(1,16777216)][int]$MaximumBytes)
-            $item=Get-Item -LiteralPath $LiteralPath -Force -ErrorAction Stop
-            if($item.PSIsContainer -or ($item.Attributes -band [IO.FileAttributes]::ReparsePoint) -or [long]$item.Length -gt $MaximumBytes){throw "Unsafe or oversized text file: $LiteralPath"}
-            $bytes=[IO.File]::ReadAllBytes($item.FullName)
-            try{if($bytes.Length -ne [long]$item.Length){throw "Text file changed while reading: $LiteralPath"};[Text.UTF8Encoding]::new($false,$true).GetString($bytes)}finally{if($bytes.Length){[Array]::Clear($bytes,0,$bytes.Length)}}
-          }
+          function Read-BoundedUtf8Text{param([string]$LiteralPath,[int]$MaximumBytes)$item=Get-Item -LiteralPath $LiteralPath -Force -ErrorAction Stop;if($item.PSIsContainer -or ($item.Attributes -band [IO.FileAttributes]::ReparsePoint) -or [long]$item.Length -gt $MaximumBytes){throw "Unsafe or oversized file: $LiteralPath"};$stream=[IO.FileStream]::new($item.FullName,[IO.FileMode]::Open,[IO.FileAccess]::Read,[IO.FileShare]::None,4096,[IO.FileOptions]::SequentialScan);try{if($stream.Length -lt 1 -or $stream.Length -gt $MaximumBytes){throw "File length out of bounds: $LiteralPath"};$bytes=[byte[]]::new([int]$stream.Length);$offset=0;while($offset -lt $bytes.Length){$read=$stream.Read($bytes,$offset,$bytes.Length-$offset);if($read -le 0){throw "File ended unexpectedly: $LiteralPath"};$offset+=$read};try{$idx=0;$cnt=$bytes.Length;if($cnt -ge 3 -and $bytes[0] -eq 0xEF -and $bytes[1] -eq 0xBB -and $bytes[2] -eq 0xBF){$idx=3;$cnt-=3};[Text.UTF8Encoding]::new($false,$true).GetString($bytes,$idx,$cnt)}finally{[Array]::Clear($bytes,0,$bytes.Length)}}finally{$stream.Dispose()}}
+
           $tagRef=& gh api "repos/$env:GH_REPO/git/ref/tags/$env:EXPECTED_TAG"|ConvertFrom-Json -Depth 20
           if($LASTEXITCODE -ne 0){throw "Unable to resolve tag $env:EXPECTED_TAG."}
           $tagObjectType=[string]$tagRef.object.type
@@ -358,13 +345,8 @@ jobs:
           SOURCE_COMMIT: ${{ needs.build-validate.outputs.source_commit }}
         run: |
           $ErrorActionPreference='Stop'
-          function Read-BoundedUtf8Text {
-            param([Parameter(Mandatory)][string]$LiteralPath,[ValidateRange(1,16777216)][int]$MaximumBytes)
-            $item=Get-Item -LiteralPath $LiteralPath -Force -ErrorAction Stop
-            if($item.PSIsContainer -or ($item.Attributes -band [IO.FileAttributes]::ReparsePoint) -or [long]$item.Length -gt $MaximumBytes){throw "Unsafe or oversized text file: $LiteralPath"}
-            $bytes=[IO.File]::ReadAllBytes($item.FullName)
-            try{if($bytes.Length -ne [long]$item.Length){throw "Text file changed while reading: $LiteralPath"};[Text.UTF8Encoding]::new($false,$true).GetString($bytes)}finally{if($bytes.Length){[Array]::Clear($bytes,0,$bytes.Length)}}
-          }
+          function Read-BoundedUtf8Text{param([string]$LiteralPath,[int]$MaximumBytes)$item=Get-Item -LiteralPath $LiteralPath -Force -ErrorAction Stop;if($item.PSIsContainer -or ($item.Attributes -band [IO.FileAttributes]::ReparsePoint) -or [long]$item.Length -gt $MaximumBytes){throw "Unsafe or oversized file: $LiteralPath"};$stream=[IO.FileStream]::new($item.FullName,[IO.FileMode]::Open,[IO.FileAccess]::Read,[IO.FileShare]::None,4096,[IO.FileOptions]::SequentialScan);try{if($stream.Length -lt 1 -or $stream.Length -gt $MaximumBytes){throw "File length out of bounds: $LiteralPath"};$bytes=[byte[]]::new([int]$stream.Length);$offset=0;while($offset -lt $bytes.Length){$read=$stream.Read($bytes,$offset,$bytes.Length-$offset);if($read -le 0){throw "File ended unexpectedly: $LiteralPath"};$offset+=$read};try{$idx=0;$cnt=$bytes.Length;if($cnt -ge 3 -and $bytes[0] -eq 0xEF -and $bytes[1] -eq 0xBB -and $bytes[2] -eq 0xBF){$idx=3;$cnt-=3};[Text.UTF8Encoding]::new($false,$true).GetString($bytes,$idx,$cnt)}finally{[Array]::Clear($bytes,0,$bytes.Length)}}finally{$stream.Dispose()}}
+
           $published=[IO.Path]::GetFullPath('./published-release')
           New-Item -ItemType Directory -Path $published -Force|Out-Null
           & gh release download $env:RELEASE_TAG --dir $published

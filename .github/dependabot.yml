@@ -1,0 +1,33 @@
+# T6.3 — Dependabot configuration for WinCare
+# All four workflow files pin GitHub Actions to SHA digests (correct security
+# practice). This config makes Dependabot propose updates automatically so
+# pinned digests don't silently rot behind new releases.
+#
+# Scope: github-actions only. Python build tools are pinned in tools/ scripts
+# via requirements files; add a pip ecosystem entry here if requirements.txt
+# or pyproject.toml are introduced.
+
+version: 2
+
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "github-actions"
+    commit-message:
+      prefix: "ci"
+      include: "scope"
+    # Only propose updates to actions that are already pinned to a SHA in our
+    # workflows. Dependabot will propose the new digest + a comment with the
+    # upstream tag so reviewers know what they're merging.
+    groups:
+      github-actions:
+        patterns:
+          - "*"

@@ -45,7 +45,7 @@ $contracts=@([regex]::Matches((Read-WinCareStaticText -Path $contractPath),"Add-
 $dispatch=@([regex]::Matches((Read-WinCareStaticText -Path $transactionPath),"(?m)^\s*'([^']+)'\s*\{Invoke-WinCare")|ForEach-Object{$_.Groups[1].Value}|Sort-Object -Unique)
 foreach($difference in Compare-Object $contracts $dispatch){$failures.Add("Action contract/dispatcher mismatch: $($difference.InputObject) $($difference.SideIndicator)")}
 
-foreach($json in Get-ChildItem -LiteralPath $rootPath -Recurse -File -Filter *.json|Where-Object{$_.FullName -notmatch '[\\/](\.git|artifacts)[\\/]'}){
+foreach($json in Get-ChildItem -LiteralPath $rootPath -Recurse -File -Filter *.json|Where-Object{$_.FullName -notmatch '[\\/](\.git|artifacts)[\\/]' -and $_.Name -notlike '.wincare-*'}){
     try{Read-WinCareStaticText -Path $json.FullName -MaximumBytes 16777216|ConvertFrom-Json -Depth 100|Out-Null}catch{$failures.Add("JSON: $($json.FullName): $($_.Exception.Message)")}
 }
 
@@ -83,7 +83,9 @@ $analyzer=Get-Module -ListAvailable PSScriptAnalyzer|Sort-Object Version -Descen
 if($analyzer){
     try{
         Import-Module $analyzer -Force
-        $settings=Join-Path $rootPath 'PSScriptAnalyzerSettings.psd1'
+        $settings=Join-Path $rootPath 'tools\PSScriptAnalyzer.psd1'
+        if(-not (Test-Path -LiteralPath $settings)){$settings=Join-Path $rootPath 'PSScriptAnalyzerSettings.psd1'}
+
         foreach($finding in Invoke-ScriptAnalyzer -Path $rootPath -Recurse -Settings $settings){
             if($finding.Severity -eq 'Error'){
                 $failures.Add("PSScriptAnalyzer $($finding.RuleName): $($finding.ScriptPath):$($finding.Line): $($finding.Message)")

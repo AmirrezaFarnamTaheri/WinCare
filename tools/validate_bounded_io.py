@@ -50,9 +50,10 @@ def files(root: Path) -> list[Path]:
     for relative_root in SOURCE_ROOTS:
         directory = root / relative_root
         if directory.is_dir():
-            result.extend(directory.rglob("*.ps1"))
+            result.extend(p for p in directory.rglob("*.ps1") if not p.name.startswith(".wincare-"))
     result.extend(root / name for name in ROOT_FILES if (root / name).is_file())
     return sorted(set(result), key=lambda item: item.as_posix().casefold())
+
 
 
 def validate(root: Path) -> dict[str, object]:

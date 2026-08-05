@@ -21,7 +21,7 @@
 | `surface-raised` | `#1B2740` | controls and secondary actions |
 | `surface-hover` | `#22314F` | hover/focus support |
 | `border` | `#2B3A58` | boundaries and dividers |
-| `accent` | `#7C5CFC` | primary action/selection |
+| `accent` | `#2F80ED` | primary action/selection |
 | `information` | `#36C5F0` | read-only and informational state |
 | `success` | `#2DD4A8` | healthy/completed state |
 | `warning` | `#F6C85F` | caution/moderate risk |

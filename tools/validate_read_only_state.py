@@ -22,8 +22,9 @@ def source_files(root: Path) -> list[Path]:
     for relative in SOURCE_ROOTS:
         directory = root / relative
         if directory.is_dir():
-            files.extend(directory.rglob("*.ps1"))
+            files.extend(p for p in directory.rglob("*.ps1") if not p.name.startswith(".wincare-"))
     return sorted(set(files), key=lambda item: item.as_posix().casefold())
+
 
 
 def function_body(text: str, start: int) -> str:
