@@ -46,6 +46,7 @@ jobs:
         run: |
           set -euo pipefail
           git apply --whitespace=nowarn /tmp/wincare-fixes.patch
+          sed -i 's/[[:space:]]*$//' docs/decisions/T6.2-gate16-keep.md
           rm -rf .autofix
           rm -f .github/workflows/apply-validated-autofix.yml
       - name: Verify structural and behavioral gates
