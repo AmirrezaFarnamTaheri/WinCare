@@ -11,8 +11,8 @@
   "strictFiles": [],
   "totals": {
     "fileCount": 176,
-    "lineCount": 27104,
-    "functionCount": 1194,
+    "lineCount": 27088,
+    "functionCount": 1193,
     "linesOver200": 1658,
     "linesOver500": 207,
     "maxFileLines": 581,
@@ -33,7 +33,7 @@
     },
     "Core/00-01-BridgePrimitives.ps1": {
       "group": "Core",
-      "lineCount": 228,
+      "lineCount": 232,
       "functionCount": 15,
       "maxFunctionLines": 33,
       "maxLineLength": 231,
@@ -209,9 +209,9 @@
     },
     "Core/01-Config.ps1": {
       "group": "Core",
-      "lineCount": 514,
-      "functionCount": 20,
-      "maxFunctionLines": 90,
+      "lineCount": 529,
+      "functionCount": 21,
+      "maxFunctionLines": 84,
       "maxLineLength": 1036,
       "linesOver200": 11,
       "linesOver500": 2,
@@ -385,8 +385,8 @@
     },
     "Core/09-Transactions.ps1": {
       "group": "Core",
-      "lineCount": 537,
-      "functionCount": 28,
+      "lineCount": 502,
+      "functionCount": 26,
       "maxFunctionLines": 125,
       "maxLineLength": 663,
       "linesOver200": 46,

@@ -4,7 +4,7 @@ function Get-WinCareActionContractTable {
     if($script:WinCareState.ContainsKey('ActionContracts')){return $script:WinCareState.ActionContracts}
     $table=[ordered]@{}
     function Add-Contract([string]$Type,[string[]]$Required,[string[]]$Allowed,[string]$MinimumRisk='Low',[bool]$AlwaysAdmin=$false,[bool]$ElevationAllowed=$true,[int]$MaximumTimeout=21600){
-        $table[$Type]=[pscustomobject]@{Type=$Type;Required=@($Required);Allowed=@($Allowed);MinimumRisk=$MinimumRisk;AlwaysAdmin=$AlwaysAdmin;ElevationAllowed=$ElevationAllowed;MaximumTimeout=$MaximumTimeout}
+        $table[$Type]=[pscustomobject]@{Type=$Type;Required=@($Required);Allowed=@($Allowed);RequiredParameters=@($Required);AllowedParameters=@($Allowed);MinimumRisk=$MinimumRisk;AlwaysAdmin=$AlwaysAdmin;ElevationAllowed=$ElevationAllowed;MaximumTimeout=$MaximumTimeout}
     }
     Add-Contract 'UninstallRegistryApp' @('ApplicationId','Name','FilePath','Arguments','SuccessExitCodes') @('ApplicationId','Name','FilePath','Arguments','SuccessExitCodes') 'Moderate' $false $true
     Add-Contract 'RemoveAppxPackage' @('PackageFullName') @('PackageFullName','Name') 'Moderate' $false $true
