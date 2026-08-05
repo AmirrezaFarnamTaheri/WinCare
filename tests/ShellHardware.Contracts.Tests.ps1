@@ -18,7 +18,7 @@ Describe 'Shell and Hardware Studio contracts' {
     }
 
     It 'uses exact typed contracts for the three new mutations' {
-        $contracts=Get-Content -LiteralPath (Join-Path $root 'src/WinCare/Core/11-ActionContracts.ps1') -Raw
+        $contracts=Get-Content -LiteralPath (Join-Path $root 'src/WinCare/Core/11-ActionContractsSchema.ps1') -Raw
         $dispatch=Get-Content -LiteralPath (Join-Path $root 'src/WinCare/Core/09-Transactions.ps1') -Raw
         foreach($type in @('SetMonitorVcpFeature','OpenExplorerLocation','LaunchAppxApplication')){$contracts|Should -Match ("Add-Contract '"+[regex]::Escape($type)+"'");$dispatch|Should -Match ("'"+[regex]::Escape($type)+"'\{Invoke-WinCare")}
     }
