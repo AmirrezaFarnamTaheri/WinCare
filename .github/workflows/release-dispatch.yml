@@ -1,0 +1,56 @@
+name: release-dispatch
+
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: Semantic version increment forwarded to the hardened release workflow.
+        required: true
+        default: auto
+        type: choice
+        options:
+          - auto
+          - patch
+          - minor
+          - major
+
+permissions:
+  actions: write
+  contents: read
+
+concurrency:
+  group: release-dispatch-${{ github.repository }}
+  cancel-in-progress: false
+
+jobs:
+  dispatch:
+    name: Dispatch production release
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      contains(github.event.head_commit.message, '[release]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Dispatch hardened release workflow
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_REF: master
+          RELEASE_BUMP: ${{ inputs.bump || 'auto' }}
+        run: |
+          set -euo pipefail
+          gh workflow run release.yml \
+            --repo "$GH_REPO" \
+            --ref "$RELEASE_REF" \
+            --field bump="$RELEASE_BUMP"
+          {
+            echo "## Production release dispatched"
+            echo
+            echo "- Workflow: \`release.yml\`"
+            echo "- Ref: \`$RELEASE_REF\`"
+            echo "- Bump: \`$RELEASE_BUMP\`"
+            echo "- Trigger: \`${{ github.event_name }}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
