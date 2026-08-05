@@ -302,7 +302,7 @@ function Get-WinCareInitialConfig {
     param(
         [Parameter(Mandatory)][string]$ConfigPath,
         [Parameter(Mandatory)][bool]$ReadOnlyLocked,
-        [Parameter(Mandatory)][Collections.Generic.List[string]]$InitializationWarnings
+        [Parameter(Mandatory)][AllowEmptyCollection()][Collections.Generic.List[string]]$InitializationWarnings
     )
     $config = Get-WinCareDefaultConfig
     if (Test-Path -LiteralPath $ConfigPath) {
