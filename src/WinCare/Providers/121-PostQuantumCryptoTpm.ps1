@@ -43,27 +43,34 @@ function Protect-WinCareTpmBoundPqcKey {
         throw "PQC key material size is invalid."
     }
 
+    if (-not $IsWindows) {
+        throw "TPM-bound PQC key protection is supported only on Windows operating systems."
+    }
+
+    if (Get-Command Initialize-WinCareProtectedDataSupport -ErrorAction SilentlyContinue) {
+        Initialize-WinCareProtectedDataSupport
+    }
+
     $tpmCap = Get-WinCareTpmPqcCapability
     $entropy = [Text.Encoding]::UTF8.GetBytes($KeyAlias)
     
     try {
-        $protected = if ($IsWindows) {
-            [Security.Cryptography.ProtectedData]::Protect($KeyMaterial, $entropy, [Security.Cryptography.DataProtectionScope]::CurrentUser)
-        } else {
-            $KeyMaterial.Clone()
-        }
+        $protected = [Security.Cryptography.ProtectedData]::Protect($KeyMaterial, $entropy, [Security.Cryptography.DataProtectionScope]::CurrentUser)
+        $protectedSha256 = [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($protected)).ToLowerInvariant()
 
         [pscustomobject]@{
-            KeyAlias          = $KeyAlias
-            TpmBound          = $tpmCap.TpmAvailable
-            TpmVersion        = $tpmCap.TpmVersion
-            ProtectedKeyBytes = $protected.Length
-            KeySha256         = [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($KeyMaterial)).ToLowerInvariant()
-            ProtectedPayload  = [Convert]::ToBase64String($protected)
-            EvidenceType      = 'TpmBoundPqcKeyProtectionResult'
+            KeyAlias               = $KeyAlias
+            TpmAvailable           = $tpmCap.TpmAvailable
+            TpmVersion             = $tpmCap.TpmVersion
+            ProtectionMechanism    = if ($tpmCap.TpmAvailable) { 'Hardware-TPM2.0-DPAPI' } else { 'Software-DPAPI-User' }
+            ProtectedKeyBytes      = $protected.Length
+            ProtectedPayloadSha256 = $protectedSha256
+            ProtectedPayload       = [Convert]::ToBase64String($protected)
+            EvidenceType           = 'TpmBoundPqcKeyProtectionResult'
         }
     } finally {
         [Array]::Clear($entropy, 0, $entropy.Length)
+        [Array]::Clear($KeyMaterial, 0, $KeyMaterial.Length)
     }
 }
 

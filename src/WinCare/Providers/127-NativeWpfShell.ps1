@@ -62,7 +62,6 @@ function Start-WinCareWpfDashboardWindow {
             [long]$xamlItem.Length -gt 1048576L) {
             throw 'The WPF XAML asset failed bounded regular-file validation.'
         }
-        }
 
         $stream = [System.IO.FileStream]::new(
             $xamlFile,
@@ -174,7 +173,7 @@ function Start-WinCareIpcServer {
     )
 
     try {
-        $asyncResult = $server.BeginConnect($null, $null)
+        $asyncResult = $server.BeginWaitForConnection($null, $null)
         if (-not $asyncResult.AsyncWaitHandle.WaitOne($TimeoutMs)) {
             $server.Close()
             return [pscustomobject]@{
@@ -183,35 +182,45 @@ function Start-WinCareIpcServer {
                 EvidenceType = 'WinCareIpcServerStatus'
             }
         }
-        $server.EndConnect($asyncResult)
+        $server.EndWaitForConnection($asyncResult)
 
-        $reader = [System.IO.StreamReader]::new($server, [System.Text.Encoding]::UTF8)
-        $writer = [System.IO.StreamWriter]::new($server, [System.Text.Encoding]::UTF8)
+        $reader = [System.IO.StreamReader]::new($server, [System.Text.UTF8Encoding]::new($false, $true))
+        $writer = [System.IO.StreamWriter]::new($server, [System.Text.UTF8Encoding]::new($false, $true))
         $writer.AutoFlush = $true
 
-        $line = $reader.ReadLine()
-        $response = if ($Handler -and -not [string]::IsNullOrWhiteSpace($line)) {
-            & $Handler $line
-        } elseif (-not [string]::IsNullOrWhiteSpace($line)) {
-            $msg = $line | ConvertFrom-Json -AsHashtable
-            [ordered]@{
-                Status    = 'Received'
-                Command   = $msg.Command
-                Payload   = $msg.Payload
-                Timestamp = [datetime]::UtcNow.ToString('o')
-            } | ConvertTo-Json -Compress
-        } else {
-            '{"Status":"EmptyInput"}'
-        }
+        try {
+            $line = $reader.ReadLine()
+            if ($line -and $line.Length -gt 65536) {
+                throw "IPC message length exceeds 64 KiB ceiling."
+            }
 
-        $writer.WriteLine($response)
-        
-        return [pscustomobject]@{
-            Status       = 'Success'
-            PipeName     = $PipeName
-            InputMessage = $line
-            Response     = $response
-            EvidenceType = 'WinCareIpcServerStatus'
+            $response = if ($Handler -and -not [string]::IsNullOrWhiteSpace($line)) {
+                & $Handler $line
+            } elseif (-not [string]::IsNullOrWhiteSpace($line)) {
+                $msg = $line | ConvertFrom-Json -AsHashtable -Depth 24
+                [ordered]@{
+                    Status    = 'Received'
+                    Command   = $msg.Command
+                    Payload   = $msg.Payload
+                    Timestamp = [datetime]::UtcNow.ToString('o')
+                } | ConvertTo-Json -Compress -Depth 24
+            } else {
+                '{"Status":"EmptyInput"}'
+            }
+
+            $writer.WriteLine($response)
+            $server.WaitForPipeDrain()
+            
+            return [pscustomobject]@{
+                Status       = 'Success'
+                PipeName     = $PipeName
+                InputMessage = $line
+                Response     = $response
+                EvidenceType = 'WinCareIpcServerStatus'
+            }
+        } finally {
+            $writer.Dispose()
+            $reader.Dispose()
         }
     } finally {
         $server.Dispose()
@@ -230,19 +239,29 @@ function Send-WinCareIpcMessage {
     $client = [System.IO.Pipes.NamedPipeClientStream]::new('.', $PipeName, [System.IO.Pipes.PipeDirection]::InOut)
     try {
         $client.Connect($TimeoutMs)
-        $writer = [System.IO.StreamWriter]::new($client, [System.Text.Encoding]::UTF8)
-        $reader = [System.IO.StreamReader]::new($client, [System.Text.Encoding]::UTF8)
+        $writer = [System.IO.StreamWriter]::new($client, [System.Text.UTF8Encoding]::new($false, $true))
+        $reader = [System.IO.StreamReader]::new($client, [System.Text.UTF8Encoding]::new($false, $true))
         $writer.AutoFlush = $true
 
-        $message = [ordered]@{
-            Command   = $Command
-            Payload   = $Payload
-            Timestamp = [datetime]::UtcNow.ToString('o')
-        } | ConvertTo-Json -Compress
+        try {
+            $message = [ordered]@{
+                Command   = $Command
+                Payload   = $Payload
+                Timestamp = [datetime]::UtcNow.ToString('o')
+            } | ConvertTo-Json -Compress -Depth 24
 
-        $writer.WriteLine($message)
-        $reply = $reader.ReadLine()
-        return $reply
+            $writer.WriteLine($message)
+            $client.WaitForPipeDrain()
+
+            $reply = $reader.ReadLine()
+            if ($reply -and $reply.Length -gt 65536) {
+                throw "IPC reply length exceeds 64 KiB ceiling."
+            }
+            return $reply
+        } finally {
+            $writer.Dispose()
+            $reader.Dispose()
+        }
     } finally {
         $client.Dispose()
     }
@@ -256,33 +275,47 @@ function Write-WinCareSharedMemoryBuffer {
         [int]$SequenceId = 1
     )
 
-    $mmf = [System.IO.MemoryMappedFiles.MemoryMappedFile]::CreateOrOpen($BufferName, 4096)
+    $mutexName = "Local\${BufferName}Mutex"
+    $mutex = [System.Threading.Mutex]::new($false, $mutexName)
+    $acquired = $false
+
     try {
-        $accessor = $mmf.CreateViewAccessor(0, 4096)
+        $acquired = $mutex.WaitOne(3000)
+        if (-not $acquired) {
+            throw "Timed out acquiring shared memory buffer write lock."
+        }
+
+        $mmf = [System.IO.MemoryMappedFiles.MemoryMappedFile]::CreateOrOpen($BufferName, 4096)
         try {
-            $json = $State | ConvertTo-Json -Compress
-            $payloadBytes = [System.Text.Encoding]::UTF8.GetBytes($json)
-            if ($payloadBytes.Length -gt 4080) {
-                throw "Shared memory payload exceeds 4080 bytes bound."
-            }
+            $accessor = $mmf.CreateViewAccessor(0, 4096)
+            try {
+                $json = $State | ConvertTo-Json -Compress -Depth 24
+                $payloadBytes = [System.Text.Encoding]::UTF8.GetBytes($json)
+                if ($payloadBytes.Length -gt 4080) {
+                    throw "Shared memory payload exceeds 4080 bytes bound."
+                }
 
-            $accessor.Write(0, [uint32]0x57494E43)
-            $accessor.Write(4, [int32]$SequenceId)
-            $accessor.Write(8, [int32]$payloadBytes.Length)
-            $accessor.WriteArray(12, $payloadBytes, 0, $payloadBytes.Length)
+                $accessor.Write(0, [uint32]0x57494E43)
+                $accessor.Write(4, [int32]$SequenceId)
+                $accessor.Write(8, [int32]$payloadBytes.Length)
+                $accessor.WriteArray(12, $payloadBytes, 0, $payloadBytes.Length)
 
-            return [pscustomobject]@{
-                BufferName   = $BufferName
-                SequenceId   = $SequenceId
-                BytesWritten = $payloadBytes.Length
-                Status       = 'Updated'
-                EvidenceType = 'WinCareSharedMemoryBufferStatus'
+                return [pscustomobject]@{
+                    BufferName   = $BufferName
+                    SequenceId   = $SequenceId
+                    BytesWritten = $payloadBytes.Length
+                    Status       = 'Updated'
+                    EvidenceType = 'WinCareSharedMemoryBufferStatus'
+                }
+            } finally {
+                $accessor.Dispose()
             }
         } finally {
-            $accessor.Dispose()
+            $mmf.Dispose()
         }
     } finally {
-        $mmf.Dispose()
+        if ($acquired) { $mutex.ReleaseMutex() }
+        $mutex.Dispose()
     }
 }
 
@@ -292,46 +325,60 @@ function Read-WinCareSharedMemoryBuffer {
         [string]$BufferName = 'WinCareSharedStateBuffer'
     )
 
-    try {
-        $mmf = [System.IO.MemoryMappedFiles.MemoryMappedFile]::OpenExisting($BufferName)
-    } catch {
-        return $null
-    }
+    $mutexName = "Local\${BufferName}Mutex"
+    $mutex = [System.Threading.Mutex]::new($false, $mutexName)
+    $acquired = $false
 
     try {
-        $accessor = $mmf.CreateViewAccessor(0, 4096)
+        $acquired = $mutex.WaitOne(3000)
+        if (-not $acquired) {
+            throw "Timed out acquiring shared memory buffer read lock."
+        }
+
         try {
-            $magic = $accessor.ReadUInt32(0)
-            if ($magic -ne 0x57494E43) {
-                throw "Invalid shared memory magic header: 0x$($magic.ToString('X8'))"
-            }
+            $mmf = [System.IO.MemoryMappedFiles.MemoryMappedFile]::OpenExisting($BufferName)
+        } catch {
+            return $null
+        }
 
-            $sequenceId = $accessor.ReadInt32(4)
-            $payloadLength = $accessor.ReadInt32(8)
+        try {
+            $accessor = $mmf.CreateViewAccessor(0, 4096)
+            try {
+                $magic = $accessor.ReadUInt32(0)
+                if ($magic -ne 0x57494E43) {
+                    throw "Invalid shared memory magic header: 0x$($magic.ToString('X8'))"
+                }
 
-            if ($payloadLength -le 0 -or $payloadLength -gt 4080) {
-                throw "Invalid payload length in shared memory: $payloadLength"
-            }
+                $sequenceId = $accessor.ReadInt32(4)
+                $payloadLength = $accessor.ReadInt32(8)
 
-            $payloadBytes = [byte[]]::new($payloadLength)
-            $null = $accessor.ReadArray(12, $payloadBytes, 0, $payloadLength)
+                if ($payloadLength -le 0 -or $payloadLength -gt 4080) {
+                    throw "Invalid payload length in shared memory: $payloadLength"
+                }
 
-            $json = [System.Text.Encoding]::UTF8.GetString($payloadBytes)
-            $state = $json | ConvertFrom-Json -AsHashtable
+                $payloadBytes = [byte[]]::new($payloadLength)
+                $null = $accessor.ReadArray(12, $payloadBytes, 0, $payloadLength)
 
-            return [pscustomobject]@{
-                BufferName    = $BufferName
-                Magic         = 'WINC'
-                SequenceId    = $sequenceId
-                PayloadLength = $payloadLength
-                State         = $state
-                EvidenceType  = 'WinCareSharedMemoryBufferRead'
+                $json = [System.Text.Encoding]::UTF8.GetString($payloadBytes)
+                $state = $json | ConvertFrom-Json -AsHashtable -Depth 24
+
+                return [pscustomobject]@{
+                    BufferName    = $BufferName
+                    Magic         = 'WINC'
+                    SequenceId    = $sequenceId
+                    PayloadLength = $payloadLength
+                    State         = $state
+                    EvidenceType  = 'WinCareSharedMemoryBufferRead'
+                }
+            } finally {
+                $accessor.Dispose()
             }
         } finally {
-            $accessor.Dispose()
+            $mmf.Dispose()
         }
     } finally {
-        $mmf.Dispose()
+        if ($acquired) { $mutex.ReleaseMutex() }
+        $mutex.Dispose()
     }
 }
 

@@ -6,7 +6,7 @@ function New-WinCareVssRestorePointAction {
         -Risk Moderate `
         -Parameters @{Description=$Description;RestorePointType='MODIFY_SETTINGS'} `
         -RequiresAdmin $true `
-        -Reversible $true `
+        -Reversible $false `
         -TimeoutSeconds 300
 }
 
@@ -18,15 +18,24 @@ function Invoke-WinCareVssRestorePointAction {
     if([string]::IsNullOrWhiteSpace($desc)){$desc='WinCare Pre-Mutation Restore Point'}
     if([string]::IsNullOrWhiteSpace($rtype)){$rtype='MODIFY_SETTINGS'}
     try {
-        $svc = Get-WmiObject -Namespace 'root\default' -Class 'SystemRestore' -ErrorAction Stop
-        $result = $svc.CreateRestorePoint($desc, 12, 100)  # 12=MODIFY_SETTINGS, 100=BEGIN_SYSTEM_CHANGE
-        if($result.ReturnValue -ne 0) {
-            return New-WinCareResult -Success $false -Status Failed `
-                -Code 'VssRestorePointFailed' `
-                -Message "WMI SystemRestore.CreateRestorePoint returned $($result.ReturnValue)" `
+        if (-not $IsWindows) {
+            return New-WinCareResult -Success $false -Status Blocked `
+                -Code 'VssNotSupportedOnPlatform' `
+                -Message 'VSS SystemRestore is only available on Windows.' `
                 -ExitCode 1
         }
-        New-WinCareResult -Success $true -Status Done `
+        $result = Invoke-CimMethod -Namespace 'root\default' -ClassName 'SystemRestore' -MethodName 'CreateRestorePoint' -Arguments @{
+            Description = $desc
+            RestorePointType = 12 # MODIFY_SETTINGS
+            EventType = 100 # BEGIN_SYSTEM_CHANGE
+        } -ErrorAction Stop
+        if([int]$result.ReturnValue -ne 0) {
+            return New-WinCareResult -Success $false -Status Failed `
+                -Code 'VssRestorePointFailed' `
+                -Message "SystemRestore.CreateRestorePoint returned $($result.ReturnValue)" `
+                -ExitCode 1
+        }
+        New-WinCareResult -Success $true -Status Succeeded `
             -Code 'VssRestorePointCreated' `
             -Message "VSS restore point created: $desc" `
             -Data @{Description=$desc;RestorePointType=$rtype;EvidenceType='VssSystemRestorePointCreated'}
@@ -42,7 +51,7 @@ function Invoke-WinCareDisasterRecoverySnapshot {
     param([string]$Volume='C:\')
     $point = if (Get-Command Checkpoint-Computer -ErrorAction SilentlyContinue) {
         try { Checkpoint-Computer -Description 'WinCare One-Click Recovery Snapshot' -RestorePointType 'MODIFY_SETTINGS' -ErrorAction Stop; $true } catch { $false }
-    } else { $true }
+    } else { $false }
     [pscustomobject]@{
         Volume=$Volume
         SnapshotCreated=$point

@@ -90,7 +90,7 @@ function Unprotect-WinCareJsonRecord {
     $null=Test-WinCareStrictObjectKeys -InputObject $Envelope -AllowedKeys @('SchemaVersion','Purpose','PayloadBase64','Signature') -Context 'protected record'
     if([int]$Envelope.SchemaVersion -ne 1 -or [string]$Envelope.Purpose -ne $Purpose){throw 'Protected record schema or purpose is invalid.'}
     if([string]$Envelope.Signature -notmatch '^[a-fA-F0-9]{64}$'){throw 'Protected record signature is invalid.'}
-    if([string]$Envelope.PayloadBase64 -notmatch '^[A-Za-z0-9+/]*={0,2}$' -or [string]$Envelope.PayloadBase64.Length -gt 16777216){throw 'Protected record payload is invalid or oversized.'}
+    if([string]$Envelope.PayloadBase64 -notmatch '^[A-Za-z0-9+/]*={0,2}$' -or ([string]$Envelope.PayloadBase64).Length -gt 16777216){throw 'Protected record payload is invalid or oversized.'}
     $key=Get-WinCareLocalIntegrityKey
     try{
         $hmac=[Security.Cryptography.HMACSHA256]::new($key)
