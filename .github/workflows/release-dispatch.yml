@@ -28,9 +28,13 @@ concurrency:
 jobs:
   dispatch:
     name: Dispatch production release
+    # Merged pull requests have passed the protected validation path. Direct
+    # pushes remain explicitly opt-in through [release], and manual dispatches
+    # remain available for controlled bump selection.
     if: >-
       github.event_name == 'workflow_dispatch' ||
-      contains(github.event.head_commit.message, '[release]')
+      contains(github.event.head_commit.message, '[release]') ||
+      startsWith(github.event.head_commit.message, 'Merge pull request')
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
