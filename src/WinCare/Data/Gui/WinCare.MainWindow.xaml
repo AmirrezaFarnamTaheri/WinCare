@@ -14,19 +14,22 @@
         <SolidColorBrush x:Key="SurfaceRaisedBrush" Color="#1B2740"/>
         <SolidColorBrush x:Key="SurfaceHoverBrush" Color="#22314F"/>
         <SolidColorBrush x:Key="BorderBrush" Color="#2B3A58"/>
-        <SolidColorBrush x:Key="AccentBrush" Color="#7C5CFC"/>
-        <SolidColorBrush x:Key="AccentSoftBrush" Color="#2B225A"/>
-        <SolidColorBrush x:Key="CyanBrush" Color="#36C5F0"/>
-        <SolidColorBrush x:Key="SuccessBrush" Color="#2DD4A8"/>
-        <SolidColorBrush x:Key="WarningBrush" Color="#F6C85F"/>
-        <SolidColorBrush x:Key="CriticalBrush" Color="#F97066"/>
-        <SolidColorBrush x:Key="TextBrush" Color="#F4F7FB"/>
-        <SolidColorBrush x:Key="TextMutedBrush" Color="#9AA9C3"/>
-        <SolidColorBrush x:Key="TextDimBrush" Color="#71809C"/>
+        <!-- Accent: brand blue #2F80ED — NOT AI purple. See DESIGN.md §Token Table -->
+        <SolidColorBrush x:Key="AccentBrush" Color="#2F80ED"/>
+        <SolidColorBrush x:Key="AccentSoftBrush" Color="#1A2E50"/>
+        <SolidColorBrush x:Key="SelectionBrush" Color="#1E2D4A"/>
+        <SolidColorBrush x:Key="CyanBrush" Color="#34D6E9"/>
+        <SolidColorBrush x:Key="SuccessBrush" Color="#3FB950"/>
+        <SolidColorBrush x:Key="WarningBrush" Color="#D29922"/>
+        <SolidColorBrush x:Key="CriticalBrush" Color="#F85149"/>
+        <SolidColorBrush x:Key="TextBrush" Color="#E6EDF3"/>
+        <SolidColorBrush x:Key="TextMutedBrush" Color="#8B949E"/>
+        <SolidColorBrush x:Key="TextDimBrush" Color="#5A6478"/>
+        <!-- HeroBrush: brand palette only — Ink→DeepBlue→dark. No purple. See DESIGN.md §Token Table -->
         <LinearGradientBrush x:Key="HeroBrush" StartPoint="0,0" EndPoint="1,1">
-            <GradientStop Color="#231C52" Offset="0"/>
-            <GradientStop Color="#132B46" Offset="0.58"/>
-            <GradientStop Color="#10283A" Offset="1"/>
+            <GradientStop Color="#0B1F3A" Offset="0"/>
+            <GradientStop Color="#123A72" Offset="0.55"/>
+            <GradientStop Color="#0D1117" Offset="1"/>
         </LinearGradientBrush>
         <DropShadowEffect x:Key="CardShadow" BlurRadius="22" ShadowDepth="4" Opacity="0.22" Color="#000000"/>
 
@@ -78,7 +81,7 @@
             <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
         </Style>
         <Style x:Key="DangerButton" TargetType="Button" BasedOn="{StaticResource BaseButton}">
-            <Setter Property="Background" Value="#512128"/>
+            <Setter Property="Background" Value="#3D141B"/>
             <Setter Property="BorderBrush" Value="{DynamicResource CriticalBrush}"/>
         </Style>
         <Style TargetType="TextBox">
@@ -90,9 +93,12 @@
             <Setter Property="CaretBrush" Value="{DynamicResource AccentBrush}"/>
             <Setter Property="SelectionBrush" Value="{DynamicResource AccentBrush}"/>
         </Style>
+        <!-- ComboBox: dark-native theme. Previous #F4F7FB bg was a light-mode inversion bug. -->
         <Style TargetType="ComboBox">
-            <Setter Property="Foreground" Value="#111827"/>
-            <Setter Property="Background" Value="#F4F7FB"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource SurfaceRaisedBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Padding" Value="10,6"/>
         </Style>
         <Style TargetType="ListBox">
@@ -100,37 +106,68 @@
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled"/>
         </Style>
+        <!-- WCAG AA focus ring: 2px AccentBrush outline, 3px offset, 6px radius. -->
+        <Style x:Key="FocusRingStyle" TargetType="{x:Type Control}">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type Control}">
+                        <Rectangle StrokeThickness="2" Stroke="{DynamicResource AccentBrush}"
+                                   Margin="-3" RadiusX="6" RadiusY="6"/>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <!-- NavItemStyle: signature move — 2px left-border AccentBrush on selected state. See DESIGN.md §Signature Move -->
         <Style x:Key="NavItemStyle" TargetType="ListBoxItem">
             <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
             <Setter Property="Margin" Value="0,2"/>
             <Setter Property="Padding" Value="0"/>
+            <Setter Property="FocusVisualStyle" Value="{StaticResource FocusRingStyle}"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="ListBoxItem">
-                        <Border x:Name="NavBorder" Background="Transparent" CornerRadius="9" Padding="12,10">
+                        <Border x:Name="NavBorder" Background="Transparent" CornerRadius="9" Padding="12,10"
+                                BorderThickness="0" BorderBrush="Transparent">
                             <ContentPresenter/>
                         </Border>
                         <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="NavBorder" Property="Background" Value="{DynamicResource SurfaceHoverBrush}"/></Trigger>
-                            <Trigger Property="IsSelected" Value="True"><Setter TargetName="NavBorder" Property="Background" Value="{DynamicResource AccentSoftBrush}"/><Setter Property="Foreground" Value="White"/></Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="NavBorder" Property="Background" Value="{DynamicResource SurfaceHoverBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="NavBorder" Property="Background" Value="{DynamicResource AccentSoftBrush}"/>
+                                <Setter TargetName="NavBorder" Property="BorderThickness" Value="2,0,0,0"/>
+                                <Setter TargetName="NavBorder" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+                            </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
         </Style>
+        <!-- ActionItemStyle: signature move — AccentBrush left border on selected, SelectionBrush bg. -->
         <Style x:Key="ActionItemStyle" TargetType="ListBoxItem">
             <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
             <Setter Property="Margin" Value="0,0,0,8"/>
             <Setter Property="Padding" Value="0"/>
+            <Setter Property="FocusVisualStyle" Value="{StaticResource FocusRingStyle}"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="ListBoxItem">
-                        <Border x:Name="ActionBorder" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="11" Padding="14">
+                        <Border x:Name="ActionBorder" Background="{DynamicResource SurfaceBrush}"
+                                BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                                CornerRadius="11" Padding="14">
                             <ContentPresenter/>
                         </Border>
                         <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="ActionBorder" Property="Background" Value="{DynamicResource SurfaceHoverBrush}"/></Trigger>
-                            <Trigger Property="IsSelected" Value="True"><Setter TargetName="ActionBorder" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/><Setter TargetName="ActionBorder" Property="Background" Value="#1E2850"/></Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="ActionBorder" Property="Background" Value="{DynamicResource SurfaceHoverBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="ActionBorder" Property="Background" Value="{DynamicResource SelectionBrush}"/>
+                                <Setter TargetName="ActionBorder" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                <Setter TargetName="ActionBorder" Property="BorderThickness" Value="2,1,1,1"/>
+                            </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
                 </Setter.Value>
@@ -235,7 +272,8 @@
                                         <Button x:Name="OpenAssuranceButton" AutomationProperties.Name="Review build and validation assurance" Style="{StaticResource BaseButton}" Content="Review assurance"/>
                                     </StackPanel>
                                 </StackPanel>
-                                <Border Grid.Column="1" Background="#44121A2B" BorderBrush="#667C5CFC" BorderThickness="1" CornerRadius="14" Padding="18">
+                                <!-- Hero machine card: AccentSoftBrush bg, AccentBrush border — brand blue, no purple -->
+                                <Border Grid.Column="1" Background="{DynamicResource AccentSoftBrush}" BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1" Opacity="0.88" CornerRadius="14" Padding="18">
                                     <StackPanel>
                                         <TextBlock Text="Current machine" Foreground="#B9C7DE" FontSize="12" FontWeight="SemiBold"/>
                                         <TextBlock x:Name="HeroMachineText" Text="Scanning…" FontSize="20" FontWeight="SemiBold" Margin="0,8,0,0"/>
@@ -247,20 +285,46 @@
                             </Grid>
                         </Border>
 
-                        <UniformGrid Columns="4" Margin="0,0,0,18">
-                            <Border Style="{StaticResource Card}" Margin="0,0,10,0">
-                                <StackPanel><TextBlock Text="SECURITY" Style="{StaticResource CaptionText}"/><TextBlock x:Name="SecurityValueText" Text="Scanning…" FontSize="22" FontWeight="SemiBold" Margin="0,8,0,0"/><TextBlock x:Name="SecurityDetailText" Text="Defender posture" Style="{StaticResource CaptionText}" Margin="0,5,0,0"/></StackPanel>
+                        <!-- Dashboard stats: weighted Grid — Security wider (shows posture detail), Restart compact (binary). -->
+                        <!-- Replaces UniformGrid Columns='4'. See DESIGN.md §Layout -->
+                        <Grid Margin="0,0,0,18">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="1.4*"/>
+                                <ColumnDefinition Width="1.1*"/>
+                                <ColumnDefinition Width="1.1*"/>
+                                <ColumnDefinition Width="0.9*"/>
+                            </Grid.ColumnDefinitions>
+                            <Border Grid.Column="0" Style="{StaticResource Card}" Margin="0,0,9,0">
+                                <StackPanel>
+                                    <TextBlock Text="SECURITY" Style="{StaticResource CaptionText}"/>
+                                    <TextBlock x:Name="SecurityValueText" Text="Scanning…" FontSize="22" FontWeight="SemiBold" Margin="0,8,0,0"/>
+                                    <TextBlock x:Name="SecurityDetailText" Text="Defender posture" Style="{StaticResource CaptionText}" Margin="0,5,0,0"/>
+                                </StackPanel>
                             </Border>
-                            <Border Style="{StaticResource Card}" Margin="4,0,6,0">
-                                <StackPanel><TextBlock Text="STORAGE" Style="{StaticResource CaptionText}"/><TextBlock x:Name="StorageValueText" Text="Scanning…" FontSize="22" FontWeight="SemiBold" Margin="0,8,0,0"/><ProgressBar x:Name="StorageProgress" Minimum="0" Maximum="100" Height="6" Margin="0,10,0,3" Foreground="{DynamicResource CyanBrush}" Background="#263550"/><TextBlock x:Name="StorageDetailText" Text="System volume" Style="{StaticResource CaptionText}"/></StackPanel>
+                            <Border Grid.Column="1" Style="{StaticResource Card}" Margin="4,0,5,0">
+                                <StackPanel>
+                                    <TextBlock Text="STORAGE" Style="{StaticResource CaptionText}"/>
+                                    <TextBlock x:Name="StorageValueText" Text="Scanning…" FontSize="22" FontWeight="SemiBold" Margin="0,8,0,0"/>
+                                    <ProgressBar x:Name="StorageProgress" Minimum="0" Maximum="100" Height="5" Margin="0,10,0,3" Foreground="{DynamicResource CyanBrush}" Background="{DynamicResource SurfaceRaisedBrush}"/>
+                                    <TextBlock x:Name="StorageDetailText" Text="System volume" Style="{StaticResource CaptionText}"/>
+                                </StackPanel>
                             </Border>
-                            <Border Style="{StaticResource Card}" Margin="6,0,4,0">
-                                <StackPanel><TextBlock Text="MEMORY" Style="{StaticResource CaptionText}"/><TextBlock x:Name="MemoryValueText" Text="Scanning…" FontSize="22" FontWeight="SemiBold" Margin="0,8,0,0"/><ProgressBar x:Name="MemoryProgress" Minimum="0" Maximum="100" Height="6" Margin="0,10,0,3" Foreground="{DynamicResource AccentBrush}" Background="#263550"/><TextBlock x:Name="MemoryDetailText" Text="Physical memory" Style="{StaticResource CaptionText}"/></StackPanel>
+                            <Border Grid.Column="2" Style="{StaticResource Card}" Margin="5,0,4,0">
+                                <StackPanel>
+                                    <TextBlock Text="MEMORY" Style="{StaticResource CaptionText}"/>
+                                    <TextBlock x:Name="MemoryValueText" Text="Scanning…" FontSize="22" FontWeight="SemiBold" Margin="0,8,0,0"/>
+                                    <ProgressBar x:Name="MemoryProgress" Minimum="0" Maximum="100" Height="5" Margin="0,10,0,3" Foreground="{DynamicResource AccentBrush}" Background="{DynamicResource SurfaceRaisedBrush}"/>
+                                    <TextBlock x:Name="MemoryDetailText" Text="Physical memory" Style="{StaticResource CaptionText}"/>
+                                </StackPanel>
                             </Border>
-                            <Border Style="{StaticResource Card}" Margin="10,0,0,0">
-                                <StackPanel><TextBlock Text="RESTART" Style="{StaticResource CaptionText}"/><TextBlock x:Name="RestartValueText" Text="Scanning…" FontSize="22" FontWeight="SemiBold" Margin="0,8,0,0"/><TextBlock x:Name="RestartDetailText" Text="Pending restart state" Style="{StaticResource CaptionText}" Margin="0,5,0,0"/></StackPanel>
+                            <Border Grid.Column="3" Style="{StaticResource Card}" Margin="9,0,0,0">
+                                <StackPanel>
+                                    <TextBlock Text="RESTART" Style="{StaticResource CaptionText}"/>
+                                    <TextBlock x:Name="RestartValueText" Text="Scanning…" FontSize="22" FontWeight="SemiBold" Margin="0,8,0,0"/>
+                                    <TextBlock x:Name="RestartDetailText" Text="Pending restart" Style="{StaticResource CaptionText}" Margin="0,5,0,0"/>
+                                </StackPanel>
                             </Border>
-                        </UniformGrid>
+                        </Grid>
 
                         <Grid>
                             <Grid.ColumnDefinitions><ColumnDefinition Width="1.25*"/><ColumnDefinition Width="0.75*"/></Grid.ColumnDefinitions>
@@ -338,12 +402,43 @@
 
             <Grid x:Name="AssurancePanel" Visibility="Collapsed">
                 <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
-                <UniformGrid Columns="4" Margin="0,0,0,16">
-                    <Border Style="{StaticResource Card}" Margin="0,0,8,0"><StackPanel><TextBlock Text="MODULE FILES" Style="{StaticResource CaptionText}"/><TextBlock x:Name="AssuranceSourceText" Text="—" FontSize="28" FontWeight="SemiBold" Margin="0,8,0,0"/><TextBlock Text="Closed source manifests" Style="{StaticResource CaptionText}"/></StackPanel></Border>
-                    <Border Style="{StaticResource Card}" Margin="4,0"><StackPanel><TextBlock Text="EXPORTED COMMANDS" Style="{StaticResource CaptionText}"/><TextBlock x:Name="AssuranceExportText" Text="—" FontSize="28" FontWeight="SemiBold" Margin="0,8,0,0"/><TextBlock Text="Public module contract" Style="{StaticResource CaptionText}"/></StackPanel></Border>
-                    <Border Style="{StaticResource Card}" Margin="4,0"><StackPanel><TextBlock Text="TEST INVENTORY" Style="{StaticResource CaptionText}"/><TextBlock x:Name="AssuranceTestText" Text="—" FontSize="28" FontWeight="SemiBold" Margin="0,8,0,0"/><TextBlock Text="Cases / suites" Style="{StaticResource CaptionText}"/></StackPanel></Border>
-                    <Border Style="{StaticResource Card}" Margin="8,0,0,0"><StackPanel><TextBlock Text="NATIVE RUNTIME" Style="{StaticResource CaptionText}"/><TextBlock x:Name="AssuranceNativeText" Text="Pending" FontSize="28" FontWeight="SemiBold" Margin="0,8,0,0"/><TextBlock Text="Source-built .NET boundary" Style="{StaticResource CaptionText}"/></StackPanel></Border>
-                </UniformGrid>
+                <!-- Assurance stats: equal 4-column explicit Grid with margin-controlled gutters. Replaces UniformGrid. -->
+                <Grid Margin="0,0,0,16">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <Border Grid.Column="0" Style="{StaticResource Card}" Margin="0,0,8,0">
+                        <StackPanel>
+                            <TextBlock Text="MODULE FILES" Style="{StaticResource CaptionText}"/>
+                            <TextBlock x:Name="AssuranceSourceText" Text="—" FontSize="28" FontWeight="SemiBold" Margin="0,8,0,0"/>
+                            <TextBlock Text="Closed source manifests" Style="{StaticResource CaptionText}"/>
+                        </StackPanel>
+                    </Border>
+                    <Border Grid.Column="1" Style="{StaticResource Card}" Margin="4,0">
+                        <StackPanel>
+                            <TextBlock Text="EXPORTED COMMANDS" Style="{StaticResource CaptionText}"/>
+                            <TextBlock x:Name="AssuranceExportText" Text="—" FontSize="28" FontWeight="SemiBold" Margin="0,8,0,0"/>
+                            <TextBlock Text="Public module contract" Style="{StaticResource CaptionText}"/>
+                        </StackPanel>
+                    </Border>
+                    <Border Grid.Column="2" Style="{StaticResource Card}" Margin="4,0">
+                        <StackPanel>
+                            <TextBlock Text="TEST INVENTORY" Style="{StaticResource CaptionText}"/>
+                            <TextBlock x:Name="AssuranceTestText" Text="—" FontSize="28" FontWeight="SemiBold" Margin="0,8,0,0"/>
+                            <TextBlock Text="Cases / suites" Style="{StaticResource CaptionText}"/>
+                        </StackPanel>
+                    </Border>
+                    <Border Grid.Column="3" Style="{StaticResource Card}" Margin="8,0,0,0">
+                        <StackPanel>
+                            <TextBlock Text="NATIVE RUNTIME" Style="{StaticResource CaptionText}"/>
+                            <TextBlock x:Name="AssuranceNativeText" Text="Pending" FontSize="28" FontWeight="SemiBold" Margin="0,8,0,0"/>
+                            <TextBlock Text="Source-built .NET boundary" Style="{StaticResource CaptionText}"/>
+                        </StackPanel>
+                    </Border>
+                </Grid>
                 <Border Grid.Row="1" Style="{StaticResource Card}">
                     <Grid><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><StackPanel><TextBlock Text="Current assurance" Style="{StaticResource SectionTitle}"/><TextBlock Text="Current source closure, public API, validation inventory, native runtime, and package provenance. Historical research records are intentionally excluded from the product runtime." Style="{StaticResource CaptionText}" TextWrapping="Wrap"/></StackPanel><Button x:Name="OpenAssuranceFolderButton" AutomationProperties.Name="Open WinCare assurance location" Grid.Column="1" Style="{StaticResource BaseButton}" Content="Open assurance location"/></Grid><DataGrid x:Name="AssuranceGrid" AutomationProperties.Name="Current build and validation assurance" Grid.Row="1" Margin="0,16,0,0" AutoGenerateColumns="False"><DataGrid.Columns><DataGridTextColumn Header="Check" Binding="{Binding Check}" Width="220"/><DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="120"/><DataGridTextColumn Header="Scope" Binding="{Binding Scope}" Width="220"/><DataGridTextColumn Header="Detail" Binding="{Binding Detail}" Width="*"/></DataGrid.Columns></DataGrid></Grid>
                 </Border>
@@ -374,7 +469,7 @@
 
         <Grid x:Name="ConfirmOverlay" Grid.RowSpan="3" Grid.ColumnSpan="2" Background="#C4070B14" Visibility="Collapsed" Panel.ZIndex="110">
             <Border Width="590" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource CriticalBrush}" BorderThickness="1" CornerRadius="18" Padding="26" HorizontalAlignment="Center" VerticalAlignment="Center" Effect="{StaticResource CardShadow}">
-                <StackPanel><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><TextBlock x:Name="ConfirmTitleText" Text="Confirm operation" FontSize="23" FontWeight="SemiBold"/><Border Grid.Column="1" Background="#512128" CornerRadius="10" Padding="9,4"><TextBlock x:Name="ConfirmRiskText" Text="Critical" Foreground="{DynamicResource CriticalBrush}" FontWeight="SemiBold"/></Border></Grid><TextBlock x:Name="ConfirmDescriptionText" Text="Review the blast radius before continuing." Foreground="{DynamicResource TextMutedBrush}" TextWrapping="Wrap" Margin="0,14,0,0"/><Border Background="#1A1218" BorderBrush="#6A3035" BorderThickness="1" CornerRadius="10" Padding="14" Margin="0,18,0,0"><StackPanel><TextBlock Text="Execution guarantees" FontWeight="SemiBold"/><TextBlock Text="The apply process regenerates and previews the exact plan, rechecks policy, writes a transaction journal, and runs compensators where supported." Style="{StaticResource CaptionText}" TextWrapping="Wrap" Margin="0,6,0,0"/></StackPanel></Border><StackPanel x:Name="ConfirmPhrasePanel" Margin="0,18,0,0"><TextBlock Text="Type the exact acknowledgement" FontWeight="SemiBold"/><TextBlock Text="I ACCEPT LEGACY UNSAFE MUTATIONS" Foreground="{DynamicResource CriticalBrush}" FontFamily="Cascadia Mono, Consolas" Margin="0,6,0,7"/><TextBox x:Name="ConfirmPhraseTextBox" AutomationProperties.Name="Critical action acknowledgement"/></StackPanel><Grid Margin="0,22,0,0"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><TextBlock Text="Escape cancels" Style="{StaticResource CaptionText}" VerticalAlignment="Center"/><Button x:Name="ConfirmCancelButton" AutomationProperties.Name="Cancel operation" Grid.Column="1" Style="{StaticResource BaseButton}" Content="Cancel" Margin="0,0,9,0"/><Button x:Name="ConfirmExecuteButton" AutomationProperties.Name="Execute exact operation plan" Grid.Column="2" Style="{StaticResource DangerButton}" Content="Execute exact plan" IsEnabled="False"/></Grid></StackPanel>
+                <StackPanel><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><TextBlock x:Name="ConfirmTitleText" Text="Confirm operation" FontSize="23" FontWeight="SemiBold"/><Border Grid.Column="1" Background="#3D141B" CornerRadius="10" Padding="9,4"><TextBlock x:Name="ConfirmRiskText" Text="Critical" Foreground="{DynamicResource CriticalBrush}" FontWeight="SemiBold"/></Border></Grid><TextBlock x:Name="ConfirmDescriptionText" Text="Review the blast radius before continuing." Foreground="{DynamicResource TextMutedBrush}" TextWrapping="Wrap" Margin="0,14,0,0"/><Border Background="#1A1218" BorderBrush="#6A3035" BorderThickness="1" CornerRadius="10" Padding="14" Margin="0,18,0,0"><StackPanel><TextBlock Text="Execution guarantees" FontWeight="SemiBold"/><TextBlock Text="The apply process regenerates and previews the exact plan, rechecks policy, writes a transaction journal, and runs compensators where supported." Style="{StaticResource CaptionText}" TextWrapping="Wrap" Margin="0,6,0,0"/></StackPanel></Border><StackPanel x:Name="ConfirmPhrasePanel" Margin="0,18,0,0"><TextBlock Text="Type the exact acknowledgement" FontWeight="SemiBold"/><TextBlock Text="I ACCEPT LEGACY UNSAFE MUTATIONS" Foreground="{DynamicResource CriticalBrush}" FontFamily="Cascadia Mono, Consolas" Margin="0,6,0,7"/><TextBox x:Name="ConfirmPhraseTextBox" AutomationProperties.Name="Critical action acknowledgement"/></StackPanel><Grid Margin="0,22,0,0"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><TextBlock Text="Escape cancels" Style="{StaticResource CaptionText}" VerticalAlignment="Center"/><Button x:Name="ConfirmCancelButton" AutomationProperties.Name="Cancel operation" Grid.Column="1" Style="{StaticResource BaseButton}" Content="Cancel" Margin="0,0,9,0"/><Button x:Name="ConfirmExecuteButton" AutomationProperties.Name="Execute exact operation plan" Grid.Column="2" Style="{StaticResource DangerButton}" Content="Execute exact plan" IsEnabled="False"/></Grid></StackPanel>
             </Border>
         </Grid>
 

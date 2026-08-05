@@ -18,384 +18,136 @@ $script:WinCareSourceManifestFiles = @(
     'SourceManifests/UI.psd1'
 )
 $script:WinCareSourceGroups = @(
-    [pscustomobject]@{ Name='Core'; Manifest='SourceManifests/Core.psd1'; Folders=@('Core') }
+    [pscustomobject]@{ Name='Core';      Manifest='SourceManifests/Core.psd1';      Folders=@('Core') }
     [pscustomobject]@{ Name='Providers'; Manifest='SourceManifests/Providers.psd1'; Folders=@('Providers') }
-    [pscustomobject]@{ Name='UI'; Manifest='SourceManifests/UI.psd1'; Folders=@('UI','UI/Gui','UI/Screens') }
+    [pscustomobject]@{ Name='UI';        Manifest='SourceManifests/UI.psd1';         Folders=@('UI','UI/Gui','UI/Screens') }
 )
-$expectedModuleFiles = [Collections.Generic.List[string]]::new()
-foreach ($group in $script:WinCareSourceGroups) {
-    if ([string]$group.Manifest -notin $script:WinCareSourceManifestFiles) {
-        throw "Source group $($group.Name) is not declared in WinCareSourceManifestFiles."
+
+function Get-WinCarePreloadFileFingerprint {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)][string]$LiteralPath,
+        [ValidateRange(1,67108864)][long]$MaximumBytes=16777216
+    )
+    $root=[IO.Path]::GetFullPath($PSScriptRoot).TrimEnd([IO.Path]::DirectorySeparatorChar,[IO.Path]::AltDirectorySeparatorChar)+[IO.Path]::DirectorySeparatorChar
+    $full=[IO.Path]::GetFullPath($LiteralPath)
+    if(-not $full.StartsWith($root,[StringComparison]::OrdinalIgnoreCase)){throw "Preload path escapes the module root: $LiteralPath"}
+    $item=Get-Item -LiteralPath $full -Force -ErrorAction Stop
+    if($item.PSIsContainer -or ($item.Attributes -band [IO.FileAttributes]::ReparsePoint) -or [long]$item.Length -gt $MaximumBytes){throw "Unsafe or oversized preload file: $LiteralPath"}
+    $stream=[IO.FileStream]::new($full,[IO.FileMode]::Open,[IO.FileAccess]::Read,[IO.FileShare]::Read,65536,[IO.FileOptions]::SequentialScan)
+    $sha=[Security.Cryptography.SHA256]::Create()
+    try{$hash=$sha.ComputeHash($stream)}finally{$sha.Dispose();$stream.Dispose()}
+    $after=Get-Item -LiteralPath $full -Force -ErrorAction Stop
+    if([long]$after.Length -ne [long]$item.Length -or $after.LastWriteTimeUtc.Ticks -ne $item.LastWriteTimeUtc.Ticks){throw "Preload file changed while hashing: $LiteralPath"}
+    [pscustomobject]@{Path=$full;Length=[long]$item.Length;Ticks=[long]$item.LastWriteTimeUtc.Ticks;Sha256=[Convert]::ToHexString($hash).ToLowerInvariant()}
+}
+
+function Get-WinCarePreloadGroupSourceHash {
+    [CmdletBinding()]
+    param([Parameter(Mandatory)][string[]]$Declared)
+    $builder=[Text.StringBuilder]::new()
+    foreach($relative in $Declared){
+        $info=Get-WinCarePreloadFileFingerprint -LiteralPath (Join-Path $PSScriptRoot $relative)
+        $null=$builder.Append($relative.Replace('\\','/')).Append("`n").Append($info.Length).Append("`n").Append($info.Sha256).Append("`n")
     }
-    $manifestPath = Join-Path $PSScriptRoot ([string]$group.Manifest)
-    if (-not (Test-Path -LiteralPath $manifestPath -PathType Leaf)) {
-        throw "Required source manifest is missing: $($group.Manifest)"
-    }
-    $sourceManifest = Import-PowerShellDataFile -LiteralPath $manifestPath
-    if ([int]($sourceManifest.SchemaVersion) -ne 1 -or [string]($sourceManifest.Group) -ne [string]($group.Name)) {
-        throw "Source manifest identity is invalid: $($group.Manifest)"
-    }
-    $declared = @($sourceManifest.Files | ForEach-Object { ([string]$_).Replace('\','/') })
-    $duplicates = @($declared | Group-Object | Where-Object Count -gt 1 | ForEach-Object Name)
-    if ($duplicates.Count) { throw "Duplicate source entries in $($group.Manifest): $($duplicates -join ', ')" }
-    $actual = [Collections.Generic.List[string]]::new()
-    foreach ($folder in @($group.Folders)) {
-        $folderPath = Join-Path $PSScriptRoot ([string]$folder)
-        if (-not (Test-Path -LiteralPath $folderPath -PathType Container)) { throw "Required module source directory is missing: $folder" }
-        foreach ($file in Get-ChildItem -LiteralPath $folderPath -Filter '*.ps1' -File | Sort-Object Name) {
-            $actual.Add([IO.Path]::GetRelativePath($PSScriptRoot, $file.FullName).Replace('\','/'))
+    $bytes=[Text.UTF8Encoding]::new($false,$true).GetBytes($builder.ToString())
+    try{[Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($bytes)).ToLowerInvariant()}finally{[Array]::Clear($bytes,0,$bytes.Length)}
+}
+
+# Receipt cache v4. Warm loads still validate source and merged-cache content hashes,
+# then dot-source three merged group files. Cold loads validate manifests, rebuild the
+# caches atomically, and write an authenticated-by-content receipt.
+$receiptPath=Join-Path $PSScriptRoot '.wincare-load-receipt.json'
+$receiptHit=$false
+$mergedPaths=[ordered]@{}
+
+try{
+    if(Test-Path -LiteralPath $receiptPath -PathType Leaf){
+        $receiptInfo=Get-WinCarePreloadFileFingerprint -LiteralPath $receiptPath -MaximumBytes 1048576
+        $stream=[IO.FileStream]::new($receiptInfo.Path,[IO.FileMode]::Open,[IO.FileAccess]::Read,[IO.FileShare]::Read)
+        $reader=[IO.StreamReader]::new($stream,[Text.UTF8Encoding]::new($false,$true),$false,4096,$false)
+        try{$receipt=$reader.ReadToEnd()|ConvertFrom-Json -Depth 12}finally{$reader.Dispose()}
+        if([int]$receipt.SchemaVersion -eq 4 -and [string]$receipt.ModuleVersion -eq $script:WinCareVersion){
+            $fingerprintsMatch=$true
+            foreach($group in $script:WinCareSourceGroups){
+                $manifestPath=Join-Path $PSScriptRoot ([string]$group.Manifest)
+                $manifestInfo=Get-WinCarePreloadFileFingerprint -LiteralPath $manifestPath -MaximumBytes 1048576
+                $sourceManifest=Import-PowerShellDataFile -LiteralPath $manifestInfo.Path
+                if([int]$sourceManifest.SchemaVersion -ne 1 -or [string]$sourceManifest.Group -ne [string]$group.Name){$fingerprintsMatch=$false;break}
+                $declared=@($sourceManifest.Files|ForEach-Object{([string]$_).Replace('\\','/')})
+                $stored=$receipt.Fingerprints.($group.Name)
+                $mergedFile=Join-Path $PSScriptRoot ".wincare-merged-$($group.Name).ps1"
+                $mergedInfo=Get-WinCarePreloadFileFingerprint -LiteralPath $mergedFile -MaximumBytes 33554432
+                if($null -eq $stored -or [long]$stored.ManifestTicks -ne $manifestInfo.Ticks -or [long]$stored.ManifestLength -ne $manifestInfo.Length -or [string]$stored.SourceHash -ne (Get-WinCarePreloadGroupSourceHash -Declared $declared) -or [string]$stored.MergedHash -ne $mergedInfo.Sha256){$fingerprintsMatch=$false;break}
+                $mergedPaths[$group.Name]=$mergedInfo.Path
+            }
+            $receiptHit=$fingerprintsMatch
         }
     }
-    $missing = @($declared | Where-Object { $_ -notin $actual })
-    $unexpected = @($actual | Where-Object { $_ -notin $declared })
-    if ($missing.Count -or $unexpected.Count) {
-        $parts = [Collections.Generic.List[string]]::new()
-        if ($missing.Count) { $parts.Add('missing=' + ($missing -join ',')) }
-        if ($unexpected.Count) { $parts.Add('unexpected=' + ($unexpected -join ',')) }
-        throw "WinCare $($group.Name) source manifest mismatch: $($parts -join '; ')"
-    }
-    if (($declared -join "`n") -ne (@($actual) -join "`n")) {
-        throw "WinCare $($group.Name) source manifest order is not canonical."
-    }
-    foreach ($relativePath in $declared) { $expectedModuleFiles.Add($relativePath) }
+}catch{
+    Write-Verbose "WinCare: load receipt validation failed ($($_.Exception.Message)); running full validation."
+    $receiptHit=$false
+    $mergedPaths=[ordered]@{}
 }
-$duplicateModuleFiles = @($expectedModuleFiles | Group-Object | Where-Object Count -gt 1 | ForEach-Object Name)
-if ($duplicateModuleFiles.Count) { throw ('Source files assigned to multiple groups: ' + ($duplicateModuleFiles -join ', ')) }
-foreach ($relativePath in $expectedModuleFiles) {
-    $sourcePath = Join-Path $PSScriptRoot $relativePath
-    . $sourcePath
+
+if(-not $receiptHit){
+    $newFingerprints=[ordered]@{}
+    $newMergedFiles=[ordered]@{}
+    $allSourcePaths=[Collections.Generic.List[string]]::new()
+    foreach($group in $script:WinCareSourceGroups){
+        if([string]$group.Manifest -notin $script:WinCareSourceManifestFiles){throw "Source group $($group.Name) is not declared in WinCareSourceManifestFiles."}
+        $manifestPath=Join-Path $PSScriptRoot ([string]$group.Manifest)
+        $manifestInfo=Get-WinCarePreloadFileFingerprint -LiteralPath $manifestPath -MaximumBytes 1048576
+        $sourceManifest=Import-PowerShellDataFile -LiteralPath $manifestInfo.Path
+        if([int]$sourceManifest.SchemaVersion -ne 1 -or [string]$sourceManifest.Group -ne [string]$group.Name){throw "Source manifest identity is invalid: $($group.Manifest)"}
+        $declared=@($sourceManifest.Files|ForEach-Object{([string]$_).Replace('\\','/')})
+        $duplicates=@($declared|Group-Object|Where-Object Count -gt 1|ForEach-Object Name)
+        if($duplicates.Count){throw "Duplicate source entries in $($group.Manifest): $($duplicates -join ', ')"}
+        $actual=[Collections.Generic.List[string]]::new()
+        foreach($folder in @($group.Folders)){
+            $folderPath=Join-Path $PSScriptRoot ([string]$folder)
+            if(-not(Test-Path -LiteralPath $folderPath -PathType Container)){throw "Required module source directory is missing: $folder"}
+            foreach($file in Get-ChildItem -LiteralPath $folderPath -Filter '*.ps1' -File|Sort-Object Name){$actual.Add([IO.Path]::GetRelativePath($PSScriptRoot,$file.FullName).Replace('\\','/'))}
+        }
+        $missing=@($declared|Where-Object{$_ -notin $actual});$unexpected=@($actual|Where-Object{$_ -notin $declared})
+        if($missing.Count -or $unexpected.Count){throw "WinCare $($group.Name) source manifest mismatch: missing=$($missing -join ','); unexpected=$($unexpected -join ',')"}
+        if(($declared -join "`n") -ne (@($actual) -join "`n")){throw "WinCare $($group.Name) source manifest order is not canonical."}
+        foreach($relativePath in $declared){$allSourcePaths.Add($relativePath)}
+        $sourceHash=Get-WinCarePreloadGroupSourceHash -Declared $declared
+        $mergedRelative=".wincare-merged-$($group.Name).ps1"
+        $mergedAbs=Join-Path $PSScriptRoot $mergedRelative
+        $mergedTmp="$mergedAbs.$([guid]::NewGuid().ToString('N')).tmp"
+        try{
+            $sb=[Text.StringBuilder]::new(1048576)
+            foreach($rel in $declared){$null=$sb.AppendLine("# --- merged: $rel ---");$null=$sb.AppendLine([IO.File]::ReadAllText((Join-Path $PSScriptRoot $rel),[Text.Encoding]::UTF8))}
+            [IO.File]::WriteAllText($mergedTmp,$sb.ToString(),[Text.UTF8Encoding]::new($false))
+            [IO.File]::Move($mergedTmp,$mergedAbs,$true)
+            $mergedInfo=Get-WinCarePreloadFileFingerprint -LiteralPath $mergedAbs -MaximumBytes 33554432
+            $newMergedFiles[$group.Name]=$mergedRelative
+            $newFingerprints[$group.Name]=[ordered]@{ManifestTicks=$manifestInfo.Ticks;ManifestLength=$manifestInfo.Length;SourceHash=$sourceHash;MergedHash=$mergedInfo.Sha256}
+        }catch{
+            Remove-Item -LiteralPath $mergedTmp -Force -ErrorAction SilentlyContinue
+            Write-Verbose "WinCare: could not write merged cache for $($group.Name) ($($_.Exception.Message)); using individual files."
+            $newMergedFiles[$group.Name]=$null
+        }
+    }
+    $duplicateModuleFiles=@($allSourcePaths|Group-Object|Where-Object Count -gt 1|ForEach-Object Name)
+    if($duplicateModuleFiles.Count){throw ('Source files assigned to multiple groups: '+($duplicateModuleFiles -join ', '))}
+    foreach($relativePath in $allSourcePaths){. (Join-Path $PSScriptRoot $relativePath)}
+    if($newMergedFiles.Values -notcontains $null){
+        $receiptTmp="$receiptPath.$([guid]::NewGuid().ToString('N')).tmp"
+        try{
+            $receiptObj=[ordered]@{SchemaVersion=4;ModuleVersion=$script:WinCareVersion;WrittenUtc=[datetime]::UtcNow.ToString('o');Fingerprints=$newFingerprints;MergedFiles=$newMergedFiles}
+            [IO.File]::WriteAllText($receiptTmp,($receiptObj|ConvertTo-Json -Depth 8 -Compress),[Text.UTF8Encoding]::new($false))
+            [IO.File]::Move($receiptTmp,$receiptPath,$true)
+        }catch{Remove-Item -LiteralPath $receiptTmp -Force -ErrorAction SilentlyContinue;Write-Verbose "WinCare: could not write load receipt ($($_.Exception.Message))."}
+    }
+}else{
+    foreach($group in $script:WinCareSourceGroups){. $mergedPaths[$group.Name]}
 }
-Export-ModuleMember -Function @(
-    'Start-WinCare',
-    'Start-WinCareMetricsHttpServer',
-    'Get-WinCareMetricsHttpServerState',
-    'Stop-WinCareMetricsHttpServer',
-    'Initialize-WinCareState',
-    'Invoke-WinCareHeadlessCommand',
-    'Get-WinCareHeadlessCommandName',
-    'Get-WinCareSystemSummary',
-    'Get-WinCareInstalledApplication',
-    'Get-WinCareCleanupTarget',
-    'Get-WinCareDriveSummary',
-    'Get-WinCareStartupItem',
-    'Get-WinCareHealthFinding',
-    'Get-WinCareSecuritySummary',
-    'Get-WinCareNetworkSummary',
-    'Get-WinCareCatalog',
-    'Get-WinCarePreset',
-    'New-WinCarePresetPlan',
-    'New-WinCareCatalogPlan',
-    'Get-WinCareWuaUpdate',
-    'Get-WinCareWuaHistory',
-    'Get-WinCareWdacActivePolicy',
-    'Get-WinCareCodeIntegrityEvent',
-    'Get-WinCareProcessInternals',
-    'Get-WinCareMemoryInternals',
-    'Get-WinCareProcessorTopology',
-    'Get-WinCareCredentialProvider',
-    'Get-WinCareDesktopControlSummary',
-    'Get-WinCareWifiProfile',
-    'Get-WinCareShellExtension',
-    'Get-WinCareBootDiagnostics',
-    'Get-WinCareUnattendAnalysis',
-    'Import-WinCareProvisioningBlueprint',
-    'New-WinCareProvisioningPlan',
-    'Export-WinCareProvisioningKit',
-    'Get-WinCareKnowledgeBase',
-    'New-WinCareSystemReportData',
-    'Get-WinCareAutomationProfile',
-    'Invoke-WinCareAutomationProfile',
-    'Get-WinCareUndoableOperation',
-    'New-WinCareUndoPlan',
-    'Get-WinCareInterruptedOperation',
-    'Get-WinCareInstalledExtension',
-    'New-WinCareInstallExtensionPlan',
-    'New-WinCareRemoveExtensionPlan',
-    'Test-WinCareOperationJournalIntegrity',
-    'Request-WinCareOperationCancellation',
-    'Start-WinCareLocalBroker',
-    'Invoke-WinCareBrokerRequest',
-    'Get-WinCareWidgetDefinition',
-    'Get-WinCareWidgetSnapshot',
-    'New-WinCareWidgetSnapshotExportPlan',
-    'Get-WinCareBluetoothDevice',
-    'Get-WinCareBluetoothEvent',
-    'Get-WinCareMaintenanceWindow',
-    'New-WinCareMaintenanceWindowRecord',
-    'New-WinCareMaintenanceUpsertPlan',
-    'New-WinCareMaintenanceTransitionPlan',
-    'Get-WinCareMaintenanceMetrics',
-    'New-WinCareMaintenanceMetricsExportPlan',
-    'Get-WinCareContextMenuRuleState',
-    'New-WinCareContextMenuPlan',
-    'Import-WinCareModernContextMenuDefinition',
-    'Get-WinCareCustomizationHost',
-    'Get-WinCareRainmeterSkinInventory',
-    'Get-WinCareWindhawkModInventory',
-    'Get-WinCareExplorerPatcherState',
-    'Get-WinCarePlaybook',
-    'New-WinCarePlaybookPlan',
-    'Get-WinCareLocalGroupPolicyState',
-    'New-WinCareLocalGroupPolicyImportPlan',
-    'Get-WinCareSysmonState',
-    'New-WinCareSysmonConfigurationPlan',
-    'New-WinCareSysmonUninstallPlan',
-    'Get-WinCareMountedWindowsImage',
-    'Get-WinCareOfflineImageDriver',
-    'Get-WinCareOfflineImagePackage',
-    'Get-WinCareOfflineImageFeature',
-    'New-WinCareOfflineDriverAddPlan',
-    'New-WinCareOfflineDriverRemovePlan',
-    'New-WinCareOfflinePackageAddPlan',
-    'New-WinCareOfflineFeaturePlan',
-    'Get-WinCarePageFileConfiguration',
-    'Get-WinCarePageFileRecommendation',
-    'New-WinCarePageFilePlan',
-    'Get-WinCareSecurityControlState',
-    'Get-WinCareSecurityMaintenanceRecord',
-    'New-WinCareSecurityMaintenancePlan',
-    'New-WinCareSecurityMaintenanceRestorePlan',
-    'Get-WinCareTcpGlobalState',
-    'Measure-WinCareNetworkEndpoint',
-    'Get-WinCareNetworkExperimentHistory',
-    'New-WinCareNetworkExperimentPlan',
-    'Get-WinCareInjectionSurface',
-    'Get-WinCareProcessModuleInventory',
-    'Get-WinCareRemoteThreadEvent',
-    'Get-WinCareEtwSession',
-    'New-WinCareEtwCapturePlan',
-    'New-WinCareInjectionSurfaceQuarantinePlan',
-    'Get-WinCarePowerSession',
-    'New-WinCarePowerSessionPlan',
-    'New-WinCarePowerSessionStopPlan',
-    'Invoke-WinCarePowerSessionHost',
-    'Get-WinCareWindowInventory',
-    'Get-WinCareMonitorInventory',
-    'Get-WinCareWindowZoneDefinition',
-    'New-WinCareWindowZonePlan',
-    'New-WinCareWindowTopmostPlan',
-    'New-WinCareWindowActivatePlan',
-    'New-WinCareEmergencyInputReleasePlan',
-    'Get-WinCareScreenColor',
-    'ConvertTo-WinCareColorRecord',
-    'Get-WinCareColorPalette',
-    'New-WinCareColorPaletteAddPlan',
-    'New-WinCareColorPaletteRemovePlan',
-    'Get-WinCareImageMetadata',
-    'Get-WinCareLocalNote',
-    'Search-WinCareLocalNote',
-    'New-WinCareLocalNotePlan',
-    'New-WinCareLocalNoteRemovePlan',
-    'Get-WinCareRemoteSupportCatalog',
-    'Get-WinCareRemoteSupportSurface',
-    'Get-WinCareRemoteSupportConsent',
-    'New-WinCareRemoteSupportConsentPlan',
-    'New-WinCareRemoteSupportConsentStatePlan',
-    'New-WinCareRemoteSupportExpiryReconciliationPlan',
-    'New-WinCareRemoteSupportEmergencyPlan',
-    'Get-WinCareBrowserWorkspaceSummary',
-    'Get-WinCareBrowserExtensionInventory',
-    'Get-WinCareExtensionCommand',
-    'Get-WinCareDownloadJob',
-    'New-WinCareDownloadJobRecord',
-    'New-WinCareDownloadJobPlan',
-    'New-WinCareDownloadJobRemovePlan',
-    'New-WinCareDownloadStartPlan',
-    'New-WinCareDownloadStatePlan',
-    'New-WinCareDownloadReconcilePlan',
-    'New-WinCareDownloadCancelPlan',
-    'Get-WinCareTelemetrySnapshot',
-    'Get-WinCareTelemetryHistory',
-    'New-WinCareTelemetryCapturePlan',
-    'New-WinCareTelemetryExportPlan',
-    'Get-WinCareLaunchTarget',
-    'New-WinCareOpenLaunchTargetPlan',
-    'Invoke-WinCareCalculator',
-    'Get-WinCareSteamLibraryPath',
-    'Get-WinCareSteamGame',
-    'Get-WinCareSteamUser',
-    'Get-WinCareSteamCloudFile',
-    'New-WinCareSteamCloudBackupPlan',
-    'New-WinCareSteamCloudRestorePlan',
-    'Get-WinCareGameIntegrityFinding',
-    'Get-WinCareOfflineProvisionedAppx',
-    'Get-WinCareOfflineReductionProfile',
-    'Get-WinCareOfflineReductionAssessment',
-    'New-WinCareOfflineReductionPlan',
-    'Get-WinCareWorkspaceLayout',
-    'New-WinCareWorkspaceLayoutRecord',
-    'New-WinCareWorkspaceLayoutSavePlan',
-    'New-WinCareWorkspaceLayoutRemovePlan',
-    'New-WinCareWorkspaceLayoutApplyPlan',
-    'Get-WinCareDisplayOverrideState',
-    'New-WinCareDisplayOverrideResetPlan',
-    'Get-WinCareWlanSurvey',
-    'Get-WinCareLogSnapshot',
-    'Get-WinCarePeMetadata',
-    'Get-WinCareContainerLogMonitorConfiguration',
-    'New-WinCareContainerLogMonitorPlan',
-    'Get-WinCareTaskBoard',
-    'New-WinCareTaskPlan',
-    'Get-WinCareLegacyUnsafeProfile',
-    'New-WinCareLegacyUnsafeProfilePlan',
-    'Get-WinCareHibernateState',
-    'Get-WinCareFileWorkspace',
-    'New-WinCareFileWorkspacePlan',
-    'Get-WinCareWorkspaceStudioProfile',
-    'New-WinCareWorkspaceStudioLayoutPlan',
-    'Get-WinCareUnifiedSystemSnapshot',
-    'New-WinCareMonitoringExportPlan',
-    'Get-WinCarePackageArchiveMetadata',
-    'Test-WinCareKanataConfiguration',
-    'Get-WinCareSyncthingState',
-    'New-WinCareWezTermStatusBarPlan',
-    'Get-WinCarePlaybookGraph',
-    'Get-WinCareBrightnessSchedule',
-    'New-WinCareBrightnessSchedulePlan',
-    'New-WinCareBrightnessScheduleApplyPlan',
-    'Get-WinCareFolderAppearanceState',
-    'New-WinCareFolderAppearancePlan',
-    'New-WinCareVerifiedPeerToolPlan',
-    'New-WinCareAdbInventoryPlan',
-    'New-WinCareXboxFullscreenExperiencePlan',
-    'Get-WinCareWin32ErrorMessage',
-    'Get-WinCareMsiMetadata',
-    'Get-WinCareSystemToolkitDiagnostic',
-    'Get-WinCareHardeningProfile',
-    'Get-WinCareHardeningAssessment',
-    'New-WinCareHardeningProfilePlan',
-    'Get-WinCareMaintenanceTemplate',
-    'New-WinCareMaintenanceTemplatePlan',
-    'Get-WinCareSystemShortcutCatalog',
-    'New-WinCareSystemShortcutExportPlan',
-    'Import-WinCareDownloadBatchDefinition',
-    'New-WinCareDownloadBatchPlan',
-    'Get-WinCareExperienceStudioRoot',
-    'Get-WinCareVisualAssetInfo',
-    'Get-WinCareSpriteSheetLayout',
-    'New-WinCareVisualAssetManifestPlan',
-    'Get-WinCareLocationPrivacyState',
-    'New-WinCareLocationPrivacyPlan',
-    'Get-WinCareRemoteAccessProfile',
-    'Get-WinCareRemoteAccessState',
-    'New-WinCareRemoteAccessPlan',
-    'Get-WinCarePowerConditionProfile',
-    'Get-WinCarePowerConditionAssessment',
-    'New-WinCarePowerConditionPlan',
-    'Get-WinCareDownloadStrategy',
-    'Get-WinCarePrivacyProfile',
-    'New-WinCarePrivacyProfilePlan',
-    'Get-WinCareExperienceCapabilityCard',
-    'Get-WinCareTorrentMetadata',
-    'Get-WinCareHardwareInventory',
-    'New-WinCareHardwareReportPlan',
-    'Get-WinCareMonitorControlState',
-    'New-WinCareMonitorControlPlan',
-    'Get-WinCareWindowSearch',
-    'Get-WinCareExplorerSession',
-    'New-WinCareExplorerSessionSavePlan',
-    'Get-WinCareExplorerSessionRecord',
-    'New-WinCareExplorerSessionRestorePlan',
-    'Get-WinCareUiAutomationSnapshot',
-    'Get-WinCareAppxRuntimeInventory',
-    'Get-WinCareAppxLaunchTarget',
-    'New-WinCareAppxLaunchPlan',
-    'Get-WinCareArchiveInspection',
-    'Get-WinCareServicingMediaInfo',
-    'Get-WinCareTerminalEnvironment',
-    'New-WinCareTerminalProfileExportPlan',
-    'Get-WinCareGuiResourceAudit',
-    'Get-WinCareFullscreenShellAssessment',
-    'Get-WinCareShellHardwareCapabilityCard',
-    'Get-WinCareDiskPressureAssessment',
-    'New-WinCareDiskPressureCleanupPlan',
-    'New-WinCareDiskPressureAutomationPlan',
-    'Import-WinCareWinapp2Catalog',
-    'Get-WinCareWinapp2Assessment',
-    'New-WinCareWinapp2CleanupPlan',
-    'Get-WinCareApplicationDataRelocationProfile',
-    'Get-WinCareApplicationDataRelocationAssessment',
-    'New-WinCareApplicationDataRelocationPlan',
-    'Get-WinCareFilePreviewProfile',
-    'Get-WinCareFilePreview',
-    'Get-WinCarePreviewHandlerAssessment',
-    'New-WinCareFilePreviewExportPlan',
-    'Get-WinCareCleanerPreviewCapabilityCard',
-    'Start-WinCareGui',
-    'Get-WinCareGuiNavigation',
-    'Get-WinCareGuiActionCatalog',
-    'Get-WinCareFleetNodeInventory',
-    'Compare-WinCareFleetPolicyState',
-    'Get-WinCareHypervisorIsolationState',
-    'New-WinCareVbsHardeningPlan',
-    'New-WinCareMicroVmSandboxPlan',
-    'Get-WinCareTelemetryLakeRoot',
-    'Get-WinCareTelemetryLakeRecord',
-    'Get-WinCareTelemetryLakeAggregate',
-    'New-WinCareTelemetryLakeIngestPlan',
-    'New-WinCareTelemetryLakeRetentionPlan',
-    'Test-WinCareTelemetryAnomaly',
-    'Get-WinCareBinaryBehaviorProfile',
-    'Get-WinCareBinaryIntelligenceCapability',
-    'Get-WinCareVbsEnclaveState',
-    'New-WinCareVbsEnclaveHardeningPlan',
-    'Get-WinCareEbpfSocketRedirectCapability',
-    'Get-WinCareEbpfProgramInventory',
-    'New-WinCareEbpfSocketProgramAdmission',
-    'Get-WinCareForensicTimeline',
-    'Get-WinCareMemoryAnomalySummary',
-    'New-WinCareWindowsSandboxConfigurationPlan',
-    'Get-WinCareDisplayPipelineState',
-    'Get-WinCareVirtualDisplayCapability',
-    'New-WinCareDisplayCalibrationPlan',
-    'Get-WinCareWireGuardTunnelState',
-    'Get-WinCareQuicRuntimeCapability',
-    'Get-WinCareCapabilityRegistry',
-    'Get-WinCareSysmonThreatMap',
-    'Audit-WinCareDefenderFirewallRules',
-    'Resolve-WinCareDohQuery',
-    'Optimize-WinCareCdnRouting',
-    'Invoke-WinCareFuzzyDeduplication',
-    'Get-WinCareMftDiskReport',
-    'Invoke-WinCareOnnxDiagnosticScan',
-    'Get-WinCareSmartFailurePrediction',
-    'Enable-WinCareEbpfFilter',
-    'Set-WinCareMicrosegmentationRule',
-    'Audit-WinCareUefiDbxSignatures',
-    'Get-WinCareTpmPcrReport',
-    'Invoke-WinCarePqcKeyExchange',
-    'Protect-WinCarePqcFile',
-    'Unprotect-WinCarePqcFile',
-    'Synthesize-WinCareCodePatch',
-    'Test-WinCarePatchInSandbox',
-    'Start-WinCareRaftMeshNode',
-    'Stop-WinCareFleetCoordinator',
-    'Sync-WinCareFleetPolicies',
-    'Predict-WinCareKernelBsodFault',
-    'Invoke-WinCarePageTableOptimization',
-    'Invoke-WinCareWasiPlugin',
-    'Get-WinCareWasiMarketplaceCatalog',
-    'Send-WinCareMultiCloudTelemetry',
-    'Get-WinCareFleetMeshStatus',
-    'Test-WinCareGuiCatalog',
-    'Get-WinCareRbacMatrix',
-    'Assert-WinCareRolePermission',
-    'Test-WinCareGpoEntraDrift',
-    'New-WinCareGpoRemediationPlan',
-    'Send-WinCareSiemStream',
-    'Invoke-WinCareDismServicingCleanup',
-    'Get-WinCareStorageHealthTriage',
-    'Enable-WinCareGameStateMode',
-    'Import-WinCareFancyZonesLayout',
-    'Protect-WinCarePqcSignature',
-    'Invoke-WinCareMicroVmSandboxTest',
-    'Get-WinCareVbsDmaState',
-    'Enable-WinCareEbpfSocketGovernance',
-    'Start-WinCareWpfDashboardWindow',
-    'Invoke-WinCareFleetDeployment',
-    'New-WinCareIsolatedStagingDirectory',
-    'Remove-WinCareCryptographicFile',
-    'Get-WinCareTerminalCellWidth',
-    'Get-WinCareEbpfTelemetryStream',
-    'Send-WinCareTelemetryEventBusMessage'
-)
+
+# T2.1 (ponytail/shrink): replaced ~330-line manual list. Public API surface is
+# enforced by tools/validate_module_manifest.py and source manifest PSD1 files.
+# To make a function private, prefix with lowercase verb (not Verb-Noun) and add
+# an explicit Export-ModuleMember deny list after this comment.
+Export-ModuleMember -Function *

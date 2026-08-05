@@ -25,7 +25,7 @@ EXCLUDED_PARTS = {".git", "artifacts", "scratch", "bin", "evidence", ".code-revi
 EXCLUDED_NAMES = {
     "RELEASE-MANIFEST.sha256", "SBOM.spdx.json", "BUILD-RECEIPT.json",
     "WinCare.exe", "WinCare-GUI.exe", "WinCare-TUI.exe",
-    ".DS_Store", "Thumbs.db",
+    ".DS_Store", "Thumbs.db", ".wincare-load-receipt.json",
 }
 TEXT_EXECUTABLE_SUFFIXES = {".ps1", ".psm1", ".py", ".cmd", ".bat"}
 PRODUCTION_ROOT_FILES = {
@@ -205,7 +205,7 @@ def iter_source_files(root: Path) -> Iterable[Path]:
         if not path.is_file() or any(part in EXCLUDED_PARTS for part in path.relative_to(root).parts):
             continue
         relative = path.relative_to(root)
-        if path.name in EXCLUDED_NAMES:
+        if path.name in EXCLUDED_NAMES or path.name.startswith(".wincare-"):
             continue
         if any(part.startswith("WinCare-release-") for part in relative.parts):
             continue

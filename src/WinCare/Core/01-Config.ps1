@@ -172,6 +172,15 @@ function Test-WinCareConfigObject {
     return $true
 }
 
+function Test-WinCareConfigSourceObject {
+    param([Parameter(Mandatory)][Collections.IDictionary]$Config)
+    $defaults=Get-WinCareDefaultConfig
+    $null=Test-WinCareStrictObjectKeys -InputObject $Config -AllowedKeys @($defaults.Keys) -Context 'source configuration'
+    if(-not $Config.Contains('SchemaVersion')){throw 'Source configuration is missing SchemaVersion.'}
+    if([int]$Config.SchemaVersion -notin @(1,2,3,4,5,6,7,8)){throw 'Unsupported source configuration schema.'}
+    return $true
+}
+
 function Convert-WinCareConfigToCurrent {
     param([Parameter(Mandatory)][Collections.IDictionary]$Config)
     $result=Get-WinCareDefaultConfig
@@ -288,6 +297,39 @@ function Initialize-WinCareDataRootIdentity {
     return $identityPath
 }
 
+function Get-WinCareInitialConfig {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)][string]$ConfigPath,
+        [Parameter(Mandatory)][bool]$ReadOnlyLocked,
+        [Parameter(Mandatory)][Collections.Generic.List[string]]$InitializationWarnings
+    )
+    $config = Get-WinCareDefaultConfig
+    if (Test-Path -LiteralPath $ConfigPath) {
+        try {
+            $loaded = Read-WinCareJsonHashtable -LiteralPath $ConfigPath
+            $null   = Test-WinCareConfigSourceObject -Config $loaded
+            $config = Convert-WinCareConfigToCurrent -Config $loaded
+            $null   = Test-WinCareConfigObject -Config $config
+        } catch {
+            $configError = $_.Exception.Message
+            if ($ReadOnlyLocked) {
+                $warnMsg = "WinCare: settings.json is invalid and could not be repaired (read-only mode). Using safe defaults. Error: $configError"
+                $InitializationWarnings.Add($warnMsg)
+                Write-Warning $warnMsg
+            } else {
+                $corrupt = "$ConfigPath.corrupt.$([datetime]::UtcNow.ToString('yyyyMMddHHmmssfff')).$([guid]::NewGuid().ToString('N'))"
+                $null = Assert-WinCareSafePath -LiteralPath $ConfigPath
+                $null = Assert-WinCareSafePath -LiteralPath $corrupt -AllowMissing
+                [IO.File]::Move($ConfigPath, $corrupt, $false)
+                Write-Warning "WinCare: settings.json was invalid and has been quarantined to '$corrupt'. Using safe defaults. Error: $configError"
+            }
+            $config = Get-WinCareDefaultConfig
+        }
+    }
+    return $config
+}
+
 function Initialize-WinCareState {
     [CmdletBinding()]
     param([switch]$Ascii,[switch]$ReadOnly,[string]$Theme='Normal',[switch]$SkipConfigSave)
@@ -308,31 +350,14 @@ function Initialize-WinCareState {
             $null=New-Item -ItemType Directory -Path (Join-Path $root $name) -Force
         }
     }
-    $dataIdentityPath=$null
-    if(Test-Path -LiteralPath $root -PathType Container) {
-        $dataIdentityPath=Initialize-WinCareDataRootIdentity -Root $root -VerifyOnly:$readOnlyLocked
-    } elseif(-not $readOnlyLocked) {
+    $dataIdentityPath = $null
+    if (Test-Path -LiteralPath $root -PathType Container) {
+        $dataIdentityPath = Initialize-WinCareDataRootIdentity -Root $root -VerifyOnly:$readOnlyLocked
+    } elseif (-not $readOnlyLocked) {
         throw 'WinCare data root was not created successfully.'
     }
-    $configPath=Join-Path $root 'settings.json'
-    $config=Get-WinCareDefaultConfig
-    if(Test-Path -LiteralPath $configPath) {
-        try {
-            $loaded=Read-WinCareJsonHashtable -LiteralPath $configPath
-            $config=Convert-WinCareConfigToCurrent -Config $loaded
-            $null=Test-WinCareConfigObject -Config $config
-        } catch {
-            if($readOnlyLocked) {
-                $initializationWarnings.Add('Stored configuration is invalid; read-only defaults are active and the file was not changed.')
-            } else {
-                $corrupt="$configPath.corrupt.$([datetime]::UtcNow.ToString('yyyyMMddHHmmssfff')).$([guid]::NewGuid().ToString('N'))"
-                $null=Assert-WinCareSafePath -LiteralPath $configPath
-                $null=Assert-WinCareSafePath -LiteralPath $corrupt -AllowMissing
-                [IO.File]::Move($configPath,$corrupt,$false)
-            }
-            $config=Get-WinCareDefaultConfig
-        }
-    }
+    $configPath = Join-Path $root 'settings.json'
+    $config     = Get-WinCareInitialConfig -ConfigPath $configPath -ReadOnlyLocked $readOnlyLocked -InitializationWarnings $initializationWarnings
     $persisted=[ordered]@{}
     foreach($key in $config.Keys) { $persisted[$key]=$config[$key] }
     $script:WinCareState=@{

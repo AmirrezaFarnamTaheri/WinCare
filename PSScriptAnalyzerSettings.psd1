@@ -1,6 +1,7 @@
 @{
     Severity = @('Error','Warning')
     IncludeRules = @(
+        'PSAvoidSemicolonsAsLineTerminators',
         'PSAvoidUsingInvokeExpression',
         'PSAvoidUsingPlainTextForPassword',
         'PSAvoidUsingConvertToSecureStringWithPlainText',
@@ -10,7 +11,9 @@
         'PSAvoidUsingEmptyCatchBlock'
     )
     Rules = @{
+        PSAvoidSemicolonsAsLineTerminators = @{ Enable = $true; Severity = 'Error' }
         PSAvoidUsingPlainTextForPassword = @{ Enable = $true }
         PSAvoidUsingConvertToSecureStringWithPlainText = @{ Enable = $true }
     }
 }
+

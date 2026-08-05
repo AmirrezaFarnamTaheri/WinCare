@@ -21,7 +21,7 @@ function Get-WinCareGuiRiskColor {
         'Low'{'#173D35'}
         'Moderate'{'#3D3520'}
         'High'{'#4A2F24'}
-        'Critical'{'#512128'}
+        'Critical'{'#3D141B'}
         default{'#263550'}
     }
 }
@@ -31,11 +31,11 @@ function Get-WinCareGuiRiskForeground {
     if($script:WinCareGuiTheme -eq 'Monochrome'){return '#FFFFFF'}
     if($script:WinCareGuiTheme -eq 'HighContrast'){return $(switch($Risk){'ReadOnly'{'#00FFFF'}'Low'{'#00FF00'}'Moderate'{'#FFFF00'}'High'{'#FFB000'}'Critical'{'#FF6B6B'}default{'#FFFFFF'}})}
     switch($Risk){
-        'ReadOnly'{'#36C5F0'}
-        'Low'{'#2DD4A8'}
-        'Moderate'{'#F6C85F'}
+        'ReadOnly'{'#34D6E9'}
+        'Low'{'#3FB950'}
+        'Moderate'{'#D29922'}
         'High'{'#F2A65A'}
-        'Critical'{'#F97066'}
+        'Critical'{'#F85149'}
         default{'#F4F7FB'}
     }
 }
@@ -170,7 +170,7 @@ function Update-WinCareGuiDashboard {
         $controls.HeroBuildText.Text="$($summary.Windows) • build $($summary.Build) • uptime $([math]::Floor($summary.Uptime.TotalHours))h"
         $controls.HeroAdminText.Text=if($summary.IsAdmin){'Administrator context'}else{'Standard-user context; elevation is operation-scoped'}
         $controls.SecurityValueText.Text=[string]$summary.Defender
-        $controls.SecurityValueText.Foreground=Get-WinCareGuiBrush $(switch([string]$summary.Defender){'Protected'{Get-WinCareGuiRiskForeground 'Low'}'Limited'{Get-WinCareGuiRiskForeground 'Moderate'}'Disabled'{Get-WinCareGuiRiskForeground 'Critical'}default{'#9AA9C3'}})
+        $controls.SecurityValueText.Foreground=Get-WinCareGuiBrush $(switch([string]$summary.Defender){'Protected'{Get-WinCareGuiRiskForeground 'Low'}'Limited'{Get-WinCareGuiRiskForeground 'Moderate'}'Disabled'{Get-WinCareGuiRiskForeground 'Critical'}default{Get-WinCareGuiRiskForeground 'ReadOnly'}})
         $controls.SecurityDetailText.Text='Microsoft Defender realtime posture'
         $systemDrive=@($summary.Drives|Where-Object{$_.DeviceId -eq $env:SystemDrive}|Select-Object -First 1)
         if($systemDrive.Count){$drive=$systemDrive[0];$controls.StorageValueText.Text="$([math]::Round([double]$drive.UsedPercent))% used";$controls.StorageProgress.Value=[double]$drive.UsedPercent;$controls.StorageDetailText.Text="$(Format-WinCareGuiBytes ([long]$drive.Free)) free on $($drive.DeviceId)"}else{$controls.StorageValueText.Text='Unavailable';$controls.StorageProgress.Value=0}
@@ -217,7 +217,7 @@ function Set-WinCareGuiSelectedAction {
     if($null -eq $Action){
         $script:WinCareGuiState.SelectedAction=$null
         $controls.ActionTitleText.Text='Select an action';$controls.ActionCommandText.Text='';$controls.ActionRiskText.Text='—'
-        $controls.ActionRiskBadge.Background=Get-WinCareGuiBrush '#263550';$controls.ActionRiskText.Foreground=Get-WinCareGuiBrush '#F4F7FB'
+        $controls.ActionRiskBadge.Background=Get-WinCareGuiBrush (Get-WinCareGuiRiskColor 'ReadOnly');$controls.ActionRiskText.Foreground=Get-WinCareGuiBrush (Get-WinCareGuiRiskForeground 'ReadOnly')
         $controls.ActionDescriptionText.Text='Choose a command to inspect its contract, implementation references, arguments, and execution path.'
         $controls.ActionSourceText.Text='';$controls.ArgumentsTextBox.Text='{}';$controls.ArgumentHelpText.Text=''
         $controls.PreviewActionButton.IsEnabled=$false;$controls.ApplyActionButton.IsEnabled=$false;$controls.ActionOutputTextBox.Text=''

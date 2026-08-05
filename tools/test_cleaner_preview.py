@@ -11,7 +11,7 @@ ROOT = Path(__file__).resolve().parents[1]
 class CleanerPreviewTests(unittest.TestCase):
     def test_routes_contracts_and_dispatch_are_complete(self) -> None:
         headless = (ROOT / "src/WinCare/UI/98-Headless.ps1").read_text("utf-8")
-        contracts = (ROOT / "src/WinCare/Core/11-ActionContracts.ps1").read_text("utf-8")
+        contracts = (ROOT / "src/WinCare/Core/11-ActionContracts.ps1").read_text("utf-8") + (ROOT / "src/WinCare/Core/11-ActionContractsSchema.ps1").read_text("utf-8")
         dispatch = (ROOT / "src/WinCare/Core/09-Transactions.ps1").read_text("utf-8")
         for name in ("cleaner-disk-pressure", "cleaner-winapp2-run", "cleaner-relocation", "file-preview", "preview-handlers"):
             self.assertIn("'" + name + "'", headless)

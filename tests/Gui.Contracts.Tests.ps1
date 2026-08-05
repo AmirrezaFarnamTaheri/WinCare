@@ -15,7 +15,7 @@ Describe 'WinCare graphical console' {
     }
 
     It 'uses accessible high-contrast design tokens and keyboard affordances' {
-        foreach($color in @('#0B1020','#121A2B','#7C5CFC','#36C5F0','#2DD4A8','#F6C85F','#F97066','#F4F7FB')){$Xaml|Should -Match ([regex]::Escape($color))}
+        foreach($color in @('#0B1020','#121A2B','#2F80ED','#34D6E9','#3FB950','#D29922','#F85149','#E6EDF3')){$Xaml|Should -Match ([regex]::Escape($color))}
         $Xaml|Should -Match 'AutomationProperties.Name="Search WinCare actions"'
         $Xaml|Should -Match 'AutomationProperties.Name="Critical action acknowledgement"'
         (Get-Content -LiteralPath (Join-Path $Root 'src/WinCare/UI/Gui/10-GuiRuntime.ps1') -Raw)|Should -Match 'ModifierKeys.*Control'

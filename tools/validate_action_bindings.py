@@ -125,7 +125,10 @@ def parameter_names(raw_param_block: str) -> list[str]:
 def parse_functions(root: Path) -> dict[str, dict]:
     functions: dict[str, dict] = {}
     for path in sorted((root / "src" / "WinCare").rglob("*.ps1")):
+        if path.name.startswith(".wincare-"):
+            continue
         text = path.read_text(encoding="utf-8", errors="replace")
+
         code = strip_powershell(text)
         for match in re.finditer(r"(?im)^\s*function\s+([A-Za-z][A-Za-z0-9_-]*)\s*\{", code):
             opening = code.find("{", match.start())
@@ -167,7 +170,7 @@ def main() -> int:
         functions = {}
         errors.append(f"Function parsing failed: {exc}")
 
-    contract_path = root / "src/WinCare/Core/11-ActionContracts.ps1"
+    contract_path = root / "src/WinCare/Core/11-ActionContractsSchema.ps1"
     transaction_path = root / "src/WinCare/Core/09-Transactions.ps1"
     contract_text = contract_path.read_text(encoding="utf-8", errors="replace")
     transaction_text = transaction_path.read_text(encoding="utf-8", errors="replace")

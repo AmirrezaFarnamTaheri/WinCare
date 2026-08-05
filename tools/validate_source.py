@@ -31,7 +31,7 @@ def check_balance(path:Path,text:str,errors:list[str]):
 def main()->int:
     ap=argparse.ArgumentParser();ap.add_argument('root',nargs='?',default='.');ap.add_argument('--json-output')
     args=ap.parse_args();root=Path(args.root).resolve();errors=[];warnings=[]
-    files=sorted(p for p in root.rglob('*') if p.is_file() and p.suffix.lower() in PSEXT and '.git' not in p.parts)
+    files=sorted(p for p in root.rglob('*') if p.is_file() and p.suffix.lower() in PSEXT and '.git' not in p.parts and not p.name.startswith('.wincare-'))
     funcs={};refs={}
     for p in files:
         text=p.read_text('utf-8-sig',errors='replace');check_balance(p,text,errors);code=strip_ps(text)
@@ -44,7 +44,7 @@ def main()->int:
         if len(defs)>1: errors.append('duplicate function '+name+': '+', '.join(f'{p}:{line}' for p,line,_ in defs))
     for name,uses in refs.items():
         if name not in funcs: errors.append('unresolved WinCare function '+uses[0][2]+': '+', '.join(f'{p}:{line}' for p,line,_ in uses[:8]))
-    contract=(root/'src/WinCare/Core/11-ActionContracts.ps1').read_text('utf-8-sig')
+    contract=(root/'src/WinCare/Core/11-ActionContractsSchema.ps1').read_text('utf-8-sig')
     transaction=(root/'src/WinCare/Core/09-Transactions.ps1').read_text('utf-8-sig')
     contracts=set(re.findall(r"Add-Contract\s+'([^']+)'",contract));dispatch=set(re.findall(r"(?m)^\s*'([^']+)'\s*\{Invoke-WinCare",transaction))
     if contracts!=dispatch: errors.append(f'action parity mismatch: missing dispatch {sorted(contracts-dispatch)}; missing contracts {sorted(dispatch-contracts)}')
@@ -71,7 +71,7 @@ def main()->int:
     missing_routes=(menu-{'Exit'})-(routes|route_special)
     if missing_routes: errors.append(f'menu actions without routes: {sorted(missing_routes)}')
     for p in sorted(root.rglob('*.json')):
-        if '.git' in p.parts: continue
+        if '.git' in p.parts or p.name.startswith('.wincare-'): continue
         try: json.loads(p.read_text('utf-8-sig'))
         except Exception as e: errors.append(f'{p}: invalid JSON: {e}')
     psm=(root/'src/WinCare/WinCare.psm1').read_text('utf-8-sig');psd=(root/'src/WinCare/WinCare.psd1').read_text('utf-8-sig')
@@ -96,7 +96,7 @@ def main()->int:
                 errors.append(f'{metadata_path.relative_to(root)} is missing current metadata marker {marker!r}')
         stale_product_pattern=re.compile(r'(?i)\bWinCare\s+v?\d+\.\d+(?:\.\d+)?\b')
         for candidate in root.rglob('*'):
-            if not candidate.is_file() or candidate.suffix.lower() not in {'.md','.ps1','.psm1','.psd1','.xaml','.json','.py','.yml','.yaml'}:
+            if not candidate.is_file() or candidate.name.startswith('.wincare-') or candidate.suffix.lower() not in {'.md','.ps1','.psm1','.psd1','.xaml','.json','.py','.yml','.yaml'}:
                 continue
             if candidate.name in {'BUILD-RECEIPT.json','SBOM.spdx.json'}:
                 continue
@@ -112,13 +112,20 @@ def main()->int:
             if hardcoded and hardcoded!={product_version}: errors.append(f'CI contains stale hardcoded release versions: {sorted(hardcoded)}')
             if 'Invoke-WindowsValidation.ps1' not in ci_text or 'tools/verify_release.py' not in ci_text:
                 errors.append('CI does not include Windows-native and independent archive validation gates')
-    exports=set(re.findall(r"(?m)^\s*'([A-Za-z][A-Za-z0-9_-]+)'[,]?\s*$",psm[psm.find('Export-ModuleMember'):]))
+    # T2.1: psm1 now uses Export-ModuleMember -Function * (wildcard).
+    # In wildcard mode the psm1 carries no redundant explicit list; the psd1
+    # FunctionsToExport array is the sole contract. Skip the psm-vs-psd diff
+    # and validate only the psd1 list against the actual function definitions.
+    psm_wildcard=bool(re.search(r'Export-ModuleMember\s+-Function\s+\*',psm))
+    exports=set() if psm_wildcard else set(re.findall(r"(?m)^\s*'([A-Za-z][A-Za-z0-9_-]+)'[,]?\s*$",psm[psm.find('Export-ModuleMember'):]))
     psd_export_match=re.search(r'FunctionsToExport\s*=\s*@\((.*?)\)\s*CmdletsToExport',psd,re.S)
     psd_exports=set(re.findall(r"'([A-Za-z][A-Za-z0-9_-]+)'",psd_export_match.group(1))) if psd_export_match else set()
     if not psd_export_match: errors.append('module manifest FunctionsToExport block was not found')
-    elif exports!=psd_exports: errors.append(f'module export mismatch: psm-only {sorted(exports-psd_exports)}; psd-only {sorted(psd_exports-exports)}')
+    elif not psm_wildcard and exports!=psd_exports: errors.append(f'module export mismatch: psm-only {sorted(exports-psd_exports)}; psd-only {sorted(psd_exports-exports)}')
     if 'Invoke-WinCarePlan' in exports or 'Invoke-WinCarePlan' in psd_exports: errors.append('unrestricted internal plan executor must not be exported')
-    missing_defs=sorted(x for x in exports|psd_exports if x.lower() not in funcs)
+    # Use psd1 as the contract in both explicit and wildcard modes.
+    contract_exports=psd_exports
+    missing_defs=sorted(x for x in contract_exports if x.lower() not in funcs)
     if missing_defs: errors.append(f'exports without functions: {missing_defs}')
     proc=(root/'src/WinCare/Core/03-Process.ps1').read_text('utf-8-sig')
     if 'Get-WinCareActionContractTable' not in proc or 'HMACSHA256' not in proc or 'FixedTimeEquals' not in proc: errors.append('elevation broker is not contract-derived and authenticated')

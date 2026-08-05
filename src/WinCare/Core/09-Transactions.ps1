@@ -3,36 +3,6 @@ function Get-WinCareRiskRank {
     switch ($Risk) {'ReadOnly'{0};'Low'{1};'Moderate'{2};'High'{3};'Critical'{4};default{99}}
 }
 
-function New-WinCareVssRestorePointAction {
-    [CmdletBinding()]
-    param([string]$Description='WinCare Pre-Mutation Restore Point')
-    New-WinCareAction -Type 'CreateSystemRestorePoint' `
-        -Label "Create VSS restore point: $Description" `
-        -Risk Moderate `
-        -Parameters @{Description=$Description;RestorePointType='MODIFY_SETTINGS'} `
-        -RequiresAdmin $true `
-        -Reversible $true `
-        -TimeoutSeconds 300
-}
-
-function Invoke-WinCareVssRestorePointAction {
-    [CmdletBinding()]param([Parameter(Mandatory)][object]$Action)
-    $blocked=Test-WinCareWindowsRequired 'VSS restore point creation';if($blocked){return $blocked}
-    $desc=[string]$Action.Parameters.Description;if([string]::IsNullOrWhiteSpace($desc)){$desc='WinCare Pre-Mutation Restore Point'}
-    $rtype=[string]$Action.Parameters.RestorePointType;if([string]::IsNullOrWhiteSpace($rtype)){$rtype='MODIFY_SETTINGS'}
-    $typeCodes=@{APPLICATION_INSTALL=0;APPLICATION_UNINSTALL=1;DEVICE_DRIVER_INSTALL=10;MODIFY_SETTINGS=12;CANCELLED_OPERATION=13}
-    if(-not $typeCodes.ContainsKey($rtype)){return New-WinCareResult -Success $false -Status Blocked -Code 'VssRestorePointTypeInvalid' -Message "Unsupported restore point type: $rtype" -ExitCode 22}
-    try {
-        # EventType 100 = BEGIN_SYSTEM_CHANGE; CIM replaces the retired Get-WmiObject pipeline on PowerShell 7.
-        $arguments=@{Description=$desc;RestorePointType=[uint32]$typeCodes[$rtype];EventType=[uint32]100}
-        $result=Invoke-CimMethod -Namespace 'root/default' -ClassName 'SystemRestore' -MethodName 'CreateRestorePoint' -Arguments $arguments -ErrorAction Stop
-        if($result.ReturnValue -ne 0){return New-WinCareResult -Success $false -Code 'VssRestorePointFailed' -Message "SystemRestore.CreateRestorePoint returned $($result.ReturnValue)." -ExitCode 1}
-        $evidence=@{Description=$desc;RestorePointType=$rtype;EvidenceType='VssSystemRestorePointCreated'}
-        New-WinCareResult -Success $true -Code 'VssRestorePointCreated' -Message "VSS restore point created: $desc" -Data $evidence
-    } catch {
-        New-WinCareResult -Success $false -Code 'VssRestorePointException' -Message $_.Exception.Message -ExitCode 1
-    }
-}
 
 function Get-WinCareActionStableHash {
     [CmdletBinding()]param([Parameter(Mandatory)][object]$Action)

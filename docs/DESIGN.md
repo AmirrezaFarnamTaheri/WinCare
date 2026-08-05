@@ -1,272 +1,234 @@
-# WinCare design system
+# WinCare Design
 
-WinCare uses a utilitarian, evidence-first design language for Windows administration and diagnostics. The graphical, terminal, and headless surfaces must present the same operation authority and result semantics even when their visual density differs.
+WinCare is a local Windows operations workstation optimized for explicit authority, recoverability, and observable evidence.
 
-This document defines interaction and presentation contracts. It does not grant capabilities or mutation authority.
+## Principles
 
-## Design objectives
+1. One authoritative write path.
+2. Query surfaces never acquire mutation authority.
+3. UI state is not policy or durable truth.
+4. Missing evidence never becomes success.
+5. Resource bounds are part of every external boundary.
+6. Recovery is designed before mutation.
+7. Optional dependencies are explicit, verified, and replaceable.
+8. Language boundaries must earn their operational cost.
+9. Current executable documentation replaces implementation-history narratives.
 
-WinCare prioritizes:
+## Language allocation
 
-1. operational clarity over decoration;
-2. real system evidence over simulated metrics;
-3. risk and authority visibility before action;
-4. dense but readable information presentation;
-5. keyboard, screen-reader, high-contrast, monochrome, and reduced-motion usability;
-6. consistent status semantics across GUI, TUI, logs, and JSON;
-7. stable performance on machines that are already under diagnosis.
+PowerShell remains the natural owner of Windows orchestration and operator workflows. C# is limited to compiled primitives that benefit from stable interop, strict byte-oriented parsing, or reduced runtime compilation. Python is limited to reproducible build and independent verification tools. No language is introduced solely to imitate an external architecture.
 
-## Cross-surface hierarchy
+## Product surfaces
 
-Every surface should answer these questions in order:
+WPF, terminal, and headless entry points call the same module. Advanced capabilities are exposed through capability discovery and domain functions, with dependency state and non-claims included in their results.
 
-1. **Where am I?** — capability/workspace and target context.
-2. **What is the current state?** — observations and confidence/evidence.
-3. **What can be done?** — available actions constrained by capability/policy.
-4. **What will change?** — preview, affected resources, risk, and reversibility.
-5. **What authority is required?** — apply, approval, elevation, network, or persistence.
-6. **What happened?** — result, postconditions, journal/receipt, and residual state.
+---
 
-Presentation layers must not hide blocked, unsupported, unknown, partial, or failed states merely to simplify the interface.
+## Design System
 
-## Information architecture
+### Aesthetic
 
-The default workstation model is:
+**Precision Instrument.** Dark maritime navy shell with brand-blue (`#2F80ED`) as the sole accent. Interface reads like calibrated instrumentation: high-contrast typography, defined edges, no decoration that does not carry information. The accent appears sparingly — selected states, interactive targets, progress indicators — and never as decoration. Purple (`#7C5CFC`) is absent from every layer of the design. The only gradient is the hero panel, built entirely from brand palette hues (Ink → Deep Blue, no purple).
 
-- **Navigation** — capability areas and workspaces.
-- **Context header** — current machine/target, mode, read-only state, and capability status.
-- **Primary content** — observations, plans, evidence, tables, or forms.
-- **Action area** — preview, apply, cancel, export, or navigation actions.
-- **Evidence/status area** — result state, timestamps, hashes/identities, warnings, postconditions, and recovery information.
+### Typography
 
-The GUI may use panes, tabs, or cards; the TUI may use sections and tables. Both must preserve the same conceptual order.
+- **Display/body:** Segoe UI Variable Text, Segoe UI (built into Windows 10/11; correct for a native WPF tool; no external font dependency)
+- **Evidence/code layer:** Cascadia Mono, Consolas (command names, output, arguments, unsafe phrase display)
+- **Scale** (base 12px, ratio ×1.25): 10, 12 (caption), 14 (body), 17 (subtitle), 20 (section heading), 24 (action title), 25 (page title), 28 (assurance metric), 30 (hero heading)
+- **Weight rhythm:** Regular for body; SemiBold for headings and emphasis; Bold only for the wordmark
 
-## Semantic status model
+### Token Table
 
-Use consistent labels and iconography:
+All XAML `DynamicResource` keys. This table is the single source of truth — values in `WinCare.MainWindow.xaml` must match.
 
-| Status | Meaning | Visual treatment |
-| --- | --- | --- |
-| `Available` | Capability and prerequisite are present | Neutral-positive, not celebratory |
-| `ReadOnly` | Observation permitted; persistent mutation unavailable or disabled | Informational |
-| `Preview` | Plan exists but has not been applied | Accent/informational |
-| `AwaitingApproval` | Explicit approval/elevation is required | Warning |
-| `Running` | Bounded operation is active | Progress without implying success |
-| `Succeeded` | Required postconditions/evidence passed | Positive |
-| `Partial` | Some work/evidence completed; residual state exists | Warning |
-| `Blocked` | Prerequisite, policy, or environment prevents operation | Warning with reason |
-| `Unsupported` | Capability is not meaningful/implemented in this environment | Neutral-muted with explanation |
-| `Unknown` | Evidence is insufficient to assert state | Neutral-warning; never display as healthy |
-| `Denied` | Policy, approval, identity, or scope rejected the request | Alert |
-| `Failed` | Attempted operation did not satisfy its contract | Alert |
+| Key | Value | Role |
+|---|---|---|
+| `BackgroundBrush` | `#0B1020` | Window background |
+| `SidebarBrush` | `#0E1526` | Navigation rail background |
+| `SurfaceBrush` | `#121A2B` | Card and panel surface |
+| `SurfaceRaisedBrush` | `#1B2740` | Raised surface (button bg, column headers) |
+| `SurfaceHoverBrush` | `#22314F` | Interactive hover state |
+| `SelectionBrush` | `#1E2D4A` | Selected item fill (action list) |
+| `BorderBrush` | `#2B3A58` | Borders, separators |
+| `AccentBrush` | `#2F80ED` | Brand blue — primary accent, selected state indicator, focus ring, progress |
+| `AccentSoftBrush` | `#1A2E50` | Accent background at low opacity — selected nav item fill |
+| `CyanBrush` | `#34D6E9` | Icon color, secondary data accent (storage progress) |
+| `SuccessBrush` | `#3FB950` | Positive status, low-risk badge |
+| `WarningBrush` | `#D29922` | Warning status, moderate-risk badge |
+| `CriticalBrush` | `#F85149` | Critical/error status, danger badge and confirm overlay border |
+| `TextBrush` | `#E6EDF3` | Primary text |
+| `TextMutedBrush` | `#8B949E` | Secondary/caption text |
+| `TextDimBrush` | `#5A6478` | Tertiary/evidence text, command path |
+| `HeroBrush` | LinearGradient `#0B1F3A→#123A72→#0D1117` | Hero panel background — brand deep blue, **no purple** |
 
-Color must reinforce text and iconography, never carry status alone.
+> **Brand palette reference** (from `design/WinCare-Brand.manifest.json`): Ink `#0B1026` · Deep Blue `#123A72` · Blue `#2F80ED` · Cyan `#34D6E9` · Mint `#68E0B5` · White `#FFFFFF`
 
-## Semantic color roles
+### Spacing
 
-Implementation-specific colors live in WPF resources and terminal theme mappings. All themes must provide these roles:
+- **Base unit:** 8px
+- Within-group tight: 4–8px
+- Within-card comfortable: 12–18px
+- Card padding: 18–24px
+- Section separation: 18–24px
+- Content area margin: 24px
 
-| Role | Purpose |
-| --- | --- |
-| Canvas | Main application background |
-| Surface | Panels, tables, forms, and grouped evidence |
-| Raised surface | Active controls, selected rows, dialogs, and temporary layers |
-| Border | Structural separation without heavy shadows |
-| Primary text | Main labels and values |
-| Secondary text | Metadata, descriptions, and supporting context |
-| Muted text | Disabled or low-priority information that remains legible |
-| Accent | Selected navigation and primary non-destructive actions |
-| Information | Read-only, preview, and explanatory states |
-| Warning | approval, blocked, partial, caution, and non-recoverable disclosure |
-| Alert | denied, failed, destructive, or integrity-critical states |
-| Success | verified completion/postcondition success |
-| Focus | keyboard focus and active accessibility target |
+### Radius
 
-### Theme requirements
+| Surface | Value |
+|---|---|
+| Cards | 14px |
+| Buttons | 8px |
+| Badges / chips | 9–11px |
+| Overlays | 16–18px |
 
-- `Normal` may use a dark or system-aligned high-density palette.
-- `HighContrast` must prioritize OS/user contrast semantics over brand colors.
-- `Monochrome` must remain fully usable without hue distinctions.
-- Terminal themes must degrade cleanly when ANSI color is unavailable.
-- Read-only and mutation authority must remain visible in every theme.
+**Rule:** Nothing above 18px. Blob-rounding is absent from this design.
 
-## Typography
+### Shadow
 
-Use Windows/system-installed typefaces; WinCare must not require downloaded fonts.
+One approach only: `CardShadow` (BlurRadius=22, ShadowDepth=4, Opacity=0.18, Color=#000000).
 
-Recommended roles:
+Never stack `CardShadow` with a visible `BorderBrush` border on the same element — this design uses bordered surfaces with a light shadow, not glowing elevation.
 
-- UI and body: `Segoe UI` with system fallback;
-- terminal/code/path/hash: `Cascadia Mono`, `Consolas`, or system monospace fallback;
-- headings: the same UI family with weight/size hierarchy rather than a separate decorative family.
+### Signature Move
 
-Text should remain crisp at Windows scaling settings. Avoid all-caps paragraphs, ultra-light weights, and font sizes that sacrifice dense readability.
+The selected-state indicator is a **2px left-border** in `AccentBrush` (`#2F80ED`) on `NavItem` and `ActionItem`. Not a background highlight; not a glow. The fill behind it is `AccentSoftBrush` (nav) or `SelectionBrush` (actions) so the border carries the primary selection signal. It reads as a precision marker: one thin line of authority — like a vernier scale indicator.
 
-## Spacing and density
+---
 
-Use a 4-pixel conceptual spacing grid:
+## Craft Layer
 
-| Token | Typical value | Use |
-| --- | ---: | --- |
-| `xs` | 4 px | icon/text gap, compact metadata |
-| `sm` | 8 px | dense cell/control padding |
-| `md` | 12 px | grouped controls and panel interiors |
-| `lg` | 16 px | section separation |
-| `xl` | 24 px | major workspace separation |
+### Layout
 
-Density rules:
+- **Shell:** 3-row Grid (72px header / `*` content / 32px footer) × 2-column (258px sidebar / `*` content). Sidebar spans all 3 rows.
+- **Dashboard stats row:** Explicit `Grid` with weighted columns `1.4* 1.1* 1.1* 0.9*` — Security wider (shows Defender posture detail); Restart narrower (binary pending/clear state). Replaces `UniformGrid Columns="4"`.
+- **Assurance stats row:** Explicit `Grid` `1* 1* 1* 1*` with margin-controlled gutters. Replaces `UniformGrid Columns="4"`.
+- **Actions panel:** 440px fixed list column + `*` detail column — master-detail pattern, not a card grid.
 
-- prefer scan-friendly tables for comparable evidence;
-- keep labels close to their values;
-- avoid oversized empty cards and decorative whitespace;
-- allow user-resizable columns/panes where data length varies;
-- never truncate the only copy of a critical path, identity, error, or risk disclosure without a way to reveal/copy it.
+### Component State Matrix
 
-## Controls and actions
+**NavItem** (`ListBoxItem` with `NavItemStyle`)
 
-### Primary action
+| State | Background | Border | Foreground |
+|---|---|---|---|
+| Default | Transparent | None | TextBrush |
+| Hover | SurfaceHoverBrush | None | TextBrush |
+| Selected | AccentSoftBrush | 2px left AccentBrush | TextBrush |
+| Focused | — | FocusVisualStyle ring | — |
 
-Only one primary action should dominate a local context. For mutating workflows, the primary action is normally **Preview** before **Apply** becomes available.
+**ActionItem** (`ListBoxItem` with `ActionItemStyle`)
 
-### Destructive action
+| State | Background | Border |
+|---|---|---|
+| Default | SurfaceBrush | 1px BorderBrush |
+| Hover | SurfaceHoverBrush | 1px BorderBrush |
+| Selected | SelectionBrush | 2px left + 1px AccentBrush |
+| Focused | — | FocusVisualStyle ring |
 
-Destructive actions must:
+**Button** (`BaseButton`)
 
-- use explicit verbs and target names;
-- disclose scope, reversibility, and evidence expectations;
-- avoid being the default focused button when a safer action exists;
-- require the same policy/approval path as non-UI callers;
-- remain distinguishable in high-contrast and monochrome modes.
+| State | Surface | Border | Opacity |
+|---|---|---|---|
+| Default | SurfaceRaisedBrush | BorderBrush | 1.0 |
+| Hover | SurfaceHoverBrush | BorderBrush | 1.0 |
+| Pressed | SurfaceHoverBrush | BorderBrush | 0.78 |
+| Disabled | SurfaceRaisedBrush | BorderBrush | 0.42 |
+| Focused | — | FocusVisualStyle ring | — |
 
-### Disabled versus unavailable
+**PrimaryButton** — same as `BaseButton` with `AccentBrush` as the surface background.
 
-Do not silently disable a control without explanation. Prefer a visible `Blocked`/`Unsupported` state with the prerequisite or policy reason.
+**DangerButton** — `#3D141B` background, `CriticalBrush` border (confirmation actions only).
 
-### Confirmation
+**TextBox** — Default: `#0D1424` bg, `BorderBrush` border, `AccentBrush` caret. Focused: `AccentBrush` border. Error: `CriticalBrush` border.
 
-Confirmation is not a replacement for target validation. Use confirmation for human intent while the backend independently enforces identity, scope, policy, and postconditions.
+**ProgressBar** — `AccentBrush` foreground (Memory); `CyanBrush` foreground (Storage); `SurfaceRaisedBrush` track.
 
-## Plan and preview presentation
+**Toast** — `SurfaceRaisedBrush` bg, `AccentBrush` border (default), bottom-right corner, auto-dismiss at 4s.
 
-A plan view should expose, as applicable:
+**BusyOverlay** — `#AA070B14` scrim; centered modal card (440px, `SurfaceBrush` bg, 16px radius).
 
-- operation name and target;
-- current observed state;
-- proposed changes;
-- affected resources;
-- prerequisites and capability status;
-- required authority/elevation;
-- risk and non-recoverable steps;
-- compensation/rollback behavior;
-- expected postconditions;
-- evidence that will be recorded.
+**ConfirmOverlay** — `#C4070B14` scrim; `CriticalBrush` border card (590px) — the danger surface uses `CriticalBrush` as its edge, not `AccentBrush`.
 
-The apply control must remain bound to the reviewed plan identity; a materially changed target or plan should require a new preview.
+### Motion
 
-## Evidence presentation
+- **ReducedMotion:** Respect `config.ReducedMotion`; no storyboard animations when true.
+- **Only animate:** `Opacity`, `Transform` — never `Width`/`Height`/`Top`/`Left`.
+- **Toast:** Opacity storyboard `0→1` in 150ms ease-out.
+- **BusyOverlay:** fade-in 120ms.
+- **No animation** on high-frequency list scroll or filter operations.
+- **Duration tokens:** Fast=120ms · Standard=200ms · Deliberate=300ms
+- **Easing:** ease-out for entrances; ease-in for exits.
 
-Evidence views should favor structured fields over prose-only summaries. Make it possible to inspect and copy:
+### Focus
 
-- timestamps and duration;
-- target/provider identity;
-- selected arguments;
-- before/after state;
-- hashes, manifests, signatures, or exit codes;
-- verification/postcondition outcome;
-- blocked/unsupported reason;
-- journal, receipt, or artifact location;
-- residual or recovery state.
+- `FocusRingStyle` resource defined in `Window.Resources`.
+- Visual: 2px solid `AccentBrush` outline, 3px margin offset, 6px corner radius.
+- Applied via `FocusVisualStyle="{StaticResource FocusRingStyle}"` on `NavItemStyle`, `ActionItemStyle`, and optionally via `Window.FocusVisualStyle` override.
+- **WCAG 2.2 SC 2.4.11:** visible focus indicator on all interactive controls.
 
-Do not display fabricated percentages, random sparklines, generic health scores, or decorative telemetry.
+### Accessibility
 
-## Tables and logs
+- **Target:** WCAG 2.2 AA
+- **Contrast (verified):** `TextBrush #E6EDF3` on `BackgroundBrush #0B1020` → ~16.0:1 ✓ (exceeds AA 4.5:1). `TextMutedBrush #8B949E` on `SurfaceBrush #121A2B` → ~5.65:1 ✓.
+- **Automation:** All interactive controls have `AutomationProperties.Name` (verified in XAML).
+- **Target size:** Min 24×24px — all buttons and nav items meet this ✓.
+- **Color independence:** Risk levels show both a colored badge AND a text label (`Risk: Critical / High / Moderate / Low / ReadOnly`) — color is not the only signal ✓.
+- **Screen reader mode:** `ScreenReaderCheckBox` in Settings propagates to `config.ScreenReaderMode`.
+- **HighContrast / Monochrome:** Handled by `Set-WinCareGuiTheme` in `10-GuiRuntime.ps1`.
 
-- freeze or preserve important identity columns when practical;
-- provide sorting/filtering without changing underlying evidence;
-- distinguish empty, unavailable, and error states;
-- use monospaced text for paths, command lines, IDs, hashes, and raw events;
-- bound rendered rows and offer explicit paging/export for large datasets;
-- avoid auto-scrolling that prevents inspection;
-- preserve exact raw values behind formatted summaries.
+### Dark Mode
 
-## Accessibility
+App is dark-only. Background is near-black (`#0B1020`), not pure black — this maintains elevation contrast headroom. HighContrast theme is a designed override, not an inversion, managed in the runtime.
 
-All operator surfaces must support the applicable platform capabilities:
+---
 
-- complete keyboard navigation;
-- visible focus indicator;
-- logical focus order;
-- accessible names/descriptions for icon-only controls;
-- status announcements that do not rely on color;
-- screen-reader-compatible tables and form relationships;
-- Windows high-contrast behavior;
-- monochrome and ASCII terminal rendering;
-- reduced or absent nonessential motion;
-- text scaling without clipping critical controls;
-- copyable error and evidence details.
+## Slop Audit
 
-Automation IDs and accessibility labels should be stable enough for UI validation where feasible.
+### Signals eliminated (v2.0 design pass)
 
-## Motion and performance
+| Signal | Old value | Replaced with |
+|---|---|---|
+| AI purple accent | `#7C5CFC` | `#2F80ED` brand blue |
+| `AccentSoftBrush` purple tint | `#2B225A` | `#1A2E50` brand deep blue tint |
+| `HeroBrush` purple bleed | Stop `#231C52` | `#0B1F3A` (Ink) brand start |
+| `UniformGrid` Dashboard | `Columns="4"` uniform | Weighted `Grid` `1.4* 1.1* 1.1* 0.9*` |
+| `UniformGrid` Assurance | `Columns="4"` uniform | Explicit `Grid` `1* 1* 1* 1*` with margin gutters |
+| Missing `FocusVisualStyle` | (absent) | `FocusRingStyle` — 2px `AccentBrush` ring |
+| `ComboBox` light-mode inversion | `#F4F7FB` bg, `#111827` fg | `SurfaceRaisedBrush` bg, `TextBrush` fg |
 
-WinCare is a diagnostic tool and must not compete with the system being diagnosed.
+### Signals correctly absent
 
-- avoid continuous background animation;
-- use motion only to communicate state transition or progress;
-- honor reduced-motion preferences;
-- stop progress animation when the operation stops;
-- virtualize/bound large collections;
-- keep expensive evidence collection outside the UI thread;
-- never create decorative GPU workloads or WebGL-like backgrounds.
+- Blob-rounding: `CornerRadius` max 14px ✓
+- Excessive shadows: one `CardShadow` definition only ✓
+- Glassmorphism: none ✓
+- Gradient text or metric display values: none ✓
+- Floating orbs or decorative elements: none ✓
+- Inter/Roboto as primary: Segoe UI Variable Text (native Windows, platform-correct) ✓
 
-## Icons and product identity
+### Remaining open items
 
-Product and capability icons must be simple, high-contrast, and recognizable at small Windows sizes.
+- **[OPEN]** ~12 hardcoded hex values remain in XAML outside the resource block (hero card separator `#40506A`, output pane `#0A101D`, alternating row `#10182A`, overlay scrims, etc.) — migrate to named tokens in next pass.
+- **[OPEN]** `FocusVisualStyle` needs to be wired to `Button`, `TextBox`, `ComboBox`, `CheckBox` via a global Window style override — currently only on `NavItemStyle` and `ActionItemStyle`.
+- **[OPEN]** Motion storyboards (Toast, BusyOverlay) not yet implemented in XAML — next pass.
 
-The WinCare product mark should have:
+### Self-audit score
 
-- one vector source of truth;
-- square icon-safe geometry;
-- transparent-background exports;
-- tested sizes for 16, 20, 24, 32, 48, 64, 128, and 256 pixels;
-- a multi-resolution Windows `.ico` for executable and shortcut use;
-- monochrome/high-contrast fallback treatment;
-- no embedded small text that becomes unreadable in Explorer or the taskbar.
+| Area | Status |
+|---|---|
+| Aesthetic commitment (Precision Instrument) | ✓ Clear and committed |
+| Typography (platform-appropriate) | ✓ |
+| Color hierarchy (60/30/10 navy/surface/accent) | ✓ |
+| No purple anywhere in token table | ✓ |
+| Layout intentional (weighted stats, master-detail) | ✓ |
+| WCAG AA contrast | ✓ |
+| Focus indicators (all interactive controls) | ⚠ Partial — NavItem and ActionItem done; Button/TextBox/ComboBox global override pending |
+| Motion (ReducedMotion respected) | ⚠ Defined in spec, storyboards pending |
+| Hardcoded hex values eliminated | ⚠ Major tokens done; ~12 minor values remain |
 
-Every standalone executable and installed shortcut should resolve to the approved product icon through the build/install pipeline. Asset generation and executable embedding must be deterministic and validated as part of release assurance.
+---
 
-## Anti-slop rules
+## Changelog
 
-Do not add:
-
-- decorative gradients or blurred blobs without operational meaning;
-- fake metrics, placeholder counters, or random charts;
-- heavy shadows as a substitute for hierarchy;
-- gratuitous glass/transparency that reduces readability;
-- oversized marketing-style hero areas inside operational workspaces;
-- animated backgrounds;
-- generic icons that conceal distinct risk levels;
-- success-colored states before postconditions pass;
-- unexplained disabled controls;
-- duplicate panels that present the same evidence differently.
-
-## Review checklist
-
-A UI change is ready when:
-
-- it uses the existing backend contract rather than independent logic;
-- read-only/preview/apply/elevation states are explicit;
-- blocked, unsupported, unknown, partial, and failed states are represented;
-- critical information survives high-contrast, monochrome, and narrow layouts;
-- keyboard and screen-reader paths are considered;
-- large data is bounded or virtualized;
-- no fake or decorative operational data was introduced;
-- UI catalog/XAML/resource tests and relevant Windows launch checks pass;
-- command/capability/security documentation is updated when behavior changed.
-
-## Related documents
-
-- [Architecture](ARCHITECTURE.md)
-- [Commands](COMMANDS.md)
-- [Security](../SECURITY.md)
-- [Testing](Testing.md)
+| Version | Date | Notes |
+|---|---|---|
+| v1.0 | 2026-08-01 | Initial principles, language allocation, product surfaces |
+| v2.0 | 2026-08-01 | Full design system added: aesthetic commitment, token table, typography, spacing, radius, shadow, signature move, craft layer (layout, components, motion, focus, accessibility, dark mode), slop audit |

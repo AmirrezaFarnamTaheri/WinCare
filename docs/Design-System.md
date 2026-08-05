@@ -21,15 +21,15 @@
 | `surface-raised` | `#1B2740` | controls and secondary actions |
 | `surface-hover` | `#22314F` | hover/focus support |
 | `border` | `#2B3A58` | boundaries and dividers |
-| `accent` | `#7C5CFC` | primary action/selection |
-| `information` | `#36C5F0` | read-only and informational state |
-| `success` | `#2DD4A8` | healthy/completed state |
-| `warning` | `#F6C85F` | caution/moderate risk |
-| `critical` | `#F97066` | destructive/critical risk |
-| `text` | `#F4F7FB` | primary text |
-| `text-muted` | `#9AA9C3` | secondary text |
+| `accent` | `#2F80ED` | primary action/selection |
+| `information` | `#34D6E9` | read-only and informational state |
+| `success` | `#3FB950` | healthy/completed state |
+| `warning` | `#D29922` | caution/moderate risk |
+| `critical` | `#F85149` | destructive/critical risk |
+| `text` | `#E6EDF3` | primary text |
+| `text-muted` | `#8B949E` | secondary text |
 
-Validated contrast ratios include 17.62:1 for primary text/background, 7.31:1 for muted text/surface, and at least 4.72:1 for status text on its status surface.
+Validated contrast ratios include approximately 16.0:1 for primary text/background and 5.65:1 for muted text/surface; status colors are always paired with text labels.
 
 ### Typography
 

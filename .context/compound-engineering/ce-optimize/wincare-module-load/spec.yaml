@@ -1,0 +1,84 @@
+# ce-optimize spec: WinCare module load time
+# Goal: reduce Import-Module WinCare cold-start time
+# Baseline: ~4,960ms median (172 .ps1 files dot-sourced sequentially in jobs)
+# Target: <3,000ms median (>40% reduction)
+# Type: hard — wall-clock time, objectively measurable
+
+name: wincare-module-load
+description: >
+  Reduce the time taken by `Import-Module WinCare` in a clean PowerShell process.
+  Currently 172 source files are dot-sourced sequentially during module init.
+  Experiments explore caching strategies, manifest pruning, and load ordering.
+
+type: hard
+
+primary_metric:
+  name: load_time_ms_median
+  direction: minimize
+  # Gate: module load must succeed and be <30s
+  gate:
+    load_succeeded: true
+    load_time_ms_median:
+      max: 30000
+
+diagnostics:
+  - load_time_ms_min
+  - load_time_ms_max
+  - source_file_count
+
+measurement:
+  command: >
+    pwsh -NoProfile -ExecutionPolicy Bypass
+    "D:\WinCare-5.2.0\WinCare\tools\measure_load_time.ps1" -Runs 3
+  working_directory: D:\WinCare-5.2.0\WinCare
+  timeout_seconds: 300
+  output_format: json
+  stability:
+    mode: repeat
+    repeat_count: 3
+    aggregation: median
+    noise_threshold: 0.20
+
+scope:
+  mutable:
+    - src/WinCare/WinCare.psm1
+    - src/WinCare/SourceManifests/Core.psd1
+    - src/WinCare/SourceManifests/Providers.psd1
+    - src/WinCare/SourceManifests/UI.psd1
+  immutable:
+    - src/WinCare/WinCare.psd1
+    - tools/measure_load_time.ps1
+    - tools/validate_source.py
+    - tools/validate_module_manifest.py
+
+execution:
+  mode: serial
+  max_concurrent: 1
+
+stopping:
+  max_iterations: 6
+  max_hours: 2
+  target_metric_value: 3000
+
+hypothesis_categories:
+  - name: load-ordering
+    description: Reorder source files to front-load most-used functions
+  - name: psm-caching
+    description: Cache compiled script blocks or use Add-Type assemblies
+  - name: manifest-pruning
+    description: Skip source file validation during hot path
+  - name: parallel-dot-source
+    description: Use parallel Runspace to dot-source independent groups
+
+baseline:
+  timestamp: "2026-08-01T19:18:59Z"
+  load_time_ms_median: 4961.5
+  load_time_ms_min: 4281.0
+  load_time_ms_max: 4961.5
+  load_succeeded: true
+  source_file_count: 172
+  notes: >
+    Measured using isolated PowerShell jobs (3 runs).
+    WARNING suppressed: unapproved verbs in function names (not blocking).
+    The large median-max spread in earlier 2-run measurement (5180-17156ms)
+    was due to cold JIT; 3-run warm measurement is 4281-4962ms (stable).

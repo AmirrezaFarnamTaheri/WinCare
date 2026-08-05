@@ -48,7 +48,10 @@ def validate(root: Path) -> dict[str, object]:
     scanned = 0
     source_root = root / "src/WinCare"
     for path in sorted(source_root.rglob("*.ps1")):
+        if path.name.startswith(".wincare-"):
+            continue
         relative = path.relative_to(root).as_posix()
+
         scanned += 1
         original = path.read_text(encoding="utf-8-sig", errors="replace")
         scrubbed = _scrub_powershell(original)
