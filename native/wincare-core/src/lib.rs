@@ -197,7 +197,10 @@ mod tests {
         assert_eq!(Status::Ok.code(), status);
         assert_eq!(
             "ffea9f97d9a428ca7734085ae405b3f41d5a97e800bd2e287cd7c7d6fad5de9c",
-            output.iter().map(|byte| format!("{byte:02x}")).collect::<String>()
+            output
+                .iter()
+                .map(|byte| format!("{byte:02x}"))
+                .collect::<String>()
         );
     }
 
@@ -278,13 +281,7 @@ mod tests {
         let mut output = [0_u8; SHA256_LENGTH];
         // SAFETY: This intentionally supplies null pointers to verify validation.
         let null_status = unsafe {
-            wincare_core_sha256_file(
-                std::ptr::null(),
-                0,
-                1,
-                output.as_mut_ptr(),
-                output.len(),
-            )
+            wincare_core_sha256_file(std::ptr::null(), 0, 1, output.as_mut_ptr(), output.len())
         };
         // SAFETY: The path is valid. The output length is intentionally too short.
         let short_status = unsafe {

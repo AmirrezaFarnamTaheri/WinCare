@@ -1,3 +1,4 @@
+//! Contract test for the versioned wincare-core ABI surface.
 use wincare_core::wincare_core_abi_version;
 
 #[test]
