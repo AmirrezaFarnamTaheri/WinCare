@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "sourceRepository": "AmirrezaFarnamTaheri/WinCare",
+  "sourceCommit": "83567c4dbf3cf85e44217855d39604b0193623e3",
+  "capturedAt": "2026-08-06T00:00:00Z",
+  "purpose": "Immutable, non-executable parity fixtures for the native migration.",
+  "sourceFiles": {
+    "src/WinCare/UI/97-AdvancedCapabilities.ps1": "aed80b1058149db9eb96202e19a1833cd963cb2e17d2479c576491545fa10622",
+    "src/WinCare/UI/98-Headless.ps1": "195b051aa0f9900bb370c51c0310c724c2b09e31a5f61e13923797b2429a6af1",
+    "src/WinCare/Data/Catalog/rules.json": "82abd1f64344a80854123fe10f7d363ed8e7b771103e69d10e47b7ebbee7df11",
+    "src/WinCare/Data/Catalog/presets.json": "27a53013a5b9f6cb529a434814e80625635eada08d0ce817261373f1b8dac7db"
+  }
+}

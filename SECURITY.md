@@ -1,124 +1,64 @@
 # WinCare security policy and model
 
-WinCare performs privileged and potentially destructive Windows operations. Security is therefore a product contract, not an optional hardening layer.
+WinCare performs privileged and potentially destructive Windows operations. Security is a product contract, not an optional hardening layer.
 
 ## Reporting a vulnerability
 
-Do not publish an undisclosed vulnerability, exploit, credential, machine identifier, or sensitive log in a public issue or pull request.
-
-Use GitHub's private vulnerability-reporting or Security Advisory workflow when it is available for this repository. If no private reporting control is visible, contact the repository maintainer through a private channel and request a secure disclosure path without including exploit details in the initial public message.
-
-A useful report includes:
-
-- affected version, branch, or commit;
-- affected Windows edition/build and architecture;
-- required privilege and user interaction;
-- reproducible steps using non-sensitive test data;
-- expected versus observed authority or outcome;
-- impact and realistic attack preconditions;
-- logs, traces, or proof-of-concept material with secrets removed;
-- suggested mitigation when known.
-
-Please allow maintainers time to reproduce, remediate, validate, and prepare coordinated disclosure before publishing details.
+Do not publish an undisclosed vulnerability, exploit, credential, machine identifier, or sensitive log in a public issue or pull request. Use GitHub private vulnerability reporting or a private maintainer channel. Include the affected version, Windows build and architecture, privilege level, reproduction steps with non-sensitive data, observed impact, and redacted evidence.
 
 ## Supported security scope
 
-Security fixes target:
+Security fixes target the current default branch, the latest supported production release, and release tooling used to produce supported artifacts. WinCare 2.4.0-rc1 is a source release candidate and is not a supported production release.
 
-- the latest supported release;
-- the current default branch;
-- release and installation tooling used to produce or validate supported artifacts.
-
-Older commits, development artifacts, dirty-source packages, locally modified installations, and unsupported Windows environments may be useful for diagnosis but are not equivalent to a supported production release.
-
-## Core security invariants
+## Core invariants
 
 ### Explicit authority
 
-Observation does not imply mutation authority. Planning does not imply execution authority. Local execution does not imply elevation, network transmission, remote control, persistence, or deployment authority.
+Observation does not imply mutation authority. Planning does not imply execution authority. Search, navigation, UI state, Rust results, and catalog presence cannot grant elevation or mutation authority.
 
-Mutating operations must use the governed action/transaction path and require explicit approval or `-Apply` semantics as applicable.
+### Fail closed
 
-### Fail-closed results
-
-Missing dependencies, unsupported platforms, denied policies, unverifiable identities, unsafe paths, failed postconditions, and nonzero process results must remain explicit. WinCare does not report synthetic success.
+Missing dependencies, unsupported platforms, denied policy, unverifiable identity, unsafe paths, failed postconditions, native errors, cancelled work, timeouts, and incomplete migration remain explicit failures or blocked results. They never become success.
 
 ### Bounded resources
 
-Filesystem traversal, archive processing, process output, network responses, event collection, and generated artifacts must have explicit limits. Reparse points, unsafe archive paths, case collisions, duplicates, suspicious expansion, and unmanifested content are rejected where those conditions affect authority or integrity.
+Filesystem traversal, archive processing, process output, network responses, event collection, and native buffers require explicit limits. Unsafe archive paths, links, collisions, duplicates, suspicious expansion, and unmanifested content are rejected.
 
 ### Exact identity
 
-Security-sensitive operations bind to canonical paths, hashes, manifests, receipts, product identity, admitted executables, or provider-specific identifiers. Display names and mutable ambient state are not sufficient authority.
+Security-sensitive operations bind to canonical paths, hashes, manifests, receipts, product identity, admitted executables, or provider-specific identifiers. Display names and mutable ambient state are not authority.
 
 ### No implicit egress
 
-WinCare does not infer remote destinations, silently upload telemetry, attach hidden interceptors, or broaden network authority as a fallback. Network operations require admitted endpoints and bounded request/response behavior.
-
-### Protected state and secrets
-
-Credentials, keys, tokens, and sensitive state must not be committed to the repository or emitted into ordinary logs. Protected records must preserve their envelope, identity, access-control, size, and lifecycle contracts.
+WinCare does not infer remote destinations, upload hidden telemetry, attach interceptors, or broaden network authority as a fallback. Network operations require admitted endpoints and bounded request and response behavior.
 
 ### Evidence before assurance
 
-Configuration state must not be overstated as a guaranteed security property. Observed VBS, HVCI, Credential Guard, DMA, Secure Boot, TPM, BitLocker, or policy settings are evidence about configuration and provider state; they are not proof that every possible compromise is absent.
+Source inspection, successful compilation, configuration state, and a smoke test are not command-equivalence evidence. Production promotion requires command-by-command Windows behavior verification.
 
 ## Trust boundaries
 
 | Boundary | Security expectation |
-| --- | --- |
-| User input | Parsed as data, validated against explicit command/action contracts, and never treated as arbitrary code |
-| Filesystem | Canonical containment, no-follow behavior, reparse rejection, bounded enumeration, and identity re-checks where required |
-| External process | Exact executable discovery/identity, bounded arguments, timeout, captured output ceiling, and exit-code evidence |
-| Network | Explicit target admission, credential/redirect restrictions, response limits, and no silent fallback |
-| Archive/package | Safe member paths, duplicate/collision rejection, size ceilings, manifest closure, hashes, receipts, and provenance |
-| Optional runtime | Dependency detection and digest/identity evidence; no marketplace or auto-install authority |
-| UI/TUI/headless surfaces | Shared backend contracts; presentation layers do not gain independent mutation authority |
-| Standalone executable | Cryptographically bound embedded payload, verified extraction/cache, and restricted argument forwarding |
-| Installer/uninstaller | Product/path/manifest/receipt binding, managed-tree validation, transactional shortcuts, and guarded corrupt-install recovery |
-| Fleet/cloud adapter | Explicit peers/endpoints and credentials; no general-purpose remote administration service |
+|---|---|
+| User input | parsed as data and validated against typed command contracts |
+| WinUI | presentation only; cannot bypass dispatcher admission or safety policy |
+| Command dispatcher | rejects unknown, disabled, unavailable, and unmigrated commands |
+| Filesystem | canonical containment, link rejection, bounded enumeration, and identity re-checks |
+| External process | exact executable identity, bounded arguments and output, timeout, and exit evidence |
+| Network | explicit target admission, redirect and credential restrictions, and response ceilings |
+| Rust ABI | versioned interface, explicit lengths, bounded buffers, status codes, and no business policy |
+| Archive and package | safe paths, deterministic entries, manifest closure, hashes, signatures, and provenance |
+| Elevation | narrow operation-specific broker after review, never shell access |
+| Recovery | durable journal, explicit partial-failure state, and compensation when supported |
 
 ## Deliberately excluded behavior
 
-WinCare does not claim or ship:
-
-- covert interception or redirection;
-- packet desynchronization or censorship-bypass behavior;
-- kernel patching;
-- automatic unsigned-driver installation;
-- arbitrary remote command execution;
-- hidden background telemetry;
-- autonomous production patch deployment;
-- an unrestricted plugin marketplace;
-- a guarantee that configuration evidence proves compromise absence;
-- a security boundary based only on launching a process.
-
-See [Advanced Capabilities](docs/Advanced-Capabilities.md) for capability-specific boundaries.
-
-## Security review requirements for changes
-
-Changes require explicit security review when they add or expand:
-
-- mutation or elevation authority;
-- filesystem deletion, relocation, staging, or recursive traversal;
-- process creation, IPC, service, task, or driver behavior;
-- network egress, remote peers, credentials, or cloud adapters;
-- archive extraction, package verification, installation, or update behavior;
-- protected state, cryptography, key material, signatures, or policy enforcement;
-- plugin/runtime loading, native interop, binary inspection, or code execution;
-- recovery, compensation, or corrupt-install removal.
-
-The review must include negative-path and adversarial tests, not only a successful example.
+WinCare does not claim or ship covert interception, kernel patching, automatic unsigned-driver installation, arbitrary remote command execution, hidden telemetry, unrestricted plugins, or autonomous production changes.
 
 ## Release integrity
 
-A development package is not a production release. Production promotion requires the exact artifact bytes to pass the mandatory Windows, native-build, deterministic-package, independent-verification, installation, repair, and uninstall evidence gates defined in [Validation](VALIDATION.md) and [Release Engineering](docs/RELEASE.md).
+A development artifact is not a production release. Promotion requires the exact artifact bytes to pass the source, Windows runtime, command parity, deterministic package, signature, installation, repair, upgrade, and uninstall gates in [Validation](VALIDATION.md) and [finalization status](docs/migration/finalization-status.md).
 
-## Security-related logs and diagnostics
+## Diagnostics
 
-Before sharing diagnostics:
-
-1. remove credentials, tokens, keys, user names, host names, internal URLs, and personal paths when they are not essential;
-2. preserve timestamps, exit codes, hashes, schema versions, and bounded error context needed to reproduce the issue;
-3. do not upload complete protected-state stores, memory captures, or private forensic collections to public issues;
-4. use a private disclosure channel for exploit material or sensitive evidence.
+Before sharing diagnostics, remove credentials, keys, user and host names, internal URLs, and personal paths unless essential. Preserve timestamps, status codes, hashes, schema versions, and bounded error context needed for reproduction. Use a private channel for exploit material or sensitive evidence.

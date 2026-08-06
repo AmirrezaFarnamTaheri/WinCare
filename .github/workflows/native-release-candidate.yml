@@ -1,0 +1,59 @@
+name: Native Release Finalization
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Release version label
+        required: true
+        default: 2.4.0-rc1
+        type: string
+      mode:
+        description: Finalization gate
+        required: true
+        default: rc
+        type: choice
+        options:
+          - rc
+          - production
+
+permissions:
+  contents: read
+
+jobs:
+  finalize:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      WINCARE_VERSION: ${{ inputs.version }}
+      WINCARE_MODE: ${{ inputs.mode }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+      - name: Verify native source contract
+        run: python tools/verify_native_foundation.py
+      - name: Run native structural tests
+        run: python -m unittest discover -s tests/native -v
+      - name: Finalize release-candidate source artifacts
+        if: inputs.mode == 'rc'
+        shell: bash
+        run: >-
+          python tools/finalize_native_release.py
+          --output artifacts/finalization
+          --version "$WINCARE_VERSION"
+          --mode rc
+      - name: Enforce production parity and finalize source artifacts
+        if: inputs.mode == 'production'
+        shell: bash
+        run: >-
+          python tools/finalize_native_release.py
+          --output artifacts/finalization
+          --version "$WINCARE_VERSION"
+          --mode production
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: WinCare-${{ inputs.version }}-${{ inputs.mode }}-finalization
+          path: artifacts/finalization/*
+          if-no-files-found: error

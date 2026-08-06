@@ -1,0 +1,23 @@
+using System.Text.Json;
+
+namespace WinCare.Domain.Commands;
+
+/// <summary>
+/// Typed request into the native command plane.
+/// </summary>
+/// <param name="CommandId">Stable catalog command ID.</param>
+/// <param name="Parameters">JSON object parameters.</param>
+/// <param name="Apply">Whether to apply mutations or preview them.</param>
+/// <param name="CorrelationId">Correlation ID for dispatch, telemetry, and recovery.</param>
+public sealed record CommandRequest(
+    string CommandId,
+    JsonElement Parameters,
+    bool Apply,
+    Guid CorrelationId)
+{
+    /// <summary>
+    /// Creates a non-mutative preview request.
+    /// </summary>
+    public static CommandRequest Preview(string commandId, JsonElement parameters) =>
+        new(commandId, parameters, Apply: false, Guid.NewGuid());
+}
