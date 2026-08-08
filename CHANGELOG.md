@@ -14,8 +14,7 @@
 
 This release candidate is not production-promotable. Current migration status is 259 cataloged, 2 implemented, and 0 behavior-verified.
 
-## 2.2.0
-
+## 2.3.0
 The final PowerShell/WPF release remains available in Git history and the legacy oracle archive for parity work.
 
 ## 1.1.0
