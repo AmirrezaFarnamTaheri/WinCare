@@ -1,0 +1,53 @@
+<Page
+    x:Class="WinCare.App.Views.ShellPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    NavigationCacheMode="Required">
+    <NavigationView
+        x:Name="PrimaryNavigation"
+        IsBackButtonVisible="Collapsed"
+        IsSettingsVisible="False"
+        IsTitleBarAutoPaddingEnabled="False"
+        PaneDisplayMode="Auto"
+        OpenPaneLength="240"
+        CompactPaneLength="48"
+        SelectionChanged="PrimaryNavigation_SelectionChanged"
+        AutomationProperties.AutomationId="PrimaryNavigation"
+        AutomationProperties.Name="Primary navigation">
+        <NavigationView.MenuItems>
+            <NavigationViewItem Content="Home" Tag="home" AutomationProperties.AutomationId="NavHome" AutomationProperties.Name="Home">
+                <NavigationViewItem.Icon><FontIcon Glyph="&#xE80F;" /></NavigationViewItem.Icon>
+            </NavigationViewItem>
+            <NavigationViewItem Content="Checkup" Tag="checkup" AutomationProperties.AutomationId="NavCheckup" AutomationProperties.Name="Checkup">
+                <NavigationViewItem.Icon><FontIcon Glyph="&#xE9D9;" /></NavigationViewItem.Icon>
+            </NavigationViewItem>
+            <NavigationViewItem Content="System care" Tag="system-care" AutomationProperties.AutomationId="NavSystemCare" AutomationProperties.Name="System care">
+                <NavigationViewItem.Icon><FontIcon Glyph="&#xE90F;" /></NavigationViewItem.Icon>
+            </NavigationViewItem>
+            <NavigationViewItem Content="Security" Tag="security" AutomationProperties.AutomationId="NavSecurity" AutomationProperties.Name="Security">
+                <NavigationViewItem.Icon><FontIcon Glyph="&#xEA18;" /></NavigationViewItem.Icon>
+            </NavigationViewItem>
+            <NavigationViewItem Content="Repair &amp; recovery" Tag="repair-recovery" AutomationProperties.AutomationId="NavRepairRecovery" AutomationProperties.Name="Repair and recovery">
+                <NavigationViewItem.Icon><FontIcon Glyph="&#xE777;" /></NavigationViewItem.Icon>
+            </NavigationViewItem>
+            <NavigationViewItem Content="All tools" Tag="all-tools" AutomationProperties.AutomationId="NavAllTools" AutomationProperties.Name="All tools">
+                <NavigationViewItem.Icon><FontIcon Glyph="&#xE71D;" /></NavigationViewItem.Icon>
+            </NavigationViewItem>
+            <NavigationViewItem Content="Activity" Tag="activity" AutomationProperties.AutomationId="NavActivity" AutomationProperties.Name="Activity">
+                <NavigationViewItem.Icon><FontIcon Glyph="&#xE81C;" /></NavigationViewItem.Icon>
+            </NavigationViewItem>
+        </NavigationView.MenuItems>
+        <NavigationView.FooterMenuItems>
+            <NavigationViewItem Content="Settings" Tag="settings" AutomationProperties.AutomationId="NavSettings" AutomationProperties.Name="Settings">
+                <NavigationViewItem.Icon><FontIcon Glyph="&#xE713;" /></NavigationViewItem.Icon>
+            </NavigationViewItem>
+            <NavigationViewItem Content="Help and documentation" Tag="help" AutomationProperties.AutomationId="NavHelp" AutomationProperties.Name="Help and documentation">
+                <NavigationViewItem.Icon><FontIcon Glyph="&#xE897;" /></NavigationViewItem.Icon>
+            </NavigationViewItem>
+            <NavigationViewItem Content="About WinCare" Tag="about" AutomationProperties.AutomationId="NavAbout" AutomationProperties.Name="About WinCare">
+                <NavigationViewItem.Icon><FontIcon Glyph="&#xE946;" /></NavigationViewItem.Icon>
+            </NavigationViewItem>
+        </NavigationView.FooterMenuItems>
+        <Frame x:Name="ContentFrame" />
+    </NavigationView>
+</Page>

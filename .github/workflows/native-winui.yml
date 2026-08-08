@@ -1,0 +1,115 @@
+name: Native WinUI
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  verify-source:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+      - name: Verify native source contract
+        run: python tools/verify_native_foundation.py
+      - name: Run structural tests
+        run: python -m unittest discover -s tests/native -v
+      - name: Finalize native release candidate source
+        run: >-
+          python tools/finalize_native_release.py
+          --output artifacts/finalization
+          --version 2.4.0-rc1
+          --mode rc
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: WinCare-native-source-finalization
+          path: artifacts/finalization/*
+          if-no-files-found: error
+
+  rust:
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        target: [x86_64-pc-windows-msvc, aarch64-pc-windows-msvc]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772 # master 2026-08-05
+        with:
+          toolchain: 1.97.1
+          targets: ${{ matrix.target }}
+          components: rustfmt, clippy
+      - name: Format
+        shell: bash
+        run: cargo fmt --manifest-path native/Cargo.toml --check
+      - name: Clippy
+        shell: bash
+        run: cargo clippy --manifest-path native/Cargo.toml --target ${{ matrix.target }} --all-targets --all-features -- -D warnings
+      - name: Test
+        if: matrix.target == 'x86_64-pc-windows-msvc'
+        shell: bash
+        run: cargo test --manifest-path native/Cargo.toml --target ${{ matrix.target }}
+      - name: Build release library
+        shell: bash
+        run: cargo build --manifest-path native/Cargo.toml --target ${{ matrix.target }} --release
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: native-${{ matrix.target }}
+          path: native/target/${{ matrix.target }}/release/wincare_core.dll
+
+  managed-and-package:
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        include:
+          - platform: x64
+            runtime: win-x64
+            rustTarget: x86_64-pc-windows-msvc
+          - platform: ARM64
+            runtime: win-arm64
+            rustTarget: aarch64-pc-windows-msvc
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-dotnet@6df8cefd1440cf9313e76b8fdb8aaf90cfa745a3 # v6.0.0
+        with:
+          dotnet-version: 8.0.416
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+      - uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772 # master 2026-08-05
+        with:
+          toolchain: 1.97.1
+          targets: ${{ matrix.rustTarget }}
+      - name: Build Rust core
+        shell: bash
+        run: cargo build --manifest-path native/Cargo.toml --target ${{ matrix.rustTarget }} --release
+      - name: Stage Rust core
+        shell: bash
+        run: |
+          mkdir -p src/WinCare.App/Native/${{ matrix.platform }}
+          cp native/target/${{ matrix.rustTarget }}/release/wincare_core.dll src/WinCare.App/Native/${{ matrix.platform }}/wincare_core.dll
+      - name: Restore
+        shell: bash
+        run: dotnet restore WinCare.Native.sln -p:Platform=${{ matrix.platform }}
+      - name: Managed tests
+        if: matrix.platform == 'x64'
+        shell: bash
+        run: dotnet test WinCare.Native.sln -c Release -p:Platform=${{ matrix.platform }} --no-restore
+      - name: Build MSIX
+        shell: bash
+        run: dotnet build src/WinCare.App/WinCare.App.csproj -c Release -p:Platform=${{ matrix.platform }} -p:GenerateAppxPackageOnBuild=true --no-restore
+      - name: Publish portable
+        shell: bash
+        run: dotnet publish src/WinCare.App/WinCare.App.csproj -c Release -p:Platform=${{ matrix.platform }} -r ${{ matrix.runtime }} -p:WindowsPackageType=None -p:WindowsAppSDKSelfContained=true -p:SelfContained=true -p:PublishSingleFile=false -o artifacts/portable/${{ matrix.runtime }}
+      - name: Create portable ZIP
+        shell: bash
+        run: python tools/package_portable.py artifacts/portable/${{ matrix.runtime }} artifacts/WinCare-${{ matrix.runtime }}-portable.zip
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: WinCare-${{ matrix.platform }}
+          path: |
+            src/WinCare.App/AppPackages/**/*.msix
+            artifacts/WinCare-${{ matrix.runtime }}-portable.zip

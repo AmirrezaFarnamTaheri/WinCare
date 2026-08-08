@@ -1,50 +1,101 @@
 # Architecture
 
-## Ownership model
+## Release boundary
 
-WinCare uses three implementation languages for bounded responsibilities:
+The 2.4.0-rc1 line is finalized as a native source release candidate. The distributable native source archive contains no PowerShell files. Historical PowerShell source is isolated in a separately hashed legacy oracle archive and is not invoked, embedded, or required by the native runtime.
 
-| Plane | Owner | Responsibility |
-|---|---|---|
-| Orchestration and Windows integration | PowerShell 7.2+ | typed plans, policy, providers, WPF/TUI/headless surfaces, Windows APIs, recovery |
-| Compiled primitives | .NET 8 / C# | command-line parsing, process memory, audio/display interop, security inspection, file and PE intelligence, launchers |
-| Build and independent verification | Python 3 | deterministic packaging, streamed ZIP verification, provenance, structural assurance |
+Production promotion remains blocked until every one of the 259 command contracts has a native implementation and Windows behavioral evidence.
 
-A new language boundary is accepted only when it materially improves safety, determinism, performance, or deployment clarity.
+## Ownership
 
-## Runtime topology
+| Project | Responsibility |
+|---|---|
+| `WinCare.App` | WinUI 3 shell, pages, accessibility, lifecycle, presentation state |
+| `WinCare.Application` | use cases, navigation, tool discovery, command dispatch |
+| `WinCare.Domain` | requests, results, activity, recovery and evidence models |
+| `WinCare.Infrastructure` | Windows integration, persistence, elevation boundary, telemetry, Rust interop |
+| `WinCare.CommandCatalog` | typed definitions and frozen data for all 259 command IDs |
+| `native/wincare-core` | bounded native primitives through a versioned C ABI |
 
-`WinCare.psm1` loads closed ordered manifests for Core, Providers, and UI. Startup fails when a declared file is missing, duplicated, unexpected, or assigned to the wrong ownership group.
+C# owns product decisions and safety policy. Rust returns structured evidence or performs narrowly admitted primitives. Business rules are not duplicated across languages.
 
-The Core plane owns models, policy, process/HTTP brokers, bounded I/O, path safety, canonical integrity, module identity, transactions, journaling, and action contracts. Providers own domain observation and plan construction. UI layers remain non-authoritative and invoke the same exported contracts.
+## Dependency direction
 
-## Mutation path
+```text
+WinCare.App
+  -> WinCare.Application
+  -> WinCare.Domain
+  -> WinCare.CommandCatalog
 
-`UI or headless request -> exported plan constructor -> action contract -> policy/compatibility -> preview/approval -> provider dispatch -> evidence/postcondition -> journal/receipt -> compensation`
+WinCare.App
+  -> WinCare.Infrastructure
+  -> WinCare.Domain
+  -> wincare_core.dll
+```
 
-No alternate GUI, automation, extension, or native write path may bypass that chain.
+Domain and application projects contain no XAML types. ViewModels contain no `Microsoft.UI.Xaml.*` references.
 
-## Trust boundaries
+## Command lifecycle
 
-- **Process:** regular executable, trusted path, optional digest, bounded arguments/output/time, cancellation, redacted persistence.
-- **Network:** admitted URI, credential/header restrictions, metadata-host denial, redirect denial, DNS-change checks, byte/time ceilings, response hash.
-- **Filesystem:** canonical roots, no reparse traversal, ADS rejection, aggregate traversal bounds, race checks, atomic commit and rollback.
-- **IPC:** authenticated framed messages, size and deadline limits, replay prevention, peer checks.
-- **Extension/runtime:** schema, path, hash, signature, revocation, permission, runtime, and output admission.
-- **Elevation:** exact module identity, authenticated request/result envelopes, contract-derived authority, operation-specific approval.
+```text
+UI request
+  -> command catalog contract
+  -> current-state observation
+  -> plan construction
+  -> policy and compatibility checks
+  -> preview and approval
+  -> admitted provider operation
+  -> evidence and postcondition
+  -> journal and receipt
+  -> compensation when supported
+```
 
-## Advanced capability composition
+The dispatcher fails closed for unknown, unavailable, disabled, or unmigrated commands. All tools may display the full catalog, but catalog presence never grants execution authority.
 
-Advanced features reuse existing owners rather than creating parallel platforms:
+## Rust boundary
 
-- fleet topology uses authenticated health and policy-hash evidence;
-- forensics combines event, process, registry, signature, and module evidence;
-- Windows Sandbox configuration uses managed-file transactions and does not auto-launch;
-- VBS/DMA hardening composes catalog actions and observed Device Guard state;
-- telemetry storage uses protected records and managed-file transactions;
-- eBPF and WireGuard use dependency-aware, digest-pinned adapters;
-- binary intelligence uses the source-built native file-analysis library without executing targets.
+The initial ABI exposes:
 
-## Release topology
+- ABI version
+- library version
+- bounded SHA-256 file hashing
 
-The Windows gate builds native components from the audited source, runs static and runtime validation, creates one deterministic candidate, verifies it independently, and publishes the same bytes. Development archives are non-promotable when native or Windows evidence is absent.
+The interface uses explicit pointer lengths, output lengths, maximum byte counts, and integer status codes. Unsafe blocks stay minimal and documented. New Rust functionality requires profiling evidence or a concrete safety benefit.
+
+## Startup
+
+The first WinUI frame performs no network access, external process launch, WMI/CIM query, Defender query, optional-runtime probe, or command execution. The 259-item catalog is loaded when All tools is opened, not on the critical startup path.
+
+Startup markers:
+
+- `AppConstructed`
+- `WindowCreated`
+- `FirstContentRendered`
+- `ShellInteractive`
+
+Performance targets require Windows measurements and are not claimed from source inspection.
+
+## Packaging
+
+- Signed MSIX is the primary production distribution.
+- A self-contained portable folder and deterministic ZIP are secondary distributions.
+- x64 and ARM64 use architecture-matched `wincare_core.dll` files.
+- Native source and legacy oracle are separate deterministic source artifacts.
+- Production mode fails unless all 259 commands are `BehaviorVerified`.
+
+## Migration rule
+
+A command may advance only through evidence-backed states:
+
+1. `Cataloged`
+2. `ContractVerified`
+3. `Implemented`
+4. `BehaviorVerified`
+
+Current state:
+
+- 259 cataloged
+- 2 implemented
+- 0 behavior-verified
+- 257 native implementation blockers
+- 259 production behavior-verification blockers

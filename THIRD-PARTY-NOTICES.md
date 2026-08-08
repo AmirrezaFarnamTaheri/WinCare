@@ -1,24 +1,16 @@
 # Third-Party Notices
 
-WinCare is licensed under the Apache License 2.0. The source distribution does not bundle third-party repositories, research archives, package caches, models, eBPF programs, WASI modules, cloud agents, or external command-line runtimes.
+WinCare is licensed under the Apache License 2.0.
 
-## Platform dependencies
+The native source project depends on separately licensed platform and development components:
 
-WinCare integrates with operating-system and framework components that are installed separately and remain governed by their own licenses:
+- Microsoft Windows and Windows APIs
+- Windows App SDK and WinUI 3
+- .NET 8
+- Rust toolchain and standard library
+- Python for deterministic source validation and packaging
+- NuGet and Cargo packages declared by the source manifests
 
-- Microsoft Windows APIs and administration modules;
-- PowerShell 7.2 or later;
-- .NET 8 when native WinCare components are built from source;
-- Pester and PSScriptAnalyzer in validation environments.
+The native source archive does not bundle external repositories, package caches, development certificates, signing keys, or optional command-line runtimes. The legacy oracle archive contains historical WinCare source only and is not a native runtime dependency.
 
-## Optional operator-supplied dependencies
-
-Some advanced capabilities can use separately installed software. WinCare does not redistribute these components and requires dependency discovery, bounded execution, and digest verification where a custom path is accepted:
-
-- OpenSSL for ML-KEM operations;
-- Wasmtime or Wasmer for WASI execution;
-- eBPF for Windows tooling;
-- WireGuard command-line tooling;
-- ONNX Runtime through the source-built WinCare host and an operator-approved model.
-
-The applicable license must be reviewed before installing or distributing any optional dependency. Generated SBOM and build-receipt files describe the exact content of each WinCare release artifact.
+Production package SBOM and provenance generation must describe the exact binaries and dependencies included in the signed release candidate.

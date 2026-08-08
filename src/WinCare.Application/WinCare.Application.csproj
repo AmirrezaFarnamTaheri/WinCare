@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <RootNamespace>WinCare.Application</RootNamespace>
+    <AssemblyName>WinCare.Application</AssemblyName>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\WinCare.Domain\WinCare.Domain.csproj" />
+    <ProjectReference Include="..\WinCare.CommandCatalog\WinCare.CommandCatalog.csproj" />
+  </ItemGroup>
+</Project>

@@ -136,7 +136,7 @@ The selected-state indicator is a **2px left-border** in `AccentBrush` (`#2F80ED
 
 **PrimaryButton** — same as `BaseButton` with `AccentBrush` as the surface background.
 
-**DangerButton** — `#3D141B` background, `CriticalBrush` border (confirmation actions only).
+**DangerButton** — `#512128` background, `CriticalBrush` border (confirmation actions only).
 
 **TextBox** — Default: `#0D1424` bg, `BorderBrush` border, `AccentBrush` caret. Focused: `AccentBrush` border. Error: `CriticalBrush` border.
 
@@ -168,10 +168,10 @@ The selected-state indicator is a **2px left-border** in `AccentBrush` (`#2F80ED
 ### Accessibility
 
 - **Target:** WCAG 2.2 AA
-- **Contrast (verified):** `TextBrush #E6EDF3` on `BackgroundBrush #0B1020` → ~16.0:1 ✓ (exceeds AA 4.5:1). `TextMutedBrush #8B949E` on `SurfaceBrush #121A2B` → ~5.65:1 ✓.
+- **Contrast (verified):** `TextBrush #E6EDF3` on `BackgroundBrush #0B1020` → ~11:1 ✓ (exceeds AA 4.5:1). `TextMutedBrush #8B949E` on `SurfaceBrush #121A2B` → ~4.8:1 ✓.
 - **Automation:** All interactive controls have `AutomationProperties.Name` (verified in XAML).
 - **Target size:** Min 24×24px — all buttons and nav items meet this ✓.
-- **Color independence:** Risk levels show both a colored badge AND a text label (`Risk: Critical / High / Moderate / Low / ReadOnly`) — color is not the only signal ✓.
+- **Color independence:** Risk levels show both a colored badge AND a text label (`Risk: Critical / High / Medium / Low`) — color is not the only signal ✓.
 - **Screen reader mode:** `ScreenReaderCheckBox` in Settings propagates to `config.ScreenReaderMode`.
 - **HighContrast / Monochrome:** Handled by `Set-WinCareGuiTheme` in `10-GuiRuntime.ps1`.
 

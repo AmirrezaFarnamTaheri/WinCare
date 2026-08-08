@@ -1,13 +1,11 @@
-# WinCare design assets
+# WinCare native design assets
 
-This directory contains the current product design references used for implementation review and visual consistency.
+This directory contains the retained native identity assets used by documentation and package generation:
 
-- `WinCare-Logo.png` — current product mark.
-- `WinCare-GUI-Preview.png` — current overview-screen reference.
-- `WinCare-Panel-Cleaner.png` — cleaner workspace reference.
-- `WinCare-Panel-Debloater.png` — application-removal workspace reference.
-- `WinCare-Panel-Downloads.png` — download workspace reference.
-- `WinCare-Panel-NetworkDNS.png` — network and DNS workspace reference.
-- `WinCare-Tokens.json` — portable color, spacing, radius, and typography tokens.
+- `WinCare-Logo.svg` and `WinCare-Logo-512.png`
+- `WinCare-Wordmark.svg`
+- `WinCare.ico`
+- `WinCare-Brand.manifest.json`
+- `BRAND.md`
 
-These files are design references, not runtime authority. The WPF XAML and design-token documentation define the shipped interface contract.
+The application UI is governed by the root `DESIGN.md` and native WinUI theme resources. Historical WPF screen previews and panel mockups are intentionally excluded from the native source artifact.

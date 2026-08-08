@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
+    <RootNamespace>WinCare.Infrastructure</RootNamespace>
+    <AssemblyName>WinCare.Infrastructure</AssemblyName>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\WinCare.Domain\WinCare.Domain.csproj" />
+  </ItemGroup>
+</Project>
