@@ -62,7 +62,7 @@ Tabular views across `AllToolsPage`, `CheckupPage`, and `ActivityPage` implement
 ### Micro-Ergonomic Details
 1. **Status Micro-Pills**: Monospaced status pill badges (`[ READ-ONLY ]` in Emerald, `[ MUTATING ]` in Crimson) for instant visual scanning.
 2. **Telemetry Corner Accents**: High-priority KPI cards feature subtle 1px corner accents (`border-subtle`) to establish an industrial diagnostic tone.
-3. **Responsive Cards (< 640 DIP)**: On narrow windows under 640 DIP, tabular rows collapse into compact stacked records with monospaced telemetry headers.
+3. **Responsive Cards (< 920 DIP)**: On narrow windows under 920 DIP, tabular rows collapse into compact stacked records with monospaced telemetry headers (`LayoutVisibility.CompactBreakpointDip = 920.0`).
 
 ---
 

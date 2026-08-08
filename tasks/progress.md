@@ -46,21 +46,21 @@
 
 | Status | Task | File(s) Modified | Exit Criterion |
 |--------|------|-----------------|----------------|
-| `[ ]` | **4.1** `ActivityJournalService` (in-memory, thread-safe) + stress test | `ActivityJournalService.cs` (new) | Concurrent 5×5 test: zero races |
-| `[ ]` | **4.2** `CommandDispatcher` integration: begin/complete journal entries | `CommandDispatcher.cs` | Journal populated after dispatch |
-| `[ ]` | **4.3** `ActivityPageViewModel` binds to `IActivityJournalService` | `ActivityPageViewModel.cs` | ViewModel exposes `ObservableCollection<ActivityRecord>` |
-| `[ ]` | **4.4** `AttentionInfoBar` in `ActivityPage.xaml` (visible when NeedsAttention) | `ActivityPage.xaml`, `ActivityPageViewModel.cs` | InfoBar shows/hides correctly |
-| `[ ]` | **4.5** V5 gate extended: 8 command IDs, `CompactThreshold` ban, 3 new AutomationIds | `verify_native_foundation.py` | V5 exits 0 after all Phase 1-3 tasks |
-| `[ ]` | **4.6** `CommandRuntime.LastJournal` property exposed | `CommandRuntime.cs` | `ShellPage` can access journal service |
-| `[ ]` | **4.7** RC finalization: `tasks/progress.md` all `[x]`, `DESIGN.md` updated | `DESIGN.md`, `tasks/progress.md` | V6 archive exits 0; DoD conditions 18-20 pass |
+| `[x]` | **4.1** `ActivityJournalService` (in-memory, thread-safe) + stress test | `ActivityJournalService.cs` (new) | Concurrent 5×5 test: zero races |
+| `[x]` | **4.2** `CommandDispatcher` integration: begin/complete journal entries | `CommandDispatcher.cs` | Journal populated after dispatch |
+| `[x]` | **4.3** `ActivityPageViewModel` binds to `IActivityJournalService` | `ActivityPageViewModel.cs` | ViewModel exposes `ObservableCollection<ActivityRecord>` |
+| `[x]` | **4.4** `AttentionInfoBar` in `ActivityPage.xaml` (visible when NeedsAttention) | `ActivityPage.xaml`, `ActivityPageViewModel.cs` | InfoBar shows/hides correctly |
+| `[x]` | **4.5** V5 gate extended: 8 command IDs, `CompactThreshold` ban, 3 new AutomationIds | `verify_native_foundation.py` | V5 exits 0 after all Phase 1-3 tasks |
+| `[x]` | **4.6** `CommandRuntime.LastJournal` property exposed | `CommandRuntime.cs` | `ShellPage` can access journal service |
+| `[x]` | **4.7** RC finalization: `tasks/progress.md` all `[x]`, `DESIGN.md` updated | `DESIGN.md`, `tasks/progress.md` | V6 archive exits 0; DoD conditions 18-20 pass |
 
 ## New Tooling
 
 | Status | Task | File | Exit Criterion |
 |--------|------|------|----------------|
-| `[ ]` | Create `tools/verify_visual_tokens.py` | `tools/verify_visual_tokens.py` (new) | Script runs; exits 0 after Task 3.1 |
-| `[ ]` | Create `tools/verify_pill_contrast.py` | `tools/verify_pill_contrast.py` (new) | Script runs; exits 0 with `#C41A1A` bg |
-| `[ ]` | Create `tools/release_checklist.py` | `tools/release_checklist.py` (new) | Script runs all 7 checks sequentially |
+| `[x]` | Create `tools/verify_visual_tokens.py` | `tools/verify_visual_tokens.py` (new) | Script runs; exits 0 after Task 3.1 |
+| `[x]` | Create `tools/verify_pill_contrast.py` | `tools/verify_pill_contrast.py` (new) | Script runs; exits 0 with `#C41A1A` bg |
+| `[x]` | Create `tools/release_checklist.py` | `tools/release_checklist.py` (new) | Script runs all 7 checks sequentially |
 
 ---
 
@@ -70,23 +70,23 @@ Track these separately — each must be ✅ before milestone closes:
 
 | # | Condition | Status |
 |---|-----------|--------|
-| 1 | 17 Rust tests | `[ ]` |
-| 2 | Zero clippy warnings | `[ ]` |
-| 3 | 4 Python interop files | `[ ]` |
-| 4 | 57 new C# managed tests | `[ ]` |
-| 5 | V5 gate exits 0 | `[ ]` |
-| 6 | V6 RC archive exits 0 | `[ ]` |
-| 7 | Zero PS1 in archive | `[ ]` |
-| 8 | 8 commands Implemented in commands.json | `[ ]` |
-| 9 | 11 tokens × 3 themes | `[ ]` |
-| 10 | StatusPillTemplate in ControlStyles | `[ ]` |
-| 11 | All pill pairs ≥ 4.5:1 WCAG AA | `[ ]` |
-| 12 | 24 AutomationIds present | `[ ]` |
-| 13 | ReviewApprovedToggle IsMutatingTool only | `[ ]` |
-| 14 | Journal stress test zero races | `[ ]` |
-| 15 | AttentionInfoBar shows/hides correctly | `[ ]` |
-| 16 | CompactBreakpointDip single source of truth | `[ ]` |
-| 17 | panic = "abort" in Cargo.toml | `[ ]` |
-| 18 | tasks/progress.md all 26 tasks [x] | `[ ]` |
-| 19 | DESIGN.md updated with 4 token refs | `[ ]` |
-| 20 | release_checklist.py exits 0 | `[ ]` |
+| 1 | 17 Rust tests | `[x]` |
+| 2 | Zero clippy warnings | `[x]` |
+| 3 | 4 Python interop files | `[x]` |
+| 4 | 57 new C# managed tests | `[x]` |
+| 5 | V5 gate exits 0 | `[x]` |
+| 6 | V6 RC archive exits 0 | `[x]` |
+| 7 | Zero PS1 in archive | `[x]` |
+| 8 | 8 commands Implemented in commands.json | `[x]` |
+| 9 | 11 tokens × 3 themes | `[x]` |
+| 10 | StatusPillTemplate in ControlStyles | `[x]` |
+| 11 | All pill pairs ≥ 4.5:1 WCAG AA | `[x]` |
+| 12 | 24 AutomationIds present | `[x]` |
+| 13 | ReviewApprovedToggle IsMutatingTool only | `[x]` |
+| 14 | Journal stress test zero races | `[x]` |
+| 15 | AttentionInfoBar shows/hides correctly | `[x]` |
+| 16 | CompactBreakpointDip single source of truth | `[x]` |
+| 17 | panic = "abort" in Cargo.toml | `[x]` |
+| 18 | tasks/progress.md all 26 tasks [x] | `[x]` |
+| 19 | DESIGN.md updated with 4 token refs | `[x]` |
+| 20 | release_checklist.py exits 0 | `[x]` |

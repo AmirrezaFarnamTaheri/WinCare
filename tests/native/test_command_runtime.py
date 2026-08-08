@@ -39,7 +39,10 @@ class CommandRuntimeTests(unittest.TestCase):
             for command in document["commands"]
             if command["migrationStatus"] in {"Implemented", "BehaviorVerified"}
         }
-        self.assertEqual({"catalog", "presets"}, implemented)
+        self.assertEqual({
+            "catalog", "presets", "system", "storage", "network",
+            "experience-privacy-profiles", "cleaner-disk-pressure", "cleanup-targets",
+        }, implemented)
         self.assertEqual(259, len(document["commands"]))
 
     def test_embedded_catalog_data_matches_the_frozen_oracle_data(self) -> None:
@@ -64,10 +67,9 @@ class CommandRuntimeTests(unittest.TestCase):
         )
         for required in (
             "CommandResultStatus.NotMigrated",
-            "command.unknown",
+            "command.not_found",
             "command.not_migrated",
-            "command.read_only",
-            "command.parameters_invalid",
+            "command.readonly_mutation_denied",
             "request.CorrelationId",
             "command.review_required",
             "command.deadline_exceeded",

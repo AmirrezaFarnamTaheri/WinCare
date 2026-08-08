@@ -59,12 +59,21 @@ REQUIRED_FILES = (
     ROOT / "src/WinCare.Application/Commands/CommandRuntime.cs",
     ROOT / "src/WinCare.Application/Commands/Handlers/CatalogCommandHandler.cs",
     ROOT / "src/WinCare.Application/Commands/Handlers/PresetsCommandHandler.cs",
+    ROOT / "src/WinCare.Application/Commands/Handlers/SystemInfoCommandHandler.cs",
+    ROOT / "src/WinCare.Application/Commands/Handlers/StorageHealthCommandHandler.cs",
+    ROOT / "src/WinCare.Application/Commands/Handlers/NetworkStatusCommandHandler.cs",
+    ROOT / "src/WinCare.Application/Commands/Handlers/PrivacyStatusCommandHandler.cs",
+    ROOT / "src/WinCare.Application/Commands/Handlers/DiskCleanupCommandHandler.cs",
+    ROOT / "src/WinCare.Application/Commands/Handlers/LogCleanupCommandHandler.cs",
+    ROOT / "src/WinCare.Application/Activity/ActivityJournalService.cs",
     ROOT / "native/Cargo.toml",
     ROOT / "native/wincare-core/Cargo.toml",
     ROOT / "native/wincare-core/src/lib.rs",
     ROOT / ".github/workflows/native-winui.yml",
     ROOT / ".github/workflows/native-release-candidate.yml",
     ROOT / "tools/finalize_native_release.py",
+    ROOT / "tools/verify_visual_tokens.py",
+    ROOT / "tools/verify_pill_contrast.py",
     ROOT / "docs/migration/finalization-status.md",
 )
 
@@ -160,10 +169,14 @@ def verify() -> list[Finding]:
                 for item in commands
                 if isinstance(item, dict) and item.get("migrationStatus") in {"Implemented", "BehaviorVerified"}
             }
-            if implemented_ids != {"catalog", "presets"}:
+            expected_ids = {
+                "catalog", "presets", "system", "storage", "network",
+                "experience-privacy-profiles", "cleaner-disk-pressure", "cleanup-targets",
+            }
+            if implemented_ids != expected_ids:
                 findings.append(Finding(
                     "implemented-command-set",
-                    f"expected catalog and presets, found {sorted(implemented_ids)}",
+                    f"expected 8 command IDs, found {sorted(implemented_ids)}",
                 ))
             for index, item in enumerate(commands):
                 if not isinstance(item, dict):
@@ -203,8 +216,8 @@ def verify() -> list[Finding]:
     if dispatcher_path.is_file():
         dispatcher = dispatcher_path.read_text(encoding="utf-8")
         for token in (
-            "command.unknown", "command.not_migrated", "command.read_only",
-            "command.review_required", "command.parameters_invalid", "command.deadline_exceeded",
+            "command.not_found", "command.not_migrated", "command.readonly_mutation_denied",
+            "command.review_required", "command.deadline_exceeded",
             "request.CorrelationId", "CancellationTokenSource.CreateLinkedTokenSource",
             "OperationCanceledException",
         ):
@@ -233,8 +246,12 @@ def verify() -> list[Finding]:
             match = re.search(r'CommandId\s*=>\s*"([^"]+)"', handler_text)
             if match:
                 handler_ids.add(match.group(1))
-    if handler_ids != {"catalog", "presets"}:
-        findings.append(Finding("handler-set", f"expected catalog and presets, found {sorted(handler_ids)}"))
+    expected_ids = {
+        "catalog", "presets", "system", "storage", "network",
+        "experience-privacy-profiles", "cleaner-disk-pressure", "cleanup-targets",
+    }
+    if handler_ids != expected_ids:
+        findings.append(Finding("handler-set", f"expected 8 handlers, found {sorted(handler_ids)}"))
 
     for path in _iter_text_files(NATIVE_ROOTS):
         text = path.read_text(encoding="utf-8", errors="replace")
