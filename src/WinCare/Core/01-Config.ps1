@@ -221,7 +221,7 @@ function Read-WinCareJsonHashtable {
         [Parameter(Mandatory)][string]$LiteralPath,
         [ValidateRange(1,16777216)][long]$MaximumBytes=4194304
     )
-    Read-WinCareBoundedJson -LiteralPath $LiteralPath -MaximumBytes $MaximumBytes -Depth 50 -AsHashtable
+    Read-WinCareBoundedJson -LiteralPath $LiteralPath -MaximumBytes ([int]$MaximumBytes) -Depth 50 -AsHashtable
 }
 
 function Get-WinCareEffectivePolicy {
@@ -293,7 +293,7 @@ function Get-WinCareInitialConfig {
     param(
         [Parameter(Mandatory)][string]$ConfigPath,
         [Parameter(Mandatory)][bool]$ReadOnlyLocked,
-        [Parameter(Mandatory)][Collections.Generic.List[string]]$InitializationWarnings
+        [Parameter(Mandatory)][AllowEmptyCollection()][Collections.Generic.List[string]]$InitializationWarnings
     )
     $config = Get-WinCareDefaultConfig
     if (Test-Path -LiteralPath $ConfigPath) {

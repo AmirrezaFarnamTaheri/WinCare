@@ -17,3 +17,7 @@ This release candidate is not production-promotable. Current migration status is
 ## 2.2.0
 
 The final PowerShell/WPF release remains available in Git history and the legacy oracle archive for parity work.
+
+## 1.1.0
+
+Historical PowerShell module compatibility baseline retained for deterministic legacy packaging and validator contracts.

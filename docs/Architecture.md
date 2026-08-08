@@ -1,8 +1,8 @@
-# Native architecture
+# Architecture
 
 ## Release boundary
 
-WinCare 2.4.0-rc1 is finalized as a native source release candidate. The distributable native source archive contains no PowerShell files. Historical PowerShell source is isolated in a separately hashed legacy oracle archive and is not invoked, embedded, or required by the native runtime.
+The 2.4.0-rc1 line is finalized as a native source release candidate. The distributable native source archive contains no PowerShell files. Historical PowerShell source is isolated in a separately hashed legacy oracle archive and is not invoked, embedded, or required by the native runtime.
 
 Production promotion remains blocked until every one of the 259 command contracts has a native implementation and Windows behavioral evidence.
 

@@ -2,11 +2,11 @@
   <img src="design/WinCare-Wordmark.svg" width="520" alt="WinCare" />
 </p>
 
-# WinCare 2.4.0-rc1
+# WinCare
 
 WinCare is a native Windows care, diagnostics, security, repair, and recovery application built with WinUI 3, C#, and Rust.
 
-This repository snapshot is a **native source release candidate**, not a production-ready replacement for WinCare 2.2.0. It finalizes the native architecture, user interface, command catalog, source packaging, and promotion controls while refusing to hide incomplete command migration.
+This repository snapshot is a **native source release candidate**, not a production-ready replacement for version 2.2.0. It finalizes the native architecture, user interface, command catalog, source packaging, and promotion controls while refusing to hide incomplete command migration.
 
 ## Exact readiness
 

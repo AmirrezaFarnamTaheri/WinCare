@@ -8,7 +8,7 @@ Do not publish an undisclosed vulnerability, exploit, credential, machine identi
 
 ## Supported security scope
 
-Security fixes target the current default branch, the latest supported production release, and release tooling used to produce supported artifacts. WinCare 2.4.0-rc1 is a source release candidate and is not a supported production release.
+Security fixes target the current default branch, the latest supported production release, and release tooling used to produce supported artifacts. The 2.4.0-rc1 source release candidate is not a supported production release.
 
 ## Core invariants
 
