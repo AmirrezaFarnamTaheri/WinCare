@@ -103,6 +103,23 @@ public sealed class CommandDispatcherTests
     }
 
     [Fact]
+    public async Task Far_future_deadline_does_not_overflow_cancel_after()
+    {
+        CommandDefinition definition = Definition("read", MigrationStatus.Implemented, readOnly: true);
+        RecordingHandler handler = new("read");
+        CommandDispatcher dispatcher = CreateDispatcher([definition], [handler]);
+
+        CommandResult result = await dispatcher.ExecuteAsync(
+            Request("read"),
+            new CommandExecutionOptions(ReviewApproved: false, Deadline: DateTimeOffset.UtcNow.AddDays(30)),
+            CancellationToken.None);
+
+        Assert.Equal(CommandResultStatus.Succeeded, result.Status);
+        Assert.Equal("test.succeeded", result.Code);
+        Assert.Equal(1, handler.InvocationCount);
+    }
+
+    [Fact]
     public async Task Precancelled_token_cancels_before_handler_invocation()
     {
         CommandDefinition definition = Definition("read", MigrationStatus.Implemented, readOnly: true);
