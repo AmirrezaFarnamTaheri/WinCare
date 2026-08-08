@@ -5,10 +5,15 @@ namespace WinCare.CommandCatalog.Models;
 /// </summary>
 public enum CommandRisk
 {
+    /// <summary>The command only reads system state.</summary>
     ReadOnly,
+    /// <summary>The command has low operational risk.</summary>
     Low,
+    /// <summary>The command has moderate operational risk.</summary>
     Moderate,
+    /// <summary>The command has high operational risk.</summary>
     High,
+    /// <summary>The command has critical operational risk.</summary>
     Critical,
 }
 
@@ -17,8 +22,11 @@ public enum CommandRisk
 /// </summary>
 public enum AdministratorAccess
 {
+    /// <summary>Administrator access is not required.</summary>
     No,
+    /// <summary>Administrator access may be required.</summary>
     MayBeRequired,
+    /// <summary>Administrator access is required.</summary>
     Required,
 }
 
@@ -27,8 +35,11 @@ public enum AdministratorAccess
 /// </summary>
 public enum RestartExpectation
 {
+    /// <summary>No restart is expected.</summary>
     No,
+    /// <summary>A restart may be required.</summary>
     MayBeRequired,
+    /// <summary>A restart is required.</summary>
     Required,
 }
 
@@ -37,9 +48,13 @@ public enum RestartExpectation
 /// </summary>
 public enum MigrationStatus
 {
+    /// <summary>The legacy command is cataloged for migration.</summary>
     Cataloged,
+    /// <summary>The command contract has been verified.</summary>
     ContractVerified,
+    /// <summary>The native implementation is available.</summary>
     Implemented,
+    /// <summary>The native behavior has been verified against the legacy command.</summary>
     BehaviorVerified,
 }
 
