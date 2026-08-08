@@ -24,6 +24,8 @@
     <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
     <ErrorOnDuplicatePublishOutputFiles>true</ErrorOnDuplicatePublishOutputFiles>
     <StartupObject>WinCareEntryPoint</StartupObject>
+    <ManagePackageVersionsCentrally>false</ManagePackageVersionsCentrally>
+    <RestorePackagesWithLockFile>false</RestorePackagesWithLockFile>
     <RestoreLockedMode Condition="Exists('$(MSBuildThisFileDirectory)packages.lock.json')">true</RestoreLockedMode>
     <WinCareApplicationIcon>$(MSBuildThisFileDirectory)..\Data\Gui\WinCare.ico</WinCareApplicationIcon>
     <ApplicationIcon>$(WinCareApplicationIcon)</ApplicationIcon>
