@@ -173,7 +173,7 @@ public sealed class CommandDispatcher
         if (options.Deadline is DateTimeOffset activeDeadline)
         {
             TimeSpan remaining = activeDeadline - startedAt;
-            if (remaining <= TimeSpan.FromMilliseconds(uint.MaxValue - 1d))
+            if (remaining <= TimeSpan.FromMilliseconds(int.MaxValue))
             {
                 linkedCancellation.CancelAfter(remaining);
             }
