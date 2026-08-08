@@ -4,6 +4,7 @@
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
   </PropertyGroup>
   <ItemGroup>
     <Using Include="Xunit" />
