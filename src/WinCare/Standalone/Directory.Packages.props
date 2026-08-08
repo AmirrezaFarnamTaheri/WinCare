@@ -1,0 +1,6 @@
+<Project>
+  <PropertyGroup>
+    <!-- Legacy standalone projects intentionally keep explicit PackageReference versions. -->
+    <ManagePackageVersionsCentrally>false</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+</Project>
