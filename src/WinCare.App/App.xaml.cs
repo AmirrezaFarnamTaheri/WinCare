@@ -3,7 +3,7 @@ using WinCare.Infrastructure.Observability;
 
 namespace WinCare.App;
 
-public partial class App : Application
+public partial class App : Microsoft.UI.Xaml.Application
 {
     private Window? _window;
 
