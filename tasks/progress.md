@@ -21,15 +21,15 @@
 
 | Status | Task | File(s) Modified | Exit Criterion |
 |--------|------|-----------------|----------------|
-| `[ ]` | **2.1** `CommandHandlerOutcome.Failed` factory + `Data?` field | `CommandHandlerOutcome.cs` | Existing tests unchanged; 3 new tests pass |
-| `[ ]` | **2.2** `SystemInfoCommandHandler` (read-only, native) | `SystemInfoCommandHandler.cs` (new) | Unit test: `Succeeded`, message format matches §15.5 |
-| `[ ]` | **2.3** `StorageHealthCommandHandler` (read-only, WMI) | `StorageHealthCommandHandler.cs` (new) | Unit test: 3 drives enumerated |
-| `[ ]` | **2.4** `NetworkStatusCommandHandler` (read-only) | `NetworkStatusCommandHandler.cs` (new) | Unit test: adapters enumerated |
-| `[ ]` | **2.5** `PrivacyStatusCommandHandler` (read-only, registry) | `PrivacyStatusCommandHandler.cs` (new) | Unit test: reads telemetry level |
-| `[ ]` | **2.6** `DiskCleanupCommandHandler` (mutating, dry + apply) | `DiskCleanupCommandHandler.cs` (new) | Dry-run: `Preview:` message; apply: `Freed:` message |
-| `[ ]` | **2.7** `LogCleanupCommandHandler` (mutating, dry + apply) | `LogCleanupCommandHandler.cs` (new) | Dry-run: `Preview:` message; apply: `Cleared:` message |
-| `[ ]` | **2.8** ABI version guard in `NativeCoreService` + `CommandDispatcher` | `NativeCoreService.cs` | Guard throws `InvalidOperationException` when mismatch |
-| `[ ]` | **2.9** `CommandRuntime.CreateDefault()` wires all 8 handlers | `CommandRuntime.cs` | All 8 `CommandId` values resolvable |
+| `[x]` | **2.1** `CommandHandlerOutcome.Failed` factory + `Data?` field | `CommandHandlerOutcome.cs` | Existing tests unchanged; 3 new tests pass |
+| `[x]` | **2.2** `SystemInfoCommandHandler` (read-only, native) | `SystemInfoCommandHandler.cs` (new) | Unit test: `Succeeded`, message format matches §15.5 |
+| `[x]` | **2.3** `StorageHealthCommandHandler` (read-only, WMI) | `StorageHealthCommandHandler.cs` (new) | Unit test: 3 drives enumerated |
+| `[x]` | **2.4** `NetworkStatusCommandHandler` (read-only) | `NetworkStatusCommandHandler.cs` (new) | Unit test: adapters enumerated |
+| `[x]` | **2.5** `PrivacyStatusCommandHandler` (read-only, registry) | `PrivacyStatusCommandHandler.cs` (new) | Unit test: reads telemetry level |
+| `[x]` | **2.6** `DiskCleanupCommandHandler` (mutating, dry + apply) | `DiskCleanupCommandHandler.cs` (new) | Dry-run: `Preview:` message; apply: `Freed:` message |
+| `[x]` | **2.7** `LogCleanupCommandHandler` (mutating, dry + apply) | `LogCleanupCommandHandler.cs` (new) | Dry-run: `Preview:` message; apply: `Cleared:` message |
+| `[x]` | **2.8** ABI version guard in `NativeCoreService` + `CommandDispatcher` | `NativeCoreService.cs` | Guard throws `InvalidOperationException` when mismatch |
+| `[x]` | **2.9** `CommandRuntime.CreateDefault()` wires all 8 handlers | `CommandRuntime.cs` | All 8 `CommandId` values resolvable |
 
 ## Phase 3 — Visual Character & WinUI 3 Ergonomics
 

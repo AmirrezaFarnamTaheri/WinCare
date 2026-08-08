@@ -1,4 +1,5 @@
 using WinCare.Application.Commands.Handlers;
+using WinCare.Infrastructure.Native;
 
 namespace WinCare.Application.Commands;
 
@@ -11,12 +12,22 @@ public static class CommandRuntime
     /// Creates the default dispatcher wired to the frozen native catalog and the
     /// implemented runtime handlers.
     /// </summary>
-    public static CommandDispatcher CreateDefault() =>
-        new(
+    public static CommandDispatcher CreateDefault()
+    {
+        NativeCoreService nativeCore = new();
+        return new CommandDispatcher(
             WinCare.CommandCatalog.CommandCatalog.Load(),
             [
                 new CatalogCommandHandler(),
                 new PresetsCommandHandler(),
+                new SystemInfoCommandHandler(nativeCore),
+                new StorageHealthCommandHandler(),
+                new NetworkStatusCommandHandler(),
+                new PrivacyStatusCommandHandler(),
+                new DiskCleanupCommandHandler(nativeCore),
+                new LogCleanupCommandHandler(),
             ],
-            TimeProvider.System);
+            TimeProvider.System,
+            nativeCore);
+    }
 }

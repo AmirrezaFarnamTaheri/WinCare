@@ -3,6 +3,8 @@ using System.Text.Json;
 using WinCare.CommandCatalog.Models;
 using WinCare.Domain.Commands;
 
+using WinCare.Infrastructure.Native;
+
 namespace WinCare.Application.Commands;
 
 /// <summary>
@@ -20,10 +22,24 @@ public sealed class CommandDispatcher
     public CommandDispatcher(
         IReadOnlyList<CommandDefinition> definitions,
         IEnumerable<ICommandHandler> handlers,
-        TimeProvider? timeProvider = null)
+        TimeProvider? timeProvider = null,
+        NativeCoreService? nativeCore = null)
     {
         ArgumentNullException.ThrowIfNull(definitions);
         ArgumentNullException.ThrowIfNull(handlers);
+
+        if (nativeCore is not null)
+        {
+            uint actual = nativeCore.GetAbiVersion();
+            const uint expected = NativeCoreService.SupportedAbiVersion;
+            if (actual != expected)
+            {
+                throw new InvalidOperationException(
+                    $"wincare_core ABI version mismatch: expected {expected}, got {actual}. " +
+                    $"The installed wincare_core.dll is incompatible with this build. " +
+                    $"Replace wincare_core.dll with a build matching ABI version {expected}.");
+            }
+        }
 
         Dictionary<string, CommandDefinition> definitionsById = new(StringComparer.Ordinal);
         foreach (CommandDefinition definition in definitions)
