@@ -55,4 +55,21 @@ public sealed class ToolRowViewModel : ObservableObject
         get => _isCompact;
         set => SetProperty(ref _isCompact, value);
     }
+
+    public string RiskPillLabel => Risk switch
+    {
+        "Read-only" => "[ READ-ONLY ]",
+        "Low" => "[ LOW      ]",
+        "Moderate" => "[ MODERATE ]",
+        "High" => "[ HIGH RISK]",
+        "Critical" => "[ CRITICAL ]",
+        _ => $"[ {Risk?.ToUpperInvariant()?.PadRight(8) ?? "UNKNOWN ",8} ]",
+    };
+
+    public string StatusPillLabel => MigrationState switch
+    {
+        "Behavior verified" => "[ VERIFIED ]",
+        "Implemented" => "[ READY    ]",
+        _ => "[ NOT READY]",
+    };
 }

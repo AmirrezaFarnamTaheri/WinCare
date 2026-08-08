@@ -88,7 +88,13 @@
             CompactPaneLength="0"
             IsPaneOpen="{x:Bind ViewModel.IsDetailsOpen, Mode=TwoWay}">
             <SplitView.Pane>
-                <Border Margin="16,0,0,0" Padding="20" Style="{StaticResource SurfaceBorderStyle}">
+                <Border
+                    Margin="16,0,0,0"
+                    Padding="20"
+                    Background="{ThemeResource CardSurfaceBrush}"
+                    BorderBrush="{ThemeResource AccentTealBrush}"
+                    BorderThickness="1,0,0,0"
+                    CornerRadius="8">
                     <ScrollViewer VerticalScrollBarVisibility="Auto">
                         <StackPanel Spacing="16">
                             <StackPanel Spacing="6">
@@ -102,6 +108,14 @@
                                 Severity="Informational"
                                 Title="Migration status"
                                 Message="A tool becomes runnable when its native implementation is available. Behavior parity remains visible in Advanced details." />
+                            <ToggleSwitch
+                                Header="Approve mutating execution"
+                                OffContent="Preview only"
+                                OnContent="Review approved"
+                                IsOn="{x:Bind ViewModel.Execution.IsReviewApproved, Mode=TwoWay}"
+                                Visibility="{x:Bind local:AllToolsPage.BoolToVisibility(ViewModel.Execution.IsMutatingTool), Mode=OneWay}"
+                                AutomationProperties.AutomationId="ReviewApprovedToggle"
+                                AutomationProperties.Name="Approve mutating command execution" />
                             <StackPanel Orientation="Horizontal" Spacing="8">
                                 <Button
                                     Command="{x:Bind ViewModel.Execution.ExecuteSelectedToolCommand}"
@@ -188,12 +202,14 @@
                         <ColumnDefinition Width="110" />
                         <ColumnDefinition Width="150" />
                         <ColumnDefinition Width="130" />
+                        <ColumnDefinition Width="110" />
                     </Grid.ColumnDefinitions>
                     <TextBlock Style="{StaticResource ColumnHeaderTextStyle}" Text="Command" />
                     <TextBlock Grid.Column="1" Style="{StaticResource ColumnHeaderTextStyle}" Text="Category" />
                     <TextBlock x:Name="RiskHeader" Grid.Column="2" Style="{StaticResource ColumnHeaderTextStyle}" Text="Risk" />
                     <TextBlock x:Name="AdministratorHeader" Grid.Column="3" Style="{StaticResource ColumnHeaderTextStyle}" Text="Administrator access" />
                     <TextBlock x:Name="RestartHeader" Grid.Column="4" Style="{StaticResource ColumnHeaderTextStyle}" Text="Restart" />
+                    <TextBlock x:Name="StatusHeader" Grid.Column="5" Style="{StaticResource ColumnHeaderTextStyle}" Text="Status" AutomationProperties.AutomationId="StatusColumnHeader" />
                 </Grid>
                 <InfoBar
                     Grid.Row="1"
@@ -228,6 +244,7 @@
                                         <ColumnDefinition Width="110" />
                                         <ColumnDefinition Width="150" />
                                         <ColumnDefinition Width="130" />
+                                        <ColumnDefinition Width="110" />
                                     </Grid.ColumnDefinitions>
                                     <StackPanel Spacing="2">
                                         <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="{x:Bind Title}" />
@@ -237,6 +254,7 @@
                                     <TextBlock Grid.Column="2" Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind Risk}" />
                                     <TextBlock Grid.Column="3" Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind AdministratorAccess}" />
                                     <TextBlock Grid.Column="4" Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind Restart}" />
+                                    <ContentControl Grid.Column="5" VerticalAlignment="Center" Template="{StaticResource StatusPillTemplate}" Content="{x:Bind StatusPillLabel}" Background="{ThemeResource PillReadOnlyBgBrush}" Foreground="{ThemeResource PillTextBrush}" />
                                 </Grid>
                                 <StackPanel
                                     Spacing="4"

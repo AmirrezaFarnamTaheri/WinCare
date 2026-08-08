@@ -42,4 +42,21 @@
         <Setter Property="BorderThickness" Value="1" />
         <Setter Property="CornerRadius" Value="12" />
     </Style>
+    <ControlTemplate x:Key="StatusPillTemplate" TargetType="ContentControl">
+        <Border
+            Padding="6,2"
+            Background="{TemplateBinding Background}"
+            BorderBrush="{TemplateBinding BorderBrush}"
+            BorderThickness="{TemplateBinding BorderThickness}"
+            CornerRadius="4">
+            <TextBlock
+                FontFamily="Cascadia Code, Consolas, Courier New"
+                FontSize="11"
+                FontWeight="SemiBold"
+                Foreground="{TemplateBinding Foreground}"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                Text="{TemplateBinding Content}" />
+        </Border>
+    </ControlTemplate>
 </ResourceDictionary>

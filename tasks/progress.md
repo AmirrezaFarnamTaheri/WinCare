@@ -35,12 +35,12 @@
 
 | Status | Task | File(s) Modified | Exit Criterion |
 |--------|------|-----------------|----------------|
-| `[ ]` | **3.1** 11 Cyber-Teal brush tokens in all 3 theme dicts | `ThemeResources.xaml`, `ControlStyles.xaml` | `verify_visual_tokens.py` exits 0 |
-| `[ ]` | **3.2** Status pill column in AllToolsPage (wide + compact) | `AllToolsPage.xaml`, `AllToolsPage.xaml.cs`, `ToolRowViewModel.cs` | Pill visible in both layouts |
-| `[ ]` | **3.3** Ctrl+K focus shortcut → `ToolSearch` TextBox | `AllToolsPage.xaml.cs` | `KeyboardAccelerator` fires; focus moves |
-| `[ ]` | **3.4** `ReviewApprovedToggle` ToggleSwitch + `IsMutatingTool` binding | `AllToolsPage.xaml`, `ToolExecutionViewModel.cs` | Toggle visible only when mutating tool selected |
-| `[ ]` | **3.5** `LayoutVisibility.IsCompact(double)` + remove local `CompactThreshold` | `LayoutVisibility.cs`, `AllToolsPage.xaml.cs` | `grep -r CompactThreshold` returns 0 matches |
-| `[ ]` | **3.6** A11y audit: 24 AutomationId strings verified + 3 new added | `AllToolsPage.xaml`, `ActivityPage.xaml` | V5 XML scan passes |
+| `[x]` | **3.1** 11 Cyber-Teal brush tokens in all 3 theme dicts | `ThemeResources.xaml`, `ControlStyles.xaml` | `verify_visual_tokens.py` exits 0 |
+| `[x]` | **3.2** Status pill column in AllToolsPage (wide + compact) | `AllToolsPage.xaml`, `AllToolsPage.xaml.cs`, `ToolRowViewModel.cs` | Pill visible in both layouts |
+| `[x]` | **3.3** Ctrl+K focus shortcut → `ToolSearch` TextBox | `AllToolsPage.xaml.cs` | `KeyboardAccelerator` fires; focus moves |
+| `[x]` | **3.4** `ReviewApprovedToggle` ToggleSwitch + `IsMutatingTool` binding | `AllToolsPage.xaml`, `ToolExecutionViewModel.cs` | Toggle visible only when mutating tool selected |
+| `[x]` | **3.5** `LayoutVisibility.IsCompact(double)` + remove local `CompactThreshold` | `LayoutVisibility.cs`, `AllToolsPage.xaml.cs` | `grep -r CompactThreshold` returns 0 matches |
+| `[x]` | **3.6** A11y audit: 24 AutomationId strings verified + 3 new added | `AllToolsPage.xaml`, `ActivityPage.xaml` | V5 XML scan passes |
 
 ## Phase 4 — Activity Journal, Observability & Finalization
 

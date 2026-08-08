@@ -7,8 +7,6 @@ namespace WinCare.App.Views.Pages;
 
 public sealed partial class AllToolsPage : Page
 {
-    private const double CompactThreshold = 920;
-
     public AllToolsPage()
     {
         ViewModel = new AllToolsPageViewModel();
@@ -46,11 +44,12 @@ public sealed partial class AllToolsPage : Page
 
     private void Page_SizeChanged(object sender, SizeChangedEventArgs e)
     {
-        bool compact = e.NewSize.Width < CompactThreshold;
+        bool compact = LayoutVisibility.IsCompact(e.NewSize.Width);
         ViewModel.SetCompactLayout(compact);
         RiskHeader.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
         AdministratorHeader.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
         RestartHeader.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
+        StatusHeader.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
         DetailsSplitView.DisplayMode = compact ? SplitViewDisplayMode.Overlay : SplitViewDisplayMode.Inline;
     }
 }

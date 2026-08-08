@@ -90,6 +90,16 @@ public sealed class ToolExecutionViewModel : ObservableObject
 
     public string ExecutionResultText => _executionResultText;
 
+    private bool _isReviewApproved;
+
+    public bool IsMutatingTool => _selectedTool?.Definition.ReadOnly == false;
+
+    public bool IsReviewApproved
+    {
+        get => _isReviewApproved;
+        set => SetProperty(ref _isReviewApproved, value);
+    }
+
     public void SelectTool(ToolRowViewModel? tool)
     {
         if (ReferenceEquals(_selectedTool, tool))
@@ -98,6 +108,7 @@ public sealed class ToolExecutionViewModel : ObservableObject
         }
 
         _selectedTool = tool;
+        IsReviewApproved = false;
         ClearExecutionResult();
         NotifyAvailabilityChanged();
     }
@@ -117,11 +128,13 @@ public sealed class ToolExecutionViewModel : ObservableObject
         try
         {
             JsonElement parameters = JsonSerializer.SerializeToElement(new Dictionary<string, object?>());
-            CommandRequest request = CommandRequest.Preview(selected.Id, parameters);
+            CommandRequest request = _isReviewApproved
+                ? CommandRequest.Execute(selected.Id, parameters)
+                : CommandRequest.Preview(selected.Id, parameters);
             CommandResult result = await _dispatcher.ExecuteAsync(
                 request,
                 new CommandExecutionOptions(
-                    ReviewApproved: false,
+                    ReviewApproved: _isReviewApproved,
                     Deadline: DateTimeOffset.UtcNow.AddSeconds(30)),
                 cancellationToken);
 
@@ -173,6 +186,7 @@ public sealed class ToolExecutionViewModel : ObservableObject
     {
         OnPropertyChanged(nameof(CanRunSelectedTool));
         OnPropertyChanged(nameof(PrimaryActionLabel));
+        OnPropertyChanged(nameof(IsMutatingTool));
         ExecuteSelectedToolCommand.NotifyCanExecuteChanged();
     }
 
