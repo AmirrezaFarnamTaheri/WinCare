@@ -8,7 +8,7 @@ public static class NavigationCatalog
     /// <summary>
     /// Ordered navigation items, including footer items.
     /// </summary>
-    public static IReadOnlyList<NavigationDefinition> Items { get; } = Array.AsReadOnly(
+    public static IReadOnlyList<NavigationDefinition> Items { get; } = Array.AsReadOnly<NavigationDefinition>(
     [
         new("home", "Home", "NavHome", ["Overview", "Recommendations", "Favorites"]),
         new("checkup", "Checkup", "NavCheckup", ["Quick check", "Full check", "Custom check", "Results"]),
