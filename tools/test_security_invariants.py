@@ -98,7 +98,7 @@ class SecurityInvariantTests(unittest.TestCase):
         self.assertIn("RaftImplemented=$false", fleet)
 
     def test_safety_layer_uses_structural_redaction_atomic_replace_and_key_lock(self) -> None:
-        source = self.read("src/WinCare/Core/06-Safety.ps1")
+        source = self.read("src/WinCare/Core/06-Safety.ps1") + self.read("src/WinCare/Core/06-SafetyRules.ps1")
         self.assertIn("ConvertTo-WinCareRedactedValue", source)
         self.assertNotIn("$json=[regex]::Replace", source)
         self.assertIn("[IO.File]::Replace", source)
@@ -643,6 +643,51 @@ class SecurityInvariantTests(unittest.TestCase):
         self.assertIn("maximumSections", intelligence)
         self.assertIn("CryptographicOperations.ZeroMemory", intelligence)
         self.assertNotIn("Add-Type -TypeDefinition", providers)
+
+    def test_module_load_cache_is_content_bound_and_atomic(self) -> None:
+        module = self.read("src/WinCare/WinCare.psm1")
+        self.assertIn("SchemaVersion=4", module)
+        self.assertIn("SourceHash", module)
+        self.assertIn("MergedHash", module)
+        self.assertIn("Get-WinCarePreloadGroupSourceHash", module)
+        self.assertIn("Get-WinCarePreloadFileFingerprint", module)
+        self.assertIn("[IO.File]::Move($receiptTmp,$receiptPath,$true)", module)
+        self.assertIn("[IO.File]::Move($mergedTmp,$mergedAbs,$true)", module)
+        self.assertNotIn("[IO.File]::ReadAllText($receiptPath", module)
+
+    def test_native_wpf_ipc_uses_bounded_timeout_frames(self) -> None:
+        provider = self.read("src/WinCare/Providers/127-NativeWpfShell.ps1")
+        server = provider[provider.index("function Start-WinCareIpcServer"):provider.index("function Write-WinCareSharedMemoryBuffer")]
+        self.assertIn("Read-WinCareBrokerFrame", server)
+        self.assertIn("Write-WinCareBrokerFrame", server)
+        self.assertIn("-MaximumBytes 65536", server)
+        self.assertIn("-TimeoutSeconds $timeoutSeconds", server)
+        self.assertNotIn("ReadLine()", server)
+        self.assertNotIn("StreamReader", server)
+
+    def test_split_core_modules_have_single_owners_and_split_aware_validators(self) -> None:
+        targets = {
+            "Protect-WinCareConfigVault": ("src/WinCare/Core/01-ConfigVault.ps1",),
+            "New-WinCareIsolatedStagingDirectory": ("src/WinCare/Core/06-SafetyStaging.ps1",),
+            "Get-WinCarePlanSummary": ("src/WinCare/Core/09-TransactionIntegrity.ps1",),
+            "New-WinCareVssRestorePointAction": ("src/WinCare/Core/09-TransactionsVss.ps1",),
+            "Invoke-WinCareVssRestorePointAction": ("src/WinCare/Core/09-TransactionsVss.ps1",),
+        }
+        core_text = {path: self.read(path) for path in sorted({item for paths in targets.values() for item in paths} | {
+            "src/WinCare/Core/01-Config.ps1", "src/WinCare/Core/06-SafetyRules.ps1", "src/WinCare/Core/09-Transactions.ps1"
+        })}
+        for name, owners in targets.items():
+            definitions = [path for path, text in core_text.items() if f"function {name}" in text]
+            self.assertEqual(definitions, list(owners))
+        self.assertNotRegex("\n".join(core_text.values()), r"(?m)^(<<<<<<<|=======|>>>>>>>)")
+        for path in ("tools/validate_source.py", "tools/validate_action_bindings.py", "tools/Invoke-StaticChecks.ps1"):
+            self.assertIn("11-ActionContractsSchema.ps1", self.read(path))
+
+    def test_config_migration_validates_source_before_conversion(self) -> None:
+        config = self.read("src/WinCare/Core/01-Config.ps1")
+        load = config[config.index("function Get-WinCareInitialConfig"):config.index("function Initialize-WinCareState")]
+        self.assertLess(load.index("Test-WinCareConfigSourceObject"), load.index("Convert-WinCareConfigToCurrent"))
+        self.assertIn("Unsupported source configuration schema", config)
 
     def test_advanced_capabilities_are_exposed_without_covert_or_automatic_authority(self) -> None:
         headless = self.read("src/WinCare/UI/97-AdvancedCapabilities.ps1")

@@ -172,6 +172,15 @@ function Test-WinCareConfigObject {
     return $true
 }
 
+function Test-WinCareConfigSourceObject {
+    param([Parameter(Mandatory)][Collections.IDictionary]$Config)
+    $defaults=Get-WinCareDefaultConfig
+    $null=Test-WinCareStrictObjectKeys -InputObject $Config -AllowedKeys @($defaults.Keys) -Context 'source configuration'
+    if(-not $Config.Contains('SchemaVersion')){throw 'Source configuration is missing SchemaVersion.'}
+    if([int]$Config.SchemaVersion -notin @(1,2,3,4,5,6,7,8)){throw 'Unsupported source configuration schema.'}
+    return $true
+}
+
 function Convert-WinCareConfigToCurrent {
     param([Parameter(Mandatory)][Collections.IDictionary]$Config)
     $result=Get-WinCareDefaultConfig
@@ -221,7 +230,7 @@ function Read-WinCareJsonHashtable {
         [Parameter(Mandatory)][string]$LiteralPath,
         [ValidateRange(1,16777216)][long]$MaximumBytes=4194304
     )
-    Read-WinCareBoundedJson -LiteralPath $LiteralPath -MaximumBytes ([int]$MaximumBytes) -Depth 50 -AsHashtable
+    Read-WinCareBoundedJson -LiteralPath $LiteralPath -MaximumBytes $MaximumBytes -Depth 50 -AsHashtable
 }
 
 function Get-WinCareEffectivePolicy {
@@ -299,6 +308,7 @@ function Get-WinCareInitialConfig {
     if (Test-Path -LiteralPath $ConfigPath) {
         try {
             $loaded = Read-WinCareJsonHashtable -LiteralPath $ConfigPath
+            $null   = Test-WinCareConfigSourceObject -Config $loaded
             $config = Convert-WinCareConfigToCurrent -Config $loaded
             $null   = Test-WinCareConfigObject -Config $config
         } catch {

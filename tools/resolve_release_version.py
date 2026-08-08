@@ -150,6 +150,11 @@ def is_ancestor(repo: Path, ancestor: str, descendant: str) -> bool:
     return result.returncode == 0
 
 
+def find_merge_base(repo: Path, left: str, right: str) -> str | None:
+    common = run_git(repo, "merge-base", left, right, check=False)
+    return common or None
+
+
 def commit_parents(repo: Path, commit: str) -> list[str]:
     parents = run_git(repo, "show", "-s", "--format=%P", commit)
     return parents.split() if parents else []
@@ -171,8 +176,12 @@ def determine_baseline(repo: Path, latest_tag: str, head: str) -> tuple[str, str
     if is_ancestor(repo, tag_commit, head):
         return tag_commit, tag_commit, "recover" if tag_commit == head else "advance"
 
+    common = find_merge_base(repo, tag_commit, head)
+    if common is not None:
+        return common, tag_commit, "diverged"
+
     raise ValueError(
-        f"Latest release tag {latest_tag} is not related to HEAD {head}; refusing to infer a version across divergent history"
+        f"Latest release tag {latest_tag} has no common history with HEAD {head}; refusing to infer a version"
     )
 
 
@@ -204,6 +213,7 @@ def resolve_dispatch(
         current_version = SemVer(0, 0, 0)
         latest_tag = ""
         baseline = run_git(repo, "rev-list", "--max-parents=0", "HEAD").splitlines()[0]
+        mode = "advance"
 
     messages = commit_messages(repo, baseline, head)
     if not messages and tags:
@@ -223,7 +233,7 @@ def resolve_dispatch(
     run_git(repo, "commit", "-m", f"chore(release): {next_version.tag}")
     source_commit = run_git(repo, "rev-parse", "HEAD")
     run_git(repo, "tag", "-a", next_version.tag, "-m", next_version.tag, source_commit)
-    return Resolution(next_version, next_version.tag, source_commit, True, "create", baseline, bump)
+    return Resolution(next_version, next_version.tag, source_commit, True, "create" if mode != "diverged" else "diverged", baseline, bump)
 
 
 def resolve_tag_push(repo: Path, ref_name: str, manifest_path: Path | None = None) -> Resolution:

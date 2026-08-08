@@ -170,7 +170,7 @@ def main() -> int:
         functions = {}
         errors.append(f"Function parsing failed: {exc}")
 
-    contract_path = root / "src/WinCare/Core/11-ActionContracts.ps1"
+    contract_path = root / "src/WinCare/Core/11-ActionContractsSchema.ps1"
     transaction_path = root / "src/WinCare/Core/09-Transactions.ps1"
     contract_text = contract_path.read_text(encoding="utf-8", errors="replace")
     transaction_text = transaction_path.read_text(encoding="utf-8", errors="replace")

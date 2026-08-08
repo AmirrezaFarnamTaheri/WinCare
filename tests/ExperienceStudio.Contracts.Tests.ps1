@@ -40,7 +40,7 @@ Describe 'Experience Studio contracts' {
         $source | Should -Match 'OpenSSH-Server-In-TCP'
         $source | Should -Match 'SetServiceRuntimeState'
         $source | Should -Match 'Stage 1 installs the OpenSSH Server capability'
-        (Get-Content (Join-Path $root 'src/WinCare/Core/11-ActionContracts.ps1') -Raw) | Should -Match "Add-Contract 'SetServiceRuntimeState'"
+        (Get-Content (Join-Path $root 'src/WinCare/Core/11-ActionContractsSchema.ps1') -Raw) | Should -Match "Add-Contract 'SetServiceRuntimeState'"
         (Get-Content (Join-Path $root 'src/WinCare/Core/09-Transactions.ps1') -Raw) | Should -Match "'SetServiceRuntimeState'\{Invoke-WinCareServiceRuntimeStateAction"
         (Get-Content (Join-Path $root 'src/WinCare/Core/00-11-MutationActions.ps1') -Raw) | Should -Match 'function Invoke-WinCareServiceRuntimeStateAction'
         $source | Should -Not -Match 'password|KMS|Enable-PSRemoting|New-NetFirewallRule'

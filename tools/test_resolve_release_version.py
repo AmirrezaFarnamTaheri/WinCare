@@ -117,6 +117,35 @@ class RepositoryResolutionTests(unittest.TestCase):
         self.assertEqual(result.tag, 'v1.2.1')
         self.assertTrue(result.created)
 
+    def test_divergent_latest_tag_uses_merge_base_and_global_version_floor(self) -> None:
+        repo = init_repo()
+        common = git(repo, 'rev-parse', 'HEAD')
+        git(repo, 'checkout', '-b', 'release-line')
+        (repo / 'release-only.txt').write_text('breaking release-only work\n', encoding='utf-8')
+        git(repo, 'add', '.')
+        git(repo, 'commit', '-m', 'feat!: release-only breaking change')
+        module.update_release_files(
+            repo / 'src/WinCare/WinCare.psd1',
+            repo / 'CHANGELOG.md',
+            module.SemVer(2, 1, 0),
+        )
+        git(repo, 'add', '.')
+        git(repo, 'commit', '-m', 'chore(release): v2.1.0')
+        git(repo, 'tag', '-a', 'v2.1.0', '-m', 'v2.1.0')
+
+        git(repo, 'checkout', 'master')
+        (repo / 'fix.txt').write_text('current-line fix\n', encoding='utf-8')
+        git(repo, 'add', '.')
+        git(repo, 'commit', '-m', 'fix: repair current release line')
+
+        result = module.resolve_dispatch(repo, 'auto')
+
+        self.assertEqual(result.tag, 'v2.1.1')
+        self.assertEqual(result.baseline_commit, common)
+        self.assertEqual(result.mode, 'diverged')
+        self.assertEqual(result.bump, 'patch')
+        self.assertTrue(result.created)
+
     def test_push_tag_requires_manifest_version_match(self) -> None:
         repo = init_repo()
         with self.assertRaisesRegex(ValueError, 'does not match'):

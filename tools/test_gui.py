@@ -16,8 +16,8 @@ SPEC.loader.exec_module(MODULE)
 
 class GuiValidationTests(unittest.TestCase):
     def test_primary_contrast_exceeds_wcag_aa(self) -> None:
-        self.assertGreaterEqual(MODULE.contrast("#F4F7FB", "#0B1020"), 4.5)
-        self.assertGreaterEqual(MODULE.contrast("#F97066", "#512128"), 4.5)
+        self.assertGreaterEqual(MODULE.contrast("#E6EDF3", "#0B1020"), 4.5)
+        self.assertGreaterEqual(MODULE.contrast("#F85149", "#3D141B"), 4.5)
 
     def test_gui_json_ids_are_unique(self) -> None:
         for name in ("actions.json", "navigation.json"):
@@ -33,6 +33,14 @@ class GuiValidationTests(unittest.TestCase):
         self.assertIn("ConfirmOverlay", names)
         self.assertIn("AssurancePanel", names)
         self.assertFalse(any(namespace + "Class" in element.attrib for element in tree.iter()))
+
+    def test_focus_ring_is_a_style_declared_before_static_references(self) -> None:
+        text = (ROOT / "src/WinCare/Data/Gui/WinCare.MainWindow.xaml").read_text("utf-8")
+        declaration = text.index('<Style x:Key="FocusRingStyle"')
+        first_reference = text.index('{StaticResource FocusRingStyle}')
+        self.assertLess(declaration, first_reference)
+        self.assertNotIn('<FocusVisualStyle x:Key="FocusRingStyle">', text)
+        self.assertIn('TargetType="{x:Type Control}"', text[declaration:first_reference])
 
     def test_gui_process_boundary_is_argument_safe_and_bounded(self) -> None:
         runtime = (ROOT / "src/WinCare/UI/Gui/10-GuiRuntime.ps1").read_text("utf-8")

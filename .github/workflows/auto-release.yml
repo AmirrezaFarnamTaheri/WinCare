@@ -1,0 +1,35 @@
+name: Auto release from master
+
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+permissions:
+  actions: write
+  contents: read
+
+concurrency:
+  group: auto-release-dispatch-${{ github.repository }}
+  cancel-in-progress: true
+
+jobs:
+  dispatch-release:
+    name: Dispatch installer build and GitHub release
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Dispatch the release workflow
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_REF: ${{ github.ref_name }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh workflow run release.yml \
+            --repo "$GITHUB_REPOSITORY" \
+            --ref "$RELEASE_REF" \
+            --field bump=auto
+
+          echo "Dispatched release.yml on ref $RELEASE_REF with automatic semantic-version selection." >> "$GITHUB_STEP_SUMMARY"

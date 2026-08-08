@@ -33,7 +33,7 @@ class ClosureCanonicalizationTests(unittest.TestCase):
         self.assertEqual([], findings)
 
     def test_canonical_owners_preserve_stronger_contracts(self) -> None:
-        action_contracts = (SRC / "Core" / "11-ActionContracts.ps1").read_text(encoding="utf-8")
+        action_contracts = (SRC / "Core" / "11-ActionContracts.ps1").read_text(encoding="utf-8") + (SRC / "Core" / "11-ActionContractsSchema.ps1").read_text(encoding="utf-8")
         menu = (SRC / "Core" / "00-12-MainMenu.ps1").read_text(encoding="utf-8")
         network = (SRC / "Core" / "00-04-NetworkExperiments.ps1").read_text(encoding="utf-8")
         playbooks = (SRC / "Core" / "00-08-PlaybookCatalog.ps1").read_text(encoding="utf-8")

@@ -21,7 +21,7 @@ function Get-WinCareGuiRiskColor {
         'Low'{'#173D35'}
         'Moderate'{'#3D3520'}
         'High'{'#4A2F24'}
-        'Critical'{'#512128'}
+        'Critical'{'#3D141B'}
         default{'#263550'}
     }
 }
@@ -31,11 +31,11 @@ function Get-WinCareGuiRiskForeground {
     if($script:WinCareGuiTheme -eq 'Monochrome'){return '#FFFFFF'}
     if($script:WinCareGuiTheme -eq 'HighContrast'){return $(switch($Risk){'ReadOnly'{'#00FFFF'}'Low'{'#00FF00'}'Moderate'{'#FFFF00'}'High'{'#FFB000'}'Critical'{'#FF6B6B'}default{'#FFFFFF'}})}
     switch($Risk){
-        'ReadOnly'{'#36C5F0'}
-        'Low'{'#2DD4A8'}
-        'Moderate'{'#F6C85F'}
+        'ReadOnly'{'#34D6E9'}
+        'Low'{'#3FB950'}
+        'Moderate'{'#D29922'}
         'High'{'#F2A65A'}
-        'Critical'{'#F97066'}
+        'Critical'{'#F85149'}
         default{'#F4F7FB'}
     }
 }

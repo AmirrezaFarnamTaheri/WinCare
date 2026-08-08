@@ -27,6 +27,7 @@
         'Providers/119-Capabilities.ps1'
         'Providers/120-FirmwareBootkitAuditor.ps1'
         'Providers/121-PostQuantumCrypto.ps1'
+        'Providers/121-PostQuantumCryptoTpm.ps1'
         'Providers/123-AutonomousPatchAgent.ps1'
         'Providers/124-HypervMicroVmSandbox.ps1'
         'Providers/125-TelemetryDataLake.ps1'

@@ -30,13 +30,16 @@
         'Core/06-ObjectValidation.ps1'
         'Core/06-Safety.ps1'
         'Core/06-SafetyModuleIntegrity.ps1'
+        'Core/06-SafetyRules.ps1'
         'Core/06-SafetyStaging.ps1'
         'Core/07-Conditions.ps1'
         'Core/08-Policy.ps1'
         'Core/09-TransactionIntegrity.ps1'
         'Core/09-Transactions.ps1'
+        'Core/09-TransactionsVss.ps1'
         'Core/10-Catalog.ps1'
         'Core/11-ActionContracts.ps1'
+        'Core/11-ActionContractsSchema.ps1'
         'Core/ScheduledTaskEngine.ps1'
     )
 }

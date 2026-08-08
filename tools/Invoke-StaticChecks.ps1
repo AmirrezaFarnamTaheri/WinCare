@@ -39,7 +39,7 @@ try{
     foreach($difference in Compare-Object $expected $actual){$failures.Add("Module export mismatch: $($difference.InputObject) $($difference.SideIndicator)")}
 }catch{$failures.Add("Module: $($_.Exception.Message)")}
 
-$contractPath=Join-Path $rootPath 'src\WinCare\Core\11-ActionContracts.ps1'
+$contractPath=Join-Path $rootPath 'src\WinCare\Core\11-ActionContractsSchema.ps1'
 $transactionPath=Join-Path $rootPath 'src\WinCare\Core\09-Transactions.ps1'
 $contracts=@([regex]::Matches((Read-WinCareStaticText -Path $contractPath),"Add-Contract\s+'([^']+)'")|ForEach-Object{$_.Groups[1].Value}|Sort-Object -Unique)
 $dispatch=@([regex]::Matches((Read-WinCareStaticText -Path $transactionPath),"(?m)^\s*'([^']+)'\s*\{Invoke-WinCare")|ForEach-Object{$_.Groups[1].Value}|Sort-Object -Unique)
@@ -86,7 +86,7 @@ if($analyzer){
         $settings=Join-Path $rootPath 'tools\PSScriptAnalyzer.psd1'
         if(-not (Test-Path -LiteralPath $settings)){$settings=Join-Path $rootPath 'PSScriptAnalyzerSettings.psd1'}
 
-        foreach($finding in Invoke-ScriptAnalyzer -Path $rootPath -Recurse -Settings $settings){
+        foreach($finding in ($files.FullName | Invoke-ScriptAnalyzer -Settings $settings)){
             if($finding.Severity -eq 'Error'){
                 $failures.Add("PSScriptAnalyzer $($finding.RuleName): $($finding.ScriptPath):$($finding.Line): $($finding.Message)")
             }else{
