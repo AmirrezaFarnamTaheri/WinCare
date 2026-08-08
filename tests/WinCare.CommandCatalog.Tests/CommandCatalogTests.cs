@@ -16,7 +16,7 @@ public sealed class CommandCatalogTests
     [Theory]
     [InlineData("system", "System overview")]
     [InlineData("wua-install", "Install Windows updates")]
-    [InlineData("legacy-unsafe", "Legacy high-risk operations")]
+    [InlineData("legacy-unsafe", "Winhance maximum profile")]
     [InlineData("quic-capability", "QUIC capability")]
     public void Find_returns_plain_language_metadata(string id, string expectedTitle)
     {
