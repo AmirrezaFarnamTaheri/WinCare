@@ -7,9 +7,13 @@ namespace WinCare.CommandCatalog.Models;
 /// </summary>
 public enum RemediationRisk
 {
+    /// <summary>The remediation has low operational risk.</summary>
     Low,
+    /// <summary>The remediation has moderate operational risk.</summary>
     Moderate,
+    /// <summary>The remediation has high operational risk.</summary>
     High,
+    /// <summary>The remediation has critical operational risk.</summary>
     Critical,
 }
 
