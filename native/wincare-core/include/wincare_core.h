@@ -33,6 +33,16 @@ WINCARE_API int32_t wincare_core_sha256_file(
     uint8_t *output,
     size_t output_len);
 
+WINCARE_API int32_t wincare_core_dir_size(
+    const uint8_t *path_utf8,
+    size_t path_len,
+    uint64_t *size_out);
+
+WINCARE_API int32_t wincare_core_sys_info(
+    uint8_t *buffer,
+    size_t buffer_len,
+    size_t *written);
+
 #ifdef __cplusplus
 }
 #endif

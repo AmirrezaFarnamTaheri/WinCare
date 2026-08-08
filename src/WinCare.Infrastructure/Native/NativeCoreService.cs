@@ -53,6 +53,67 @@ public sealed class NativeCoreService
         return Convert.ToHexString(digest).ToLowerInvariant();
     }
 
+    /// <summary>
+    /// Asynchronously accumulates the total byte size of all files under <paramref name="path"/>.
+    /// Offloads the recursive traversal to a thread pool thread to keep the UI thread responsive.
+    /// </summary>
+    /// <exception cref="ArgumentException">path is null or whitespace.</exception>
+    /// <exception cref="IOException">Native library returned a non-Ok status.</exception>
+    /// <exception cref="OperationCanceledException">cancellationToken was cancelled.</exception>
+    public Task<ulong> GetDirectorySizeAsync(string path, CancellationToken cancellationToken)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(path);
+        return Task.Run(() => GetDirectorySize(path, cancellationToken), cancellationToken);
+    }
+
+    private static unsafe ulong GetDirectorySize(string path, CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        byte[] pathBytes = Encoding.UTF8.GetBytes(path);
+        ulong size;
+        fixed (byte* p = pathBytes)
+        {
+            int code = WinCareCoreNative.wincare_core_dir_size(p, (nuint)pathBytes.Length, &size);
+            NativeCoreStatus status = (NativeCoreStatus)code;
+            if (status != NativeCoreStatus.Ok)
+            {
+                throw CreateException(status, path, maxBytes: 0);
+            }
+        }
+        ct.ThrowIfCancellationRequested();
+        return size;
+    }
+
+    /// <summary>
+    /// Asynchronously retrieves a JSON string with system facts (logical CPUs, memory, OS build).
+    /// Uses a two-call probe-then-fill pattern matching <c>wincare_core_sys_info</c> ABI contract.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">Native call failed unexpectedly.</exception>
+    /// <exception cref="OperationCanceledException">cancellationToken was cancelled.</exception>
+    public Task<string> GetSystemInfoJsonAsync(CancellationToken cancellationToken)
+        => Task.Run(() => GetSystemInfoJson(cancellationToken), cancellationToken);
+
+    private static unsafe string GetSystemInfoJson(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        nuint required = 0;
+        WinCareCoreNative.wincare_core_sys_info(null, 0, &required);
+
+        byte[] buf = new byte[(int)required];
+        fixed (byte* p = buf)
+        {
+            nuint written = 0;
+            int code = WinCareCoreNative.wincare_core_sys_info(p, (nuint)buf.Length, &written);
+            NativeCoreStatus status = (NativeCoreStatus)code;
+            if (status != NativeCoreStatus.Ok)
+            {
+                throw new InvalidOperationException(
+                    $"wincare_core_sys_info failed with status {status} ({(int)status}).");
+            }
+            return Encoding.UTF8.GetString(buf, 0, (int)written);
+        }
+    }
+
     private static Exception CreateException(NativeCoreStatus status, string path, ulong maxBytes) => status switch
     {
         NativeCoreStatus.NotFound => new FileNotFoundException("The file was not found.", path),
