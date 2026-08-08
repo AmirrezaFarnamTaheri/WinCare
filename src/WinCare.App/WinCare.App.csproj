@@ -31,6 +31,7 @@
     <Content Include="Assets\**\*" CopyToOutputDirectory="PreserveNewest" />
     <Content
       Include="Native\$(Platform)\wincare_core.dll"
+      Condition="Exists('Native\$(Platform)\wincare_core.dll')"
       Link="wincare_core.dll"
       CopyToOutputDirectory="PreserveNewest"
       CopyToPublishDirectory="PreserveNewest" />
