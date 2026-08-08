@@ -154,8 +154,8 @@
                                     IsReadOnly="True"
                                     Text="{x:Bind ViewModel.Execution.ExecutionResultText, Mode=OneWay}"
                                     TextWrapping="NoWrap"
-                                    VerticalScrollBarVisibility="Auto"
-                                    HorizontalScrollBarVisibility="Auto"
+                                    ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                    ScrollViewer.HorizontalScrollBarVisibility="Auto"
                                     AutomationProperties.Name="Structured command output" />
                             </Expander>
                             <Expander Header="Advanced details" AutomationProperties.Name="Advanced tool details">
