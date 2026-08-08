@@ -46,11 +46,10 @@ jobs:
           RELEASE_REF: release-dispatch/${{ github.sha }}
         run: |
           set -euo pipefail
-          existing_sha="$(
+          if existing_sha="$(
             gh api "repos/$GH_REPO/git/ref/tags/$RELEASE_REF" \
-              --jq '.object.sha' 2>/dev/null || true
-          )"
-          if [[ -n "$existing_sha" ]]; then
+              --jq '.object.sha' 2>/dev/null
+          )"; then
             if [[ "$existing_sha" != "$SOURCE_SHA" ]]; then
               echo "Immutable dispatch tag $RELEASE_REF points to $existing_sha, expected $SOURCE_SHA." >&2
               exit 1
