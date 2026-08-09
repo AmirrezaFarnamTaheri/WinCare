@@ -54,3 +54,21 @@
 - [x] Removed `.review-fix/trigger-2.txt` — stale CI trigger; purpose fulfilled
 - [x] Updated `.gitignore` to cover `build_out.txt` and `.review-fix/` permanently
 
+## CodeRabbitAI Remediation (2026-08-09) — commit 7f98847
+All 16 actionable CodeRabbitAI PR review comments addressed:
+- [x] **Rust / accumulate_dir_size**: `symlink_metadata` guard prevents stack overflow on cyclic junction trees
+- [x] **Rust / read_registry_os_build**: Aligned `[u16;64]` buffer eliminates u8→u16 pointer UB; validates REG_SZ type
+- [x] **Rust / GlobalMemoryStatusEx**: Failure surfaces as explicit error JSON instead of zeroed memory
+- [x] **SystemInfoCommandHandler**: `JsonException` → explicit `Failed` outcome
+- [x] **StorageHealthCommandHandler**: Per-drive IOException/UnauthorizedAccessException → skip gracefully
+- [x] **NetworkStatusCommandHandler**: `n.Speed` guarded; virtual/tunnel NIC exception → -1 sentinel
+- [x] **ActivityPageViewModel.RefreshFromJournal**: Maps `ActivityRecord → PageRow`; populates `CurrentRows` per-section
+- [x] **ActivityPageViewModel.SelectSection**: Override serves rows from backing lists on tab switch
+- [x] **CommandRuntime.LastJournal**: Added; parameterless ctor compilation error resolved
+- [x] **TabbedPageViewModel.SelectSection**: Made `virtual`
+- [x] **ActivityPage.xaml SelectorBarItems**: AutomationId added to all 4 items
+- [x] **verify_pill_contrast.py**: Parses live hex from ThemeResources.xaml; all 8 pairs WCAG AA ✓
+- [x] **verify_visual_tokens.py**: StatusPillTemplate presence check added
+- [x] **release_checklist.py**: OSError catch; missing executables → FAIL not crash
+- [x] **AllToolsPage.xaml glyph `&#xE735;`**: Already correct — CR stale comment
+- [x] **Ctrl+F accelerator**: Already wired in code-behind — CR stale comment
