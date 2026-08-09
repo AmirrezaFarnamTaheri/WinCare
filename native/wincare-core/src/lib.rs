@@ -279,13 +279,16 @@ fn accumulate_dir_size(path: &Path) -> io::Result<u64> {
     if meta.is_dir() {
         for entry in std::fs::read_dir(path)? {
             let entry = entry?;
-            // Only recurse into real directories — skip symlinks and reparse points.
-            let entry_meta = match std::fs::symlink_metadata(entry.path()) {
-                Ok(m) => m,
-                Err(_) => continue, // skip inaccessible entries
-            };
+            let entry_meta = std::fs::symlink_metadata(entry.path())?;
             if entry_meta.file_type().is_symlink() {
                 continue;
+            }
+            #[cfg(target_os = "windows")]
+            {
+                use std::os::windows::fs::MetadataExt;
+                if (entry_meta.file_attributes() & 0x400) != 0 {
+                    continue;
+                }
             }
             let sub = accumulate_dir_size(&entry.path())?;
             total = total.saturating_add(sub);
@@ -315,7 +318,10 @@ pub unsafe extern "C" fn wincare_core_sys_info(
             return Status::NullPointer.code();
         }
         let mut stack_buf = [0u8; 512];
-        let json_bytes = compose_sys_info_json(&mut stack_buf);
+        let json_bytes = match compose_sys_info_json(&mut stack_buf) {
+            Some(bytes) => bytes,
+            None => return Status::IoError.code(),
+        };
 
         // SAFETY: written is non-null (checked above); caller guarantees valid writable usize.
         unsafe { written.write(json_bytes.len()) };
@@ -330,7 +336,7 @@ pub unsafe extern "C" fn wincare_core_sys_info(
     .unwrap_or(Status::InternalError.code())
 }
 
-fn compose_sys_info_json(buf: &mut [u8; 512]) -> &[u8] {
+fn compose_sys_info_json(buf: &mut [u8; 512]) -> Option<&[u8]> {
     #[cfg(target_os = "windows")]
     {
         use self::win32::*;
@@ -342,14 +348,8 @@ fn compose_sys_info_json(buf: &mut [u8; 512]) -> &[u8] {
         // SAFETY: MEMORYSTATUSEX is POD; zeroed then dwLength-initialized before use per GlobalMemoryStatusEx calling contract.
         let mut ms = unsafe { std::mem::zeroed::<MEMORYSTATUSEX>() };
         ms.dwLength = std::mem::size_of::<MEMORYSTATUSEX>() as u32;
-        // GlobalMemoryStatusEx returns 0 on failure; surface the error rather than
-        // silently serialising zeroed memory fields.
         if unsafe { GlobalMemoryStatusEx(&mut ms) } == 0 {
-            let buf = &mut *buf;
-            let json = r#"{"logical_cpus":0,"total_physical_memory_bytes":0,"available_physical_memory_bytes":0,"os_build":"error:GlobalMemoryStatusEx"}"#;
-            let len = json.len().min(buf.len());
-            buf[..len].copy_from_slice(&json.as_bytes()[..len]);
-            return &buf[..len];
+            return None;
         }
 
         let os_build = read_registry_os_build().unwrap_or_else(|| "unknown".to_owned());
@@ -363,14 +363,14 @@ fn compose_sys_info_json(buf: &mut [u8; 512]) -> &[u8] {
         );
         let len = json.len().min(buf.len());
         buf[..len].copy_from_slice(&json.as_bytes()[..len]);
-        &buf[..len]
+        Some(&buf[..len])
     }
     #[cfg(not(target_os = "windows"))]
     {
         let json = r#"{"logical_cpus":1,"total_physical_memory_bytes":0,"available_physical_memory_bytes":0,"os_build":"non-windows"}"#;
         let len = json.len().min(buf.len());
         buf[..len].copy_from_slice(&json.as_bytes()[..len]);
-        &buf[..len]
+        Some(&buf[..len])
     }
 }
 

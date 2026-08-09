@@ -64,7 +64,7 @@ jobs:
         shell: bash
         run: python tools/verify_visual_tokens.py
 
-      - name: Gate 2 — WCAG 2.1 AA pill contrast (9 pairs, min 4.5:1)
+      - name: Gate 2 — WCAG 2.1 AA pill contrast (8 pairs, min 4.5:1)
         id: contrast
         shell: bash
         run: python tools/verify_pill_contrast.py

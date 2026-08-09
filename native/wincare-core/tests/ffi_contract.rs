@@ -1,3 +1,6 @@
+//! FFI contract integration test suite for wincare-core.
+#![allow(missing_docs)]
+
 use wincare_core::*;
 
 #[test]

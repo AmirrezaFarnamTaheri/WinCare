@@ -26,7 +26,11 @@ def main() -> int:
     for name, cmd in CHECKS:
         print(f"\n[RUNNING] {name}...")
         try:
-            res = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True)
+            res = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True, timeout=120)
+        except subprocess.TimeoutExpired:
+            print(f"[FAIL] {name} — timed out after 120 seconds")
+            failed.append(name)
+            continue
         except OSError as exc:
             print(f"[FAIL] {name} — could not launch process: {exc}")
             failed.append(name)

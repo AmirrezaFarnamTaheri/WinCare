@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 """WCAG 2.1 AA contrast checker — reads deployed values from ThemeResources.xaml."""
 import sys
-import xml.etree.ElementTree as ET
+try:
+    import defusedxml.ElementTree as ET
+except ImportError:
+    import xml.etree.ElementTree as ET
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
