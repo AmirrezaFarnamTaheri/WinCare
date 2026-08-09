@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import xml.etree.ElementTree as ET
 from pathlib import Path
@@ -34,6 +35,32 @@ def extract_headless(root: Path) -> set[str]:
         if match:
             commands.update(re.findall(r"'([^']+)'", match.group(1)))
     return commands
+
+
+def validate_winui3_tokens(repo_root):
+    """Verify required WinUI 3 pill tokens exist in ThemeResources.xaml."""
+    winui3_required = [
+        'PillMutatingBgBrush', 'PillElevatedBgBrush', 'PillReadOnlyBgBrush',
+        'PillNotReadyBgBrush', 'PillTextBrush', 'PillAltTextBrush',
+        'AccentTealBrush', 'AccentTealSubtleBrush',
+    ]
+    path = os.path.join(repo_root, 'src', 'WinCare.App', 'Styles', 'ThemeResources.xaml')
+    if not os.path.exists(path):
+        print(f'WARN: ThemeResources.xaml not found at {path}')
+        return True
+    with open(path, encoding='utf-8') as f:
+        content = f.read()
+    errors = []
+    for token in winui3_required:
+        count = content.count(f'x:Key="{token}"')
+        if count < 3:
+            errors.append(f'Token {token} found only {count}x in ThemeResources.xaml (expected >=3, one per theme)')
+    if errors:
+        for e in errors:
+            print(f'FAIL: {e}')
+        return False
+    print(f'PASS: All {len(winui3_required)} WinUI 3 pill tokens present across themes')
+    return True
 
 
 def main() -> int:
@@ -89,7 +116,7 @@ def main() -> int:
             if xaml_text.count("AutomationProperties.Name=") < 15:
                 errors.append("GUI accessibility names are incomplete")
             resource_definitions = set(re.findall(r'x:Key\s*=\s*["\']([^"\']+)["\']', xaml_text))
-            resource_references = set(re.findall(r"\{(?:StaticResource|DynamicResource)\s+([^},\s]+)", xaml_text))
+            resource_references = set(re.findall(r"\{(?:StaticResource|DynamicResource|ThemeResource)\s+([^},\s]+)", xaml_text))
             missing_resources = sorted(resource_references - resource_definitions)
             if missing_resources:
                 errors.append(f"GUI XAML references undefined resources: {missing_resources}")
@@ -180,6 +207,9 @@ def main() -> int:
         errors.append(f"Pester inventory regressed: suites={len(test_files)} cases={pester_cases}")
     if gui_pester_cases < 10:
         errors.append(f"GUI Pester coverage regressed: {gui_pester_cases}")
+
+    if not validate_winui3_tokens(root):
+        errors.append("WinUI 3 pill tokens validation failed")
 
     report = {
         "schema": "wincare.gui.validation/v1",

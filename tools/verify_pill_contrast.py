@@ -21,6 +21,9 @@ PAIRS = [
     ("NotReady dark",    "#94A3B8", "#1F2937"),
     ("Mutating light",   "#FFFFFF", "#DC2626"),
     ("Elevated light",   "#1A1A1A", "#D97706"),
+    ("PillReadOnlyBgBrush Light: #047857 bg + white text", "#047857", "#FFFFFF"),
+    ("PillNotReadyBgBrush Light: #E2E8F0 bg + dark text", "#E2E8F0", "#1A1A1A"),
+    ("PillNotReadyBgBrush Dark: #1F2937 bg + white text", "#1F2937", "#FFFFFF"),
 ]
 
 MINIMUM = 4.5
