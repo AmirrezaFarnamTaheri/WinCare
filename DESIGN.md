@@ -7,7 +7,7 @@
 
 WinCare is an **Operate-Mode Industrial Diagnostic & Recovery Engine**. It avoids bland generic SaaS layouts and cliché purple AI gradients. Instead, it adopts a distinct **Tactile Telemetry & Cyber-Operate Engine** visual character—combining native Windows Fluent Mica surfaces with crisp monospaced telemetry readouts, status pill badges, and electric cyan accent highlights.
 
-```
+```text
 Visual System Architecture (Tactile Telemetry & Cyber-Operate)
 ├── Shell Surface   : Windows Mica backdrop with Obsidian Slate depth (#202020 Dark / #F3F3F3 Light)
 ├── Accent Identity : Electric Cyber-Teal (#00D2FF / #0078D4) for active states & primary focus
@@ -48,13 +48,13 @@ Tabular views across `AllToolsPage`, `CheckupPage`, and `ActivityPage` implement
 
 ```text
 +-------------------------------------------------------------------------------------------------------+
-| Search Palette (Ctrl+K): [ 🔍 Search catalog tools... ]  [ Area: All v ]  [ Risk: All v ]  [x] ReadOnly |
+| Search Palette (Ctrl+K): [ Search catalog tools... ]  [ Area: All v ]  [ Risk: All v ]  [x] ReadOnly |
 +-------------------------------------------------------------------------------------------------------+
 | Command (2*)              | Category (1*)   | Risk Badge (1*)  | Admin Access (1*) | Status Pill (80) |
 +-------------------------------------------------------------------------------------------------------+
-| 🔍 sysinfo                | System Care     | [ READ-ONLY ]    | No                | [ VERIFIED ]     |
-| 🧹 disk_cleanup           | Maintenance     | [ MODERATE  ]    | Required          | [ MUTATING ]     |
-| 🔒 wdac_audit             | Security        | [ HIGH RISK ]    | Required          | [ MUTATING ]     |
+| sysinfo                   | System Care     | [ READ-ONLY ]    | No                | [ VERIFIED ]     |
+| disk_cleanup              | Maintenance     | [ MODERATE  ]    | Required          | [ MUTATING ]     |
+| wdac_audit                | Security        | [ HIGH RISK ]    | Required          | [ MUTATING ]     |
 +-------------------------------------------------------------------------------------------------------+
 | Detail Drawer (Right/Overlay): Diagnostic Review -> Affected Paths -> Apply (ReviewApproved) -> Undo  |
 +-------------------------------------------------------------------------------------------------------+
@@ -88,9 +88,9 @@ WinCare's signature visual hallmark is **Monospaced Industrial Telemetry Pills &
 ## 🦀 Native Core & FFI Safety Invariants (`rust-skills`)
 
 All underlying Rust native engine components (`native/wincare-core`) strictly enforce Rust 2024 edition guidelines:
-- **`#[unsafe(no_mangle)]`**: Required attribute syntax for all exported C-ABI symbols (`wincare_core_init`, `wincare_core_execute_command`).
+- **`#[unsafe(no_mangle)]`**: Required attribute syntax for exported C-ABI symbols such as `wincare_core_dir_size` and `wincare_core_sys_info`.
 - **Unwind Safety (`catch_unwind`)**: Every FFI entry point wraps internal Rust logic in `std::panic::catch_unwind` to prevent unwinding across C ABI boundaries (`err-result-over-panic`).
-- **Zero-Copy ABI Transfer (`type-repr-transparent` & `own-borrow-over-clone`)**: Status codes (`repr(i32)`) and telemetry buffers use `repr(C)` and slice borrowing (`&[u8]`) for zero-overhead C# P/Invoke marshalling.
+- **Caller-Owned Pointer/Length ABI**: Status codes use `repr(i32)`. Byte buffers cross the C ABI as caller-owned pointer-plus-length pairs (`uint8_t*` / `byte*` with `size_t` / `nuint`). The caller keeps each buffer valid for the duration of the call; Rust neither takes ownership nor retains the pointer after returning.
 - **Explicit Safety Comments (`unsafe-safety-comment`)**: Every `unsafe` block includes an explicit `// SAFETY:` invariant comment and `# Safety` doc comment section.
 
 ---
@@ -101,7 +101,7 @@ All C# ViewModel and XAML View components strictly adhere to .NET 8 and WinUI 3 
 - **Compiled XAML Bindings (`{x:Bind}`)**: All UI controls use compiled `{x:Bind}` with explicit `Mode=OneWay` or `Mode=TwoWay` to eliminate runtime reflection overhead and achieve zero-allocation data binding.
 - **Clean MVVM Separation (CommunityToolkit.Mvvm)**: ViewModels inherit `ObservableObject` and encapsulate dynamic presentation logic using C# 12 pattern-matching switch expressions (`ToolRowViewModel.cs`).
 - **Dynamic Theme Resource System (`{ThemeResource}`)**: Zero hardcoded colors in XAML. All brushes bind dynamically to `{ThemeResource}` keys defined in `ThemeResources.xaml`.
-- **Keyboard Ergonomics & Accessibility**: `Ctrl+F` global shortcut for catalog search focus, 3px high-contrast `FocusVisualPrimaryBrush` focus rings, and explicit `AutomationProperties.AutomationId` / `AutomationProperties.Name` on every control.
+- **Keyboard Ergonomics & Accessibility**: `Ctrl+F` global shortcut for catalog search focus, 3px high-contrast `FocusVisualPrimaryBrush` focus rings, and explicit `AutomationProperties.AutomationId` / `AutomationProperties.Name` on every interactive control.
 
 ---
 

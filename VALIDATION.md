@@ -34,7 +34,7 @@ One evidence class cannot substitute for another.
 - [x] `AllowedBasePaths` uses `Path.GetFullPath` normalization (Unicode bypass / relative path attacks prevented)
 
 ### Design and accessibility
-- [x] All 9 pill color pairs pass WCAG 2.1 AA (≥ 4.5:1 contrast ratio)
+- [x] All 8 pill color pairs pass WCAG 2.1 AA (≥ 4.5:1 contrast ratio)
 - [x] All 33 theme tokens defined in Light, Dark, and HighContrast dictionaries
 - [x] HighContrast `PillNotReadyBgBrush` uses `SystemColorHighlightColor` pairing (no same-color trap)
 - [x] 3px `FocusVisualPrimaryThickness` enforced on `ListViewItem` styles
@@ -53,7 +53,7 @@ One evidence class cannot substitute for another.
 ### Infrastructure and CI
 - [x] `ci.yml` — full evidence + Windows matrix (x64 + ARM64) — SHA-pinned actions
 - [x] `native-winui.yml` — Rust fmt/clippy/test + .NET build + portable ZIP
-- [x] `native-python-gates.yml` — Python verification gates (tokens, contrast, GUI, unit tests)
+- [x] `native-python-gates.yml` — visual/GUI verification, native source contract, safety regressions, Rust FFI gates, and managed build/test
 - [x] `native-release-candidate.yml` — manual RC and production finalization dispatch
 - [x] `dependabot.yml` — weekly Action SHA-digest update proposals
 - [x] `release.yml` — sealed, attested, two-stage GitHub release with immutable byte verification
@@ -169,7 +169,7 @@ the full gate again.
 | Error rate 2x baseline | Revert to previous branch HEAD via `git revert` + push |
 | Critical security finding | Close PR immediately; patch in isolated branch |
 | .NET build regression | Revert last commit with `git revert HEAD~1` |
-| Rust FFI panic in CI | `cargo revert` to previous `Cargo.lock` state |
+| Rust FFI panic in CI | Use `git revert <commit>` for the commit that changed `Cargo.lock` or the FFI source |
 | Design token regression | Run `verify_visual_tokens.py`; revert `ThemeResources.xaml` |
 
 All rollbacks are reversible via Git history. No database migrations are involved.

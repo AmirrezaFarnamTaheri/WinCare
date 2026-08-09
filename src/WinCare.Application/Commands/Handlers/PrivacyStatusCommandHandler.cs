@@ -39,20 +39,28 @@ public sealed class PrivacyStatusCommandHandler : ICommandHandler
 
         cancellationToken.ThrowIfCancellationRequested();
 
+        string telemetryText = record.TelemetryLevel?.ToString() ?? "unknown";
+        string advertisingIdText = record.AdvertisingIdEnabled switch
+        {
+            true => "enabled",
+            false => "disabled",
+            null => "unknown",
+        };
+
         string json = JsonSerializer.Serialize(record, PrivacyStatusJsonContext.Default.PrivacyRecord);
         using JsonDocument doc = JsonDocument.Parse(json);
 
         return CommandHandlerOutcome.Succeeded(
             "privacy.ok",
-            $"Telemetry level: {record.TelemetryLevel}, Advertising ID: {(record.AdvertisingIdEnabled ? "enabled" : "disabled")}.",
+            $"Telemetry level: {telemetryText}, Advertising ID: {advertisingIdText}.",
             doc.RootElement.Clone(),
             undoAvailable: false);
     }
 
     private static PrivacyRecord ReadPrivacySettings()
     {
-        int telemetry = 1;
-        bool adId = false;
+        int? telemetry = null;
+        bool? advertisingIdEnabled = null;
 
         using (RegistryKey? key = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Policies\Microsoft\Windows\DataCollection"))
         {
@@ -66,17 +74,17 @@ public sealed class PrivacyStatusCommandHandler : ICommandHandler
         {
             if (key?.GetValue("Enabled") is int value)
             {
-                adId = value != 0;
+                advertisingIdEnabled = value != 0;
             }
         }
 
-        return new PrivacyRecord(telemetry, adId);
+        return new PrivacyRecord(telemetry, advertisingIdEnabled);
     }
 
     /// <summary>
-    /// Represents privacy settings record.
+    /// Represents privacy settings record. Null values mean the corresponding registry setting is not present.
     /// </summary>
-    public sealed record PrivacyRecord(int TelemetryLevel, bool AdvertisingIdEnabled);
+    public sealed record PrivacyRecord(int? TelemetryLevel, bool? AdvertisingIdEnabled);
 }
 
 [JsonSerializable(typeof(PrivacyStatusCommandHandler.PrivacyRecord))]

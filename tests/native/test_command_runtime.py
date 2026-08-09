@@ -101,6 +101,32 @@ class CommandRuntimeTests(unittest.TestCase):
         self.assertIn("AutomationProperties.AutomationId=\"CommandResultDetails\"", xaml)
         ET.fromstring(xaml)
 
+    def test_review_safety_contracts_are_encoded_in_sources(self) -> None:
+        native_interop = (ROOT / "src/WinCare.Infrastructure/Native/WinCareCoreNative.cs").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn('EntryPoint = "wincare_core_dir_size"', native_interop)
+        self.assertIn('EntryPoint = "wincare_core_sys_info"', native_interop)
+        self.assertIn("WinCareCoreDirSize", native_interop)
+        self.assertIn("WinCareCoreSysInfo", native_interop)
+
+        privacy = (
+            ROOT / "src/WinCare.Application/Commands/Handlers/PrivacyStatusCommandHandler.cs"
+        ).read_text(encoding="utf-8")
+        self.assertIn("int? telemetry = null;", privacy)
+        self.assertIn("bool? advertisingIdEnabled = null;", privacy)
+        self.assertIn('null => "unknown"', privacy)
+
+        tool_row = (ROOT / "src/WinCare.App/ViewModels/Pages/ToolRowViewModel.cs").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn('"Read-only" => "PillReadOnlyBgBrush"', tool_row)
+        self.assertIn('_ => "PillMutatingBgBrush"', tool_row)
+
+        release_checklist = (ROOT / "tools/release_checklist.py").read_text(encoding="utf-8")
+        self.assertIn("PYTHON = sys.executable", release_checklist)
+        self.assertIn("sys.version_info < (3, 11)", release_checklist)
+
     def test_native_runtime_does_not_reference_legacy_runtime(self) -> None:
         native_roots = (
             ROOT / "src/WinCare.Application",

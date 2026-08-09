@@ -84,9 +84,10 @@ public sealed class ToolRowViewModel : ObservableObject
 
             string key = Risk switch
             {
-                "Mutating" or "High Risk" or "High" or "Critical" => "PillMutatingBgBrush",
+                "Read-only" => "PillReadOnlyBgBrush",
                 "Elevated" or "Moderate" or "Low" => "PillElevatedBgBrush",
-                _ => "PillReadOnlyBgBrush",
+                "Mutating" or "High Risk" or "High" or "Critical" => "PillMutatingBgBrush",
+                _ => "PillMutatingBgBrush",
             };
             return ResolveBrush(key);
         }
@@ -119,5 +120,4 @@ public sealed class ToolRowViewModel : ObservableObject
         return new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.Transparent);
     }
 }
-
 

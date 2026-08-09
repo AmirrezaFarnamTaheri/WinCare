@@ -18,7 +18,7 @@ public sealed class NativeCoreService : INativeCoreService
     /// <summary>
     /// Returns the native C ABI version exposed by the Rust library.
     /// </summary>
-    public uint GetAbiVersion() => WinCareCoreNative.wincare_core_abi_version();
+    public uint GetAbiVersion() => WinCareCoreNative.WinCareCoreAbiVersion();
 
     /// <summary>
     /// Hashes a bounded file with SHA-256 through the native primitive.
@@ -38,7 +38,7 @@ public sealed class NativeCoreService : INativeCoreService
         fixed (byte* pathPointer = pathBytes)
         fixed (byte* digestPointer = digest)
         {
-            int statusCode = WinCareCoreNative.wincare_core_sha256_file(
+            int statusCode = WinCareCoreNative.WinCareCoreSha256File(
                 pathPointer,
                 (nuint)pathBytes.Length,
                 maxBytes,
@@ -73,7 +73,7 @@ public sealed class NativeCoreService : INativeCoreService
         ulong size;
         fixed (byte* p = pathBytes)
         {
-            int code = WinCareCoreNative.wincare_core_dir_size(p, (nuint)pathBytes.Length, &size);
+            int code = WinCareCoreNative.WinCareCoreDirSize(p, (nuint)pathBytes.Length, &size);
             NativeCoreStatus status = (NativeCoreStatus)code;
             if (status != NativeCoreStatus.Ok)
             {
@@ -95,7 +95,7 @@ public sealed class NativeCoreService : INativeCoreService
     {
         ct.ThrowIfCancellationRequested();
         nuint required = 0;
-        NativeCoreStatus probeStatus = (NativeCoreStatus)WinCareCoreNative.wincare_core_sys_info(null, 0, &required);
+        NativeCoreStatus probeStatus = (NativeCoreStatus)WinCareCoreNative.WinCareCoreSysInfo(null, 0, &required);
         if (probeStatus != NativeCoreStatus.BufferTooSmall && probeStatus != NativeCoreStatus.Ok)
         {
             throw SystemInfoException(probeStatus);
@@ -112,7 +112,7 @@ public sealed class NativeCoreService : INativeCoreService
             fixed (byte* pointer = buffer)
             {
                 nuint written = 0;
-                NativeCoreStatus status = (NativeCoreStatus)WinCareCoreNative.wincare_core_sys_info(
+                NativeCoreStatus status = (NativeCoreStatus)WinCareCoreNative.WinCareCoreSysInfo(
                     pointer,
                     (nuint)buffer.Length,
                     &written);

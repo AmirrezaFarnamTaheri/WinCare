@@ -7,18 +7,23 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+PYTHON = sys.executable
 
 CHECKS = [
-    ("Visual tokens check", ["python", "tools/verify_visual_tokens.py"]),
-    ("Pill contrast check", ["python", "tools/verify_pill_contrast.py"]),
-    ("Native foundation gate V5", ["python", "tools/verify_native_foundation.py"]),
+    ("Visual tokens check", [PYTHON, "tools/verify_visual_tokens.py"]),
+    ("Pill contrast check", [PYTHON, "tools/verify_pill_contrast.py"]),
+    ("Native foundation gate V5", [PYTHON, "tools/verify_native_foundation.py"]),
     ("Rust unit tests", ["cargo", "test", "--manifest-path", "native/wincare-core/Cargo.toml"]),
     ("Rust clippy lints", ["cargo", "clippy", "--manifest-path", "native/wincare-core/Cargo.toml", "--", "-D", "warnings"]),
-    ("Python native tests", ["python", "-m", "unittest", "discover", "-s", "tests/native", "-v"]),
-    ("RC package finalization", ["python", "tools/finalize_native_release.py", "--version", "2.4.0-rc1", "--output", "artifacts/"]),
+    ("Python native tests", [PYTHON, "-m", "unittest", "discover", "-s", "tests/native", "-v"]),
+    ("RC package finalization", [PYTHON, "tools/finalize_native_release.py", "--version", "2.4.0-rc1", "--output", "artifacts/"]),
 ]
 
 def main() -> int:
+    if sys.version_info < (3, 11):
+        print("[FAIL] WinCare release validation requires Python 3.11 or newer.")
+        return 1
+
     failed = []
     print("=" * 60)
     print("WinCare Release Checklist Validation")

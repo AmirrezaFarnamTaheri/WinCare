@@ -47,8 +47,8 @@ Released: 2026-08-09
   to prevent file-path or PII leakage.
 - Removed static mutable `CommandRuntime.LastJournal` global: eliminates race conditions in
   concurrent and test contexts.
-- `DiskCleanupCommandHandler`: `AllowedBasePaths` safelist and `IsPathAllowed()` guard prevent
-  path-traversal and arbitrary filesystem deletion.
+- `DiskCleanupCommandHandler`: canonical allowlisted roots, boundary-aware descendant checks, and
+  reparse-point-safe traversal prevent path traversal and cleanup escaping into linked trees.
 
 ### Rust native core
 
@@ -65,8 +65,8 @@ Released: 2026-08-09
   and `{DynamicResource}`; targets WinUI 3 XAML styles, not the legacy PowerShell surface.
 - `verify_visual_tokens.py`: upgraded from naive string-count to XML tree parsing with per-dictionary
   (Light / Dark / HighContrast) token verification — false positives eliminated.
-- `verify_pill_contrast.py`: extended to cover all 9 pill color pairs across both themes,
-  including the Light ReadOnly, Light NotReady, and PillAltTextBrush pairings previously missing.
+- `verify_pill_contrast.py`: validates all 8 deployed pill color pairs across the supported themes,
+  including the Light ReadOnly, Light NotReady, and PillAltTextBrush pairings.
 
 ### Design system accuracy
 
@@ -86,7 +86,7 @@ Released: 2026-08-09
 
 This release candidate is not production-promotable. Current migration status:
 - 259 commands cataloged
-- 6 handlers implemented
+- 8 handlers implemented
 - 0 behavior-verified
 
 The production finalization gate refuses promotion until all 259 commands reach `BehaviorVerified`.
