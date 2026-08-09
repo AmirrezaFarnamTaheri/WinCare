@@ -15,3 +15,5 @@ __pycache__/
 scratch/
 .omd/
 /.agents
+build_out.txt
+.review-fix/

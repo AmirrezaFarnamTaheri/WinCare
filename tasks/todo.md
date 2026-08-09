@@ -48,3 +48,9 @@
 - [x] Re-run Rust unit/FFI test suite (`cargo test`) -> PASSED (18/18 tests OK)
 - [x] Re-run `$impeccable audit` and `$impeccable critique` to confirm health score -> VERIFIED & PERSISTED
 
+## Post-Shipping Cleanup (2026-08-09)
+- [x] Removed `tasks/plan_part1.md` — superseded split artifact from plan construction phase
+- [x] Removed `tasks/plan_temp.py` — empty ephemeral temp file
+- [x] Removed `.review-fix/trigger-2.txt` — stale CI trigger; purpose fulfilled
+- [x] Updated `.gitignore` to cover `build_out.txt` and `.review-fix/` permanently
+
