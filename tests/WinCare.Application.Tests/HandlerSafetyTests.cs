@@ -1,4 +1,5 @@
 using System.Text.Json;
+using WinCare.Application.Commands;
 using WinCare.Application.Commands.Handlers;
 using WinCare.Application.Native;
 using WinCare.Domain.Commands;
