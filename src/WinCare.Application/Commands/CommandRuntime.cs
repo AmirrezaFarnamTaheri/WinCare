@@ -1,6 +1,6 @@
 using WinCare.Application.Activity;
 using WinCare.Application.Commands.Handlers;
-using WinCare.Infrastructure.Native;
+using WinCare.Application.Native;
 
 namespace WinCare.Application.Commands;
 
@@ -23,24 +23,30 @@ public static class CommandRuntime
     /// Creates the default dispatcher wired to the frozen native catalog and the
     /// implemented runtime handlers.
     /// </summary>
-    public static CommandDispatcher CreateDefault()
+    public static CommandDispatcher CreateDefault(INativeCoreService? nativeCore = null)
     {
-        NativeCoreService nativeCore = new();
         ActivityJournalService journal = new();
         _lastJournal = journal;
 
+        var handlers = new List<ICommandHandler>
+        {
+            new CatalogCommandHandler(),
+            new PresetsCommandHandler(),
+            new StorageHealthCommandHandler(),
+            new NetworkStatusCommandHandler(),
+            new PrivacyStatusCommandHandler(),
+            new LogCleanupCommandHandler(),
+        };
+
+        if (nativeCore is not null)
+        {
+            handlers.Add(new SystemInfoCommandHandler(nativeCore));
+            handlers.Add(new DiskCleanupCommandHandler(nativeCore));
+        }
+
         return new CommandDispatcher(
             WinCare.CommandCatalog.CommandCatalog.Load(),
-            [
-                new CatalogCommandHandler(),
-                new PresetsCommandHandler(),
-                new SystemInfoCommandHandler(nativeCore),
-                new StorageHealthCommandHandler(),
-                new NetworkStatusCommandHandler(),
-                new PrivacyStatusCommandHandler(),
-                new DiskCleanupCommandHandler(nativeCore),
-                new LogCleanupCommandHandler(),
-            ],
+            handlers,
             TimeProvider.System,
             nativeCore,
             journal);

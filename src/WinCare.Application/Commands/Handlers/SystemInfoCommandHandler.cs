@@ -1,6 +1,6 @@
 using System.Text.Json;
+using WinCare.Application.Native;
 using WinCare.Domain.Commands;
-using WinCare.Infrastructure.Native;
 
 namespace WinCare.Application.Commands.Handlers;
 
@@ -10,7 +10,7 @@ namespace WinCare.Application.Commands.Handlers;
 /// </summary>
 public sealed class SystemInfoCommandHandler : ICommandHandler
 {
-    private readonly NativeCoreService _native;
+    private readonly INativeCoreService _native;
 
     /// <inheritdoc />
     public string CommandId => "system";
@@ -18,7 +18,7 @@ public sealed class SystemInfoCommandHandler : ICommandHandler
     /// <summary>
     /// Initializes a new instance of the <see cref="SystemInfoCommandHandler"/> class.
     /// </summary>
-    public SystemInfoCommandHandler(NativeCoreService native)
+    public SystemInfoCommandHandler(INativeCoreService native)
         => _native = native ?? throw new ArgumentNullException(nameof(native));
 
     /// <inheritdoc />

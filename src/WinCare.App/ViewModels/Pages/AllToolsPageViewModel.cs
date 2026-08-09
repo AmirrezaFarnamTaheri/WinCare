@@ -5,6 +5,8 @@ using WinCare.Application.Commands;
 using WinCare.Application.Tools;
 using WinCare.CommandCatalog.Models;
 
+using WinCare.Infrastructure.Native;
+
 namespace WinCare.App.ViewModels.Pages;
 
 public sealed class AllToolsPageViewModel : ObservableObject
@@ -22,12 +24,12 @@ public sealed class AllToolsPageViewModel : ObservableObject
     private bool _isCompactLayout;
 
     public AllToolsPageViewModel()
-        : this(new ToolCatalogService(), CommandRuntime.CreateDefault())
+        : this(new ToolCatalogService(), CommandRuntime.CreateDefault(new NativeCoreService()))
     {
     }
 
     public AllToolsPageViewModel(ToolCatalogService catalog)
-        : this(catalog, CommandRuntime.CreateDefault())
+        : this(catalog, CommandRuntime.CreateDefault(new NativeCoreService()))
     {
     }
 

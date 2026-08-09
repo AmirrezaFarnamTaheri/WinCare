@@ -1,10 +1,10 @@
 using System.Collections.ObjectModel;
 using System.Text.Json;
 using WinCare.Application.Activity;
+using WinCare.Application.Native;
 using WinCare.CommandCatalog.Models;
 using WinCare.Domain.Activity;
 using WinCare.Domain.Commands;
-using WinCare.Infrastructure.Native;
 
 namespace WinCare.Application.Commands;
 
@@ -19,13 +19,18 @@ public sealed class CommandDispatcher
     private readonly ActivityJournalService? _journal;
 
     /// <summary>
+    /// Expected C ABI version exported by <c>wincare_core</c>.
+    /// </summary>
+    public const uint SupportedAbiVersion = 1;
+
+    /// <summary>
     /// Initializes a new dispatcher bound to the catalog and the supplied handlers.
     /// </summary>
     public CommandDispatcher(
         IReadOnlyList<CommandDefinition> definitions,
         IEnumerable<ICommandHandler> handlers,
         TimeProvider? timeProvider = null,
-        NativeCoreService? nativeCore = null,
+        INativeCoreService? nativeCore = null,
         ActivityJournalService? journal = null)
     {
         ArgumentNullException.ThrowIfNull(definitions);
@@ -35,7 +40,7 @@ public sealed class CommandDispatcher
         if (nativeCore is not null)
         {
             uint actual = nativeCore.GetAbiVersion();
-            const uint expected = NativeCoreService.SupportedAbiVersion;
+            const uint expected = SupportedAbiVersion;
             if (actual != expected)
             {
                 throw new InvalidOperationException(

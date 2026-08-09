@@ -1,7 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using WinCare.Application.Native;
 using WinCare.Domain.Commands;
-using WinCare.Infrastructure.Native;
 
 namespace WinCare.Application.Commands.Handlers;
 
@@ -10,7 +10,7 @@ namespace WinCare.Application.Commands.Handlers;
 /// </summary>
 public sealed class DiskCleanupCommandHandler : ICommandHandler
 {
-    private readonly NativeCoreService _native;
+    private readonly INativeCoreService _native;
 
     /// <inheritdoc />
     public string CommandId => "cleaner-disk-pressure";
@@ -34,7 +34,7 @@ public sealed class DiskCleanupCommandHandler : ICommandHandler
     /// <summary>
     /// Initializes a new instance of the <see cref="DiskCleanupCommandHandler"/> class.
     /// </summary>
-    public DiskCleanupCommandHandler(NativeCoreService native)
+    public DiskCleanupCommandHandler(INativeCoreService native)
         => _native = native ?? throw new ArgumentNullException(nameof(native));
 
     /// <summary>Returns true when <paramref name="resolvedPath"/> is rooted under an allowed base.</summary>

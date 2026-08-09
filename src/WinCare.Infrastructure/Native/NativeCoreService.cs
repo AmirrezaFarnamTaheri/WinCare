@@ -1,11 +1,12 @@
 using System.Text;
+using WinCare.Application.Native;
 
 namespace WinCare.Infrastructure.Native;
 
 /// <summary>
 /// Safe, synchronous wrapper over the Rust-backed native primitive surface.
 /// </summary>
-public sealed class NativeCoreService
+public sealed class NativeCoreService : INativeCoreService
 {
     /// <summary>
     /// Expected C ABI version exported by <c>wincare_core</c>.
