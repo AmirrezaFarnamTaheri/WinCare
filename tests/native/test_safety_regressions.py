@@ -33,7 +33,7 @@ class SafetyRegressionTests(unittest.TestCase):
         self.assertNotIn("Fallback default", source)
 
     def test_mutating_ui_requires_successful_preview_before_approval(self) -> None:
-        source = self.read("src/WinCare.App/ViewModels/Pages/ToolExecutionViewModel.cs")
+        view_model = self.read("src/WinCare.App/ViewModels/Pages/ToolExecutionViewModel.cs")
         for token in (
             "CanApproveReview",
             "value && CanApproveReview",
@@ -41,7 +41,13 @@ class SafetyRegressionTests(unittest.TestCase):
             "SetSuccessfulPreview(result.Status == CommandResultStatus.Succeeded)",
             "ResetReviewState();",
         ):
-            self.assertIn(token, source)
+            self.assertIn(token, view_model)
+
+        xaml = self.read("src/WinCare.App/Views/Pages/AllToolsPage.xaml")
+        self.assertIn(
+            'IsEnabled="{x:Bind ViewModel.Execution.CanApproveReview, Mode=OneWay}"',
+            xaml,
+        )
 
     def test_native_directory_size_uses_iterative_walk(self) -> None:
         source = self.read("native/wincare-core/src/lib.rs")
