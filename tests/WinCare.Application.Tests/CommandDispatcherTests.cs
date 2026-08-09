@@ -16,7 +16,7 @@ public sealed class CommandDispatcherTests
             Request("missing"), CommandExecutionOptions.Default, CancellationToken.None);
 
         Assert.Equal(CommandResultStatus.Blocked, result.Status);
-        Assert.Equal("command.unknown", result.Code);
+        Assert.Equal("command.not_found", result.Code);
     }
 
     [Fact]
@@ -29,7 +29,7 @@ public sealed class CommandDispatcherTests
             Request("legacy"), CommandExecutionOptions.Default, CancellationToken.None);
 
         Assert.Equal(CommandResultStatus.NotMigrated, result.Status);
-        Assert.Equal("command.not_migrated", result.Code);
+        Assert.Equal("command.migration_blocked", result.Code);
     }
 
     [Fact]
@@ -64,7 +64,7 @@ public sealed class CommandDispatcherTests
             Request("read", apply: true), CommandExecutionOptions.Default, CancellationToken.None);
 
         Assert.Equal(CommandResultStatus.Blocked, result.Status);
-        Assert.Equal("command.read_only", result.Code);
+        Assert.Equal("command.readonly_mutation_denied", result.Code);
         Assert.Equal(0, handler.InvocationCount);
     }
 
