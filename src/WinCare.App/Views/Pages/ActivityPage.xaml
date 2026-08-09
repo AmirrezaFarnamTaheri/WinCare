@@ -56,7 +56,7 @@
                         Padding="16,0"
                         ColumnSpacing="16"
                         Background="{ThemeResource SurfaceSecondaryBrush}"
-                        Visibility="{x:Bind views:LayoutVisibility.InvertBoolToVisibility(IsCompact), Mode=OneWay}">
+                        Visibility="{x:Bind views:LayoutVisibility.InvertBoolToVisibility(ViewModel.IsCompactLayout), Mode=OneWay}">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="2*" />
                             <ColumnDefinition Width="3*" />

@@ -48,7 +48,12 @@
                 Text="{x:Bind ViewModel.SearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                 ToolTipService.ToolTip="Filter catalog tools by name or description (Ctrl+F)"
                 AutomationProperties.AutomationId="ToolSearch"
-                AutomationProperties.Name="Search all tools" />
+                AutomationProperties.Name="Search all tools">
+                <TextBox.KeyboardAccelerators>
+                    <KeyboardAccelerator Modifiers="Control" Key="F"
+                                         Invoked="ToolSearch_FocusAccelerator" />
+                </TextBox.KeyboardAccelerators>
+            </TextBox>
             <ComboBox
                 Grid.Column="1"
                 Header="Area"
@@ -183,6 +188,8 @@
                                     FontFamily="Cascadia Mono"
                                     FontSize="12"
                                     IsTextSelectionEnabled="True"
+                                    LineHeight="18"
+                                    Padding="12"
                                     Text="{x:Bind ViewModel.SelectedToolTechnicalDetails, Mode=OneWay}"
                                     TextWrapping="Wrap" />
                             </Expander>
@@ -202,7 +209,7 @@
                     Padding="16,0"
                     ColumnSpacing="12"
                     Background="{ThemeResource SurfaceSecondaryBrush}"
-                    Visibility="{x:Bind views:LayoutVisibility.InvertBoolToVisibility(IsCompact), Mode=OneWay}">
+                    Visibility="{x:Bind views:LayoutVisibility.InvertBoolToVisibility(ViewModel.IsCompactLayout), Mode=OneWay}">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="2.4*" />
                         <ColumnDefinition Width="1.2*" />
@@ -211,12 +218,19 @@
                         <ColumnDefinition Width="130" />
                         <ColumnDefinition Width="110" />
                     </Grid.ColumnDefinitions>
-                    <TextBlock Style="{StaticResource ColumnHeaderTextStyle}" Text="Command" />
-                    <TextBlock Grid.Column="1" Style="{StaticResource ColumnHeaderTextStyle}" Text="Category" />
-                    <TextBlock x:Name="RiskHeader" Grid.Column="2" Style="{StaticResource ColumnHeaderTextStyle}" Text="Risk" />
-                    <TextBlock x:Name="AdministratorHeader" Grid.Column="3" Style="{StaticResource ColumnHeaderTextStyle}" Text="Administrator access" />
-                    <TextBlock x:Name="RestartHeader" Grid.Column="4" Style="{StaticResource ColumnHeaderTextStyle}" Text="Restart" />
-                    <TextBlock x:Name="StatusHeader" Grid.Column="5" Style="{StaticResource ColumnHeaderTextStyle}" Text="Status" AutomationProperties.AutomationId="StatusColumnHeader" />
+                    <TextBlock Style="{StaticResource ColumnHeaderTextStyle}" Text="Command"
+                               ToolTipService.ToolTip="Command name and unique identifier" />
+                    <TextBlock Grid.Column="1" Style="{StaticResource ColumnHeaderTextStyle}" Text="Category"
+                               ToolTipService.ToolTip="Functional area or system domain" />
+                    <TextBlock x:Name="RiskHeader" Grid.Column="2" Style="{StaticResource ColumnHeaderTextStyle}" Text="Risk"
+                               ToolTipService.ToolTip="Impact level: Read-only, Low, Elevated, or Mutating" />
+                    <TextBlock x:Name="AdministratorHeader" Grid.Column="3" Style="{StaticResource ColumnHeaderTextStyle}" Text="Administrator access"
+                               ToolTipService.ToolTip="Whether elevated privileges are required" />
+                    <TextBlock x:Name="RestartHeader" Grid.Column="4" Style="{StaticResource ColumnHeaderTextStyle}" Text="Restart"
+                               ToolTipService.ToolTip="Whether a system restart is required after execution" />
+                    <TextBlock x:Name="StatusHeader" Grid.Column="5" Style="{StaticResource ColumnHeaderTextStyle}" Text="Status"
+                               ToolTipService.ToolTip="Migration readiness: Ready, Pending migration, or Not ready"
+                               AutomationProperties.AutomationId="StatusColumnHeader" />
                 </Grid>
                 <InfoBar
                     Grid.Row="1"

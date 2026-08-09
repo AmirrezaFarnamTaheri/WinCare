@@ -61,5 +61,7 @@
     <Style TargetType="ListViewItem">
         <Setter Property="FocusVisualPrimaryBrush" Value="{ThemeResource AccentTealBrush}" />
         <Setter Property="FocusVisualSecondaryBrush" Value="{ThemeResource SurfaceBrush}" />
+        <Setter Property="FocusVisualPrimaryThickness" Value="3" />
+        <Setter Property="FocusVisualMargin" Value="-3" />
     </Style>
 </ResourceDictionary>

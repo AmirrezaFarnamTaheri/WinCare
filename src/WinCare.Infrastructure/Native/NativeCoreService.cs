@@ -97,7 +97,11 @@ public sealed class NativeCoreService
     {
         ct.ThrowIfCancellationRequested();
         nuint required = 0;
-        WinCareCoreNative.wincare_core_sys_info(null, 0, &required);
+        var probeStatus = (NativeCoreStatus)WinCareCoreNative.wincare_core_sys_info(null, 0, &required);
+        if (probeStatus != NativeCoreStatus.BufferTooSmall && probeStatus != NativeCoreStatus.Ok)
+        {
+            throw new InvalidOperationException($"wincare_core_sys_info failed with status {probeStatus} ({(int)probeStatus}).");
+        }
 
         byte[] buf = new byte[(int)required];
         fixed (byte* p = buf)

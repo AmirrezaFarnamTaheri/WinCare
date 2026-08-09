@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
+using System.Threading.Tasks;
 using WinCare.Application.Commands;
 using WinCare.Application.Tools;
 using WinCare.CommandCatalog.Models;
@@ -73,12 +74,21 @@ public sealed class AllToolsPageViewModel : ObservableObject
         }
     }
 
-    private void DebounceSearch()
+    private async void DebounceSearch()
     {
         _searchCts?.Cancel();
         _searchCts?.Dispose();
         _searchCts = new CancellationTokenSource();
-        Refresh();
+        var token = _searchCts.Token;
+        try
+        {
+            await Task.Delay(250, token);
+            Refresh();
+        }
+        catch (OperationCanceledException)
+        {
+            // Superseded by a newer keystroke — expected.
+        }
     }
 
 
