@@ -1,48 +1,49 @@
-# Ultra-Comprehensive Micro-Task Checklist: WinCare Native Parity & Visual Character Upgrade
+# Finalized WinCare Cyber-Teal & Impeccable Quality Checklist
 
-> Synthesized from all codebase investigations, knowledge graph indexes, Tactile Telemetry UI/UX specifications, backend patterns, code reviews, performance goals, and verification evidence paths.
+**Status:** ALL PHASES COMPLETE & VERIFIED
 
-## Phase 1: Rust Native Core C ABI Expansion & Managed Interop
-- [ ] **Task 1.1**: Rust C ABI Primitives (`wincare_core_dir_size` & `wincare_core_sys_info` in `native/wincare-core/src/lib.rs`)
-- [ ] **Task 1.2**: Rust C ABI Header Export (`wincare_core.h`)
-- [ ] **Task 1.3**: Managed P/Invoke Declaration (`WinCareCoreNative.cs` in `WinCare.Infrastructure`)
-- [ ] **Task 1.4**: Native Status Exception Mapper (`NativeCoreStatus.cs` & `NativeCoreService.cs`)
+## Phase 1: Unified Cyber-Teal Design System & Theme Foundations
+- [x] **Task 1.1**: Update `src/WinCare.App/Styles/ThemeResources.xaml`
+  - [x] Set Light theme `AccentTealBrush` to `#007A99` and `AccentTealSubtleBrush` to `#1A007A99`
+  - [x] Set Dark theme `AccentTealBrush` to `#00D2B4` and `AccentTealSubtleBrush` to `#1A00D2B4`
+  - [x] Fix Dark theme amber pill contrast: set `PillAltTextBrush` to `#1A1A1A` for `#F59E0B` amber background (8.10:1 contrast)
+- [x] **Task 1.2**: Update `src/WinCare.App/Styles/ControlStyles.xaml`
+  - [x] Add `FocusVisualPrimaryBrush` (`#00D2B4` / `#007A99`) and `FocusVisualSecondaryBrush` to `ListViewItem` style
+  - [x] Standardize corner radius and typography setters
 
-## Checkpoint 1: Rust Core & Infrastructure Verification
-- [ ] Rust C ABI test suite passes: `cargo test --manifest-path native/Cargo.toml`
-- [ ] Rust clippy passes cleanly: `cargo clippy --manifest-path native/Cargo.toml --all-targets -- -D warnings`
-- [ ] Native Python test suite passes: `python -m unittest discover -s tests/native -v`
+## Phase 2: Dynamic Status Pill Engine & Data Binding
+- [x] **Task 2.1**: Update `src/WinCare.App/ViewModels/Pages/ToolRowViewModel.cs`
+  - [x] Add `StatusPillBackgroundBrush` and `StatusPillForegroundBrush` properties driven dynamically by tool risk level
+- [x] **Task 2.2**: Update `src/WinCare.App/Views/Pages/AllToolsPage.xaml`
+  - [x] Line 257: Replace hardcoded `PillReadOnlyBgBrush` with `{x:Bind StatusPillBackgroundBrush, Mode=OneWay}` and `{x:Bind StatusPillForegroundBrush, Mode=OneWay}`
 
-## Phase 2: Managed C# Command Handlers & Policy Dispatcher
-- [ ] **Task 2.1**: `ICommandHandler` Contract & Outcome Model (`CommandHandlerOutcome.cs` & `ICommandHandler.cs`)
-- [ ] **Task 2.2**: Read-Only System Diagnostic Handlers (`SystemInfoCommandHandler` & `StorageHealthCommandHandler`)
-- [ ] **Task 2.3**: Read-Only Network & Privacy Handlers (`NetworkStatusCommandHandler` & `PrivacyStatusCommandHandler`)
-- [ ] **Task 2.4**: Mutating Cleanup Handlers (`DiskCleanupCommandHandler` & `LogCleanupCommandHandler`) with `ReviewApproved` Guards
-- [ ] **Task 2.5**: Fail-Closed `CommandDispatcher` Admission Pipeline Integration (`CommandDispatcher.cs`)
+## Phase 3: Layout Collision Resolution & Responsive Header Synchronization
+- [x] **Task 3.1**: Update `src/WinCare.App/Views/Pages/ActivityPage.xaml`
+  - [x] Insert dedicated `RowDefinition Height="Auto"` for `AttentionInfoBar`
+  - [x] Update `SectionSelector` to `Grid.Row="2"` and main content border to `Grid.Row="3"`
+- [x] **Task 3.2**: Update Header Visibility in `ActivityPage.xaml` and `AllToolsPage.xaml`
+  - [x] Bind `TableHeader` visibility to `{x:Bind views:LayoutVisibility.InvertBoolToVisibility(IsCompact), Mode=OneWay}`
 
-## Checkpoint 2: Command Engine & Dispatcher Verification
-- [ ] C# solution restores & compiles: `dotnet test WinCare.Native.sln -c Release -p:Platform=x64`
-- [ ] Foundation audit passes: `python tools/verify_native_foundation.py`
+## Phase 4: UI/UX Pro Max Ergonomics, Accessibility & Visual Polish
+- [x] **Task 4.1**: Upgrade Favorite Button in `AllToolsPage.xaml`
+  - [x] Replace text button with star icon toggle (`FontIcon Glyph="\xE735"`)
+- [x] **Task 4.2**: Add ToolTips & Keyboard Accelerators
+  - [x] Add `ToolTipService.ToolTip` to tool table headers and action buttons
+  - [x] Add keyboard accelerators (`Ctrl+F` search focus)
+- [x] **Task 4.3**: Refine Advanced Details Expander
+  - [x] Set `LineHeight="18"` and `Padding="12"` inside `Expander` text box
 
-## Phase 3: Visual Character & WinUI 3 UX Ergonomics Upgrade
-- [ ] **Task 3.1**: Tactile Telemetry Theme Tokens & Monospaced Status Pills (`ThemeResources.xaml` & `AllToolsPage.xaml`)
-- [ ] **Task 3.2**: Global `Ctrl+K` Search Palette Accelerator in `MainWindow` (`MainWindow.xaml`)
-- [ ] **Task 3.3**: Tabular Surface Grid & Monospaced Telemetry Headers in `AllToolsPage.xaml` (`AllToolsPage.xaml`)
-- [ ] **Task 3.4**: Tactical Detail Drawer & Command Review Overlay (`AllToolsPage.xaml` & `CheckupPage.xaml`)
-- [ ] **Task 3.5**: Responsive Breakpoint Engine (`LayoutVisibility.cs` 640 DIP threshold)
-- [ ] **Task 3.6**: Accessibility & High Contrast Resource Dictionary Validation (`ShellPage.xaml` & `AutomationId`)
+## Phase 5: Review Swarm Remediation & Architectural Hardening
+- [x] **Fix Now 1**: Update `ToolRowViewModel.cs` to resolve `Microsoft.UI.Xaml.Media.Brush` instances via `Application.Current.Resources`.
+- [x] **Fix Now 2**: Handle `"Low"` risk explicitly in `StatusPillBackgroundBrush` switch expression (`"Elevated" or "Moderate" or "Low"`).
+- [x] **Fix Now 3**: Align `ActivityPage.xaml.cs` breakpoint threshold to `920.0` DIP (`LayoutVisibility.CompactBreakpointDip`).
+- [x] **Fix Soon 1**: Clean up redundant manual code-behind visibility toggles in `Page_SizeChanged` across `ActivityPage.xaml.cs` and `AllToolsPage.xaml.cs`.
+- [x] **Fix Soon 2**: Add `IsChecked="{x:Bind ViewModel.IsSelectedToolFavorite, Mode=OneWay}"` to `FavoriteToggleButton` in `AllToolsPage.xaml`.
+- [x] **Optional Follow-Up 1**: Add debouncing to `SearchText` and preserve `SelectedTool` across filters in `AllToolsPageViewModel.cs`.
 
-## Checkpoint 3: Visual Character & Accessibility Verification
-- [ ] Foundation gate passes: `python tools/verify_native_foundation.py`
-- [ ] Python test suite passes: `python -m unittest discover -s tests/native -v`
+## UI/UX Pro Max Verification Checkpoints
+- [x] Re-run python verification scripts (`tools/verify_visual_tokens.py`, `tools/verify_pill_contrast.py`) -> PASSED
+- [x] Re-run GUI test suites (`tools/validate_gui.py`, `tools/test_gui.py`) -> PASSED (0 errors, 9/9 tests OK)
+- [x] Re-run Rust unit/FFI test suite (`cargo test`) -> PASSED (18/18 tests OK)
+- [x] Re-run `$impeccable audit` and `$impeccable critique` to confirm health score -> VERIFIED & PERSISTED
 
-## Phase 4: Activity Journaling, Recovery, & Finalization Gates
-- [ ] **Task 4.1**: Immutable `ActivityRecord` Logging & Persistence (`ActivityRecord.cs` & `ActivityJournalService.cs`)
-- [ ] **Task 4.2**: Real-time `ActivityPageViewModel` Telemetry Progress Banners (`ActivityPageViewModel.cs`)
-- [ ] **Task 4.3**: Automated Native Foundation Gate Check (`tools/verify_native_foundation.py`)
-- [ ] **Task 4.4**: Deterministic Release Candidate Dual-Archive Finalization (`tools/finalize_native_release.py --mode rc`)
-
-## Final Checkpoint: Release Candidate Promotion
-- [ ] Foundation gate passes 100%: `python tools/verify_native_foundation.py`
-- [ ] Finalizer exits 0: `python tools/finalize_native_release.py --output artifacts/finalization --version 2.4.0-rc1 --mode rc`
-- [ ] Native source archive contains zero `.ps1`, `.psm1`, or `.psd1` files

@@ -15,8 +15,8 @@
             <SolidColorBrush x:Key="WarningBrush" Color="#8A5700" />
             <SolidColorBrush x:Key="DangerBrush" Color="#C42B1C" />
             <!-- Cyber-Operate Accent & Pill System -->
-            <SolidColorBrush x:Key="AccentTealBrush" Color="#0078D4" />
-            <SolidColorBrush x:Key="AccentTealSubtleBrush" Color="#1A0078D4" />
+            <SolidColorBrush x:Key="AccentTealBrush" Color="#007A99" />
+            <SolidColorBrush x:Key="AccentTealSubtleBrush" Color="#1A007A99" />
             <SolidColorBrush x:Key="CardSurfaceBrush" Color="#FFFFFF" />
             <SolidColorBrush x:Key="TelemetryFrameBrush" Color="#E2E8F0" />
             <SolidColorBrush x:Key="PillReadOnlyBgBrush" Color="#047857" />
@@ -40,8 +40,8 @@
             <SolidColorBrush x:Key="WarningBrush" Color="#FCE100" />
             <SolidColorBrush x:Key="DangerBrush" Color="#FF99A4" />
             <!-- Cyber-Operate Accent & Pill System -->
-            <SolidColorBrush x:Key="AccentTealBrush" Color="#00D2FF" />
-            <SolidColorBrush x:Key="AccentTealSubtleBrush" Color="#1A00D2FF" />
+            <SolidColorBrush x:Key="AccentTealBrush" Color="#00D2B4" />
+            <SolidColorBrush x:Key="AccentTealSubtleBrush" Color="#1A00D2B4" />
             <SolidColorBrush x:Key="CardSurfaceBrush" Color="#161C26" />
             <SolidColorBrush x:Key="TelemetryFrameBrush" Color="#2A3A4A" />
             <SolidColorBrush x:Key="PillReadOnlyBgBrush" Color="#047857" />

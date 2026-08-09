@@ -6,8 +6,6 @@ namespace WinCare.App.Views.Pages;
 
 public sealed partial class ActivityPage : Page
 {
-    private const double CompactThreshold = 820;
-
     public ActivityPage()
     {
         ViewModel = new ActivityPageViewModel();
@@ -16,18 +14,24 @@ public sealed partial class ActivityPage : Page
     }
 
     public ActivityPageViewModel ViewModel { get; }
+    public bool IsCompact => ViewModel.IsCompactLayout;
 
     private void SectionSelector_SelectionChanged(SelectorBar sender, SelectorBarSelectionChangedEventArgs args)
     {
-        ViewModel.SelectSection(sender.Items.IndexOf(sender.SelectedItem));
+        if (sender.SelectedItem is SelectorBarItem item)
+        {
+            int index = sender.Items.IndexOf(item);
+            if (index >= 0)
+            {
+                ViewModel.SelectSection(index);
+            }
+        }
     }
 
     private void Page_SizeChanged(object sender, SizeChangedEventArgs e)
     {
-        bool compact = e.NewSize.Width < CompactThreshold;
+        bool compact = LayoutVisibility.IsCompact(e.NewSize.Width);
         ViewModel.SetCompactLayout(compact);
-        DescriptionHeader.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
-        StateHeader.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
-        NotesHeader.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
     }
 }
+

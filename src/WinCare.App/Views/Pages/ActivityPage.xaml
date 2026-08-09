@@ -10,6 +10,7 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
@@ -21,7 +22,7 @@
         <InfoBar
             x:Name="AttentionInfoBar"
             Grid.Row="1"
-            Margin="0,0,0,12"
+            Margin="0"
             IsOpen="{x:Bind ViewModel.HasAttentionItems, Mode=OneWay}"
             IsClosable="False"
             Severity="Warning"
@@ -32,7 +33,7 @@
 
         <SelectorBar
             x:Name="SectionSelector"
-            Grid.Row="1"
+            Grid.Row="2"
             SelectionChanged="SectionSelector_SelectionChanged"
             AutomationProperties.AutomationId="ActivityPageTabs"
             AutomationProperties.Name="Activity sections">
@@ -42,7 +43,7 @@
             <SelectorBarItem Text="Reports" AutomationProperties.Name="Reports" />
         </SelectorBar>
 
-        <Grid Grid.Row="2">
+        <Grid Grid.Row="3">
             <Border Style="{StaticResource SurfaceBorderStyle}">
                 <Grid>
                     <Grid.RowDefinitions>
@@ -50,10 +51,12 @@
                         <RowDefinition Height="*" />
                     </Grid.RowDefinitions>
                     <Grid
+                        x:Name="TableHeader"
                         Height="42"
                         Padding="16,0"
                         ColumnSpacing="16"
-                        Background="{ThemeResource SurfaceSecondaryBrush}">
+                        Background="{ThemeResource SurfaceSecondaryBrush}"
+                        Visibility="{x:Bind views:LayoutVisibility.InvertBoolToVisibility(IsCompact), Mode=OneWay}">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="2*" />
                             <ColumnDefinition Width="3*" />

@@ -15,6 +15,7 @@ public sealed partial class AllToolsPage : Page
     }
 
     public AllToolsPageViewModel ViewModel { get; }
+    public bool IsCompact => ViewModel.IsCompactLayout;
 
     public static Visibility BoolToVisibility(bool value) => value ? Visibility.Visible : Visibility.Collapsed;
     public static Visibility InvertBoolToVisibility(bool value) => value ? Visibility.Collapsed : Visibility.Visible;
@@ -46,10 +47,7 @@ public sealed partial class AllToolsPage : Page
     {
         bool compact = LayoutVisibility.IsCompact(e.NewSize.Width);
         ViewModel.SetCompactLayout(compact);
-        RiskHeader.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
-        AdministratorHeader.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
-        RestartHeader.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
-        StatusHeader.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
         DetailsSplitView.DisplayMode = compact ? SplitViewDisplayMode.Overlay : SplitViewDisplayMode.Inline;
     }
 }
+

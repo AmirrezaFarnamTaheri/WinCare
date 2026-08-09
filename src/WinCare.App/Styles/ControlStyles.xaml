@@ -47,16 +47,19 @@
             Padding="6,2"
             Background="{TemplateBinding Background}"
             BorderBrush="{TemplateBinding BorderBrush}"
-            BorderThickness="{TemplateBinding BorderThickness}"
+            BorderThickness="1"
             CornerRadius="4">
-            <TextBlock
+            <ContentPresenter
                 FontFamily="Cascadia Code, Consolas, Courier New"
                 FontSize="11"
                 FontWeight="SemiBold"
                 Foreground="{TemplateBinding Foreground}"
                 HorizontalAlignment="Center"
-                VerticalAlignment="Center"
-                Text="{TemplateBinding Content}" />
+                VerticalAlignment="Center" />
         </Border>
     </ControlTemplate>
+    <Style TargetType="ListViewItem">
+        <Setter Property="FocusVisualPrimaryBrush" Value="{ThemeResource AccentTealBrush}" />
+        <Setter Property="FocusVisualSecondaryBrush" Value="{ThemeResource SurfaceBrush}" />
+    </Style>
 </ResourceDictionary>

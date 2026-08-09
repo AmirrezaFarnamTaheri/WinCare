@@ -72,4 +72,42 @@ public sealed class ToolRowViewModel : ObservableObject
         "Implemented" => "[ READY    ]",
         _ => "[ NOT READY]",
     };
+
+    public Microsoft.UI.Xaml.Media.Brush StatusPillBackgroundBrush
+    {
+        get
+        {
+            string key = Risk switch
+            {
+                "Mutating" or "High Risk" or "High" or "Critical" => "PillMutatingBgBrush",
+                "Elevated" or "Moderate" or "Low" => "PillElevatedBgBrush",
+                _ => "PillReadOnlyBgBrush",
+            };
+            return ResolveBrush(key);
+        }
+    }
+
+    public Microsoft.UI.Xaml.Media.Brush StatusPillForegroundBrush
+    {
+        get
+        {
+            string key = Risk switch
+            {
+                "Elevated" or "Moderate" or "Low" => "PillAltTextBrush",
+                _ => "PillTextBrush",
+            };
+            return ResolveBrush(key);
+        }
+    }
+
+    private static Microsoft.UI.Xaml.Media.Brush ResolveBrush(string resourceKey)
+    {
+        if (Microsoft.UI.Xaml.Application.Current?.Resources?.TryGetValue(resourceKey, out var resource) == true && resource is Microsoft.UI.Xaml.Media.Brush brush)
+        {
+            return brush;
+        }
+        return new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.Transparent);
+    }
 }
+
+
