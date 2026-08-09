@@ -73,7 +73,7 @@
             <SolidColorBrush x:Key="PillMutatingBgBrush" Color="{ThemeResource SystemColorHighlightColor}" />
             <SolidColorBrush x:Key="PillElevatedBgBrush" Color="{ThemeResource SystemColorHighlightColor}" />
             <SolidColorBrush x:Key="PillVerifiedBorderBrush" Color="{ThemeResource SystemColorWindowTextColor}" />
-            <SolidColorBrush x:Key="PillNotReadyBgBrush" Color="{ThemeResource SystemColorWindowColor}" />
+            <SolidColorBrush x:Key="PillNotReadyBgBrush" Color="{ThemeResource SystemColorHighlightColor}" />
             <SolidColorBrush x:Key="PillTextBrush" Color="{ThemeResource SystemColorHighlightTextColor}" />
             <SolidColorBrush x:Key="PillAltTextBrush" Color="{ThemeResource SystemColorHighlightTextColor}" />
         </ResourceDictionary>

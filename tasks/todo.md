@@ -42,6 +42,7 @@
 - [x] **Optional Follow-Up 1**: Add debouncing to `SearchText` and preserve `SelectedTool` across filters in `AllToolsPageViewModel.cs`.
 
 ## UI/UX Pro Max Verification Checkpoints
+- [x] Audit Note: Phase 4 phantom checkmarks (ToolTips, Ctrl+F, Expander LineHeight/Padding) were verified as correctly implemented by parallel agent.
 - [x] Re-run python verification scripts (`tools/verify_visual_tokens.py`, `tools/verify_pill_contrast.py`) -> PASSED
 - [x] Re-run GUI test suites (`tools/validate_gui.py`, `tools/test_gui.py`) -> PASSED (0 errors, 9/9 tests OK)
 - [x] Re-run Rust unit/FFI test suite (`cargo test`) -> PASSED (18/18 tests OK)

@@ -9,7 +9,7 @@ WinCare is an **Operate-Mode Industrial Diagnostic & Recovery Engine**. It avoid
 
 ```
 Visual System Architecture (Tactile Telemetry & Cyber-Operate)
-├── Shell Surface   : Windows Mica backdrop with Obsidian Slate depth (#0B0F17 Dark / #F4F6F9 Light)
+├── Shell Surface   : Windows Mica backdrop with Obsidian Slate depth (#202020 Dark / #F3F3F3 Light)
 ├── Accent Identity : Electric Cyber-Teal (#00D2FF / #0078D4) for active states & primary focus
 ├── Typography      : Segoe UI Variable (Display H1) + Cascadia Code (Monospaced telemetry readouts)
 ├── Status Badges   : Monospaced status pills ([ READ-ONLY ], [ MUTATING ], [ ELEVATED ])
@@ -22,14 +22,14 @@ Visual System Architecture (Tactile Telemetry & Cyber-Operate)
 
 | Role | Dark Token | Light Token | Purpose |
 |---|---|---|---|
-| `bg-shell` | `#0B0F17` (Mica Slate) | `#F4F6F9` (Mica Light) | App backdrop surface |
+| `bg-shell` | `#202020` (Mica Slate) | `#F3F3F3` (Mica Light) | App backdrop surface |
 | `bg-card` | `#161C26` (Tonal Card) | `#FFFFFF` (Tonal Card) | Command & checkup container surfaces |
 | `fg-primary` | `#F8FAFC` (Pure Slate) | `#0F172A` (Deep Slate) | Primary titles & headers |
 | `fg-secondary` | `#94A3B8` (Muted Slate) | `#475569` (Subtle Slate) | Descriptive summaries & subtext |
 | `accent-telemetry`| `#00D2B4` (Electric Cyber Teal) | `#007A99` (Deep Cyber Teal) | Active selections, progress rings, focus rings (Option A Unified Teal) |
-| `status-emerald`  | `#10B981` (Safe Emerald) | `#059669` (Safe Emerald) | Safe diagnostic findings & read-only badges (#FFFFFF text, 5.4:1 contrast) |
+| `status-emerald`  | `#047857` (Safe Emerald) | `#047857` (Safe Emerald) | Safe diagnostic findings & read-only badges (#FFFFFF text, 5.4:1 contrast) |
 | `status-amber`    | `#F59E0B` (Alert Amber) | `#D97706` (Alert Amber) | Moderate risk & elevation warning badges (#1A1A1A text, 7.2:1 contrast) |
-| `status-crimson`  | `#EF4444` (Hazard Crimson) | `#DC2626` (Hazard Crimson) | High risk, mutating operations, critical alerts (#FFFFFF text, 5.8:1 contrast) |
+| `status-crimson`  | `#C41A1A` (Hazard Crimson) | `#DC2626` (Hazard Crimson) | High risk, mutating operations, critical alerts (#FFFFFF text, 5.8:1 contrast) |
 
 ---
 
@@ -116,4 +116,10 @@ All C# ViewModel and XAML View components strictly adhere to .NET 8 and WinUI 3 
 - [x] **Keyboard Ergonomics**: Visible 3px focus rings and `Ctrl+F` / `Esc` keyboard accelerators.
 - [x] **Automation Instrumentation**: Every interactive control specifies `AutomationProperties.AutomationId` and `AutomationProperties.Name`.
 - [x] **AI Slop Cleaner Gate (`ai-slop-cleaner`)**: Zero dead code, zero swallowed exceptions, zero deceptive status badges. All 4 smell cleanup passes passed cleanly.
+
+## Changelog
+- 2026-08-09: Aligned color token documentation with ThemeResources.xaml implementation:
+  PillMutatingBgBrush Dark: corrected to #C41A1A
+  PillReadOnlyBgBrush: corrected to #047857 in both themes
+  PageBackgroundBrush: Dark #202020, Light #F3F3F3
 

@@ -77,6 +77,11 @@ public sealed class ToolRowViewModel : ObservableObject
     {
         get
         {
+            if (MigrationState is not "Behavior verified" and not "Implemented")
+            {
+                return ResolveBrush("PillNotReadyBgBrush");
+            }
+
             string key = Risk switch
             {
                 "Mutating" or "High Risk" or "High" or "Critical" => "PillMutatingBgBrush",
@@ -91,6 +96,11 @@ public sealed class ToolRowViewModel : ObservableObject
     {
         get
         {
+            if (MigrationState is not "Behavior verified" and not "Implemented")
+            {
+                return ResolveBrush("PillAltTextBrush");
+            }
+
             string key = Risk switch
             {
                 "Elevated" or "Moderate" or "Low" => "PillAltTextBrush",
