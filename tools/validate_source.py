@@ -31,7 +31,7 @@ def check_balance(path:Path,text:str,errors:list[str]):
 def main()->int:
     ap=argparse.ArgumentParser();ap.add_argument('root',nargs='?',default='.');ap.add_argument('--json-output')
     args=ap.parse_args();root=Path(args.root).resolve();errors=[];warnings=[]
-    files=sorted(p for p in root.rglob('*') if p.is_file() and p.suffix.lower() in PSEXT and '.git' not in p.parts and not p.name.startswith('.wincare-'))
+    files=sorted(p for p in root.rglob('*') if p.is_file() and p.suffix.lower() in PSEXT and not any(part.startswith('.') for part in p.parts[:-1]) and 'artifacts' not in p.parts and 'tasks' not in p.parts)
     funcs={};refs={}
     for p in files:
         text=p.read_text('utf-8-sig',errors='replace');check_balance(p,text,errors);code=strip_ps(text)
@@ -71,7 +71,7 @@ def main()->int:
     missing_routes=(menu-{'Exit'})-(routes|route_special)
     if missing_routes: errors.append(f'menu actions without routes: {sorted(missing_routes)}')
     for p in sorted(root.rglob('*.json')):
-        if '.git' in p.parts or p.name.startswith('.wincare-'): continue
+        if any(part.startswith('.') for part in p.parts[:-1]) or 'artifacts' in p.parts or 'tasks' in p.parts: continue
         try: json.loads(p.read_text('utf-8-sig'))
         except Exception as e: errors.append(f'{p}: invalid JSON: {e}')
     psm=(root/'src/WinCare/WinCare.psm1').read_text('utf-8-sig');psd=(root/'src/WinCare/WinCare.psd1').read_text('utf-8-sig')
@@ -96,8 +96,9 @@ def main()->int:
                 errors.append(f'{metadata_path.relative_to(root)} is missing current metadata marker {marker!r}')
         stale_product_pattern=re.compile(r'(?i)\bWinCare\s+v?\d+\.\d+(?:\.\d+)?\b')
         for candidate in root.rglob('*'):
-            if not candidate.is_file() or candidate.name.startswith('.wincare-') or candidate.suffix.lower() not in {'.md','.ps1','.psm1','.psd1','.xaml','.json','.py','.yml','.yaml'}:
+            if not candidate.is_file() or any(part.startswith('.') for part in candidate.parts[:-1]) or 'artifacts' in candidate.parts or 'tasks' in candidate.parts or candidate.suffix.lower() not in {'.md','.ps1','.psm1','.psd1','.xaml','.json','.py','.yml','.yaml'}:
                 continue
+
             if candidate.name in {'BUILD-RECEIPT.json','SBOM.spdx.json'}:
                 continue
             candidate_text=candidate.read_text('utf-8-sig',errors='replace')

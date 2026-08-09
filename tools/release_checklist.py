@@ -21,7 +21,7 @@ CHECKS = [
 def main() -> int:
     failed = []
     print("=" * 60)
-    print("WinCare 2.4.0-rc1 Release Checklist Validation")
+    print("WinCare Release Checklist Validation")
     print("=" * 60)
     for name, cmd in CHECKS:
         print(f"\n[RUNNING] {name}...")
