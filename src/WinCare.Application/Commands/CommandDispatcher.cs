@@ -96,6 +96,30 @@ public sealed class CommandDispatcher
 
         DateTimeOffset startedAt = _timeProvider.GetUtcNow();
 
+        if (request.Parameters.ValueKind != JsonValueKind.Object)
+        {
+            return CreateResult(
+                request,
+                CommandResultStatus.Blocked,
+                "command.parameters_invalid",
+                "Command parameters must be a JSON object.",
+                data: null,
+                undoAvailable: false,
+                startedAt);
+        }
+
+        if (cancellationToken.IsCancellationRequested)
+        {
+            return CreateResult(
+                request,
+                CommandResultStatus.Cancelled,
+                "command.cancelled",
+                "The operation was cancelled.",
+                data: null,
+                undoAvailable: false,
+                startedAt);
+        }
+
         if (!_definitions.TryGetValue(request.CommandId, out CommandDefinition? definition))
         {
             return CreateResult(
