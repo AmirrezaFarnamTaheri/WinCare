@@ -103,18 +103,6 @@ public sealed class CommandDispatcher
                 startedAt);
         }
 
-        if (!_handlers.TryGetValue(request.CommandId, out ICommandHandler? handler))
-        {
-            return CreateResult(
-                request,
-                CommandResultStatus.NotMigrated,
-                "command.not_migrated",
-                $"Command '{request.CommandId}' has no native handler implementation registered.",
-                data: null,
-                undoAvailable: false,
-                startedAt);
-        }
-
         if (definition.MigrationStatus is not (MigrationStatus.Implemented or MigrationStatus.BehaviorVerified))
         {
             return CreateResult(
@@ -122,6 +110,18 @@ public sealed class CommandDispatcher
                 CommandResultStatus.NotMigrated,
                 "command.migration_blocked",
                 $"Command '{request.CommandId}' is cataloged as '{definition.MigrationStatus}' and cannot be executed.",
+                data: null,
+                undoAvailable: false,
+                startedAt);
+        }
+
+        if (!_handlers.TryGetValue(request.CommandId, out ICommandHandler? handler))
+        {
+            return CreateResult(
+                request,
+                CommandResultStatus.NotMigrated,
+                "command.not_migrated",
+                $"Command '{request.CommandId}' has no native handler implementation registered.",
                 data: null,
                 undoAvailable: false,
                 startedAt);
@@ -139,7 +139,7 @@ public sealed class CommandDispatcher
                 startedAt);
         }
 
-        if (!definition.ReadOnly && !options.ReviewApproved)
+        if (!definition.ReadOnly && request.Apply && !options.ReviewApproved)
         {
             return CreateResult(
                 request,
@@ -222,7 +222,9 @@ public sealed class CommandDispatcher
         {
             if (activity is not null)
             {
-                _journal?.Fail(activity.Id, $"Unhandled exception: {ex.GetType().Name}: {ex.Message}");
+                // Log only the exception type — ex.Message can contain file paths or PII.
+                _journal?.Fail(activity.Id, $"Command faulted ({ex.GetType().Name}). No changes were applied.");
+                System.Diagnostics.Debug.WriteLine($"[CommandDispatcher] {request.CommandId} fault: {ex}");
             }
             return CreateResult(
                 request,

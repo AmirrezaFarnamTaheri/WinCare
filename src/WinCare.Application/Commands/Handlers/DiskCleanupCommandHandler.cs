@@ -22,10 +22,29 @@ public sealed class DiskCleanupCommandHandler : ICommandHandler
     ];
 
     /// <summary>
+    /// Resolved paths that this handler is permitted to enumerate and delete within.
+    /// Any target supplied via the request payload MUST be rooted under one of these prefixes.
+    /// This prevents path traversal / arbitrary file deletion.
+    /// </summary>
+    private static readonly string[] AllowedBasePaths = DefaultTargets
+        .Select(Environment.ExpandEnvironmentVariables)
+        .Select(p => Path.GetFullPath(p).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar))
+        .ToArray();
+
+    /// <summary>
     /// Initializes a new instance of the <see cref="DiskCleanupCommandHandler"/> class.
     /// </summary>
     public DiskCleanupCommandHandler(NativeCoreService native)
         => _native = native ?? throw new ArgumentNullException(nameof(native));
+
+    /// <summary>Returns true when <paramref name="resolvedPath"/> is rooted under an allowed base.</summary>
+    private static bool IsPathAllowed(string resolvedPath)
+    {
+        string normalized = Path.GetFullPath(resolvedPath)
+            .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        return AllowedBasePaths.Any(allowed =>
+            normalized.StartsWith(allowed, StringComparison.OrdinalIgnoreCase));
+    }
 
     /// <inheritdoc />
     public async Task<CommandHandlerOutcome> ExecuteAsync(
@@ -41,7 +60,7 @@ public sealed class DiskCleanupCommandHandler : ICommandHandler
 
         string[] resolvedTargets = rawTargets
             .Select(Environment.ExpandEnvironmentVariables)
-            .Where(Directory.Exists)
+            .Where(p => Directory.Exists(p) && IsPathAllowed(p))
             .ToArray();
 
         if (!request.Apply)

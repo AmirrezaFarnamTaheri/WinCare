@@ -89,6 +89,11 @@ public sealed class AllToolsPageViewModel : ObservableObject
         {
             // Superseded by a newer keystroke — expected.
         }
+        catch (Exception ex)
+        {
+            // Refresh should not throw; log defensively to prevent async void crash.
+            System.Diagnostics.Debug.WriteLine($"[AllToolsPageViewModel] DebounceSearch fault: {ex.Message}");
+        }
     }
 
 

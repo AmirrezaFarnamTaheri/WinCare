@@ -16,7 +16,6 @@ public sealed partial class AllToolsPage : Page
     }
 
     public AllToolsPageViewModel ViewModel { get; }
-    public bool IsCompact => ViewModel.IsCompactLayout;
 
     public static Visibility BoolToVisibility(bool value) => value ? Visibility.Visible : Visibility.Collapsed;
     public static Visibility InvertBoolToVisibility(bool value) => value ? Visibility.Collapsed : Visibility.Visible;
