@@ -49,6 +49,7 @@ mod win32 {
     pub const REG_SZ: u32 = 1;
 
     #[link(name = "kernel32")]
+    // SAFETY: These Win32 C-ABI extern declarations match the official Windows SDK signatures exactly. Callers must uphold each function's documented argument constraints.
     unsafe extern "system" {
         pub fn GetSystemInfo(lpSystemInfo: *mut SYSTEM_INFO);
         pub fn GlobalMemoryStatusEx(lpBuffer: *mut MEMORYSTATUSEX) -> i32;
@@ -92,6 +93,7 @@ enum Status {
     FileTooLarge = 4,
     IoError = 5,
     BufferTooSmall = 6,
+    InternalError = -99,
 }
 
 impl Status {
@@ -103,7 +105,7 @@ impl Status {
 /// Returns the version of the exported ABI.
 #[unsafe(no_mangle)]
 pub extern "C" fn wincare_core_abi_version() -> u32 {
-    ABI_VERSION
+    std::panic::catch_unwind(|| ABI_VERSION).unwrap_or(0)
 }
 
 /// Copies the UTF-8 library version into the caller-provided buffer.
@@ -118,25 +120,27 @@ pub unsafe extern "C" fn wincare_core_version(
     buffer_len: usize,
     written: *mut usize,
 ) -> i32 {
-    if written.is_null() {
-        return Status::NullPointer.code();
-    }
+    std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| -> i32 {
+        if written.is_null() {
+            return Status::NullPointer.code();
+        }
 
-    // SAFETY: The caller contract requires a valid writable `written` pointer.
-    unsafe { written.write(VERSION.len()) };
+        // SAFETY: The caller contract requires a valid writable `written` pointer.
+        unsafe { written.write(VERSION.len()) };
 
-    if buffer_len < VERSION.len() {
-        return Status::BufferTooSmall.code();
-    }
-    if buffer.is_null() {
-        return Status::NullPointer.code();
-    }
+        if buffer_len < VERSION.len() {
+            return Status::BufferTooSmall.code();
+        }
+        if buffer.is_null() {
+            return Status::NullPointer.code();
+        }
 
-    // SAFETY: The checks above establish that `buffer` is non-null and the
-    // caller contract provides at least `buffer_len` writable bytes.
-    let destination = unsafe { slice::from_raw_parts_mut(buffer, buffer_len) };
-    destination[..VERSION.len()].copy_from_slice(VERSION);
-    Status::Ok.code()
+        // SAFETY: The checks above establish that `buffer` is non-null and the
+        // caller contract provides at least `buffer_len` writable bytes.
+        let destination = unsafe { slice::from_raw_parts_mut(buffer, buffer_len) };
+        destination[..VERSION.len()].copy_from_slice(VERSION);
+        Status::Ok.code()
+    })).unwrap_or(Status::InternalError.code())
 }
 
 /// Hashes a file with SHA-256 while enforcing an explicit maximum byte count.
@@ -153,30 +157,32 @@ pub unsafe extern "C" fn wincare_core_sha256_file(
     output: *mut u8,
     output_len: usize,
 ) -> i32 {
-    if path_utf8.is_null() || output.is_null() {
-        return Status::NullPointer.code();
-    }
-    if output_len < SHA256_LENGTH {
-        return Status::BufferTooSmall.code();
-    }
+    std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| -> i32 {
+        if path_utf8.is_null() || output.is_null() {
+            return Status::NullPointer.code();
+        }
+        if output_len < SHA256_LENGTH {
+            return Status::BufferTooSmall.code();
+        }
 
-    // SAFETY: The caller contract provides `path_len` readable bytes.
-    let path_bytes = unsafe { slice::from_raw_parts(path_utf8, path_len) };
-    let Ok(path_text) = str::from_utf8(path_bytes) else {
-        return Status::InvalidUtf8.code();
-    };
+        // SAFETY: The caller contract provides `path_len` readable bytes.
+        let path_bytes = unsafe { slice::from_raw_parts(path_utf8, path_len) };
+        let Ok(path_text) = str::from_utf8(path_bytes) else {
+            return Status::InvalidUtf8.code();
+        };
 
-    let digest = match sha256_file(Path::new(path_text), max_bytes) {
-        Ok(value) => value,
-        Err(HashError::NotFound) => return Status::NotFound.code(),
-        Err(HashError::FileTooLarge) => return Status::FileTooLarge.code(),
-        Err(HashError::Io) => return Status::IoError.code(),
-    };
+        let digest = match sha256_file(Path::new(path_text), max_bytes) {
+            Ok(value) => value,
+            Err(HashError::NotFound) => return Status::NotFound.code(),
+            Err(HashError::FileTooLarge) => return Status::FileTooLarge.code(),
+            Err(HashError::Io) => return Status::IoError.code(),
+        };
 
-    // SAFETY: The checks above establish a non-null output with at least 32 bytes.
-    let output_slice = unsafe { slice::from_raw_parts_mut(output, output_len) };
-    output_slice[..SHA256_LENGTH].copy_from_slice(&digest);
-    Status::Ok.code()
+        // SAFETY: The checks above establish a non-null output with at least 32 bytes.
+        let output_slice = unsafe { slice::from_raw_parts_mut(output, output_len) };
+        output_slice[..SHA256_LENGTH].copy_from_slice(&digest);
+        Status::Ok.code()
+    })).unwrap_or(Status::InternalError.code())
 }
 
 #[derive(Debug)]
@@ -236,26 +242,30 @@ pub unsafe extern "C" fn wincare_core_dir_size(
     path_len: usize,
     size_out: *mut u64,
 ) -> i32 {
-    if path_utf8.is_null() || size_out.is_null() {
-        return Status::NullPointer.code();
-    }
-    let path_bytes = unsafe { slice::from_raw_parts(path_utf8, path_len) };
-    let path_str = match str::from_utf8(path_bytes) {
-        Ok(s) => s,
-        Err(_) => return Status::InvalidUtf8.code(),
-    };
-    let path = Path::new(path_str);
-    if !path.exists() {
-        return Status::NotFound.code();
-    }
-    let total = accumulate_dir_size(path);
-    match total {
-        Ok(bytes) => {
-            unsafe { size_out.write(bytes) };
-            Status::Ok.code()
+    std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| -> i32 {
+        if path_utf8.is_null() || size_out.is_null() {
+            return Status::NullPointer.code();
         }
-        Err(_) => Status::IoError.code(),
-    }
+        // SAFETY: path_utf8 is non-null (checked above); caller guarantees path_len valid readable bytes.
+        let path_bytes = unsafe { slice::from_raw_parts(path_utf8, path_len) };
+        let path_str = match str::from_utf8(path_bytes) {
+            Ok(s) => s,
+            Err(_) => return Status::InvalidUtf8.code(),
+        };
+        let path = Path::new(path_str);
+        if !path.exists() {
+            return Status::NotFound.code();
+        }
+        let total = accumulate_dir_size(path);
+        match total {
+            Ok(bytes) => {
+                // SAFETY: size_out is non-null (checked above); caller guarantees valid writable u64 memory.
+                unsafe { size_out.write(bytes) };
+                Status::Ok.code()
+            }
+            Err(_) => Status::IoError.code(),
+        }
+    })).unwrap_or(Status::InternalError.code())
 }
 
 fn accumulate_dir_size(path: &Path) -> io::Result<u64> {
@@ -286,29 +296,35 @@ pub unsafe extern "C" fn wincare_core_sys_info(
     buffer_len: usize,
     written: *mut usize,
 ) -> i32 {
-    if written.is_null() {
-        return Status::NullPointer.code();
-    }
-    let mut stack_buf = [0u8; 512];
-    let json_bytes = compose_sys_info_json(&mut stack_buf);
+    std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| -> i32 {
+        if written.is_null() {
+            return Status::NullPointer.code();
+        }
+        let mut stack_buf = [0u8; 512];
+        let json_bytes = compose_sys_info_json(&mut stack_buf);
 
-    unsafe { written.write(json_bytes.len()) };
+        // SAFETY: written is non-null (checked above); caller guarantees valid writable usize.
+        unsafe { written.write(json_bytes.len()) };
 
-    if buffer.is_null() || buffer_len < json_bytes.len() {
-        return Status::BufferTooSmall.code();
-    }
-    unsafe { std::ptr::copy_nonoverlapping(json_bytes.as_ptr(), buffer, json_bytes.len()) };
-    Status::Ok.code()
+        if buffer.is_null() || buffer_len < json_bytes.len() {
+            return Status::BufferTooSmall.code();
+        }
+        // SAFETY: buffer is non-null; buffer_len >= json_bytes.len() (checked above); source is stack slice, dest is caller heap — no overlap.
+        unsafe { std::ptr::copy_nonoverlapping(json_bytes.as_ptr(), buffer, json_bytes.len()) };
+        Status::Ok.code()
+    })).unwrap_or(Status::InternalError.code())
 }
 
 fn compose_sys_info_json(buf: &mut [u8; 512]) -> &[u8] {
     #[cfg(target_os = "windows")]
     {
         use self::win32::*;
+        // SAFETY: SYSTEM_INFO is a POD type with no validity invariants; zeroed init is sound. GetSystemInfo writes the struct per Win32 contract.
         let mut si = unsafe { std::mem::zeroed::<SYSTEM_INFO>() };
         unsafe { GetSystemInfo(&mut si) };
         let logical_cpus = si.dwNumberOfProcessors;
 
+        // SAFETY: MEMORYSTATUSEX is POD; zeroed then dwLength-initialized before use per GlobalMemoryStatusEx calling contract.
         let mut ms = unsafe { std::mem::zeroed::<MEMORYSTATUSEX>() };
         ms.dwLength = std::mem::size_of::<MEMORYSTATUSEX>() as u32;
         let _ = unsafe { GlobalMemoryStatusEx(&mut ms) };
@@ -339,6 +355,7 @@ fn compose_sys_info_json(buf: &mut [u8; 512]) -> &[u8] {
 fn read_registry_os_build() -> Option<String> {
     use self::win32::*;
 
+    // SAFETY: Win32 registry APIs are called with valid null-terminated UTF-16 string pointers and proper buffer lengths. HKEYs are managed correctly.
     unsafe {
         let mut hkey: HKEY = std::ptr::null_mut();
         let subkey: Vec<u16> = "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\0"
