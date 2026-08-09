@@ -22,17 +22,33 @@ public sealed class StorageHealthCommandHandler : ICommandHandler
             .ConfigureAwait(false);
         cancellationToken.ThrowIfCancellationRequested();
 
-        var records = drives
-            .Where(d => d.IsReady)
-            .Select(d => new DriveRecord(d.Name, d.DriveFormat, d.TotalSize, d.AvailableFreeSpace))
-            .ToArray();
+        var records = new List<DriveRecord>();
+        foreach (DriveInfo d in drives)
+        {
+            if (!d.IsReady)
+            {
+                continue;
+            }
+            try
+            {
+                records.Add(new DriveRecord(d.Name, d.DriveFormat, d.TotalSize, d.AvailableFreeSpace));
+            }
+            catch (IOException)
+            {
+                // Drive became unavailable between IsReady check and property read — skip it.
+            }
+            catch (UnauthorizedAccessException)
+            {
+                // No permission to read drive details — skip it.
+            }
+        }
 
-        string json = JsonSerializer.Serialize(records, StorageHealthJsonContext.Default.DriveRecordArray);
+        string json = JsonSerializer.Serialize(records.ToArray(), StorageHealthJsonContext.Default.DriveRecordArray);
         using JsonDocument doc = JsonDocument.Parse(json);
 
         return CommandHandlerOutcome.Succeeded(
             "storage.ok",
-            $"Found {records.Length} ready drive(s).",
+            $"Found {records.Count} ready drive(s).",
             doc.RootElement.Clone(),
             undoAvailable: false);
     }

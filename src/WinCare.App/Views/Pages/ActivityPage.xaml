@@ -37,10 +37,18 @@
             SelectionChanged="SectionSelector_SelectionChanged"
             AutomationProperties.AutomationId="ActivityPageTabs"
             AutomationProperties.Name="Activity sections">
-            <SelectorBarItem Text="Running" AutomationProperties.Name="Running" />
-            <SelectorBarItem Text="Needs attention" AutomationProperties.Name="Needs attention" />
-            <SelectorBarItem Text="Completed" AutomationProperties.Name="Completed" />
-            <SelectorBarItem Text="Reports" AutomationProperties.Name="Reports" />
+            <SelectorBarItem Text="Running"
+                             AutomationProperties.AutomationId="ActivityTab_Running"
+                             AutomationProperties.Name="Running" />
+            <SelectorBarItem Text="Needs attention"
+                             AutomationProperties.AutomationId="ActivityTab_NeedsAttention"
+                             AutomationProperties.Name="Needs attention" />
+            <SelectorBarItem Text="Completed"
+                             AutomationProperties.AutomationId="ActivityTab_Completed"
+                             AutomationProperties.Name="Completed" />
+            <SelectorBarItem Text="Reports"
+                             AutomationProperties.AutomationId="ActivityTab_Reports"
+                             AutomationProperties.Name="Reports" />
         </SelectorBar>
 
         <Grid Grid.Row="3">

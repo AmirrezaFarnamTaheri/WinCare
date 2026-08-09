@@ -25,7 +25,12 @@ def main() -> int:
     print("=" * 60)
     for name, cmd in CHECKS:
         print(f"\n[RUNNING] {name}...")
-        res = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True)
+        try:
+            res = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True)
+        except OSError as exc:
+            print(f"[FAIL] {name} — could not launch process: {exc}")
+            failed.append(name)
+            continue
         if res.returncode == 0:
             print(f"[PASS] {name}")
         else:

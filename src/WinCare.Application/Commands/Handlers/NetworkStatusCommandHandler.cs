@@ -24,19 +24,32 @@ public sealed class NetworkStatusCommandHandler : ICommandHandler
             .ConfigureAwait(false);
         cancellationToken.ThrowIfCancellationRequested();
 
-        var records = ifaces.Select(n => new NetworkRecord(
-            n.Name,
-            n.NetworkInterfaceType.ToString(),
-            n.OperationalStatus.ToString(),
-            n.Speed))
-            .ToArray();
+        var records = new List<NetworkRecord>();
+        foreach (NetworkInterface n in ifaces)
+        {
+            long speed;
+            try
+            {
+                speed = n.Speed;
+            }
+            catch (Exception)
+            {
+                // Some virtual or tunnel adapters throw on Speed — report as unknown.
+                speed = -1;
+            }
+            records.Add(new NetworkRecord(
+                n.Name,
+                n.NetworkInterfaceType.ToString(),
+                n.OperationalStatus.ToString(),
+                speed));
+        }
 
-        string json = JsonSerializer.Serialize(records, NetworkStatusJsonContext.Default.NetworkRecordArray);
+        string json = JsonSerializer.Serialize(records.ToArray(), NetworkStatusJsonContext.Default.NetworkRecordArray);
         using JsonDocument doc = JsonDocument.Parse(json);
 
         return CommandHandlerOutcome.Succeeded(
             "network.ok",
-            $"Found {records.Length} network adapter(s).",
+            $"Found {records.Count} network adapter(s).",
             doc.RootElement.Clone(),
             undoAvailable: false);
     }

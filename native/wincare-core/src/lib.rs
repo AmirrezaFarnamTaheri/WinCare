@@ -270,14 +270,25 @@ pub unsafe extern "C" fn wincare_core_dir_size(
 
 fn accumulate_dir_size(path: &Path) -> io::Result<u64> {
     let mut total: u64 = 0;
-    if path.is_dir() {
+    // Use non-following metadata to detect symlinks and reparse points.
+    // Following is_dir() would recurse through directory symlinks and risk stack overflow.
+    let meta = std::fs::symlink_metadata(path)?;
+    if meta.is_dir() {
         for entry in std::fs::read_dir(path)? {
             let entry = entry?;
+            // Only recurse into real directories — skip symlinks and reparse points.
+            let entry_meta = match std::fs::symlink_metadata(entry.path()) {
+                Ok(m) => m,
+                Err(_) => continue, // skip inaccessible entries
+            };
+            if entry_meta.file_type().is_symlink() {
+                continue;
+            }
             let sub = accumulate_dir_size(&entry.path())?;
             total = total.saturating_add(sub);
         }
-    } else {
-        total = path.metadata()?.len();
+    } else if meta.is_file() {
+        total = meta.len();
     }
     Ok(total)
 }
@@ -327,7 +338,15 @@ fn compose_sys_info_json(buf: &mut [u8; 512]) -> &[u8] {
         // SAFETY: MEMORYSTATUSEX is POD; zeroed then dwLength-initialized before use per GlobalMemoryStatusEx calling contract.
         let mut ms = unsafe { std::mem::zeroed::<MEMORYSTATUSEX>() };
         ms.dwLength = std::mem::size_of::<MEMORYSTATUSEX>() as u32;
-        let _ = unsafe { GlobalMemoryStatusEx(&mut ms) };
+        // GlobalMemoryStatusEx returns 0 on failure; surface the error rather than
+        // silently serialising zeroed memory fields.
+        if unsafe { GlobalMemoryStatusEx(&mut ms) } == 0 {
+            let buf = &mut *buf;
+            let json = r#"{"logical_cpus":0,"total_physical_memory_bytes":0,"available_physical_memory_bytes":0,"os_build":"error:GlobalMemoryStatusEx"}"#;
+            let len = json.len().min(buf.len());
+            buf[..len].copy_from_slice(&json.as_bytes()[..len]);
+            return &buf[..len];
+        }
 
         let os_build = read_registry_os_build().unwrap_or_else(|| "unknown".to_owned());
 
@@ -373,8 +392,9 @@ fn read_registry_os_build() -> Option<String> {
         }
 
         let value_name: Vec<u16> = "CurrentBuildNumber\0".encode_utf16().collect();
-        let mut buf = [0u8; 128];
-        let mut buf_len = buf.len() as u32;
+        // Use an aligned [u16] buffer to avoid undefined behaviour from u8-to-u16 pointer casting.
+        let mut buf = [0u16; 64];
+        let mut buf_len = (buf.len() * std::mem::size_of::<u16>()) as u32;
         let mut value_type = REG_SZ;
 
         let status = RegQueryValueExW(
@@ -382,18 +402,17 @@ fn read_registry_os_build() -> Option<String> {
             value_name.as_ptr(),
             std::ptr::null_mut(),
             &mut value_type,
-            buf.as_mut_ptr(),
+            buf.as_mut_ptr() as *mut u8,
             &mut buf_len,
         );
 
         let _ = RegCloseKey(hkey);
 
-        if status == 0 && buf_len > 1 {
-            let u16_slice = std::slice::from_raw_parts(
-                buf.as_ptr() as *const u16,
-                (buf_len as usize / 2).saturating_sub(1),
-            );
-            return String::from_utf16(u16_slice).ok();
+        // Require success, REG_SZ type, at least one u16 code unit, and even length.
+        if status == 0 && value_type == REG_SZ && buf_len >= 2 && buf_len % 2 == 0 {
+            // Exclude the null-terminator code unit.
+            let u16_count = (buf_len as usize / 2).saturating_sub(1);
+            return String::from_utf16(&buf[..u16_count]).ok();
         }
         None
     }

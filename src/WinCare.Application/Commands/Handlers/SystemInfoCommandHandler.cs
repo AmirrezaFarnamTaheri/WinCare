@@ -30,13 +30,26 @@ public sealed class SystemInfoCommandHandler : ICommandHandler
         string json = await _native.GetSystemInfoJsonAsync(cancellationToken)
             .ConfigureAwait(false);
 
-        using JsonDocument doc = JsonDocument.Parse(json);
-        JsonElement data = doc.RootElement.Clone();
+        JsonDocument doc;
+        try
+        {
+            doc = JsonDocument.Parse(json);
+        }
+        catch (JsonException ex)
+        {
+            return CommandHandlerOutcome.Failed(
+                "system.parse_error",
+                $"Native sys-info response could not be parsed: {ex.GetType().Name}");
+        }
 
-        return CommandHandlerOutcome.Succeeded(
-            "system.ok",
-            "System information collected successfully.",
-            data,
-            undoAvailable: false);
+        using (doc)
+        {
+            JsonElement data = doc.RootElement.Clone();
+            return CommandHandlerOutcome.Succeeded(
+                "system.ok",
+                "System information collected successfully.",
+                data,
+                undoAvailable: false);
+        }
     }
 }

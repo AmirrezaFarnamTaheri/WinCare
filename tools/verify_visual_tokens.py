@@ -47,12 +47,22 @@ def verify_tokens_xml(path):
 
 def main() -> int:
     theme_file = ROOT / "src/WinCare.App/Styles/ThemeResources.xaml"
+    control_file = ROOT / "src/WinCare.App/Styles/ControlStyles.xaml"
     if not theme_file.is_file():
         print(f"FAIL: {theme_file} not found")
         return 1
-    if not verify_tokens_xml(theme_file):
-        return 1
-    return 0
+    ok = verify_tokens_xml(theme_file)
+    if control_file.is_file():
+        cs = control_file.read_text(encoding="utf-8")
+        if 'x:Key="StatusPillTemplate"' not in cs:
+            print('FAIL: StatusPillTemplate: missing from ControlStyles.xaml')
+            ok = False
+        else:
+            print('OK: StatusPillTemplate found in ControlStyles.xaml')
+    else:
+        print(f'FAIL: ControlStyles.xaml not found at {control_file}')
+        ok = False
+    return 0 if ok else 1
 
 
 if __name__ == "__main__":
