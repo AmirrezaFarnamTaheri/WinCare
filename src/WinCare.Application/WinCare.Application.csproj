@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
     <RootNamespace>WinCare.Application</RootNamespace>
     <AssemblyName>WinCare.Application</AssemblyName>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
@@ -8,5 +8,9 @@
   <ItemGroup>
     <ProjectReference Include="..\WinCare.Domain\WinCare.Domain.csproj" />
     <ProjectReference Include="..\WinCare.CommandCatalog\WinCare.CommandCatalog.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Win32.Registry" />
+    <PackageReference Include="System.Diagnostics.EventLog" />
   </ItemGroup>
 </Project>

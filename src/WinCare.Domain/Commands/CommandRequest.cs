@@ -20,4 +20,10 @@ public sealed record CommandRequest(
     /// </summary>
     public static CommandRequest Preview(string commandId, JsonElement parameters) =>
         new(commandId, parameters, Apply: false, Guid.NewGuid());
+
+    /// <summary>
+    /// Creates a mutative execution request.
+    /// </summary>
+    public static CommandRequest Execute(string commandId, JsonElement parameters) =>
+        new(commandId, parameters, Apply: true, Guid.NewGuid());
 }

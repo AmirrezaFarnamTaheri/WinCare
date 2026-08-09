@@ -21,9 +21,11 @@ public sealed class ToolExecutionViewModel : ObservableObject
     private ToolRowViewModel? _selectedTool;
     private bool _isExecuting;
     private bool _isExecutionResultOpen;
+    private bool _hasSuccessfulPreview;
     private CommandResultStatus? _executionStatus;
     private string _executionMessage = string.Empty;
     private string _executionResultText = string.Empty;
+    private bool _isReviewApproved;
 
     public ToolExecutionViewModel(CommandDispatcher dispatcher, Action<string> recordRecent)
     {
@@ -61,9 +63,11 @@ public sealed class ToolExecutionViewModel : ObservableObject
 
     public string PrimaryActionLabel => IsExecuting
         ? "Running"
-        : _selectedTool?.Definition.ReadOnly == false
-            ? "Review changes"
-            : "Run tool";
+        : IsMutatingTool && IsReviewApproved
+            ? "Apply changes"
+            : IsMutatingTool
+                ? "Review changes"
+                : "Run tool";
 
     public bool HasExecutionResult => _executionStatus is not null;
 
@@ -90,6 +94,23 @@ public sealed class ToolExecutionViewModel : ObservableObject
 
     public string ExecutionResultText => _executionResultText;
 
+    public bool IsMutatingTool => _selectedTool?.Definition.ReadOnly == false;
+
+    public bool CanApproveReview => IsMutatingTool && _hasSuccessfulPreview && !IsExecuting;
+
+    public bool IsReviewApproved
+    {
+        get => _isReviewApproved;
+        set
+        {
+            bool next = value && CanApproveReview;
+            if (SetProperty(ref _isReviewApproved, next))
+            {
+                OnPropertyChanged(nameof(PrimaryActionLabel));
+            }
+        }
+    }
+
     public void SelectTool(ToolRowViewModel? tool)
     {
         if (ReferenceEquals(_selectedTool, tool))
@@ -98,6 +119,7 @@ public sealed class ToolExecutionViewModel : ObservableObject
         }
 
         _selectedTool = tool;
+        ResetReviewState();
         ClearExecutionResult();
         NotifyAvailabilityChanged();
     }
@@ -112,16 +134,24 @@ public sealed class ToolExecutionViewModel : ObservableObject
             return;
         }
 
+        bool apply = IsMutatingTool && IsReviewApproved;
+        if (apply && !CanApproveReview)
+        {
+            return;
+        }
+
         IsExecuting = true;
         ClearExecutionResult();
         try
         {
             JsonElement parameters = JsonSerializer.SerializeToElement(new Dictionary<string, object?>());
-            CommandRequest request = CommandRequest.Preview(selected.Id, parameters);
+            CommandRequest request = apply
+                ? CommandRequest.Execute(selected.Id, parameters)
+                : CommandRequest.Preview(selected.Id, parameters);
             CommandResult result = await _dispatcher.ExecuteAsync(
                 request,
                 new CommandExecutionOptions(
-                    ReviewApproved: false,
+                    ReviewApproved: apply,
                     Deadline: DateTimeOffset.UtcNow.AddSeconds(30)),
                 cancellationToken);
 
@@ -129,6 +159,17 @@ public sealed class ToolExecutionViewModel : ObservableObject
             if (string.Equals(_selectedTool?.Id, result.CommandId, StringComparison.Ordinal))
             {
                 ApplyExecutionResult(result);
+                if (IsMutatingTool)
+                {
+                    if (!apply)
+                    {
+                        SetSuccessfulPreview(result.Status == CommandResultStatus.Succeeded);
+                    }
+                    else
+                    {
+                        ResetReviewState();
+                    }
+                }
             }
         }
         finally
@@ -169,10 +210,39 @@ public sealed class ToolExecutionViewModel : ObservableObject
         NotifyExecutionResultChanged();
     }
 
+    private void SetSuccessfulPreview(bool value)
+    {
+        if (_hasSuccessfulPreview == value)
+        {
+            return;
+        }
+
+        _hasSuccessfulPreview = value;
+        if (!value && _isReviewApproved)
+        {
+            _isReviewApproved = false;
+            OnPropertyChanged(nameof(IsReviewApproved));
+        }
+        NotifyAvailabilityChanged();
+    }
+
+    private void ResetReviewState()
+    {
+        _hasSuccessfulPreview = false;
+        if (_isReviewApproved)
+        {
+            _isReviewApproved = false;
+            OnPropertyChanged(nameof(IsReviewApproved));
+        }
+        NotifyAvailabilityChanged();
+    }
+
     private void NotifyAvailabilityChanged()
     {
         OnPropertyChanged(nameof(CanRunSelectedTool));
         OnPropertyChanged(nameof(PrimaryActionLabel));
+        OnPropertyChanged(nameof(IsMutatingTool));
+        OnPropertyChanged(nameof(CanApproveReview));
         ExecuteSelectedToolCommand.NotifyCanExecuteChanged();
     }
 

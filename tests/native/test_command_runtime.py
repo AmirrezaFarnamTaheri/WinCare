@@ -39,7 +39,10 @@ class CommandRuntimeTests(unittest.TestCase):
             for command in document["commands"]
             if command["migrationStatus"] in {"Implemented", "BehaviorVerified"}
         }
-        self.assertEqual({"catalog", "presets"}, implemented)
+        self.assertEqual({
+            "catalog", "presets", "system", "storage", "network",
+            "experience-privacy-profiles", "cleaner-disk-pressure", "cleanup-targets",
+        }, implemented)
         self.assertEqual(259, len(document["commands"]))
 
     def test_embedded_catalog_data_matches_the_frozen_oracle_data(self) -> None:
@@ -64,10 +67,9 @@ class CommandRuntimeTests(unittest.TestCase):
         )
         for required in (
             "CommandResultStatus.NotMigrated",
-            "command.unknown",
+            "command.not_found",
             "command.not_migrated",
-            "command.read_only",
-            "command.parameters_invalid",
+            "command.readonly_mutation_denied",
             "request.CorrelationId",
             "command.review_required",
             "command.deadline_exceeded",
@@ -98,6 +100,32 @@ class CommandRuntimeTests(unittest.TestCase):
         self.assertIn("AutomationProperties.AutomationId=\"ExecuteSelectedTool\"", xaml)
         self.assertIn("AutomationProperties.AutomationId=\"CommandResultDetails\"", xaml)
         ET.fromstring(xaml)
+
+    def test_review_safety_contracts_are_encoded_in_sources(self) -> None:
+        native_interop = (ROOT / "src/WinCare.Infrastructure/Native/WinCareCoreNative.cs").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn('EntryPoint = "wincare_core_dir_size"', native_interop)
+        self.assertIn('EntryPoint = "wincare_core_sys_info"', native_interop)
+        self.assertIn("WinCareCoreDirSize", native_interop)
+        self.assertIn("WinCareCoreSysInfo", native_interop)
+
+        privacy = (
+            ROOT / "src/WinCare.Application/Commands/Handlers/PrivacyStatusCommandHandler.cs"
+        ).read_text(encoding="utf-8")
+        self.assertIn("int? telemetry = null;", privacy)
+        self.assertIn("bool? advertisingIdEnabled = null;", privacy)
+        self.assertIn('null => "unknown"', privacy)
+
+        tool_row = (ROOT / "src/WinCare.App/ViewModels/Pages/ToolRowViewModel.cs").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn('"Read-only" => "PillReadOnlyBgBrush"', tool_row)
+        self.assertIn('_ => "PillMutatingBgBrush"', tool_row)
+
+        release_checklist = (ROOT / "tools/release_checklist.py").read_text(encoding="utf-8")
+        self.assertIn("PYTHON = sys.executable", release_checklist)
+        self.assertIn("sys.version_info < (3, 11)", release_checklist)
 
     def test_native_runtime_does_not_reference_legacy_runtime(self) -> None:
         native_roots = (

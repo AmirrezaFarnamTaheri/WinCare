@@ -1,14 +1,13 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Navigation;
+using Microsoft.UI.Xaml.Input;
 using WinCare.App.ViewModels.Pages;
 
 namespace WinCare.App.Views.Pages;
 
 public sealed partial class AllToolsPage : Page
 {
-    private const double CompactThreshold = 920;
-
     public AllToolsPage()
     {
         ViewModel = new AllToolsPageViewModel();
@@ -46,11 +45,15 @@ public sealed partial class AllToolsPage : Page
 
     private void Page_SizeChanged(object sender, SizeChangedEventArgs e)
     {
-        bool compact = e.NewSize.Width < CompactThreshold;
+        bool compact = LayoutVisibility.IsCompact(e.NewSize.Width);
         ViewModel.SetCompactLayout(compact);
-        RiskHeader.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
-        AdministratorHeader.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
-        RestartHeader.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
         DetailsSplitView.DisplayMode = compact ? SplitViewDisplayMode.Overlay : SplitViewDisplayMode.Inline;
     }
+
+    private void ToolSearch_FocusAccelerator(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
+    {
+        ToolSearchBox.Focus(FocusState.Keyboard);
+        args.Handled = true;
+    }
 }
+

@@ -10,6 +10,7 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
@@ -18,19 +19,39 @@
             <TextBlock MaxWidth="760" HorizontalAlignment="Left" Style="{StaticResource PageDescriptionTextStyle}" Text="Track running work, decisions that need attention, completed changes, and reports." />
         </StackPanel>
 
+        <InfoBar
+            x:Name="AttentionInfoBar"
+            Grid.Row="1"
+            Margin="0"
+            IsOpen="{x:Bind ViewModel.HasAttentionItems, Mode=OneWay}"
+            IsClosable="False"
+            Severity="Warning"
+            Title="Attention required"
+            Message="One or more operations require user review or elevated confirmation."
+            AutomationProperties.AutomationId="AttentionInfoBar"
+            AutomationProperties.Name="Attention required" />
+
         <SelectorBar
             x:Name="SectionSelector"
-            Grid.Row="1"
+            Grid.Row="2"
             SelectionChanged="SectionSelector_SelectionChanged"
             AutomationProperties.AutomationId="ActivityPageTabs"
             AutomationProperties.Name="Activity sections">
-            <SelectorBarItem Text="Running" AutomationProperties.Name="Running" />
-            <SelectorBarItem Text="Needs attention" AutomationProperties.Name="Needs attention" />
-            <SelectorBarItem Text="Completed" AutomationProperties.Name="Completed" />
-            <SelectorBarItem Text="Reports" AutomationProperties.Name="Reports" />
+            <SelectorBarItem Text="Running"
+                             AutomationProperties.AutomationId="ActivityTab_Running"
+                             AutomationProperties.Name="Running" />
+            <SelectorBarItem Text="Needs attention"
+                             AutomationProperties.AutomationId="ActivityTab_NeedsAttention"
+                             AutomationProperties.Name="Needs attention" />
+            <SelectorBarItem Text="Completed"
+                             AutomationProperties.AutomationId="ActivityTab_Completed"
+                             AutomationProperties.Name="Completed" />
+            <SelectorBarItem Text="Reports"
+                             AutomationProperties.AutomationId="ActivityTab_Reports"
+                             AutomationProperties.Name="Reports" />
         </SelectorBar>
 
-        <Grid Grid.Row="2">
+        <Grid Grid.Row="3">
             <Border Style="{StaticResource SurfaceBorderStyle}">
                 <Grid>
                     <Grid.RowDefinitions>
@@ -38,10 +59,12 @@
                         <RowDefinition Height="*" />
                     </Grid.RowDefinitions>
                     <Grid
+                        x:Name="TableHeader"
                         Height="42"
                         Padding="16,0"
                         ColumnSpacing="16"
-                        Background="{ThemeResource SurfaceSecondaryBrush}">
+                        Background="{ThemeResource SurfaceSecondaryBrush}"
+                        Visibility="{x:Bind views:LayoutVisibility.InvertBoolToVisibility(ViewModel.IsCompactLayout), Mode=OneWay}">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="2*" />
                             <ColumnDefinition Width="3*" />

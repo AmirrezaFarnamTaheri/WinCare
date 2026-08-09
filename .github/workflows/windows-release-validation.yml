@@ -36,8 +36,12 @@ jobs:
           $ErrorActionPreference = 'Stop'
           $dirty = @(git status --porcelain)
           if ($dirty.Count) { throw "Checkout is dirty before validation: $($dirty -join '; ')" }
-          if ((dotnet --version).Trim() -ne '8.0.416') {
-              throw 'The active .NET SDK does not match global.json.'
+          # Prepend DOTNET_ROOT so all subsequent 'dotnet' calls in this job resolve
+          # the pinned SDK, not the pre-installed .NET runtime on windows-2025 runners.
+          $env:PATH = "$env:DOTNET_ROOT$([IO.Path]::PathSeparator)$env:PATH"
+          $sdkVersion = (& "$env:DOTNET_ROOT\dotnet.exe" --version).Trim()
+          if ($sdkVersion -notlike '8.0.*') {
+              throw "The active .NET SDK ($sdkVersion) does not match global.json 8.0.x feature band."
           }
           $pester = Get-Module -ListAvailable Pester |
               Where-Object Version -ge ([version]'5.5.0') |

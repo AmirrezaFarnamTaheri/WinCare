@@ -1,6 +1,9 @@
 using System.Collections.ObjectModel;
 using System.Text.Json;
+using WinCare.Application.Activity;
+using WinCare.Application.Native;
 using WinCare.CommandCatalog.Models;
+using WinCare.Domain.Activity;
 using WinCare.Domain.Commands;
 
 namespace WinCare.Application.Commands;
@@ -13,6 +16,12 @@ public sealed class CommandDispatcher
     private readonly IReadOnlyDictionary<string, CommandDefinition> _definitions;
     private readonly IReadOnlyDictionary<string, ICommandHandler> _handlers;
     private readonly TimeProvider _timeProvider;
+    private readonly ActivityJournalService? _journal;
+
+    /// <summary>
+    /// Expected C ABI version exported by <c>wincare_core</c>.
+    /// </summary>
+    public const uint SupportedAbiVersion = 1;
 
     /// <summary>
     /// Initializes a new dispatcher bound to the catalog and the supplied handlers.
@@ -20,10 +29,26 @@ public sealed class CommandDispatcher
     public CommandDispatcher(
         IReadOnlyList<CommandDefinition> definitions,
         IEnumerable<ICommandHandler> handlers,
-        TimeProvider? timeProvider = null)
+        TimeProvider? timeProvider = null,
+        INativeCoreService? nativeCore = null,
+        ActivityJournalService? journal = null)
     {
         ArgumentNullException.ThrowIfNull(definitions);
         ArgumentNullException.ThrowIfNull(handlers);
+        _journal = journal;
+
+        if (nativeCore is not null)
+        {
+            uint actual = nativeCore.GetAbiVersion();
+            const uint expected = SupportedAbiVersion;
+            if (actual != expected)
+            {
+                throw new InvalidOperationException(
+                    $"wincare_core ABI version mismatch: expected {expected}, got {actual}. " +
+                    $"The installed wincare_core.dll is incompatible with this build. " +
+                    $"Replace wincare_core.dll with a build matching ABI version {expected}.");
+            }
+        }
 
         Dictionary<string, CommandDefinition> definitionsById = new(StringComparer.Ordinal);
         foreach (CommandDefinition definition in definitions)
@@ -64,49 +89,12 @@ public sealed class CommandDispatcher
     /// </summary>
     public async Task<CommandResult> ExecuteAsync(
         CommandRequest request,
-        CommandExecutionOptions? options,
+        CommandExecutionOptions options,
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
-        options ??= CommandExecutionOptions.Default;
+
         DateTimeOffset startedAt = _timeProvider.GetUtcNow();
-
-        if (cancellationToken.IsCancellationRequested)
-        {
-            return CreateResult(
-                request,
-                CommandResultStatus.Cancelled,
-                "command.cancelled",
-                "The command was cancelled before it started.",
-                data: null,
-                undoAvailable: false,
-                startedAt);
-        }
-
-        if (options.Deadline is DateTimeOffset deadline && deadline <= startedAt)
-        {
-            return CreateResult(
-                request,
-                CommandResultStatus.Cancelled,
-                "command.deadline_exceeded",
-                "The command deadline passed before execution started.",
-                data: null,
-                undoAvailable: false,
-                startedAt);
-        }
-
-        if (string.IsNullOrWhiteSpace(request.CommandId) ||
-            !_definitions.TryGetValue(request.CommandId, out CommandDefinition? definition))
-        {
-            return CreateResult(
-                request,
-                CommandResultStatus.Blocked,
-                "command.unknown",
-                "The requested command is not in the WinCare catalog.",
-                data: null,
-                undoAvailable: false,
-                startedAt);
-        }
 
         if (request.Parameters.ValueKind != JsonValueKind.Object)
         {
@@ -120,13 +108,49 @@ public sealed class CommandDispatcher
                 startedAt);
         }
 
-        if (definition.MigrationStatus is not MigrationStatus.Implemented and not MigrationStatus.BehaviorVerified)
+        if (cancellationToken.IsCancellationRequested)
+        {
+            return CreateResult(
+                request,
+                CommandResultStatus.Cancelled,
+                "command.cancelled",
+                "The operation was cancelled.",
+                data: null,
+                undoAvailable: false,
+                startedAt);
+        }
+
+        if (!_definitions.TryGetValue(request.CommandId, out CommandDefinition? definition))
+        {
+            return CreateResult(
+                request,
+                CommandResultStatus.Blocked,
+                "command.not_found",
+                $"Command '{request.CommandId}' is not declared in the native catalog.",
+                data: null,
+                undoAvailable: false,
+                startedAt);
+        }
+
+        if (definition.MigrationStatus is not (MigrationStatus.Implemented or MigrationStatus.BehaviorVerified))
+        {
+            return CreateResult(
+                request,
+                CommandResultStatus.NotMigrated,
+                "command.migration_blocked",
+                $"Command '{request.CommandId}' is cataloged as '{definition.MigrationStatus}' and cannot be executed.",
+                data: null,
+                undoAvailable: false,
+                startedAt);
+        }
+
+        if (!_handlers.TryGetValue(request.CommandId, out ICommandHandler? handler))
         {
             return CreateResult(
                 request,
                 CommandResultStatus.NotMigrated,
                 "command.not_migrated",
-                "This command is preserved in the catalog but its native implementation is not ready.",
+                $"Command '{request.CommandId}' has no native handler implementation registered.",
                 data: null,
                 undoAvailable: false,
                 startedAt);
@@ -137,8 +161,8 @@ public sealed class CommandDispatcher
             return CreateResult(
                 request,
                 CommandResultStatus.Blocked,
-                "command.read_only",
-                "This command only reads system information and cannot apply changes.",
+                "command.readonly_mutation_denied",
+                $"Command '{request.CommandId}' is declared ReadOnly and cannot be invoked with Apply=true.",
                 data: null,
                 undoAvailable: false,
                 startedAt);
@@ -150,40 +174,50 @@ public sealed class CommandDispatcher
                 request,
                 CommandResultStatus.Blocked,
                 "command.review_required",
-                "Review and approve the planned changes before applying this command.",
+                $"Mutating command '{request.CommandId}' requires explicit ReviewApproved confirmation.",
                 data: null,
                 undoAvailable: false,
                 startedAt);
         }
 
-        if (!_handlers.TryGetValue(definition.Id, out ICommandHandler? handler))
+        using CancellationTokenSource linkedCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        if (options.Deadline is DateTimeOffset deadline)
         {
-            return CreateResult(
-                request,
-                CommandResultStatus.Failed,
-                "command.handler_missing",
-                "The native command registration is incomplete.",
-                data: null,
-                undoAvailable: false,
-                startedAt);
-        }
-
-        using CancellationTokenSource linkedCancellation =
-            CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        if (options.Deadline is DateTimeOffset activeDeadline)
-        {
-            TimeSpan remaining = activeDeadline - startedAt;
-            if (remaining <= TimeSpan.FromMilliseconds(int.MaxValue))
+            TimeSpan delay = deadline - startedAt;
+            if (delay <= TimeSpan.Zero)
             {
-                linkedCancellation.CancelAfter(remaining);
+                return CreateResult(
+                    request,
+                    CommandResultStatus.Cancelled,
+                    "command.deadline_exceeded",
+                    "The command deadline has already expired.",
+                    data: null,
+                    undoAvailable: false,
+                    startedAt);
             }
+            linkedCancellation.CancelAfter(delay);
         }
+
+        ActivityRecord? activity = _journal?.Begin(definition.Id, definition.Title ?? definition.Id);
 
         try
         {
             CommandHandlerOutcome outcome = await handler.ExecuteAsync(
                 request,
                 linkedCancellation.Token).ConfigureAwait(false);
+
+            if (activity is not null)
+            {
+                if (outcome.Status == CommandResultStatus.Succeeded)
+                {
+                    _journal?.Complete(activity.Id, outcome.Message, outcome.UndoAvailable);
+                }
+                else
+                {
+                    _journal?.Fail(activity.Id, outcome.Message);
+                }
+            }
+
             return CreateResult(
                 request,
                 outcome.Status,
@@ -195,6 +229,10 @@ public sealed class CommandDispatcher
         }
         catch (OperationCanceledException) when (linkedCancellation.IsCancellationRequested)
         {
+            if (activity is not null)
+            {
+                _journal?.Cancel(activity.Id);
+            }
             bool deadlineExceeded = !cancellationToken.IsCancellationRequested &&
                 options.Deadline is DateTimeOffset configuredDeadline &&
                 configuredDeadline <= _timeProvider.GetUtcNow();
@@ -209,8 +247,14 @@ public sealed class CommandDispatcher
                 undoAvailable: false,
                 startedAt);
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            if (activity is not null)
+            {
+                // Log only the exception type — ex.Message can contain file paths or PII.
+                _journal?.Fail(activity.Id, $"Command faulted ({ex.GetType().Name}). No changes were applied.");
+                System.Diagnostics.Debug.WriteLine($"[CommandDispatcher] {request.CommandId} fault: {ex}");
+            }
             return CreateResult(
                 request,
                 CommandResultStatus.Failed,

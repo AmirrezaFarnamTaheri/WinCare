@@ -1,8 +1,11 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
+using System.Threading.Tasks;
 using WinCare.Application.Commands;
 using WinCare.Application.Tools;
 using WinCare.CommandCatalog.Models;
+
+using WinCare.Infrastructure.Native;
 
 namespace WinCare.App.ViewModels.Pages;
 
@@ -21,12 +24,12 @@ public sealed class AllToolsPageViewModel : ObservableObject
     private bool _isCompactLayout;
 
     public AllToolsPageViewModel()
-        : this(new ToolCatalogService(), CommandRuntime.CreateDefault())
+        : this(new ToolCatalogService(), CommandRuntime.CreateDefault(new NativeCoreService()))
     {
     }
 
     public AllToolsPageViewModel(ToolCatalogService catalog)
-        : this(catalog, CommandRuntime.CreateDefault())
+        : this(catalog, CommandRuntime.CreateDefault(new NativeCoreService()))
     {
     }
 
@@ -59,6 +62,8 @@ public sealed class AllToolsPageViewModel : ObservableObject
     public IReadOnlyList<RiskFilterOption> RiskOptions { get; }
     public ToolExecutionViewModel Execution { get; }
 
+    private CancellationTokenSource? _searchCts;
+
     public string SearchText
     {
         get => _searchText;
@@ -66,10 +71,33 @@ public sealed class AllToolsPageViewModel : ObservableObject
         {
             if (SetProperty(ref _searchText, value ?? string.Empty))
             {
-                Refresh();
+                DebounceSearch();
             }
         }
     }
+
+    private async void DebounceSearch()
+    {
+        _searchCts?.Cancel();
+        _searchCts?.Dispose();
+        _searchCts = new CancellationTokenSource();
+        var token = _searchCts.Token;
+        try
+        {
+            await Task.Delay(250, token);
+            Refresh();
+        }
+        catch (OperationCanceledException)
+        {
+            // Superseded by a newer keystroke — expected.
+        }
+        catch (Exception ex)
+        {
+            // Refresh should not throw; log defensively to prevent async void crash.
+            System.Diagnostics.Debug.WriteLine($"[AllToolsPageViewModel] DebounceSearch fault: {ex.Message}");
+        }
+    }
+
 
     public AreaFilterOption SelectedAreaOption
     {
@@ -245,14 +273,22 @@ public sealed class AllToolsPageViewModel : ObservableObject
                 .ThenBy(command => command.Title, StringComparer.OrdinalIgnoreCase);
         }
 
+        string? previousSelectedId = SelectedTool?.Id;
         VisibleTools.Clear();
+        ToolRowViewModel? newSelectedTool = null;
         foreach (CommandDefinition command in commands)
         {
-            VisibleTools.Add(new ToolRowViewModel(command) { IsCompact = IsCompactLayout });
+            var row = new ToolRowViewModel(command) { IsCompact = IsCompactLayout };
+            VisibleTools.Add(row);
+            if (previousSelectedId != null && string.Equals(command.Id, previousSelectedId, StringComparison.Ordinal))
+            {
+                newSelectedTool = row;
+            }
         }
-        SelectedTool = null;
+        SelectedTool = newSelectedTool;
         OnPropertyChanged(nameof(ResultCountText));
         OnPropertyChanged(nameof(IsEmpty));
         OnPropertyChanged(nameof(EmptyMessage));
     }
 }
+

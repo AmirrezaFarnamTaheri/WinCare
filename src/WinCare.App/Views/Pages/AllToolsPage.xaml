@@ -3,6 +3,7 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:local="using:WinCare.App.Views.Pages"
+    xmlns:views="using:WinCare.App.Views"
     xmlns:vm="using:WinCare.App.ViewModels.Pages"
     NavigationCacheMode="Required"
     SizeChanged="Page_SizeChanged">
@@ -45,8 +46,14 @@
                 Header="Search tools"
                 PlaceholderText="Name, command ID, category, or purpose"
                 Text="{x:Bind ViewModel.SearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                ToolTipService.ToolTip="Filter catalog tools by name or description (Ctrl+F)"
                 AutomationProperties.AutomationId="ToolSearch"
-                AutomationProperties.Name="Search all tools" />
+                AutomationProperties.Name="Search all tools">
+                <TextBox.KeyboardAccelerators>
+                    <KeyboardAccelerator Modifiers="Control" Key="F"
+                                         Invoked="ToolSearch_FocusAccelerator" />
+                </TextBox.KeyboardAccelerators>
+            </TextBox>
             <ComboBox
                 Grid.Column="1"
                 Header="Area"
@@ -88,7 +95,13 @@
             CompactPaneLength="0"
             IsPaneOpen="{x:Bind ViewModel.IsDetailsOpen, Mode=TwoWay}">
             <SplitView.Pane>
-                <Border Margin="16,0,0,0" Padding="20" Style="{StaticResource SurfaceBorderStyle}">
+                <Border
+                    Margin="16,0,0,0"
+                    Padding="20"
+                    Background="{ThemeResource CardSurfaceBrush}"
+                    BorderBrush="{ThemeResource AccentTealBrush}"
+                    BorderThickness="1,0,0,0"
+                    CornerRadius="8">
                     <ScrollViewer VerticalScrollBarVisibility="Auto">
                         <StackPanel Spacing="16">
                             <StackPanel Spacing="6">
@@ -102,6 +115,15 @@
                                 Severity="Informational"
                                 Title="Migration status"
                                 Message="A tool becomes runnable when its native implementation is available. Behavior parity remains visible in Advanced details." />
+                            <ToggleSwitch
+                                Header="Approve mutating execution"
+                                OffContent="Preview only"
+                                OnContent="Review approved"
+                                IsEnabled="{x:Bind ViewModel.Execution.CanApproveReview, Mode=OneWay}"
+                                IsOn="{x:Bind ViewModel.Execution.IsReviewApproved, Mode=TwoWay}"
+                                Visibility="{x:Bind local:AllToolsPage.BoolToVisibility(ViewModel.Execution.IsMutatingTool), Mode=OneWay}"
+                                AutomationProperties.AutomationId="ReviewApprovedToggle"
+                                AutomationProperties.Name="Approve mutating command execution after preview" />
                             <StackPanel Orientation="Horizontal" Spacing="8">
                                 <Button
                                     Command="{x:Bind ViewModel.Execution.ExecuteSelectedToolCommand}"
@@ -115,9 +137,13 @@
                                     IsActive="{x:Bind ViewModel.Execution.IsExecuting, Mode=OneWay}"
                                     Visibility="{x:Bind local:AllToolsPage.BoolToVisibility(ViewModel.Execution.IsExecuting), Mode=OneWay}"
                                     AutomationProperties.Name="Selected tool is running" />
-                                <Button
-                                    Content="Favorite"
+                                <ToggleButton
+                                    x:Name="FavoriteToggleButton"
+                                    Content="&#xE735;"
+                                    FontFamily="Segoe Fluent Icons"
+                                    IsChecked="{x:Bind ViewModel.IsSelectedToolFavorite, Mode=OneWay}"
                                     Click="FavoriteButton_Click"
+                                    ToolTipService.ToolTip="Toggle favorite bookmark"
                                     AutomationProperties.AutomationId="FavoriteSelectedTool"
                                     AutomationProperties.Name="Add or remove selected tool from favorites" />
                             </StackPanel>
@@ -163,6 +189,8 @@
                                     FontFamily="Cascadia Mono"
                                     FontSize="12"
                                     IsTextSelectionEnabled="True"
+                                    LineHeight="18"
+                                    Padding="12"
                                     Text="{x:Bind ViewModel.SelectedToolTechnicalDetails, Mode=OneWay}"
                                     TextWrapping="Wrap" />
                             </Expander>
@@ -181,19 +209,29 @@
                     Height="42"
                     Padding="16,0"
                     ColumnSpacing="12"
-                    Background="{ThemeResource SurfaceSecondaryBrush}">
+                    Background="{ThemeResource SurfaceSecondaryBrush}"
+                    Visibility="{x:Bind views:LayoutVisibility.InvertBoolToVisibility(ViewModel.IsCompactLayout), Mode=OneWay}">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="2.4*" />
                         <ColumnDefinition Width="1.2*" />
                         <ColumnDefinition Width="110" />
                         <ColumnDefinition Width="150" />
                         <ColumnDefinition Width="130" />
+                        <ColumnDefinition Width="110" />
                     </Grid.ColumnDefinitions>
-                    <TextBlock Style="{StaticResource ColumnHeaderTextStyle}" Text="Command" />
-                    <TextBlock Grid.Column="1" Style="{StaticResource ColumnHeaderTextStyle}" Text="Category" />
-                    <TextBlock x:Name="RiskHeader" Grid.Column="2" Style="{StaticResource ColumnHeaderTextStyle}" Text="Risk" />
-                    <TextBlock x:Name="AdministratorHeader" Grid.Column="3" Style="{StaticResource ColumnHeaderTextStyle}" Text="Administrator access" />
-                    <TextBlock x:Name="RestartHeader" Grid.Column="4" Style="{StaticResource ColumnHeaderTextStyle}" Text="Restart" />
+                    <TextBlock Style="{StaticResource ColumnHeaderTextStyle}" Text="Command"
+                               ToolTipService.ToolTip="Command name and unique identifier" />
+                    <TextBlock Grid.Column="1" Style="{StaticResource ColumnHeaderTextStyle}" Text="Category"
+                               ToolTipService.ToolTip="Functional area or system domain" />
+                    <TextBlock x:Name="RiskHeader" Grid.Column="2" Style="{StaticResource ColumnHeaderTextStyle}" Text="Risk"
+                               ToolTipService.ToolTip="Impact level: Read-only, Low, Elevated, or Mutating" />
+                    <TextBlock x:Name="AdministratorHeader" Grid.Column="3" Style="{StaticResource ColumnHeaderTextStyle}" Text="Administrator access"
+                               ToolTipService.ToolTip="Whether elevated privileges are required" />
+                    <TextBlock x:Name="RestartHeader" Grid.Column="4" Style="{StaticResource ColumnHeaderTextStyle}" Text="Restart"
+                               ToolTipService.ToolTip="Whether a system restart is required after execution" />
+                    <TextBlock x:Name="StatusHeader" Grid.Column="5" Style="{StaticResource ColumnHeaderTextStyle}" Text="Status"
+                               ToolTipService.ToolTip="Migration readiness: Ready, Pending migration, or Not ready"
+                               AutomationProperties.AutomationId="StatusColumnHeader" />
                 </Grid>
                 <InfoBar
                     Grid.Row="1"
@@ -228,6 +266,7 @@
                                         <ColumnDefinition Width="110" />
                                         <ColumnDefinition Width="150" />
                                         <ColumnDefinition Width="130" />
+                                        <ColumnDefinition Width="110" />
                                     </Grid.ColumnDefinitions>
                                     <StackPanel Spacing="2">
                                         <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="{x:Bind Title}" />
@@ -237,6 +276,7 @@
                                     <TextBlock Grid.Column="2" Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind Risk}" />
                                     <TextBlock Grid.Column="3" Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind AdministratorAccess}" />
                                     <TextBlock Grid.Column="4" Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind Restart}" />
+                                    <ContentControl Grid.Column="5" VerticalAlignment="Center" Template="{StaticResource StatusPillTemplate}" Content="{x:Bind StatusPillLabel}" Background="{x:Bind StatusPillBackgroundBrush, Mode=OneWay}" Foreground="{x:Bind StatusPillForegroundBrush, Mode=OneWay}" />
                                 </Grid>
                                 <StackPanel
                                     Spacing="4"

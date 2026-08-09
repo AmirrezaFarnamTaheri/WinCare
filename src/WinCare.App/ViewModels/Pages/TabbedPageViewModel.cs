@@ -36,7 +36,7 @@ public abstract class TabbedPageViewModel : ObservableObject
     public bool IsEmpty => CurrentRows.Count == 0;
     public string EmptyMessage => Sections[SelectedIndex].EmptyMessage;
 
-    public void SelectSection(int index)
+    public virtual void SelectSection(int index)
     {
         if (index < 0 || index >= Sections.Count || index == SelectedIndex)
         {

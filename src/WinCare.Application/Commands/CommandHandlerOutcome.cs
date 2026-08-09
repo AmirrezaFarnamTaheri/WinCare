@@ -33,4 +33,10 @@ public sealed record CommandHandlerOutcome(
     /// </summary>
     public static CommandHandlerOutcome Blocked(string code, string message) =>
         new(CommandResultStatus.Blocked, code, message, null, UndoAvailable: false);
+
+    /// <summary>
+    /// Creates a failed outcome for an unrecoverable handler error.
+    /// </summary>
+    public static CommandHandlerOutcome Failed(string code, string message) =>
+        new(CommandResultStatus.Failed, code, message, null, UndoAvailable: false);
 }

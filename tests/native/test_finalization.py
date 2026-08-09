@@ -73,9 +73,9 @@ class FinalizationTests(unittest.TestCase):
             self.assertTrue(result.report_path.is_file())
             self.assertTrue(result.manifest_path.is_file())
             self.assertEqual(259, result.readiness.cataloged)
-            self.assertEqual(2, result.readiness.implemented)
+            self.assertEqual(8, result.readiness.implemented)
             self.assertEqual(0, result.readiness.behavior_verified)
-            self.assertEqual(257, result.readiness.implementation_blockers)
+            self.assertEqual(251, result.readiness.implementation_blockers)
             self.assertEqual(259, result.readiness.production_blockers)
 
             with zipfile.ZipFile(result.native_archive) as archive:

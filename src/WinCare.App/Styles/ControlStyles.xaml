@@ -42,4 +42,26 @@
         <Setter Property="BorderThickness" Value="1" />
         <Setter Property="CornerRadius" Value="12" />
     </Style>
+    <ControlTemplate x:Key="StatusPillTemplate" TargetType="ContentControl">
+        <Border
+            Padding="6,2"
+            Background="{TemplateBinding Background}"
+            BorderBrush="{TemplateBinding BorderBrush}"
+            BorderThickness="1"
+            CornerRadius="4">
+            <ContentPresenter
+                FontFamily="Cascadia Code, Consolas, Courier New"
+                FontSize="11"
+                FontWeight="SemiBold"
+                Foreground="{TemplateBinding Foreground}"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center" />
+        </Border>
+    </ControlTemplate>
+    <Style TargetType="ListViewItem">
+        <Setter Property="FocusVisualPrimaryBrush" Value="{ThemeResource AccentTealBrush}" />
+        <Setter Property="FocusVisualSecondaryBrush" Value="{ThemeResource SurfaceBrush}" />
+        <Setter Property="FocusVisualPrimaryThickness" Value="3" />
+        <Setter Property="FocusVisualMargin" Value="-3" />
+    </Style>
 </ResourceDictionary>

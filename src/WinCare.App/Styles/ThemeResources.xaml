@@ -14,6 +14,18 @@
             <SolidColorBrush x:Key="SuccessBrush" Color="#0F7B0F" />
             <SolidColorBrush x:Key="WarningBrush" Color="#8A5700" />
             <SolidColorBrush x:Key="DangerBrush" Color="#C42B1C" />
+            <!-- Cyber-Operate Accent & Pill System -->
+            <SolidColorBrush x:Key="AccentTealBrush" Color="#007A99" />
+            <SolidColorBrush x:Key="AccentTealSubtleBrush" Color="#1A007A99" />
+            <SolidColorBrush x:Key="CardSurfaceBrush" Color="#FFFFFF" />
+            <SolidColorBrush x:Key="TelemetryFrameBrush" Color="#E2E8F0" />
+            <SolidColorBrush x:Key="PillReadOnlyBgBrush" Color="#047857" />
+            <SolidColorBrush x:Key="PillMutatingBgBrush" Color="#DC2626" />
+            <SolidColorBrush x:Key="PillElevatedBgBrush" Color="#D97706" />
+            <SolidColorBrush x:Key="PillVerifiedBorderBrush" Color="#047857" />
+            <SolidColorBrush x:Key="PillNotReadyBgBrush" Color="#E2E8F0" />
+            <SolidColorBrush x:Key="PillTextBrush" Color="#FFFFFF" />
+            <SolidColorBrush x:Key="PillAltTextBrush" Color="#1A1A1A" />
         </ResourceDictionary>
         <ResourceDictionary x:Key="Dark">
             <SolidColorBrush x:Key="PageBackgroundBrush" Color="#202020" />
@@ -27,6 +39,18 @@
             <SolidColorBrush x:Key="SuccessBrush" Color="#6CCB5F" />
             <SolidColorBrush x:Key="WarningBrush" Color="#FCE100" />
             <SolidColorBrush x:Key="DangerBrush" Color="#FF99A4" />
+            <!-- Cyber-Operate Accent & Pill System -->
+            <SolidColorBrush x:Key="AccentTealBrush" Color="#00D2B4" />
+            <SolidColorBrush x:Key="AccentTealSubtleBrush" Color="#1A00D2B4" />
+            <SolidColorBrush x:Key="CardSurfaceBrush" Color="#161C26" />
+            <SolidColorBrush x:Key="TelemetryFrameBrush" Color="#2A3A4A" />
+            <SolidColorBrush x:Key="PillReadOnlyBgBrush" Color="#047857" />
+            <SolidColorBrush x:Key="PillMutatingBgBrush" Color="#C41A1A" />
+            <SolidColorBrush x:Key="PillElevatedBgBrush" Color="#F59E0B" />
+            <SolidColorBrush x:Key="PillVerifiedBorderBrush" Color="#047857" />
+            <SolidColorBrush x:Key="PillNotReadyBgBrush" Color="#1F2937" />
+            <SolidColorBrush x:Key="PillTextBrush" Color="#FFFFFF" />
+            <SolidColorBrush x:Key="PillAltTextBrush" Color="#1A1A1A" />
         </ResourceDictionary>
         <ResourceDictionary x:Key="HighContrast">
             <SolidColorBrush x:Key="PageBackgroundBrush" Color="{ThemeResource SystemColorWindowColor}" />
@@ -40,6 +64,18 @@
             <SolidColorBrush x:Key="SuccessBrush" Color="{ThemeResource SystemColorWindowTextColor}" />
             <SolidColorBrush x:Key="WarningBrush" Color="{ThemeResource SystemColorWindowTextColor}" />
             <SolidColorBrush x:Key="DangerBrush" Color="{ThemeResource SystemColorWindowTextColor}" />
+            <!-- Cyber-Operate Accent & Pill System -->
+            <SolidColorBrush x:Key="AccentTealBrush" Color="{ThemeResource SystemColorHighlightColor}" />
+            <SolidColorBrush x:Key="AccentTealSubtleBrush" Color="{ThemeResource SystemColorHighlightColor}" />
+            <SolidColorBrush x:Key="CardSurfaceBrush" Color="{ThemeResource SystemColorWindowColor}" />
+            <SolidColorBrush x:Key="TelemetryFrameBrush" Color="{ThemeResource SystemColorWindowTextColor}" />
+            <SolidColorBrush x:Key="PillReadOnlyBgBrush" Color="{ThemeResource SystemColorHighlightColor}" />
+            <SolidColorBrush x:Key="PillMutatingBgBrush" Color="{ThemeResource SystemColorHighlightColor}" />
+            <SolidColorBrush x:Key="PillElevatedBgBrush" Color="{ThemeResource SystemColorHighlightColor}" />
+            <SolidColorBrush x:Key="PillVerifiedBorderBrush" Color="{ThemeResource SystemColorWindowTextColor}" />
+            <SolidColorBrush x:Key="PillNotReadyBgBrush" Color="{ThemeResource SystemColorHighlightColor}" />
+            <SolidColorBrush x:Key="PillTextBrush" Color="{ThemeResource SystemColorHighlightTextColor}" />
+            <SolidColorBrush x:Key="PillAltTextBrush" Color="{ThemeResource SystemColorHighlightTextColor}" />
         </ResourceDictionary>
     </ResourceDictionary.ThemeDictionaries>
 </ResourceDictionary>

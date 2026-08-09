@@ -55,4 +55,69 @@ public sealed class ToolRowViewModel : ObservableObject
         get => _isCompact;
         set => SetProperty(ref _isCompact, value);
     }
+
+    public string RiskPillLabel => Risk switch
+    {
+        "Read-only" => "[ READ-ONLY ]",
+        "Low" => "[ LOW      ]",
+        "Moderate" => "[ MODERATE ]",
+        "High" => "[ HIGH RISK]",
+        "Critical" => "[ CRITICAL ]",
+        _ => $"[ {Risk?.ToUpperInvariant()?.PadRight(8) ?? "UNKNOWN ",8} ]",
+    };
+
+    public string StatusPillLabel => MigrationState switch
+    {
+        "Behavior verified" => "[ VERIFIED ]",
+        "Implemented" => "[ READY    ]",
+        _ => "[ NOT READY]",
+    };
+
+    public Microsoft.UI.Xaml.Media.Brush StatusPillBackgroundBrush
+    {
+        get
+        {
+            if (MigrationState is not "Behavior verified" and not "Implemented")
+            {
+                return ResolveBrush("PillNotReadyBgBrush");
+            }
+
+            string key = Risk switch
+            {
+                "Read-only" => "PillReadOnlyBgBrush",
+                "Elevated" or "Moderate" or "Low" => "PillElevatedBgBrush",
+                "Mutating" or "High Risk" or "High" or "Critical" => "PillMutatingBgBrush",
+                _ => "PillMutatingBgBrush",
+            };
+            return ResolveBrush(key);
+        }
+    }
+
+    public Microsoft.UI.Xaml.Media.Brush StatusPillForegroundBrush
+    {
+        get
+        {
+            if (MigrationState is not "Behavior verified" and not "Implemented")
+            {
+                return ResolveBrush("PillAltTextBrush");
+            }
+
+            string key = Risk switch
+            {
+                "Elevated" or "Moderate" or "Low" => "PillAltTextBrush",
+                _ => "PillTextBrush",
+            };
+            return ResolveBrush(key);
+        }
+    }
+
+    private static Microsoft.UI.Xaml.Media.Brush ResolveBrush(string resourceKey)
+    {
+        if (Microsoft.UI.Xaml.Application.Current?.Resources?.TryGetValue(resourceKey, out var resource) == true && resource is Microsoft.UI.Xaml.Media.Brush brush)
+        {
+            return brush;
+        }
+        return new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.Transparent);
+    }
 }
+
