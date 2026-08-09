@@ -140,7 +140,8 @@ pub unsafe extern "C" fn wincare_core_version(
         let destination = unsafe { slice::from_raw_parts_mut(buffer, buffer_len) };
         destination[..VERSION.len()].copy_from_slice(VERSION);
         Status::Ok.code()
-    })).unwrap_or(Status::InternalError.code())
+    }))
+    .unwrap_or(Status::InternalError.code())
 }
 
 /// Hashes a file with SHA-256 while enforcing an explicit maximum byte count.
@@ -182,7 +183,8 @@ pub unsafe extern "C" fn wincare_core_sha256_file(
         let output_slice = unsafe { slice::from_raw_parts_mut(output, output_len) };
         output_slice[..SHA256_LENGTH].copy_from_slice(&digest);
         Status::Ok.code()
-    })).unwrap_or(Status::InternalError.code())
+    }))
+    .unwrap_or(Status::InternalError.code())
 }
 
 #[derive(Debug)]
@@ -265,7 +267,8 @@ pub unsafe extern "C" fn wincare_core_dir_size(
             }
             Err(_) => Status::IoError.code(),
         }
-    })).unwrap_or(Status::InternalError.code())
+    }))
+    .unwrap_or(Status::InternalError.code())
 }
 
 fn accumulate_dir_size(path: &Path) -> io::Result<u64> {
@@ -323,7 +326,8 @@ pub unsafe extern "C" fn wincare_core_sys_info(
         // SAFETY: buffer is non-null; buffer_len >= json_bytes.len() (checked above); source is stack slice, dest is caller heap — no overlap.
         unsafe { std::ptr::copy_nonoverlapping(json_bytes.as_ptr(), buffer, json_bytes.len()) };
         Status::Ok.code()
-    })).unwrap_or(Status::InternalError.code())
+    }))
+    .unwrap_or(Status::InternalError.code())
 }
 
 fn compose_sys_info_json(buf: &mut [u8; 512]) -> &[u8] {
@@ -380,14 +384,7 @@ fn read_registry_os_build() -> Option<String> {
         let subkey: Vec<u16> = "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\0"
             .encode_utf16()
             .collect();
-        if RegOpenKeyExW(
-            HKEY_LOCAL_MACHINE,
-            subkey.as_ptr(),
-            0,
-            KEY_READ,
-            &mut hkey,
-        ) != 0
-        {
+        if RegOpenKeyExW(HKEY_LOCAL_MACHINE, subkey.as_ptr(), 0, KEY_READ, &mut hkey) != 0 {
             return None;
         }
 
@@ -573,7 +570,10 @@ mod tests {
         let dir = std::env::temp_dir().join("wc_test_dir_size_known");
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
-        std::fs::File::create(dir.join("a.txt")).unwrap().write_all(&[0u8; 1024]).unwrap();
+        std::fs::File::create(dir.join("a.txt"))
+            .unwrap()
+            .write_all(&[0u8; 1024])
+            .unwrap();
         let path = dir.to_str().unwrap();
         let mut out: u64 = 0;
         let r = unsafe { wincare_core_dir_size(path.as_ptr(), path.len(), &mut out) };
@@ -588,7 +588,8 @@ mod tests {
         let r = unsafe { wincare_core_dir_size(std::ptr::null(), 0, &mut out) };
         assert_eq!(r, 1); // Status::NullPointer
         let dummy = b"path";
-        let r2 = unsafe { wincare_core_dir_size(dummy.as_ptr(), dummy.len(), std::ptr::null_mut()) };
+        let r2 =
+            unsafe { wincare_core_dir_size(dummy.as_ptr(), dummy.len(), std::ptr::null_mut()) };
         assert_eq!(r2, 1);
     }
 
