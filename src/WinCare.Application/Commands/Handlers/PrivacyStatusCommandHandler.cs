@@ -1,3 +1,4 @@
+using System.Security;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.Win32;
@@ -19,8 +20,23 @@ public sealed class PrivacyStatusCommandHandler : ICommandHandler
         CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        PrivacyRecord record = await Task.Run(ReadPrivacySettings, cancellationToken)
-            .ConfigureAwait(false);
+
+        PrivacyRecord record;
+        try
+        {
+            record = await Task.Run(ReadPrivacySettings, cancellationToken).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex) when (ex is SecurityException or UnauthorizedAccessException or IOException)
+        {
+            return CommandHandlerOutcome.Failed(
+                "privacy.read_failed",
+                "Windows privacy settings could not be read reliably.");
+        }
+
         cancellationToken.ThrowIfCancellationRequested();
 
         string json = JsonSerializer.Serialize(record, PrivacyStatusJsonContext.Default.PrivacyRecord);
@@ -38,30 +54,20 @@ public sealed class PrivacyStatusCommandHandler : ICommandHandler
         int telemetry = 1;
         bool adId = false;
 
-        try
+        using (RegistryKey? key = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Policies\Microsoft\Windows\DataCollection"))
         {
-            using RegistryKey? key = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Policies\Microsoft\Windows\DataCollection");
-            if (key?.GetValue("AllowTelemetry") is int val)
+            if (key?.GetValue("AllowTelemetry") is int value)
             {
-                telemetry = val;
+                telemetry = value;
             }
-        }
-        catch
-        {
-            // Fallback default
         }
 
-        try
+        using (RegistryKey? key = Registry.CurrentUser.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\AdvertisingInfo"))
         {
-            using RegistryKey? key = Registry.CurrentUser.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\AdvertisingInfo");
-            if (key?.GetValue("Enabled") is int val)
+            if (key?.GetValue("Enabled") is int value)
             {
-                adId = val != 0;
+                adId = value != 0;
             }
-        }
-        catch
-        {
-            // Fallback default
         }
 
         return new PrivacyRecord(telemetry, adId);

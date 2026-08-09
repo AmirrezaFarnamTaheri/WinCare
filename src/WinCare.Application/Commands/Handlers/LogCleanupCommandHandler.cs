@@ -6,7 +6,7 @@ using WinCare.Domain.Commands;
 namespace WinCare.Application.Commands.Handlers;
 
 /// <summary>
-/// Implements the "cleanup-targets" command — dry-run preview and event log cleanup execution.
+/// Implements the read-only "cleanup-targets" command by discovering Windows event-log targets.
 /// </summary>
 public sealed class LogCleanupCommandHandler : ICommandHandler
 {
@@ -20,67 +20,45 @@ public sealed class LogCleanupCommandHandler : ICommandHandler
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        if (!request.Apply)
+        if (request.Apply)
         {
-            LogInfoRecord[] logInfo = await Task.Run(() =>
-            {
-                try
-                {
-                    return EventLog.GetEventLogs()
-                        .Select(l => new LogInfoRecord(l.Log, l.Entries.Count))
-                        .ToArray();
-                }
-                catch
-                {
-                    return Array.Empty<LogInfoRecord>();
-                }
-            }, cancellationToken).ConfigureAwait(false);
-
-            var preview = new LogCleanupPreviewRecord(true, logInfo);
-            string json = JsonSerializer.Serialize(preview, LogCleanupJsonContext.Default.LogCleanupPreviewRecord);
-            using JsonDocument doc = JsonDocument.Parse(json);
-
-            return CommandHandlerOutcome.Succeeded(
-                "log_cleanup.preview",
-                $"Preview: {logInfo.Length} event log(s) found.",
-                doc.RootElement.Clone(),
-                undoAvailable: false);
+            return CommandHandlerOutcome.Blocked(
+                "log_cleanup.readonly",
+                "cleanup-targets is read-only and cannot clear Windows event logs.");
         }
 
-        string[] selectedLogs = request.Parameters.TryGetProperty("logs", out JsonElement logsEl)
-            && logsEl.ValueKind == JsonValueKind.Array
-            ? logsEl.EnumerateArray().Select(e => e.GetString() ?? "").Where(s => s.Length > 0).ToArray()
-            : ["Application", "System"];
-
-        int clearedCount = 0;
-        int errorCount = 0;
-
-        await Task.Run(() =>
+        LogInfoRecord[] logInfo;
+        try
         {
-            foreach (string logName in selectedLogs)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-                try
+            logInfo = await Task.Run(() => EventLog.GetEventLogs()
+                .Select(log =>
                 {
-                    using EventLog log = new(logName);
-                    log.Clear();
-                    clearedCount++;
-                }
-                catch
-                {
-                    errorCount++;
-                }
-            }
-        }, cancellationToken).ConfigureAwait(false);
+                    using (log)
+                    {
+                        return new LogInfoRecord(log.Log, log.Entries.Count);
+                    }
+                })
+                .ToArray(), cancellationToken).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or System.ComponentModel.Win32Exception or UnauthorizedAccessException)
+        {
+            return CommandHandlerOutcome.Failed(
+                "log_cleanup.enumeration_failed",
+                "Windows event logs could not be enumerated reliably.");
+        }
 
-        var resultRecord = new LogCleanupResultRecord(clearedCount, errorCount);
-        string resultJson = JsonSerializer.Serialize(resultRecord, LogCleanupJsonContext.Default.LogCleanupResultRecord);
-        using JsonDocument resultDoc = JsonDocument.Parse(resultJson);
+        var preview = new LogCleanupPreviewRecord(true, logInfo);
+        string json = JsonSerializer.Serialize(preview, LogCleanupJsonContext.Default.LogCleanupPreviewRecord);
+        using JsonDocument doc = JsonDocument.Parse(json);
 
         return CommandHandlerOutcome.Succeeded(
-            "log_cleanup.applied",
-            $"Cleared {clearedCount} log(s), {errorCount} skipped.",
-            resultDoc.RootElement.Clone(),
+            "log_cleanup.preview",
+            $"Preview: {logInfo.Length} event log(s) found.",
+            doc.RootElement.Clone(),
             undoAvailable: false);
     }
 
@@ -93,15 +71,9 @@ public sealed class LogCleanupCommandHandler : ICommandHandler
     /// Represents log cleanup preview record.
     /// </summary>
     public sealed record LogCleanupPreviewRecord(bool Preview, LogInfoRecord[] Logs);
-
-    /// <summary>
-    /// Represents log cleanup execution result record.
-    /// </summary>
-    public sealed record LogCleanupResultRecord(int ClearedLogsCount, int SkippedLogsCount);
 }
 
 [JsonSerializable(typeof(LogCleanupCommandHandler.LogCleanupPreviewRecord))]
-[JsonSerializable(typeof(LogCleanupCommandHandler.LogCleanupResultRecord))]
 internal sealed partial class LogCleanupJsonContext : JsonSerializerContext
 {
 }

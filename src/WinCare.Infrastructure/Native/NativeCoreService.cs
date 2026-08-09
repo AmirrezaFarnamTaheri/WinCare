@@ -8,6 +8,8 @@ namespace WinCare.Infrastructure.Native;
 /// </summary>
 public sealed class NativeCoreService : INativeCoreService
 {
+    private const int SystemInfoMaxAttempts = 3;
+
     /// <summary>
     /// Expected C ABI version exported by <c>wincare_core</c>.
     /// </summary>
@@ -56,11 +58,8 @@ public sealed class NativeCoreService : INativeCoreService
 
     /// <summary>
     /// Asynchronously accumulates the total byte size of all files under <paramref name="path"/>.
-    /// Offloads the recursive traversal to a thread pool thread to keep the UI thread responsive.
+    /// Offloads traversal to a thread pool thread to keep the UI thread responsive.
     /// </summary>
-    /// <exception cref="ArgumentException">path is null or whitespace.</exception>
-    /// <exception cref="IOException">Native library returned a non-Ok status.</exception>
-    /// <exception cref="OperationCanceledException">cancellationToken was cancelled.</exception>
     public Task<ulong> GetDirectorySizeAsync(string path, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(path);
@@ -87,10 +86,8 @@ public sealed class NativeCoreService : INativeCoreService
 
     /// <summary>
     /// Asynchronously retrieves a JSON string with system facts (logical CPUs, memory, OS build).
-    /// Uses a two-call probe-then-fill pattern matching <c>wincare_core_sys_info</c> ABI contract.
+    /// Uses a bounded probe/fill retry loop matching <c>wincare_core_sys_info</c> ABI contract.
     /// </summary>
-    /// <exception cref="InvalidOperationException">Native call failed unexpectedly.</exception>
-    /// <exception cref="OperationCanceledException">cancellationToken was cancelled.</exception>
     public Task<string> GetSystemInfoJsonAsync(CancellationToken cancellationToken)
         => Task.Run(() => GetSystemInfoJson(cancellationToken), cancellationToken);
 
@@ -98,26 +95,66 @@ public sealed class NativeCoreService : INativeCoreService
     {
         ct.ThrowIfCancellationRequested();
         nuint required = 0;
-        var probeStatus = (NativeCoreStatus)WinCareCoreNative.wincare_core_sys_info(null, 0, &required);
+        NativeCoreStatus probeStatus = (NativeCoreStatus)WinCareCoreNative.wincare_core_sys_info(null, 0, &required);
         if (probeStatus != NativeCoreStatus.BufferTooSmall && probeStatus != NativeCoreStatus.Ok)
         {
-            throw new InvalidOperationException($"wincare_core_sys_info failed with status {probeStatus} ({(int)probeStatus}).");
+            throw SystemInfoException(probeStatus);
         }
 
-        byte[] buf = new byte[(int)required];
-        fixed (byte* p = buf)
+        ValidateSystemInfoLength(required);
+
+        for (int attempt = 0; attempt < SystemInfoMaxAttempts; attempt++)
         {
-            nuint written = 0;
-            int code = WinCareCoreNative.wincare_core_sys_info(p, (nuint)buf.Length, &written);
-            NativeCoreStatus status = (NativeCoreStatus)code;
-            if (status != NativeCoreStatus.Ok)
+            ct.ThrowIfCancellationRequested();
+            int length = checked((int)required);
+            byte[] buffer = new byte[length];
+
+            fixed (byte* pointer = buffer)
             {
-                throw new InvalidOperationException(
-                    $"wincare_core_sys_info failed with status {status} ({(int)status}).");
+                nuint written = 0;
+                NativeCoreStatus status = (NativeCoreStatus)WinCareCoreNative.wincare_core_sys_info(
+                    pointer,
+                    (nuint)buffer.Length,
+                    &written);
+
+                if (status == NativeCoreStatus.Ok)
+                {
+                    if (written > (nuint)buffer.Length)
+                    {
+                        throw new InvalidOperationException("wincare_core_sys_info wrote an invalid output length.");
+                    }
+
+                    return Encoding.UTF8.GetString(buffer, 0, checked((int)written));
+                }
+
+                if (status != NativeCoreStatus.BufferTooSmall)
+                {
+                    throw SystemInfoException(status);
+                }
+
+                if (written <= (nuint)buffer.Length)
+                {
+                    throw new InvalidOperationException("wincare_core_sys_info returned BufferTooSmall without increasing the required length.");
+                }
+
+                required = written;
+                ValidateSystemInfoLength(required);
             }
-            return Encoding.UTF8.GetString(buf, 0, (int)written);
+        }
+
+        throw new InvalidOperationException("wincare_core_sys_info output changed repeatedly during bounded retries.");
+    }
+
+    private static void ValidateSystemInfoLength(nuint length)
+    {
+        if (length == 0 || length > int.MaxValue)
+        {
+            throw new InvalidOperationException("wincare_core_sys_info reported an invalid required buffer length.");
         }
     }
+
+    private static InvalidOperationException SystemInfoException(NativeCoreStatus status) =>
+        new($"wincare_core_sys_info failed with status {status} ({(int)status}).");
 
     private static Exception CreateException(NativeCoreStatus status, string path, ulong maxBytes) => status switch
     {

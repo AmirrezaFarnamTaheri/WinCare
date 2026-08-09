@@ -231,7 +231,7 @@ fn map_io_error(error: io::Error) -> HashError {
     }
 }
 
-/// Recursively accumulates the total byte size of all files under `path_utf8`.
+/// Accumulates the total byte size of all regular files under `path_utf8`.
 /// Writes the byte count to `*size_out` on success.
 ///
 /// # Safety
@@ -272,31 +272,36 @@ pub unsafe extern "C" fn wincare_core_dir_size(
 }
 
 fn accumulate_dir_size(path: &Path) -> io::Result<u64> {
-    let mut total: u64 = 0;
-    // Use non-following metadata to detect symlinks and reparse points.
-    // Following is_dir() would recurse through directory symlinks and risk stack overflow.
-    let meta = std::fs::symlink_metadata(path)?;
-    if meta.is_dir() {
-        for entry in std::fs::read_dir(path)? {
-            let entry = entry?;
-            let entry_meta = std::fs::symlink_metadata(entry.path())?;
-            if entry_meta.file_type().is_symlink() {
-                continue;
-            }
-            #[cfg(target_os = "windows")]
-            {
-                use std::os::windows::fs::MetadataExt;
-                if (entry_meta.file_attributes() & 0x400) != 0 {
-                    continue;
-                }
-            }
-            let sub = accumulate_dir_size(&entry.path())?;
-            total = total.saturating_add(sub);
+    let mut total = 0_u64;
+    let mut pending = vec![path.to_path_buf()];
+
+    while let Some(current) = pending.pop() {
+        let metadata = std::fs::symlink_metadata(&current)?;
+        if metadata.file_type().is_symlink() || is_reparse_point(&metadata) {
+            continue;
         }
-    } else if meta.is_file() {
-        total = meta.len();
+
+        if metadata.is_dir() {
+            for entry in std::fs::read_dir(&current)? {
+                pending.push(entry?.path());
+            }
+        } else if metadata.is_file() {
+            total = total.saturating_add(metadata.len());
+        }
     }
+
     Ok(total)
+}
+
+#[cfg(target_os = "windows")]
+fn is_reparse_point(metadata: &std::fs::Metadata) -> bool {
+    use std::os::windows::fs::MetadataExt;
+    (metadata.file_attributes() & 0x400) != 0
+}
+
+#[cfg(not(target_os = "windows"))]
+fn is_reparse_point(_metadata: &std::fs::Metadata) -> bool {
+    false
 }
 
 /// Writes a UTF-8 JSON object with system facts into `buffer`.
@@ -580,6 +585,27 @@ mod tests {
         assert_eq!(r, 0);
         assert_eq!(out, 1024);
         let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn dir_size_handles_deep_directory_tree_without_recursion() {
+        let root = std::env::temp_dir().join("wc_test_dir_size_deep");
+        let _ = std::fs::remove_dir_all(&root);
+        let mut current = root.clone();
+        std::fs::create_dir_all(&current).unwrap();
+        for index in 0..96 {
+            current = current.join(format!("d{index}"));
+            std::fs::create_dir(&current).unwrap();
+        }
+        std::fs::write(current.join("payload.bin"), [7_u8; 17]).unwrap();
+
+        let path = root.to_str().unwrap();
+        let mut out = 0_u64;
+        let status = unsafe { wincare_core_dir_size(path.as_ptr(), path.len(), &mut out) };
+
+        assert_eq!(Status::Ok.code(), status);
+        assert_eq!(17, out);
+        let _ = std::fs::remove_dir_all(&root);
     }
 
     #[test]
