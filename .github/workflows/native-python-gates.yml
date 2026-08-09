@@ -2,7 +2,7 @@ name: Native Python Gates
 
 # Runs the WinUI-3 / Rust focused Python verification suite on every push and PR.
 # Complements the full Windows CI by providing fast, cross-platform gate feedback
-# for all design-system, contrast, GUI structure, and source-contract checks.
+# for all design-system, contrast, GUI structure, source-contract, and native tests.
 
 on:
   push:
@@ -79,6 +79,16 @@ jobs:
         shell: bash
         run: python -m unittest tools.test_gui -v
 
+      - name: Gate 5 — Native source foundation contract
+        id: source_contract
+        shell: bash
+        run: python tools/verify_native_foundation.py
+
+      - name: Gate 6 — Native and safety regression tests
+        id: native_tests
+        shell: bash
+        run: python -m unittest discover -s tests/native -v
+
       - name: Publish gate summary
         if: always()
         shell: bash
@@ -91,12 +101,16 @@ jobs:
               "contrast": "${{ steps.contrast.outcome }}",
               "gui_validate": "${{ steps.gui_validate.outcome }}",
               "gui_tests": "${{ steps.gui_tests.outcome }}",
+              "source_contract": "${{ steps.source_contract.outcome }}",
+              "native_tests": "${{ steps.native_tests.outcome }}",
           }
           labels = {
               "tokens": "Visual token completeness",
               "contrast": "WCAG AA pill contrast",
               "gui_validate": "GUI structure validation",
               "gui_tests": "GUI unit tests",
+              "source_contract": "Native source foundation contract",
+              "native_tests": "Native and safety regression tests",
           }
           summary = pathlib.Path(os.environ["GITHUB_STEP_SUMMARY"])
           with summary.open("a", encoding="utf-8") as f:
