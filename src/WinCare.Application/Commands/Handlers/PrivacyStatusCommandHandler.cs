@@ -1,3 +1,4 @@
+using System.Runtime.Versioning;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.Win32;
@@ -8,6 +9,7 @@ namespace WinCare.Application.Commands.Handlers;
 /// <summary>
 /// Implements the "experience-privacy-profiles" command — reads Windows telemetry and privacy registry keys.
 /// </summary>
+[SupportedOSPlatform("windows")]
 public sealed class PrivacyStatusCommandHandler : ICommandHandler
 {
     /// <inheritdoc />

@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Runtime.Versioning;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using WinCare.Domain.Commands;
@@ -8,6 +9,7 @@ namespace WinCare.Application.Commands.Handlers;
 /// <summary>
 /// Implements the "cleanup-targets" command — dry-run preview and event log cleanup execution.
 /// </summary>
+[SupportedOSPlatform("windows")]
 public sealed class LogCleanupCommandHandler : ICommandHandler
 {
     /// <inheritdoc />
