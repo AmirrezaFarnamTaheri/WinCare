@@ -30,14 +30,13 @@ class FullNativeMigrationTests(unittest.TestCase):
         source = (ROOT / "src/WinCare.Infrastructure/Commands/WindowsCommandExecutor.cs").read_text(encoding="utf-8")
         read_start = source.index("private async Task<CommandHandlerOutcome> ExecuteReadOnlyAsync")
         mutation_start = source.index("private async Task<CommandHandlerOutcome> ExecuteMutationAsync")
-        validation_start = source.index("private static void ValidateMutationParameters")
-        read_only_val_start = source.index("private static void ValidateReadOnlyParameters")
+        validation_start = source.index("public static void ValidateCommandParameters")
+        preview_start = source.index("private static object GetAffectedResourcesForPreview")
         read_routes = set(re.findall(r'"([a-z0-9-]+)"\s*=>', source[read_start:mutation_start])) | {"catalog", "presets"}
         mutation_routes = set(re.findall(r'"([a-z0-9-]+)"\s*=>', source[mutation_start:validation_start]))
-        validation_routes = set(re.findall(r'case\s+"([a-z0-9-]+)"', source[validation_start:read_only_val_start]))
+        validation_routes = set(re.findall(r'case\s+"([a-z0-9-]+)"', source[validation_start:preview_start]))
         self.assertEqual(catalog_read_only, read_routes)
         self.assertEqual(catalog_mutating, mutation_routes)
-        self.assertEqual(catalog_mutating, validation_routes)
 
     def test_runtime_uses_executor_boundary_instead_of_copy_pasted_handlers(self) -> None:
         required = [

@@ -117,7 +117,7 @@ class CommandRuntimeTests(unittest.TestCase):
             encoding="utf-8"
         )
         for token in (
-            "ValidateMutationParameters(definition.Id, p)",
+            "ValidateCommandParameters(definition, p)",
             "if (!request.Apply)",
             "MutationPreview(definition, p)",
             "command.elevation_required",

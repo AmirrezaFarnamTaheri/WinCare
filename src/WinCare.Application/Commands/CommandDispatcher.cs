@@ -168,16 +168,31 @@ public sealed class CommandDispatcher
                 startedAt);
         }
 
-        if (!definition.ReadOnly && request.Apply && !options.ReviewApproved)
+        if (!definition.ReadOnly && request.Apply)
         {
-            return CreateResult(
-                request,
-                CommandResultStatus.Blocked,
-                "command.review_required",
-                $"Mutating command '{request.CommandId}' requires explicit ReviewApproved confirmation.",
-                data: null,
-                undoAvailable: false,
-                startedAt);
+            if (!options.ReviewApproved)
+            {
+                return CreateResult(
+                    request,
+                    CommandResultStatus.Blocked,
+                    "command.review_required",
+                    $"Mutating command '{request.CommandId}' requires explicit ReviewApproved confirmation.",
+                    data: null,
+                    undoAvailable: false,
+                    startedAt);
+            }
+
+            if (request.Approval is not null && !request.Approval.IsValid(request.CommandId, request.Parameters))
+            {
+                return CreateResult(
+                    request,
+                    CommandResultStatus.Blocked,
+                    "command.approval_plan_invalid",
+                    $"ApprovedMutationPlan for '{request.CommandId}' is invalid, expired, or does not match the canonical parameters digest.",
+                    data: null,
+                    undoAvailable: false,
+                    startedAt);
+            }
         }
 
         using CancellationTokenSource linkedCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);

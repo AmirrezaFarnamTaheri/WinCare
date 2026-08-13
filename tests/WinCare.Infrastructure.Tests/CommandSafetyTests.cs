@@ -130,4 +130,116 @@ public sealed class CommandSafetyTests
             if (Directory.Exists(testRoot)) Directory.Delete(testRoot, true);
         }
     }
+
+    [Fact]
+    public async Task CommandStateStore_ConcurrentUpdates_ZeroLostUpdates()
+    {
+        string testRoot = Path.Combine(Path.GetTempPath(), "WinCareConcurrentTest_" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            CommandStateStore store = new(testRoot);
+            JsonElement fallback = JsonSerializer.SerializeToElement(new { count = 0 });
+
+            Task[] tasks = Enumerable.Range(0, 50).Select(_ => Task.Run(async () =>
+            {
+                await store.UpdateAsync("counter", fallback, current =>
+                {
+                    int currentCount = current.GetProperty("count").GetInt32();
+                    return JsonSerializer.SerializeToElement(new { count = currentCount + 1 });
+                }, CancellationToken.None);
+            })).ToArray();
+
+            await Task.WhenAll(tasks);
+
+            JsonElement finalState = await store.ReadObjectAsync("counter", CancellationToken.None);
+            Assert.Equal(50, finalState.GetProperty("count").GetInt32());
+        }
+        finally
+        {
+            if (Directory.Exists(testRoot)) Directory.Delete(testRoot, true);
+        }
+    }
+
+    [Fact]
+    public void ApprovedMutationPlan_CanonicalHashing_OrderInsensitive()
+    {
+        using JsonDocument json1 = JsonDocument.Parse("""{"b": 2, "a": 1}""");
+        using JsonDocument json2 = JsonDocument.Parse("""{"a": 1, "b": 2}""");
+
+        ApprovedMutationPlan plan1 = ApprovedMutationPlan.Create("test-cmd", json1.RootElement);
+        ApprovedMutationPlan plan2 = ApprovedMutationPlan.Create("test-cmd", json2.RootElement);
+
+        Assert.Equal(plan1.ParametersDigest, plan2.ParametersDigest);
+        Assert.True(plan1.IsValid("test-cmd", json2.RootElement));
+    }
+
+    [Fact]
+    public void ApprovedMutationPlan_MismatchingParametersOrId_FailsValidation()
+    {
+        using JsonDocument json1 = JsonDocument.Parse("""{"a": 1}""");
+        using JsonDocument json2 = JsonDocument.Parse("""{"a": 2}""");
+
+        ApprovedMutationPlan plan = ApprovedMutationPlan.Create("test-cmd", json1.RootElement);
+
+        Assert.False(plan.IsValid("different-cmd", json1.RootElement));
+        Assert.False(plan.IsValid("test-cmd", json2.RootElement));
+    }
+
+    [Fact]
+    public void CommandValidation_SpriteLayout_ValidatesNumericalDimensionsWithoutPath()
+    {
+        using JsonDocument validParamsDoc = JsonDocument.Parse("""
+            { "FrameWidth": 32, "FrameHeight": 32, "SheetWidth": 256, "SheetHeight": 256 }
+            """);
+        CommandParameters validParams = new(validParamsDoc.RootElement);
+
+        CommandDefinition spriteDef = new(
+            Id: "experience-sprite-layout",
+            Title: "Sprite Layout",
+            Summary: "Calculate sprite layout",
+            Area: "Experience",
+            Section: "Visuals",
+            Risk: CommandRisk.ReadOnly,
+            ReadOnly: true,
+            AdministratorAccess: AdministratorAccess.No,
+            Restart: RestartExpectation.No,
+            LegacySource: "Visuals.ps1",
+            MigrationStatus: MigrationStatus.Implemented,
+            Keywords: Array.Empty<string>()
+        );
+
+        // Should not throw CommandParameterException requiring "Path"
+        WindowsCommandExecutor.ValidateCommandParameters(spriteDef, validParams);
+    }
+
+    [Fact]
+    public async Task WindowsCommandExecutor_MutationPreview_ReturnsConcreteAffectedResources()
+    {
+        using WindowsCommandExecutor executor = new();
+        CommandDefinition pagefileDef = new(
+            Id: "pagefile-set",
+            Title: "Configure Pagefile",
+            Summary: "Configure pagefile settings",
+            Area: "System",
+            Section: "Memory",
+            Risk: CommandRisk.Low,
+            ReadOnly: false,
+            AdministratorAccess: AdministratorAccess.Required,
+            Restart: RestartExpectation.No,
+            LegacySource: "Memory.ps1",
+            MigrationStatus: MigrationStatus.Implemented,
+            Keywords: Array.Empty<string>()
+        );
+
+        using JsonDocument paramsDoc = JsonDocument.Parse("""{ "Mode": "Automatic" }""");
+        CommandRequest previewRequest = CommandRequest.Preview("pagefile-set", paramsDoc.RootElement);
+
+        CommandHandlerOutcome outcome = await executor.ExecuteAsync(pagefileDef, previewRequest, CancellationToken.None);
+
+        Assert.Equal(CommandResultStatus.Succeeded, outcome.Status);
+        Assert.True(outcome.Data.TryGetProperty("affectedResources", out JsonElement affected));
+        Assert.Equal(JsonValueKind.Array, affected.ValueKind);
+        Assert.True(affected.GetArrayLength() > 0);
+        Assert.Equal("Registry/WMI", affected[0].GetProperty("resourceType").GetString());
+    }
 }

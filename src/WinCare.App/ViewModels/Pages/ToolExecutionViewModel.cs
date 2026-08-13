@@ -29,6 +29,9 @@ public sealed class ToolExecutionViewModel : ObservableObject
     private string _executionResultText = string.Empty;
     private bool _isReviewApproved;
     private string _parameterJson = "{}";
+    private ApprovedMutationPlan? _lastApprovedPlan;
+
+    private CancellationTokenSource? _activeCts;
 
     public ToolExecutionViewModel(CommandDispatcher dispatcher, Action<string> recordRecent)
     {
@@ -37,9 +40,16 @@ public sealed class ToolExecutionViewModel : ObservableObject
         ExecuteSelectedToolCommand = new AsyncRelayCommand(
             ExecuteSelectedToolAsync,
             CanExecuteSelectedTool);
+        CancelSelectedToolCommand = new RelayCommand(CancelSelectedTool);
     }
 
     public IAsyncRelayCommand ExecuteSelectedToolCommand { get; }
+    public IRelayCommand CancelSelectedToolCommand { get; }
+
+    private void CancelSelectedTool()
+    {
+        _activeCts?.Cancel();
+    }
 
     public bool IsExecuting
     {
@@ -184,15 +194,26 @@ public sealed class ToolExecutionViewModel : ObservableObject
                 return;
             }
 
+            ApprovedMutationPlan? approval = apply ? _lastApprovedPlan : null;
             CommandRequest request = apply
-                ? CommandRequest.Execute(selected.Id, parameters)
+                ? CommandRequest.Execute(selected.Id, parameters, approval)
                 : CommandRequest.Preview(selected.Id, parameters);
-            CommandResult result = await _dispatcher.ExecuteAsync(
-                request,
-                new CommandExecutionOptions(
-                    ReviewApproved: apply,
-                    Deadline: DateTimeOffset.UtcNow + ExecutionBudget(selected.Definition)),
-                cancellationToken);
+            using CancellationTokenSource linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            _activeCts = linkedCts;
+            CommandResult result;
+            try
+            {
+                result = await _dispatcher.ExecuteAsync(
+                    request,
+                    new CommandExecutionOptions(
+                        ReviewApproved: apply,
+                        Deadline: DateTimeOffset.UtcNow + ExecutionBudget(selected.Definition)),
+                    linkedCts.Token);
+            }
+            finally
+            {
+                _activeCts = null;
+            }
 
             _recordRecent(result.CommandId);
             if (string.Equals(_selectedTool?.Id, result.CommandId, StringComparison.Ordinal))
@@ -202,11 +223,14 @@ public sealed class ToolExecutionViewModel : ObservableObject
                 {
                     if (!apply)
                     {
-                        SetSuccessfulPreview(result.Status == CommandResultStatus.Succeeded);
+                        bool previewSuccess = result.Status == CommandResultStatus.Succeeded;
+                        SetSuccessfulPreview(previewSuccess);
+                        _lastApprovedPlan = previewSuccess ? ApprovedMutationPlan.Create(selected.Id, parameters, request.CorrelationId) : null;
                     }
                     else
                     {
                         ResetReviewState();
+                        _lastApprovedPlan = null;
                     }
                 }
             }

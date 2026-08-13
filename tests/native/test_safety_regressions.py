@@ -48,7 +48,7 @@ class SafetyRegressionTests(unittest.TestCase):
             "CanApproveReview",
             "value && CanApproveReview",
             '"Apply changes"',
-            "SetSuccessfulPreview(result.Status == CommandResultStatus.Succeeded)",
+            "SetSuccessfulPreview(previewSuccess)",
             "ResetReviewState();",
         ):
             self.assertIn(token, view_model)

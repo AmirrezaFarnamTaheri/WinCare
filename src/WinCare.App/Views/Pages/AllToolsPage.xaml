@@ -159,6 +159,12 @@
                                     IsActive="{x:Bind ViewModel.Execution.IsExecuting, Mode=OneWay}"
                                     Visibility="{x:Bind local:AllToolsPage.BoolToVisibility(ViewModel.Execution.IsExecuting), Mode=OneWay}"
                                     AutomationProperties.Name="Selected tool is running" />
+                                <Button
+                                    Command="{x:Bind ViewModel.Execution.CancelSelectedToolCommand}"
+                                    Content="Cancel"
+                                    Visibility="{x:Bind local:AllToolsPage.BoolToVisibility(ViewModel.Execution.IsExecuting), Mode=OneWay}"
+                                    AutomationProperties.AutomationId="CancelSelectedTool"
+                                    AutomationProperties.Name="Cancel active tool operation" />
                                 <ToggleButton
                                     x:Name="FavoriteToggleButton"
                                     Content="&#xE735;"

@@ -271,19 +271,33 @@ pub unsafe extern "C" fn wincare_core_dir_size(
     .unwrap_or(Status::InternalError.code())
 }
 
+const MAX_DIR_ENTRIES: usize = 500_000;
+
 fn accumulate_dir_size(path: &Path) -> io::Result<u64> {
     let mut total = 0_u64;
+    let mut entries_count = 0_usize;
     let mut pending = vec![path.to_path_buf()];
 
     while let Some(current) = pending.pop() {
-        let metadata = std::fs::symlink_metadata(&current)?;
+        entries_count = entries_count.saturating_add(1);
+        if entries_count > MAX_DIR_ENTRIES {
+            break;
+        }
+
+        let metadata = match std::fs::symlink_metadata(&current) {
+            Ok(meta) => meta,
+            Err(_) => continue,
+        };
+
         if metadata.file_type().is_symlink() || is_reparse_point(&metadata) {
             continue;
         }
 
         if metadata.is_dir() {
-            for entry in std::fs::read_dir(&current)? {
-                pending.push(entry?.path());
+            if let Ok(entries) = std::fs::read_dir(&current) {
+                for entry in entries.flatten() {
+                    pending.push(entry.path());
+                }
             }
         } else if metadata.is_file() {
             total = total.saturating_add(metadata.len());

@@ -26,15 +26,33 @@ public sealed partial class WindowsCommandExecutor
         }, cancellationToken).ConfigureAwait(false);
     }
 
+    private async Task TransitionStateItemAsync(string key, string id, JsonElement updatedItem, CancellationToken cancellationToken)
+    {
+        JsonElement fallback = JsonSerializer.SerializeToElement(Array.Empty<object>());
+        await _state.UpdateAsync(key, fallback, current =>
+        {
+            var list = current.ValueKind == JsonValueKind.Array
+                ? current.EnumerateArray().Select(x => JsonNode.Parse(x.GetRawText())).ToList()
+                : new List<JsonNode?>();
+
+            int existingIndex = list.FindIndex(item => item is JsonObject obj && string.Equals(obj["id"]?.GetValue<string>(), id, StringComparison.Ordinal));
+            JsonNode? newNode = JsonNode.Parse(updatedItem.GetRawText());
+            if (existingIndex >= 0)
+            {
+                list[existingIndex] = newNode;
+            }
+            else
+            {
+                list.Add(newNode);
+            }
+            return JsonSerializer.SerializeToElement(list, JsonOptions);
+        }, cancellationToken).ConfigureAwait(false);
+    }
+
     private async Task<CommandHandlerOutcome> UpsertStateItemAsync(string key, CommandParameters p, CancellationToken cancellationToken)
     {
         string id = p.String("Id").Trim();
         if (id.Length == 0) id = Guid.NewGuid().ToString("N");
-        JsonElement current = await _state.ReadArrayAsync(key, cancellationToken).ConfigureAwait(false);
-        var list = current.ValueKind == JsonValueKind.Array
-            ? current.EnumerateArray().Select(x => JsonNode.Parse(x.GetRawText())).Where(x => x is not null).Cast<JsonNode>().ToList()
-            : new List<JsonNode>();
-
         JsonObject item = p.OptionalElement("Record") is JsonElement record && record.ValueKind == JsonValueKind.Object
             ? JsonNode.Parse(record.GetRawText())!.AsObject()
             : new JsonObject();
@@ -46,35 +64,61 @@ public sealed partial class WindowsCommandExecutor
         if (p.OptionalElement("Value") is JsonElement valueElement) item["value"] = JsonNode.Parse(valueElement.GetRawText());
         if (p.OptionalElement("Data") is JsonElement dataElement) item["data"] = JsonNode.Parse(dataElement.GetRawText());
 
-        int index = list.FindIndex(node => node is JsonObject obj && string.Equals(obj["id"]?.GetValue<string>(), id, StringComparison.Ordinal));
-        if (index >= 0) list[index] = item; else list.Add(item);
-        JsonElement data = JsonSerializer.SerializeToElement(list, JsonOptions);
-        await _state.WriteAsync(key, data, cancellationToken).ConfigureAwait(false);
+        JsonElement fallback = JsonSerializer.SerializeToElement(Array.Empty<object>());
+        await _state.UpdateAsync(key, fallback, current =>
+        {
+            var list = current.ValueKind == JsonValueKind.Array
+                ? current.EnumerateArray().Select(x => JsonNode.Parse(x.GetRawText())).Where(x => x is not null).Cast<JsonNode>().ToList()
+                : new List<JsonNode>();
+            int index = list.FindIndex(node => node is JsonObject obj && string.Equals(obj["id"]?.GetValue<string>(), id, StringComparison.Ordinal));
+            if (index >= 0) list[index] = item; else list.Add(item);
+            return JsonSerializer.SerializeToElement(list, JsonOptions);
+        }, cancellationToken).ConfigureAwait(false);
+
         return Success(key, $"Saved '{id}' in WinCare state '{key}'.", item, undo: false);
     }
 
     private async Task<CommandHandlerOutcome> RemoveStateItemAsync(string key, string id, CancellationToken cancellationToken)
     {
-        JsonElement current = await _state.ReadArrayAsync(key, cancellationToken).ConfigureAwait(false);
-        var list = current.ValueKind == JsonValueKind.Array
-            ? current.EnumerateArray().Where(x => !(x.ValueKind == JsonValueKind.Object && x.TryGetProperty("id", out JsonElement idElement) && string.Equals(idElement.GetString(), id, StringComparison.Ordinal))).Select(x => JsonNode.Parse(x.GetRawText())).ToList()
-            : new List<JsonNode?>();
-        int before = current.ValueKind == JsonValueKind.Array ? current.GetArrayLength() : 0;
-        if (list.Count == before) return Block(key, $"State item '{id}' was not found.");
-        await _state.WriteAsync(key, JsonSerializer.SerializeToElement(list, JsonOptions), cancellationToken).ConfigureAwait(false);
+        bool found = false;
+        JsonElement fallback = JsonSerializer.SerializeToElement(Array.Empty<object>());
+        await _state.UpdateAsync(key, fallback, current =>
+        {
+            if (current.ValueKind != JsonValueKind.Array) return current;
+            var list = new List<JsonNode?>();
+            foreach (JsonElement x in current.EnumerateArray())
+            {
+                if (x.ValueKind == JsonValueKind.Object && x.TryGetProperty("id", out JsonElement idElement) && string.Equals(idElement.GetString(), id, StringComparison.Ordinal))
+                {
+                    found = true;
+                    continue;
+                }
+                list.Add(JsonNode.Parse(x.GetRawText()));
+            }
+            return JsonSerializer.SerializeToElement(list, JsonOptions);
+        }, cancellationToken).ConfigureAwait(false);
+
+        if (!found) return Block(key, $"State item '{id}' was not found.");
         return Success(key, $"Removed '{id}' from WinCare state '{key}'.", new { id, removed = true }, undo: false);
     }
 
     private async Task PatchStateItemAsync(string key, string id, Action<JsonObject> patch, CancellationToken cancellationToken)
     {
-        JsonElement current = await _state.ReadArrayAsync(key, cancellationToken).ConfigureAwait(false);
-        var list = current.ValueKind == JsonValueKind.Array
-            ? current.EnumerateArray().Select(x => JsonNode.Parse(x.GetRawText())).Where(x => x is not null).Cast<JsonNode>().ToList()
-            : new List<JsonNode>();
-        JsonObject? item = list.OfType<JsonObject>().FirstOrDefault(obj => string.Equals(obj["id"]?.GetValue<string>(), id, StringComparison.Ordinal));
-        if (item is null) throw new CommandParameterException("Id", $"State item '{id}' was not found.");
-        patch(item);
-        await _state.WriteAsync(key, JsonSerializer.SerializeToElement(list, JsonOptions), cancellationToken).ConfigureAwait(false);
+        JsonElement fallback = JsonSerializer.SerializeToElement(Array.Empty<object>());
+        bool found = false;
+        await _state.UpdateAsync(key, fallback, current =>
+        {
+            var list = current.ValueKind == JsonValueKind.Array
+                ? current.EnumerateArray().Select(x => JsonNode.Parse(x.GetRawText())).Where(x => x is not null).Cast<JsonNode>().ToList()
+                : new List<JsonNode>();
+            JsonObject? item = list.OfType<JsonObject>().FirstOrDefault(obj => string.Equals(obj["id"]?.GetValue<string>(), id, StringComparison.Ordinal));
+            if (item is null) throw new CommandParameterException("Id", $"State item '{id}' was not found.");
+            found = true;
+            patch(item);
+            return JsonSerializer.SerializeToElement(list, JsonOptions);
+        }, cancellationToken).ConfigureAwait(false);
+
+        if (!found) throw new CommandParameterException("Id", $"State item '{id}' was not found.");
     }
 
     private async Task<CommandHandlerOutcome> ExportStateAsync(string key, CommandParameters p, string defaultName, CancellationToken cancellationToken)

@@ -27,7 +27,7 @@ public sealed partial class WindowsCommandExecutor
             if (!rules.TryGetValue(ruleId, out RemediationRule? rule))
             {
                 JsonElement partialPreset = Data(new { id = executionId, presetId = preset.Id, preset.Title, status = "PartiallyApplied", stoppedAtRule = ruleId, error = $"Missing rule '{ruleId}'", rules = results });
-                await AppendStateItemAsync("preset-history", partialPreset, cancellationToken).ConfigureAwait(false);
+                await TransitionStateItemAsync("preset-history", executionId, partialPreset, cancellationToken).ConfigureAwait(false);
                 throw new InvalidDataException($"Preset '{preset.Id}' references missing rule '{ruleId}'.");
             }
             try
@@ -37,19 +37,19 @@ public sealed partial class WindowsCommandExecutor
                 if (outcome.Status != CommandResultStatus.Succeeded)
                 {
                     JsonElement partialPreset = Data(new { id = executionId, presetId = preset.Id, preset.Title, status = "PartiallyApplied", stoppedAtRule = ruleId, message = outcome.Message, rules = results });
-                    await AppendStateItemAsync("preset-history", partialPreset, cancellationToken).ConfigureAwait(false);
+                    await TransitionStateItemAsync("preset-history", executionId, partialPreset, cancellationToken).ConfigureAwait(false);
                     return CommandHandlerOutcome.Failed("preset.partial_failure", $"Preset '{preset.Title}' stopped at rule '{ruleId}': {outcome.Message}");
                 }
             }
             catch (Exception ex)
             {
                 JsonElement partialPreset = Data(new { id = executionId, presetId = preset.Id, preset.Title, status = "PartiallyApplied", stoppedAtRule = ruleId, error = ex.Message, rules = results });
-                await AppendStateItemAsync("preset-history", partialPreset, cancellationToken).ConfigureAwait(false);
+                await TransitionStateItemAsync("preset-history", executionId, partialPreset, cancellationToken).ConfigureAwait(false);
                 throw;
             }
         }
         JsonElement finalPreset = Data(new { id = executionId, presetId = preset.Id, preset.Title, status = "Applied", completedAt = DateTimeOffset.UtcNow, rules = results });
-        await AppendStateItemAsync("preset-history", finalPreset, cancellationToken).ConfigureAwait(false);
+        await TransitionStateItemAsync("preset-history", executionId, finalPreset, cancellationToken).ConfigureAwait(false);
         return Success("preset", $"Preset '{preset.Title}' applied through native remediation primitives.", finalPreset, undo: false);
     }
 
@@ -73,13 +73,13 @@ public sealed partial class WindowsCommandExecutor
                 changes.Add(new { change.Type, detail, appliedAt = DateTimeOffset.UtcNow });
             }
             JsonElement history = Data(new { id = executionId, ruleId = rule.Id, rule.Title, status = "Applied", completedAt = DateTimeOffset.UtcNow, changes });
-            await AppendStateItemAsync("remediation-history", history, cancellationToken).ConfigureAwait(false);
+            await TransitionStateItemAsync("remediation-history", executionId, history, cancellationToken).ConfigureAwait(false);
             return Success("preset", $"Rule '{rule.Title}' applied.", history, undo: rule.Reversible);
         }
         catch (Exception ex)
         {
             JsonElement partialRecord = Data(new { id = executionId, ruleId = rule.Id, rule.Title, status = "PartiallyApplied", failedAt = DateTimeOffset.UtcNow, error = ex.Message, appliedChanges = changes });
-            await AppendStateItemAsync("remediation-history", partialRecord, cancellationToken).ConfigureAwait(false);
+            await TransitionStateItemAsync("remediation-history", executionId, partialRecord, cancellationToken).ConfigureAwait(false);
             throw;
         }
     }

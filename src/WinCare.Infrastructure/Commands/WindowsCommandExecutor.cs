@@ -149,6 +149,7 @@ public sealed partial class WindowsCommandExecutor : ICommandOperationExecutor, 
         CommandParameters p,
         CancellationToken cancellationToken)
     {
+        ValidateCommandParameters(definition, p);
         return definition.Id switch
         {
             "system" => await SystemOverviewAsync(cancellationToken).ConfigureAwait(false),
@@ -314,7 +315,7 @@ public sealed partial class WindowsCommandExecutor : ICommandOperationExecutor, 
         CommandParameters p,
         CancellationToken cancellationToken)
     {
-        ValidateMutationParameters(definition.Id, p);
+        ValidateCommandParameters(definition, p);
         if (!request.Apply)
         {
             return MutationPreview(definition, p);
@@ -430,7 +431,7 @@ public sealed partial class WindowsCommandExecutor : ICommandOperationExecutor, 
         };
     }
 
-    private static void ValidateMutationParameters(string commandId, CommandParameters p)
+    public static void ValidateCommandParameters(CommandDefinition definition, CommandParameters p)
     {
         static void RequireStrings(CommandParameters parameters, params string[] names)
         {
@@ -445,8 +446,26 @@ public sealed partial class WindowsCommandExecutor : ICommandOperationExecutor, 
             }
         }
 
-        switch (commandId)
+        switch (definition.Id)
         {
+            case "process-modules":
+            case "appcontainer":
+                _ = p.Int32("ProcessId", 0, 1, int.MaxValue);
+                break;
+            case "experience-visual-asset":
+            case "archive-inspect":
+            case "peer-log-tail":
+            case "peer-pe":
+            case "file-preview":
+            case "image-metadata":
+                _ = p.RequiredString("Path");
+                break;
+            case "experience-sprite-layout":
+                _ = p.Int32("FrameWidth", 0, 1, 16384);
+                _ = p.Int32("FrameHeight", 0, 1, 16384);
+                _ = p.Int32("SheetWidth", 0, 1, 65536);
+                _ = p.Int32("SheetHeight", 0, 1, 65536);
+                break;
             case "preset":
                 RequireStrings(p, "PresetId");
                 break;
@@ -492,8 +511,6 @@ public sealed partial class WindowsCommandExecutor : ICommandOperationExecutor, 
             case "wua-unhide":
             case "wua-download":
             case "wua-install":
-                RequireIds(p, "UpdateIds");
-                break;
             case "wua-uninstall":
                 RequireIds(p, "UpdateIds");
                 break;
@@ -615,42 +632,59 @@ public sealed partial class WindowsCommandExecutor : ICommandOperationExecutor, 
             case "telemetry-retention": _ = p.Int32("RetentionDays", 30, 1, 3650); break;
             case "ebpf-admit": RequireStrings(p, "Path"); break;
 
-            // These commands either take optional parameters only or have no required input.
-            case "widget-export":
-            case "maintenance-export":
-            case "sysmon-uninstall":
-            case "power-start":
-            case "input-release":
+            case "cleaner-disk-pressure-schedule":
             case "download-start-due":
-            case "telemetry-capture":
-            case "telemetry-export":
-            case "workspace-layout-save":
+            case "experience-remote-set":
+            case "explorer-session-save":
+            case "hardening-apply":
+            case "hardware-report":
+            case "input-release":
+            case "maintenance-export":
+            case "maintenance-template-create":
+            case "peer-container-log-config":
+            case "peer-display-reset":
+            case "peer-task-save":
+            case "power-start":
             case "remote-emergency":
-            case "studio-monitoring-export":
+            case "studio-brightness-save":
             case "studio-file-workspace-save":
             case "studio-layout-save":
-            case "studio-brightness-save":
+            case "studio-monitoring-export":
             case "studio-wezterm":
-            case "hardening-apply":
-            case "maintenance-template-create":
+            case "sysmon-uninstall":
             case "system-shortcuts-export":
-            case "experience-remote-set":
-            case "hardware-report":
-            case "explorer-session-save":
+            case "telemetry-capture":
+            case "telemetry-export":
             case "terminal-export":
-            case "cleaner-disk-pressure-schedule":
-            case "peer-display-reset":
-            case "peer-container-log-config":
-            case "peer-task-save":
             case "vbs-harden":
+            case "widget-export":
+            case "workspace-layout-save":
                 break;
+
+            // Optional or parameterless commands
             default:
-                throw new InvalidOperationException($"Mutating command '{commandId}' is missing parameter validation.");
+                break;
         }
+    }
+
+    private static object GetAffectedResourcesForPreview(string commandId, CommandParameters p)
+    {
+        return commandId switch
+        {
+            "pagefile-set" => new[] { new { resourceType = "Registry/WMI", path = @"HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management", target = "PagingFiles", proposedValue = p.String("Mode", "SystemManaged"), reversible = true } },
+            "experience-power-apply" => new[] { new { resourceType = "PowerScheme", path = @"PowerCfg", target = "ActiveScheme", proposedValue = p.String("ProfileId", "balanced"), reversible = true } },
+            "security-control-reduce" => new[] { new { resourceType = "SecurityControl", path = p.String("Control", "DefenderRealtime"), target = "State", proposedValue = "Disabled", durationMinutes = p.Int32("DurationMinutes", 15, 5, 1440), reversible = true } },
+            "security-control-restore" => new[] { new { resourceType = "SecurityControl", path = p.String("RecordId", "all"), target = "State", proposedValue = "Restored", reversible = true } },
+            "cleaner-disk-pressure" => new[] { new { resourceType = "FileSystem", path = @"%TEMP%, %WINDIR%\Temp", target = "Cleanup", olderThanDays = p.Int32("OlderThanDays", 7, 0, 3650), proposedValue = "PurgeExpiredFiles", reversible = false } },
+            "deep-clean" => new[] { new { resourceType = "FileSystem", path = @"C:\Windows\Temp", target = "DeepClean", profile = p.String("ProfileId", "temp"), proposedValue = "Purge", reversible = false } },
+            "preset" => new[] { new { resourceType = "RemediationPreset", path = p.String("PresetId", ""), target = "PresetExecution", proposedValue = "ApplyAllRules", reversible = false } },
+            _ => new[] { new { resourceType = "SystemState", path = commandId, target = "Mutation", proposedValue = "Apply", reversible = true } }
+        };
     }
 
     private static CommandHandlerOutcome MutationPreview(CommandDefinition definition, CommandParameters p)
     {
+        var affectedResources = GetAffectedResourcesForPreview(definition.Id, p);
         JsonElement data = JsonSerializer.SerializeToElement(new
         {
             commandId = definition.Id,
@@ -659,7 +693,9 @@ public sealed partial class WindowsCommandExecutor : ICommandOperationExecutor, 
             risk = definition.Risk.ToString(),
             administratorAccess = definition.AdministratorAccess.ToString(),
             restart = definition.Restart.ToString(),
-            parameters = "Validated. Review the Advanced details payload before approval.",
+            reversible = definition.UndoAvailable,
+            affectedResources,
+            parameters = "Validated. Review the concrete affected resources payload before approval.",
         }, JsonOptions);
         return CommandHandlerOutcome.Succeeded(
             definition.Id + ".preview",
@@ -710,34 +746,7 @@ public sealed partial class WindowsCommandExecutor : ICommandOperationExecutor, 
                 : Data(new { });
 
             CommandParameters cmdParams = new(parameters);
-            if (!definition.ReadOnly)
-            {
-                ValidateMutationParameters(definition.Id, cmdParams);
-            }
-            else
-            {
-                ValidateReadOnlyParameters(definition.Id, cmdParams);
-            }
-        }
-    }
-
-    private static void ValidateReadOnlyParameters(string commandId, CommandParameters p)
-    {
-        switch (commandId)
-        {
-            case "process-modules":
-            case "appcontainer":
-                _ = p.Int32("ProcessId", 0, 1, int.MaxValue);
-                break;
-            case "experience-visual-asset":
-            case "experience-sprite-layout":
-            case "archive-inspect":
-            case "peer-log-tail":
-            case "peer-pe":
-            case "file-preview":
-            case "image-metadata":
-                _ = p.RequiredString("Path");
-                break;
+            ValidateCommandParameters(definition, cmdParams);
         }
     }
 

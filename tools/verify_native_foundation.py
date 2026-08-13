@@ -276,7 +276,7 @@ def verify() -> list[Finding]:
             }
             main_executor = ROOT / "src/WinCare.Infrastructure/Commands/WindowsCommandExecutor.cs"
             text = main_executor.read_text(encoding="utf-8") if main_executor.is_file() else ""
-            marker = "private static void ValidateMutationParameters"
+            marker = "public static void ValidateCommandParameters"
             validation_text = text[text.find(marker):] if marker in text else ""
             validation_ids = set(re.findall(r'case\s+"([a-z0-9-]+)"', validation_text))
             missing_validation = sorted(mutating_ids - validation_ids)
