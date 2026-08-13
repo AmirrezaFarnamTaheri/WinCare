@@ -2024,7 +2024,7 @@
       "administratorAccess": "MayBeRequired",
       "restart": "No",
       "legacySource": "src/WinCare/UI/98-Headless.ps1",
-      "migrationStatus": "Cataloged",
+      "migrationStatus": "Implemented",
       "keywords": [
         "download",
         "due",
@@ -2045,7 +2045,7 @@
       "administratorAccess": "MayBeRequired",
       "restart": "No",
       "legacySource": "src/WinCare/UI/98-Headless.ps1",
-      "migrationStatus": "Cataloged",
+      "migrationStatus": "Implemented",
       "keywords": [
         "download",
         "network & updates",
@@ -2065,7 +2065,7 @@
       "administratorAccess": "MayBeRequired",
       "restart": "No",
       "legacySource": "src/WinCare/UI/98-Headless.ps1",
-      "migrationStatus": "Cataloged",
+      "migrationStatus": "Implemented",
       "keywords": [
         "download",
         "network & updates",
@@ -2085,7 +2085,7 @@
       "administratorAccess": "MayBeRequired",
       "restart": "No",
       "legacySource": "src/WinCare/UI/98-Headless.ps1",
-      "migrationStatus": "Cataloged",
+      "migrationStatus": "Implemented",
       "keywords": [
         "download",
         "network & updates",
@@ -2105,7 +2105,7 @@
       "administratorAccess": "MayBeRequired",
       "restart": "No",
       "legacySource": "src/WinCare/UI/98-Headless.ps1",
-      "migrationStatus": "Cataloged",
+      "migrationStatus": "Implemented",
       "keywords": [
         "cancel",
         "cancel a download",
@@ -2125,7 +2125,7 @@
       "administratorAccess": "MayBeRequired",
       "restart": "No",
       "legacySource": "src/WinCare/UI/98-Headless.ps1",
-      "migrationStatus": "Cataloged",
+      "migrationStatus": "Implemented",
       "keywords": [
         "download",
         "network & updates",
@@ -2145,7 +2145,7 @@
       "administratorAccess": "No",
       "restart": "No",
       "legacySource": "src/WinCare/UI/98-Headless.ps1",
-      "migrationStatus": "Cataloged",
+      "migrationStatus": "Implemented",
       "keywords": [
         "checkup",
         "results",
@@ -2165,7 +2165,7 @@
       "administratorAccess": "No",
       "restart": "No",
       "legacySource": "src/WinCare/UI/98-Headless.ps1",
-      "migrationStatus": "Cataloged",
+      "migrationStatus": "Implemented",
       "keywords": [
         "checkup",
         "history",
@@ -2185,7 +2185,7 @@
       "administratorAccess": "Required",
       "restart": "No",
       "legacySource": "src/WinCare/UI/98-Headless.ps1",
-      "migrationStatus": "Cataloged",
+      "migrationStatus": "Implemented",
       "keywords": [
         "all tools",
         "capture",
@@ -2205,7 +2205,7 @@
       "administratorAccess": "Required",
       "restart": "No",
       "legacySource": "src/WinCare/UI/98-Headless.ps1",
-      "migrationStatus": "Cataloged",
+      "migrationStatus": "Implemented",
       "keywords": [
         "all tools",
         "commands",

@@ -132,6 +132,16 @@ public static class CommandRuntime
             new DownloadsDueCommandHandler(),
             new DownloadCreateCommandHandler(),
             new DownloadStartCommandHandler(),
+            new DownloadStartDueCommandHandler(),
+            new DownloadSuspendCommandHandler(),
+            new DownloadResumeCommandHandler(),
+            new DownloadReconcileCommandHandler(),
+            new DownloadCancelCommandHandler(),
+            new DownloadRemoveCommandHandler(),
+            new TelemetrySnapshotCommandHandler(),
+            new TelemetryHistoryCommandHandler(),
+            new TelemetryCaptureCommandHandler(),
+            new TelemetryExportCommandHandler(),
         };
 
         if (nativeCore is not null)

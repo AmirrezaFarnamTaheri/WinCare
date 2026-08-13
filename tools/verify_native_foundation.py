@@ -193,11 +193,14 @@ def verify() -> list[Finding]:
                 "offline-package-add", "offline-feature-set", "power-sessions", "power-start", "power-stop", "windows",
                 "monitors", "window-zones", "window-zone-set", "window-topmost", "window-activate",
                 "input-release", "downloads", "downloads-due", "download-create", "download-start",
+                "download-start-due", "download-suspend", "download-resume", "download-reconcile",
+                "download-cancel", "download-remove", "telemetry-snapshot", "telemetry-history",
+                "telemetry-capture", "telemetry-export",
             }
             if implemented_ids != expected_ids:
                 findings.append(Finding(
                     "implemented-command-set",
-                    f"expected 104 command IDs, found {sorted(implemented_ids)}",
+                    f"expected 114 command IDs, found {sorted(implemented_ids)}",
                 ))
             for index, item in enumerate(commands):
                 if not isinstance(item, dict):
@@ -291,9 +294,12 @@ def verify() -> list[Finding]:
         "offline-package-add", "offline-feature-set", "power-sessions", "power-start", "power-stop", "windows",
         "monitors", "window-zones", "window-zone-set", "window-topmost", "window-activate",
         "input-release", "downloads", "downloads-due", "download-create", "download-start",
+        "download-start-due", "download-suspend", "download-resume", "download-reconcile",
+        "download-cancel", "download-remove", "telemetry-snapshot", "telemetry-history",
+        "telemetry-capture", "telemetry-export",
     }
     if handler_ids != expected_ids:
-        findings.append(Finding("handler-set", f"expected 104 handlers, found {sorted(handler_ids)}"))
+        findings.append(Finding("handler-set", f"expected 114 handlers, found {sorted(handler_ids)}"))
 
     for path in _iter_text_files(NATIVE_ROOTS):
         text = path.read_text(encoding="utf-8", errors="replace")

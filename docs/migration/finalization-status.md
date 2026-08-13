@@ -33,8 +33,8 @@
 | Gate | Result |
 |---|---|
 | Command ID parity | 259 of 259 |
-| Contract verification | 104 of 259 |
-| Implementation readiness | 104 of 259 |
+| Contract verification | 114 of 259 |
+| Implementation readiness | 114 of 259 |
 | Native source PowerShell files | 0 |
 | Production blockers | 259 behavior-verification gaps |
 

@@ -9,10 +9,10 @@ The frozen oracle contains all stable command IDs from the historical implementa
 | Total stable IDs | 259 |
 | Unique native catalog IDs | 259 |
 | Cataloged | 259 |
-| Contract verified or later | 104 |
-| Implemented or later | 104 |
+| Contract verified or later | 114 |
+| Implemented or later | 114 |
 | Behavior verified | 0 |
-| Native implementation blockers | 155 |
+| Native implementation blockers | 145 |
 | Production behavior-verification blockers | 259 |
 
 Implemented native commands:
