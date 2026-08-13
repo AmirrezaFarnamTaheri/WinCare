@@ -157,6 +157,13 @@ class CommandRuntimeTests(unittest.TestCase):
                         findings.append(f"{path.relative_to(ROOT)}: {token}")
         self.assertEqual([], findings)
 
+    def test_command_plan_prevalidation_and_read_only_fail_closed(self) -> None:
+        executor = (ROOT / "src/WinCare.Infrastructure/Commands/WindowsCommandExecutor.cs").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("ValidateCommandPlanSteps(steps)", executor)
+        self.assertIn("No concrete native inspection route implemented", executor)
+
 
 if __name__ == "__main__":
     unittest.main()

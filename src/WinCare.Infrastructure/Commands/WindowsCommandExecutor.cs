@@ -298,7 +298,7 @@ public sealed partial class WindowsCommandExecutor : ICommandOperationExecutor, 
             "virtual-display-capability" => VirtualDisplayCapability(),
             "wireguard-tunnels" => await WireGuardTunnelsAsync(p, cancellationToken).ConfigureAwait(false),
             "quic-capability" => QuicCapability(),
-            _ => await GenericInspectionAsync(definition, p, cancellationToken).ConfigureAwait(false),
+            _ => Block(definition.Id, $"No concrete native inspection route implemented for read-only command '{definition.Id}'."),
         };
     }
 
@@ -497,8 +497,7 @@ public sealed partial class WindowsCommandExecutor : ICommandOperationExecutor, 
             case "run-automation":
             {
                 JsonElement steps = p.Element("Steps");
-                if (steps.ValueKind != JsonValueKind.Array || steps.GetArrayLength() is < 1 or > 50)
-                    throw new CommandParameterException("Steps", "Steps must be an array containing 1 to 50 commands.");
+                ValidateCommandPlanSteps(steps);
                 break;
             }
             case "cancel-operation": RequireStrings(p, "OperationId"); break;
@@ -675,6 +674,37 @@ public sealed partial class WindowsCommandExecutor : ICommandOperationExecutor, 
 
     private static CommandHandlerOutcome Block(string id, string message) =>
         CommandHandlerOutcome.Blocked(id + ".blocked", message);
+
+    public static void ValidateCommandPlanSteps(JsonElement steps)
+    {
+        if (steps.ValueKind != JsonValueKind.Array)
+            throw new CommandParameterException("Steps", "Steps must be an array of command objects.");
+        if (steps.GetArrayLength() is < 1 or > 50)
+            throw new CommandParameterException("Steps", "Steps must be an array containing 1 to 50 commands.");
+
+        foreach (JsonElement step in steps.EnumerateArray())
+        {
+            if (step.ValueKind != JsonValueKind.Object)
+                throw new CommandParameterException("Steps", "Every command-plan step must be an object.");
+            string id = step.TryGetProperty("commandId", out JsonElement idEl) ? idEl.GetString() ?? string.Empty : string.Empty;
+            if (id.Length == 0)
+                throw new CommandParameterException("Steps", "Every command-plan step requires a commandId.");
+            if (id is "run-automation" or "playbook" or "preset" or "cancel-operation")
+                throw new CommandParameterException("Steps", $"Recursive orchestration command '{id}' is not allowed inside a command plan.");
+            CommandDefinition? definition = WinCare.CommandCatalog.CommandCatalog.Find(id);
+            if (definition is null)
+                throw new CommandParameterException("Steps", $"Unknown command '{id}' in command plan step.");
+
+            JsonElement parameters = step.TryGetProperty("parameters", out JsonElement paramEl) && paramEl.ValueKind == JsonValueKind.Object
+                ? paramEl.Clone()
+                : Data(new { });
+
+            if (!definition.ReadOnly)
+            {
+                ValidateMutationParameters(definition.Id, new CommandParameters(parameters));
+            }
+        }
+    }
 
     public void Dispose()
     {

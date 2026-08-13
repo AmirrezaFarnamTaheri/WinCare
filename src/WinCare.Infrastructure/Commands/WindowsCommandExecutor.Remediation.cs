@@ -172,24 +172,20 @@ public sealed partial class WindowsCommandExecutor
 
     private async Task<CommandHandlerOutcome> ExecuteCommandPlanAsync(string commandId, JsonElement steps, CancellationToken cancellationToken)
     {
-        if (steps.GetArrayLength() is 0 or > 50) throw new CommandParameterException("Steps", "Command plans must contain 1-50 steps.");
+        WindowsCommandExecutor.ValidateCommandPlanSteps(steps);
         var results = new List<object>();
         foreach (JsonElement step in steps.EnumerateArray())
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (step.ValueKind != JsonValueKind.Object) throw new CommandParameterException("Steps", "Every command-plan step must be an object.");
-            string id = step.TryGetProperty("commandId", out JsonElement idElement) ? idElement.GetString() ?? string.Empty : string.Empty;
-            if (id.Length == 0) throw new CommandParameterException("Steps", "Every command-plan step requires commandId.");
-            if (id is "run-automation" or "playbook" or "preset" or "cancel-operation") throw new CommandParameterException("Steps", $"Recursive orchestration command '{id}' is not allowed inside a command plan.");
-            CommandDefinition? definition = WinCare.CommandCatalog.CommandCatalog.Find(id);
-            if (definition is null) throw new CommandParameterException("Steps", $"Unknown command '{id}'.");
+            string id = step.GetProperty("commandId").GetString()!;
+            CommandDefinition definition = WinCare.CommandCatalog.CommandCatalog.Find(id)!;
             JsonElement parameters = step.TryGetProperty("parameters", out JsonElement parameterElement) && parameterElement.ValueKind == JsonValueKind.Object ? parameterElement.Clone() : Data(new { });
             CommandRequest nested = definition.ReadOnly ? CommandRequest.Preview(id, parameters) : CommandRequest.Execute(id, parameters);
             CommandHandlerOutcome outcome = await ExecuteAsync(definition, nested, cancellationToken).ConfigureAwait(false);
             results.Add(new { commandId = id, status = outcome.Status.ToString(), outcome.Code, outcome.Message, outcome.Data });
             if (outcome.Status != CommandResultStatus.Succeeded)
             {
-                return CommandHandlerOutcome.Failed(commandId + ".step_failed", $"Command plan stopped at '{id}': {outcome.Message}");
+                return CommandHandlerOutcome.Failed(commandId + ".step_failed", $"Command plan stopped at '{id}': {outcome.Message}", Data(results));
             }
         }
         return Success(commandId, "Command plan completed through the native command dispatcher.", results);

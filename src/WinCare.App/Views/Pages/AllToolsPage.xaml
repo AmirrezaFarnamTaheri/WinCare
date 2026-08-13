@@ -128,8 +128,11 @@
                                 Visibility="{x:Bind local:AllToolsPage.BoolToVisibility(ViewModel.Execution.IsMutatingTool), Mode=OneWay}"
                                 AutomationProperties.AutomationId="ReviewApprovedToggle"
                                 AutomationProperties.Name="Approve mutating command execution after preview" />
-                            <StackPanel Orientation="Horizontal" Spacing="8">
-                                                            <Expander Header="Command parameters" AutomationProperties.Name="Command parameters JSON">
+                            <Expander
+                                Header="Command parameters"
+                                HorizontalAlignment="Stretch"
+                                HorizontalContentAlignment="Stretch"
+                                AutomationProperties.Name="Command parameters JSON">
                                 <TextBox
                                     MinHeight="120"
                                     AcceptsReturn="True"
@@ -143,7 +146,8 @@
                                     AutomationProperties.AutomationId="CommandParameterJson"
                                     AutomationProperties.Name="Command parameters as JSON" />
                             </Expander>
-<Button
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <Button
                                     Command="{x:Bind ViewModel.Execution.ExecuteSelectedToolCommand}"
                                     Content="{x:Bind ViewModel.Execution.PrimaryActionLabel, Mode=OneWay}"
                                     AutomationProperties.AutomationId="ExecuteSelectedTool"

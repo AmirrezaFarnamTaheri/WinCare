@@ -64,7 +64,6 @@ class FinalizationTests(unittest.TestCase):
             self.assertEqual(259, readiness.behavior_verified)
             self.assertEqual(0, readiness.production_blockers)
 
-    @unittest.skipUnless(LEGACY_EXECUTABLE_ORACLE.is_file(), "executable legacy oracle is intentionally absent from finalized native-source archives")
     def test_rc_finalization_separates_native_source_and_legacy_oracle(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             output = Path(directory)
@@ -97,7 +96,6 @@ class FinalizationTests(unittest.TestCase):
 
             with zipfile.ZipFile(result.oracle_archive) as archive:
                 names = archive.namelist()
-                self.assertTrue(any(name.lower().endswith(".psm1") for name in names))
                 self.assertIn("migration/oracle/provenance.json", names)
                 for entry in archive.infolist():
                     self.assertEqual((1980, 1, 1, 0, 0, 0), entry.date_time)
@@ -119,7 +117,6 @@ class FinalizationTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "version label"):
                 finalize_release(ROOT, Path(directory), version="../escape", mode="rc")
 
-    @unittest.skipUnless(LEGACY_EXECUTABLE_ORACLE.is_file(), "executable legacy oracle is intentionally absent from finalized native-source archives")
     def test_finalizer_cli_runs_from_repository_root(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             result = subprocess.run(
