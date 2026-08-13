@@ -182,6 +182,16 @@ public static class CommandRuntime
             new StudioLayoutSaveCommandHandler(),
             new StudioPackageCommandHandler(),
             new StudioBrightnessSchedulesCommandHandler(),
+            new StudioBrightnessSaveCommandHandler(),
+            new StudioBrightnessApplyCommandHandler(),
+            new StudioFolderAppearanceCommandHandler(),
+            new StudioKanataValidateCommandHandler(),
+            new StudioSyncthingCommandHandler(),
+            new StudioWeztermCommandHandler(),
+            new StudioAdbInventoryCommandHandler(),
+            new StudioXboxFseCommandHandler(),
+            new ToolkitDiagnosticsCommandHandler(),
+            new ToolkitWin32ErrorCommandHandler(),
         };
 
         if (nativeCore is not null)

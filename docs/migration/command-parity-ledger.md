@@ -9,10 +9,10 @@ The frozen oracle contains all stable command IDs from the historical implementa
 | Total stable IDs | 259 |
 | Unique native catalog IDs | 259 |
 | Cataloged | 259 |
-| Contract verified or later | 154 |
-| Implemented or later | 154 |
+| Contract verified or later | 164 |
+| Implemented or later | 164 |
 | Behavior verified | 0 |
-| Native implementation blockers | 105 |
+| Native implementation blockers | 95 |
 | Production behavior-verification blockers | 259 |
 
 Implemented native commands:
@@ -171,6 +171,16 @@ Implemented native commands:
 - `studio-layout-save`
 - `studio-package`
 - `studio-brightness-schedules`
+- `studio-brightness-save`
+- `studio-brightness-apply`
+- `studio-folder-appearance`
+- `studio-kanata-validate`
+- `studio-syncthing`
+- `studio-wezterm`
+- `studio-adb-inventory`
+- `studio-xbox-fse`
+- `toolkit-diagnostics`
+- `toolkit-win32-error`
 
 None of these commands are marked `BehaviorVerified` because Windows oracle comparison has not run in the current environment.
 
