@@ -431,7 +431,7 @@ public sealed partial class WindowsCommandExecutor : ICommandOperationExecutor, 
         };
     }
 
-    public static void ValidateCommandParameters(CommandDefinition definition, CommandParameters p)
+    internal static void ValidateCommandParameters(CommandDefinition definition, CommandParameters p)
     {
         static void RequireStrings(CommandParameters parameters, params string[] names)
         {

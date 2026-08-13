@@ -30,7 +30,7 @@ class FullNativeMigrationTests(unittest.TestCase):
         source = (ROOT / "src/WinCare.Infrastructure/Commands/WindowsCommandExecutor.cs").read_text(encoding="utf-8")
         read_start = source.index("private async Task<CommandHandlerOutcome> ExecuteReadOnlyAsync")
         mutation_start = source.index("private async Task<CommandHandlerOutcome> ExecuteMutationAsync")
-        validation_start = source.index("public static void ValidateCommandParameters")
+        validation_start = source.index("static void ValidateCommandParameters")
         preview_start = source.index("private static object GetAffectedResourcesForPreview")
         read_routes = set(re.findall(r'"([a-z0-9-]+)"\s*=>', source[read_start:mutation_start])) | {"catalog", "presets"}
         mutation_routes = set(re.findall(r'"([a-z0-9-]+)"\s*=>', source[mutation_start:validation_start]))
