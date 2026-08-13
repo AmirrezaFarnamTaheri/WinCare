@@ -272,31 +272,27 @@ public sealed partial class WindowsCommandExecutor
 
     private static List<PhysicalMonitorRecord> EnumeratePhysicalMonitors()
     {
-        List<(nint Handle, string Description)> handles = EnumeratePhysicalMonitorHandles();
         var rows = new List<PhysicalMonitorRecord>();
-        foreach ((nint handle, string description) in handles)
-        {
-            try
-            {
-                uint minB = 0, curB = 0, maxB = 0, minC = 0, curC = 0, maxC = 0;
-                bool hasBrightness = WindowsInterop.GetMonitorBrightness(handle, out minB, out curB, out maxB);
-                bool hasContrast = WindowsInterop.GetMonitorContrast(handle, out minC, out curC, out maxC);
-                rows.Add(new PhysicalMonitorRecord(description, hasBrightness, minB, curB, maxB, hasContrast, minC, curC, maxC));
-            }
-            finally { WindowsInterop.DestroyPhysicalMonitors(1, [new WindowsInterop.PhysicalMonitor { Handle = handle, Description = description }]); }
-        }
-        return rows;
-    }
-
-    private static List<(nint Handle, string Description)> EnumeratePhysicalMonitorHandles()
-    {
-        var rows = new List<(nint, string)>();
         WindowsInterop.EnumDisplayMonitors(0, 0, (nint monitor, nint hdc, ref WindowsInterop.Rect monitorRect, nint data) =>
         {
             if (!WindowsInterop.GetNumberOfPhysicalMonitorsFromHMONITOR(monitor, out uint count) || count == 0 || count > 32) return true;
             var physical = new WindowsInterop.PhysicalMonitor[count];
             if (!WindowsInterop.GetPhysicalMonitorsFromHMONITOR(monitor, count, physical)) return true;
-            foreach (WindowsInterop.PhysicalMonitor item in physical) rows.Add((item.Handle, item.Description ?? string.Empty));
+            try
+            {
+                foreach (WindowsInterop.PhysicalMonitor item in physical)
+                {
+                    if (item.Handle == 0) continue;
+                    uint minB = 0, curB = 0, maxB = 0, minC = 0, curC = 0, maxC = 0;
+                    bool hasBrightness = WindowsInterop.GetMonitorBrightness(item.Handle, out minB, out curB, out maxB);
+                    bool hasContrast = WindowsInterop.GetMonitorContrast(item.Handle, out minC, out curC, out maxC);
+                    rows.Add(new PhysicalMonitorRecord(item.Description ?? string.Empty, hasBrightness, minB, curB, maxB, hasContrast, minC, curC, maxC));
+                }
+            }
+            finally
+            {
+                WindowsInterop.DestroyPhysicalMonitors(count, physical);
+            }
             return true;
         }, 0);
         return rows;

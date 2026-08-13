@@ -7,20 +7,23 @@ public sealed partial class WindowsCommandExecutor
 {
     private async Task AppendStateItemAsync(string key, JsonElement item, CancellationToken cancellationToken)
     {
-        JsonElement current = await _state.ReadArrayAsync(key, cancellationToken).ConfigureAwait(false);
-        var list = current.ValueKind == JsonValueKind.Array
-            ? current.EnumerateArray().Select(x => JsonNode.Parse(x.GetRawText())).ToList()
-            : new List<JsonNode?>();
-        if (item.ValueKind == JsonValueKind.Object &&
-            item.TryGetProperty("id", out JsonElement idElement) &&
-            idElement.ValueKind == JsonValueKind.String &&
-            idElement.GetString() is string id &&
-            list.OfType<JsonObject>().Any(existing => string.Equals(existing["id"]?.GetValue<string>(), id, StringComparison.Ordinal)))
+        JsonElement fallback = JsonSerializer.SerializeToElement(Array.Empty<object>());
+        await _state.UpdateAsync(key, fallback, current =>
         {
-            throw new CommandParameterException("Id", $"State item '{id}' already exists.");
-        }
-        list.Add(JsonNode.Parse(item.GetRawText()));
-        await _state.WriteAsync(key, JsonSerializer.SerializeToElement(list, JsonOptions), cancellationToken).ConfigureAwait(false);
+            var list = current.ValueKind == JsonValueKind.Array
+                ? current.EnumerateArray().Select(x => JsonNode.Parse(x.GetRawText())).ToList()
+                : new List<JsonNode?>();
+            if (item.ValueKind == JsonValueKind.Object &&
+                item.TryGetProperty("id", out JsonElement idElement) &&
+                idElement.ValueKind == JsonValueKind.String &&
+                idElement.GetString() is string id &&
+                list.OfType<JsonObject>().Any(existing => string.Equals(existing["id"]?.GetValue<string>(), id, StringComparison.Ordinal)))
+            {
+                throw new CommandParameterException("Id", $"State item '{id}' already exists.");
+            }
+            list.Add(JsonNode.Parse(item.GetRawText()));
+            return JsonSerializer.SerializeToElement(list, JsonOptions);
+        }, cancellationToken).ConfigureAwait(false);
     }
 
     private async Task<CommandHandlerOutcome> UpsertStateItemAsync(string key, CommandParameters p, CancellationToken cancellationToken)

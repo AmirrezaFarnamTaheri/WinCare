@@ -12,6 +12,10 @@ public sealed class CommandStateStore
     private readonly string _root;
     private readonly SemaphoreSlim _gate = new(1, 1);
 
+    /// <summary>
+    /// Initializes a new instance of <see cref="CommandStateStore"/>.
+    /// </summary>
+    /// <param name="root">Optional data root directory.</param>
     public CommandStateStore(string? root = null)
     {
         _root = Path.GetFullPath(root ?? Path.Combine(
@@ -21,8 +25,14 @@ public sealed class CommandStateStore
         Directory.CreateDirectory(_root);
     }
 
+    /// <summary>
+    /// Gets the absolute root data path.
+    /// </summary>
     public string Root => _root;
 
+    /// <summary>
+    /// Reads a state element by key.
+    /// </summary>
     public async Task<JsonElement> ReadAsync(string key, JsonElement fallback, CancellationToken cancellationToken)
     {
         string path = PathFor(key);
@@ -50,6 +60,9 @@ public sealed class CommandStateStore
         }
     }
 
+    /// <summary>
+    /// Writes a state element by key.
+    /// </summary>
     public async Task WriteAsync(string key, JsonElement value, CancellationToken cancellationToken)
     {
         string path = PathFor(key);
@@ -72,12 +85,68 @@ public sealed class CommandStateStore
         }
     }
 
+    /// <summary>
+    /// Atomically reads, transforms, and writes state within a single lock.
+    /// </summary>
+    public async Task<JsonElement> UpdateAsync(
+        string key,
+        JsonElement fallback,
+        Func<JsonElement, JsonElement> transform,
+        CancellationToken cancellationToken)
+    {
+        string path = PathFor(key);
+        string temp = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
+        await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            JsonElement current = fallback.Clone();
+            if (File.Exists(path))
+            {
+                try
+                {
+                    await using FileStream readStream = new(path, FileMode.Open, FileAccess.Read, FileShare.Read, 64 * 1024, useAsync: true);
+                    using JsonDocument doc = await JsonDocument.ParseAsync(readStream, cancellationToken: cancellationToken).ConfigureAwait(false);
+                    current = doc.RootElement.Clone();
+                }
+                catch (JsonException ex)
+                {
+                    throw new InvalidDataException($"WinCare state '{key}' is not valid JSON.", ex);
+                }
+            }
+
+            JsonElement updated = transform(current);
+
+            Directory.CreateDirectory(_root);
+            await using (FileStream writeStream = new(temp, FileMode.CreateNew, FileAccess.Write, FileShare.None, 64 * 1024, useAsync: true))
+            {
+                await JsonSerializer.SerializeAsync(writeStream, updated, JsonOptions, cancellationToken).ConfigureAwait(false);
+                await writeStream.FlushAsync(cancellationToken).ConfigureAwait(false);
+            }
+            File.Move(temp, path, overwrite: true);
+            return updated;
+        }
+        finally
+        {
+            TryDelete(temp);
+            _gate.Release();
+        }
+    }
+
+    /// <summary>
+    /// Reads state as a JSON object.
+    /// </summary>
     public async Task<JsonElement> ReadObjectAsync(string key, CancellationToken cancellationToken) =>
         await ReadAsync(key, JsonSerializer.SerializeToElement(new Dictionary<string, object?>()), cancellationToken).ConfigureAwait(false);
 
+    /// <summary>
+    /// Reads state as a JSON array.
+    /// </summary>
     public async Task<JsonElement> ReadArrayAsync(string key, CancellationToken cancellationToken) =>
         await ReadAsync(key, JsonSerializer.SerializeToElement(Array.Empty<object>()), cancellationToken).ConfigureAwait(false);
 
+    /// <summary>
+    /// Resolves export path safely within target directory bounds.
+    /// </summary>
     public string ResolveExportPath(string requestedPath, string defaultFileName)
     {
         string path = string.IsNullOrWhiteSpace(requestedPath)

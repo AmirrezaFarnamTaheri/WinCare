@@ -63,6 +63,7 @@ jobs:
   managed-and-package:
     runs-on: windows-latest
     strategy:
+      fail-fast: false
       matrix:
         include:
           - platform: x64

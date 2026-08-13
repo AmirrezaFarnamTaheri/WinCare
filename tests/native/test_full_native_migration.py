@@ -31,9 +31,10 @@ class FullNativeMigrationTests(unittest.TestCase):
         read_start = source.index("private async Task<CommandHandlerOutcome> ExecuteReadOnlyAsync")
         mutation_start = source.index("private async Task<CommandHandlerOutcome> ExecuteMutationAsync")
         validation_start = source.index("private static void ValidateMutationParameters")
+        read_only_val_start = source.index("private static void ValidateReadOnlyParameters")
         read_routes = set(re.findall(r'"([a-z0-9-]+)"\s*=>', source[read_start:mutation_start])) | {"catalog", "presets"}
         mutation_routes = set(re.findall(r'"([a-z0-9-]+)"\s*=>', source[mutation_start:validation_start]))
-        validation_routes = set(re.findall(r'case\s+"([a-z0-9-]+)"', source[validation_start:]))
+        validation_routes = set(re.findall(r'case\s+"([a-z0-9-]+)"', source[validation_start:read_only_val_start]))
         self.assertEqual(catalog_read_only, read_routes)
         self.assertEqual(catalog_mutating, mutation_routes)
         self.assertEqual(catalog_mutating, validation_routes)

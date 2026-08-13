@@ -39,6 +39,9 @@ public sealed partial class WindowsCommandExecutor : ICommandOperationExecutor, 
     private readonly ConcurrentDictionary<string, CancellationTokenSource> _operations = new(StringComparer.Ordinal);
     private bool _disposed;
 
+    /// <summary>
+    /// Initializes a new instance of <see cref="WindowsCommandExecutor"/>.
+    /// </summary>
     public WindowsCommandExecutor(
         INativeCoreService? nativeCore = null,
         BoundedProcessRunner? process = null,
@@ -60,6 +63,9 @@ public sealed partial class WindowsCommandExecutor : ICommandOperationExecutor, 
         };
     }
 
+    /// <summary>
+    /// Executes a command synchronously or asynchronously as a native operation.
+    /// </summary>
     public async Task<CommandHandlerOutcome> ExecuteAsync(
         CommandDefinition definition,
         CommandRequest request,
@@ -675,6 +681,10 @@ public sealed partial class WindowsCommandExecutor : ICommandOperationExecutor, 
     private static CommandHandlerOutcome Block(string id, string message) =>
         CommandHandlerOutcome.Blocked(id + ".blocked", message);
 
+    /// <summary>
+    /// Validates all steps in a command plan before execution or preview.
+    /// </summary>
+    /// <param name="steps">JSON array element containing command step objects.</param>
     public static void ValidateCommandPlanSteps(JsonElement steps)
     {
         if (steps.ValueKind != JsonValueKind.Array)
@@ -699,13 +709,41 @@ public sealed partial class WindowsCommandExecutor : ICommandOperationExecutor, 
                 ? paramEl.Clone()
                 : Data(new { });
 
+            CommandParameters cmdParams = new(parameters);
             if (!definition.ReadOnly)
             {
-                ValidateMutationParameters(definition.Id, new CommandParameters(parameters));
+                ValidateMutationParameters(definition.Id, cmdParams);
+            }
+            else
+            {
+                ValidateReadOnlyParameters(definition.Id, cmdParams);
             }
         }
     }
 
+    private static void ValidateReadOnlyParameters(string commandId, CommandParameters p)
+    {
+        switch (commandId)
+        {
+            case "process-modules":
+            case "appcontainer":
+                _ = p.Int32("ProcessId", 0, 1, int.MaxValue);
+                break;
+            case "experience-visual-asset":
+            case "experience-sprite-layout":
+            case "archive-inspect":
+            case "peer-log-tail":
+            case "peer-pe":
+            case "file-preview":
+            case "image-metadata":
+                _ = p.RequiredString("Path");
+                break;
+        }
+    }
+
+    /// <summary>
+    /// Disposes native executor resources and cancels active operations.
+    /// </summary>
     public void Dispose()
     {
         if (_disposed) return;
