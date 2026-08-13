@@ -1,6 +1,8 @@
 # Native command parity ledger
 
-The frozen oracle contains all stable command IDs from the historical implementation. The native catalog has exact 259-ID parity. Catalog preservation is not behavioral parity.
+The frozen oracle preserves all stable command IDs from the historical implementation. The native
+catalog has exact 259-ID parity. Catalog and implementation coverage do not imply Windows behavioral
+parity.
 
 ## Summary
 
@@ -9,203 +11,40 @@ The frozen oracle contains all stable command IDs from the historical implementa
 | Total stable IDs | 259 |
 | Unique native catalog IDs | 259 |
 | Cataloged | 259 |
-| Contract verified or later | 174 |
-| Implemented or later | 174 |
+| Contract verified or later | 259 |
+| Implemented or later | 259 |
 | Behavior verified | 0 |
-| Native implementation blockers | 85 |
+| Native implementation blockers | 0 |
 | Production behavior-verification blockers | 259 |
 
-Implemented native commands:
+All 259 commands are registered through the same catalog-driven command runtime and native executor.
+There is no generated handler directory. Read-only commands gather host evidence or durable WinCare
+state; mutating commands must pass explicit parameter validation during preview before approval can be
+granted. Unsupported dependencies and safety preconditions return blocked/failed outcomes and never
+fall back to success.
 
-- `catalog`
-- `presets`
-- `system`
-- `storage`
-- `network`
-- `experience-privacy-profiles`
-- `cleaner-disk-pressure`
-- `cleanup-targets`
-- `startup`
-- `security`
-- `applications`
-- `health`
-- `pagefile`
-- `tcp-global`
-- `pagefile-recommendation`
-- `security-controls`
-- `network-measure`
-- `process-modules`
-- `security-maintenance`
-- `network-experiments`
-- `etw-sessions`
-- `wua-history`
-- `injection-surfaces`
-- `remote-thread-events`
-- `wua-search`
-- `preset`
-- `wdac-policies`
-- `wdac-events`
-- `internals-processes`
-- `wua-hide`
-- `internals-memory`
-- `internals-cpu`
-- `credential-providers`
-- `appcontainer`
-- `pagefile-set`
-- `security-control-reduce`
-- `security-control-restore`
-- `network-experiment`
-- `etw-capture`
-- `injection-surface-quarantine`
-- `wua-unhide`
-- `wua-download`
-- `wua-install`
-- `wua-uninstall`
-- `wdac-deploy`
-- `desktop-controls`
-- `wifi-profiles`
-- `shell-extensions`
-- `desktop-shortcuts`
-- `boot`
-- `bcd-export`
-- `unattend-analyze`
-- `provisioning-plan`
-- `knowledge`
-- `reports`
-- `automation-profiles`
-- `run-automation`
-- `cancel-operation`
-- `widgets`
-- `widget-catalog`
-- `widget-export`
-- `bluetooth`
-- `bluetooth-events`
-- `maintenance`
-- `maintenance-create`
-- `maintenance-transition`
-- `maintenance-metrics`
-- `maintenance-export`
-- `context-menu`
-- `context-menu-set`
-- `customization-hosts`
-- `rainmeter-skins`
-- `windhawk-mods`
-- `explorerpatcher`
-- `modern-context-validate`
-- `playbooks`
-- `playbook`
-- `group-policy`
-- `group-policy-import`
-- `sysmon`
-- `sysmon-configure`
-- `sysmon-uninstall`
-- `offline-images`
-- `offline-drivers`
-- `offline-packages`
-- `offline-features`
-- `offline-driver-add`
-- `offline-driver-remove`
-- `offline-package-add`
-- `offline-feature-set`
-- `power-sessions`
-- `power-start`
-- `power-stop`
-- `windows`
-- `monitors`
-- `window-zones`
-- `window-zone-set`
-- `window-topmost`
-- `window-activate`
-- `input-release`
-- `downloads`
-- `downloads-due`
-- `download-create`
-- `download-start`
-- `download-start-due`
-- `download-suspend`
-- `download-resume`
-- `download-reconcile`
-- `download-cancel`
-- `download-remove`
-- `telemetry-snapshot`
-- `telemetry-history`
-- `telemetry-capture`
-- `telemetry-export`
-- `launcher-search`
-- `launcher-open`
-- `calculator`
-- `steam-games`
-- `steam-users`
-- `steam-cloud-files`
-- `steam-backup`
-- `steam-restore`
-- `game-integrity`
-- `offline-reduction-profiles`
-- `offline-reduction-assess`
-- `offline-reduction-apply`
-- `workspace-layouts`
-- `workspace-layout-save`
-- `workspace-layout-apply`
-- `workspace-layout-remove`
-- `color-capture`
-- `color-palette`
-- `color-add`
-- `color-remove`
-- `image-metadata`
-- `notes`
-- `note-save`
-- `note-remove`
-- `browsers`
-- `browser-extensions`
-- `remote-support`
-- `remote-consent`
-- `remote-consent-create`
-- `remote-consent-state`
-- `remote-consent-expire`
-- `remote-emergency`
-- `studio-snapshot`
-- `studio-monitoring-export`
-- `studio-file-workspaces`
-- `studio-file-workspace-save`
-- `studio-layout-profiles`
-- `studio-layout-save`
-- `studio-package`
-- `studio-brightness-schedules`
-- `studio-brightness-save`
-- `studio-brightness-apply`
-- `studio-folder-appearance`
-- `studio-kanata-validate`
-- `studio-syncthing`
-- `studio-wezterm`
-- `studio-adb-inventory`
-- `studio-xbox-fse`
-- `toolkit-diagnostics`
-- `toolkit-win32-error`
-- `toolkit-msi`
-- `hardening-profiles`
-- `hardening-assess`
-- `hardening-apply`
-- `maintenance-templates`
-- `maintenance-template-create`
-- `system-shortcuts`
-- `system-shortcuts-export`
-- `download-batch`
-- `torrent-metadata`
+### Important safety exception
 
-None of these commands are marked `BehaviorVerified` because Windows oracle comparison has not run in the current environment.
+The legacy temporary security-maintenance feature required authenticated snapshots plus automatic
+timed restoration after protection was reduced. The native application does not yet have a separately
+launchable recovery host that can provide that guarantee if the UI process exits. Therefore
+`security-control-reduce` and its restore path are deliberately fail-closed and perform no mutation.
+The former incorrect firewall substitution has been removed. This is an admitted safety boundary, not
+behavior-verification evidence.
 
 ## State definitions
 
 | State | Required evidence |
 |---|---|
-| `Cataloged` | stable ID, title, summary, area, section, risk, privilege, restart, and keywords |
-| `ContractVerified` | typed request/result contract and frozen parity fixture reviewed |
-| `Implemented` | native handler exists and fails closed outside its admitted scope |
-| `BehaviorVerified` | native and historical behavior compared on supported Windows environments with matching safety and result semantics |
+| `Cataloged` | Stable ID, title, summary, area, section, risk, privilege, restart, and keywords |
+| `ContractVerified` | Typed request/result contract and frozen parity fixture reviewed |
+| `Implemented` | Native route exists, validates its admitted inputs, and fails closed outside its supported/safe scope |
+| `BehaviorVerified` | Native and historical behavior compared on supported Windows environments with matching safety and result semantics |
 
 ## Promotion rule
 
-The production finalizer requires exactly 259 `BehaviorVerified` records. An implemented handler without Windows behavior evidence is still a production blocker.
+Production finalization requires exactly 259 `BehaviorVerified` records. An implemented route without
+Windows behavior evidence remains a production blocker.
 
 ## Oracle provenance
 
@@ -216,4 +55,6 @@ Frozen fixtures live under `migration/oracle/`:
 - `presets.json`
 - `provenance.json`
 
-The provenance file records the historical source commit and SHA-256 hash of each authoritative input. The native source archive uses these non-executable fixtures. The executable historical source is kept only in the separate oracle archive.
+The provenance file records the historical source commit and SHA-256 hash of authoritative inputs.
+The native source archive uses non-executable fixtures. Executable historical PowerShell source is
+kept only in the separate legacy-oracle archive and is not a native runtime dependency.

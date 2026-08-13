@@ -3,9 +3,9 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using System.Threading.Tasks;
 using WinCare.Application.Commands;
 using WinCare.Application.Tools;
+using WinCare.App.Services;
 using WinCare.CommandCatalog.Models;
 
-using WinCare.Infrastructure.Native;
 
 namespace WinCare.App.ViewModels.Pages;
 
@@ -24,12 +24,12 @@ public sealed class AllToolsPageViewModel : ObservableObject
     private bool _isCompactLayout;
 
     public AllToolsPageViewModel()
-        : this(new ToolCatalogService(), CommandRuntime.CreateDefault(new NativeCoreService()))
+        : this(new ToolCatalogService(), AppRuntime.Current.Dispatcher)
     {
     }
 
     public AllToolsPageViewModel(ToolCatalogService catalog)
-        : this(catalog, CommandRuntime.CreateDefault(new NativeCoreService()))
+        : this(catalog, AppRuntime.Current.Dispatcher)
     {
     }
 
@@ -76,12 +76,16 @@ public sealed class AllToolsPageViewModel : ObservableObject
         }
     }
 
-    private async void DebounceSearch()
+    private void DebounceSearch()
     {
         _searchCts?.Cancel();
         _searchCts?.Dispose();
         _searchCts = new CancellationTokenSource();
-        var token = _searchCts.Token;
+        _ = DebounceSearchAsync(_searchCts.Token);
+    }
+
+    private async Task DebounceSearchAsync(CancellationToken token)
+    {
         try
         {
             await Task.Delay(250, token);
@@ -93,7 +97,7 @@ public sealed class AllToolsPageViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            // Refresh should not throw; log defensively to prevent async void crash.
+            // Task is deliberately fire-and-forget; observe every non-cancellation fault here.
             System.Diagnostics.Debug.WriteLine($"[AllToolsPageViewModel] DebounceSearch fault: {ex.Message}");
         }
     }

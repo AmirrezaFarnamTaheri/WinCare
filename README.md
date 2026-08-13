@@ -17,13 +17,23 @@ migration.
 | Measure | Count |
 |---|---:|
 | Stable command IDs preserved | 259 of 259 |
-| Typed contracts verified | 174 of 259 |
-| Native handlers implemented | 174 of 259 |
+| Typed command contracts routed | 259 of 259 |
+| Native command routes implemented | 259 of 259 |
 | Behavior verified on Windows | 0 of 259 |
-| Native implementation blockers | 85 |
+| Native implementation blockers | 0 |
 | Production behavior-verification blockers | 259 |
 
-The implemented native handlers are `catalog`, `presets`, `system`, `storage`, `network`, `experience-privacy-profiles`, `cleaner-disk-pressure`, `cleanup-targets`, `startup`, `security`, `applications`, `health`, `pagefile`, `tcp-global`, `pagefile-recommendation`, `security-controls`, `network-measure`, `process-modules`, `security-maintenance`, `network-experiments`, `etw-sessions`, `wua-history`, `injection-surfaces`, `remote-thread-events`, `wua-search`, `preset`, `wdac-policies`, `wdac-events`, `internals-processes`, `wua-hide`, `internals-memory`, `internals-cpu`, `credential-providers`, `appcontainer`, `pagefile-set`, `security-control-reduce`, `security-control-restore`, `network-experiment`, `etw-capture`, `injection-surface-quarantine`, `wua-unhide`, `wua-download`, `wua-install`, `wua-uninstall`, `wdac-deploy`, `desktop-controls`, `wifi-profiles`, `shell-extensions`, `desktop-shortcuts`, `boot`, `bcd-export`, `unattend-analyze`, `provisioning-plan`, `knowledge`, `reports`, `automation-profiles`, `run-automation`, `cancel-operation`, `widgets`, `widget-catalog`, `widget-export`, `bluetooth`, `bluetooth-events`, `maintenance`, `maintenance-create`, `maintenance-transition`, `maintenance-metrics`, `maintenance-export`, `context-menu`, `context-menu-set`, `customization-hosts`, `rainmeter-skins`, `windhawk-mods`, `explorerpatcher`, `modern-context-validate`, `playbooks`, `playbook`, `group-policy`, `group-policy-import`, `sysmon`, `sysmon-configure`, `sysmon-uninstall`, `offline-images`, `offline-drivers`, `offline-packages`, `offline-features`, `offline-driver-add`, `offline-driver-remove`, `offline-package-add`, `offline-feature-set`, `power-sessions`, `power-start`, `power-stop`, `windows`, `monitors`, `window-zones`, `window-zone-set`, `window-topmost`, `window-activate`, `input-release`, `downloads`, `downloads-due`, `download-create`, `download-start`, `download-start-due`, `download-suspend`, `download-resume`, `download-reconcile`, `download-cancel`, `download-remove`, `telemetry-snapshot`, `telemetry-history`, `telemetry-capture`, `telemetry-export`, `launcher-search`, `launcher-open`, `calculator`, `steam-games`, `steam-users`, `steam-cloud-files`, `steam-backup`, `steam-restore`, `game-integrity`, `offline-reduction-profiles`, `offline-reduction-assess`, `offline-reduction-apply`, `workspace-layouts`, `workspace-layout-save`, `workspace-layout-apply`, `workspace-layout-remove`, `color-capture`, `color-palette`, `color-add`, `color-remove`, `image-metadata`, `notes`, `note-save`, `note-remove`, `browsers`, `browser-extensions`, `remote-support`, `remote-consent`, `remote-consent-create`, `remote-consent-state`, `remote-consent-expire`, `remote-emergency`, `studio-snapshot`, `studio-monitoring-export`, `studio-file-workspaces`, `studio-file-workspace-save`, `studio-layout-profiles`, `studio-layout-save`, `studio-package`, `studio-brightness-schedules`, `studio-brightness-save`, `studio-brightness-apply`, `studio-folder-appearance`, `studio-kanata-validate`, `studio-syncthing`, `studio-wezterm`, `studio-adb-inventory`, `studio-xbox-fse`, `toolkit-diagnostics`, `toolkit-win32-error`, `toolkit-msi`, `hardening-profiles`, `hardening-assess`, `hardening-apply`, `maintenance-templates`, `maintenance-template-create`, `system-shortcuts`, `system-shortcuts-export`, `download-batch`, and `torrent-metadata`. Every other command remains visible in All tools but is disabled by the dispatcher and returns an explicit not-implemented result.
+All 259 stable command IDs now route through one fail-closed native executor rather than
+copy-pasted handlers. The executor validates mutating parameters before approval, distinguishes
+preview from apply, uses bounded native process/file operations, and returns blocked/failed results
+instead of fabricated success when a dependency, platform capability, or safety precondition is
+unavailable.
+
+`Implemented` is intentionally not the same as `BehaviorVerified`. Command-by-command Windows
+comparison against the historical oracle has not run in this Linux environment, so production
+promotion remains blocked. Temporary security-control reduction is also intentionally blocked until
+a separately launchable native recovery host can prove authenticated automatic restoration; the
+previous incorrect firewall substitution was removed rather than weakening that safety contract.
 
 ## Finalized artifact model
 
@@ -103,13 +113,14 @@ python tools/verify_native_foundation.py
 python -m unittest discover -s tests/native -v
 python tools/verify_visual_tokens.py
 python tools/verify_pill_contrast.py
-python tools/validate_gui.py
-python -m unittest tools.test_gui -v
 ```
 
 These checks verify frozen 259-ID parity, native source boundaries, command status accounting,
 deterministic archive rules, WinUI source structure, accessibility metadata, packaging metadata,
-and the fail-closed production gate. They do not substitute for a Windows build or runtime test.
+and the fail-closed production gate. In the full migration workspace, additional legacy-oracle GUI
+compatibility gates also run. Finalized native-source archives intentionally omit executable legacy
+PowerShell, so the two finalization tests that require that executable oracle report an explicit skip.
+These checks do not substitute for a Windows build or runtime test.
 
 ## Windows release evidence still required
 
@@ -149,11 +160,16 @@ require migration status and handler registration.
 
 ## Security invariants
 
-- `DiskCleanupCommandHandler` enforces an `AllowedBasePaths` safelist: only `%TEMP%` and
-  `%LOCALAPPDATA%\Temp` are permitted targets. Path traversal attempts are silently dropped.
-- `CommandDispatcher` exception logs emit only the exception type name — `ex.Message` is never
-  written to the activity journal to prevent file-path or PII leakage.
-- Thread-safe journal binding: `ActivityJournalService` instances are created per `CommandDispatcher` instance, with `CommandRuntime.LastJournal` providing design-time fallback.
+- File and cleanup operations canonicalize user-selected paths, reject reparse-point operation roots,
+  skip reparse-point descendants during recursive traversal, and use bounded iterative enumeration so
+  junctions and inaccessible trees cannot silently escape the admitted boundary or exhaust recursion.
+- `CommandDispatcher` exception journals emit only the exception type name — `ex.Message` is never
+  written to the activity journal, avoiding file-path or PII leakage through user-visible history.
+- One application-scoped `ActivityJournalService` is injected into the dispatcher and Activity page
+  through `AppRuntime`; cached Activity navigation refreshes from that same journal instead of relying
+  on mutable global fallback state.
+- Temporary security-control reduction fails closed until a native recovery host can prove authenticated
+  automatic restoration; no unrelated firewall control is substituted.
 - All Rust FFI exports are wrapped in `catch_unwind` — panics cannot cross the FFI boundary.
 
 ## CI

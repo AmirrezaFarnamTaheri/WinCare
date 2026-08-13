@@ -16,7 +16,7 @@ public sealed class CommandDispatcher
     private readonly IReadOnlyDictionary<string, CommandDefinition> _definitions;
     private readonly IReadOnlyDictionary<string, ICommandHandler> _handlers;
     private readonly TimeProvider _timeProvider;
-    private readonly ActivityJournalService? _journal;
+    private readonly IActivityJournalService? _journal;
 
     /// <summary>
     /// Expected C ABI version exported by <c>wincare_core</c>.
@@ -31,7 +31,7 @@ public sealed class CommandDispatcher
         IEnumerable<ICommandHandler> handlers,
         TimeProvider? timeProvider = null,
         INativeCoreService? nativeCore = null,
-        ActivityJournalService? journal = null)
+        IActivityJournalService? journal = null)
     {
         ArgumentNullException.ThrowIfNull(definitions);
         ArgumentNullException.ThrowIfNull(handlers);

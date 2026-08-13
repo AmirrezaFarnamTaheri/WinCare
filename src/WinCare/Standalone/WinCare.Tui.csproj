@@ -1,7 +1,0 @@
-<Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup>
-    <AssemblyName>WinCare-TUI</AssemblyName>
-    <OutputType>Exe</OutputType>
-    <DefineConstants>$(DefineConstants);WINCARE_TUI</DefineConstants>
-  </PropertyGroup>
-</Project>

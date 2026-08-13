@@ -11,26 +11,36 @@ class SafetyRegressionTests(unittest.TestCase):
     def read(self, relative: str) -> str:
         return (ROOT / relative).read_text(encoding="utf-8")
 
-    def test_disk_cleanup_enforces_boundary_and_reparse_safe_walk(self) -> None:
-        source = self.read("src/WinCare.Application/Commands/Handlers/DiskCleanupCommandHandler.cs")
-        self.assertIn("normalized.Equals(allowed, StringComparison.OrdinalIgnoreCase)", source)
-        self.assertIn("allowed + Path.DirectorySeparatorChar", source)
+    def test_disk_cleanup_enforces_fixed_boundaries_and_reparse_safe_walk(self) -> None:
+        source = self.read("src/WinCare.Infrastructure/Commands/WindowsCommandExecutor.Experience.cs")
+        productivity = self.read("src/WinCare.Infrastructure/Commands/WindowsCommandExecutor.Productivity.cs")
+        self.assertIn("Path.GetTempPath()", source)
+        self.assertIn("SafeRecursiveEnumeration", source)
         self.assertIn("FileAttributes.ReparsePoint", source)
-        self.assertIn("disk_cleanup.target_denied", source)
-        self.assertIn("disk_cleanup.measurement_failed", source)
         self.assertNotIn("SearchOption.AllDirectories", source)
+        self.assertIn("AttributesToSkip = FileAttributes.ReparsePoint", productivity)
 
-    def test_cleanup_targets_has_no_event_log_mutation_path(self) -> None:
-        source = self.read("src/WinCare.Application/Commands/Handlers/LogCleanupCommandHandler.cs")
-        self.assertIn("log_cleanup.readonly", source)
-        self.assertIn("log_cleanup.enumeration_failed", source)
-        self.assertNotIn(".Clear()", source)
-        self.assertNotIn("LogCleanupResultRecord", source)
+    def test_cleanup_target_inventory_has_no_event_log_mutation_path(self) -> None:
+        source = self.read("src/WinCare.Infrastructure/Commands/WindowsCommandExecutor.System.cs")
+        method = source[source.index("CleanupTargetsAsync"):source.index("private CommandHandlerOutcome StorageOverview")]
+        self.assertIn("Cleanup targets measured without changing files", method)
+        self.assertNotIn("EventLog", method)
+        self.assertNotIn(".Clear(", method)
+        self.assertNotIn("File.Delete", method)
 
-    def test_privacy_handler_reports_registry_read_failures(self) -> None:
-        source = self.read("src/WinCare.Application/Commands/Handlers/PrivacyStatusCommandHandler.cs")
-        self.assertIn("privacy.read_failed", source)
+    def test_platform_access_and_io_failures_do_not_fall_back_to_success(self) -> None:
+        source = self.read("src/WinCare.Infrastructure/Commands/WindowsCommandExecutor.cs")
+        self.assertIn("catch (UnauthorizedAccessException ex)", source)
+        self.assertIn('CommandHandlerOutcome.Blocked("command.access_denied"', source)
+        self.assertIn("IOException", source)
+        self.assertIn('"command.native_failure"', source)
         self.assertNotIn("Fallback default", source)
+
+    def test_windows_update_result_codes_do_not_report_partial_failure_as_success(self) -> None:
+        source = self.read("src/WinCare.Infrastructure/Commands/WindowsCommandExecutor.Security.cs")
+        self.assertIn("WindowsUpdateOperationOutcome", source)
+        self.assertIn("resultCode == 2", source)
+        self.assertIn("CommandResultStatus.Failed", source)
 
     def test_mutating_ui_requires_successful_preview_before_approval(self) -> None:
         view_model = self.read("src/WinCare.App/ViewModels/Pages/ToolExecutionViewModel.cs")

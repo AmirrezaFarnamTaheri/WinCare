@@ -2645,9 +2645,9 @@
       "summary": "Review the current state and available actions for notes.",
       "area": "All tools",
       "section": "Commands",
-      "risk": "Moderate",
-      "readOnly": false,
-      "administratorAccess": "Required",
+      "risk": "ReadOnly",
+      "readOnly": true,
+      "administratorAccess": "No",
       "restart": "No",
       "legacySource": "src/WinCare/UI/98-Headless.ps1",
       "migrationStatus": "Implemented",
@@ -3443,7 +3443,7 @@
       "administratorAccess": "No",
       "restart": "No",
       "legacySource": "src/WinCare/UI/98-Headless.ps1",
-      "migrationStatus": "Cataloged",
+      "migrationStatus": "Implemented",
       "keywords": [
         "all tools",
         "capability evidence cards",
@@ -3463,7 +3463,7 @@
       "administratorAccess": "No",
       "restart": "No",
       "legacySource": "src/WinCare/UI/98-Headless.ps1",
-      "migrationStatus": "Cataloged",
+      "migrationStatus": "Implemented",
       "keywords": [
         "all tools",
         "asset",
@@ -3484,7 +3484,7 @@
       "administratorAccess": "No",
       "restart": "No",
       "legacySource": "src/WinCare/UI/98-Headless.ps1",
-      "migrationStatus": "Cataloged",
+      "migrationStatus": "Implemented",
       "keywords": [
         "all tools",
         "commands",
@@ -3505,7 +3505,7 @@
       "administratorAccess": "Required",
       "restart": "No",
       "legacySource": "src/WinCare/UI/98-Headless.ps1",
-      "migrationStatus": "Cataloged",
+      "migrationStatus": "Implemented",
       "keywords": [
         "all tools",
         "commands",
@@ -3526,7 +3526,7 @@
       "administratorAccess": "No",
       "restart": "No",
       "legacySource": "src/WinCare/UI/98-Headless.ps1",
-      "migrationStatus": "Cataloged",
+      "migrationStatus": "Implemented",
       "keywords": [
         "all tools",
         "commands",
@@ -3547,7 +3547,7 @@
       "administratorAccess": "Required",
       "restart": "No",
       "legacySource": "src/WinCare/UI/98-Headless.ps1",
-      "migrationStatus": "Cataloged",
+      "migrationStatus": "Implemented",
       "keywords": [
         "all tools",
         "change experience location",
@@ -3568,7 +3568,7 @@
       "administratorAccess": "No",
       "restart": "No",
       "legacySource": "src/WinCare/UI/98-Headless.ps1",
-      "migrationStatus": "Cataloged",
+      "migrationStatus": "Implemented",
       "keywords": [
         "all tools",
         "commands",
@@ -3589,7 +3589,7 @@
       "administratorAccess": "No",
       "restart": "No",
       "legacySource": "src/WinCare/UI/98-Headless.ps1",
-      "migrationStatus": "Cataloged",
+      "migrationStatus": "Implemented",
       "keywords": [
         "all tools",
         "commands",
@@ -3610,7 +3610,7 @@
       "administratorAccess": "Required",
       "restart": "No",
       "legacySource": "src/WinCare/UI/98-Headless.ps1",
-      "migrationStatus": "Cataloged",
+      "migrationStatus": "Implemented",
       "keywords": [
         "all tools",
         "change experience remote",
@@ -3631,7 +3631,7 @@
       "administratorAccess": "No",
       "restart": "No",
       "legacySource": "src/WinCare/UI/98-Headless.ps1",
-      "migrationStatus": "Cataloged",
+      "migrationStatus": "Implemented",
       "keywords": [
         "all tools",
         "commands",
@@ -3652,7 +3652,7 @@
       "administratorAccess": "No",
       "restart": "No",
       "legacySource": "src/WinCare/UI/98-Headless.ps1",
-      "migrationStatus": "Cataloged",
+      "migrationStatus": "Implemented",
       "keywords": [
         "all tools",
         "assess",
@@ -3673,7 +3673,7 @@
       "administratorAccess": "Required",
       "restart": "No",
       "legacySource": "src/WinCare/UI/98-Headless.ps1",
-      "migrationStatus": "Cataloged",
+      "migrationStatus": "Implemented",
       "keywords": [
         "all tools",
         "apply",
@@ -3694,7 +3694,7 @@
       "administratorAccess": "No",
       "restart": "No",
       "legacySource": "src/WinCare/UI/98-Headless.ps1",
-      "migrationStatus": "Cataloged",
+      "migrationStatus": "Implemented",
       "keywords": [
         "all tools",
         "commands",
@@ -3735,7 +3735,7 @@
       "administratorAccess": "Required",
       "restart": "No",
       "legacySource": "src/WinCare/UI/98-Headless.ps1",
-      "migrationStatus": "Cataloged",
+      "migrationStatus": "Implemented",
       "keywords": [
         "apply",
         "experience",
@@ -3755,7 +3755,7 @@
       "administratorAccess": "No",
       "restart": "No",
       "legacySource": "src/WinCare/UI/98-Headless.ps1",
-      "migrationStatus": "Cataloged",
+      "migrationStatus": "Implemented",
       "keywords": [
         "cards",
         "checkup",
@@ -3776,7 +3776,7 @@
       "administratorAccess": "No",
       "restart": "No",
       "legacySource": "src/WinCare/UI/98-Headless.ps1",
-      "migrationStatus": "Cataloged",
+      "migrationStatus": "Implemented",
       "keywords": [
         "checkup",
         "hardware",
@@ -3796,7 +3796,7 @@
       "administratorAccess": "Required",
       "restart": "No",
       "legacySource": "src/WinCare/UI/98-Headless.ps1",
-      "migrationStatus": "Cataloged",
+      "migrationStatus": "Implemented",
       "keywords": [
         "checkup",
         "hardware",
@@ -3816,7 +3816,7 @@
       "administratorAccess": "No",
       "restart": "No",
       "legacySource": "src/WinCare/UI/98-Headless.ps1",
-      "migrationStatus": "Cataloged",
+      "migrationStatus": "Implemented",
       "keywords": [
         "controls",
         "external monitor controls",
@@ -3836,7 +3836,7 @@
       "administratorAccess": "Required",
       "restart": "No",
       "legacySource": "src/WinCare/UI/98-Headless.ps1",
-      "migrationStatus": "Cataloged",
+      "migrationStatus": "Implemented",
       "keywords": [
         "change monitor control",
         "control",
@@ -3857,7 +3857,7 @@
       "administratorAccess": "No",
       "restart": "No",
       "legacySource": "src/WinCare/UI/98-Headless.ps1",
-      "migrationStatus": "Cataloged",
+      "migrationStatus": "Implemented",
       "keywords": [
         "performance",
         "search",
@@ -3877,7 +3877,7 @@
       "administratorAccess": "No",
       "restart": "No",
       "legacySource": "src/WinCare/UI/98-Headless.ps1",
-      "migrationStatus": "Cataloged",
+      "migrationStatus": "Implemented",
       "keywords": [
         "all tools",
         "commands",
@@ -3897,7 +3897,7 @@
       "administratorAccess": "Required",
       "restart": "No",
       "legacySource": "src/WinCare/UI/98-Headless.ps1",
-      "migrationStatus": "Cataloged",
+      "migrationStatus": "Implemented",
       "keywords": [
         "all tools",
         "commands",
@@ -3918,7 +3918,7 @@
       "administratorAccess": "No",
       "restart": "No",
       "legacySource": "src/WinCare/UI/98-Headless.ps1",
-      "migrationStatus": "Cataloged",
+      "migrationStatus": "Implemented",
       "keywords": [
         "all tools",
         "commands",
@@ -3939,7 +3939,7 @@
       "administratorAccess": "Required",
       "restart": "No",
       "legacySource": "src/WinCare/UI/98-Headless.ps1",
-      "migrationStatus": "Cataloged",
+      "migrationStatus": "Implemented",
       "keywords": [
         "all tools",
         "commands",
@@ -3960,7 +3960,7 @@
       "administratorAccess": "No",
       "restart": "No",
       "legacySource": "src/WinCare/UI/98-Headless.ps1",
-      "migrationStatus": "Cataloged",
+      "migrationStatus": "Implemented",
       "keywords": [
         "accessibility tree snapshot",
         "all tools",
@@ -3981,7 +3981,7 @@
       "administratorAccess": "No",
       "restart": "No",
       "legacySource": "src/WinCare/UI/98-Headless.ps1",
-      "migrationStatus": "Cataloged",
+      "migrationStatus": "Implemented",
       "keywords": [
         "all tools",
         "appx",
@@ -4001,7 +4001,7 @@
       "administratorAccess": "No",
       "restart": "No",
       "legacySource": "src/WinCare/UI/98-Headless.ps1",
-      "migrationStatus": "Cataloged",
+      "migrationStatus": "Implemented",
       "keywords": [
         "all tools",
         "app packages launch targets",
@@ -4022,7 +4022,7 @@
       "administratorAccess": "Required",
       "restart": "No",
       "legacySource": "src/WinCare/UI/98-Headless.ps1",
-      "migrationStatus": "Cataloged",
+      "migrationStatus": "Implemented",
       "keywords": [
         "all tools",
         "appx",
@@ -4042,7 +4042,7 @@
       "administratorAccess": "No",
       "restart": "No",
       "legacySource": "src/WinCare/UI/98-Headless.ps1",
-      "migrationStatus": "Cataloged",
+      "migrationStatus": "Implemented",
       "keywords": [
         "all tools",
         "archive",
@@ -4062,7 +4062,7 @@
       "administratorAccess": "No",
       "restart": "No",
       "legacySource": "src/WinCare/UI/98-Headless.ps1",
-      "migrationStatus": "Cataloged",
+      "migrationStatus": "Implemented",
       "keywords": [
         "all tools",
         "commands",
@@ -4082,7 +4082,7 @@
       "administratorAccess": "No",
       "restart": "No",
       "legacySource": "src/WinCare/UI/98-Headless.ps1",
-      "migrationStatus": "Cataloged",
+      "migrationStatus": "Implemented",
       "keywords": [
         "all tools",
         "commands",
@@ -4102,7 +4102,7 @@
       "administratorAccess": "Required",
       "restart": "No",
       "legacySource": "src/WinCare/UI/98-Headless.ps1",
-      "migrationStatus": "Cataloged",
+      "migrationStatus": "Implemented",
       "keywords": [
         "all tools",
         "commands",
@@ -4122,7 +4122,7 @@
       "administratorAccess": "No",
       "restart": "No",
       "legacySource": "src/WinCare/UI/98-Headless.ps1",
-      "migrationStatus": "Cataloged",
+      "migrationStatus": "Implemented",
       "keywords": [
         "all tools",
         "audit",
@@ -4143,7 +4143,7 @@
       "administratorAccess": "No",
       "restart": "No",
       "legacySource": "src/WinCare/UI/98-Headless.ps1",
-      "migrationStatus": "Cataloged",
+      "migrationStatus": "Implemented",
       "keywords": [
         "all tools",
         "assess",
@@ -4164,7 +4164,7 @@
       "administratorAccess": "No",
       "restart": "No",
       "legacySource": "src/WinCare/UI/98-Headless.ps1",
-      "migrationStatus": "Cataloged",
+      "migrationStatus": "Implemented",
       "keywords": [
         "cards",
         "clean up",
@@ -4206,7 +4206,7 @@
       "administratorAccess": "Required",
       "restart": "No",
       "legacySource": "src/WinCare/UI/98-Headless.ps1",
-      "migrationStatus": "Cataloged",
+      "migrationStatus": "Implemented",
       "keywords": [
         "clean up",
         "cleaner",
@@ -4228,7 +4228,7 @@
       "administratorAccess": "No",
       "restart": "No",
       "legacySource": "src/WinCare/UI/98-Headless.ps1",
-      "migrationStatus": "Cataloged",
+      "migrationStatus": "Implemented",
       "keywords": [
         "clean up",
         "cleaner",
@@ -4248,7 +4248,7 @@
       "administratorAccess": "Required",
       "restart": "No",
       "legacySource": "src/WinCare/UI/98-Headless.ps1",
-      "migrationStatus": "Cataloged",
+      "migrationStatus": "Implemented",
       "keywords": [
         "clean up",
         "cleaner",
@@ -4269,7 +4269,7 @@
       "administratorAccess": "No",
       "restart": "No",
       "legacySource": "src/WinCare/UI/98-Headless.ps1",
-      "migrationStatus": "Cataloged",
+      "migrationStatus": "Implemented",
       "keywords": [
         "clean up",
         "cleaner",
@@ -4290,7 +4290,7 @@
       "administratorAccess": "No",
       "restart": "No",
       "legacySource": "src/WinCare/UI/98-Headless.ps1",
-      "migrationStatus": "Cataloged",
+      "migrationStatus": "Implemented",
       "keywords": [
         "assess",
         "assess cleaner relocation",
@@ -4311,7 +4311,7 @@
       "administratorAccess": "Required",
       "restart": "No",
       "legacySource": "src/WinCare/UI/98-Headless.ps1",
-      "migrationStatus": "Cataloged",
+      "migrationStatus": "Implemented",
       "keywords": [
         "clean up",
         "cleaner",
@@ -4331,7 +4331,7 @@
       "administratorAccess": "No",
       "restart": "No",
       "legacySource": "src/WinCare/UI/98-Headless.ps1",
-      "migrationStatus": "Cataloged",
+      "migrationStatus": "Implemented",
       "keywords": [
         "file",
         "file preview profiles",
@@ -4352,7 +4352,7 @@
       "administratorAccess": "No",
       "restart": "No",
       "legacySource": "src/WinCare/UI/98-Headless.ps1",
-      "migrationStatus": "Cataloged",
+      "migrationStatus": "Implemented",
       "keywords": [
         "file",
         "preview",
@@ -4372,7 +4372,7 @@
       "administratorAccess": "Required",
       "restart": "No",
       "legacySource": "src/WinCare/UI/98-Headless.ps1",
-      "migrationStatus": "Cataloged",
+      "migrationStatus": "Implemented",
       "keywords": [
         "backup",
         "export",
@@ -4393,7 +4393,7 @@
       "administratorAccess": "No",
       "restart": "No",
       "legacySource": "src/WinCare/UI/98-Headless.ps1",
-      "migrationStatus": "Cataloged",
+      "migrationStatus": "Implemented",
       "keywords": [
         "handlers",
         "preview",
@@ -4413,7 +4413,7 @@
       "administratorAccess": "No",
       "restart": "No",
       "legacySource": "src/WinCare/UI/98-Headless.ps1",
-      "migrationStatus": "Cataloged",
+      "migrationStatus": "Implemented",
       "keywords": [
         "display",
         "overrides",
@@ -4434,7 +4434,7 @@
       "administratorAccess": "Required",
       "restart": "No",
       "legacySource": "src/WinCare/UI/98-Headless.ps1",
-      "migrationStatus": "Cataloged",
+      "migrationStatus": "Implemented",
       "keywords": [
         "display",
         "peer",
@@ -4455,7 +4455,7 @@
       "administratorAccess": "No",
       "restart": "No",
       "legacySource": "src/WinCare/UI/98-Headless.ps1",
-      "migrationStatus": "Cataloged",
+      "migrationStatus": "Implemented",
       "keywords": [
         "network & updates",
         "peer",
@@ -4475,7 +4475,7 @@
       "administratorAccess": "No",
       "restart": "No",
       "legacySource": "src/WinCare/UI/98-Headless.ps1",
-      "migrationStatus": "Cataloged",
+      "migrationStatus": "Implemented",
       "keywords": [
         "log",
         "peer",
@@ -4496,7 +4496,7 @@
       "administratorAccess": "No",
       "restart": "No",
       "legacySource": "src/WinCare/UI/98-Headless.ps1",
-      "migrationStatus": "Cataloged",
+      "migrationStatus": "Implemented",
       "keywords": [
         "pe",
         "peer",
@@ -4516,7 +4516,7 @@
       "administratorAccess": "Required",
       "restart": "No",
       "legacySource": "src/WinCare/UI/98-Headless.ps1",
-      "migrationStatus": "Cataloged",
+      "migrationStatus": "Implemented",
       "keywords": [
         "config",
         "container",
@@ -4538,7 +4538,7 @@
       "administratorAccess": "No",
       "restart": "No",
       "legacySource": "src/WinCare/UI/98-Headless.ps1",
-      "migrationStatus": "Cataloged",
+      "migrationStatus": "Implemented",
       "keywords": [
         "peer",
         "peer taskboard",
@@ -4558,7 +4558,7 @@
       "administratorAccess": "Required",
       "restart": "No",
       "legacySource": "src/WinCare/UI/98-Headless.ps1",
-      "migrationStatus": "Cataloged",
+      "migrationStatus": "Implemented",
       "keywords": [
         "peer",
         "performance",
@@ -4579,7 +4579,7 @@
       "administratorAccess": "Required",
       "restart": "No",
       "legacySource": "src/WinCare/UI/98-Headless.ps1",
-      "migrationStatus": "Cataloged",
+      "migrationStatus": "Implemented",
       "keywords": [
         "all tools",
         "commands",
@@ -4599,7 +4599,7 @@
       "administratorAccess": "No",
       "restart": "No",
       "legacySource": "src/WinCare/UI/98-Headless.ps1",
-      "migrationStatus": "Cataloged",
+      "migrationStatus": "Implemented",
       "keywords": [
         "clean",
         "deep",
@@ -4620,7 +4620,7 @@
       "administratorAccess": "Required",
       "restart": "No",
       "legacySource": "src/WinCare/UI/98-Headless.ps1",
-      "migrationStatus": "Cataloged",
+      "migrationStatus": "Implemented",
       "keywords": [
         "clean",
         "deep",
@@ -4640,7 +4640,7 @@
       "administratorAccess": "No",
       "restart": "MayBeRequired",
       "legacySource": "src/WinCare/UI/98-Headless.ps1",
-      "migrationStatus": "Cataloged",
+      "migrationStatus": "Implemented",
       "keywords": [
         "app packages selection profiles",
         "apps & startup",
@@ -4661,7 +4661,7 @@
       "administratorAccess": "No",
       "restart": "MayBeRequired",
       "legacySource": "src/WinCare/UI/98-Headless.ps1",
-      "migrationStatus": "Cataloged",
+      "migrationStatus": "Implemented",
       "keywords": [
         "apps & startup",
         "appx",
@@ -4682,7 +4682,7 @@
       "administratorAccess": "Required",
       "restart": "MayBeRequired",
       "legacySource": "src/WinCare/UI/98-Headless.ps1",
-      "migrationStatus": "Cataloged",
+      "migrationStatus": "Implemented",
       "keywords": [
         "app packages selection",
         "apps & startup",
@@ -4702,7 +4702,7 @@
       "administratorAccess": "Required",
       "restart": "MayBeRequired",
       "legacySource": "src/WinCare/UI/98-Headless.ps1",
-      "migrationStatus": "Cataloged",
+      "migrationStatus": "Implemented",
       "keywords": [
         "appx",
         "offline",
@@ -4723,7 +4723,7 @@
       "administratorAccess": "No",
       "restart": "No",
       "legacySource": "src/WinCare/UI/98-Headless.ps1",
-      "migrationStatus": "Cataloged",
+      "migrationStatus": "Implemented",
       "keywords": [
         "legacy",
         "legacy high-risk profiles",
@@ -4744,7 +4744,7 @@
       "administratorAccess": "Required",
       "restart": "No",
       "legacySource": "src/WinCare/UI/98-Headless.ps1",
-      "migrationStatus": "Cataloged",
+      "migrationStatus": "Implemented",
       "keywords": [
         "legacy",
         "repair & recovery",
@@ -4764,7 +4764,7 @@
       "administratorAccess": "No",
       "restart": "No",
       "legacySource": "src/WinCare/UI/97-AdvancedCapabilities.ps1",
-      "migrationStatus": "Cataloged",
+      "migrationStatus": "Implemented",
       "keywords": [
         "available capabilities",
         "capabilities",
@@ -4783,7 +4783,7 @@
       "administratorAccess": "MayBeRequired",
       "restart": "No",
       "legacySource": "src/WinCare/UI/97-AdvancedCapabilities.ps1",
-      "migrationStatus": "Cataloged",
+      "migrationStatus": "Implemented",
       "keywords": [
         "checkup",
         "fleet",
@@ -4803,7 +4803,7 @@
       "administratorAccess": "MayBeRequired",
       "restart": "No",
       "legacySource": "src/WinCare/UI/97-AdvancedCapabilities.ps1",
-      "migrationStatus": "Cataloged",
+      "migrationStatus": "Implemented",
       "keywords": [
         "checkup",
         "drift",
@@ -4824,7 +4824,7 @@
       "administratorAccess": "No",
       "restart": "No",
       "legacySource": "src/WinCare/UI/97-AdvancedCapabilities.ps1",
-      "migrationStatus": "Cataloged",
+      "migrationStatus": "Implemented",
       "keywords": [
         "hypervisor",
         "isolation",
@@ -4844,7 +4844,7 @@
       "administratorAccess": "MayBeRequired",
       "restart": "No",
       "legacySource": "src/WinCare/UI/97-AdvancedCapabilities.ps1",
-      "migrationStatus": "Cataloged",
+      "migrationStatus": "Implemented",
       "keywords": [
         "forensic event timeline",
         "forensics",
@@ -4864,7 +4864,7 @@
       "administratorAccess": "MayBeRequired",
       "restart": "No",
       "legacySource": "src/WinCare/UI/97-AdvancedCapabilities.ps1",
-      "migrationStatus": "Cataloged",
+      "migrationStatus": "Implemented",
       "keywords": [
         "anomalies",
         "memory",
@@ -4884,7 +4884,7 @@
       "administratorAccess": "No",
       "restart": "No",
       "legacySource": "src/WinCare/UI/97-AdvancedCapabilities.ps1",
-      "migrationStatus": "Cataloged",
+      "migrationStatus": "Implemented",
       "keywords": [
         "assurance",
         "security",
@@ -4904,7 +4904,7 @@
       "administratorAccess": "Required",
       "restart": "MayBeRequired",
       "legacySource": "src/WinCare/UI/97-AdvancedCapabilities.ps1",
-      "migrationStatus": "Cataloged",
+      "migrationStatus": "Implemented",
       "keywords": [
         "harden",
         "harden virtualization-based security",
@@ -4924,7 +4924,7 @@
       "administratorAccess": "Required",
       "restart": "No",
       "legacySource": "src/WinCare/UI/97-AdvancedCapabilities.ps1",
-      "migrationStatus": "Cataloged",
+      "migrationStatus": "Implemented",
       "keywords": [
         "config",
         "create a windows sandbox configuration",
@@ -4944,7 +4944,7 @@
       "administratorAccess": "No",
       "restart": "No",
       "legacySource": "src/WinCare/UI/97-AdvancedCapabilities.ps1",
-      "migrationStatus": "Cataloged",
+      "migrationStatus": "Implemented",
       "keywords": [
         "all tools",
         "commands",
@@ -4965,7 +4965,7 @@
       "administratorAccess": "No",
       "restart": "No",
       "legacySource": "src/WinCare/UI/97-AdvancedCapabilities.ps1",
-      "migrationStatus": "Cataloged",
+      "migrationStatus": "Implemented",
       "keywords": [
         "all tools",
         "commands",
@@ -4985,7 +4985,7 @@
       "administratorAccess": "Required",
       "restart": "No",
       "legacySource": "src/WinCare/UI/97-AdvancedCapabilities.ps1",
-      "migrationStatus": "Cataloged",
+      "migrationStatus": "Implemented",
       "keywords": [
         "add a telemetry record",
         "all tools",
@@ -5005,7 +5005,7 @@
       "administratorAccess": "Required",
       "restart": "No",
       "legacySource": "src/WinCare/UI/97-AdvancedCapabilities.ps1",
-      "migrationStatus": "Cataloged",
+      "migrationStatus": "Implemented",
       "keywords": [
         "all tools",
         "change telemetry retention",
@@ -5025,7 +5025,7 @@
       "administratorAccess": "No",
       "restart": "No",
       "legacySource": "src/WinCare/UI/97-AdvancedCapabilities.ps1",
-      "migrationStatus": "Cataloged",
+      "migrationStatus": "Implemented",
       "keywords": [
         "binary",
         "inspect a windows binary",
@@ -5045,7 +5045,7 @@
       "administratorAccess": "No",
       "restart": "No",
       "legacySource": "src/WinCare/UI/97-AdvancedCapabilities.ps1",
-      "migrationStatus": "Cataloged",
+      "migrationStatus": "Implemented",
       "keywords": [
         "binary",
         "binary inspection capability",
@@ -5066,7 +5066,7 @@
       "administratorAccess": "MayBeRequired",
       "restart": "No",
       "legacySource": "src/WinCare/UI/97-AdvancedCapabilities.ps1",
-      "migrationStatus": "Cataloged",
+      "migrationStatus": "Implemented",
       "keywords": [
         "capability",
         "ebpf",
@@ -5086,7 +5086,7 @@
       "administratorAccess": "MayBeRequired",
       "restart": "No",
       "legacySource": "src/WinCare/UI/97-AdvancedCapabilities.ps1",
-      "migrationStatus": "Cataloged",
+      "migrationStatus": "Implemented",
       "keywords": [
         "ebpf",
         "loaded ebpf programs",
@@ -5106,7 +5106,7 @@
       "administratorAccess": "Required",
       "restart": "No",
       "legacySource": "src/WinCare/UI/97-AdvancedCapabilities.ps1",
-      "migrationStatus": "Cataloged",
+      "migrationStatus": "Implemented",
       "keywords": [
         "admit",
         "admit an ebpf program",
@@ -5126,7 +5126,7 @@
       "administratorAccess": "No",
       "restart": "No",
       "legacySource": "src/WinCare/UI/97-AdvancedCapabilities.ps1",
-      "migrationStatus": "Cataloged",
+      "migrationStatus": "Implemented",
       "keywords": [
         "all tools",
         "commands",
@@ -5146,7 +5146,7 @@
       "administratorAccess": "No",
       "restart": "No",
       "legacySource": "src/WinCare/UI/97-AdvancedCapabilities.ps1",
-      "migrationStatus": "Cataloged",
+      "migrationStatus": "Implemented",
       "keywords": [
         "all tools",
         "capability",
@@ -5167,7 +5167,7 @@
       "administratorAccess": "Required",
       "restart": "No",
       "legacySource": "src/WinCare/UI/97-AdvancedCapabilities.ps1",
-      "migrationStatus": "Cataloged",
+      "migrationStatus": "Implemented",
       "keywords": [
         "all tools",
         "calibrate",
@@ -5187,7 +5187,7 @@
       "administratorAccess": "No",
       "restart": "No",
       "legacySource": "src/WinCare/UI/97-AdvancedCapabilities.ps1",
-      "migrationStatus": "Cataloged",
+      "migrationStatus": "Implemented",
       "keywords": [
         "security",
         "status",
@@ -5207,7 +5207,7 @@
       "administratorAccess": "No",
       "restart": "No",
       "legacySource": "src/WinCare/UI/97-AdvancedCapabilities.ps1",
-      "migrationStatus": "Cataloged",
+      "migrationStatus": "Implemented",
       "keywords": [
         "capability",
         "quic",

@@ -73,51 +73,41 @@ public sealed class ToolRowViewModel : ObservableObject
         _ => "[ NOT READY]",
     };
 
-    public Microsoft.UI.Xaml.Media.Brush StatusPillBackgroundBrush
+    public string StatusPillBackgroundResourceKey
     {
         get
         {
             if (MigrationState is not "Behavior verified" and not "Implemented")
             {
-                return ResolveBrush("PillNotReadyBgBrush");
+                return "PillNotReadyBgBrush";
             }
 
-            string key = Risk switch
+            return Risk switch
             {
                 "Read-only" => "PillReadOnlyBgBrush",
                 "Elevated" or "Moderate" or "Low" => "PillElevatedBgBrush",
                 "Mutating" or "High Risk" or "High" or "Critical" => "PillMutatingBgBrush",
                 _ => "PillMutatingBgBrush",
             };
-            return ResolveBrush(key);
         }
     }
 
-    public Microsoft.UI.Xaml.Media.Brush StatusPillForegroundBrush
+    public string StatusPillForegroundResourceKey
     {
         get
         {
             if (MigrationState is not "Behavior verified" and not "Implemented")
             {
-                return ResolveBrush("PillAltTextBrush");
+                return "PillAltTextBrush";
             }
 
-            string key = Risk switch
+            return Risk switch
             {
                 "Elevated" or "Moderate" or "Low" => "PillAltTextBrush",
                 _ => "PillTextBrush",
             };
-            return ResolveBrush(key);
         }
     }
 
-    private static Microsoft.UI.Xaml.Media.Brush ResolveBrush(string resourceKey)
-    {
-        if (Microsoft.UI.Xaml.Application.Current?.Resources?.TryGetValue(resourceKey, out var resource) == true && resource is Microsoft.UI.Xaml.Media.Brush brush)
-        {
-            return brush;
-        }
-        return new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.Transparent);
-    }
 }
 

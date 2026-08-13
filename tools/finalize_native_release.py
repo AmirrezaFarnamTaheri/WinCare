@@ -90,9 +90,13 @@ NATIVE_DOCUMENT_FILES = (
 )
 
 NATIVE_TOOL_FILES = (
+    "tools/__init__.py",
     "tools/finalize_native_release.py",
     "tools/package_portable.py",
+    "tools/release_checklist.py",
     "tools/verify_native_foundation.py",
+    "tools/verify_visual_tokens.py",
+    "tools/verify_pill_contrast.py",
 )
 
 NATIVE_WORKFLOW_FILES = (

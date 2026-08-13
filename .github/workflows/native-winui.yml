@@ -19,12 +19,14 @@ jobs:
       - name: Run structural tests
         run: python -m unittest discover -s tests/native -v
       - name: Finalize native release candidate source
+        if: hashFiles('src/WinCare/WinCare.psm1') != ''
         run: >-
           python tools/finalize_native_release.py
           --output artifacts/finalization
           --version 2.4.0-rc1
           --mode rc
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: hashFiles('src/WinCare/WinCare.psm1') != ''
         with:
           name: WinCare-native-source-finalization
           path: artifacts/finalization/*

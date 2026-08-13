@@ -1,5 +1,6 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Navigation;
 using WinCare.App.ViewModels.Pages;
 
 namespace WinCare.App.Views.Pages;
@@ -15,6 +16,12 @@ public sealed partial class ActivityPage : Page
 
     public ActivityPageViewModel ViewModel { get; }
     public bool IsCompact => ViewModel.IsCompactLayout;
+
+    protected override void OnNavigatedTo(NavigationEventArgs e)
+    {
+        base.OnNavigatedTo(e);
+        ViewModel.RefreshFromJournal();
+    }
 
     private void SectionSelector_SelectionChanged(SelectorBar sender, SelectorBarSelectionChangedEventArgs args)
     {

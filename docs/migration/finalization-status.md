@@ -4,39 +4,43 @@
 **Classification:** native source release candidate  
 **Production promotable:** no
 
-## Completed
+## Current readiness
 
-- Approved WinUI 3 navigation, page tabs, responsive tables, themes, and accessibility metadata
-- C# application, domain, infrastructure, and command-catalog boundaries
-- Rust workspace and versioned C ABI foundation
-- Exact preservation of all 259 stable command IDs
-- Typed, fail-closed command dispatch
-- Native read-only `catalog`, `presets`, `system`, `storage`, `network`, `experience-privacy-profiles`, `cleaner-disk-pressure`, `cleanup-targets`, `startup`, `security`, `applications`, `health`, `pagefile`, `tcp-global`, `pagefile-recommendation`, `security-controls`, `network-measure`, `process-modules`, `security-maintenance`, `network-experiments`, `etw-sessions`, `wua-history`, `injection-surfaces`, `remote-thread-events`, `wua-search`, `preset`, `wdac-policies`, `wdac-events`, `internals-processes`, `wua-hide`, `internals-memory`, `internals-cpu`, `credential-providers`, `appcontainer`, `pagefile-set`, `security-control-reduce`, `security-control-restore`, `network-experiment`, `etw-capture`, `injection-surface-quarantine`, `wua-unhide`, `wua-download`, `wua-install`, `wua-uninstall`, `wdac-deploy`, `desktop-controls`, `wifi-profiles`, `shell-extensions`, `desktop-shortcuts`, `boot`, `bcd-export`, `unattend-analyze`, `provisioning-plan`, `knowledge`, `reports`, `automation-profiles`, `run-automation`, `cancel-operation`, `widgets`, `widget-catalog`, `widget-export`, `bluetooth`, `bluetooth-events`, `maintenance`, `maintenance-create`, `maintenance-transition`, `maintenance-metrics`, `maintenance-export`, `context-menu`, `context-menu-set`, `customization-hosts`, `rainmeter-skins`, `windhawk-mods`, `explorerpatcher`, `modern-context-validate`, `playbooks`, `playbook`, `group-policy`, `group-policy-import`, `sysmon`, `sysmon-configure`, `sysmon-uninstall`, `offline-images`, `offline-drivers`, `offline-packages`, `offline-features`, `offline-driver-add`, `offline-driver-remove`, `offline-package-add`, `offline-feature-set`, `power-sessions`, `power-start`, `power-stop`, `windows`, `monitors`, `window-zones`, `window-zone-set`, `window-topmost`, `window-activate`, `input-release`, `downloads`, `downloads-due`, `download-create`, `download-start`, `download-start-due`, `download-suspend`, `download-resume`, `download-reconcile`, `download-cancel`, `download-remove`, `telemetry-snapshot`, `telemetry-history`, `telemetry-capture`, `telemetry-export`, `launcher-search`, `launcher-open`, `calculator`, `steam-games`, `steam-users`, `steam-cloud-files`, `steam-backup`, `steam-restore`, `game-integrity`, `offline-reduction-profiles`, `offline-reduction-assess`, `offline-reduction-apply`, `workspace-layouts`, `workspace-layout-save`, `workspace-layout-apply`, `workspace-layout-remove`, `color-capture`, `color-palette`, `color-add`, `color-remove`, `image-metadata`, `notes`, `note-save`, `note-remove`, `browsers`, `browser-extensions`, `remote-support`, `remote-consent`, `remote-consent-create`, `remote-consent-state`, `remote-consent-expire`, `remote-emergency`, `studio-snapshot`, `studio-monitoring-export`, `studio-file-workspaces`, `studio-file-workspace-save`, `studio-layout-profiles`, `studio-layout-save`, `studio-package`, `studio-brightness-schedules`, `studio-brightness-save`, `studio-brightness-apply`, `studio-folder-appearance`, `studio-kanata-validate`, `studio-syncthing`, `studio-wezterm`, `studio-adb-inventory`, `studio-xbox-fse`, `toolkit-diagnostics`, `toolkit-win32-error`, `toolkit-msi`, `hardening-profiles`, `hardening-assess`, `hardening-apply`, `maintenance-templates`, `maintenance-template-create`, `system-shortcuts`, `system-shortcuts-export`, `download-batch`, and `torrent-metadata` handlers
-- Frozen non-executable parity fixtures with provenance
-- Deterministic native-source and legacy-oracle archives
-- Zero PowerShell files in the native source archive
-- Linux-capable structural and finalization tests
-- Windows CI definitions for Rust, managed tests, MSIX, and portable builds
-- Manual release workflow with separate RC and production modes
+| Measure | Count |
+|---|---:|
+| Stable command IDs | 259 / 259 |
+| Native executor routes | 259 / 259 |
+| Catalog entries at `Implemented` | 259 / 259 |
+| Mutating commands with explicit preview validation | 104 / 104 |
+| `BehaviorVerified` on supported Windows hosts | 0 / 259 |
+| Native implementation blockers | 0 |
+| Production behavior-verification blockers | 259 |
+| PowerShell files in native runtime roots | 0 |
 
-## Not completed
+## What changed in this candidate
 
-- Native handlers for 85 commands
-- Windows behavioral verification for all 259 commands
-- Windows UI Automation evidence for the final source tree
-- Signed and timestamped x64 and ARM64 release packages
-- Representative-device startup measurements
-- Production promotion
+- Removed the generated per-command handler sprawl and the fabricated-success result pattern.
+- Routed every stable command through `ICommandOperationExecutor` and the Windows-native executor.
+- Added typed JSON parameter entry in All Tools; invalid JSON and non-object payloads fail locally.
+- Made preview/apply admission explicit for every mutating command.
+- Replaced `CommandRuntime.LastJournal` with one app-scoped injected activity journal and refresh-on-navigation.
+- Added bounded process execution, bounded file reads, reparse-point-safe traversal, atomic local state, and capability/dependency failures.
+- Corrected Windows Update partial-result handling, resumable download semantics, firewall-state inspection, and hash-pinned Studio ADB/ViVeTool execution.
+- Preserved the executable historical PowerShell implementation only as a separate migration oracle; it is excluded from native runtime roots and the native source artifact.
+- Removed misleading generic `UndoAvailable` claims until an end-to-end recovery action is actually wired.
 
-## Release accounting
+## Deliberate safety boundary
 
-| Gate | Result |
-|---|---|
-| Command ID parity | 259 of 259 |
-| Contract verification | 174 of 259 |
-| Implementation readiness | 174 of 259 |
-| Native source PowerShell files | 0 |
-| Production blockers | 259 behavior-verification gaps |
+`security-control-reduce` and `security-control-restore` no longer substitute Windows Firewall for
+the legacy security controls. Temporary reduction is fail-closed until the native product has a
+separately launchable recovery host that can authenticate snapshots and restore protection even if
+the WinUI process exits. No host mutation occurs on that blocked path.
+
+## Verification available in this environment
+
+The cross-platform source, GUI, contrast, finalization, and native regression gates are expected to
+pass before an RC artifact is emitted. Windows-only .NET/WinUI, Rust MSVC, MSIX, UI Automation, and
+command-oracle comparisons remain required evidence and are not replaced by source inspection.
 
 ## Artifact contract
 
@@ -47,8 +51,4 @@
 - `WinCare-<version>-finalization-report.md`
 - `WinCare-<version>-finalization-manifest.json`
 
-`--mode production` exits non-zero unless every command is `BehaviorVerified`.
-
-## Honest completion boundary
-
-This candidate finalizes the architecture, native user interface, repository separation, deterministic source artifacts, and release controls. It does not claim that 257 missing command implementations or 259 missing Windows behavior comparisons are complete.
+`--mode production` continues to exit non-zero until all 259 commands are `BehaviorVerified`.

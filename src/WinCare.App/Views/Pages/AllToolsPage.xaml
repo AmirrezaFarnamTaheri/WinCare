@@ -5,8 +5,12 @@
     xmlns:local="using:WinCare.App.Views.Pages"
     xmlns:views="using:WinCare.App.Views"
     xmlns:vm="using:WinCare.App.ViewModels.Pages"
+    xmlns:converters="using:WinCare.App.Converters"
     NavigationCacheMode="Required"
     SizeChanged="Page_SizeChanged">
+    <Page.Resources>
+        <converters:ThemeResourceBrushConverter x:Key="ThemeResourceBrushConverter" />
+    </Page.Resources>
     <Grid Padding="32,24,32,32" RowSpacing="16">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
@@ -125,7 +129,21 @@
                                 AutomationProperties.AutomationId="ReviewApprovedToggle"
                                 AutomationProperties.Name="Approve mutating command execution after preview" />
                             <StackPanel Orientation="Horizontal" Spacing="8">
-                                <Button
+                                                            <Expander Header="Command parameters" AutomationProperties.Name="Command parameters JSON">
+                                <TextBox
+                                    MinHeight="120"
+                                    AcceptsReturn="True"
+                                    FontFamily="Cascadia Mono"
+                                    FontSize="12"
+                                    Header="JSON parameters"
+                                    PlaceholderText="{}"
+                                    Text="{x:Bind ViewModel.Execution.ParameterJson, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                    TextWrapping="NoWrap"
+                                    ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                                    AutomationProperties.AutomationId="CommandParameterJson"
+                                    AutomationProperties.Name="Command parameters as JSON" />
+                            </Expander>
+<Button
                                     Command="{x:Bind ViewModel.Execution.ExecuteSelectedToolCommand}"
                                     Content="{x:Bind ViewModel.Execution.PrimaryActionLabel, Mode=OneWay}"
                                     AutomationProperties.AutomationId="ExecuteSelectedTool"
@@ -276,7 +294,7 @@
                                     <TextBlock Grid.Column="2" Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind Risk}" />
                                     <TextBlock Grid.Column="3" Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind AdministratorAccess}" />
                                     <TextBlock Grid.Column="4" Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind Restart}" />
-                                    <ContentControl Grid.Column="5" VerticalAlignment="Center" Template="{StaticResource StatusPillTemplate}" Content="{x:Bind StatusPillLabel}" Background="{x:Bind StatusPillBackgroundBrush, Mode=OneWay}" Foreground="{x:Bind StatusPillForegroundBrush, Mode=OneWay}" />
+                                    <ContentControl Grid.Column="5" VerticalAlignment="Center" Template="{StaticResource StatusPillTemplate}" Content="{x:Bind StatusPillLabel}" Background="{x:Bind StatusPillBackgroundResourceKey, Mode=OneWay, Converter={StaticResource ThemeResourceBrushConverter}}" Foreground="{x:Bind StatusPillForegroundResourceKey, Mode=OneWay, Converter={StaticResource ThemeResourceBrushConverter}}" />
                                 </Grid>
                                 <StackPanel
                                     Spacing="4"

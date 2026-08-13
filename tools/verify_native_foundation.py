@@ -57,15 +57,22 @@ REQUIRED_FILES = (
     ROOT / "src/WinCare.CommandCatalog/RemediationCatalogValidator.cs",
     ROOT / "src/WinCare.Application/Commands/CommandDispatcher.cs",
     ROOT / "src/WinCare.Application/Commands/CommandRuntime.cs",
-    ROOT / "src/WinCare.Application/Commands/Handlers/CatalogCommandHandler.cs",
-    ROOT / "src/WinCare.Application/Commands/Handlers/PresetsCommandHandler.cs",
-    ROOT / "src/WinCare.Application/Commands/Handlers/SystemInfoCommandHandler.cs",
-    ROOT / "src/WinCare.Application/Commands/Handlers/StorageHealthCommandHandler.cs",
-    ROOT / "src/WinCare.Application/Commands/Handlers/NetworkStatusCommandHandler.cs",
-    ROOT / "src/WinCare.Application/Commands/Handlers/PrivacyStatusCommandHandler.cs",
-    ROOT / "src/WinCare.Application/Commands/Handlers/DiskCleanupCommandHandler.cs",
-    ROOT / "src/WinCare.Application/Commands/Handlers/LogCleanupCommandHandler.cs",
+    ROOT / "src/WinCare.Application/Commands/ICommandOperationExecutor.cs",
+    ROOT / "src/WinCare.Application/Commands/DelegatingCommandHandler.cs",
+    ROOT / "src/WinCare.Application/Activity/IActivityJournalService.cs",
     ROOT / "src/WinCare.Application/Activity/ActivityJournalService.cs",
+    ROOT / "src/WinCare.App/Services/AppRuntime.cs",
+    ROOT / "src/WinCare.Infrastructure/Commands/WindowsCommandExecutor.cs",
+    ROOT / "src/WinCare.Infrastructure/Commands/WindowsCommandExecutor.System.cs",
+    ROOT / "src/WinCare.Infrastructure/Commands/WindowsCommandExecutor.Security.cs",
+    ROOT / "src/WinCare.Infrastructure/Commands/WindowsCommandExecutor.Desktop.cs",
+    ROOT / "src/WinCare.Infrastructure/Commands/WindowsCommandExecutor.Productivity.cs",
+    ROOT / "src/WinCare.Infrastructure/Commands/WindowsCommandExecutor.Experience.cs",
+    ROOT / "src/WinCare.Infrastructure/Commands/WindowsCommandExecutor.State.cs",
+    ROOT / "src/WinCare.Infrastructure/Commands/WindowsCommandExecutor.Remediation.cs",
+    ROOT / "src/WinCare.Infrastructure/Commands/CommandParameters.cs",
+    ROOT / "src/WinCare.Infrastructure/Commands/BoundedProcessRunner.cs",
+    ROOT / "src/WinCare.Infrastructure/Commands/CommandStateStore.cs",
     ROOT / "native/Cargo.toml",
     ROOT / "native/wincare-core/Cargo.toml",
     ROOT / "native/wincare-core/src/lib.rs",
@@ -169,54 +176,13 @@ def verify() -> list[Finding]:
                 for item in commands
                 if isinstance(item, dict) and item.get("migrationStatus") in {"Implemented", "BehaviorVerified"}
             }
-            expected_ids = {
-                "catalog", "presets", "system", "storage", "network",
-                "experience-privacy-profiles", "cleaner-disk-pressure", "cleanup-targets",
-                "startup", "security", "applications", "health", "pagefile", "tcp-global",
-                "pagefile-recommendation", "security-controls", "network-measure", "process-modules",
-                "security-maintenance", "network-experiments", "etw-sessions", "wua-history",
-                "injection-surfaces", "remote-thread-events", "wua-search", "preset",
-                "wdac-policies", "wdac-events", "internals-processes", "wua-hide",
-                "internals-memory", "internals-cpu", "credential-providers", "appcontainer",
-                "pagefile-set", "security-control-reduce", "security-control-restore", "network-experiment",
-                "etw-capture", "injection-surface-quarantine", "wua-unhide", "wua-download",
-                "wua-install", "wua-uninstall", "wdac-deploy", "desktop-controls", "wifi-profiles",
-                "shell-extensions", "desktop-shortcuts", "boot", "bcd-export", "unattend-analyze",
-                "provisioning-plan", "knowledge", "reports", "automation-profiles", "run-automation",
-                "cancel-operation", "widgets", "widget-catalog", "widget-export", "bluetooth",
-                "bluetooth-events", "maintenance", "maintenance-create", "maintenance-transition",
-                "maintenance-metrics", "maintenance-export", "context-menu", "context-menu-set",
-                "customization-hosts", "rainmeter-skins", "windhawk-mods", "explorerpatcher",
-                "modern-context-validate", "playbooks", "playbook", "group-policy", "group-policy-import",
-                "sysmon", "sysmon-configure", "sysmon-uninstall", "offline-images", "offline-drivers",
-                "offline-packages", "offline-features", "offline-driver-add", "offline-driver-remove",
-                "offline-package-add", "offline-feature-set", "power-sessions", "power-start", "power-stop", "windows",
-                "monitors", "window-zones", "window-zone-set", "window-topmost", "window-activate",
-                "input-release", "downloads", "downloads-due", "download-create", "download-start",
-                "download-start-due", "download-suspend", "download-resume", "download-reconcile",
-                "download-cancel", "download-remove", "telemetry-snapshot", "telemetry-history",
-                "telemetry-capture", "telemetry-export", "launcher-search", "launcher-open",
-                "calculator", "steam-games", "steam-users", "steam-cloud-files",
-                "steam-backup", "steam-restore", "game-integrity", "offline-reduction-profiles",
-                "offline-reduction-assess", "offline-reduction-apply", "workspace-layouts", "workspace-layout-save",
-                "workspace-layout-apply", "workspace-layout-remove", "color-capture", "color-palette",
-                "color-add", "color-remove", "image-metadata", "notes",
-                "note-save", "note-remove", "browsers", "browser-extensions",
-                "remote-support", "remote-consent", "remote-consent-create", "remote-consent-state",
-                "remote-consent-expire", "remote-emergency", "studio-snapshot", "studio-monitoring-export",
-                "studio-file-workspaces", "studio-file-workspace-save", "studio-layout-profiles", "studio-layout-save",
-                "studio-package", "studio-brightness-schedules",
-                "studio-brightness-save", "studio-brightness-apply", "studio-folder-appearance", "studio-kanata-validate",
-                "studio-syncthing", "studio-wezterm", "studio-adb-inventory", "studio-xbox-fse",
-                "toolkit-diagnostics", "toolkit-win32-error",
-                "toolkit-msi", "hardening-profiles", "hardening-assess", "hardening-apply",
-                "maintenance-templates", "maintenance-template-create", "system-shortcuts", "system-shortcuts-export",
-                "download-batch", "torrent-metadata",
-            }
+            expected_ids = set(legacy)
             if implemented_ids != expected_ids:
+                missing = sorted(expected_ids - implemented_ids)
+                extra = sorted(implemented_ids - expected_ids)
                 findings.append(Finding(
                     "implemented-command-set",
-                    f"expected 174 command IDs, found {sorted(implemented_ids)}",
+                    f"all 259 commands must be Implemented or BehaviorVerified; missing={missing}; extra={extra}",
                 ))
             for index, item in enumerate(commands):
                 if not isinstance(item, dict):
@@ -279,59 +245,48 @@ def verify() -> list[Finding]:
                 findings.append(Finding("execution-result-envelope", f"missing {token}"))
 
     handlers_root = ROOT / "src/WinCare.Application/Commands/Handlers"
-    handler_ids: set[str] = set()
-    if handlers_root.is_dir():
-        for handler_path in handlers_root.glob("*CommandHandler.cs"):
-            handler_text = handler_path.read_text(encoding="utf-8")
-            match = re.search(r'CommandId\s*=>\s*"([^"]+)"', handler_text)
-            if match:
-                handler_ids.add(match.group(1))
-    expected_ids = {
-        "catalog", "presets", "system", "storage", "network",
-        "experience-privacy-profiles", "cleaner-disk-pressure", "cleanup-targets",
-        "startup", "security", "applications", "health", "pagefile", "tcp-global",
-        "pagefile-recommendation", "security-controls", "network-measure", "process-modules",
-        "security-maintenance", "network-experiments", "etw-sessions", "wua-history",
-        "injection-surfaces", "remote-thread-events", "wua-search", "preset",
-        "wdac-policies", "wdac-events", "internals-processes", "wua-hide",
-        "internals-memory", "internals-cpu", "credential-providers", "appcontainer",
-        "pagefile-set", "security-control-reduce", "security-control-restore", "network-experiment",
-        "etw-capture", "injection-surface-quarantine", "wua-unhide", "wua-download",
-        "wua-install", "wua-uninstall", "wdac-deploy", "desktop-controls", "wifi-profiles",
-        "shell-extensions", "desktop-shortcuts", "boot", "bcd-export", "unattend-analyze",
-        "provisioning-plan", "knowledge", "reports", "automation-profiles", "run-automation",
-        "cancel-operation", "widgets", "widget-catalog", "widget-export", "bluetooth",
-        "bluetooth-events", "maintenance", "maintenance-create", "maintenance-transition",
-        "maintenance-metrics", "maintenance-export", "context-menu", "context-menu-set",
-        "customization-hosts", "rainmeter-skins", "windhawk-mods", "explorerpatcher",
-        "modern-context-validate", "playbooks", "playbook", "group-policy", "group-policy-import",
-        "sysmon", "sysmon-configure", "sysmon-uninstall", "offline-images", "offline-drivers",
-        "offline-packages", "offline-features", "offline-driver-add", "offline-driver-remove",
-        "offline-package-add", "offline-feature-set", "power-sessions", "power-start", "power-stop", "windows",
-        "monitors", "window-zones", "window-zone-set", "window-topmost", "window-activate",
-        "input-release", "downloads", "downloads-due", "download-create", "download-start",
-        "download-start-due", "download-suspend", "download-resume", "download-reconcile",
-        "download-cancel", "download-remove", "telemetry-snapshot", "telemetry-history",
-        "telemetry-capture", "telemetry-export", "launcher-search", "launcher-open",
-        "calculator", "steam-games", "steam-users", "steam-cloud-files",
-        "steam-backup", "steam-restore", "game-integrity", "offline-reduction-profiles",
-        "offline-reduction-assess", "offline-reduction-apply", "workspace-layouts", "workspace-layout-save",
-        "workspace-layout-apply", "workspace-layout-remove", "color-capture", "color-palette",
-        "color-add", "color-remove", "image-metadata", "notes",
-        "note-save", "note-remove", "browsers", "browser-extensions",
-        "remote-support", "remote-consent", "remote-consent-create", "remote-consent-state",
-        "remote-consent-expire", "remote-emergency", "studio-snapshot", "studio-monitoring-export",
-        "studio-file-workspaces", "studio-file-workspace-save", "studio-layout-profiles", "studio-layout-save",
-        "studio-package", "studio-brightness-schedules",
-        "studio-brightness-save", "studio-brightness-apply", "studio-folder-appearance", "studio-kanata-validate",
-        "studio-syncthing", "studio-wezterm", "studio-adb-inventory", "studio-xbox-fse",
-        "toolkit-diagnostics", "toolkit-win32-error",
-        "toolkit-msi", "hardening-profiles", "hardening-assess", "hardening-apply",
-        "maintenance-templates", "maintenance-template-create", "system-shortcuts", "system-shortcuts-export",
-        "download-batch", "torrent-metadata",
-    }
-    if handler_ids != expected_ids:
-        findings.append(Finding("handler-set", f"expected 174 handlers, found {sorted(handler_ids)}"))
+    if handlers_root.exists():
+        findings.append(Finding(
+            "handler-sprawl",
+            "copy-pasted command handler directory must remain removed; commands route through ICommandOperationExecutor",
+        ))
+
+    runtime_path = ROOT / "src/WinCare.Application/Commands/CommandRuntime.cs"
+    if runtime_path.is_file():
+        runtime = runtime_path.read_text(encoding="utf-8")
+        for token in ("ICommandOperationExecutor", "DelegatingCommandHandler", "ActivityJournalService"):
+            if token not in runtime:
+                findings.append(Finding("executor-composition", f"CommandRuntime missing {token}"))
+        if "LastJournal" in runtime:
+            findings.append(Finding("activity-lifetime", "CommandRuntime must not expose LastJournal service-locator state"))
+
+    executor_files = sorted((ROOT / "src/WinCare.Infrastructure/Commands").glob("WindowsCommandExecutor*.cs"))
+    executor_text = "\n".join(path.read_text(encoding="utf-8") for path in executor_files)
+    route_ids = set(re.findall(r'"([a-z0-9-]+)"\s*=>', executor_text)) | {"catalog", "presets"}
+    missing_routes = sorted(set(legacy) - route_ids)
+    if missing_routes:
+        findings.append(Finding("executor-route-coverage", f"missing command routes: {missing_routes}"))
+
+    if CATALOG_PATH.is_file():
+        try:
+            command_document = json.loads(CATALOG_PATH.read_text(encoding="utf-8"))
+            mutating_ids = {
+                item["id"] for item in command_document.get("commands", [])
+                if isinstance(item, dict) and item.get("readOnly") is False
+            }
+            main_executor = ROOT / "src/WinCare.Infrastructure/Commands/WindowsCommandExecutor.cs"
+            text = main_executor.read_text(encoding="utf-8") if main_executor.is_file() else ""
+            marker = "private static void ValidateMutationParameters"
+            validation_text = text[text.find(marker):] if marker in text else ""
+            validation_ids = set(re.findall(r'case\s+"([a-z0-9-]+)"', validation_text))
+            missing_validation = sorted(mutating_ids - validation_ids)
+            if missing_validation:
+                findings.append(Finding(
+                    "mutation-preview-validation",
+                    f"mutating commands without explicit preview validation: {missing_validation}",
+                ))
+        except (OSError, json.JSONDecodeError, KeyError) as exc:
+            findings.append(Finding("mutation-validation-json", str(exc)))
 
     for path in _iter_text_files(NATIVE_ROOTS):
         text = path.read_text(encoding="utf-8", errors="replace")
@@ -446,7 +401,7 @@ def main() -> int:
     print("catalog: 259 unique command IDs with exact frozen-oracle parity")
     print("native source: no PowerShell or WPF references")
     print("WinUI source: approved navigation, tabs, table contract, command execution binding, and automation metadata present")
-    print("command runtime: 2 native read-only handlers with fail-closed admission")
+    print("command runtime: all 259 catalog commands route through one fail-closed native executor")
     return 0
 
 

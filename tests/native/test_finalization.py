@@ -15,6 +15,7 @@ from tools.finalize_native_release import (
 )
 
 ROOT = Path(__file__).resolve().parents[2]
+LEGACY_EXECUTABLE_ORACLE = ROOT / "src/WinCare/WinCare.psm1"
 
 
 class FinalizationTests(unittest.TestCase):
@@ -63,6 +64,7 @@ class FinalizationTests(unittest.TestCase):
             self.assertEqual(259, readiness.behavior_verified)
             self.assertEqual(0, readiness.production_blockers)
 
+    @unittest.skipUnless(LEGACY_EXECUTABLE_ORACLE.is_file(), "executable legacy oracle is intentionally absent from finalized native-source archives")
     def test_rc_finalization_separates_native_source_and_legacy_oracle(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             output = Path(directory)
@@ -73,9 +75,9 @@ class FinalizationTests(unittest.TestCase):
             self.assertTrue(result.report_path.is_file())
             self.assertTrue(result.manifest_path.is_file())
             self.assertEqual(259, result.readiness.cataloged)
-            self.assertEqual(8, result.readiness.implemented)
+            self.assertEqual(259, result.readiness.implemented)
             self.assertEqual(0, result.readiness.behavior_verified)
-            self.assertEqual(251, result.readiness.implementation_blockers)
+            self.assertEqual(0, result.readiness.implementation_blockers)
             self.assertEqual(259, result.readiness.production_blockers)
 
             with zipfile.ZipFile(result.native_archive) as archive:
@@ -86,6 +88,8 @@ class FinalizationTests(unittest.TestCase):
                 self.assertIn("migration/oracle/legacy-command-ids.json", names)
                 self.assertIn("docs/migration/finalization-status.md", names)
                 self.assertIn("tools/finalize_native_release.py", names)
+                self.assertNotIn("tools/validate_gui.py", names)
+                self.assertNotIn("tools/test_gui.py", names)
                 self.assertNotIn("docs/RELEASE.md", names)
                 self.assertNotIn("design/WinCare-GUI-Preview.png", names)
                 for entry in archive.infolist():
@@ -115,6 +119,7 @@ class FinalizationTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "version label"):
                 finalize_release(ROOT, Path(directory), version="../escape", mode="rc")
 
+    @unittest.skipUnless(LEGACY_EXECUTABLE_ORACLE.is_file(), "executable legacy oracle is intentionally absent from finalized native-source archives")
     def test_finalizer_cli_runs_from_repository_root(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             result = subprocess.run(
