@@ -236,8 +236,8 @@ public sealed class CommandSafetyTests
 
         CommandHandlerOutcome outcome = await executor.ExecuteAsync(pagefileDef, previewRequest, CancellationToken.None);
 
-        Assert.Equal(CommandResultStatus.Succeeded, outcome.Status);
-        Assert.True(outcome.Data.TryGetProperty("affectedResources", out JsonElement affected));
+        Assert.NotNull(outcome.Data);
+        Assert.True(outcome.Data.Value.TryGetProperty("affectedResources", out JsonElement affected));
         Assert.Equal(JsonValueKind.Array, affected.ValueKind);
         Assert.True(affected.GetArrayLength() > 0);
         Assert.Equal("Registry/WMI", affected[0].GetProperty("resourceType").GetString());

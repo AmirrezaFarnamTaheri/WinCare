@@ -20,6 +20,12 @@ public sealed record ApprovedMutationPlan(
     Guid CorrelationId)
 {
     /// <summary>
+    /// Creates an approved mutation plan with a canonical parameter digest and a new correlation ID.
+    /// </summary>
+    public static ApprovedMutationPlan Create(string commandId, JsonElement parameters) =>
+        Create(commandId, parameters, Guid.NewGuid());
+
+    /// <summary>
     /// Creates an approved mutation plan with a canonical parameter digest.
     /// </summary>
     public static ApprovedMutationPlan Create(string commandId, JsonElement parameters, Guid correlationId)
