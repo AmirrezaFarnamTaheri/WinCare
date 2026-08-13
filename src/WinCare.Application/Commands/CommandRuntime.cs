@@ -162,6 +162,16 @@ public static class CommandRuntime
             new ColorPaletteCommandHandler(),
             new ColorAddCommandHandler(),
             new ColorRemoveCommandHandler(),
+            new ImageMetadataCommandHandler(),
+            new NotesCommandHandler(),
+            new NoteSaveCommandHandler(),
+            new NoteRemoveCommandHandler(),
+            new BrowsersCommandHandler(),
+            new BrowserExtensionsCommandHandler(),
+            new RemoteSupportCommandHandler(),
+            new RemoteConsentCommandHandler(),
+            new RemoteConsentCreateCommandHandler(),
+            new RemoteConsentStateCommandHandler(),
         };
 
         if (nativeCore is not null)

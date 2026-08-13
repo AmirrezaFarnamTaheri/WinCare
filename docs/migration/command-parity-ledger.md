@@ -9,10 +9,10 @@ The frozen oracle contains all stable command IDs from the historical implementa
 | Total stable IDs | 259 |
 | Unique native catalog IDs | 259 |
 | Cataloged | 259 |
-| Contract verified or later | 134 |
-| Implemented or later | 134 |
+| Contract verified or later | 144 |
+| Implemented or later | 144 |
 | Behavior verified | 0 |
-| Native implementation blockers | 125 |
+| Native implementation blockers | 115 |
 | Production behavior-verification blockers | 259 |
 
 Implemented native commands:
@@ -151,6 +151,16 @@ Implemented native commands:
 - `color-palette`
 - `color-add`
 - `color-remove`
+- `image-metadata`
+- `notes`
+- `note-save`
+- `note-remove`
+- `browsers`
+- `browser-extensions`
+- `remote-support`
+- `remote-consent`
+- `remote-consent-create`
+- `remote-consent-state`
 
 None of these commands are marked `BehaviorVerified` because Windows oracle comparison has not run in the current environment.
 

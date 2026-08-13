@@ -200,12 +200,14 @@ def verify() -> list[Finding]:
                 "steam-backup", "steam-restore", "game-integrity", "offline-reduction-profiles",
                 "offline-reduction-assess", "offline-reduction-apply", "workspace-layouts", "workspace-layout-save",
                 "workspace-layout-apply", "workspace-layout-remove", "color-capture", "color-palette",
-                "color-add", "color-remove",
+                "color-add", "color-remove", "image-metadata", "notes",
+                "note-save", "note-remove", "browsers", "browser-extensions",
+                "remote-support", "remote-consent", "remote-consent-create", "remote-consent-state",
             }
             if implemented_ids != expected_ids:
                 findings.append(Finding(
                     "implemented-command-set",
-                    f"expected 134 command IDs, found {sorted(implemented_ids)}",
+                    f"expected 144 command IDs, found {sorted(implemented_ids)}",
                 ))
             for index, item in enumerate(commands):
                 if not isinstance(item, dict):
@@ -306,10 +308,12 @@ def verify() -> list[Finding]:
         "steam-backup", "steam-restore", "game-integrity", "offline-reduction-profiles",
         "offline-reduction-assess", "offline-reduction-apply", "workspace-layouts", "workspace-layout-save",
         "workspace-layout-apply", "workspace-layout-remove", "color-capture", "color-palette",
-        "color-add", "color-remove",
+        "color-add", "color-remove", "image-metadata", "notes",
+        "note-save", "note-remove", "browsers", "browser-extensions",
+        "remote-support", "remote-consent", "remote-consent-create", "remote-consent-state",
     }
     if handler_ids != expected_ids:
-        findings.append(Finding("handler-set", f"expected 134 handlers, found {sorted(handler_ids)}"))
+        findings.append(Finding("handler-set", f"expected 144 handlers, found {sorted(handler_ids)}"))
 
     for path in _iter_text_files(NATIVE_ROOTS):
         text = path.read_text(encoding="utf-8", errors="replace")
