@@ -224,7 +224,7 @@ public sealed partial class WindowsCommandExecutor
             return JsonSerializer.SerializeToElement(list, JsonOptions);
         }, cancellationToken).ConfigureAwait(false);
 
-        return Success("note-save", "Note saved.", savedNode, undo: false);
+        return Success("note-save", "Note saved.", savedNode!, undo: false);
     }
 
     private async Task<CommandHandlerOutcome> RemoteConsentCreateAsync(CommandParameters p, CancellationToken cancellationToken)
