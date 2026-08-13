@@ -82,6 +82,16 @@ public static class CommandRuntime
             new UnattendAnalyzeCommandHandler(),
             new ProvisioningPlanCommandHandler(),
             new KnowledgeCommandHandler(),
+            new ReportsCommandHandler(),
+            new AutomationProfilesCommandHandler(),
+            new RunAutomationCommandHandler(),
+            new CancelOperationCommandHandler(),
+            new WidgetsCommandHandler(),
+            new WidgetCatalogCommandHandler(),
+            new WidgetExportCommandHandler(),
+            new BluetoothCommandHandler(),
+            new BluetoothEventsCommandHandler(),
+            new MaintenanceCommandHandler(),
         };
 
         if (nativeCore is not null)

@@ -9,10 +9,10 @@ The frozen oracle contains all stable command IDs from the historical implementa
 | Total stable IDs | 259 |
 | Unique native catalog IDs | 259 |
 | Cataloged | 259 |
-| Contract verified or later | 54 |
-| Implemented or later | 54 |
+| Contract verified or later | 64 |
+| Implemented or later | 64 |
 | Behavior verified | 0 |
-| Native implementation blockers | 205 |
+| Native implementation blockers | 195 |
 | Production behavior-verification blockers | 259 |
 
 Implemented native commands:
@@ -71,6 +71,16 @@ Implemented native commands:
 - `unattend-analyze`
 - `provisioning-plan`
 - `knowledge`
+- `reports`
+- `automation-profiles`
+- `run-automation`
+- `cancel-operation`
+- `widgets`
+- `widget-catalog`
+- `widget-export`
+- `bluetooth`
+- `bluetooth-events`
+- `maintenance`
 
 None of these commands are marked `BehaviorVerified` because Windows oracle comparison has not run in the current environment.
 

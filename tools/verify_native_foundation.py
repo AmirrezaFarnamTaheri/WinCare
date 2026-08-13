@@ -182,12 +182,14 @@ def verify() -> list[Finding]:
                 "etw-capture", "injection-surface-quarantine", "wua-unhide", "wua-download",
                 "wua-install", "wua-uninstall", "wdac-deploy", "desktop-controls", "wifi-profiles",
                 "shell-extensions", "desktop-shortcuts", "boot", "bcd-export", "unattend-analyze",
-                "provisioning-plan", "knowledge",
+                "provisioning-plan", "knowledge", "reports", "automation-profiles", "run-automation",
+                "cancel-operation", "widgets", "widget-catalog", "widget-export", "bluetooth",
+                "bluetooth-events", "maintenance",
             }
             if implemented_ids != expected_ids:
                 findings.append(Finding(
                     "implemented-command-set",
-                    f"expected 54 command IDs, found {sorted(implemented_ids)}",
+                    f"expected 64 command IDs, found {sorted(implemented_ids)}",
                 ))
             for index, item in enumerate(commands):
                 if not isinstance(item, dict):
@@ -270,10 +272,12 @@ def verify() -> list[Finding]:
         "etw-capture", "injection-surface-quarantine", "wua-unhide", "wua-download",
         "wua-install", "wua-uninstall", "wdac-deploy", "desktop-controls", "wifi-profiles",
         "shell-extensions", "desktop-shortcuts", "boot", "bcd-export", "unattend-analyze",
-        "provisioning-plan", "knowledge",
+        "provisioning-plan", "knowledge", "reports", "automation-profiles", "run-automation",
+        "cancel-operation", "widgets", "widget-catalog", "widget-export", "bluetooth",
+        "bluetooth-events", "maintenance",
     }
     if handler_ids != expected_ids:
-        findings.append(Finding("handler-set", f"expected 54 handlers, found {sorted(handler_ids)}"))
+        findings.append(Finding("handler-set", f"expected 64 handlers, found {sorted(handler_ids)}"))
 
     for path in _iter_text_files(NATIVE_ROOTS):
         text = path.read_text(encoding="utf-8", errors="replace")
