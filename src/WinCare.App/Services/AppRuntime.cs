@@ -20,13 +20,28 @@ public sealed class AppRuntime
         Dispatcher = CommandRuntime.CreateDefault(CommandExecutor, NativeCore, Journal);
     }
 
+    /// <summary>
+    /// Gets the singleton process runtime instance.
+    /// </summary>
     public static AppRuntime Current => CurrentValue.Value;
 
+    /// <summary>
+    /// Gets the activity journal service instance.
+    /// </summary>
     public ActivityJournalService Journal { get; }
 
+    /// <summary>
+    /// Gets the native core service instance.
+    /// </summary>
     public NativeCoreService NativeCore { get; }
 
+    /// <summary>
+    /// Gets the Windows command executor instance.
+    /// </summary>
     public WindowsCommandExecutor CommandExecutor { get; }
 
+    /// <summary>
+    /// Gets the command dispatcher instance.
+    /// </summary>
     public CommandDispatcher Dispatcher { get; }
 }
