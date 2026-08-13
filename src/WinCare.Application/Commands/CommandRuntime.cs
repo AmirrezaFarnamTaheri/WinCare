@@ -38,6 +38,14 @@ public static class CommandRuntime
             new LogCleanupCommandHandler(),
             new StartupCommandHandler(),
             new SecurityStatusCommandHandler(),
+            new ApplicationsCommandHandler(),
+            new HealthStatusCommandHandler(),
+            new VirtualMemoryCommandHandler(),
+            new TcpGlobalCommandHandler(),
+            new PagefileRecommendationCommandHandler(),
+            new SecurityControlsCommandHandler(),
+            new NetworkMeasureCommandHandler(),
+            new ProcessModulesCommandHandler(),
         };
 
         if (nativeCore is not null)

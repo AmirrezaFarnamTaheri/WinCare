@@ -17,13 +17,13 @@ migration.
 | Measure | Count |
 |---|---:|
 | Stable command IDs preserved | 259 of 259 |
-| Typed contracts verified | 10 of 259 |
-| Native handlers implemented | 10 of 259 |
+| Typed contracts verified | 18 of 259 |
+| Native handlers implemented | 18 of 259 |
 | Behavior verified on Windows | 0 of 259 |
-| Native implementation blockers | 249 |
+| Native implementation blockers | 241 |
 | Production behavior-verification blockers | 259 |
 
-The implemented native handlers are `catalog`, `presets`, `system`, `storage`, `network`, `experience-privacy-profiles`, `cleaner-disk-pressure`, `cleanup-targets`, `startup`, and `security`. Every other command remains visible in All tools but is disabled by the dispatcher and returns an explicit not-implemented result.
+The implemented native handlers are `catalog`, `presets`, `system`, `storage`, `network`, `experience-privacy-profiles`, `cleaner-disk-pressure`, `cleanup-targets`, `startup`, `security`, `applications`, `health`, `pagefile`, `tcp-global`, `pagefile-recommendation`, `security-controls`, `network-measure`, and `process-modules`. Every other command remains visible in All tools but is disabled by the dispatcher and returns an explicit not-implemented result.
 
 ## Finalized artifact model
 

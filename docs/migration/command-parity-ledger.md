@@ -9,10 +9,10 @@ The frozen oracle contains all stable command IDs from the historical implementa
 | Total stable IDs | 259 |
 | Unique native catalog IDs | 259 |
 | Cataloged | 259 |
-| Contract verified or later | 10 |
-| Implemented or later | 10 |
+| Contract verified or later | 18 |
+| Implemented or later | 18 |
 | Behavior verified | 0 |
-| Native implementation blockers | 249 |
+| Native implementation blockers | 241 |
 | Production behavior-verification blockers | 259 |
 
 Implemented native commands:
@@ -27,6 +27,14 @@ Implemented native commands:
 - `cleanup-targets`
 - `startup`
 - `security`
+- `applications`
+- `health`
+- `pagefile`
+- `tcp-global`
+- `pagefile-recommendation`
+- `security-controls`
+- `network-measure`
+- `process-modules`
 
 None of these commands are marked `BehaviorVerified` because Windows oracle comparison has not run in the current environment.
 
