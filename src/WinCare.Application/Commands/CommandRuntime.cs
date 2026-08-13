@@ -50,6 +50,10 @@ public static class CommandRuntime
             new NetworkExperimentsCommandHandler(),
             new EtwSessionsCommandHandler(),
             new WuaHistoryCommandHandler(),
+            new InjectionSurfacesCommandHandler(),
+            new RemoteThreadEventsCommandHandler(),
+            new WuaSearchCommandHandler(),
+            new PresetExecutionCommandHandler(),
         };
 
         if (nativeCore is not null)
