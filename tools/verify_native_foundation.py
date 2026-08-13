@@ -209,11 +209,14 @@ def verify() -> list[Finding]:
                 "studio-brightness-save", "studio-brightness-apply", "studio-folder-appearance", "studio-kanata-validate",
                 "studio-syncthing", "studio-wezterm", "studio-adb-inventory", "studio-xbox-fse",
                 "toolkit-diagnostics", "toolkit-win32-error",
+                "toolkit-msi", "hardening-profiles", "hardening-assess", "hardening-apply",
+                "maintenance-templates", "maintenance-template-create", "system-shortcuts", "system-shortcuts-export",
+                "download-batch", "torrent-metadata",
             }
             if implemented_ids != expected_ids:
                 findings.append(Finding(
                     "implemented-command-set",
-                    f"expected 164 command IDs, found {sorted(implemented_ids)}",
+                    f"expected 174 command IDs, found {sorted(implemented_ids)}",
                 ))
             for index, item in enumerate(commands):
                 if not isinstance(item, dict):
@@ -323,9 +326,12 @@ def verify() -> list[Finding]:
         "studio-brightness-save", "studio-brightness-apply", "studio-folder-appearance", "studio-kanata-validate",
         "studio-syncthing", "studio-wezterm", "studio-adb-inventory", "studio-xbox-fse",
         "toolkit-diagnostics", "toolkit-win32-error",
+        "toolkit-msi", "hardening-profiles", "hardening-assess", "hardening-apply",
+        "maintenance-templates", "maintenance-template-create", "system-shortcuts", "system-shortcuts-export",
+        "download-batch", "torrent-metadata",
     }
     if handler_ids != expected_ids:
-        findings.append(Finding("handler-set", f"expected 164 handlers, found {sorted(handler_ids)}"))
+        findings.append(Finding("handler-set", f"expected 174 handlers, found {sorted(handler_ids)}"))
 
     for path in _iter_text_files(NATIVE_ROOTS):
         text = path.read_text(encoding="utf-8", errors="replace")

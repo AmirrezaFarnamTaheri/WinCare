@@ -3244,7 +3244,7 @@
       "administratorAccess": "No",
       "restart": "No",
       "legacySource": "src/WinCare/UI/98-Headless.ps1",
-      "migrationStatus": "Cataloged",
+      "migrationStatus": "Implemented",
       "keywords": [
         "msi",
         "performance",
@@ -3264,7 +3264,7 @@
       "administratorAccess": "No",
       "restart": "No",
       "legacySource": "src/WinCare/UI/98-Headless.ps1",
-      "migrationStatus": "Cataloged",
+      "migrationStatus": "Implemented",
       "keywords": [
         "hardening",
         "hardening profiles",
@@ -3283,7 +3283,7 @@
       "administratorAccess": "No",
       "restart": "No",
       "legacySource": "src/WinCare/UI/98-Headless.ps1",
-      "migrationStatus": "Cataloged",
+      "migrationStatus": "Implemented",
       "keywords": [
         "assess",
         "balanced hardening assessment",
@@ -3302,7 +3302,7 @@
       "administratorAccess": "Required",
       "restart": "MayBeRequired",
       "legacySource": "src/WinCare/UI/98-Headless.ps1",
-      "migrationStatus": "Cataloged",
+      "migrationStatus": "Implemented",
       "keywords": [
         "apply",
         "hail mary hardening",
@@ -3321,7 +3321,7 @@
       "administratorAccess": "No",
       "restart": "No",
       "legacySource": "src/WinCare/UI/98-Headless.ps1",
-      "migrationStatus": "Cataloged",
+      "migrationStatus": "Implemented",
       "keywords": [
         "maintenance",
         "maintenance templates",
@@ -3341,7 +3341,7 @@
       "administratorAccess": "Required",
       "restart": "No",
       "legacySource": "src/WinCare/UI/98-Headless.ps1",
-      "migrationStatus": "Cataloged",
+      "migrationStatus": "Implemented",
       "keywords": [
         "create",
         "create weekly health window",
@@ -3362,7 +3362,7 @@
       "administratorAccess": "No",
       "restart": "No",
       "legacySource": "src/WinCare/UI/98-Headless.ps1",
-      "migrationStatus": "Cataloged",
+      "migrationStatus": "Implemented",
       "keywords": [
         "performance",
         "shortcuts",
@@ -3382,7 +3382,7 @@
       "administratorAccess": "Required",
       "restart": "No",
       "legacySource": "src/WinCare/UI/98-Headless.ps1",
-      "migrationStatus": "Cataloged",
+      "migrationStatus": "Implemented",
       "keywords": [
         "export",
         "export system shortcuts",
@@ -3403,7 +3403,7 @@
       "administratorAccess": "MayBeRequired",
       "restart": "No",
       "legacySource": "src/WinCare/UI/98-Headless.ps1",
-      "migrationStatus": "Cataloged",
+      "migrationStatus": "Implemented",
       "keywords": [
         "batch",
         "download",
@@ -3423,7 +3423,7 @@
       "administratorAccess": "No",
       "restart": "No",
       "legacySource": "src/WinCare/UI/98-Headless.ps1",
-      "migrationStatus": "Cataloged",
+      "migrationStatus": "Implemented",
       "keywords": [
         "metadata",
         "network & updates",

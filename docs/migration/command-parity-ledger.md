@@ -9,10 +9,10 @@ The frozen oracle contains all stable command IDs from the historical implementa
 | Total stable IDs | 259 |
 | Unique native catalog IDs | 259 |
 | Cataloged | 259 |
-| Contract verified or later | 164 |
-| Implemented or later | 164 |
+| Contract verified or later | 174 |
+| Implemented or later | 174 |
 | Behavior verified | 0 |
-| Native implementation blockers | 95 |
+| Native implementation blockers | 85 |
 | Production behavior-verification blockers | 259 |
 
 Implemented native commands:
@@ -181,6 +181,16 @@ Implemented native commands:
 - `studio-xbox-fse`
 - `toolkit-diagnostics`
 - `toolkit-win32-error`
+- `toolkit-msi`
+- `hardening-profiles`
+- `hardening-assess`
+- `hardening-apply`
+- `maintenance-templates`
+- `maintenance-template-create`
+- `system-shortcuts`
+- `system-shortcuts-export`
+- `download-batch`
+- `torrent-metadata`
 
 None of these commands are marked `BehaviorVerified` because Windows oracle comparison has not run in the current environment.
 

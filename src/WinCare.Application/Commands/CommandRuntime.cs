@@ -192,6 +192,16 @@ public static class CommandRuntime
             new StudioXboxFseCommandHandler(),
             new ToolkitDiagnosticsCommandHandler(),
             new ToolkitWin32ErrorCommandHandler(),
+            new ToolkitMsiCommandHandler(),
+            new HardeningProfilesCommandHandler(),
+            new HardeningAssessCommandHandler(),
+            new HardeningApplyCommandHandler(),
+            new MaintenanceTemplatesCommandHandler(),
+            new MaintenanceTemplateCreateCommandHandler(),
+            new SystemShortcutsCommandHandler(),
+            new SystemShortcutsExportCommandHandler(),
+            new DownloadBatchCommandHandler(),
+            new TorrentMetadataCommandHandler(),
         };
 
         if (nativeCore is not null)
