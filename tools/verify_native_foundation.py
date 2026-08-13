@@ -180,12 +180,14 @@ def verify() -> list[Finding]:
                 "internals-memory", "internals-cpu", "credential-providers", "appcontainer",
                 "pagefile-set", "security-control-reduce", "security-control-restore", "network-experiment",
                 "etw-capture", "injection-surface-quarantine", "wua-unhide", "wua-download",
-                "wua-install", "wua-uninstall",
+                "wua-install", "wua-uninstall", "wdac-deploy", "desktop-controls", "wifi-profiles",
+                "shell-extensions", "desktop-shortcuts", "boot", "bcd-export", "unattend-analyze",
+                "provisioning-plan", "knowledge",
             }
             if implemented_ids != expected_ids:
                 findings.append(Finding(
                     "implemented-command-set",
-                    f"expected 44 command IDs, found {sorted(implemented_ids)}",
+                    f"expected 54 command IDs, found {sorted(implemented_ids)}",
                 ))
             for index, item in enumerate(commands):
                 if not isinstance(item, dict):
@@ -266,10 +268,12 @@ def verify() -> list[Finding]:
         "internals-memory", "internals-cpu", "credential-providers", "appcontainer",
         "pagefile-set", "security-control-reduce", "security-control-restore", "network-experiment",
         "etw-capture", "injection-surface-quarantine", "wua-unhide", "wua-download",
-        "wua-install", "wua-uninstall",
+        "wua-install", "wua-uninstall", "wdac-deploy", "desktop-controls", "wifi-profiles",
+        "shell-extensions", "desktop-shortcuts", "boot", "bcd-export", "unattend-analyze",
+        "provisioning-plan", "knowledge",
     }
     if handler_ids != expected_ids:
-        findings.append(Finding("handler-set", f"expected 44 handlers, found {sorted(handler_ids)}"))
+        findings.append(Finding("handler-set", f"expected 54 handlers, found {sorted(handler_ids)}"))
 
     for path in _iter_text_files(NATIVE_ROOTS):
         text = path.read_text(encoding="utf-8", errors="replace")

@@ -72,6 +72,16 @@ public static class CommandRuntime
             new WuaDownloadCommandHandler(),
             new WuaInstallCommandHandler(),
             new WuaUninstallCommandHandler(),
+            new WdacDeployCommandHandler(),
+            new DesktopControlsCommandHandler(),
+            new WifiProfilesCommandHandler(),
+            new ShellExtensionsCommandHandler(),
+            new DesktopShortcutsCommandHandler(),
+            new BootCommandHandler(),
+            new BcdExportCommandHandler(),
+            new UnattendAnalyzeCommandHandler(),
+            new ProvisioningPlanCommandHandler(),
+            new KnowledgeCommandHandler(),
         };
 
         if (nativeCore is not null)

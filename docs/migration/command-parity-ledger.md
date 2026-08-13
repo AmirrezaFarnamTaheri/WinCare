@@ -9,10 +9,10 @@ The frozen oracle contains all stable command IDs from the historical implementa
 | Total stable IDs | 259 |
 | Unique native catalog IDs | 259 |
 | Cataloged | 259 |
-| Contract verified or later | 44 |
-| Implemented or later | 44 |
+| Contract verified or later | 54 |
+| Implemented or later | 54 |
 | Behavior verified | 0 |
-| Native implementation blockers | 215 |
+| Native implementation blockers | 205 |
 | Production behavior-verification blockers | 259 |
 
 Implemented native commands:
@@ -61,6 +61,16 @@ Implemented native commands:
 - `wua-download`
 - `wua-install`
 - `wua-uninstall`
+- `wdac-deploy`
+- `desktop-controls`
+- `wifi-profiles`
+- `shell-extensions`
+- `desktop-shortcuts`
+- `boot`
+- `bcd-export`
+- `unattend-analyze`
+- `provisioning-plan`
+- `knowledge`
 
 None of these commands are marked `BehaviorVerified` because Windows oracle comparison has not run in the current environment.
 
