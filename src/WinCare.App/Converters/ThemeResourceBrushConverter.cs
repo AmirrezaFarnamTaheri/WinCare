@@ -15,7 +15,7 @@ public sealed class ThemeResourceBrushConverter : IValueConverter
     public object Convert(object value, Type targetType, object parameter, string language)
     {
         if (value is string resourceKey &&
-            Application.Current?.Resources?.TryGetValue(resourceKey, out object? resource) == true &&
+            Microsoft.UI.Xaml.Application.Current?.Resources?.TryGetValue(resourceKey, out object? resource) == true &&
             resource is Brush brush)
         {
             return brush;
