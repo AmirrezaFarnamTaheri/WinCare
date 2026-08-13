@@ -176,11 +176,12 @@ def verify() -> list[Finding]:
                 "pagefile-recommendation", "security-controls", "network-measure", "process-modules",
                 "security-maintenance", "network-experiments", "etw-sessions", "wua-history",
                 "injection-surfaces", "remote-thread-events", "wua-search", "preset",
+                "wdac-policies", "wdac-events", "internals-processes", "wua-hide",
             }
             if implemented_ids != expected_ids:
                 findings.append(Finding(
                     "implemented-command-set",
-                    f"expected 26 command IDs, found {sorted(implemented_ids)}",
+                    f"expected 30 command IDs, found {sorted(implemented_ids)}",
                 ))
             for index, item in enumerate(commands):
                 if not isinstance(item, dict):
@@ -257,9 +258,10 @@ def verify() -> list[Finding]:
         "pagefile-recommendation", "security-controls", "network-measure", "process-modules",
         "security-maintenance", "network-experiments", "etw-sessions", "wua-history",
         "injection-surfaces", "remote-thread-events", "wua-search", "preset",
+        "wdac-policies", "wdac-events", "internals-processes", "wua-hide",
     }
     if handler_ids != expected_ids:
-        findings.append(Finding("handler-set", f"expected 26 handlers, found {sorted(handler_ids)}"))
+        findings.append(Finding("handler-set", f"expected 30 handlers, found {sorted(handler_ids)}"))
 
     for path in _iter_text_files(NATIVE_ROOTS):
         text = path.read_text(encoding="utf-8", errors="replace")

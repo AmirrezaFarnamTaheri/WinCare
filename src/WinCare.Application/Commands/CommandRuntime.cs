@@ -54,6 +54,10 @@ public static class CommandRuntime
             new RemoteThreadEventsCommandHandler(),
             new WuaSearchCommandHandler(),
             new PresetExecutionCommandHandler(),
+            new WdacPoliciesCommandHandler(),
+            new WdacEventsCommandHandler(),
+            new InternalsProcessesCommandHandler(),
+            new WuaHideCommandHandler(),
         };
 
         if (nativeCore is not null)
