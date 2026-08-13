@@ -182,7 +182,7 @@ public sealed class CommandDispatcher
                     startedAt);
             }
 
-            if (request.Approval is null || !request.Approval.IsValid(request.CommandId, request.Parameters))
+            if (request.Approval is null || !request.Approval.IsValid(request.CommandId, request.Parameters, request.CorrelationId))
             {
                 return CreateResult(
                     request,

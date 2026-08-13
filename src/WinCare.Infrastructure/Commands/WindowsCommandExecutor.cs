@@ -40,6 +40,14 @@ public sealed partial class WindowsCommandExecutor : ICommandOperationExecutor, 
     private bool _disposed;
 
     /// <summary>
+    /// Initializes a new instance of <see cref="WindowsCommandExecutor"/> bound to a custom state store root path.
+    /// </summary>
+    public WindowsCommandExecutor(string stateRootPath)
+        : this(null, null, new CommandStateStore(stateRootPath), null)
+    {
+    }
+
+    /// <summary>
     /// Initializes a new instance of <see cref="WindowsCommandExecutor"/>.
     /// </summary>
     public WindowsCommandExecutor(

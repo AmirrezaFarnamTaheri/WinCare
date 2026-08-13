@@ -262,10 +262,11 @@ public sealed class CommandSafetyTests
         );
 
         using WindowsCommandExecutor executor = new();
-        CommandDispatcher dispatcher = new(new[] { pagefileDef }, new[] { executor });
+        ICommandHandler handler = new DelegatingCommandHandler(pagefileDef, executor);
+        CommandDispatcher dispatcher = new(new[] { pagefileDef }, new[] { handler });
 
         using JsonDocument paramsDoc = JsonDocument.Parse("""{ "Mode": "Automatic" }""");
-        CommandRequest requestWithoutPlan = CommandRequest.Execute("pagefile-set", paramsDoc.RootElement, reviewApproved: true, approval: null);
+        CommandRequest requestWithoutPlan = CommandRequest.Execute("pagefile-set", paramsDoc.RootElement, approval: null);
 
         CommandResult result = await dispatcher.ExecuteAsync(requestWithoutPlan, new CommandExecutionOptions(ReviewApproved: true), CancellationToken.None);
 

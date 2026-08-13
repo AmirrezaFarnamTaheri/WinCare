@@ -38,7 +38,7 @@ public sealed class AppRuntime
     /// <summary>
     /// Gets the Windows command executor instance.
     /// </summary>
-    public WindowsCommandExecutor CommandExecutor { get; }
+    internal WindowsCommandExecutor CommandExecutor { get; }
 
     /// <summary>
     /// Gets the command dispatcher instance.
