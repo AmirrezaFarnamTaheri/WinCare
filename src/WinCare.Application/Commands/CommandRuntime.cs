@@ -46,6 +46,10 @@ public static class CommandRuntime
             new SecurityControlsCommandHandler(),
             new NetworkMeasureCommandHandler(),
             new ProcessModulesCommandHandler(),
+            new SecurityMaintenanceCommandHandler(),
+            new NetworkExperimentsCommandHandler(),
+            new EtwSessionsCommandHandler(),
+            new WuaHistoryCommandHandler(),
         };
 
         if (nativeCore is not null)

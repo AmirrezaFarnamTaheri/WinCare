@@ -9,10 +9,10 @@ The frozen oracle contains all stable command IDs from the historical implementa
 | Total stable IDs | 259 |
 | Unique native catalog IDs | 259 |
 | Cataloged | 259 |
-| Contract verified or later | 18 |
-| Implemented or later | 18 |
+| Contract verified or later | 22 |
+| Implemented or later | 22 |
 | Behavior verified | 0 |
-| Native implementation blockers | 241 |
+| Native implementation blockers | 237 |
 | Production behavior-verification blockers | 259 |
 
 Implemented native commands:
@@ -35,6 +35,10 @@ Implemented native commands:
 - `security-controls`
 - `network-measure`
 - `process-modules`
+- `security-maintenance`
+- `network-experiments`
+- `etw-sessions`
+- `wua-history`
 
 None of these commands are marked `BehaviorVerified` because Windows oracle comparison has not run in the current environment.
 

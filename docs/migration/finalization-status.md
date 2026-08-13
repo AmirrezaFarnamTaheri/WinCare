@@ -11,7 +11,7 @@
 - Rust workspace and versioned C ABI foundation
 - Exact preservation of all 259 stable command IDs
 - Typed, fail-closed command dispatch
-- Native read-only `catalog`, `presets`, `system`, `storage`, `network`, `experience-privacy-profiles`, `cleaner-disk-pressure`, `cleanup-targets`, `startup`, `security`, `applications`, `health`, `pagefile`, `tcp-global`, `pagefile-recommendation`, `security-controls`, `network-measure`, and `process-modules` handlers
+- Native read-only `catalog`, `presets`, `system`, `storage`, `network`, `experience-privacy-profiles`, `cleaner-disk-pressure`, `cleanup-targets`, `startup`, `security`, `applications`, `health`, `pagefile`, `tcp-global`, `pagefile-recommendation`, `security-controls`, `network-measure`, `process-modules`, `security-maintenance`, `network-experiments`, `etw-sessions`, and `wua-history` handlers
 - Frozen non-executable parity fixtures with provenance
 - Deterministic native-source and legacy-oracle archives
 - Zero PowerShell files in the native source archive
@@ -21,7 +21,7 @@
 
 ## Not completed
 
-- Native handlers for 241 commands
+- Native handlers for 237 commands
 - Windows behavioral verification for all 259 commands
 - Windows UI Automation evidence for the final source tree
 - Signed and timestamped x64 and ARM64 release packages
@@ -33,7 +33,7 @@
 | Gate | Result |
 |---|---|
 | Command ID parity | 259 of 259 |
-| Native implementation | 18 of 259 |
+| Native implementation | 22 of 259 |
 | Behavior verification | 0 of 259 |
 | Native source PowerShell files | 0 |
 | Production blockers | 259 behavior-verification gaps |
