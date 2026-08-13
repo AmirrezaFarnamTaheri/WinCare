@@ -195,12 +195,14 @@ def verify() -> list[Finding]:
                 "input-release", "downloads", "downloads-due", "download-create", "download-start",
                 "download-start-due", "download-suspend", "download-resume", "download-reconcile",
                 "download-cancel", "download-remove", "telemetry-snapshot", "telemetry-history",
-                "telemetry-capture", "telemetry-export",
+                "telemetry-capture", "telemetry-export", "launcher-search", "launcher-open",
+                "calculator", "steam-games", "steam-users", "steam-cloud-files",
+                "steam-backup", "steam-restore", "game-integrity", "offline-reduction-profiles",
             }
             if implemented_ids != expected_ids:
                 findings.append(Finding(
                     "implemented-command-set",
-                    f"expected 114 command IDs, found {sorted(implemented_ids)}",
+                    f"expected 124 command IDs, found {sorted(implemented_ids)}",
                 ))
             for index, item in enumerate(commands):
                 if not isinstance(item, dict):
@@ -296,10 +298,12 @@ def verify() -> list[Finding]:
         "input-release", "downloads", "downloads-due", "download-create", "download-start",
         "download-start-due", "download-suspend", "download-resume", "download-reconcile",
         "download-cancel", "download-remove", "telemetry-snapshot", "telemetry-history",
-        "telemetry-capture", "telemetry-export",
+        "telemetry-capture", "telemetry-export", "launcher-search", "launcher-open",
+        "calculator", "steam-games", "steam-users", "steam-cloud-files",
+        "steam-backup", "steam-restore", "game-integrity", "offline-reduction-profiles",
     }
     if handler_ids != expected_ids:
-        findings.append(Finding("handler-set", f"expected 114 handlers, found {sorted(handler_ids)}"))
+        findings.append(Finding("handler-set", f"expected 124 handlers, found {sorted(handler_ids)}"))
 
     for path in _iter_text_files(NATIVE_ROOTS):
         text = path.read_text(encoding="utf-8", errors="replace")

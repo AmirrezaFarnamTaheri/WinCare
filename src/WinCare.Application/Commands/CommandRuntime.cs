@@ -142,6 +142,16 @@ public static class CommandRuntime
             new TelemetryHistoryCommandHandler(),
             new TelemetryCaptureCommandHandler(),
             new TelemetryExportCommandHandler(),
+            new LauncherSearchCommandHandler(),
+            new LauncherOpenCommandHandler(),
+            new CalculatorCommandHandler(),
+            new SteamGamesCommandHandler(),
+            new SteamUsersCommandHandler(),
+            new SteamCloudFilesCommandHandler(),
+            new SteamBackupCommandHandler(),
+            new SteamRestoreCommandHandler(),
+            new GameIntegrityCommandHandler(),
+            new OfflineReductionProfilesCommandHandler(),
         };
 
         if (nativeCore is not null)
