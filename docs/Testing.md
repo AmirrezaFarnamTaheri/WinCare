@@ -232,5 +232,5 @@ Pending:
 
 - [Validation](../VALIDATION.md)
 - [Contributing](../CONTRIBUTING.md)
-- [Architecture](ARCHITECTURE.md)
+- [Architecture](Architecture.md)
 - [Release Engineering](RELEASE.md)

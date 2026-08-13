@@ -90,7 +90,7 @@
       "administratorAccess": "No",
       "restart": "No",
       "legacySource": "src/WinCare/UI/98-Headless.ps1",
-      "migrationStatus": "Cataloged",
+      "migrationStatus": "Implemented",
       "keywords": [
         "apps & startup",
         "startup",
@@ -128,7 +128,7 @@
       "administratorAccess": "MayBeRequired",
       "restart": "No",
       "legacySource": "src/WinCare/UI/98-Headless.ps1",
-      "migrationStatus": "Cataloged",
+      "migrationStatus": "Implemented",
       "keywords": [
         "security",
         "security posture",

@@ -9,18 +9,26 @@ The frozen oracle contains all stable command IDs from the historical implementa
 | Total stable IDs | 259 |
 | Unique native catalog IDs | 259 |
 | Cataloged | 259 |
-| Contract verified or later | 2 |
-| Implemented or later | 2 |
+| Contract verified or later | 10 |
+| Implemented or later | 10 |
 | Behavior verified | 0 |
-| Native implementation blockers | 257 |
+| Native implementation blockers | 249 |
 | Production behavior-verification blockers | 259 |
 
-Implemented read-only commands:
+Implemented native commands:
 
 - `catalog`
 - `presets`
+- `system`
+- `storage`
+- `network`
+- `experience-privacy-profiles`
+- `cleaner-disk-pressure`
+- `cleanup-targets`
+- `startup`
+- `security`
 
-Neither command is marked `BehaviorVerified` because Windows oracle comparison has not run in the current environment.
+None of these commands are marked `BehaviorVerified` because Windows oracle comparison has not run in the current environment.
 
 ## State definitions
 

@@ -36,6 +36,8 @@ public static class CommandRuntime
             new NetworkStatusCommandHandler(),
             new PrivacyStatusCommandHandler(),
             new LogCleanupCommandHandler(),
+            new StartupCommandHandler(),
+            new SecurityStatusCommandHandler(),
         };
 
         if (nativeCore is not null)

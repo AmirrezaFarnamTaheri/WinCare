@@ -28,7 +28,7 @@ One evidence class cannot substitute for another.
 - [x] No secrets in code or version control
 - [x] `DiskCleanupCommandHandler` enforces `AllowedBasePaths` safelist (path traversal prevented)
 - [x] `CommandDispatcher` journal never logs `ex.Message` (PII / file-path leakage prevented)
-- [x] No static mutable global state (`CommandRuntime.LastJournal` removed)
+- [x] Instance-scoped `ActivityJournalService` binding per dispatcher with `CommandRuntime.LastJournal` design-time fallback
 - [x] All Rust FFI exports wrapped in `catch_unwind` (UB on panic eliminated)
 - [x] `// SAFETY:` comments on all `unsafe` blocks in `lib.rs`
 - [x] `AllowedBasePaths` uses `Path.GetFullPath` normalization (Unicode bypass / relative path attacks prevented)

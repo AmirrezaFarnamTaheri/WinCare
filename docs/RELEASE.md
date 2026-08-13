@@ -241,7 +241,7 @@ The module version in `src/WinCare/WinCare.psd1` is the runtime/release version 
 
 - [Validation](../VALIDATION.md)
 - [Testing](Testing.md)
-- [Architecture](ARCHITECTURE.md)
+- [Architecture](Architecture.md)
 - [Security](../SECURITY.md)
 - [Contributing](../CONTRIBUTING.md)
 
