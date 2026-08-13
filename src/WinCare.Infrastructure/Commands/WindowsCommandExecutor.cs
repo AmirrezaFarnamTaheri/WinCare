@@ -693,7 +693,7 @@ public sealed partial class WindowsCommandExecutor : ICommandOperationExecutor, 
             risk = definition.Risk.ToString(),
             administratorAccess = definition.AdministratorAccess.ToString(),
             restart = definition.Restart.ToString(),
-            reversible = definition.UndoAvailable,
+            reversible = !definition.ReadOnly,
             affectedResources,
             parameters = "Validated. Review the concrete affected resources payload before approval.",
         }, JsonOptions);
