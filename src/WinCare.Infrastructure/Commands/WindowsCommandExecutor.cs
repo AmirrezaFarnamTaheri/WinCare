@@ -130,7 +130,7 @@ public sealed partial class WindowsCommandExecutor : ICommandOperationExecutor, 
     {
         if (commandId == "catalog")
         {
-            JsonElement data = JsonSerializer.SerializeToElement(WinCare.CommandCatalog.RemediationCatalog.Load(), JsonOptions);
+            JsonElement data = JsonSerializer.SerializeToElement(WinCare.CommandCatalog.RemediationCatalog.LoadRules(), JsonOptions);
             return CommandHandlerOutcome.Succeeded("catalog.loaded", "Command remediation catalog loaded.", data);
         }
 

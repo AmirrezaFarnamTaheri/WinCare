@@ -1002,8 +1002,8 @@ return M
 
     private static string DetectImageKind(ReadOnlySpan<byte> header)
     {
-        if (header.StartsWith([0x89, 0x50, 0x4E, 0x47])) return "PNG";
-        if (header.StartsWith([0xFF, 0xD8, 0xFF])) return "JPEG";
+        if (header.StartsWith((ReadOnlySpan<byte>)[0x89, 0x50, 0x4E, 0x47])) return "PNG";
+        if (header.StartsWith((ReadOnlySpan<byte>)[0xFF, 0xD8, 0xFF])) return "JPEG";
         if (header.StartsWith("GIF87a"u8) || header.StartsWith("GIF89a"u8)) return "GIF";
         if (header.Length >= 12 && header[..4].SequenceEqual("RIFF"u8) && header[8..12].SequenceEqual("WEBP"u8)) return "WebP";
         if (header.Length >= 2 && header[..2].SequenceEqual("BM"u8)) return "BMP";

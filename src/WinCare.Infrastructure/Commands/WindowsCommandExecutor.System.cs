@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Diagnostics.Eventing.Reader;
+using System.Net.Sockets;
 using System.Net.NetworkInformation;
 using System.Text.RegularExpressions;
 using System.Globalization;

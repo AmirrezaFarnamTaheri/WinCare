@@ -211,7 +211,7 @@ public sealed partial class WindowsCommandExecutor
 
     private async Task<CommandHandlerOutcome> HardwareReportAsync(CommandParameters p, CancellationToken cancellationToken)
     {
-        CommandHandlerOutcome inventory = await HardwareInventoryAsync(cancellationToken).ConfigureAwait(false);
+        CommandHandlerOutcome inventory = HardwareInventory(cancellationToken);
         JsonElement data = inventory.Data ?? Data(new { });
         string path = _state.ResolveExportPath(p.String("Path"), "wincare-hardware-report.json");
         await WriteJsonExportAsync(path, data, cancellationToken).ConfigureAwait(false);
@@ -329,7 +329,7 @@ public sealed partial class WindowsCommandExecutor
     private CommandHandlerOutcome Winapp2Admission(CommandParameters p)
     {
         string path = RequireExistingFile(p.RequiredString("Path"), 16 * 1024 * 1024);
-        int sections = File.ReadLines(path).Count(line => line.TrimStart().StartsWith('[', StringComparison.Ordinal) && line.TrimEnd().EndsWith(']'));
+        int sections = File.ReadLines(path).Count(line => line.TrimStart().StartsWith("[", StringComparison.Ordinal) && line.TrimEnd().EndsWith("]", StringComparison.Ordinal));
         bool containsExecutableDirective = File.ReadLines(path).Any(line => line.Contains("Run=", StringComparison.OrdinalIgnoreCase) || line.Contains("Command=", StringComparison.OrdinalIgnoreCase));
         return Success("cleaner-winapp2", "Winapp2-style INI inspected for admission.", new { path, sections, containsExecutableDirective, admitted = sections > 0 && !containsExecutableDirective });
     }
@@ -371,7 +371,7 @@ public sealed partial class WindowsCommandExecutor
     {
         string source = RequireExistingDirectory(p.RequiredString("Source"));
         string destination = Path.GetFullPath(Environment.ExpandEnvironmentVariables(p.RequiredString("Destination")));
-        long bytes = SumDirectoryBytes(source, CancellationToken.None, 500_000);
+        long bytes = (long)SumDirectoryBytes(source, CancellationToken.None, 500_000);
         string destinationRoot = Path.GetPathRoot(destination) ?? destination;
         DriveInfo? drive = DriveInfo.GetDrives().FirstOrDefault(d => destinationRoot.StartsWith(d.Name, StringComparison.OrdinalIgnoreCase) && d.IsReady);
         return Success("cleaner-relocation-assess", "Relocation source and destination capacity assessed.", new { source, destination, bytes, destinationFreeBytes = drive?.AvailableFreeSpace, enoughSpace = drive is null || drive.AvailableFreeSpace > bytes });
@@ -383,9 +383,9 @@ public sealed partial class WindowsCommandExecutor
         string destination = Path.GetFullPath(Environment.ExpandEnvironmentVariables(p.RequiredString("Destination")));
         bool move = p.Boolean("Move", true);
         if (IsSubPath(source, destination) || IsSubPath(destination, source)) throw new CommandParameterException("Destination", "Source and destination must not contain one another.");
-        long sourceBytes = SumDirectoryBytes(source, cancellationToken, 500_000);
+        long sourceBytes = (long)SumDirectoryBytes(source, cancellationToken, 500_000);
         long copied = await CopyDirectoryAsync(source, destination, overwrite: p.Boolean("Overwrite"), cancellationToken).ConfigureAwait(false);
-        long destinationBytes = SumDirectoryBytes(destination, cancellationToken, 500_000);
+        long destinationBytes = (long)SumDirectoryBytes(destination, cancellationToken, 500_000);
         if (destinationBytes < sourceBytes || copied < sourceBytes) return CommandHandlerOutcome.Failed("cleaner-relocation.verification_failed", "Destination verification failed; source was left untouched.");
         if (move) DeleteDirectoryTreeSafe(source, cancellationToken);
         return Success("cleaner-relocation", move ? "Relocation copied, verified, then removed source." : "Relocation copy completed and verified.", new { source, destination, bytes = copied, moved = move }, undo: !move);
@@ -554,7 +554,7 @@ public sealed partial class WindowsCommandExecutor
         if (!profile.Equals("temp", StringComparison.OrdinalIgnoreCase) && !profile.Equals("wincare-cache", StringComparison.OrdinalIgnoreCase)) throw new CommandParameterException("ProfileId", "ProfileId must be temp or wincare-cache.");
         if (profile.Equals("temp", StringComparison.OrdinalIgnoreCase)) return CleanerDiskPressure(new CommandParameters(Data(new { OlderThanDays = p.Int32("OlderThanDays", 7, 0, 3650) })), cancellationToken);
         string cache = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "WinCare", "cache");
-        long bytes = Directory.Exists(cache) ? SumDirectoryBytes(cache, cancellationToken, 200_000) : 0;
+        long bytes = Directory.Exists(cache) ? (long)SumDirectoryBytes(cache, cancellationToken, 200_000) : 0;
         if (Directory.Exists(cache)) DeleteDirectoryTreeSafe(cache, cancellationToken);
         Directory.CreateDirectory(cache);
         return Success("deep-clean", "WinCare-owned cache cleared.", new { cache, freedBytes = bytes }, undo: false);
