@@ -9,10 +9,10 @@ The frozen oracle contains all stable command IDs from the historical implementa
 | Total stable IDs | 259 |
 | Unique native catalog IDs | 259 |
 | Cataloged | 259 |
-| Contract verified or later | 124 |
-| Implemented or later | 124 |
+| Contract verified or later | 134 |
+| Implemented or later | 134 |
 | Behavior verified | 0 |
-| Native implementation blockers | 135 |
+| Native implementation blockers | 125 |
 | Production behavior-verification blockers | 259 |
 
 Implemented native commands:
@@ -121,6 +121,36 @@ Implemented native commands:
 - `downloads-due`
 - `download-create`
 - `download-start`
+- `download-start-due`
+- `download-suspend`
+- `download-resume`
+- `download-reconcile`
+- `download-cancel`
+- `download-remove`
+- `telemetry-snapshot`
+- `telemetry-history`
+- `telemetry-capture`
+- `telemetry-export`
+- `launcher-search`
+- `launcher-open`
+- `calculator`
+- `steam-games`
+- `steam-users`
+- `steam-cloud-files`
+- `steam-backup`
+- `steam-restore`
+- `game-integrity`
+- `offline-reduction-profiles`
+- `offline-reduction-assess`
+- `offline-reduction-apply`
+- `workspace-layouts`
+- `workspace-layout-save`
+- `workspace-layout-apply`
+- `workspace-layout-remove`
+- `color-capture`
+- `color-palette`
+- `color-add`
+- `color-remove`
 
 None of these commands are marked `BehaviorVerified` because Windows oracle comparison has not run in the current environment.
 

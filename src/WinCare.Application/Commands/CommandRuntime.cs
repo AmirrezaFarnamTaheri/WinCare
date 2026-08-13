@@ -152,6 +152,16 @@ public static class CommandRuntime
             new SteamRestoreCommandHandler(),
             new GameIntegrityCommandHandler(),
             new OfflineReductionProfilesCommandHandler(),
+            new OfflineReductionAssessCommandHandler(),
+            new OfflineReductionApplyCommandHandler(),
+            new WorkspaceLayoutsCommandHandler(),
+            new WorkspaceLayoutSaveCommandHandler(),
+            new WorkspaceLayoutApplyCommandHandler(),
+            new WorkspaceLayoutRemoveCommandHandler(),
+            new ColorCaptureCommandHandler(),
+            new ColorPaletteCommandHandler(),
+            new ColorAddCommandHandler(),
+            new ColorRemoveCommandHandler(),
         };
 
         if (nativeCore is not null)
