@@ -102,6 +102,16 @@ public static class CommandRuntime
             new RainmeterSkinsCommandHandler(),
             new WindhawkModsCommandHandler(),
             new ExplorerPatcherCommandHandler(),
+            new ModernContextValidateCommandHandler(),
+            new PlaybooksCommandHandler(),
+            new PlaybookExecutionCommandHandler(),
+            new GroupPolicyCommandHandler(),
+            new GroupPolicyImportCommandHandler(),
+            new SysmonCommandHandler(),
+            new SysmonConfigureCommandHandler(),
+            new SysmonUninstallCommandHandler(),
+            new OfflineImagesCommandHandler(),
+            new OfflineDriversCommandHandler(),
         };
 
         if (nativeCore is not null)

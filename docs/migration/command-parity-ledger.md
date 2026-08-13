@@ -9,10 +9,10 @@ The frozen oracle contains all stable command IDs from the historical implementa
 | Total stable IDs | 259 |
 | Unique native catalog IDs | 259 |
 | Cataloged | 259 |
-| Contract verified or later | 74 |
-| Implemented or later | 74 |
+| Contract verified or later | 84 |
+| Implemented or later | 84 |
 | Behavior verified | 0 |
-| Native implementation blockers | 185 |
+| Native implementation blockers | 175 |
 | Production behavior-verification blockers | 259 |
 
 Implemented native commands:
@@ -91,6 +91,16 @@ Implemented native commands:
 - `rainmeter-skins`
 - `windhawk-mods`
 - `explorerpatcher`
+- `modern-context-validate`
+- `playbooks`
+- `playbook`
+- `group-policy`
+- `group-policy-import`
+- `sysmon`
+- `sysmon-configure`
+- `sysmon-uninstall`
+- `offline-images`
+- `offline-drivers`
 
 None of these commands are marked `BehaviorVerified` because Windows oracle comparison has not run in the current environment.
 
