@@ -309,7 +309,7 @@ public sealed class CommandSafetyTests
             previewReq.CorrelationId,
             new[] { "Configure pagefile automatically" });
 
-        CommandRequest applyReq = CommandRequest.Execute(approval);
+        CommandRequest applyReq = CommandRequest.Execute(previewReq.CommandId, previewReq.Parameters, approval);
         CommandResult applyResult = await dispatcher.ExecuteAsync(applyReq, new CommandExecutionOptions(ReviewApproved: true), CancellationToken.None);
 
         Assert.Equal(CommandResultStatus.Success, applyResult.Status);
