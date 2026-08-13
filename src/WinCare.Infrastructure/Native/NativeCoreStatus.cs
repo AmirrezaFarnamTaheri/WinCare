@@ -19,4 +19,6 @@ public enum NativeCoreStatus
     IoError = 5,
     /// <summary>The supplied output buffer was too small.</summary>
     BufferTooSmall = 6,
+    /// <summary>Operation completed partially due to limit or unreadable entries.</summary>
+    Truncated = 7,
 }

@@ -204,19 +204,27 @@ public sealed partial class WindowsCommandExecutor
         string id = p.String("Id").Trim(); if (id.Length == 0) id = Guid.NewGuid().ToString("N");
         string text = p.RequiredString("Text");
         if (text.Length > 256 * 1024) throw new CommandParameterException("Text", "Note text exceeds 256 KiB.");
-        JsonElement current = await _state.ReadArrayAsync("notes", cancellationToken).ConfigureAwait(false);
-        var list = current.ValueKind == JsonValueKind.Array ? current.EnumerateArray().Select(x => JsonNode.Parse(x.GetRawText())).Where(x => x is not null).Cast<JsonNode>().ToList() : new List<JsonNode>();
-        JsonObject? item = list.OfType<JsonObject>().FirstOrDefault(x => string.Equals(x["id"]?.GetValue<string>(), id, StringComparison.Ordinal));
-        if (item is null)
+        string title = p.String("Title", text.Split('\n')[0].Trim());
+        JsonElement emptyFallback = Data(new object[0]);
+
+        JsonNode? savedNode = null;
+        await _state.UpdateAsync("notes", emptyFallback, current =>
         {
-            item = new JsonObject { ["id"] = id, ["createdAt"] = DateTimeOffset.UtcNow };
-            list.Add(item);
-        }
-        item["title"] = p.String("Title", text.Split('\n')[0].Trim());
-        item["text"] = text;
-        item["updatedAt"] = DateTimeOffset.UtcNow;
-        await _state.WriteAsync("notes", JsonSerializer.SerializeToElement(list, JsonOptions), cancellationToken).ConfigureAwait(false);
-        return Success("note-save", "Note saved.", item, undo: false);
+            var list = current.ValueKind == JsonValueKind.Array ? current.EnumerateArray().Select(x => JsonNode.Parse(x.GetRawText())).Where(x => x is not null).Cast<JsonNode>().ToList() : new List<JsonNode>();
+            JsonObject? item = list.OfType<JsonObject>().FirstOrDefault(x => string.Equals(x["id"]?.GetValue<string>(), id, StringComparison.Ordinal));
+            if (item is null)
+            {
+                item = new JsonObject { ["id"] = id, ["createdAt"] = DateTimeOffset.UtcNow };
+                list.Add(item);
+            }
+            item["title"] = title;
+            item["text"] = text;
+            item["updatedAt"] = DateTimeOffset.UtcNow;
+            savedNode = item;
+            return JsonSerializer.SerializeToElement(list, JsonOptions);
+        }, cancellationToken).ConfigureAwait(false);
+
+        return Success("note-save", "Note saved.", savedNode, undo: false);
     }
 
     private async Task<CommandHandlerOutcome> RemoteConsentCreateAsync(CommandParameters p, CancellationToken cancellationToken)
@@ -254,17 +262,18 @@ public sealed partial class WindowsCommandExecutor
 
     private async Task<CommandHandlerOutcome> RemoteEmergencyAsync(CommandParameters p, CancellationToken cancellationToken)
     {
-        JsonElement data = await _state.ReadArrayAsync("remote-consents", cancellationToken).ConfigureAwait(false);
-        if (data.ValueKind == JsonValueKind.Array)
+        JsonElement emptyFallback = Data(new object[0]);
+        await _state.UpdateAsync("remote-consents", emptyFallback, current =>
         {
-            var list = data.EnumerateArray().Select(x => JsonNode.Parse(x.GetRawText())!).ToList();
+            if (current.ValueKind != JsonValueKind.Array) return current;
+            var list = current.EnumerateArray().Select(x => JsonNode.Parse(x.GetRawText())!).ToList();
             foreach (JsonObject item in list.OfType<JsonObject>())
             {
                 item["state"] = "Revoked";
                 item["updatedAt"] = DateTimeOffset.UtcNow;
             }
-            await _state.WriteAsync("remote-consents", JsonSerializer.SerializeToElement(list, JsonOptions), cancellationToken).ConfigureAwait(false);
-        }
+            return JsonSerializer.SerializeToElement(list, JsonOptions);
+        }, cancellationToken).ConfigureAwait(false);
         return Success("remote-emergency", "All local remote-support consent tokens were revoked.", new { revokedAt = DateTimeOffset.UtcNow });
     }
 
@@ -290,20 +299,28 @@ public sealed partial class WindowsCommandExecutor
     private async Task<CommandHandlerOutcome> TelemetryRetentionAsync(CommandParameters p, CancellationToken cancellationToken)
     {
         int days = p.Int32("RetentionDays", 30, 1, 3650);
-        JsonElement current = await _state.ReadArrayAsync("telemetry-lake", cancellationToken).ConfigureAwait(false);
         DateTimeOffset threshold = DateTimeOffset.UtcNow.AddDays(-days);
-        var kept = new List<JsonNode?>();
+        JsonElement emptyFallback = Data(new object[0]);
         int removed = 0;
-        if (current.ValueKind == JsonValueKind.Array)
+        int remaining = 0;
+
+        await _state.UpdateAsync("telemetry-lake", emptyFallback, current =>
         {
-            foreach (JsonElement item in current.EnumerateArray())
+            var kept = new List<JsonNode?>();
+            removed = 0;
+            if (current.ValueKind == JsonValueKind.Array)
             {
-                DateTimeOffset timestamp = item.TryGetProperty("timestamp", out JsonElement ts) && ts.TryGetDateTimeOffset(out DateTimeOffset parsed) ? parsed : DateTimeOffset.UtcNow;
-                if (timestamp >= threshold) kept.Add(JsonNode.Parse(item.GetRawText())); else removed++;
+                foreach (JsonElement item in current.EnumerateArray())
+                {
+                    DateTimeOffset timestamp = item.TryGetProperty("timestamp", out JsonElement ts) && ts.TryGetDateTimeOffset(out DateTimeOffset parsed) ? parsed : DateTimeOffset.UtcNow;
+                    if (timestamp >= threshold) kept.Add(JsonNode.Parse(item.GetRawText())); else removed++;
+                }
             }
-        }
-        await _state.WriteAsync("telemetry-lake", JsonSerializer.SerializeToElement(kept, JsonOptions), cancellationToken).ConfigureAwait(false);
-        return Success("telemetry-retention", $"Telemetry retention applied; removed {removed} expired records.", new { retentionDays = days, removed, remaining = kept.Count });
+            remaining = kept.Count;
+            return JsonSerializer.SerializeToElement(kept, JsonOptions);
+        }, cancellationToken).ConfigureAwait(false);
+
+        return Success("telemetry-retention", $"Telemetry retention applied; removed {removed} expired records.", new { retentionDays = days, removed, remaining });
     }
 
     private async Task<CommandHandlerOutcome> TelemetryLakeRecordsAsync(CommandParameters p, CancellationToken cancellationToken)

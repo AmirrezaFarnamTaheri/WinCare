@@ -49,11 +49,14 @@ public sealed record ApprovedMutationPlan(
     }
 
     /// <summary>
-    /// Validates whether the approval matches the target command ID and parameter payload, and is within the expiration window.
+    /// Validates whether the approval matches the target command ID and parameter payload, is non-empty, and is within the expiration window.
     /// </summary>
-    public bool IsValid(string commandId, JsonElement parameters, TimeSpan? maxAge = null)
+    public bool IsValid(string commandId, JsonElement parameters, Guid? expectedCorrelationId = null, TimeSpan? maxAge = null)
     {
+        if (string.IsNullOrWhiteSpace(PlanId)) return false;
+        if (CorrelationId == Guid.Empty) return false;
         if (!string.Equals(CommandId, commandId, StringComparison.OrdinalIgnoreCase)) return false;
+        if (expectedCorrelationId.HasValue && CorrelationId != expectedCorrelationId.Value) return false;
         TimeSpan age = DateTimeOffset.UtcNow - ApprovedAtUtc;
         if (age < TimeSpan.Zero || age > (maxAge ?? TimeSpan.FromMinutes(15))) return false;
         string expectedDigest = ComputeCanonicalDigest(parameters);

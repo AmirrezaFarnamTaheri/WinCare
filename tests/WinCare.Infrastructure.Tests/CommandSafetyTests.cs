@@ -242,4 +242,80 @@ public sealed class CommandSafetyTests
         Assert.True(affected.GetArrayLength() > 0);
         Assert.Equal("Registry/WMI", affected[0].GetProperty("resourceType").GetString());
     }
+
+    [Fact]
+    public async Task CommandDispatcher_MutatingCommand_WithoutApprovedMutationPlan_IsBlocked()
+    {
+        CommandDefinition pagefileDef = new(
+            Id: "pagefile-set",
+            Title: "Configure Pagefile",
+            Summary: "Configure pagefile settings",
+            Area: "System",
+            Section: "Memory",
+            Risk: CommandRisk.Low,
+            ReadOnly: false,
+            AdministratorAccess: AdministratorAccess.Required,
+            Restart: RestartExpectation.No,
+            LegacySource: "Memory.ps1",
+            MigrationStatus: MigrationStatus.Implemented,
+            Keywords: Array.Empty<string>()
+        );
+
+        using WindowsCommandExecutor executor = new();
+        CommandDispatcher dispatcher = new(new[] { pagefileDef }, new[] { executor });
+
+        using JsonDocument paramsDoc = JsonDocument.Parse("""{ "Mode": "Automatic" }""");
+        CommandRequest requestWithoutPlan = CommandRequest.Execute("pagefile-set", paramsDoc.RootElement, reviewApproved: true, approval: null);
+
+        CommandResult result = await dispatcher.ExecuteAsync(requestWithoutPlan, new CommandExecutionOptions(ReviewApproved: true), CancellationToken.None);
+
+        Assert.Equal(CommandResultStatus.Blocked, result.Status);
+        Assert.Equal("command.approval_plan_invalid", result.Code);
+        Assert.Contains("requires a valid ApprovedMutationPlan", result.Message);
+    }
+
+    [Fact]
+    public async Task WindowsCommandExecutor_RemediationCancellation_DurablyPersistsCancelledState()
+    {
+        string testRoot = Path.Combine(Path.GetTempPath(), "WinCareCancelRemediationTest_" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            using WindowsCommandExecutor executor = new(testRoot);
+            CommandDefinition presetDef = new(
+                Id: "preset",
+                Title: "Apply Remediation Preset",
+                Summary: "Apply preset",
+                Area: "Remediation",
+                Section: "Presets",
+                Risk: CommandRisk.Moderate,
+                ReadOnly: false,
+                AdministratorAccess: AdministratorAccess.No,
+                Restart: RestartExpectation.No,
+                LegacySource: "Remediation.ps1",
+                MigrationStatus: MigrationStatus.Implemented,
+                Keywords: Array.Empty<string>()
+            );
+
+            using JsonDocument paramsDoc = JsonDocument.Parse("""{ "PresetId": "privacy-basic" }""");
+            using CancellationTokenSource cts = new();
+            cts.Cancel(); // Pre-cancelled token
+
+            CommandRequest request = CommandRequest.Execute("preset", paramsDoc.RootElement);
+
+            await Assert.ThrowsAsync<OperationCanceledException>(async () =>
+                await executor.ExecuteAsync(presetDef, request, cts.Token));
+
+            CommandStateStore store = new(testRoot);
+            JsonElement history = await store.ReadObjectAsync("preset-history", CancellationToken.None);
+
+            Assert.Equal(JsonValueKind.Array, history.ValueKind);
+            Assert.True(history.GetArrayLength() > 0);
+            JsonElement item = history[0];
+            Assert.Equal("Cancelled", item.GetProperty("status").GetString());
+        }
+        finally
+        {
+            if (Directory.Exists(testRoot)) Directory.Delete(testRoot, true);
+        }
+    }
 }

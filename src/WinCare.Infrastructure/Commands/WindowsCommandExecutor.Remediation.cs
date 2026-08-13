@@ -43,8 +43,10 @@ public sealed partial class WindowsCommandExecutor
             }
             catch (Exception ex)
             {
-                JsonElement partialPreset = Data(new { id = executionId, presetId = preset.Id, preset.Title, status = "PartiallyApplied", stoppedAtRule = ruleId, error = ex.Message, rules = results });
-                await TransitionStateItemAsync("preset-history", executionId, partialPreset, cancellationToken).ConfigureAwait(false);
+                using CancellationTokenSource cleanupCts = new(TimeSpan.FromSeconds(5));
+                string terminalStatus = ex is OperationCanceledException ? "Cancelled" : "PartiallyApplied";
+                JsonElement partialPreset = Data(new { id = executionId, presetId = preset.Id, preset.Title, status = terminalStatus, stoppedAtRule = ruleId, error = ex.Message, rules = results });
+                await TransitionStateItemAsync("preset-history", executionId, partialPreset, cleanupCts.Token).ConfigureAwait(false);
                 throw;
             }
         }
@@ -78,8 +80,10 @@ public sealed partial class WindowsCommandExecutor
         }
         catch (Exception ex)
         {
-            JsonElement partialRecord = Data(new { id = executionId, ruleId = rule.Id, rule.Title, status = "PartiallyApplied", failedAt = DateTimeOffset.UtcNow, error = ex.Message, appliedChanges = changes });
-            await TransitionStateItemAsync("remediation-history", executionId, partialRecord, cancellationToken).ConfigureAwait(false);
+            using CancellationTokenSource cleanupCts = new(TimeSpan.FromSeconds(5));
+            string terminalStatus = ex is OperationCanceledException ? "Cancelled" : "PartiallyApplied";
+            JsonElement partialRecord = Data(new { id = executionId, ruleId = rule.Id, rule.Title, status = terminalStatus, failedAt = DateTimeOffset.UtcNow, error = ex.Message, appliedChanges = changes });
+            await TransitionStateItemAsync("remediation-history", executionId, partialRecord, cleanupCts.Token).ConfigureAwait(false);
             throw;
         }
     }

@@ -667,8 +667,12 @@ public sealed partial class WindowsCommandExecutor : ICommandOperationExecutor, 
         }
     }
 
+    private static bool IsCommandReversible(string commandId) =>
+        commandId is "pagefile-set" or "experience-power-apply" or "security-control-restore" or "security-control-reduce";
+
     private static object GetAffectedResourcesForPreview(string commandId, CommandParameters p)
     {
+        bool isReversible = IsCommandReversible(commandId);
         return commandId switch
         {
             "pagefile-set" => new[] { new { resourceType = "Registry/WMI", path = @"HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management", target = "PagingFiles", proposedValue = p.String("Mode", "SystemManaged"), reversible = true } },
@@ -678,13 +682,14 @@ public sealed partial class WindowsCommandExecutor : ICommandOperationExecutor, 
             "cleaner-disk-pressure" => new[] { new { resourceType = "FileSystem", path = @"%TEMP%, %WINDIR%\Temp", target = "Cleanup", olderThanDays = p.Int32("OlderThanDays", 7, 0, 3650), proposedValue = "PurgeExpiredFiles", reversible = false } },
             "deep-clean" => new[] { new { resourceType = "FileSystem", path = @"C:\Windows\Temp", target = "DeepClean", profile = p.String("ProfileId", "temp"), proposedValue = "Purge", reversible = false } },
             "preset" => new[] { new { resourceType = "RemediationPreset", path = p.String("PresetId", ""), target = "PresetExecution", proposedValue = "ApplyAllRules", reversible = false } },
-            _ => new[] { new { resourceType = "SystemState", path = commandId, target = "Mutation", proposedValue = "Apply", reversible = true } }
+            _ => new[] { new { resourceType = "SystemState", path = commandId, target = "HostMutation", proposedValue = "Apply", reversible = isReversible } }
         };
     }
 
     private static CommandHandlerOutcome MutationPreview(CommandDefinition definition, CommandParameters p)
     {
         var affectedResources = GetAffectedResourcesForPreview(definition.Id, p);
+        bool isReversible = IsCommandReversible(definition.Id);
         JsonElement data = JsonSerializer.SerializeToElement(new
         {
             commandId = definition.Id,
@@ -693,7 +698,8 @@ public sealed partial class WindowsCommandExecutor : ICommandOperationExecutor, 
             risk = definition.Risk.ToString(),
             administratorAccess = definition.AdministratorAccess.ToString(),
             restart = definition.Restart.ToString(),
-            reversible = !definition.ReadOnly,
+            reversibilityStatus = isReversible ? "Supported" : "Unsupported",
+            reversible = isReversible,
             affectedResources,
             parameters = "Validated. Review the concrete affected resources payload before approval.",
         }, JsonOptions);

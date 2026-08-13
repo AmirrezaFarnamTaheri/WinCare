@@ -182,13 +182,13 @@ public sealed class CommandDispatcher
                     startedAt);
             }
 
-            if (request.Approval is not null && !request.Approval.IsValid(request.CommandId, request.Parameters))
+            if (request.Approval is null || !request.Approval.IsValid(request.CommandId, request.Parameters))
             {
                 return CreateResult(
                     request,
                     CommandResultStatus.Blocked,
                     "command.approval_plan_invalid",
-                    $"ApprovedMutationPlan for '{request.CommandId}' is invalid, expired, or does not match the canonical parameters digest.",
+                    $"Mutating command '{request.CommandId}' requires a valid ApprovedMutationPlan matching the canonical parameters digest.",
                     data: null,
                     undoAvailable: false,
                     startedAt);
