@@ -178,11 +178,14 @@ def verify() -> list[Finding]:
                 "injection-surfaces", "remote-thread-events", "wua-search", "preset",
                 "wdac-policies", "wdac-events", "internals-processes", "wua-hide",
                 "internals-memory", "internals-cpu", "credential-providers", "appcontainer",
+                "pagefile-set", "security-control-reduce", "security-control-restore", "network-experiment",
+                "etw-capture", "injection-surface-quarantine", "wua-unhide", "wua-download",
+                "wua-install", "wua-uninstall",
             }
             if implemented_ids != expected_ids:
                 findings.append(Finding(
                     "implemented-command-set",
-                    f"expected 34 command IDs, found {sorted(implemented_ids)}",
+                    f"expected 44 command IDs, found {sorted(implemented_ids)}",
                 ))
             for index, item in enumerate(commands):
                 if not isinstance(item, dict):
@@ -261,9 +264,12 @@ def verify() -> list[Finding]:
         "injection-surfaces", "remote-thread-events", "wua-search", "preset",
         "wdac-policies", "wdac-events", "internals-processes", "wua-hide",
         "internals-memory", "internals-cpu", "credential-providers", "appcontainer",
+        "pagefile-set", "security-control-reduce", "security-control-restore", "network-experiment",
+        "etw-capture", "injection-surface-quarantine", "wua-unhide", "wua-download",
+        "wua-install", "wua-uninstall",
     }
     if handler_ids != expected_ids:
-        findings.append(Finding("handler-set", f"expected 34 handlers, found {sorted(handler_ids)}"))
+        findings.append(Finding("handler-set", f"expected 44 handlers, found {sorted(handler_ids)}"))
 
     for path in _iter_text_files(NATIVE_ROOTS):
         text = path.read_text(encoding="utf-8", errors="replace")

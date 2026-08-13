@@ -62,6 +62,16 @@ public static class CommandRuntime
             new InternalsCpuCommandHandler(),
             new CredentialProvidersCommandHandler(),
             new AppContainerCommandHandler(),
+            new PagefileSetCommandHandler(),
+            new SecurityControlReduceCommandHandler(),
+            new SecurityControlRestoreCommandHandler(),
+            new NetworkExperimentCommandHandler(),
+            new EtwCaptureCommandHandler(),
+            new InjectionSurfaceQuarantineCommandHandler(),
+            new WuaUnhideCommandHandler(),
+            new WuaDownloadCommandHandler(),
+            new WuaInstallCommandHandler(),
+            new WuaUninstallCommandHandler(),
         };
 
         if (nativeCore is not null)
