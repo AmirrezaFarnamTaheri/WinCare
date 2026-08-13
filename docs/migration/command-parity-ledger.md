@@ -9,10 +9,10 @@ The frozen oracle contains all stable command IDs from the historical implementa
 | Total stable IDs | 259 |
 | Unique native catalog IDs | 259 |
 | Cataloged | 259 |
-| Contract verified or later | 84 |
-| Implemented or later | 84 |
+| Contract verified or later | 94 |
+| Implemented or later | 94 |
 | Behavior verified | 0 |
-| Native implementation blockers | 175 |
+| Native implementation blockers | 165 |
 | Production behavior-verification blockers | 259 |
 
 Implemented native commands:
@@ -101,6 +101,16 @@ Implemented native commands:
 - `sysmon-uninstall`
 - `offline-images`
 - `offline-drivers`
+- `offline-packages`
+- `offline-features`
+- `offline-driver-add`
+- `offline-driver-remove`
+- `offline-package-add`
+- `offline-feature-set`
+- `power-sessions`
+- `power-start`
+- `power-stop`
+- `windows`
 
 None of these commands are marked `BehaviorVerified` because Windows oracle comparison has not run in the current environment.
 

@@ -189,11 +189,13 @@ def verify() -> list[Finding]:
                 "customization-hosts", "rainmeter-skins", "windhawk-mods", "explorerpatcher",
                 "modern-context-validate", "playbooks", "playbook", "group-policy", "group-policy-import",
                 "sysmon", "sysmon-configure", "sysmon-uninstall", "offline-images", "offline-drivers",
+                "offline-packages", "offline-features", "offline-driver-add", "offline-driver-remove",
+                "offline-package-add", "offline-feature-set", "power-sessions", "power-start", "power-stop", "windows",
             }
             if implemented_ids != expected_ids:
                 findings.append(Finding(
                     "implemented-command-set",
-                    f"expected 84 command IDs, found {sorted(implemented_ids)}",
+                    f"expected 94 command IDs, found {sorted(implemented_ids)}",
                 ))
             for index, item in enumerate(commands):
                 if not isinstance(item, dict):
@@ -283,9 +285,11 @@ def verify() -> list[Finding]:
         "customization-hosts", "rainmeter-skins", "windhawk-mods", "explorerpatcher",
         "modern-context-validate", "playbooks", "playbook", "group-policy", "group-policy-import",
         "sysmon", "sysmon-configure", "sysmon-uninstall", "offline-images", "offline-drivers",
+        "offline-packages", "offline-features", "offline-driver-add", "offline-driver-remove",
+        "offline-package-add", "offline-feature-set", "power-sessions", "power-start", "power-stop", "windows",
     }
     if handler_ids != expected_ids:
-        findings.append(Finding("handler-set", f"expected 84 handlers, found {sorted(handler_ids)}"))
+        findings.append(Finding("handler-set", f"expected 94 handlers, found {sorted(handler_ids)}"))
 
     for path in _iter_text_files(NATIVE_ROOTS):
         text = path.read_text(encoding="utf-8", errors="replace")

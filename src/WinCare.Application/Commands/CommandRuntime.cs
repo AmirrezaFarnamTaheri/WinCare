@@ -112,6 +112,16 @@ public static class CommandRuntime
             new SysmonUninstallCommandHandler(),
             new OfflineImagesCommandHandler(),
             new OfflineDriversCommandHandler(),
+            new OfflinePackagesCommandHandler(),
+            new OfflineFeaturesCommandHandler(),
+            new OfflineDriverAddCommandHandler(),
+            new OfflineDriverRemoveCommandHandler(),
+            new OfflinePackageAddCommandHandler(),
+            new OfflineFeatureSetCommandHandler(),
+            new PowerSessionsCommandHandler(),
+            new PowerStartCommandHandler(),
+            new PowerStopCommandHandler(),
+            new WindowsInventoryCommandHandler(),
         };
 
         if (nativeCore is not null)
