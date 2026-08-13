@@ -33,5 +33,14 @@ public sealed record CommandRequest(
     /// Creates a mutative execution request.
     /// </summary>
     public static CommandRequest Execute(string commandId, JsonElement parameters, ApprovedMutationPlan? approval = null) =>
-        new(commandId, parameters, Apply: true, Guid.NewGuid(), approval);
+        new(commandId, parameters, Apply: true, approval?.CorrelationId ?? Guid.NewGuid(), approval);
+
+    /// <summary>
+    /// Creates a mutative execution request from an approved plan.
+    /// </summary>
+    public static CommandRequest Execute(ApprovedMutationPlan approval)
+    {
+        ArgumentNullException.ThrowIfNull(approval);
+        return new(approval.CommandId, approval.Parameters, Apply: true, approval.CorrelationId, approval);
+    }
 }

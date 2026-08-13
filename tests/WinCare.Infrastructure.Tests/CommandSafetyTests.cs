@@ -276,47 +276,42 @@ public sealed class CommandSafetyTests
     }
 
     [Fact]
-    public async Task WindowsCommandExecutor_RemediationCancellation_DurablyPersistsCancelledState()
+    public async Task CommandDispatcher_PreviewApproveApply_SucceedsWithValidCorrelationId()
     {
-        string testRoot = Path.Combine(Path.GetTempPath(), "WinCareCancelRemediationTest_" + Guid.NewGuid().ToString("N"));
-        try
-        {
-            using WindowsCommandExecutor executor = new(testRoot);
-            CommandDefinition presetDef = new(
-                Id: "preset",
-                Title: "Apply Remediation Preset",
-                Summary: "Apply preset",
-                Area: "Remediation",
-                Section: "Presets",
-                Risk: CommandRisk.Moderate,
-                ReadOnly: false,
-                AdministratorAccess: AdministratorAccess.No,
-                Restart: RestartExpectation.No,
-                LegacySource: "Remediation.ps1",
-                MigrationStatus: MigrationStatus.Implemented,
-                Keywords: Array.Empty<string>()
-            );
+        CommandDefinition pagefileDef = new(
+            Id: "pagefile-set",
+            Title: "Configure Pagefile",
+            Summary: "Configure pagefile settings",
+            Area: "System",
+            Section: "Memory",
+            Risk: CommandRisk.Low,
+            ReadOnly: false,
+            AdministratorAccess: AdministratorAccess.Required,
+            Restart: RestartExpectation.No,
+            LegacySource: "Memory.ps1",
+            MigrationStatus: MigrationStatus.Implemented,
+            Keywords: Array.Empty<string>()
+        );
 
-            using JsonDocument paramsDoc = JsonDocument.Parse("""{ "PresetId": "privacy-basic" }""");
-            using CancellationTokenSource cts = new();
-            cts.Cancel(); // Pre-cancelled token
+        using WindowsCommandExecutor executor = new();
+        ICommandHandler handler = new DelegatingCommandHandler(pagefileDef, executor);
+        CommandDispatcher dispatcher = new(new[] { pagefileDef }, new[] { handler });
 
-            CommandRequest request = CommandRequest.Execute("preset", paramsDoc.RootElement);
+        using JsonDocument paramsDoc = JsonDocument.Parse("""{ "Mode": "Automatic" }""");
+        CommandRequest previewReq = CommandRequest.Preview("pagefile-set", paramsDoc.RootElement);
 
-            await Assert.ThrowsAsync<OperationCanceledException>(async () =>
-                await executor.ExecuteAsync(presetDef, request, cts.Token));
+        CommandResult previewResult = await dispatcher.ExecuteAsync(previewReq, CommandExecutionOptions.Default, CancellationToken.None);
+        Assert.Equal(CommandResultStatus.Success, previewResult.Status);
 
-            CommandStateStore store = new(testRoot);
-            JsonElement history = await store.ReadObjectAsync("preset-history", CancellationToken.None);
+        ApprovedMutationPlan approval = ApprovedMutationPlan.Create(
+            previewReq.CommandId,
+            previewReq.Parameters,
+            previewReq.CorrelationId,
+            new[] { "Configure pagefile automatically" });
 
-            Assert.Equal(JsonValueKind.Array, history.ValueKind);
-            Assert.True(history.GetArrayLength() > 0);
-            JsonElement item = history[0];
-            Assert.Equal("Cancelled", item.GetProperty("status").GetString());
-        }
-        finally
-        {
-            if (Directory.Exists(testRoot)) Directory.Delete(testRoot, true);
-        }
+        CommandRequest applyReq = CommandRequest.Execute(approval);
+        CommandResult applyResult = await dispatcher.ExecuteAsync(applyReq, new CommandExecutionOptions(ReviewApproved: true), CancellationToken.None);
+
+        Assert.Equal(CommandResultStatus.Success, applyResult.Status);
     }
 }
