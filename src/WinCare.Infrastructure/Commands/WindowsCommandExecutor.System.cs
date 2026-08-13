@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Diagnostics.Eventing.Reader;
 using System.Net.NetworkInformation;
 using System.Text.RegularExpressions;
