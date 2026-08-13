@@ -92,6 +92,16 @@ public static class CommandRuntime
             new BluetoothCommandHandler(),
             new BluetoothEventsCommandHandler(),
             new MaintenanceCommandHandler(),
+            new MaintenanceCreateCommandHandler(),
+            new MaintenanceTransitionCommandHandler(),
+            new MaintenanceMetricsCommandHandler(),
+            new MaintenanceExportCommandHandler(),
+            new ContextMenuCommandHandler(),
+            new ContextMenuSetCommandHandler(),
+            new CustomizationHostsCommandHandler(),
+            new RainmeterSkinsCommandHandler(),
+            new WindhawkModsCommandHandler(),
+            new ExplorerPatcherCommandHandler(),
         };
 
         if (nativeCore is not null)

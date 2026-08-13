@@ -1229,7 +1229,7 @@
       "administratorAccess": "MayBeRequired",
       "restart": "No",
       "legacySource": "src/WinCare/UI/98-Headless.ps1",
-      "migrationStatus": "Cataloged",
+      "migrationStatus": "Implemented",
       "keywords": [
         "create",
         "create a maintenance window",
@@ -1249,7 +1249,7 @@
       "administratorAccess": "Required",
       "restart": "No",
       "legacySource": "src/WinCare/UI/98-Headless.ps1",
-      "migrationStatus": "Cataloged",
+      "migrationStatus": "Implemented",
       "keywords": [
         "change maintenance window status",
         "maintenance",
@@ -1269,7 +1269,7 @@
       "administratorAccess": "No",
       "restart": "No",
       "legacySource": "src/WinCare/UI/98-Headless.ps1",
-      "migrationStatus": "Cataloged",
+      "migrationStatus": "Implemented",
       "keywords": [
         "maintenance",
         "maintenance metrics",
@@ -1289,7 +1289,7 @@
       "administratorAccess": "Required",
       "restart": "No",
       "legacySource": "src/WinCare/UI/98-Headless.ps1",
-      "migrationStatus": "Cataloged",
+      "migrationStatus": "Implemented",
       "keywords": [
         "export",
         "export maintenance results",
@@ -1309,7 +1309,7 @@
       "administratorAccess": "No",
       "restart": "No",
       "legacySource": "src/WinCare/UI/98-Headless.ps1",
-      "migrationStatus": "Cataloged",
+      "migrationStatus": "Implemented",
       "keywords": [
         "context",
         "context menu",
@@ -1329,7 +1329,7 @@
       "administratorAccess": "Required",
       "restart": "No",
       "legacySource": "src/WinCare/UI/98-Headless.ps1",
-      "migrationStatus": "Cataloged",
+      "migrationStatus": "Implemented",
       "keywords": [
         "change context menu",
         "context",
@@ -1350,7 +1350,7 @@
       "administratorAccess": "No",
       "restart": "No",
       "legacySource": "src/WinCare/UI/98-Headless.ps1",
-      "migrationStatus": "Cataloged",
+      "migrationStatus": "Implemented",
       "keywords": [
         "customization",
         "customization hosts",
@@ -1370,7 +1370,7 @@
       "administratorAccess": "No",
       "restart": "No",
       "legacySource": "src/WinCare/UI/98-Headless.ps1",
-      "migrationStatus": "Cataloged",
+      "migrationStatus": "Implemented",
       "keywords": [
         "performance",
         "rainmeter",
@@ -1390,7 +1390,7 @@
       "administratorAccess": "No",
       "restart": "No",
       "legacySource": "src/WinCare/UI/98-Headless.ps1",
-      "migrationStatus": "Cataloged",
+      "migrationStatus": "Implemented",
       "keywords": [
         "mods",
         "performance",
@@ -1410,7 +1410,7 @@
       "administratorAccess": "No",
       "restart": "No",
       "legacySource": "src/WinCare/UI/98-Headless.ps1",
-      "migrationStatus": "Cataloged",
+      "migrationStatus": "Implemented",
       "keywords": [
         "explorerpatcher",
         "performance",

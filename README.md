@@ -17,13 +17,13 @@ migration.
 | Measure | Count |
 |---|---:|
 | Stable command IDs preserved | 259 of 259 |
-| Typed contracts verified | 64 of 259 |
-| Native handlers implemented | 64 of 259 |
+| Typed contracts verified | 74 of 259 |
+| Native handlers implemented | 74 of 259 |
 | Behavior verified on Windows | 0 of 259 |
-| Native implementation blockers | 195 |
+| Native implementation blockers | 185 |
 | Production behavior-verification blockers | 259 |
 
-The implemented native handlers are `catalog`, `presets`, `system`, `storage`, `network`, `experience-privacy-profiles`, `cleaner-disk-pressure`, `cleanup-targets`, `startup`, `security`, `applications`, `health`, `pagefile`, `tcp-global`, `pagefile-recommendation`, `security-controls`, `network-measure`, `process-modules`, `security-maintenance`, `network-experiments`, `etw-sessions`, `wua-history`, `injection-surfaces`, `remote-thread-events`, `wua-search`, `preset`, `wdac-policies`, `wdac-events`, `internals-processes`, `wua-hide`, `internals-memory`, `internals-cpu`, `credential-providers`, `appcontainer`, `pagefile-set`, `security-control-reduce`, `security-control-restore`, `network-experiment`, `etw-capture`, `injection-surface-quarantine`, `wua-unhide`, `wua-download`, `wua-install`, `wua-uninstall`, `wdac-deploy`, `desktop-controls`, `wifi-profiles`, `shell-extensions`, `desktop-shortcuts`, `boot`, `bcd-export`, `unattend-analyze`, `provisioning-plan`, `knowledge`, `reports`, `automation-profiles`, `run-automation`, `cancel-operation`, `widgets`, `widget-catalog`, `widget-export`, `bluetooth`, `bluetooth-events`, and `maintenance`. Every other command remains visible in All tools but is disabled by the dispatcher and returns an explicit not-implemented result.
+The implemented native handlers are `catalog`, `presets`, `system`, `storage`, `network`, `experience-privacy-profiles`, `cleaner-disk-pressure`, `cleanup-targets`, `startup`, `security`, `applications`, `health`, `pagefile`, `tcp-global`, `pagefile-recommendation`, `security-controls`, `network-measure`, `process-modules`, `security-maintenance`, `network-experiments`, `etw-sessions`, `wua-history`, `injection-surfaces`, `remote-thread-events`, `wua-search`, `preset`, `wdac-policies`, `wdac-events`, `internals-processes`, `wua-hide`, `internals-memory`, `internals-cpu`, `credential-providers`, `appcontainer`, `pagefile-set`, `security-control-reduce`, `security-control-restore`, `network-experiment`, `etw-capture`, `injection-surface-quarantine`, `wua-unhide`, `wua-download`, `wua-install`, `wua-uninstall`, `wdac-deploy`, `desktop-controls`, `wifi-profiles`, `shell-extensions`, `desktop-shortcuts`, `boot`, `bcd-export`, `unattend-analyze`, `provisioning-plan`, `knowledge`, `reports`, `automation-profiles`, `run-automation`, `cancel-operation`, `widgets`, `widget-catalog`, `widget-export`, `bluetooth`, `bluetooth-events`, `maintenance`, `maintenance-create`, `maintenance-transition`, `maintenance-metrics`, `maintenance-export`, `context-menu`, `context-menu-set`, `customization-hosts`, `rainmeter-skins`, `windhawk-mods`, and `explorerpatcher`. Every other command remains visible in All tools but is disabled by the dispatcher and returns an explicit not-implemented result.
 
 ## Finalized artifact model
 
