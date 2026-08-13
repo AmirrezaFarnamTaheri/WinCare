@@ -17,13 +17,13 @@ migration.
 | Measure | Count |
 |---|---:|
 | Stable command IDs preserved | 259 of 259 |
-| Typed contracts verified | 30 of 259 |
-| Native handlers implemented | 30 of 259 |
+| Typed contracts verified | 34 of 259 |
+| Native handlers implemented | 34 of 259 |
 | Behavior verified on Windows | 0 of 259 |
-| Native implementation blockers | 229 |
+| Native implementation blockers | 225 |
 | Production behavior-verification blockers | 259 |
 
-The implemented native handlers are `catalog`, `presets`, `system`, `storage`, `network`, `experience-privacy-profiles`, `cleaner-disk-pressure`, `cleanup-targets`, `startup`, `security`, `applications`, `health`, `pagefile`, `tcp-global`, `pagefile-recommendation`, `security-controls`, `network-measure`, `process-modules`, `security-maintenance`, `network-experiments`, `etw-sessions`, `wua-history`, `injection-surfaces`, `remote-thread-events`, `wua-search`, `preset`, `wdac-policies`, `wdac-events`, `internals-processes`, and `wua-hide`. Every other command remains visible in All tools but is disabled by the dispatcher and returns an explicit not-implemented result.
+The implemented native handlers are `catalog`, `presets`, `system`, `storage`, `network`, `experience-privacy-profiles`, `cleaner-disk-pressure`, `cleanup-targets`, `startup`, `security`, `applications`, `health`, `pagefile`, `tcp-global`, `pagefile-recommendation`, `security-controls`, `network-measure`, `process-modules`, `security-maintenance`, `network-experiments`, `etw-sessions`, `wua-history`, `injection-surfaces`, `remote-thread-events`, `wua-search`, `preset`, `wdac-policies`, `wdac-events`, `internals-processes`, `wua-hide`, `internals-memory`, `internals-cpu`, `credential-providers`, and `appcontainer`. Every other command remains visible in All tools but is disabled by the dispatcher and returns an explicit not-implemented result.
 
 ## Finalized artifact model
 

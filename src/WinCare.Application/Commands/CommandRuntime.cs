@@ -58,6 +58,10 @@ public static class CommandRuntime
             new WdacEventsCommandHandler(),
             new InternalsProcessesCommandHandler(),
             new WuaHideCommandHandler(),
+            new InternalsMemoryCommandHandler(),
+            new InternalsCpuCommandHandler(),
+            new CredentialProvidersCommandHandler(),
+            new AppContainerCommandHandler(),
         };
 
         if (nativeCore is not null)

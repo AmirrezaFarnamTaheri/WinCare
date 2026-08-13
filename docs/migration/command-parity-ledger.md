@@ -9,10 +9,10 @@ The frozen oracle contains all stable command IDs from the historical implementa
 | Total stable IDs | 259 |
 | Unique native catalog IDs | 259 |
 | Cataloged | 259 |
-| Contract verified or later | 30 |
-| Implemented or later | 30 |
+| Contract verified or later | 34 |
+| Implemented or later | 34 |
 | Behavior verified | 0 |
-| Native implementation blockers | 229 |
+| Native implementation blockers | 225 |
 | Production behavior-verification blockers | 259 |
 
 Implemented native commands:
@@ -47,6 +47,10 @@ Implemented native commands:
 - `wdac-events`
 - `internals-processes`
 - `wua-hide`
+- `internals-memory`
+- `internals-cpu`
+- `credential-providers`
+- `appcontainer`
 
 None of these commands are marked `BehaviorVerified` because Windows oracle comparison has not run in the current environment.
 
