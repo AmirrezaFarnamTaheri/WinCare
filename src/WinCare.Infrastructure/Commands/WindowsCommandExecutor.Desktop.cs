@@ -85,23 +85,46 @@ public sealed partial class WindowsCommandExecutor
 
     private CommandHandlerOutcome DisplayCalibrate(CommandParameters p)
     {
-        int index = p.Int32("PhysicalIndex", 0, 0, 64);
+        int targetIndex = p.Int32("PhysicalIndex", 0, 0, 64);
         int? brightness = p.Contains("Brightness") ? p.Int32("Brightness", 0, 0, 100) : null;
         int? contrast = p.Contains("Contrast") ? p.Int32("Contrast", 0, 0, 100) : null;
         if (brightness is null && contrast is null) throw new CommandParameterException("Brightness", "Provide Brightness and/or Contrast in the 0-100 range.");
-        List<(nint Handle, string Description)> handles = EnumeratePhysicalMonitorHandles();
-        if (index >= handles.Count) throw new CommandParameterException("PhysicalIndex", $"PhysicalIndex {index} is out of range; {handles.Count} monitors are available.");
-        (nint handle, string description) = handles[index];
-        try
+
+        int currentIndex = 0;
+        string matchedDescription = string.Empty;
+        bool calibrated = false;
+
+        WindowsInterop.EnumDisplayMonitors(0, 0, (nint monitor, nint hdc, ref WindowsInterop.Rect monitorRect, nint data) =>
         {
-            if (brightness.HasValue && !WindowsInterop.SetMonitorBrightness(handle, (uint)brightness.Value)) throw new System.ComponentModel.Win32Exception(Marshal.GetLastWin32Error(), "SetMonitorBrightness failed.");
-            if (contrast.HasValue && !WindowsInterop.SetMonitorContrast(handle, (uint)contrast.Value)) throw new System.ComponentModel.Win32Exception(Marshal.GetLastWin32Error(), "SetMonitorContrast failed.");
-        }
-        finally
-        {
-            WindowsInterop.DestroyPhysicalMonitors(1, [new WindowsInterop.PhysicalMonitor { Handle = handle, Description = description }]);
-        }
-        return Success("display-calibrate", "Monitor controls updated through DDC/CI.", new { physicalIndex = index, description, brightness, contrast }, undo: false);
+            if (!WindowsInterop.GetNumberOfPhysicalMonitorsFromHMONITOR(monitor, out uint count) || count == 0 || count > 32) return true;
+            var physical = new WindowsInterop.PhysicalMonitor[count];
+            if (!WindowsInterop.GetPhysicalMonitorsFromHMONITOR(monitor, count, physical)) return true;
+            try
+            {
+                foreach (WindowsInterop.PhysicalMonitor item in physical)
+                {
+                    if (item.Handle == 0) continue;
+                    if (currentIndex == targetIndex)
+                    {
+                        matchedDescription = item.Description ?? string.Empty;
+                        if (brightness.HasValue && !WindowsInterop.SetMonitorBrightness(item.Handle, (uint)brightness.Value))
+                            throw new System.ComponentModel.Win32Exception(Marshal.GetLastWin32Error(), "SetMonitorBrightness failed.");
+                        if (contrast.HasValue && !WindowsInterop.SetMonitorContrast(item.Handle, (uint)contrast.Value))
+                            throw new System.ComponentModel.Win32Exception(Marshal.GetLastWin32Error(), "SetMonitorContrast failed.");
+                        calibrated = true;
+                    }
+                    currentIndex++;
+                }
+            }
+            finally
+            {
+                WindowsInterop.DestroyPhysicalMonitors(count, physical);
+            }
+            return !calibrated;
+        }, 0);
+
+        if (!calibrated) throw new CommandParameterException("PhysicalIndex", $"PhysicalIndex {targetIndex} is out of range; {currentIndex} physical monitors detected.");
+        return Success("display-calibrate", "Monitor controls updated through DDC/CI.", new { physicalIndex = targetIndex, description = matchedDescription, brightness, contrast }, undo: false);
     }
 
     private CommandHandlerOutcome WindowTopmost(CommandParameters p)
