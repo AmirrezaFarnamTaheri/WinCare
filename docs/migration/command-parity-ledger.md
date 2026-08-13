@@ -9,10 +9,10 @@ The frozen oracle contains all stable command IDs from the historical implementa
 | Total stable IDs | 259 |
 | Unique native catalog IDs | 259 |
 | Cataloged | 259 |
-| Contract verified or later | 94 |
-| Implemented or later | 94 |
+| Contract verified or later | 104 |
+| Implemented or later | 104 |
 | Behavior verified | 0 |
-| Native implementation blockers | 165 |
+| Native implementation blockers | 155 |
 | Production behavior-verification blockers | 259 |
 
 Implemented native commands:
@@ -111,6 +111,16 @@ Implemented native commands:
 - `power-start`
 - `power-stop`
 - `windows`
+- `monitors`
+- `window-zones`
+- `window-zone-set`
+- `window-topmost`
+- `window-activate`
+- `input-release`
+- `downloads`
+- `downloads-due`
+- `download-create`
+- `download-start`
 
 None of these commands are marked `BehaviorVerified` because Windows oracle comparison has not run in the current environment.
 

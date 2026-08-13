@@ -122,6 +122,16 @@ public static class CommandRuntime
             new PowerStartCommandHandler(),
             new PowerStopCommandHandler(),
             new WindowsInventoryCommandHandler(),
+            new MonitorsCommandHandler(),
+            new WindowZonesCommandHandler(),
+            new WindowZoneSetCommandHandler(),
+            new WindowTopmostCommandHandler(),
+            new WindowActivateCommandHandler(),
+            new InputReleaseCommandHandler(),
+            new DownloadsCommandHandler(),
+            new DownloadsDueCommandHandler(),
+            new DownloadCreateCommandHandler(),
+            new DownloadStartCommandHandler(),
         };
 
         if (nativeCore is not null)
