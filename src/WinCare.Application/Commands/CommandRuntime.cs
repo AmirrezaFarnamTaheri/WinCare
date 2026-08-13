@@ -172,6 +172,16 @@ public static class CommandRuntime
             new RemoteConsentCommandHandler(),
             new RemoteConsentCreateCommandHandler(),
             new RemoteConsentStateCommandHandler(),
+            new RemoteConsentExpireCommandHandler(),
+            new RemoteEmergencyCommandHandler(),
+            new StudioSnapshotCommandHandler(),
+            new StudioMonitoringExportCommandHandler(),
+            new StudioFileWorkspacesCommandHandler(),
+            new StudioFileWorkspaceSaveCommandHandler(),
+            new StudioLayoutProfilesCommandHandler(),
+            new StudioLayoutSaveCommandHandler(),
+            new StudioPackageCommandHandler(),
+            new StudioBrightnessSchedulesCommandHandler(),
         };
 
         if (nativeCore is not null)

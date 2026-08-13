@@ -203,11 +203,14 @@ def verify() -> list[Finding]:
                 "color-add", "color-remove", "image-metadata", "notes",
                 "note-save", "note-remove", "browsers", "browser-extensions",
                 "remote-support", "remote-consent", "remote-consent-create", "remote-consent-state",
+                "remote-consent-expire", "remote-emergency", "studio-snapshot", "studio-monitoring-export",
+                "studio-file-workspaces", "studio-file-workspace-save", "studio-layout-profiles", "studio-layout-save",
+                "studio-package", "studio-brightness-schedules",
             }
             if implemented_ids != expected_ids:
                 findings.append(Finding(
                     "implemented-command-set",
-                    f"expected 144 command IDs, found {sorted(implemented_ids)}",
+                    f"expected 154 command IDs, found {sorted(implemented_ids)}",
                 ))
             for index, item in enumerate(commands):
                 if not isinstance(item, dict):
@@ -311,9 +314,12 @@ def verify() -> list[Finding]:
         "color-add", "color-remove", "image-metadata", "notes",
         "note-save", "note-remove", "browsers", "browser-extensions",
         "remote-support", "remote-consent", "remote-consent-create", "remote-consent-state",
+        "remote-consent-expire", "remote-emergency", "studio-snapshot", "studio-monitoring-export",
+        "studio-file-workspaces", "studio-file-workspace-save", "studio-layout-profiles", "studio-layout-save",
+        "studio-package", "studio-brightness-schedules",
     }
     if handler_ids != expected_ids:
-        findings.append(Finding("handler-set", f"expected 144 handlers, found {sorted(handler_ids)}"))
+        findings.append(Finding("handler-set", f"expected 154 handlers, found {sorted(handler_ids)}"))
 
     for path in _iter_text_files(NATIVE_ROOTS):
         text = path.read_text(encoding="utf-8", errors="replace")

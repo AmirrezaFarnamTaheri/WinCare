@@ -9,10 +9,10 @@ The frozen oracle contains all stable command IDs from the historical implementa
 | Total stable IDs | 259 |
 | Unique native catalog IDs | 259 |
 | Cataloged | 259 |
-| Contract verified or later | 144 |
-| Implemented or later | 144 |
+| Contract verified or later | 154 |
+| Implemented or later | 154 |
 | Behavior verified | 0 |
-| Native implementation blockers | 115 |
+| Native implementation blockers | 105 |
 | Production behavior-verification blockers | 259 |
 
 Implemented native commands:
@@ -161,6 +161,16 @@ Implemented native commands:
 - `remote-consent`
 - `remote-consent-create`
 - `remote-consent-state`
+- `remote-consent-expire`
+- `remote-emergency`
+- `studio-snapshot`
+- `studio-monitoring-export`
+- `studio-file-workspaces`
+- `studio-file-workspace-save`
+- `studio-layout-profiles`
+- `studio-layout-save`
+- `studio-package`
+- `studio-brightness-schedules`
 
 None of these commands are marked `BehaviorVerified` because Windows oracle comparison has not run in the current environment.
 
