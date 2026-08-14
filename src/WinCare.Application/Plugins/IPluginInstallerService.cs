@@ -18,4 +18,9 @@ public interface IPluginInstallerService
     /// Extracts and installs a plugin package from a zip archive stream.
     /// </summary>
     Task<string> InstallPluginFromStreamAsync(Stream archiveStream, string targetPluginId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Safely uninstalls and removes a plugin directory from local isolation storage.
+    /// </summary>
+    Task<bool> UninstallPluginAsync(string pluginId, CancellationToken cancellationToken = default);
 }

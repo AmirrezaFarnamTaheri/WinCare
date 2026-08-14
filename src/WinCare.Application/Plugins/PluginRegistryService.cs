@@ -201,11 +201,6 @@ public sealed class PluginRegistryService : IPluginRegistry
         );
 
         _entries[manifest.Id] = entry;
-
-        if (manifest.EntryType.Equals("Assembly", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrWhiteSpace(manifest.AssemblyFileName))
-        {
-            InstantiateAssemblyPlugin(entry, manifest);
-        }
     }
 
     private void InstantiateAssemblyPlugin(PluginRegistryEntry entry, PluginManifest manifest)
@@ -247,6 +242,10 @@ public sealed class PluginRegistryService : IPluginRegistry
                     !string.IsNullOrWhiteSpace(loadResult.Manifest.AssemblyFileName))
                 {
                     InstantiateAssemblyPlugin(entry, loadResult.Manifest);
+                    if (!_instantiatedPlugins.ContainsKey(pluginId))
+                    {
+                        return;
+                    }
                 }
             }
 

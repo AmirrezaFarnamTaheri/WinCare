@@ -3,6 +3,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Net.Http;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using WinCare.Application.Plugins;
@@ -14,6 +15,8 @@ namespace WinCare.Infrastructure.Plugins;
 /// </summary>
 public class PluginInstallerService : IPluginInstallerService
 {
+    private static readonly Regex PluginIdRegex = new(@"^[a-zA-Z0-9][a-zA-Z0-9._-]{2,127}$", RegexOptions.Compiled);
+
     private readonly HttpClient _httpClient;
     private readonly string _pluginsBaseDirectory;
 
@@ -132,7 +135,7 @@ public class PluginInstallerService : IPluginInstallerService
                 }
             }
 
-            var finalTargetDir = Path.Combine(_pluginsBaseDirectory, finalPluginId);
+            var finalTargetDir = ValidateAndGetPluginDirectory(finalPluginId);
             if (Directory.Exists(finalTargetDir))
             {
                 Directory.Delete(finalTargetDir, recursive: true);
@@ -159,6 +162,37 @@ public class PluginInstallerService : IPluginInstallerService
             }
             throw;
         }
+    }
+
+    /// <inheritdoc />
+    public Task<bool> UninstallPluginAsync(string pluginId, CancellationToken cancellationToken = default)
+    {
+        var pluginDir = ValidateAndGetPluginDirectory(pluginId);
+        if (Directory.Exists(pluginDir))
+        {
+            Directory.Delete(pluginDir, recursive: true);
+            return Task.FromResult(true);
+        }
+
+        return Task.FromResult(false);
+    }
+
+    private string ValidateAndGetPluginDirectory(string pluginId)
+    {
+        if (string.IsNullOrWhiteSpace(pluginId) || !PluginIdRegex.IsMatch(pluginId))
+        {
+            throw new ArgumentException($"Invalid plugin ID '{pluginId}'. Plugin IDs must match '^[a-zA-Z0-9][a-zA-Z0-9._-]{{2,127}}$'.", nameof(pluginId));
+        }
+
+        var targetDir = Path.GetFullPath(Path.Combine(_pluginsBaseDirectory, pluginId));
+        var canonicalBaseDir = Path.GetFullPath(_pluginsBaseDirectory).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar;
+
+        if (!targetDir.StartsWith(canonicalBaseDir, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new ArgumentException($"Security violation: Plugin ID '{pluginId}' traverses outside plugins root directory.", nameof(pluginId));
+        }
+
+        return targetDir;
     }
 
     private static void CopyDirectoryRecursive(string sourceDir, string destinationDir)
