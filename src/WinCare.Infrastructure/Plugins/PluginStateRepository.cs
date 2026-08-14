@@ -41,6 +41,7 @@ public sealed class PluginStateRepository : IPluginStateRepository
         }
     }
 
+    /// <inheritdoc />
     public HashSet<string> LoadEnabledPluginIds()
     {
         if (!File.Exists(_stateFilePath))
@@ -60,6 +61,7 @@ public sealed class PluginStateRepository : IPluginStateRepository
         }
     }
 
+    /// <inheritdoc />
     public void SaveEnabledPluginIds(IEnumerable<string> enabledPluginIds)
     {
         try

@@ -33,32 +33,22 @@ public class DefaultPluginHost : IPluginHost
         Directory.CreateDirectory(PluginsUserDirectory);
     }
 
-    /// <summary>
-    /// Root path of the host application.
-    /// </summary>
+    /// <inheritdoc />
     public string ApplicationRootPath { get; }
 
-    /// <summary>
-    /// Directory path where user-installed plugins are stored.
-    /// </summary>
+    /// <inheritdoc />
     public string PluginsUserDirectory { get; }
 
-    /// <summary>
-    /// Command dispatcher instance for executing plugin commands.
-    /// </summary>
+    /// <inheritdoc />
     public ICommandDispatcher CommandDispatcher => _commandDispatcher ?? throw new InvalidOperationException("No CommandDispatcher has been configured for this PluginHost.");
 
-    /// <summary>
-    /// Dynamically registers a command from a plugin.
-    /// </summary>
+    /// <inheritdoc />
     public void RegisterCommand(CommandDefinition command)
     {
         // Dynamic command registration hook
     }
 
-    /// <summary>
-    /// Dynamically unregisters a command.
-    /// </summary>
+    /// <inheritdoc />
     public void UnregisterCommand(string commandId)
     {
         // Dynamic command unregistration hook

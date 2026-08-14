@@ -66,6 +66,7 @@ public class RemoteCatalogService : IRemoteCatalogService
         }
     }
 
+    /// <inheritdoc />
     public async Task<RemotePluginCatalog> GetCatalogAsync(bool forceRefresh = false, CancellationToken cancellationToken = default)
     {
         if (!forceRefresh && File.Exists(_cacheFilePath))
@@ -109,6 +110,7 @@ public class RemoteCatalogService : IRemoteCatalogService
         }
     }
 
+    /// <inheritdoc />
     public async Task<IReadOnlyList<RemotePluginItem>> SearchPluginsAsync(string query, string? category = null, CancellationToken cancellationToken = default)
     {
         var catalog = await GetCatalogAsync(forceRefresh: false, cancellationToken).ConfigureAwait(false);

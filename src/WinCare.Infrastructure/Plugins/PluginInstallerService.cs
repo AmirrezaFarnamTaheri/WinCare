@@ -37,6 +37,7 @@ public class PluginInstallerService : IPluginInstallerService
         Directory.CreateDirectory(_pluginsBaseDirectory);
     }
 
+    /// <inheritdoc />
     public async Task<string> InstallPluginFromPackageAsync(string packageUrl, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(packageUrl))
@@ -63,6 +64,7 @@ public class PluginInstallerService : IPluginInstallerService
         return await InstallPluginFromStreamAsync(downloadStream, pluginId, cancellationToken).ConfigureAwait(false);
     }
 
+    /// <inheritdoc />
     public async Task<string> InstallPluginFromStreamAsync(Stream archiveStream, string targetPluginId, CancellationToken cancellationToken = default)
     {
         if (archiveStream == null)

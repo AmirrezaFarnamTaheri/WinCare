@@ -23,6 +23,7 @@ public sealed class PluginRegistryService : IPluginRegistry
         _enabledIds = initialEnabledPluginIds ?? _stateRepository?.LoadEnabledPluginIds() ?? new HashSet<string>(StringComparer.OrdinalIgnoreCase);
     }
 
+    /// <inheritdoc />
     public async Task DiscoverAndInitializeAsync(IPluginHost host, CancellationToken ct = default)
     {
         await _gate.WaitAsync(ct).ConfigureAwait(false);
@@ -75,8 +76,10 @@ public sealed class PluginRegistryService : IPluginRegistry
         }
     }
 
+    /// <inheritdoc />
     public IReadOnlyList<PluginRegistryEntry> GetAllPlugins() => _entries.Values.ToList();
 
+    /// <inheritdoc />
     public IReadOnlyList<CommandDefinition> GetActivePluginCommands()
     {
         var activeCommands = new List<CommandDefinition>();
@@ -90,6 +93,7 @@ public sealed class PluginRegistryService : IPluginRegistry
         return activeCommands;
     }
 
+    /// <inheritdoc />
     public IReadOnlyList<IPluginWidget> GetActivePluginWidgets()
     {
         var widgets = new List<IPluginWidget>();
@@ -119,6 +123,7 @@ public sealed class PluginRegistryService : IPluginRegistry
         return widgets;
     }
 
+    /// <inheritdoc />
     public async Task EnablePluginAsync(string pluginId, IPluginHost host, CancellationToken ct = default)
     {
         await _gate.WaitAsync(ct).ConfigureAwait(false);
@@ -134,6 +139,7 @@ public sealed class PluginRegistryService : IPluginRegistry
         }
     }
 
+    /// <inheritdoc />
     public async Task DisablePluginAsync(string pluginId, IPluginHost host, CancellationToken ct = default)
     {
         await _gate.WaitAsync(ct).ConfigureAwait(false);
