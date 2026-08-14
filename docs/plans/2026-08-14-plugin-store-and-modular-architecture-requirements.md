@@ -1,9 +1,10 @@
 # WinCare Plugin Store & Modular Extension Architecture — Product & Technical Design Specification
 
 - **Date:** 2026-08-14
-- **Status:** Requirements & Architectural Specification (`artifact_readiness: requirements-only`)
+- **Status:** Implementation-Ready Specification (`artifact_readiness: implementation-ready`)
 - **Contract Version:** `ce-unified-plan/v1`
-- **Source:** `/ce-brainstorm`
+- **Implementation Plan:** `docs/plans/2026-08-14-plugin-store-and-modular-architecture-plan.md`
+- **Source:** `/ce-brainstorm` -> `/ce-plan`
 
 ---
 
