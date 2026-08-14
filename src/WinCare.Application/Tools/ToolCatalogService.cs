@@ -1,3 +1,4 @@
+using WinCare.Application.Plugins;
 using WinCare.CommandCatalog.Models;
 
 namespace WinCare.Application.Tools;
