@@ -26,6 +26,18 @@ public class RemotePluginCatalog
     /// </summary>
     [JsonPropertyName("plugins")]
     public List<RemotePluginItem> Plugins { get; set; } = new();
+
+    /// <summary>
+    /// List of revoked publisher identifiers whose packages must be blocked.
+    /// </summary>
+    [JsonPropertyName("revokedPublishers")]
+    public List<string> RevokedPublishers { get; set; } = new();
+
+    /// <summary>
+    /// List of revoked package IDs that must not be admitted.
+    /// </summary>
+    [JsonPropertyName("revokedPackages")]
+    public List<string> RevokedPackages { get; set; } = new();
 }
 
 /// <summary>
@@ -56,6 +68,36 @@ public class RemotePluginItem
     /// </summary>
     [JsonPropertyName("author")]
     public string Author { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Publisher unique identifier or certificate thumbprint.
+    /// </summary>
+    [JsonPropertyName("publisherId")]
+    public string? PublisherId { get; set; }
+
+    /// <summary>
+    /// Cryptographic digital signature of the package manifest.
+    /// </summary>
+    [JsonPropertyName("signature")]
+    public string? Signature { get; set; }
+
+    /// <summary>
+    /// PEM formatted RSA/ECDSA public key for verifying manifest signature.
+    /// </summary>
+    [JsonPropertyName("publicKeyPem")]
+    public string? PublicKeyPem { get; set; }
+
+    /// <summary>
+    /// Indicates whether this package has been revoked by catalog maintainers.
+    /// </summary>
+    [JsonPropertyName("isRevoked")]
+    public bool IsRevoked { get; set; }
+
+    /// <summary>
+    /// Reason explaining why the package was revoked, if applicable.
+    /// </summary>
+    [JsonPropertyName("revocationReason")]
+    public string? RevocationReason { get; set; }
 
     /// <summary>
     /// Package version string.

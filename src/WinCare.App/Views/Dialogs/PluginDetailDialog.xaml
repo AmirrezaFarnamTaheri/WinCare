@@ -73,6 +73,26 @@
             </StackPanel>
         </Border>
 
+        <!-- Publisher Trust & Authenticity Section -->
+        <Border BorderThickness="1" BorderBrush="{ThemeResource SystemControlBackgroundListLowBrush}" CornerRadius="6" Padding="10" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
+            <Grid ColumnDefinitions="Auto,*">
+                <FontIcon Glyph="&#xE8D7;" FontSize="14" Foreground="{ThemeResource AccentTealBrush}" Margin="0,0,10,0" VerticalAlignment="Center"/>
+                <StackPanel Grid.Column="1" Spacing="2">
+                    <TextBlock Text="Publisher Authenticity" FontSize="11" Foreground="{ThemeResource SystemControlForegroundBaseMediumBrush}"/>
+                    <TextBlock x:Name="PublisherTrustText" FontSize="12" FontWeight="SemiBold" Text="Community / Unverified"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- Revocation Advisory Banner (Visible only when revoked) -->
+        <Border x:Name="RevocationBanner" Visibility="Collapsed" BorderThickness="1" BorderBrush="{ThemeResource SystemFillColorCriticalBrush}" CornerRadius="6" Padding="10" Background="{ThemeResource SystemFillColorCriticalBackgroundBrush}">
+            <StackPanel Orientation="Horizontal" Spacing="10">
+                <FontIcon Glyph="&#xEB90;" FontSize="16" Foreground="{ThemeResource SystemFillColorCriticalBrush}" VerticalAlignment="Top" Margin="0,2,0,0"/>
+                <TextBlock x:Name="RevocationReasonText" Text="REVOCATION ADVISORY: This package has been marked as revoked by security policy."
+                           TextWrapping="Wrap" FontSize="12" Foreground="{ThemeResource SystemControlForegroundBaseHighBrush}"/>
+            </StackPanel>
+        </Border>
+
         <!-- Commands Provided -->
         <StackPanel Spacing="4">
             <TextBlock Text="Commands Provided:" FontSize="12" FontWeight="SemiBold"/>

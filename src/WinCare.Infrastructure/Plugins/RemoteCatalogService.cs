@@ -94,6 +94,7 @@ public class RemoteCatalogService : IRemoteCatalogService
                 ?? new RemotePluginCatalog();
 
             catalog.LastUpdated = DateTime.UtcNow;
+            ApplyRevocationPolicy(catalog);
             await SaveToCacheAsync(catalog, cancellationToken).ConfigureAwait(false);
 
             return catalog;
@@ -109,11 +110,14 @@ public class RemoteCatalogService : IRemoteCatalogService
             var fallbackCatalog = await TryLoadFromCacheAsync(cancellationToken).ConfigureAwait(false);
             if (fallbackCatalog != null)
             {
+                ApplyRevocationPolicy(fallbackCatalog);
                 return fallbackCatalog;
             }
 
             // Return bundled offline default catalog with verified sample metadata
-            return GetOfflineDefaultCatalog();
+            var defaultCatalog = GetOfflineDefaultCatalog();
+            ApplyRevocationPolicy(defaultCatalog);
+            return defaultCatalog;
         }
     }
 
@@ -139,6 +143,32 @@ public class RemoteCatalogService : IRemoteCatalogService
         }
 
         return plugins.ToList().AsReadOnly();
+    }
+
+    private static void ApplyRevocationPolicy(RemotePluginCatalog catalog)
+    {
+        if (catalog?.Plugins == null) return;
+        var revokedPkgs = new HashSet<string>(catalog.RevokedPackages ?? Enumerable.Empty<string>(), StringComparer.OrdinalIgnoreCase);
+        var revokedPubs = new HashSet<string>(catalog.RevokedPublishers ?? Enumerable.Empty<string>(), StringComparer.OrdinalIgnoreCase);
+
+        foreach (var plugin in catalog.Plugins)
+        {
+            if (revokedPkgs.Contains(plugin.Id))
+            {
+                plugin.IsRevoked = true;
+                plugin.RevocationReason ??= "Package ID is listed on the security revocation advisory.";
+            }
+            else if (!string.IsNullOrEmpty(plugin.PublisherId) && revokedPubs.Contains(plugin.PublisherId))
+            {
+                plugin.IsRevoked = true;
+                plugin.RevocationReason ??= "Publisher certificate is listed on the security revocation advisory.";
+            }
+            else if (!string.IsNullOrEmpty(plugin.Author) && revokedPubs.Contains(plugin.Author))
+            {
+                plugin.IsRevoked = true;
+                plugin.RevocationReason ??= "Author entity is listed on the security revocation advisory.";
+            }
+        }
     }
 
     private static RemotePluginCatalog GetOfflineDefaultCatalog()

@@ -26,6 +26,22 @@ public sealed partial class PluginDetailDialog : ContentDialog
             ? item.Permissions 
             : new[] { "Standard Execution (No special permissions)" };
 
+        // Surface Publisher Authenticity & Signature Verification Status
+        WinCare.Infrastructure.Plugins.PluginInstallerService.VerifyPublisherAuthenticity(
+            item.Author, 
+            item.Signature, 
+            out var trustLevel, 
+            item.PublicKeyPem);
+
+        PublisherTrustText.Text = trustLevel;
+
+        if (item.IsRevoked)
+        {
+            RevocationBanner.Visibility = Microsoft.UI.Xaml.Visibility.Visible;
+            RevocationReasonText.Text = $"REVOCATION ADVISORY: {item.RevocationReason ?? "This package has been revoked by security policy."}";
+            IsPrimaryButtonEnabled = false;
+        }
+
         CommandsProvidedText.Text = item.CommandsProvided.Count > 0
             ? string.Join(", ", item.CommandsProvided)
             : "None";

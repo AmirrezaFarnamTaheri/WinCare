@@ -356,6 +356,45 @@ public class PluginInstallerService : IPluginInstallerService
                 throw new InvalidOperationException($"Package admission rejected: Manifest ID '{manifestId}' does not match expected target plugin ID '{targetPluginId}'.");
             }
 
+            // Cryptographic Publisher Authenticity & Signature Verification
+            string? manifestSignature = null;
+            if (doc.RootElement.TryGetProperty("signature", out var sigProp) && !string.IsNullOrWhiteSpace(sigProp.GetString()))
+            {
+                manifestSignature = sigProp.GetString();
+            }
+            else
+            {
+                var sigFilePath = Path.Combine(tempExtractDir, "wincare-plugin.sig");
+                if (File.Exists(sigFilePath))
+                {
+                    manifestSignature = (await File.ReadAllTextAsync(sigFilePath, cancellationToken).ConfigureAwait(false)).Trim();
+                }
+            }
+
+            string? manifestPublicKey = null;
+            if (doc.RootElement.TryGetProperty("publicKey", out var pkProp) && !string.IsNullOrWhiteSpace(pkProp.GetString()))
+            {
+                manifestPublicKey = pkProp.GetString();
+            }
+            else
+            {
+                var pkFilePath = Path.Combine(tempExtractDir, "publisher.pem");
+                if (File.Exists(pkFilePath))
+                {
+                    manifestPublicKey = await File.ReadAllTextAsync(pkFilePath, cancellationToken).ConfigureAwait(false);
+                }
+            }
+
+            var author = doc.RootElement.TryGetProperty("author", out var authorProp) ? authorProp.GetString() ?? string.Empty : string.Empty;
+            byte[] manifestRawBytes = await File.ReadAllBytesAsync(manifestPath, cancellationToken).ConfigureAwait(false);
+            if (!VerifyPublisherAuthenticity(author, manifestSignature, out var trustLevel, manifestPublicKey, manifestRawBytes))
+            {
+                if (trustLevel.Contains("Failed", StringComparison.OrdinalIgnoreCase))
+                {
+                    throw new InvalidOperationException($"Package admission rejected: Digital signature verification failed ({trustLevel}).");
+                }
+            }
+
             var finalPluginId = manifestId;
             var finalTargetDir = ValidateAndGetPluginDirectory(finalPluginId);
 

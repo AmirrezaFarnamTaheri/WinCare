@@ -70,15 +70,27 @@ public sealed class PluginCardViewModel
         _ => "ONLINE CATALOG"
     };
 
-    public string PublisherTrustBadgeText => WinCare.Infrastructure.Plugins.PluginInstallerService.VerifyPublisherAuthenticity(Author, null, out var level) 
-        ? level 
-        : "Unverified Publisher";
+    public string PublisherTrustBadgeText
+    {
+        get
+        {
+            if (RemoteItem?.IsRevoked == true)
+            {
+                return $"REVOKED: {RemoteItem.RevocationReason ?? "Security Advisory"}";
+            }
 
-    public bool IsVerifiedPublisher => WinCare.Infrastructure.Plugins.PluginInstallerService.VerifyPublisherAuthenticity(Author, null, out _);
+            return WinCare.Infrastructure.Plugins.PluginInstallerService.VerifyPublisherAuthenticity(Author, RemoteItem?.Signature, out var level, RemoteItem?.PublicKeyPem) 
+                ? level 
+                : "Unverified Publisher";
+        }
+    }
 
-    public string InstallButtonText => IsInstalled ? "Installed" : "Install";
-    public bool CanInstall => !IsInstalled && !string.IsNullOrEmpty(PackageUrl);
-    public bool CanEnable => IsInstalled && !IsBuiltIn && InstalledState == PluginState.Disabled;
+    public bool IsVerifiedPublisher => RemoteItem?.IsRevoked != true && WinCare.Infrastructure.Plugins.PluginInstallerService.VerifyPublisherAuthenticity(Author, RemoteItem?.Signature, out _, RemoteItem?.PublicKeyPem);
+    public bool IsRevoked => RemoteItem?.IsRevoked == true;
+
+    public string InstallButtonText => IsRevoked ? "Revoked" : (IsInstalled ? "Installed" : "Install");
+    public bool CanInstall => !IsInstalled && !string.IsNullOrEmpty(PackageUrl) && !IsRevoked;
+    public bool CanEnable => IsInstalled && !IsBuiltIn && InstalledState == PluginState.Disabled && !IsRevoked;
     public bool CanDisable => IsInstalled && !IsBuiltIn && InstalledState == PluginState.Enabled;
     public bool CanUninstall => IsInstalled && !IsBuiltIn;
 }

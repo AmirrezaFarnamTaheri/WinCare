@@ -58,16 +58,53 @@ The dispatcher fails closed for unknown, unavailable, disabled, or unmigrated co
 
 ## Plugin Subsystem Trust Model & Package Admission
 
-1. **Declared Capabilities & In-Process Disclosure**: Plugins execute with full user privileges. `PluginDetailDialog` presents explicit trust warnings and capability declarations before installation.
-2. **Package ID Equality**: Package archive manifests must strictly match the target plugin ID before extraction and filesystem promotion.
-3. **Mandatory SHA-256 Digest**: Every stream and URL package undergoes full byte-level SHA-256 hashing.
-4. **Staging & Backup Isolation**: Updates create rollback snapshots in `.staging/backups/`, completely isolated from active discovery routines.
-5. **Dynamic Lifecycle Management**: Discovered plugins are managed via `IPluginRegistry.RegistryChanged`, updating `ToolCatalogService` dynamically.
+1. **Publisher Authenticity & Digital Signatures**: Package manifests support digital signatures (`wincare-plugin.sig` or manifest `signature` field) verified against RSA SHA-256 PKCS#1 and ECDSA public keys (`publisher.pem` / `publicKeyPem`). Catalog entries enforce 3 trust levels:
+   - `Verified Organization`: Official WinCare repositories.
+   - `Digitally Signed (Cryptographically Verified)`: Third-party packages with verified cryptographic signatures.
+   - `Community / Unsigned`: Unsigned community contributions.
+2. **Catalog Policy & Revocation Lists**: The remote catalog maintains `revokedPublishers` and `revokedPackages` blocklists. Revoked packages are immediately barred from installation and execution in both UI and infrastructure layers.
+3. **Declared Capabilities & In-Process Disclosure**: Plugins execute in-process with user privileges. `PluginDetailDialog` presents explicit full-trust warnings, publisher trust badges, and capability declarations before installation.
+4. **Package ID Equality**: Package archive manifests must strictly match the target plugin ID before extraction and filesystem promotion.
+5. **Mandatory SHA-256 Digest**: Every stream and URL package undergoes full byte-level SHA-256 integrity verification.
+6. **Staging & Backup Isolation**: Updates create rollback snapshots in `.staging/backups/`, completely isolated from active discovery routines.
+7. **Dynamic Lifecycle Management**: Discovered plugins are managed via `IPluginRegistry.RegistryChanged`, updating `ToolCatalogService` dynamically.
 
-## Rust Boundaries
+## AI Doctor & Diagnostic Telemetry Evidence Flow
 
-- **`wincare_core`**: Exposes ABI version, library version, bounded iterative `dir_size`, `sys_info` JSON metrics, and SHA-256 file hashing. Every export is wrapped in `std::panic::catch_unwind`.
-- **`wincare-guard`**: Background daemon exposing asynchronous Named Pipe IPC (`\\.\pipe\WinCareGuardPipe`) for RAM pressure, disk quota, and thermal alerts without UI blocking.
+The AI Doctor subsystem strictly separates machine learning intent interpretation from evidence-grounded system diagnosis:
+
+```text
+User Symptom Description
+         │
+         ▼
+Local ONNX DirectML Classification (Intent & Symptom Extraction)
+         │
+         ▼
+Read-Only Hardware & OS Diagnostics (Disk capacity, RAM usage, System logs)
+         │
+         ▼
+DiagnosticEvidence Records (Source, Metric, Value, Timestamp)
+         │
+         ▼
+Evidence-Grounded Recommendation (DoctorActionPlan with RootCause & Telemetry)
+         │
+         ▼
+Explicit User Step-by-Step Approval
+         │
+         ▼
+Safe Preview & Mutation Execution (Gated by CommandExecutionOptions)
+```
+
+No mutative action may be executed by the AI Doctor without prior read-only evidence collection and explicit user confirmation.
+
+## Command Dispatch & Source Generators
+
+`CommandDispatcher` is the authoritative runtime execution engine for all 259 core commands and dynamic plugin commands. `WinCare.SourceGenerators` provides optional compile-time code generation for static catalog definitions, while dynamic plugin commands are registered and dispatched dynamically via `DefaultPluginHost` without requiring rebuilds.
+
+## Rust Boundaries & Health Guard
+
+- **`wincare_core`**: Versioned C ABI (`sys_info`, `dir_size`, `sha256`) wrapped in `std::panic::catch_unwind` for bounded native execution.
+- **`wincare-guard`**: Background daemon exposing Named Pipe IPC (`\\.\pipe\WinCareGuardPipe`) with Windows ACL restrictions, structured JSON telemetry packets, and background RAM/disk/thermal monitoring without UI thread blocking.
 
 ## Startup
 
