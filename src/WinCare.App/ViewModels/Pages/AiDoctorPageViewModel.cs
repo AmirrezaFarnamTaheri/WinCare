@@ -123,7 +123,7 @@ public sealed class AiDoctorPageViewModel : INotifyPropertyChanged
         }
     }
 
-    public async Task<CommandResult> ExecuteStepAsync(ProposedActionStep step, CancellationToken cancellationToken = default)
+    public async Task<CommandResult> ExecuteStepAsync(ProposedActionStep step, bool userApproved = false, CancellationToken cancellationToken = default)
     {
         if (step == null)
         {
@@ -131,6 +131,11 @@ public sealed class AiDoctorPageViewModel : INotifyPropertyChanged
         }
 
         var isReadOnly = step.RiskLevel == CommandCatalog.Models.CommandRisk.ReadOnly;
+        if (!isReadOnly && !userApproved)
+        {
+            throw new InvalidOperationException("Mutating maintenance operations require explicit user review and approval confirmation.");
+        }
+
         var emptyParams = System.Text.Json.JsonSerializer.SerializeToElement(new { });
         var correlationId = Guid.NewGuid();
         var approval = !isReadOnly

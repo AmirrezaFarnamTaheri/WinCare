@@ -154,16 +154,19 @@ namespace WinCare.Application.Diagnostics
             foreach (var token in queryTokens)
             {
                 var matches = _catalogService.Search(token);
-                foreach (var match in matches)
+                // Prioritize read-only inspection commands first to provide verification evidence before mutations
+                foreach (var match in matches.OrderByDescending(m => m.ReadOnly))
                 {
                     if (!steps.Any(s => s.CommandId.Equals(match.Id, StringComparison.OrdinalIgnoreCase)))
                     {
                         steps.Add(new ProposedActionStep(
-                            match.Id,
-                            match.Title,
-                            match.Summary,
-                            match.Risk,
-                            match.AdministratorAccess == AdministratorAccess.Required
+                            CommandId: match.Id,
+                            Title: match.Title,
+                            Description: match.Summary,
+                            RiskLevel: match.Risk,
+                            RequiresElevation: match.AdministratorAccess == AdministratorAccess.Required,
+                            AffectedResource: match.Area,
+                            UndoAvailable: match.Risk != CommandRisk.Critical
                         ));
                         if (steps.Count >= 5) return; // Cap recommendation steps to top 5
                     }

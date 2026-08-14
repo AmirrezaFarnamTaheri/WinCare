@@ -36,10 +36,33 @@ public sealed partial class AiDoctorPage : Page
     {
         if (sender is Button btn && btn.Tag is WinCare.Application.Diagnostics.ProposedActionStep step)
         {
+            var isReadOnly = step.IsReadOnly;
+            bool userApproved = isReadOnly;
+
+            if (!isReadOnly)
+            {
+                var dialog = new ContentDialog
+                {
+                    Title = "Review & Approve Remediation Action",
+                    Content = $"Action: {step.Title}\nCommand: {step.CommandId}\nTarget: {step.AffectedResource}\nRisk Level: {step.RiskLevel}\nAdministrator Access: {(step.RequiresElevation ? "Required" : "Not required")}\n\nDo you want to approve and execute this modification?",
+                    PrimaryButtonText = "Approve & Execute",
+                    CloseButtonText = "Cancel",
+                    DefaultButton = ContentDialogButton.Primary,
+                    XamlRoot = this.XamlRoot
+                };
+
+                var dialogResult = await dialog.ShowAsync();
+                if (dialogResult != ContentDialogResult.Primary)
+                {
+                    return;
+                }
+                userApproved = true;
+            }
+
             btn.IsEnabled = false;
             try
             {
-                var result = await ViewModel.ExecuteStepAsync(step);
+                var result = await ViewModel.ExecuteStepAsync(step, userApproved: userApproved);
                 btn.Content = result.Status == WinCare.Domain.Commands.CommandResultStatus.Succeeded ? "✓ Done" : "⚠ Failed";
             }
             catch (Exception ex)

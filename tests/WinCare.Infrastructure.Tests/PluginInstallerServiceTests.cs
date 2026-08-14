@@ -272,4 +272,50 @@ public class PluginInstallerServiceTests
             }
         }
     }
+
+    [Fact]
+    public void VerifyPublisherAuthenticity_Identifies_Known_Organizations_And_Signed_Packages()
+    {
+        Assert.True(PluginInstallerService.VerifyPublisherAuthenticity("WinCare Official", null, out var officialTrust));
+        Assert.Equal("Verified Organization", officialTrust);
+
+        Assert.True(PluginInstallerService.VerifyPublisherAuthenticity("WinCare Community", null, out var commTrust));
+        Assert.Equal("Verified Organization", commTrust);
+
+        Assert.True(PluginInstallerService.VerifyPublisherAuthenticity("ThirdParty Developer", "signature_hash_data", out var signedTrust));
+        Assert.Equal("Digitally Signed", signedTrust);
+
+        Assert.False(PluginInstallerService.VerifyPublisherAuthenticity("Unknown Developer", null, out var unsignedTrust));
+        Assert.Equal("Community / Unsigned", unsignedTrust);
+    }
+
+    [Fact]
+    public async Task InstallPluginFromPackageAsync_Installs_From_File_Uri_Successfully()
+    {
+        var tempPluginsDir = Path.Combine(Path.GetTempPath(), $"wincare_test_plugins_{Guid.NewGuid():N}");
+        var tempZipPath = Path.Combine(Path.GetTempPath(), $"wincare_test_pkg_{Guid.NewGuid():N}.zip");
+
+        try
+        {
+            using (var zip = ZipFile.Open(tempZipPath, ZipArchiveMode.Create))
+            {
+                var manifestEntry = zip.CreateEntry("wincare-plugin.json");
+                using var writer = new StreamWriter(manifestEntry.Open());
+                writer.Write(JsonSerializer.Serialize(new { id = "com.wincare.fileuri.test", name = "File URI Plugin", version = "1.0.0" }));
+            }
+
+            var installer = new PluginInstallerService(pluginsBaseDirectory: tempPluginsDir);
+            var fileUri = new Uri(tempZipPath).AbsoluteUri;
+
+            var installedPath = await installer.InstallPluginFromPackageAsync(fileUri, "com.wincare.fileuri.test");
+
+            Assert.True(Directory.Exists(installedPath));
+            Assert.True(File.Exists(Path.Combine(installedPath, "wincare-plugin.json")));
+        }
+        finally
+        {
+            if (File.Exists(tempZipPath)) File.Delete(tempZipPath);
+            if (Directory.Exists(tempPluginsDir)) Directory.Delete(tempPluginsDir, recursive: true);
+        }
+    }
 }

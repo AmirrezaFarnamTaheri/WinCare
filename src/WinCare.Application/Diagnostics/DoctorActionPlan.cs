@@ -18,7 +18,8 @@ namespace WinCare.Application.Diagnostics
         string Title,
         string Description,
         DiagnosticSeverity Severity,
-        string AffectedResource
+        string AffectedResource,
+        bool IsVerifiedByTelemetry = false
     );
 
     public sealed record ProposedActionStep(
@@ -27,8 +28,16 @@ namespace WinCare.Application.Diagnostics
         string Description,
         CommandRisk RiskLevel,
         bool RequiresElevation,
-        IReadOnlyDictionary<string, string>? Parameters = null
-    );
+        IReadOnlyDictionary<string, string>? Parameters = null,
+        string AffectedResource = "System",
+        bool UndoAvailable = false
+    )
+    {
+        public bool IsReadOnly => RiskLevel == CommandRisk.ReadOnly;
+        public string RiskBadgeText => IsReadOnly ? "SAFE / READ-ONLY" : $"{RiskLevel.ToString().ToUpperInvariant()} RISK";
+        public string ElevationBadgeText => RequiresElevation ? "ADMIN REQUIRED" : "STANDARD USER";
+        public string ActionButtonText => IsReadOnly ? "Run Diagnostic Check" : "Review & Apply Fix";
+    }
 
     public sealed class DoctorActionPlan
     {
