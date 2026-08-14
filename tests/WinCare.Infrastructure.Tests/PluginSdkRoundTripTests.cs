@@ -187,9 +187,16 @@ namespace Community.GoldenSdkPlugin
         }
         finally
         {
-            if (Directory.Exists(tempRootDir))
+            try
             {
-                Directory.Delete(tempRootDir, recursive: true);
+                if (Directory.Exists(tempRootDir))
+                {
+                    Directory.Delete(tempRootDir, recursive: true);
+                }
+            }
+            catch
+            {
+                // Assembly DLL loaded into ALC may be locked by Windows OS until process exit.
             }
         }
     }
