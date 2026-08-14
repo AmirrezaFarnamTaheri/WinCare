@@ -71,9 +71,13 @@ public sealed class PluginRegistryService : IPluginRegistry
                         widgets.AddRange(pluginWidgets);
                     }
                 }
-                catch
+                catch (Exception ex)
                 {
-                    // Swallowing exception prevents faulty third-party plugin from crashing dashboard
+                    _entries[kvp.Key] = entry with
+                    {
+                        State = PluginState.Error,
+                        ErrorMessage = $"Widget retrieval failed: {ex.Message}"
+                    };
                 }
             }
         }
