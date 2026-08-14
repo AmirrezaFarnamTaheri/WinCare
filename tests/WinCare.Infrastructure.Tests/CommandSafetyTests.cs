@@ -352,17 +352,11 @@ public sealed class CommandSafetyTests
 
             CommandRequest request = CommandRequest.Execute("preset", paramsDoc.RootElement);
 
-            // Trigger cancellation after 10ms so execution enters ApplyPresetAsync, writes "Applying", and gets cancelled mid-loop
-            cts.CancelAfter(TimeSpan.FromMilliseconds(10));
+            // Pre-cancel token so rule loop cancellation is 100% deterministic
+            cts.Cancel();
 
-            try
-            {
-                await executor.ExecuteAsync(presetDef, request, cts.Token);
-            }
-            catch (OperationCanceledException)
-            {
-                // Expected mid-operation cancellation
-            }
+            await Assert.ThrowsAsync<OperationCanceledException>(() =>
+                executor.ExecuteAsync(presetDef, request, cts.Token));
 
             CommandStateStore store = new(testRoot);
             JsonElement history = await store.ReadObjectAsync("preset-history", CancellationToken.None);

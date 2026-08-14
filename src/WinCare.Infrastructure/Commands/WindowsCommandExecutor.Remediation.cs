@@ -19,7 +19,7 @@ internal sealed partial class WindowsCommandExecutor
         string executionId = Guid.NewGuid().ToString("N");
         var results = new List<object>();
         JsonElement intentRecord = Data(new { id = executionId, presetId = preset.Id, preset.Title, status = "Applying", startedAt = DateTimeOffset.UtcNow, rules = results });
-        await AppendStateItemAsync("preset-history", intentRecord, cancellationToken).ConfigureAwait(false);
+        await AppendStateItemAsync("preset-history", intentRecord, CancellationToken.None).ConfigureAwait(false);
 
         foreach (string ruleId in preset.RuleIds)
         {
