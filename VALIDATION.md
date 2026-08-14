@@ -1,102 +1,98 @@
 # Native validation and promotion
 
-WinCare uses separate source, Windows runtime, package, and command-parity gates.
-One evidence class cannot substitute for another.
+WinCare separates source validation, Windows runtime evidence, package verification, and
+command-by-command parity. Passing one evidence class never substitutes for another.
 
 ## Evidence terms
 
 - **Verified:** behavior executed successfully in the named environment.
 - **Statically validated:** source or artifact structure checked without executing Windows behavior.
 - **Reviewed:** implementation or evidence inspected against its contract.
-- **Pending:** required evidence was unavailable.
-- **Blocked:** a declared prerequisite or gate prevented execution.
-- **Failed:** the check ran and did not satisfy its contract.
+- **Pending:** required evidence was unavailable in the current environment.
+- **Blocked:** a declared prerequisite or safety gate prevented execution.
+- **Failed:** a check ran and did not satisfy its contract.
 
-## Pre-launch checklist (2.4.0-rc1)
+## Current 2.4.0-rc1 evidence
 
-### Code quality
-- [x] All Python verification gates pass (`verify_visual_tokens.py`, `verify_pill_contrast.py`, `validate_gui.py`, `test_gui.py`)
-- [x] All Rust unit and FFI contract tests pass (`cargo test` — 18/18)
-- [x] Rust fmt and clippy clean (`cargo fmt --check`, `cargo clippy -- -D warnings`)
-- [ ] .NET build succeeds with 0 warnings (requires SDK 8.0.416 in CI — not installable locally)
-- [ ] .NET managed unit tests pass (`dotnet test WinCare.Native.sln`)
-- [x] No phantom checkmarks in `tasks/todo.md` (all items verified against source)
-- [x] No `console.log`/`Debug.WriteLine` in production journal paths (only `System.Diagnostics.Debug` in non-journal code)
-- [x] Error handling covers all expected dispatcher failure modes (NotFound, NotMigrated, ReadOnlyMutation, ReviewRequired, Timeout, Cancel, Fault)
+### Source and migration checks available in this workspace
 
-### Security
-- [x] No secrets in code or version control
-- [x] `DiskCleanupCommandHandler` enforces `AllowedBasePaths` safelist (path traversal prevented)
-- [x] `CommandDispatcher` journal never logs `ex.Message` (PII / file-path leakage prevented)
-- [x] No static mutable global state (`CommandRuntime.LastJournal` removed)
-- [x] All Rust FFI exports wrapped in `catch_unwind` (UB on panic eliminated)
-- [x] `// SAFETY:` comments on all `unsafe` blocks in `lib.rs`
-- [x] `AllowedBasePaths` uses `Path.GetFullPath` normalization (Unicode bypass / relative path attacks prevented)
+- [x] `python tools/verify_native_foundation.py`
+- [x] `python -m unittest discover -s tests/native -v` — 55/55 passed in the full migration workspace
+- [x] `python tools/verify_visual_tokens.py`
+- [x] `python tools/verify_pill_contrast.py`
+- [x] `python tools/validate_gui.py` — full migration workspace compatibility check
+- [x] `python -m unittest tools.test_gui -v` — 9/9 passed in the full migration workspace
+- [x] Python verifier/test sources compile with `python -m compileall`
+- [x] Native source scan contains no executable PowerShell/WPF runtime dependency
+- [x] All 259 catalog IDs have an explicit executor route
+- [x] All 104 mutating IDs have explicit parameter preflight before approval
+- [x] No bulk generated handler directory or known fabricated-success payloads remain
+- [x] Native recursive file operations reject or skip reparse points and avoid `SearchOption.AllDirectories`
+- [x] Native source does not advertise generic undo where no recovery action is wired
+- [x] ViewModels contain no `Microsoft.UI.Xaml` dependency
+- [x] External GitHub Actions used by native workflows are pinned to immutable commit SHAs
+- [x] No obvious source-code secrets were found by the repository scan used for this candidate
 
-### Design and accessibility
-- [x] All 8 pill color pairs pass WCAG 2.1 AA (≥ 4.5:1 contrast ratio)
-- [x] All 33 theme tokens defined in Light, Dark, and HighContrast dictionaries
-- [x] HighContrast `PillNotReadyBgBrush` uses `SystemColorHighlightColor` pairing (no same-color trap)
-- [x] 3px `FocusVisualPrimaryThickness` enforced on `ListViewItem` styles
-- [x] `Ctrl+F` keyboard accelerator implemented and bound in XAML
-- [x] Column header `ToolTipService.ToolTip` on all 6 headers
-- [x] `FavoriteToggleButton.IsChecked` bound to `ViewModel.IsSelectedToolFavorite`
-- [x] `TableHeader` bound to `ViewModel.IsCompactLayout` (INPC-compliant, not a dead proxy)
-- [x] 920 DIP compact breakpoint consistent across both pages
+### Windows-only checks not executed in this environment
 
-### Performance and reliability
-- [x] `DebounceSearch` uses real `Task.Delay(250, token)` — no synchronous full rebuild on keystrokes
-- [x] `CancellationTokenSource` properly disposed on superseded searches
-- [x] `SelectedTool` preserved across filter/refresh cycles in `AllToolsPageViewModel.Refresh()`
-- [x] `async void DebounceSearch` has outer `catch (Exception)` guard to prevent unobserved faults
+- [ ] Rust fmt, Clippy, tests, and release DLL build — **Pending**
+- [ ] .NET restore, managed tests, and WinUI build — **Pending**
+- [ ] x64 and ARM64 package builds — **Pending**
+- [ ] WinUI launch with WinApp CLI — **Pending**
+- [ ] UI Automation, keyboard flows, theme screenshots, and runtime accessibility — **Pending**
+- [ ] MSIX install/launch/repair/upgrade/uninstall — **Pending**
+- [ ] Portable package launch/data-location behavior — **Pending**
+- [ ] Command-by-command Windows comparison with historical oracle — **Pending**
 
-### Infrastructure and CI
-- [x] `ci.yml` — full evidence + Windows matrix (x64 + ARM64) — SHA-pinned actions
-- [x] `native-winui.yml` — Rust fmt/clippy/test + .NET build + portable ZIP
-- [x] `native-python-gates.yml` — visual/GUI verification, native source contract, safety regressions, Rust FFI gates, and managed build/test
-- [x] `native-release-candidate.yml` — manual RC and production finalization dispatch
-- [x] `dependabot.yml` — weekly Action SHA-digest update proposals
-- [x] `release.yml` — sealed, attested, two-stage GitHub release with immutable byte verification
-- [x] `release-dispatch.yml` — immutable source-SHA pinning before hardened release dispatch
+The current execution environment does not provide the Windows/.NET/Rust/WinApp toolchain required
+for those gates. They therefore remain pending rather than being inferred from source checks.
 
-### Documentation
-- [x] `CHANGELOG.md` updated with complete 2.4.0-rc1 feature set
-- [x] `README.md` updated: handler count, Cyber-Teal table, safety model, security invariants, CI table
-- [x] `DESIGN.md` color values aligned with actual `ThemeResources.xaml` implementation
-- [x] `tasks/todo.md` verified: all checked items confirmed against source
-- [x] `tasks/plan.md` — all quality gates marked complete
+## Safety evidence
 
----
+- [x] `CommandDispatcher` journals only exception type names; exception messages are not copied into
+  user-visible activity history.
+- [x] A single application-scoped `ActivityJournalService` is shared by command execution and Activity UI.
+- [x] Activity refreshes from that journal when its cached page is navigated to.
+- [x] File and cleanup roots are canonicalized and reject reparse-point operation roots; recursive work
+  skips reparse descendants and uses bounded iterative traversal.
+- [x] Process execution uses argument lists rather than shell command construction for native tool calls.
+- [x] Temporary security-control reduction performs **no host mutation** until a native recovery host can
+  prove authenticated automatic restoration. Unsupported reduction/restore requests fail closed.
+- [x] Windows Update result handling does not promote aborted, failed, or succeeded-with-errors states to success.
+- [x] Studio ADB and Xbox FSE tool execution requires a reviewed SHA-256 before invoking the supplied binary.
+- [x] Rust FFI source retains `catch_unwind` boundaries and `// SAFETY:` invariants around unsafe blocks.
 
-## Linux-capable source gate
+## Design and accessibility source checks
 
-Run from the repository root:
+- [x] All eight status-pill color pairs satisfy the repository's WCAG 2.1 AA contrast gate.
+- [x] Required visual tokens exist in Light, Dark, and HighContrast dictionaries.
+- [x] Primary WinUI navigation, table, command, and automation metadata pass structural validation.
+- [x] Dynamic ViewModel status styling is resolved in the view layer rather than returning XAML brushes from ViewModels.
+- [x] Parameter JSON editor has automation metadata and malformed/non-object JSON is blocked locally.
+
+These are source-level checks. Runtime accessibility still requires the Windows UI Automation gate.
+
+## Finalized native-source gate
+
+Run from the repository root of the **finalized native source archive**:
 
 ```text
 python tools/verify_native_foundation.py
 python -m unittest discover -s tests/native -v
 python tools/verify_visual_tokens.py
 python tools/verify_pill_contrast.py
+```
+
+The finalized archive intentionally omits executable legacy PowerShell. Tests that specifically require
+that executable oracle report an explicit skip; they are not silently treated as passed. The full migration
+workspace can additionally run:
+
+```text
 python tools/validate_gui.py
 python -m unittest tools.test_gui -v
 ```
 
-These gates verify:
-
-- Exact frozen-oracle parity for 259 command IDs
-- Native project separation from PowerShell and WPF
-- Approved navigation, tabs, table structure, and accessibility metadata
-- XML and JSON validity
-- Rust ABI source contract
-- Deterministic ZIP metadata and sorted entries
-- Native-source and legacy-oracle separation
-- Release metadata
-- Fail-closed production readiness accounting
-- All visual token definitions across 3 theme dictionaries
-- WCAG 2.1 AA contrast on all pill color pairs
-- GUI structure: ThemeResource references, named controls, binding counts
-
-A passing source gate means **statically validated**, not Windows verified.
+A passing source gate means **statically validated**, not Windows behavior verified.
 
 ## Release-candidate finalization
 
@@ -107,9 +103,9 @@ python tools/finalize_native_release.py \
   --mode rc
 ```
 
-The finalization manifest records artifact paths, file counts, SHA-256 hashes, command migration
-counts, and production readiness. The native source archive must contain zero `.ps1`, `.psm1`,
-and `.psd1` files. The legacy oracle archive must remain separate.
+The finalization manifest records artifact paths, file counts, SHA-256 hashes, migration counts, and
+production readiness. Native source must contain zero `.ps1`, `.psm1`, and `.psd1` files. Historical
+executable PowerShell remains isolated in the legacy-oracle archive.
 
 ## Production gate
 
@@ -122,16 +118,16 @@ python tools/finalize_native_release.py \
 
 Production mode requires:
 
-- Exactly 259 unique command IDs
+- Exactly 259 unique stable command IDs
 - All 259 commands marked `BehaviorVerified`
 - Zero production behavior-verification blockers
 - Successful deterministic staging
 
-The current project intentionally fails this gate with 259 behavior-verification blockers.
+Current candidate intentionally fails production promotion with 259 behavior-verification blockers.
 
 ## Windows gate
 
-The Windows matrix must run on the exact candidate source:
+Run against the exact candidate source on supported Windows runners:
 
 ```text
 cargo fmt --manifest-path native/Cargo.toml --check
@@ -142,34 +138,19 @@ dotnet test WinCare.Native.sln -c Release -p:Platform=x64 --no-restore
 dotnet build src/WinCare.App/WinCare.App.csproj -c Release -p:Platform=x64
 ```
 
-Required runtime evidence includes:
+Repeat the supported build/package path for ARM64. Required runtime evidence includes WinUI launch,
+UI Automation, keyboard navigation, Light/Dark/Contrast screenshots, cancellation/timeout/fail-closed
+states, Rust DLL loading, MSIX lifecycle, portable launch, startup timing, and command-by-command oracle
+comparison.
 
-- WinUI launch through WinApp CLI
-- Keyboard navigation and command-palette behavior
-- UI Automation flows for every primary page
-- Screenshots in light, dark, and Windows Contrast themes
-- Cancellation, timeout, and fail-closed result states
-- x64 and ARM64 Rust DLL loading
-- MSIX installation, launch, repair, upgrade, and uninstall
-- Portable launch and data-location behavior
-- Startup markers and representative-device timing
-- Command-by-command comparison with the frozen historical oracle
+## Promotion rule
 
-## Package promotion
+Promote only the exact bytes that passed every required gate. Rebuilding or re-zipping after verification
+creates a new candidate and requires the affected gates again.
 
-A production release requires all source and Windows gates, signed and timestamped packages,
-coherent checksums and provenance, and exact-byte promotion of the artifacts that passed
-validation. Rebuilding or re-zipping after verification creates a new candidate and requires
-the full gate again.
+## Rollback model
 
-## Rollback plan
-
-| Trigger | Action |
-|---|---|
-| Error rate 2x baseline | Revert to previous branch HEAD via `git revert` + push |
-| Critical security finding | Close PR immediately; patch in isolated branch |
-| .NET build regression | Revert last commit with `git revert HEAD~1` |
-| Rust FFI panic in CI | Use `git revert <commit>` for the commit that changed `Cargo.lock` or the FFI source |
-| Design token regression | Run `verify_visual_tokens.py`; revert `ThemeResources.xaml` |
-
-All rollbacks are reversible via Git history. No database migrations are involved.
+Source rollback is Git-based in the hosted repository. Runtime mutation rollback is command-specific and
+must never be inferred from a generic success flag. Where a safe native compensation path does not exist,
+the command reports no generic undo capability. Temporary security reduction remains unavailable until its
+recovery guarantee can be proven independently.

@@ -37,6 +37,9 @@ public sealed record CommandHandlerOutcome(
     /// <summary>
     /// Creates a failed outcome for an unrecoverable handler error.
     /// </summary>
-    public static CommandHandlerOutcome Failed(string code, string message) =>
-        new(CommandResultStatus.Failed, code, message, null, UndoAvailable: false);
+    public static CommandHandlerOutcome Failed(
+        string code,
+        string message,
+        JsonElement? data = null) =>
+        new(CommandResultStatus.Failed, code, message, data, UndoAvailable: false);
 }

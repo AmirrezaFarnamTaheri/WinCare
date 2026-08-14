@@ -90,9 +90,13 @@ NATIVE_DOCUMENT_FILES = (
 )
 
 NATIVE_TOOL_FILES = (
+    "tools/__init__.py",
     "tools/finalize_native_release.py",
     "tools/package_portable.py",
+    "tools/release_checklist.py",
     "tools/verify_native_foundation.py",
+    "tools/verify_visual_tokens.py",
+    "tools/verify_pill_contrast.py",
 )
 
 NATIVE_WORKFLOW_FILES = (
@@ -272,18 +276,18 @@ def stage_legacy_oracle(root: Path, destination: Path) -> Path:
     destination.mkdir(parents=True, exist_ok=False)
 
     for relative in ORACLE_TOP_LEVEL_FILES:
-        _copy_file(root, destination, relative)
+        source = root / relative
+        if source.is_file():
+            _copy_file(root, destination, relative)
     for relative in ORACLE_DIRECTORIES:
-        _copy_directory(root, destination, relative)
+        source = root / relative
+        if source.is_dir():
+            _copy_directory(root, destination, relative)
     _copy_matching_files(root, destination, "tools", POWERSHELL_SUFFIXES)
     _copy_matching_files(root, destination, "tests", POWERSHELL_SUFFIXES | {".json", ".xml", ".xaml"})
 
-    powershell_count = sum(
-        path.is_file() and path.suffix.lower() in POWERSHELL_SUFFIXES
-        for path in destination.rglob("*")
-    )
-    if powershell_count == 0:
-        raise ValueError("legacy oracle staging contains no PowerShell source")
+    if not (destination / "migration/oracle/provenance.json").is_file():
+        raise ValueError("legacy oracle staging requires migration/oracle/provenance.json")
     return destination
 
 

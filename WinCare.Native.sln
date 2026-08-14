@@ -16,6 +16,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WinCare.CommandCatalog.Test
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WinCare.Application.Tests", "tests\WinCare.Application.Tests\WinCare.Application.Tests.csproj", "{4799AFB9-2067-4723-9FCD-2BE900786299}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WinCare.Infrastructure.Tests", "tests\WinCare.Infrastructure.Tests\WinCare.Infrastructure.Tests.csproj", "{8A749B2C-15D8-46E3-9214-4B8F3D1A607E}"
+EndProject
 Global
   GlobalSection(SolutionConfigurationPlatforms) = preSolution
     Debug|ARM64 = Debug|ARM64
@@ -80,5 +82,13 @@ Global
     {4799AFB9-2067-4723-9FCD-2BE900786299}.Release|ARM64.Build.0 = Release|Any CPU
     {4799AFB9-2067-4723-9FCD-2BE900786299}.Release|x64.ActiveCfg = Release|Any CPU
     {4799AFB9-2067-4723-9FCD-2BE900786299}.Release|x64.Build.0 = Release|Any CPU
+    {8A749B2C-15D8-46E3-9214-4B8F3D1A607E}.Debug|ARM64.ActiveCfg = Debug|Any CPU
+    {8A749B2C-15D8-46E3-9214-4B8F3D1A607E}.Debug|ARM64.Build.0 = Debug|Any CPU
+    {8A749B2C-15D8-46E3-9214-4B8F3D1A607E}.Debug|x64.ActiveCfg = Debug|Any CPU
+    {8A749B2C-15D8-46E3-9214-4B8F3D1A607E}.Debug|x64.Build.0 = Debug|Any CPU
+    {8A749B2C-15D8-46E3-9214-4B8F3D1A607E}.Release|ARM64.ActiveCfg = Release|Any CPU
+    {8A749B2C-15D8-46E3-9214-4B8F3D1A607E}.Release|ARM64.Build.0 = Release|Any CPU
+    {8A749B2C-15D8-46E3-9214-4B8F3D1A607E}.Release|x64.ActiveCfg = Release|Any CPU
+    {8A749B2C-15D8-46E3-9214-4B8F3D1A607E}.Release|x64.Build.0 = Release|Any CPU
   EndGlobalSection
 EndGlobal

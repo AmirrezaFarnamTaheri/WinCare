@@ -9,7 +9,7 @@ public sealed class SettingsPageViewModel : TabbedPageViewModel
             new PageRow("App theme", "Use the Windows light, dark, or High Contrast preference.", "System", "Segoe UI Variable")]),
         new PageSection("Safety", "Safety settings are enforced by policy.", [
             new PageRow("Review before changes", "Require a plan and explicit approval for every mutation.", "On", "Cannot be bypassed"),
-            new PageRow("Recovery records", "Keep receipts and compensation data for supported changes.", "On", "Local protected storage")]),
+            new PageRow("Recovery records", "Keep receipts and compensation data for supported changes.", "On", "Local application storage")]),
         new PageSection("Notifications", "No notification preferences have been changed.", [
             new PageRow("Completion notifications", "Notify only when a long-running operation finishes or needs attention.", "On", "No promotional notifications")]),
         new PageSection("Data", "No cached check data is available.", [

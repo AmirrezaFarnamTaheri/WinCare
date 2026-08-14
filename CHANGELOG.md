@@ -47,8 +47,17 @@ Released: 2026-08-09
   to prevent file-path or PII leakage.
 - Removed static mutable `CommandRuntime.LastJournal` global: eliminates race conditions in
   concurrent and test contexts.
-- `DiskCleanupCommandHandler`: canonical allowlisted roots, boundary-aware descendant checks, and
-  reparse-point-safe traversal prevent path traversal and cleanup escaping into linked trees.
+- Replaced command-specific cleanup stubs with shared native path admission: canonical roots,
+  reparse-point rejection, bounded traversal, and junction-safe deletion/copy behavior.
+- Added one application-scoped activity journal through `AppRuntime`; cached Activity navigation
+  refreshes from the same injected journal instead of mutable global fallback state.
+- Added typed JSON command parameters to All Tools; malformed or non-object JSON fails locally before
+  dispatch, and parameter changes invalidate prior mutation approval.
+- Bounded parameter JSON/string/array inputs, rejected duplicate durable state IDs, and replaced the
+  former universal 30-second UI deadline with command-class execution budgets for servicing, updates,
+  downloads, backups, ordinary mutations, and diagnostics.
+- Hardened native child-process lookup to prefer Windows System32 tools, and made ETW/Xbox rollback
+  outcomes explicit instead of suppressing cleanup failures.
 
 ### Rust native core
 
@@ -82,14 +91,37 @@ Released: 2026-08-09
   with `CancellationTokenSource` pattern — search no longer triggers full list rebuild on every
   keystroke; outer `catch (Exception)` prevents unobserved exceptions from crashing the WinUI 3 process.
 
+### Native command migration
+
+- Removed the bulk-generated handler family that returned canned machine state or fabricated mutation
+  success; all 259 stable IDs now route through one fail-closed native executor.
+- Added explicit routing for all 155 read-only and 104 mutating commands, with parameter preflight for
+  every mutating command before approval can be granted.
+- Added real Windows collectors and bounded native/process integrations for system, storage, network,
+  security, Windows Update, AppX, browser/Steam, desktop, telemetry, downloads, offline servicing,
+  maintenance, Studio, and tooling surfaces.
+- Reworked downloads to retain partial files on suspend, resume with HTTP Range, verify optional SHA-256,
+  and report partial batch failures truthfully.
+- Corrected Studio integrations: fixed-command ADB inventory and Xbox FSE operations require reviewed
+  tool hashes; WezTerm writes the local status module instead of accepting arbitrary CLI execution.
+- Temporary security-control reduction now fails closed until an authenticated native recovery host can
+  guarantee automatic restoration; the incorrect firewall substitution was removed.
+- Removed false generic `UndoAvailable` claims where no recovery action is wired.
+- Moved historical executable PowerShell into the separate legacy-oracle artifact; finalized native
+  source contains no `.ps1`, `.psm1`, or `.psd1` runtime dependency.
+
 ### Release candidate status
 
 This release candidate is not production-promotable. Current migration status:
 - 259 commands cataloged
-- 8 handlers implemented
+- 259 native command routes implemented
 - 0 behavior-verified
+- 0 native implementation blockers
+- 259 production behavior-verification blockers
 
-The production finalization gate refuses promotion until all 259 commands reach `BehaviorVerified`.
+`Implemented` means a typed native route exists and fails closed when its platform, dependency, or safety
+preconditions cannot be satisfied. It is not a claim of Windows parity. Production finalization continues
+to refuse promotion until all 259 commands reach `BehaviorVerified`.
 
 ---
 

@@ -137,9 +137,10 @@ public sealed class CommandDispatcherTests
     }
 
     [Fact]
-    public async Task Catalog_handler_returns_all_built_in_rules()
+    public async Task Default_runtime_routes_catalog_commands_through_the_injected_executor()
     {
-        CommandDispatcher dispatcher = CommandRuntime.CreateDefault();
+        RecordingExecutor executor = new();
+        CommandDispatcher dispatcher = CommandRuntime.CreateDefault(executor);
 
         CommandRequest request = Request("catalog");
         CommandResult result = await dispatcher.ExecuteAsync(
@@ -147,22 +148,23 @@ public sealed class CommandDispatcherTests
 
         Assert.Equal(CommandResultStatus.Succeeded, result.Status);
         Assert.Equal(request.CorrelationId, result.CorrelationId);
-        Assert.Equal("catalog.loaded", result.Code);
-        Assert.Equal(69, result.Data?.GetArrayLength() ?? 0);
-        Assert.True(result.CompletedAt >= result.StartedAt);
+        Assert.Equal("executor.succeeded", result.Code);
+        Assert.Equal("catalog", executor.LastDefinitionId);
+        Assert.Equal(1, executor.InvocationCount);
     }
 
     [Fact]
-    public async Task Presets_handler_returns_all_built_in_presets()
+    public async Task Default_runtime_registers_all_stable_catalog_commands()
     {
-        CommandDispatcher dispatcher = CommandRuntime.CreateDefault();
+        RecordingExecutor executor = new();
+        CommandDispatcher dispatcher = CommandRuntime.CreateDefault(executor);
 
         CommandResult result = await dispatcher.ExecuteAsync(
             Request("presets"), CommandExecutionOptions.Default, CancellationToken.None);
 
         Assert.Equal(CommandResultStatus.Succeeded, result.Status);
-        Assert.Equal("presets.loaded", result.Code);
-        Assert.Equal(7, result.Data?.GetArrayLength() ?? 0);
+        Assert.Equal("presets", executor.LastDefinitionId);
+        Assert.Equal(1, executor.InvocationCount);
     }
 
     [Fact]
@@ -196,6 +198,26 @@ public sealed class CommandDispatcherTests
             "test",
             status,
             [id]);
+
+    private sealed class RecordingExecutor : ICommandOperationExecutor
+    {
+        public int InvocationCount { get; private set; }
+        public string? LastDefinitionId { get; private set; }
+
+        public Task<CommandHandlerOutcome> ExecuteAsync(
+            CommandDefinition definition,
+            CommandRequest request,
+            CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            InvocationCount++;
+            LastDefinitionId = definition.Id;
+            return Task.FromResult(CommandHandlerOutcome.Succeeded(
+                "executor.succeeded",
+                "Executor invoked.",
+                JsonSerializer.SerializeToElement(new { definition.Id })));
+        }
+    }
 
     private sealed class RecordingHandler(string commandId) : ICommandHandler
     {

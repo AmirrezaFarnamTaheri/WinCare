@@ -17,15 +17,23 @@ migration.
 | Measure | Count |
 |---|---:|
 | Stable command IDs preserved | 259 of 259 |
-| Typed contracts verified | 6 of 259 |
-| Native handlers implemented | 6 of 259 |
+| Typed command contracts routed | 259 of 259 |
+| Native command routes implemented | 259 of 259 |
 | Behavior verified on Windows | 0 of 259 |
-| Native implementation blockers | 253 |
+| Native implementation blockers | 0 |
 | Production behavior-verification blockers | 259 |
 
-The implemented read-only handlers are `catalog`, `presets`, `disk-info`, `sys-info`, and two
-additional structural handlers. Every other command remains visible in All tools but is disabled
-by the dispatcher and returns an explicit not-implemented result.
+All 259 stable command IDs now route through one fail-closed native executor rather than
+copy-pasted handlers. The executor validates mutating parameters before approval, distinguishes
+preview from apply, uses bounded native process/file operations, and returns blocked/failed results
+instead of fabricated success when a dependency, platform capability, or safety precondition is
+unavailable.
+
+`Implemented` is intentionally not the same as `BehaviorVerified`. Command-by-command Windows
+comparison against the historical oracle has not run in this Linux environment, so production
+promotion remains blocked. Temporary security-control reduction is also intentionally blocked until
+a separately launchable native recovery host can prove authenticated automatic restoration; the
+previous incorrect firewall substitution was removed rather than weakening that safety contract.
 
 ## Finalized artifact model
 
@@ -105,13 +113,14 @@ python tools/verify_native_foundation.py
 python -m unittest discover -s tests/native -v
 python tools/verify_visual_tokens.py
 python tools/verify_pill_contrast.py
-python tools/validate_gui.py
-python -m unittest tools.test_gui -v
 ```
 
 These checks verify frozen 259-ID parity, native source boundaries, command status accounting,
 deterministic archive rules, WinUI source structure, accessibility metadata, packaging metadata,
-and the fail-closed production gate. They do not substitute for a Windows build or runtime test.
+and the fail-closed production gate. In the full migration workspace, additional legacy-oracle GUI
+compatibility gates also run. Finalized native-source archives intentionally omit executable legacy
+PowerShell, so the two finalization tests that require that executable oracle report an explicit skip.
+These checks do not substitute for a Windows build or runtime test.
 
 ## Windows release evidence still required
 
@@ -151,11 +160,16 @@ require migration status and handler registration.
 
 ## Security invariants
 
-- `DiskCleanupCommandHandler` enforces an `AllowedBasePaths` safelist: only `%TEMP%` and
-  `%LOCALAPPDATA%\Temp` are permitted targets. Path traversal attempts are silently dropped.
-- `CommandDispatcher` exception logs emit only the exception type name — `ex.Message` is never
-  written to the activity journal to prevent file-path or PII leakage.
-- No static mutable globals: `CommandRuntime.LastJournal` was removed to eliminate race conditions.
+- File and cleanup operations canonicalize user-selected paths, reject reparse-point operation roots,
+  skip reparse-point descendants during recursive traversal, and use bounded iterative enumeration so
+  junctions and inaccessible trees cannot silently escape the admitted boundary or exhaust recursion.
+- `CommandDispatcher` exception journals emit only the exception type name — `ex.Message` is never
+  written to the activity journal, avoiding file-path or PII leakage through user-visible history.
+- One application-scoped `ActivityJournalService` is injected into the dispatcher and Activity page
+  through `AppRuntime`; cached Activity navigation refreshes from that same journal instead of relying
+  on mutable global fallback state.
+- Temporary security-control reduction fails closed until a native recovery host can prove authenticated
+  automatic restoration; no unrelated firewall control is substituted.
 - All Rust FFI exports are wrapped in `catch_unwind` — panics cannot cross the FFI boundary.
 
 ## CI

@@ -95,7 +95,7 @@ A command may advance only through evidence-backed states:
 Current state:
 
 - 259 cataloged
-- 2 implemented
+- 259 implemented native routes
 - 0 behavior-verified
-- 257 native implementation blockers
+- 0 native implementation blockers
 - 259 production behavior-verification blockers

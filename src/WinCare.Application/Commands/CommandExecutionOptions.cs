@@ -7,7 +7,7 @@ namespace WinCare.Application.Commands;
 /// <param name="Deadline">Optional wall-clock deadline for execution.</param>
 public sealed record CommandExecutionOptions(
     bool ReviewApproved,
-    DateTimeOffset? Deadline)
+    DateTimeOffset? Deadline = null)
 {
     /// <summary>
     /// Gets the default, non-applicative options.

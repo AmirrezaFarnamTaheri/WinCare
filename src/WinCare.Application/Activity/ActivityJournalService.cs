@@ -5,7 +5,7 @@ namespace WinCare.Application.Activity;
 /// <summary>
 /// Thread-safe, append-only in-process journal for command activity records.
 /// </summary>
-public sealed class ActivityJournalService
+public sealed class ActivityJournalService : IActivityJournalService
 {
     private readonly List<ActivityRecord> _records = [];
     private readonly object _lock = new();

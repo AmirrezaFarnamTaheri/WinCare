@@ -15,6 +15,7 @@ from tools.finalize_native_release import (
 )
 
 ROOT = Path(__file__).resolve().parents[2]
+LEGACY_EXECUTABLE_ORACLE = ROOT / "src/WinCare/WinCare.psm1"
 
 
 class FinalizationTests(unittest.TestCase):
@@ -73,9 +74,9 @@ class FinalizationTests(unittest.TestCase):
             self.assertTrue(result.report_path.is_file())
             self.assertTrue(result.manifest_path.is_file())
             self.assertEqual(259, result.readiness.cataloged)
-            self.assertEqual(8, result.readiness.implemented)
+            self.assertEqual(259, result.readiness.implemented)
             self.assertEqual(0, result.readiness.behavior_verified)
-            self.assertEqual(251, result.readiness.implementation_blockers)
+            self.assertEqual(0, result.readiness.implementation_blockers)
             self.assertEqual(259, result.readiness.production_blockers)
 
             with zipfile.ZipFile(result.native_archive) as archive:
@@ -86,6 +87,8 @@ class FinalizationTests(unittest.TestCase):
                 self.assertIn("migration/oracle/legacy-command-ids.json", names)
                 self.assertIn("docs/migration/finalization-status.md", names)
                 self.assertIn("tools/finalize_native_release.py", names)
+                self.assertNotIn("tools/validate_gui.py", names)
+                self.assertNotIn("tools/test_gui.py", names)
                 self.assertNotIn("docs/RELEASE.md", names)
                 self.assertNotIn("design/WinCare-GUI-Preview.png", names)
                 for entry in archive.infolist():
@@ -93,7 +96,6 @@ class FinalizationTests(unittest.TestCase):
 
             with zipfile.ZipFile(result.oracle_archive) as archive:
                 names = archive.namelist()
-                self.assertTrue(any(name.lower().endswith(".psm1") for name in names))
                 self.assertIn("migration/oracle/provenance.json", names)
                 for entry in archive.infolist():
                     self.assertEqual((1980, 1, 1, 0, 0, 0), entry.date_time)

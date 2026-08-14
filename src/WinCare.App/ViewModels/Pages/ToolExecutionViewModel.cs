@@ -10,6 +10,8 @@ namespace WinCare.App.ViewModels.Pages;
 
 public sealed class ToolExecutionViewModel : ObservableObject
 {
+    private const int MaxParameterJsonCharacters = 1024 * 1024;
+
     private static readonly JsonSerializerOptions ResultJsonOptions = new()
     {
         WriteIndented = true,
@@ -26,6 +28,10 @@ public sealed class ToolExecutionViewModel : ObservableObject
     private string _executionMessage = string.Empty;
     private string _executionResultText = string.Empty;
     private bool _isReviewApproved;
+    private string _parameterJson = "{}";
+    private ApprovedMutationPlan? _lastApprovedPlan;
+
+    private CancellationTokenSource? _activeCts;
 
     public ToolExecutionViewModel(CommandDispatcher dispatcher, Action<string> recordRecent)
     {
@@ -34,9 +40,16 @@ public sealed class ToolExecutionViewModel : ObservableObject
         ExecuteSelectedToolCommand = new AsyncRelayCommand(
             ExecuteSelectedToolAsync,
             CanExecuteSelectedTool);
+        CancelSelectedToolCommand = new RelayCommand(CancelSelectedTool);
     }
 
     public IAsyncRelayCommand ExecuteSelectedToolCommand { get; }
+    public IRelayCommand CancelSelectedToolCommand { get; }
+
+    private void CancelSelectedTool()
+    {
+        _activeCts?.Cancel();
+    }
 
     public bool IsExecuting
     {
@@ -94,6 +107,19 @@ public sealed class ToolExecutionViewModel : ObservableObject
 
     public string ExecutionResultText => _executionResultText;
 
+    /// <summary>JSON object passed to the selected command. Kept as text so every catalog command can expose its native contract without bespoke UI code.</summary>
+    public string ParameterJson
+    {
+        get => _parameterJson;
+        set
+        {
+            if (SetProperty(ref _parameterJson, value ?? "{}"))
+            {
+                ResetReviewState();
+            }
+        }
+    }
+
     public bool IsMutatingTool => _selectedTool?.Definition.ReadOnly == false;
 
     public bool CanApproveReview => IsMutatingTool && _hasSuccessfulPreview && !IsExecuting;
@@ -144,16 +170,50 @@ public sealed class ToolExecutionViewModel : ObservableObject
         ClearExecutionResult();
         try
         {
-            JsonElement parameters = JsonSerializer.SerializeToElement(new Dictionary<string, object?>());
+            string parameterText = string.IsNullOrWhiteSpace(ParameterJson) ? "{}" : ParameterJson;
+            if (parameterText.Length > MaxParameterJsonCharacters)
+            {
+                SetParameterError("Command parameter JSON exceeds the 1 MiB safety limit.");
+                return;
+            }
+
+            JsonElement parameters;
+            try
+            {
+                using JsonDocument document = JsonDocument.Parse(parameterText);
+                if (document.RootElement.ValueKind != JsonValueKind.Object)
+                {
+                    SetParameterError("Command parameters must be a JSON object.");
+                    return;
+                }
+                parameters = document.RootElement.Clone();
+            }
+            catch (JsonException ex)
+            {
+                SetParameterError($"Invalid parameter JSON: {ex.Message}");
+                return;
+            }
+
+            ApprovedMutationPlan? approval = apply ? _lastApprovedPlan : null;
             CommandRequest request = apply
-                ? CommandRequest.Execute(selected.Id, parameters)
+                ? CommandRequest.Execute(selected.Id, parameters, approval)
                 : CommandRequest.Preview(selected.Id, parameters);
-            CommandResult result = await _dispatcher.ExecuteAsync(
-                request,
-                new CommandExecutionOptions(
-                    ReviewApproved: apply,
-                    Deadline: DateTimeOffset.UtcNow.AddSeconds(30)),
-                cancellationToken);
+            using CancellationTokenSource linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            _activeCts = linkedCts;
+            CommandResult result;
+            try
+            {
+                result = await _dispatcher.ExecuteAsync(
+                    request,
+                    new CommandExecutionOptions(
+                        ReviewApproved: apply,
+                        Deadline: DateTimeOffset.UtcNow + ExecutionBudget(selected.Definition)),
+                    linkedCts.Token);
+            }
+            finally
+            {
+                _activeCts = null;
+            }
 
             _recordRecent(result.CommandId);
             if (string.Equals(_selectedTool?.Id, result.CommandId, StringComparison.Ordinal))
@@ -163,11 +223,14 @@ public sealed class ToolExecutionViewModel : ObservableObject
                 {
                     if (!apply)
                     {
-                        SetSuccessfulPreview(result.Status == CommandResultStatus.Succeeded);
+                        bool previewSuccess = result.Status == CommandResultStatus.Succeeded;
+                        SetSuccessfulPreview(previewSuccess);
+                        _lastApprovedPlan = previewSuccess ? ApprovedMutationPlan.Create(selected.Id, parameters, request.CorrelationId) : null;
                     }
                     else
                     {
                         ResetReviewState();
+                        _lastApprovedPlan = null;
                     }
                 }
             }
@@ -176,6 +239,40 @@ public sealed class ToolExecutionViewModel : ObservableObject
         {
             IsExecuting = false;
         }
+    }
+
+    private static TimeSpan ExecutionBudget(CommandDefinition definition) => definition.Id switch
+    {
+        // Network transfers can legitimately run for a long time while remaining cancellation-aware.
+        "download-start" or "download-batch" or "download-start-due" or "steam-backup" or "steam-restore"
+            => TimeSpan.FromHours(2),
+
+        // Windows servicing and update APIs regularly exceed interactive command timeouts.
+        "wua-download" or "wua-install" or "wua-uninstall" or
+        "offline-appx-selection" or "offline-driver-add" or "offline-driver-remove" or
+        "offline-package-add" or "offline-feature-set" or "offline-reduction-apply" or
+        "provisioning-plan" or "appx-selection" or "hardening-apply"
+            => TimeSpan.FromHours(1),
+
+        // Mutations stay bounded but get enough time for native tools and filesystem work.
+        _ when !definition.ReadOnly => TimeSpan.FromMinutes(15),
+
+        // Read-only diagnostics should be responsive while allowing large inventories/event queries.
+        _ => TimeSpan.FromMinutes(2),
+    };
+
+    private void SetParameterError(string message)
+    {
+        _executionStatus = CommandResultStatus.Blocked;
+        _executionMessage = message;
+        _executionResultText = JsonSerializer.Serialize(new
+        {
+            status = CommandResultStatus.Blocked,
+            code = "command.parameters_json_invalid",
+            message,
+        }, ResultJsonOptions);
+        IsExecutionResultOpen = true;
+        NotifyExecutionResultChanged();
     }
 
     private void ApplyExecutionResult(CommandResult result)

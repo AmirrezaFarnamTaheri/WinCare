@@ -93,6 +93,7 @@ enum Status {
     FileTooLarge = 4,
     IoError = 5,
     BufferTooSmall = 6,
+    Truncated = 7,
     InternalError = -99,
 }
 
@@ -258,39 +259,68 @@ pub unsafe extern "C" fn wincare_core_dir_size(
         if !path.exists() {
             return Status::NotFound.code();
         }
-        let total = accumulate_dir_size(path);
-        match total {
-            Ok(bytes) => {
-                // SAFETY: size_out is non-null (checked above); caller guarantees valid writable u64 memory.
-                unsafe { size_out.write(bytes) };
-                Status::Ok.code()
-            }
-            Err(_) => Status::IoError.code(),
+        let (bytes, complete) = match accumulate_dir_size(path) {
+            Ok(res) => res,
+            Err(_) => return Status::IoError.code(),
+        };
+        // SAFETY: size_out is non-null (checked above); caller guarantees valid writable u64 memory.
+        unsafe { size_out.write(bytes) };
+        if complete {
+            Status::Ok.code()
+        } else {
+            Status::Truncated.code()
         }
     }))
     .unwrap_or(Status::InternalError.code())
 }
 
-fn accumulate_dir_size(path: &Path) -> io::Result<u64> {
+const MAX_DIR_ENTRIES: usize = 500_000;
+
+fn accumulate_dir_size(path: &Path) -> io::Result<(u64, bool)> {
     let mut total = 0_u64;
+    let mut entries_count = 0_usize;
     let mut pending = vec![path.to_path_buf()];
+    let mut complete = true;
 
     while let Some(current) = pending.pop() {
-        let metadata = std::fs::symlink_metadata(&current)?;
+        entries_count = entries_count.saturating_add(1);
+        if entries_count > MAX_DIR_ENTRIES {
+            complete = false;
+            break;
+        }
+
+        let metadata = match std::fs::symlink_metadata(&current) {
+            Ok(meta) => meta,
+            Err(_) => {
+                complete = false;
+                continue;
+            }
+        };
+
         if metadata.file_type().is_symlink() || is_reparse_point(&metadata) {
             continue;
         }
 
         if metadata.is_dir() {
-            for entry in std::fs::read_dir(&current)? {
-                pending.push(entry?.path());
+            match std::fs::read_dir(&current) {
+                Ok(entries) => {
+                    for entry_res in entries {
+                        match entry_res {
+                            Ok(entry) => pending.push(entry.path()),
+                            Err(_) => complete = false,
+                        }
+                    }
+                }
+                Err(_) => {
+                    complete = false;
+                }
             }
         } else if metadata.is_file() {
             total = total.saturating_add(metadata.len());
         }
     }
 
-    Ok(total)
+    Ok((total, complete))
 }
 
 #[cfg(target_os = "windows")]

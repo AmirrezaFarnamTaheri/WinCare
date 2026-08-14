@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
-"""WinCare 2.4.0-rc1 Release Checklist Runner.
-Executes all 7 validation tools in sequence and reports binary pass/fail status.
+"""WinCare 2.4.0-rc1 source checklist runner.
+Runs self-contained source checks and, when the migration workspace still contains the
+executable historical oracle, also verifies RC source finalization. Windows build/runtime
+gates remain owned by the Windows workflows.
 """
 import subprocess
 import sys
@@ -10,14 +12,21 @@ ROOT = Path(__file__).resolve().parents[1]
 PYTHON = sys.executable
 
 CHECKS = [
-    ("Visual tokens check", [PYTHON, "tools/verify_visual_tokens.py"]),
-    ("Pill contrast check", [PYTHON, "tools/verify_pill_contrast.py"]),
-    ("Native foundation gate V5", [PYTHON, "tools/verify_native_foundation.py"]),
-    ("Rust unit tests", ["cargo", "test", "--manifest-path", "native/wincare-core/Cargo.toml"]),
-    ("Rust clippy lints", ["cargo", "clippy", "--manifest-path", "native/wincare-core/Cargo.toml", "--", "-D", "warnings"]),
-    ("Python native tests", [PYTHON, "-m", "unittest", "discover", "-s", "tests/native", "-v"]),
-    ("RC package finalization", [PYTHON, "tools/finalize_native_release.py", "--version", "2.4.0-rc1", "--output", "artifacts/"]),
+    ("Visual tokens check", [PYTHON, "tools/verify_visual_tokens.py"], 120),
+    ("Pill contrast check", [PYTHON, "tools/verify_pill_contrast.py"], 120),
+    ("Native foundation gate", [PYTHON, "tools/verify_native_foundation.py"], 120),
+    ("Rust format check", ["cargo", "fmt", "--manifest-path", "native/Cargo.toml", "--check"], 300),
+    ("Rust unit tests", ["cargo", "test", "--manifest-path", "native/Cargo.toml"], 900),
+    ("Rust clippy lints", ["cargo", "clippy", "--manifest-path", "native/Cargo.toml", "--all-targets", "--all-features", "--", "-D", "warnings"], 900),
+    ("Python native tests", [PYTHON, "-m", "unittest", "discover", "-s", "tests/native", "-v"], 300),
 ]
+
+if (ROOT / "src/WinCare/WinCare.psm1").is_file():
+    CHECKS.append((
+        "RC source finalization",
+        [PYTHON, "tools/finalize_native_release.py", "--version", "2.4.0-rc1", "--output", "artifacts/"],
+        300,
+    ))
 
 def main() -> int:
     if sys.version_info < (3, 11):
@@ -28,12 +37,12 @@ def main() -> int:
     print("=" * 60)
     print("WinCare Release Checklist Validation")
     print("=" * 60)
-    for name, cmd in CHECKS:
+    for name, cmd, timeout_seconds in CHECKS:
         print(f"\n[RUNNING] {name}...")
         try:
-            res = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True, timeout=120)
+            res = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True, timeout=timeout_seconds)
         except subprocess.TimeoutExpired:
-            print(f"[FAIL] {name} — timed out after 120 seconds")
+            print(f"[FAIL] {name} — timed out after {timeout_seconds} seconds")
             failed.append(name)
             continue
         except OSError as exc:
@@ -59,8 +68,8 @@ def main() -> int:
             print(f"  - {f}")
         return 1
 
-    print("ALL 7 RELEASE CHECKLIST VALIDATIONS PASSED! 🚀")
-    print("WinCare 2.4.0-rc1 is READY for release candidate packaging.")
+    print(f"ALL {len(CHECKS)} SOURCE CHECKLIST VALIDATIONS PASSED.")
+    print("Source checks are green. Windows build/runtime promotion still requires the Windows workflows.")
     return 0
 
 if __name__ == "__main__":

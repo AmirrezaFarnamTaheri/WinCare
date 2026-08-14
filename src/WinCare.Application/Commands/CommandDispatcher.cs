@@ -16,7 +16,7 @@ public sealed class CommandDispatcher
     private readonly IReadOnlyDictionary<string, CommandDefinition> _definitions;
     private readonly IReadOnlyDictionary<string, ICommandHandler> _handlers;
     private readonly TimeProvider _timeProvider;
-    private readonly ActivityJournalService? _journal;
+    private readonly IActivityJournalService? _journal;
 
     /// <summary>
     /// Expected C ABI version exported by <c>wincare_core</c>.
@@ -31,7 +31,7 @@ public sealed class CommandDispatcher
         IEnumerable<ICommandHandler> handlers,
         TimeProvider? timeProvider = null,
         INativeCoreService? nativeCore = null,
-        ActivityJournalService? journal = null)
+        IActivityJournalService? journal = null)
     {
         ArgumentNullException.ThrowIfNull(definitions);
         ArgumentNullException.ThrowIfNull(handlers);
@@ -168,16 +168,31 @@ public sealed class CommandDispatcher
                 startedAt);
         }
 
-        if (!definition.ReadOnly && request.Apply && !options.ReviewApproved)
+        if (!definition.ReadOnly && request.Apply)
         {
-            return CreateResult(
-                request,
-                CommandResultStatus.Blocked,
-                "command.review_required",
-                $"Mutating command '{request.CommandId}' requires explicit ReviewApproved confirmation.",
-                data: null,
-                undoAvailable: false,
-                startedAt);
+            if (!options.ReviewApproved)
+            {
+                return CreateResult(
+                    request,
+                    CommandResultStatus.Blocked,
+                    "command.review_required",
+                    $"Mutating command '{request.CommandId}' requires explicit ReviewApproved confirmation.",
+                    data: null,
+                    undoAvailable: false,
+                    startedAt);
+            }
+
+            if (request.Approval is null || !request.Approval.IsValid(request.CommandId, request.Parameters, request.CorrelationId))
+            {
+                return CreateResult(
+                    request,
+                    CommandResultStatus.Blocked,
+                    "command.approval_plan_invalid",
+                    $"Mutating command '{request.CommandId}' requires a valid ApprovedMutationPlan matching the canonical parameters digest.",
+                    data: null,
+                    undoAvailable: false,
+                    startedAt);
+            }
         }
 
         using CancellationTokenSource linkedCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);

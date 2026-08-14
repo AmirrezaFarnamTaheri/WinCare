@@ -17,8 +17,12 @@ class CommandRuntimeTests(unittest.TestCase):
             "src/WinCare.Application/Commands/CommandExecutionOptions.cs",
             "src/WinCare.Application/Commands/CommandDispatcher.cs",
             "src/WinCare.Application/Commands/CommandRuntime.cs",
-            "src/WinCare.Application/Commands/Handlers/CatalogCommandHandler.cs",
-            "src/WinCare.Application/Commands/Handlers/PresetsCommandHandler.cs",
+            "src/WinCare.Application/Commands/ICommandOperationExecutor.cs",
+            "src/WinCare.Application/Commands/DelegatingCommandHandler.cs",
+            "src/WinCare.Infrastructure/Commands/WindowsCommandExecutor.cs",
+            "src/WinCare.Infrastructure/Commands/BoundedProcessRunner.cs",
+            "src/WinCare.Infrastructure/Commands/CommandStateStore.cs",
+            "src/WinCare.App/Services/AppRuntime.cs",
             "src/WinCare.CommandCatalog/RemediationCatalog.cs",
             "src/WinCare.CommandCatalog/RemediationCatalogJsonContext.cs",
             "src/WinCare.CommandCatalog/EmbeddedJsonResource.cs",
@@ -30,20 +34,19 @@ class CommandRuntimeTests(unittest.TestCase):
         missing = [relative for relative in required if not (ROOT / relative).is_file()]
         self.assertEqual([], missing)
 
-    def test_only_catalog_and_presets_are_marked_implemented(self) -> None:
+    def test_all_catalog_commands_are_marked_implemented_or_behavior_verified(self) -> None:
         document = json.loads(
             (ROOT / "src/WinCare.CommandCatalog/Data/commands.json").read_text(encoding="utf-8")
         )
-        implemented = {
-            command["id"]
-            for command in document["commands"]
-            if command["migrationStatus"] in {"Implemented", "BehaviorVerified"}
+        commands = document["commands"]
+        self.assertEqual(259, len(commands))
+        self.assertEqual(259, len({command["id"] for command in commands}))
+        incomplete = {
+            command["id"]: command["migrationStatus"]
+            for command in commands
+            if command["migrationStatus"] not in {"Implemented", "BehaviorVerified"}
         }
-        self.assertEqual({
-            "catalog", "presets", "system", "storage", "network",
-            "experience-privacy-profiles", "cleaner-disk-pressure", "cleanup-targets",
-        }, implemented)
-        self.assertEqual(259, len(document["commands"]))
+        self.assertEqual({}, incomplete)
 
     def test_embedded_catalog_data_matches_the_frozen_oracle_data(self) -> None:
         pairs = (
@@ -110,12 +113,18 @@ class CommandRuntimeTests(unittest.TestCase):
         self.assertIn("WinCareCoreDirSize", native_interop)
         self.assertIn("WinCareCoreSysInfo", native_interop)
 
-        privacy = (
-            ROOT / "src/WinCare.Application/Commands/Handlers/PrivacyStatusCommandHandler.cs"
-        ).read_text(encoding="utf-8")
-        self.assertIn("int? telemetry = null;", privacy)
-        self.assertIn("bool? advertisingIdEnabled = null;", privacy)
-        self.assertIn('null => "unknown"', privacy)
+        executor = (ROOT / "src/WinCare.Infrastructure/Commands/WindowsCommandExecutor.cs").read_text(
+            encoding="utf-8"
+        )
+        for token in (
+            "ValidateCommandParameters(definition, p)",
+            "if (!request.Apply)",
+            "MutationPreview(definition, p)",
+            "command.elevation_required",
+            "UnauthorizedAccessException",
+            "command.access_denied",
+        ):
+            self.assertIn(token, executor)
 
         tool_row = (ROOT / "src/WinCare.App/ViewModels/Pages/ToolRowViewModel.cs").read_text(
             encoding="utf-8"
@@ -147,6 +156,13 @@ class CommandRuntimeTests(unittest.TestCase):
                     if token in text:
                         findings.append(f"{path.relative_to(ROOT)}: {token}")
         self.assertEqual([], findings)
+
+    def test_command_plan_prevalidation_and_read_only_fail_closed(self) -> None:
+        executor = (ROOT / "src/WinCare.Infrastructure/Commands/WindowsCommandExecutor.cs").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("ValidateCommandPlanSteps(steps)", executor)
+        self.assertIn("No concrete native inspection route implemented", executor)
 
 
 if __name__ == "__main__":

@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using WinCare.Application.Activity;
 using WinCare.Application.Commands;
+using WinCare.App.Services;
 using WinCare.Domain.Activity;
 
 namespace WinCare.App.ViewModels.Pages;
@@ -21,7 +22,7 @@ public sealed class ActivityPageViewModel : TabbedPageViewModel
     private const int ReportsIndex = 3;
 
     public ActivityPageViewModel()
-        : this(CommandRuntime.LastJournal)
+        : this(AppRuntime.Current.Journal)
     {
     }
 

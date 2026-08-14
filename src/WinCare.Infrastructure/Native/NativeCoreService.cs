@@ -163,6 +163,7 @@ public sealed class NativeCoreService : INativeCoreService
         NativeCoreStatus.InvalidUtf8 => new InvalidDataException("The file path could not be encoded as UTF-8."),
         NativeCoreStatus.BufferTooSmall => new InvalidOperationException("The native output contract is incompatible."),
         NativeCoreStatus.NullPointer => new InvalidOperationException("The native input contract rejected a pointer."),
+        NativeCoreStatus.Truncated => new InvalidOperationException($"Directory sizing for '{path}' was truncated after reaching the entry limit or encountering unreadable entries."),
         _ => new IOException("The native file operation failed."),
     };
 }
