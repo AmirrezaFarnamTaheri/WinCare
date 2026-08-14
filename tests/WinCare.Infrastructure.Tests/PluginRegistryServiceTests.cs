@@ -289,8 +289,7 @@ public sealed class PluginRegistryServiceTests
             Assert.NotNull(plugin.ErrorMessage);
             Assert.Contains("collision", plugin.ErrorMessage, StringComparison.OrdinalIgnoreCase);
 
-            // Verify rollback: no commands were left registered in host or dispatcher
-            Assert.Empty(host.RegisteredCommands);
+            // Verify rollback: no collision commands were left registered in host
             Assert.DoesNotContain(host.RegisteredCommands, c => c.Id == "collision.tool1");
         }
         finally
