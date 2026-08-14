@@ -398,7 +398,7 @@ public sealed class PluginRegistryService : IPluginRegistry
         }
     }
 
-    private static string? ResolveBuiltInCoreCommandId(string commandId, PluginToolDeclaration? toolDef = null)
+    private static string? ResolveBuiltInCoreCommandId(string commandId, PluginToolDefinition? toolDef = null)
     {
         if (!string.IsNullOrWhiteSpace(toolDef?.AliasOf))
         {
