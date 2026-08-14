@@ -1,3 +1,6 @@
+using System.Collections.Concurrent;
+using System.Linq;
+
 namespace WinCare.Application.Plugins;
 
 using System;
@@ -11,6 +14,7 @@ using WinCare.CommandCatalog.Models;
 public class DefaultPluginHost : IPluginHost
 {
     private readonly ICommandDispatcher? _commandDispatcher;
+    private readonly ConcurrentDictionary<string, CommandDefinition> _registeredCommands = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
     /// Initializes a new instance of <see cref="DefaultPluginHost"/>.
@@ -39,18 +43,29 @@ public class DefaultPluginHost : IPluginHost
     /// <inheritdoc />
     public string PluginsUserDirectory { get; }
 
+    /// <summary>
+    /// Gets all dynamically registered plugin commands.
+    /// </summary>
+    public IReadOnlyCollection<CommandDefinition> RegisteredCommands => _registeredCommands.Values.ToList().AsReadOnly();
+
     /// <inheritdoc />
     public ICommandDispatcher CommandDispatcher => _commandDispatcher ?? throw new InvalidOperationException("No CommandDispatcher has been configured for this PluginHost.");
 
     /// <inheritdoc />
     public void RegisterCommand(CommandDefinition command)
     {
-        // Dynamic command registration hook
+        if (command != null && !string.IsNullOrWhiteSpace(command.Id))
+        {
+            _registeredCommands[command.Id] = command;
+        }
     }
 
     /// <inheritdoc />
     public void UnregisterCommand(string commandId)
     {
-        // Dynamic command unregistration hook
+        if (!string.IsNullOrWhiteSpace(commandId))
+        {
+            _registeredCommands.TryRemove(commandId, out _);
+        }
     }
 }

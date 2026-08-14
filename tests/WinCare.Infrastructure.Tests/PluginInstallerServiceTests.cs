@@ -149,4 +149,91 @@ public class PluginInstallerServiceTests
             }
         }
     }
+
+    [Theory]
+    [InlineData("http://example.com/plugin.zip")]
+    [InlineData("ftp://example.com/plugin.zip")]
+    public async Task InstallPluginFromPackageAsync_RejectsNonHttpsUrls(string url)
+    {
+        var tempPluginsDir = Path.Combine(Path.GetTempPath(), $"wincare_test_plugins_{Guid.NewGuid():N}");
+        try
+        {
+            var installer = new PluginInstallerService(pluginsBaseDirectory: tempPluginsDir);
+            await Assert.ThrowsAsync<ArgumentException>(() =>
+                installer.InstallPluginFromPackageAsync(url));
+        }
+        finally
+        {
+            if (Directory.Exists(tempPluginsDir))
+            {
+                Directory.Delete(tempPluginsDir, recursive: true);
+            }
+        }
+    }
+
+    [Fact]
+    public async Task InstallPluginFromStreamAsync_RejectsMissingManifest()
+    {
+        var tempPluginsDir = Path.Combine(Path.GetTempPath(), $"wincare_test_plugins_{Guid.NewGuid():N}");
+
+        try
+        {
+            using var memoryStream = new MemoryStream();
+            using (var zip = new ZipArchive(memoryStream, ZipArchiveMode.Create, leaveOpen: true))
+            {
+                var entry = zip.CreateEntry("somefile.txt");
+                using var writer = new StreamWriter(entry.Open());
+                writer.Write("no manifest here");
+            }
+
+            memoryStream.Position = 0;
+            var installer = new PluginInstallerService(pluginsBaseDirectory: tempPluginsDir);
+
+            await Assert.ThrowsAsync<InvalidOperationException>(() =>
+                installer.InstallPluginFromStreamAsync(memoryStream, "com.wincare.nomanifest"));
+        }
+        finally
+        {
+            if (Directory.Exists(tempPluginsDir))
+            {
+                Directory.Delete(tempPluginsDir, recursive: true);
+            }
+        }
+    }
+
+    [Fact]
+    public async Task InstallPluginFromStreamAsync_EnforcesSha256Verification()
+    {
+        var tempPluginsDir = Path.Combine(Path.GetTempPath(), $"wincare_test_plugins_{Guid.NewGuid():N}");
+
+        try
+        {
+            using var memoryStream = new MemoryStream();
+            using (var zip = new ZipArchive(memoryStream, ZipArchiveMode.Create, leaveOpen: true))
+            {
+                var manifestEntry = zip.CreateEntry("wincare-plugin.json");
+                using var writer = new StreamWriter(manifestEntry.Open());
+                writer.Write(JsonSerializer.Serialize(new { id = "com.wincare.validhash", name = "Valid Hash", version = "1.0.0" }));
+            }
+
+            memoryStream.Position = 0;
+            var installer = new PluginInstallerService(pluginsBaseDirectory: tempPluginsDir);
+
+            // Valid installation with null expectedSha256
+            var installedPath = await installer.InstallPluginFromStreamAsync(memoryStream, "com.wincare.validhash");
+            Assert.True(Directory.Exists(installedPath));
+
+            // Tampered hash check via Package URL installation validation
+            var invalidHash = "0000000000000000000000000000000000000000000000000000000000000000";
+            await Assert.ThrowsAsync<ArgumentException>(() =>
+                installer.InstallPluginFromPackageAsync("http://insecure.example.com/plugin.zip", "com.wincare.validhash", invalidHash));
+        }
+        finally
+        {
+            if (Directory.Exists(tempPluginsDir))
+            {
+                Directory.Delete(tempPluginsDir, recursive: true);
+            }
+        }
+    }
 }

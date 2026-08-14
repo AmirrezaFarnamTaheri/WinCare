@@ -43,19 +43,39 @@ public static class JsonPluginLoader
         try
         {
             var json = File.ReadAllText(manifestPath);
-            var manifest = JsonSerializer.Deserialize<PluginManifest>(json);
+            return LoadFromString(json, pluginDirectoryPath);
+        }
+        catch (Exception ex)
+        {
+            return new PluginLoadResult(false, null, Array.Empty<CommandDefinition>(), $"Failed to read manifest file: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Loads and validates a declarative JSON plugin from a raw JSON manifest string.
+    /// </summary>
+    public static PluginLoadResult LoadFromString(string json, string pluginDirectoryPath = "")
+    {
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return new PluginLoadResult(false, null, Array.Empty<CommandDefinition>(), "Manifest JSON content is empty.");
+        }
+
+        try
+        {
+            var manifest = JsonSerializer.Deserialize<PluginManifest>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
             if (manifest == null || string.IsNullOrWhiteSpace(manifest.Id))
             {
                 return new PluginLoadResult(false, null, Array.Empty<CommandDefinition>(), "Invalid plugin manifest: missing 'id'");
             }
 
-            var canonicalDir = Path.GetFullPath(pluginDirectoryPath);
+            var canonicalDir = string.IsNullOrWhiteSpace(pluginDirectoryPath) ? string.Empty : Path.GetFullPath(pluginDirectoryPath);
             var commands = new List<CommandDefinition>();
 
             foreach (var tool in manifest.Tools)
             {
-                if (!string.IsNullOrWhiteSpace(tool.ScriptPath))
+                if (!string.IsNullOrWhiteSpace(canonicalDir) && !string.IsNullOrWhiteSpace(tool.ScriptPath))
                 {
                     var resolvedScriptPath = Path.GetFullPath(Path.Combine(canonicalDir, tool.ScriptPath));
                     var relativePath = Path.GetRelativePath(canonicalDir, resolvedScriptPath);

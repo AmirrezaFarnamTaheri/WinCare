@@ -24,7 +24,7 @@ public sealed class AllToolsPageViewModel : ObservableObject
     private bool _isCompactLayout;
 
     public AllToolsPageViewModel()
-        : this(new ToolCatalogService(), AppRuntime.Current.Dispatcher)
+        : this(new ToolCatalogService(AppRuntime.Current.PluginRegistry), AppRuntime.Current.Dispatcher)
     {
     }
 

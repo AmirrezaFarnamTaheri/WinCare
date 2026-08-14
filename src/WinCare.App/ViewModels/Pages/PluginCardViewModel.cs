@@ -20,6 +20,7 @@ public sealed class PluginCardViewModel
         ErrorMessage = entry.ErrorMessage;
         Permissions = new List<string> { "Installed Local Plugin" };
         PackageUrl = string.Empty;
+        Sha256 = string.Empty;
     }
 
     public PluginCardViewModel(RemotePluginItem item, bool isInstalled, PluginRegistryEntry? installedEntry = null)
@@ -38,6 +39,7 @@ public sealed class PluginCardViewModel
         ErrorMessage = installedEntry?.ErrorMessage;
         Permissions = item.Permissions;
         PackageUrl = item.PackageUrl;
+        Sha256 = item.Sha256;
     }
 
     public string Id { get; }
@@ -54,6 +56,7 @@ public sealed class PluginCardViewModel
     public string? ErrorMessage { get; }
     public List<string> Permissions { get; }
     public string PackageUrl { get; }
+    public string Sha256 { get; }
 
     public string StatusBadgeText => IsInstalled switch
     {

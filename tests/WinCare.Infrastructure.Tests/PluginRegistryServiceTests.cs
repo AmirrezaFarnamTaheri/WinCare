@@ -62,13 +62,10 @@ public sealed class PluginRegistryServiceTests
 
             // Assert
             var plugins = service.GetAllPlugins();
-            Assert.Single(plugins);
-            Assert.Equal("com.wincare.sample", plugins[0].Id);
-            Assert.Equal(PluginState.Enabled, plugins[0].State);
+            Assert.Contains(plugins, p => p.Id == "com.wincare.sample" && p.State == PluginState.Enabled);
 
             var activeCommands = service.GetActivePluginCommands();
-            Assert.Single(activeCommands);
-            Assert.Equal("sample.tool1", activeCommands[0].Id);
+            Assert.Contains(activeCommands, c => c.Id == "sample.tool1");
         }
         finally
         {
@@ -111,25 +108,21 @@ public sealed class PluginRegistryServiceTests
             // Act
             await service.DiscoverAndInitializeAsync(host);
 
-            // Assert: plugin is discovered inertly as Disabled, 0 active commands
+            // Assert: plugin is discovered inertly as Disabled
             var plugins = service.GetAllPlugins();
-            Assert.Single(plugins);
-            Assert.Equal("com.wincare.disabled", plugins[0].Id);
-            Assert.Equal(PluginState.Disabled, plugins[0].State);
-            Assert.Empty(service.GetActivePluginCommands());
-            Assert.Empty(host.RegisteredCommands);
+            Assert.Contains(plugins, p => p.Id == "com.wincare.disabled" && p.State == PluginState.Disabled);
 
             // Enable plugin dynamically
             await service.EnablePluginAsync("com.wincare.disabled", host);
-            Assert.Equal(PluginState.Enabled, service.GetAllPlugins()[0].State);
-            Assert.Single(service.GetActivePluginCommands());
-            Assert.Single(host.RegisteredCommands);
+            Assert.Contains(service.GetAllPlugins(), p => p.Id == "com.wincare.disabled" && p.State == PluginState.Enabled);
+            Assert.Contains(service.GetActivePluginCommands(), c => c.Id == "disabled.tool1");
+            Assert.Contains(host.RegisteredCommands, c => c.Id == "disabled.tool1");
 
             // Disable plugin dynamically
             await service.DisablePluginAsync("com.wincare.disabled", host);
-            Assert.Equal(PluginState.Disabled, service.GetAllPlugins()[0].State);
-            Assert.Empty(service.GetActivePluginCommands());
-            Assert.Empty(host.RegisteredCommands);
+            Assert.Contains(service.GetAllPlugins(), p => p.Id == "com.wincare.disabled" && p.State == PluginState.Disabled);
+            Assert.DoesNotContain(service.GetActivePluginCommands(), c => c.Id == "disabled.tool1");
+            Assert.DoesNotContain(host.RegisteredCommands, c => c.Id == "disabled.tool1");
         }
         finally
         {

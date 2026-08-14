@@ -223,7 +223,7 @@ public sealed class PluginStorePageViewModel : INotifyPropertyChanged
 
         try
         {
-            await _installerService.InstallPluginFromPackageAsync(card.PackageUrl, cancellationToken).ConfigureAwait(true);
+            await _installerService.InstallPluginFromPackageAsync(card.PackageUrl, card.Id, card.Sha256, cancellationToken).ConfigureAwait(true);
             await _registry.DiscoverAndInitializeAsync(_host, cancellationToken).ConfigureAwait(true);
             await RefreshPluginsAsync(forceRemoteRefresh: false, cancellationToken).ConfigureAwait(true);
             return true;

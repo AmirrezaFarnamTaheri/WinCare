@@ -94,6 +94,12 @@ public class RemotePluginItem
     public List<string> CommandsProvided { get; set; } = new();
 
     /// <summary>
+    /// Expected SHA-256 digest of the zip package.
+    /// </summary>
+    [JsonPropertyName("sha256")]
+    public string Sha256 { get; set; } = string.Empty;
+
+    /// <summary>
     /// Publication date timestamp.
     /// </summary>
     [JsonPropertyName("publishedDate")]

@@ -42,6 +42,9 @@ public sealed class PluginRegistryService : IPluginRegistry
             }
             _instantiatedPlugins.Clear();
 
+            // Discover built-in plugins from embedded resources
+            DiscoverEmbeddedBuiltInPlugins();
+
             // Scan built-in plugins in ApplicationRootPath/Plugins
             var builtInDir = Path.Combine(host.ApplicationRootPath, "Plugins");
             if (Directory.Exists(builtInDir))
@@ -49,6 +52,11 @@ public sealed class PluginRegistryService : IPluginRegistry
                 foreach (var dir in Directory.GetDirectories(builtInDir))
                 {
                     LoadPluginDirectory(dir, isBuiltIn: true);
+                }
+
+                foreach (var file in Directory.GetFiles(builtInDir, "*.json"))
+                {
+                    LoadPluginJsonFile(file, isBuiltIn: true);
                 }
             }
 
@@ -129,9 +137,18 @@ public sealed class PluginRegistryService : IPluginRegistry
         await _gate.WaitAsync(ct).ConfigureAwait(false);
         try
         {
-            _enabledIds.Add(pluginId);
-            _stateRepository?.SaveEnabledPluginIds(_enabledIds);
             await EnablePluginInternalAsync(pluginId, host, ct);
+
+            if (_entries.TryGetValue(pluginId, out var entry) && entry.State == PluginState.Enabled)
+            {
+                _enabledIds.Add(pluginId);
+                _stateRepository?.SaveEnabledPluginIds(_enabledIds);
+            }
+            else
+            {
+                _enabledIds.Remove(pluginId);
+                _stateRepository?.SaveEnabledPluginIds(_enabledIds);
+            }
         }
         finally
         {
@@ -265,6 +282,83 @@ public sealed class PluginRegistryService : IPluginRegistry
         catch (Exception ex)
         {
             _entries[pluginId] = entry with { State = PluginState.Error, ErrorMessage = $"Initialization failed: {ex.Message}" };
+        }
+    }
+
+    private void DiscoverEmbeddedBuiltInPlugins()
+    {
+        try
+        {
+            var assembly = typeof(CommandCatalog.CommandCatalog).Assembly;
+            var resourceNames = assembly.GetManifestResourceNames()
+                .Where(r => r.Contains("BuiltIn") && r.EndsWith(".json", StringComparison.OrdinalIgnoreCase));
+
+            foreach (var resName in resourceNames)
+            {
+                using var stream = assembly.GetManifestResourceStream(resName);
+                if (stream != null)
+                {
+                    using var reader = new StreamReader(stream);
+                    var json = reader.ReadToEnd();
+                    var loadResult = JsonPluginLoader.LoadFromString(json, string.Empty);
+                    if (loadResult.Success && loadResult.Manifest != null)
+                    {
+                        var manifest = loadResult.Manifest;
+                        var entry = new PluginRegistryEntry(
+                            Id: manifest.Id,
+                            Name: manifest.Name,
+                            Version: manifest.Version,
+                            Author: manifest.Author,
+                            Description: manifest.Description,
+                            Category: manifest.Category,
+                            SourceDirectoryPath: string.Empty,
+                            IsBuiltIn: true,
+                            State: PluginState.Disabled,
+                            Commands: loadResult.Commands,
+                            ErrorMessage: loadResult.ErrorMessage
+                        );
+                        _entries[manifest.Id] = entry;
+                    }
+                }
+            }
+        }
+        catch
+        {
+            // Built-in embedded discovery best-effort
+        }
+    }
+
+    private void LoadPluginJsonFile(string jsonFilePath, bool isBuiltIn)
+    {
+        try
+        {
+            if (!File.Exists(jsonFilePath)) return;
+            var json = File.ReadAllText(jsonFilePath);
+            var dirPath = Path.GetDirectoryName(jsonFilePath) ?? string.Empty;
+            var loadResult = JsonPluginLoader.LoadFromString(json, dirPath);
+            if (loadResult.Success && loadResult.Manifest != null)
+            {
+                var manifest = loadResult.Manifest;
+                var initialState = isBuiltIn ? PluginState.Disabled : (_enabledIds.Contains(manifest.Id) ? PluginState.Enabled : PluginState.Disabled);
+                var entry = new PluginRegistryEntry(
+                    Id: manifest.Id,
+                    Name: manifest.Name,
+                    Version: manifest.Version,
+                    Author: manifest.Author,
+                    Description: manifest.Description,
+                    Category: manifest.Category,
+                    SourceDirectoryPath: dirPath,
+                    IsBuiltIn: isBuiltIn,
+                    State: initialState,
+                    Commands: loadResult.Commands,
+                    ErrorMessage: loadResult.ErrorMessage
+                );
+                _entries[manifest.Id] = entry;
+            }
+        }
+        catch
+        {
+            // Best effort file load
         }
     }
 }

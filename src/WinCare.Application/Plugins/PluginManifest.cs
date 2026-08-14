@@ -78,6 +78,14 @@ public sealed class PluginToolDefinition
     [JsonPropertyName("risk")]
     public string Risk { get; init; } = "Low";
 
+    /// <summary>Declared administrator access requirement.</summary>
+    [JsonPropertyName("administratorAccess")]
+    public string AdministratorAccess { get; init; } = "No";
+
+    /// <summary>Declared restart expectation.</summary>
+    [JsonPropertyName("restart")]
+    public string Restart { get; init; } = "No";
+
     /// <summary>Whether command is read-only.</summary>
     [JsonPropertyName("readOnly")]
     public bool ReadOnly { get; init; }
@@ -95,7 +103,21 @@ public sealed class PluginToolDefinition
     /// </summary>
     public CommandDefinition ToCommandDefinition(string pluginId)
     {
-        Enum.TryParse<CommandRisk>(Risk, true, out var parsedRisk);
+        if (!Enum.TryParse<CommandRisk>(Risk, true, out var parsedRisk))
+        {
+            parsedRisk = CommandRisk.Low;
+        }
+
+        if (!Enum.TryParse<AdministratorAccess>(AdministratorAccess, true, out var parsedAdmin))
+        {
+            parsedAdmin = WinCare.CommandCatalog.Models.AdministratorAccess.No;
+        }
+
+        if (!Enum.TryParse<RestartExpectation>(Restart, true, out var parsedRestart))
+        {
+            parsedRestart = RestartExpectation.No;
+        }
+
         return new CommandDefinition(
             Id: Id,
             Title: Title,
@@ -104,8 +126,8 @@ public sealed class PluginToolDefinition
             Section: Section,
             Risk: parsedRisk,
             ReadOnly: ReadOnly,
-            AdministratorAccess: AdministratorAccess.No,
-            Restart: RestartExpectation.No,
+            AdministratorAccess: parsedAdmin,
+            Restart: parsedRestart,
             LegacySource: $"plugin:{pluginId}",
             MigrationStatus: MigrationStatus.Implemented,
             Keywords: new[] { Id, Title, Area, Section, pluginId }

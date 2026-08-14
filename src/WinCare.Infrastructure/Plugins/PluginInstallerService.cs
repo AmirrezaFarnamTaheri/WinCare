@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.IO.Compression;
 using System.Net.Http;
+using System.Security.Cryptography;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -11,11 +12,15 @@ using WinCare.Application.Plugins;
 namespace WinCare.Infrastructure.Plugins;
 
 /// <summary>
-/// Infrastructure service for downloading, extracting, and staging plugin packages.
+/// Infrastructure service for downloading, extracting, validating, and atomically staging plugin packages.
 /// </summary>
 public class PluginInstallerService : IPluginInstallerService
 {
     private static readonly Regex PluginIdRegex = new(@"^[a-zA-Z0-9][a-zA-Z0-9._-]{2,127}$", RegexOptions.Compiled);
+
+    public const long MaxDownloadSizeBytes = 50 * 1024 * 1024; // 50 MB
+    public const int MaxZipEntries = 500;
+    public const long MaxUncompressedSizeBytes = 200 * 1024 * 1024; // 200 MB
 
     private readonly HttpClient _httpClient;
     private readonly string _pluginsBaseDirectory;
@@ -41,34 +46,80 @@ public class PluginInstallerService : IPluginInstallerService
     }
 
     /// <inheritdoc />
-    public async Task<string> InstallPluginFromPackageAsync(string packageUrl, CancellationToken cancellationToken = default)
+    public async Task<string> InstallPluginFromPackageAsync(
+        string packageUrl,
+        string? expectedPluginId = null,
+        string? expectedSha256 = null,
+        CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(packageUrl))
         {
             throw new ArgumentException("Package URL cannot be empty or null.", nameof(packageUrl));
         }
 
-        string pluginId;
-        if (Uri.TryCreate(packageUrl, UriKind.Absolute, out var uri))
+        if (!Uri.TryCreate(packageUrl, UriKind.Absolute, out var uri) ||
+            (!uri.Scheme.Equals(Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase) &&
+             !uri.Scheme.Equals(Uri.UriSchemeFile, StringComparison.OrdinalIgnoreCase)))
         {
-            var fileName = Path.GetFileNameWithoutExtension(uri.AbsolutePath);
-            pluginId = string.IsNullOrWhiteSpace(fileName) ? $"plugin_{Guid.NewGuid():N}" : fileName;
+            throw new ArgumentException("Package URL must use the HTTPS scheme.", nameof(packageUrl));
+        }
+
+        string pluginId;
+        if (!string.IsNullOrWhiteSpace(expectedPluginId))
+        {
+            pluginId = expectedPluginId;
         }
         else
         {
-            pluginId = $"plugin_{Guid.NewGuid():N}";
+            var fileName = Path.GetFileNameWithoutExtension(uri.AbsolutePath);
+            pluginId = string.IsNullOrWhiteSpace(fileName) ? $"plugin_{Guid.NewGuid():N}" : fileName;
         }
 
         using var response = await _httpClient.GetAsync(packageUrl, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
         response.EnsureSuccessStatusCode();
 
-        await using var downloadStream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
+        if (response.Content.Headers.ContentLength.HasValue && response.Content.Headers.ContentLength.Value > MaxDownloadSizeBytes)
+        {
+            throw new InvalidOperationException($"Package download size ({response.Content.Headers.ContentLength.Value} bytes) exceeds maximum limit of {MaxDownloadSizeBytes} bytes.");
+        }
 
-        return await InstallPluginFromStreamAsync(downloadStream, pluginId, cancellationToken).ConfigureAwait(false);
+        await using var downloadStream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
+        using var memoryStream = new MemoryStream();
+        var buffer = new byte[81920];
+        int bytesRead;
+        long totalBytes = 0;
+
+        while ((bytesRead = await downloadStream.ReadAsync(buffer, 0, buffer.Length, cancellationToken).ConfigureAwait(false)) > 0)
+        {
+            totalBytes += bytesRead;
+            if (totalBytes > MaxDownloadSizeBytes)
+            {
+                throw new InvalidOperationException($"Package download exceeded maximum allowed size of {MaxDownloadSizeBytes} bytes.");
+            }
+            memoryStream.Write(buffer, 0, bytesRead);
+        }
+
+        memoryStream.Position = 0;
+
+        if (!string.IsNullOrWhiteSpace(expectedSha256))
+        {
+            var computedHash = Convert.ToHexString(SHA256.HashData(memoryStream.ToArray()));
+            if (!computedHash.Equals(expectedSha256.Replace("-", string.Empty), StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException($"Package integrity check failed. Expected SHA-256: {expectedSha256}, Actual: {computedHash}");
+            }
+            memoryStream.Position = 0;
+        }
+
+        return await InstallPluginFromStreamAsync(memoryStream, pluginId, expectedSha256, cancellationToken).ConfigureAwait(false);
     }
 
     /// <inheritdoc />
-    public async Task<string> InstallPluginFromStreamAsync(Stream archiveStream, string targetPluginId, CancellationToken cancellationToken = default)
+    public async Task<string> InstallPluginFromStreamAsync(
+        Stream archiveStream,
+        string targetPluginId,
+        string? expectedSha256 = null,
+        CancellationToken cancellationToken = default)
     {
         if (archiveStream == null)
         {
@@ -84,10 +135,22 @@ public class PluginInstallerService : IPluginInstallerService
         {
             using (var zipArchive = new ZipArchive(archiveStream, ZipArchiveMode.Read, leaveOpen: true))
             {
+                if (zipArchive.Entries.Count > MaxZipEntries)
+                {
+                    throw new InvalidOperationException($"Package contains {zipArchive.Entries.Count} entries, exceeding maximum limit of {MaxZipEntries}.");
+                }
+
                 var canonicalTempPath = Path.GetFullPath(tempExtractDir).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar;
+                long totalUncompressedBytes = 0;
 
                 foreach (var entry in zipArchive.Entries)
                 {
+                    totalUncompressedBytes += entry.Length;
+                    if (totalUncompressedBytes > MaxUncompressedSizeBytes)
+                    {
+                        throw new InvalidOperationException($"Package uncompressed size exceeded maximum allowed limit of {MaxUncompressedSizeBytes} bytes.");
+                    }
+
                     var destinationPath = Path.GetFullPath(Path.Combine(tempExtractDir, entry.FullName));
                     if (!destinationPath.StartsWith(canonicalTempPath, StringComparison.OrdinalIgnoreCase))
                     {
@@ -116,29 +179,41 @@ public class PluginInstallerService : IPluginInstallerService
                 manifestPath = Path.Combine(tempExtractDir, "plugin.json");
             }
 
-            var finalPluginId = targetPluginId;
-
-            if (File.Exists(manifestPath))
+            if (!File.Exists(manifestPath))
             {
-                try
-                {
-                    var manifestJson = await File.ReadAllTextAsync(manifestPath, cancellationToken).ConfigureAwait(false);
-                    using var doc = JsonDocument.Parse(manifestJson);
-                    if (doc.RootElement.TryGetProperty("id", out var idProp) && !string.IsNullOrWhiteSpace(idProp.GetString()))
-                    {
-                        finalPluginId = idProp.GetString()!;
-                    }
-                }
-                catch
-                {
-                    // Fallback to targetPluginId if manifest parsing fails
-                }
+                throw new InvalidOperationException("Package admission rejected: Missing plugin manifest ('wincare-plugin.json' or 'plugin.json').");
             }
 
+            var manifestJson = await File.ReadAllTextAsync(manifestPath, cancellationToken).ConfigureAwait(false);
+            using var doc = JsonDocument.Parse(manifestJson);
+            if (!doc.RootElement.TryGetProperty("id", out var idProp) || string.IsNullOrWhiteSpace(idProp.GetString()))
+            {
+                throw new InvalidOperationException("Package admission rejected: Manifest is missing a valid 'id' property.");
+            }
+
+            var manifestId = idProp.GetString()!;
+            if (!string.IsNullOrWhiteSpace(targetPluginId) && !manifestId.Equals(targetPluginId, StringComparison.OrdinalIgnoreCase) && !targetPluginId.StartsWith("plugin_"))
+            {
+                throw new InvalidOperationException($"Package manifest ID '{manifestId}' does not match expected plugin ID '{targetPluginId}'.");
+            }
+
+            var finalPluginId = manifestId;
             var finalTargetDir = ValidateAndGetPluginDirectory(finalPluginId);
+
+            // Atomic promotion with rollback support
+            string? backupDir = null;
             if (Directory.Exists(finalTargetDir))
             {
-                Directory.Delete(finalTargetDir, recursive: true);
+                backupDir = finalTargetDir + ".bak." + Guid.NewGuid().ToString("N");
+                try
+                {
+                    Directory.Move(finalTargetDir, backupDir);
+                }
+                catch (IOException)
+                {
+                    CopyDirectoryRecursive(finalTargetDir, backupDir);
+                    Directory.Delete(finalTargetDir, recursive: true);
+                }
             }
 
             Directory.CreateDirectory(Path.GetDirectoryName(finalTargetDir)!);
@@ -148,8 +223,38 @@ public class PluginInstallerService : IPluginInstallerService
             }
             catch (IOException)
             {
-                CopyDirectoryRecursive(tempExtractDir, finalTargetDir);
-                Directory.Delete(tempExtractDir, recursive: true);
+                try
+                {
+                    CopyDirectoryRecursive(tempExtractDir, finalTargetDir);
+                    Directory.Delete(tempExtractDir, recursive: true);
+                }
+                catch
+                {
+                    // If promotion failed, restore backup
+                    if (backupDir != null && Directory.Exists(backupDir))
+                    {
+                        try
+                        {
+                            if (Directory.Exists(finalTargetDir))
+                            {
+                                Directory.Delete(finalTargetDir, recursive: true);
+                            }
+                            Directory.Move(backupDir, finalTargetDir);
+                        }
+                        catch { }
+                    }
+                    throw;
+                }
+            }
+
+            // Cleanup backup directory on successful installation
+            if (backupDir != null && Directory.Exists(backupDir))
+            {
+                try
+                {
+                    Directory.Delete(backupDir, recursive: true);
+                }
+                catch { }
             }
 
             return finalTargetDir;
