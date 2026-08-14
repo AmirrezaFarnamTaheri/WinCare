@@ -24,9 +24,10 @@ public static class AssemblyPluginLoader
             return new AssemblyPluginLoadResult(false, null, null, $"Assembly file does not exist: {assemblyPath}");
         }
 
+        PluginLoadContext? loadContext = null;
         try
         {
-            var loadContext = new PluginLoadContext(assemblyPath);
+            loadContext = new PluginLoadContext(assemblyPath);
             var assembly = loadContext.LoadFromAssemblyPath(assemblyPath);
 
             Type? pluginType = null;
@@ -38,7 +39,7 @@ public static class AssemblyPluginLoader
 
             if (pluginType == null)
             {
-                pluginType = assembly.GetTypes()
+                pluginType = assembly.DefinedTypes
                     .FirstOrDefault(t => typeof(IWinCarePlugin).IsAssignableFrom(t) && !t.IsInterface && !t.IsAbstract);
             }
 
@@ -59,6 +60,7 @@ public static class AssemblyPluginLoader
         }
         catch (Exception ex)
         {
+            loadContext?.Unload();
             return new AssemblyPluginLoadResult(false, null, null, $"Assembly load failed: {ex.Message}");
         }
     }

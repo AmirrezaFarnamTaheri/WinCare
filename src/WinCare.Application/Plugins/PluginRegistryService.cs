@@ -9,7 +9,7 @@ using WinCare.CommandCatalog;
 public sealed class PluginRegistryService : IPluginRegistry
 {
     private readonly ConcurrentDictionary<string, PluginRegistryEntry> _entries = new(StringComparer.OrdinalIgnoreCase);
-    private readonly ConcurrentDictionary<string, IWinCarePlugin> _instantiatedPlugins = new(StringComparer.OrdinalIgnoreCase);
+    private readonly ConcurrentDictionary<string, (IWinCarePlugin Plugin, PluginLoadContext? LoadContext)> _instantiatedPlugins = new(StringComparer.OrdinalIgnoreCase);
     private readonly HashSet<string> _enabledIds;
 
     public PluginRegistryService(HashSet<string>? initialEnabledPluginIds = null)
@@ -20,6 +20,10 @@ public sealed class PluginRegistryService : IPluginRegistry
     public async Task DiscoverAndInitializeAsync(IPluginHost host, CancellationToken ct = default)
     {
         _entries.Clear();
+        foreach (var kvp in _instantiatedPlugins)
+        {
+            kvp.Value.LoadContext?.Unload();
+        }
         _instantiatedPlugins.Clear();
 
         if (Directory.Exists(host.PluginsUserDirectory))
@@ -65,7 +69,7 @@ public sealed class PluginRegistryService : IPluginRegistry
                 try
                 {
                     // Host Exception Isolation Boundary: Wrap third-party GetWidgets() in exception handler
-                    var pluginWidgets = kvp.Value.GetWidgets();
+                    var pluginWidgets = kvp.Value.Plugin.GetWidgets();
                     if (pluginWidgets != null)
                     {
                         widgets.AddRange(pluginWidgets);
@@ -101,6 +105,11 @@ public sealed class PluginRegistryService : IPluginRegistry
             }
 
             _entries[pluginId] = entry with { State = PluginState.Disabled };
+        }
+
+        if (_instantiatedPlugins.TryRemove(pluginId, out var inst))
+        {
+            inst.LoadContext?.Unload();
         }
 
         return Task.CompletedTask;
@@ -139,7 +148,7 @@ public sealed class PluginRegistryService : IPluginRegistry
             var asmResult = AssemblyPluginLoader.LoadPluginAssembly(assemblyPath, manifest.PluginClassName);
             if (asmResult.Success && asmResult.Plugin != null)
             {
-                _instantiatedPlugins[manifest.Id] = asmResult.Plugin;
+                _instantiatedPlugins[manifest.Id] = (asmResult.Plugin, asmResult.LoadContext);
             }
         }
     }
@@ -153,10 +162,10 @@ public sealed class PluginRegistryService : IPluginRegistry
 
         try
         {
-            if (_instantiatedPlugins.TryGetValue(pluginId, out var plugin))
+            if (_instantiatedPlugins.TryGetValue(pluginId, out var inst))
             {
                 // Host Exception Isolation Boundary: Wrap third-party InitializeAsync in exception handler
-                await plugin.InitializeAsync(host, ct);
+                await inst.Plugin.InitializeAsync(host, ct);
             }
 
             foreach (var cmd in entry.Commands)
