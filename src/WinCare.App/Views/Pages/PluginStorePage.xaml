@@ -64,6 +64,9 @@
                                     <Border Background="{ThemeResource AccentTealSubtleBrush}" BorderBrush="{ThemeResource AccentTealBrush}" BorderThickness="1" CornerRadius="4" Padding="6,2">
                                         <TextBlock Text="{x:Bind StatusBadgeText}" FontSize="10" FontWeight="Bold" Foreground="{ThemeResource AccentTealBrush}" />
                                     </Border>
+                                    <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="4" Padding="6,2">
+                                        <TextBlock Text="{x:Bind PublisherTrustBadgeText}" FontSize="10" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                    </Border>
                                 </StackPanel>
                                 <TextBlock Text="{x:Bind Description}" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
                                 

@@ -64,18 +64,15 @@ public class DefaultPluginHost : IPluginHost
             return false;
         }
 
-        if (_commandDispatcher != null && handler != null)
+        if (_commandDispatcher != null)
         {
-            if (!_commandDispatcher.RegisterDynamicCommand(command, handler))
+            if (handler == null)
             {
+                // Dynamic commands require an executable handler to prevent unexecutable ghost tools
                 return false;
             }
-        }
-        else if (_commandDispatcher != null && handler == null)
-        {
-            // Reject if command ID collides with core reserved commands/namespaces
-            if (command.Id.StartsWith("wincare.core.", StringComparison.OrdinalIgnoreCase) ||
-                command.Id.StartsWith("system.", StringComparison.OrdinalIgnoreCase))
+
+            if (!_commandDispatcher.RegisterDynamicCommand(command, handler))
             {
                 return false;
             }

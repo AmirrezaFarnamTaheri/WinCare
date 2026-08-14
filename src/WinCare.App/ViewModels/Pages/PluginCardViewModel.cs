@@ -70,6 +70,12 @@ public sealed class PluginCardViewModel
         _ => "ONLINE CATALOG"
     };
 
+    public string PublisherTrustBadgeText => WinCare.Infrastructure.Plugins.PluginInstallerService.VerifyPublisherAuthenticity(Author, null, out var level) 
+        ? level 
+        : "Unverified Publisher";
+
+    public bool IsVerifiedPublisher => WinCare.Infrastructure.Plugins.PluginInstallerService.VerifyPublisherAuthenticity(Author, null, out _);
+
     public string InstallButtonText => IsInstalled ? "Installed" : "Install";
     public bool CanInstall => !IsInstalled && !string.IsNullOrEmpty(PackageUrl);
     public bool CanEnable => IsInstalled && !IsBuiltIn && InstalledState == PluginState.Disabled;

@@ -365,4 +365,67 @@ public sealed class PluginRegistryServiceTests
             Directory.Delete(tempUserPluginsDir, recursive: true);
         }
     }
+
+    [Fact]
+    public async Task PluginRegistryService_Loads_CliGenerated_CSharp_Template_Manifest_And_Enables_Correctly()
+    {
+        var tempUserPluginsDir = Path.Combine(Path.GetTempPath(), "WinCareCliCSharpTest_" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(tempUserPluginsDir);
+
+        var pluginDir = Path.Combine(tempUserPluginsDir, "csharp-tool");
+        Directory.CreateDirectory(pluginDir);
+
+        var manifestJson = """
+        {
+          "id": "com.community.mycsharptool",
+          "name": "My CSharp Tool",
+          "version": "1.0.0",
+          "author": "Community Developer",
+          "description": "High performance managed assembly plugin",
+          "category": "Utilities",
+          "entryType": "Assembly",
+          "assemblyFileName": "PluginAssembly.dll",
+          "pluginClassName": "Community.MyCSharpTool.PluginEntryPoint",
+          "tools": [
+            {
+              "id": "com.community.mycsharptool.execute",
+              "title": "My CSharp Tool Execution Engine",
+              "summary": "High performance managed assembly plugin",
+              "area": "Utilities",
+              "section": "General",
+              "risk": "ReadOnly",
+              "readOnly": true,
+              "administratorAccess": "No",
+              "restart": "No",
+              "executorType": "Assembly"
+            }
+          ]
+        }
+        """;
+        File.WriteAllText(Path.Combine(pluginDir, "wincare-plugin.json"), manifestJson);
+
+        var dispatcher = new CommandDispatcher(Array.Empty<CommandDefinition>(), Array.Empty<ICommandHandler>());
+        var host = new DefaultPluginHost(dispatcher, pluginsUserDirectory: tempUserPluginsDir);
+        var service = new PluginRegistryService();
+
+        try
+        {
+            await service.DiscoverAndInitializeAsync(host);
+
+            var plugin = Assert.Single(service.GetAllPlugins(), p => p.Id == "com.community.mycsharptool");
+            Assert.Equal(PluginState.Disabled, plugin.State);
+            Assert.Equal("My CSharp Tool", plugin.Name);
+            Assert.Equal("1.0.0", plugin.Version);
+            Assert.Equal("Community Developer", plugin.Author);
+            Assert.Equal("Utilities", plugin.Category);
+
+            var tool = Assert.Single(plugin.Commands);
+            Assert.Equal("com.community.mycsharptool.execute", tool.Id);
+            Assert.True(tool.ReadOnly);
+        }
+        finally
+        {
+            Directory.Delete(tempUserPluginsDir, recursive: true);
+        }
+    }
 }

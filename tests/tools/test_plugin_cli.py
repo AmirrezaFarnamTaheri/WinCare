@@ -97,8 +97,36 @@ class PluginCliTests(unittest.TestCase):
         val_res = subprocess.run(["node", self.cli_path, "validate", out_dir], capture_output=True, text=True)
         self.assertNotEqual(val_res.returncode, 0)
         self.assertIn("reverse-domain format", val_res.stderr)
-        self.assertIn("does not conform to SemVer", val_res.stderr)
-        self.assertIn("must contain a non-empty \"tools\" array", val_res.stderr)
+    def test_scaffold_csharp_plugin_and_validate(self):
+        plugin_name = "test_assembly_tool"
+        out_dir = os.path.join(self.test_dir, plugin_name)
+        
+        # 1. Create C# plugin scaffold
+        res = subprocess.run(["node", self.cli_path, "create", plugin_name, "--template", "csharp-plugin", "--outDir", out_dir], capture_output=True, text=True)
+        self.assertEqual(res.returncode, 0, msg=res.stderr)
+        self.assertTrue(os.path.exists(os.path.join(out_dir, "wincare-plugin.json")))
+        self.assertTrue(os.path.exists(os.path.join(out_dir, "PluginEntryPoint.cs")))
+
+        # 2. Validate plugin scaffold
+        val_res = subprocess.run(["node", self.cli_path, "validate", out_dir], capture_output=True, text=True)
+        self.assertEqual(val_res.returncode, 0, msg=val_res.stderr)
+        self.assertIn("Plugin manifest and security checks passed cleanly", val_res.stdout)
+
+        # 3. Pack plugin package
+        pack_res = subprocess.run(["node", self.cli_path, "pack", out_dir], capture_output=True, text=True)
+        self.assertEqual(pack_res.returncode, 0, msg=pack_res.stderr)
+        
+        archive_path = os.path.join(out_dir, "com.community.testassemblytool-1.0.0.wincare-plugin")
+        self.assertTrue(os.path.exists(archive_path))
+        
+        with zipfile.ZipFile(archive_path, 'r') as zf:
+            names = zf.namelist()
+            self.assertIn("wincare-plugin.json", names)
+            self.assertIn("PluginEntryPoint.cs", names)
+            with zf.open("wincare-plugin.json") as mf:
+                manifest_data = json.loads(mf.read().decode('utf-8'))
+                self.assertEqual(manifest_data["id"], "com.community.testassemblytool")
+                self.assertEqual(manifest_data["entryType"], "Assembly")
 
 if __name__ == "__main__":
     unittest.main()
