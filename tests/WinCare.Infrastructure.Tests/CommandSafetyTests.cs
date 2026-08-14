@@ -379,10 +379,10 @@ public sealed class CommandSafetyTests
         {
             if (!request.Apply)
             {
-                return Task.FromResult(CommandHandlerOutcome.Success(request, "Preview succeeded"));
+                return Task.FromResult(CommandHandlerOutcome.Succeeded(CommandId + ".preview", "Preview succeeded"));
             }
 
-            return Task.FromResult(CommandHandlerOutcome.Success(request, "Apply succeeded"));
+            return Task.FromResult(CommandHandlerOutcome.Succeeded(CommandId + ".applied", "Apply succeeded"));
         }
     }
 }
