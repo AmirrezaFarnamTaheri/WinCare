@@ -301,17 +301,16 @@ public sealed class CommandSafetyTests
         CommandRequest previewReq = CommandRequest.Preview("pagefile-set", paramsDoc.RootElement);
 
         CommandResult previewResult = await dispatcher.ExecuteAsync(previewReq, CommandExecutionOptions.Default, CancellationToken.None);
-        Assert.Equal(CommandResultStatus.Success, previewResult.Status);
+        Assert.Equal(CommandResultStatus.Succeeded, previewResult.Status);
 
         ApprovedMutationPlan approval = ApprovedMutationPlan.Create(
             previewReq.CommandId,
             previewReq.Parameters,
-            previewReq.CorrelationId,
-            new[] { "Configure pagefile automatically" });
+            previewReq.CorrelationId);
 
         CommandRequest applyReq = CommandRequest.Execute(previewReq.CommandId, previewReq.Parameters, approval);
         CommandResult applyResult = await dispatcher.ExecuteAsync(applyReq, new CommandExecutionOptions(ReviewApproved: true), CancellationToken.None);
 
-        Assert.Equal(CommandResultStatus.Success, applyResult.Status);
+        Assert.Equal(CommandResultStatus.Succeeded, applyResult.Status);
     }
 }
