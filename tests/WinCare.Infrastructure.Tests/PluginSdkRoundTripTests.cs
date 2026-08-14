@@ -105,6 +105,7 @@ namespace Community.GoldenSdkPlugin
                 MetadataReference.CreateFromFile(typeof(IWinCarePlugin).Assembly.Location),
                 MetadataReference.CreateFromFile(typeof(CommandDefinition).Assembly.Location),
                 MetadataReference.CreateFromFile(typeof(CommandRequest).Assembly.Location),
+                MetadataReference.CreateFromFile(typeof(System.Text.Json.JsonElement).Assembly.Location),
                 MetadataReference.CreateFromFile(typeof(ICommandHandler).Assembly.Location)
             };
 
