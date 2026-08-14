@@ -75,9 +75,4 @@ public sealed class PluginCardViewModel
     public bool CanEnable => IsInstalled && !IsBuiltIn && InstalledState == PluginState.Disabled;
     public bool CanDisable => IsInstalled && !IsBuiltIn && InstalledState == PluginState.Enabled;
     public bool CanUninstall => IsInstalled && !IsBuiltIn;
-
-    public Microsoft.UI.Xaml.Visibility InstallVisibility => CanInstall ? Microsoft.UI.Xaml.Visibility.Visible : Microsoft.UI.Xaml.Visibility.Collapsed;
-    public Microsoft.UI.Xaml.Visibility EnableVisibility => CanEnable ? Microsoft.UI.Xaml.Visibility.Visible : Microsoft.UI.Xaml.Visibility.Collapsed;
-    public Microsoft.UI.Xaml.Visibility DisableVisibility => CanDisable ? Microsoft.UI.Xaml.Visibility.Visible : Microsoft.UI.Xaml.Visibility.Collapsed;
-    public Microsoft.UI.Xaml.Visibility UninstallVisibility => CanUninstall ? Microsoft.UI.Xaml.Visibility.Visible : Microsoft.UI.Xaml.Visibility.Collapsed;
 }

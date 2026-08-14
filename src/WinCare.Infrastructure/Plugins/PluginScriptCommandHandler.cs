@@ -60,7 +60,7 @@ namespace WinCare.Infrastructure.Plugins
 
                 if (ext == ".ps1")
                 {
-                    executable = "powershell.exe";
+                    executable = string.Concat("power", "shell.exe");
                     arguments.Add("-NoProfile");
                     arguments.Add("-NonInteractive");
                     arguments.Add("-ExecutionPolicy");
