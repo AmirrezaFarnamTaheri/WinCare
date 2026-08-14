@@ -10,13 +10,30 @@ namespace WinCare.App.Views.Pages;
 
 public sealed partial class PluginStorePage : Page
 {
+    private bool _initialized;
     public PluginStorePageViewModel ViewModel { get; }
 
     public PluginStorePage()
     {
-        InitializeComponent();
         ViewModel = new PluginStorePageViewModel();
-        Loaded += async (s, e) => await ViewModel.InitializeAsync();
+        InitializeComponent();
+        Loaded += async (s, e) =>
+        {
+            if (_initialized)
+            {
+                return;
+            }
+
+            _initialized = true;
+            try
+            {
+                await ViewModel.InitializeAsync();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[PluginStorePage] Initialize failed: {ex.Message}");
+            }
+        };
     }
 
     private void SearchBox_TextChanged(AutoSuggestBox sender, AutoSuggestBoxTextChangedEventArgs args)
