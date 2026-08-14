@@ -31,7 +31,8 @@
         <ListView Grid.Row="3"
                   ItemsSource="{x:Bind ViewModel.Plugins, Mode=OneWay}"
                   SelectionMode="None"
-                  Padding="24,0,24,24">
+                  Padding="24,0,24,24"
+                  AutomationProperties.Name="Plugins list">
             <ListView.ItemContainerStyle>
                 <Style TargetType="ListViewItem">
                     <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
