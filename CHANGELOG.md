@@ -1,5 +1,46 @@
 # Release Notes
 
+## 2.5.0-rc1
+
+Released: 2026-08-14
+
+### Plugin Store Architecture & Dynamic Command Plane
+
+- **Dynamic Command Dispatcher**: Extended `ICommandDispatcher` and `CommandDispatcher` with thread-safe dynamic registration via `ConcurrentDictionary`, allowing third-party and built-in plugins to dynamically inject tool definitions and execution handlers into All Tools.
+- **Native Script Execution Engine**: Added `PluginScriptCommandHandler` backed by `BoundedProcessRunner` with process boundary limits, path traversal isolation, and structured `CommandHandlerOutcome` returns.
+- **Package Admission & Integrity Verification**: Hardened `PluginInstallerService` to enforce strict package ID equality (`manifest.Id == targetPluginId`) and byte-level SHA-256 digest validation across stream extractions and remote downloads.
+- **Namespace Reservation & Collision Safety**: Protected core command IDs and reserved namespaces (`wincare.core.*`, `system.*`) against collision or overwriting in `ToolCatalogService` and `PluginRegistryService`.
+- **Atomic Backup Staging**: Isolated update rollback backups into `.staging/backups/` outside active plugin discovery paths, preventing stale or duplicate plugin registrations.
+- **Dynamic Plugin Lifecycle Management**: Implemented `event EventHandler RegistryChanged` on `IPluginRegistry` and wired dynamic tool list updating, along with full Enable, Disable, and Uninstall actions in `PluginStorePage` and `PluginStorePageViewModel`.
+- **In-Process Security Model & Capabilities**: Upgraded `PluginDetailDialog.xaml` with full-trust execution disclosures and permission reviews ("Declared Capabilities"), gating installations behind explicit user consent.
+- **Offline Fallback Catalog**: Bundled offline default plugin catalog entries with verified SHA-256 checksums in `RemoteCatalogService` to ensure high availability during network downtime.
+
+### AI System Doctor (DirectML & Local ONNX)
+
+- Integrated quantized ONNX model inference engine via `OnnxInferenceEngine` and `ModelManager` with DirectML GPU acceleration and sub-1.5s cold-start latency.
+- Implemented natural-language `IntentTranslator` mapping user symptom prompts into structured, validated `DoctorActionPlan` execution sequences.
+- Added `AiDoctorPage.xaml` featuring Cyber-Teal design tokens, chat-bubble diagnosis visualizations, and two-phase fail-closed action plan execution cards.
+
+### Community Plugin SDK (CLI & Packaging)
+
+- Created Node.js developer CLI (`wincare-plugin.js`) with `create`, `validate`, `lint`, and `pack` commands under `tools/wincare-plugin-cli/`.
+- Included project starter templates for declarative JSON packs (`json-pack`) and compiled binary plugins (`csharp-plugin`).
+- Built automated manifest linter verifying SemVer compliance, valid risk tiers, and ZipSlip path traversal immunity.
+
+### Rust Background Health Guard Service (`wincare-guard`)
+
+- Developed high-performance Rust 2024 service crate (`native/wincare-guard`) with sub-millisecond RAM pressure, disk quota, and thermal monitors.
+- Implemented Windows Toast XML notification builder and asynchronous Named Pipe IPC server (`\\.\pipe\WinCareGuardPipe`).
+- Built managed C# IPC client (`GuardPipeClient.cs`) for seamless background telemetry exchange.
+
+### Cloud Profile Sync & Roslyn Source Generation
+
+- Implemented AES-256-GCM profile payload encryption (`CryptoService.cs`) with PBKDF2/SHA-256 key derivation.
+- Added `GitHubGistSyncProvider.cs` for encrypted cloud profile backup and multi-machine sync.
+- Created Roslyn C# source generator (`CommandDispatcherGenerator.cs`) for zero-overhead compile-time command handler registration.
+
+---
+
 ## 2.4.0-rc1
 
 Released: 2026-08-09

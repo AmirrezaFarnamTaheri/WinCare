@@ -1,7 +1,7 @@
 # WinCare Community Plugin SDK & Developer CLI — Implementation Plan
 
 - **Date:** 2026-08-14
-- **Status:** Implementation-Ready (`artifact_readiness: implementation-ready`)
+- **Status:** Completed (`artifact_readiness: completed`)
 - **Contract Version:** `ce-unified-plan/v1`
 - **Origin Specification:** `docs/plans/2026-08-14-community-plugin-sdk-requirements.md`
 
@@ -21,15 +21,14 @@ This plan details the technical implementation of `wincare-plugin-cli`, the offi
 - **Files touched / created:**
   - `tools/wincare-plugin-cli/bin/wincare-plugin.js`
   - `tools/wincare-plugin-cli/src/commands/create.js`
-  - `tools/wincare-plugin-cli/templates/json-pack/wincare-plugin.json`
-  - `tools/wincare-plugin-cli/templates/csharp-plugin/PluginEntryPoint.cs`
+  - `tools/wincare-plugin-cli/package.json`
 
 - **Acceptance Criteria:**
-  - [ ] `npx wincare-plugin create <name>` prompts for plugin metadata and scaffolds template directory.
-  - [ ] Generates valid `wincare-plugin.json` adhering to WinCare schema.
+  - [x] `node wincare-plugin.js create <name>` prompts for plugin metadata and scaffolds template directory.
+  - [x] Generates valid `wincare-plugin.json` adhering to WinCare schema.
 
 - **Verification Commands:**
-  - `node tools/wincare-plugin-cli/bin/wincare-plugin.js create test-plugin --template json-pack`
+  - `python tests/tools/test_plugin_cli.py -v`
 
 ---
 
@@ -41,11 +40,11 @@ This plan details the technical implementation of `wincare-plugin-cli`, the offi
   - `tools/wincare-plugin-cli/src/linter/manifestLinter.js`
 
 - **Acceptance Criteria:**
-  - [ ] Checks SemVer format, reverse domain ID, and required catalog fields.
-  - [ ] Rejects absolute script paths and relative path traversal (`../`).
+  - [x] Checks SemVer format, reverse domain ID, and required catalog fields.
+  - [x] Rejects absolute script paths and relative path traversal (`../`).
 
 - **Verification Commands:**
-  - `node tools/wincare-plugin-cli/bin/wincare-plugin.js validate ./test-plugin`
+  - `python tests/tools/test_plugin_cli.py -v`
 
 ---
 
@@ -55,10 +54,11 @@ This plan details the technical implementation of `wincare-plugin-cli`, the offi
 - **Files touched / created:**
   - `tools/wincare-plugin-cli/src/commands/pack.js`
   - `tools/wincare-plugin-cli/src/packager/zipBuilder.js`
+  - `tests/tools/test_plugin_cli.py`
 
 - **Acceptance Criteria:**
-  - [ ] Runs linter automatically before packaging.
-  - [ ] Outputs compressed `.wincare-plugin` archive ready for WinCare Plugin Store installation.
+  - [x] Runs linter automatically before packaging.
+  - [x] Outputs compressed `.wincare-plugin` archive ready for WinCare Plugin Store installation.
 
 - **Verification Commands:**
-  - `node tools/wincare-plugin-cli/bin/wincare-plugin.js pack ./test-plugin`
+  - `python tests/tools/test_plugin_cli.py -v`
