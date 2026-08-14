@@ -39,7 +39,9 @@ internal sealed partial class WindowsCommandExecutor
                     throw new InvalidDataException($"Preset '{preset.Id}' references missing rule '{ruleId}'.");
                 }
 
-                CommandHandlerOutcome outcome = await ApplyRemediationRuleAsync(rule, cancellationToken).ConfigureAwait(false);
+                CommandHandlerOutcome outcome = RuleExecutorSeam is not null
+                    ? await RuleExecutorSeam(rule, cancellationToken).ConfigureAwait(false)
+                    : await ApplyRemediationRuleAsync(rule, cancellationToken).ConfigureAwait(false);
                 results.Add(new { ruleId, status = outcome.Status.ToString(), outcome.Code, outcome.Message, outcome.Data });
                 if (outcome.Status != CommandResultStatus.Succeeded)
                 {

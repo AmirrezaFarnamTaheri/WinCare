@@ -40,6 +40,7 @@ internal sealed partial class WindowsCommandExecutor : ICommandOperationExecutor
     private bool _disposed;
 
     internal Func<string, Task>? OnIntentPersistedAsync { get; set; }
+    internal Func<RemediationRule, CancellationToken, Task<CommandHandlerOutcome>>? RuleExecutorSeam { get; set; }
 
     /// <summary>
     /// Initializes a new instance of <see cref="WindowsCommandExecutor"/> bound to a custom state store root path.
