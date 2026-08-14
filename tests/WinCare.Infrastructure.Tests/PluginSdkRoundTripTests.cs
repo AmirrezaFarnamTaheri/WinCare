@@ -39,8 +39,10 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using WinCare.Application.Commands;
 using WinCare.Application.Plugins;
 using WinCare.CommandCatalog.Models;
+using WinCare.Domain.Commands;
 
 namespace Community.GoldenSdkPlugin
 {
@@ -65,7 +67,8 @@ namespace Community.GoldenSdkPlugin
                 AdministratorAccess: AdministratorAccess.No,
                 Restart: RestartExpectation.No,
                 LegacySource: ""plugin:com.community.goldensdk"",
-                MigrationStatus: MigrationStatus.BehaviorVerified
+                MigrationStatus: MigrationStatus.BehaviorVerified,
+                Keywords: new[] { ""golden"", ""test"" }
             );
 
             host.RegisterCommand(cmd, new GoldenCommandHandler());
@@ -101,6 +104,7 @@ namespace Community.GoldenSdkPlugin
                 MetadataReference.CreateFromFile(Assembly.Load("System.Collections").Location),
                 MetadataReference.CreateFromFile(typeof(IWinCarePlugin).Assembly.Location),
                 MetadataReference.CreateFromFile(typeof(CommandDefinition).Assembly.Location),
+                MetadataReference.CreateFromFile(typeof(CommandRequest).Assembly.Location),
                 MetadataReference.CreateFromFile(typeof(ICommandHandler).Assembly.Location)
             };
 
