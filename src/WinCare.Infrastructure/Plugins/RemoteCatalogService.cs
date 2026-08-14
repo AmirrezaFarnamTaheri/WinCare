@@ -145,7 +145,7 @@ public class RemoteCatalogService : IRemoteCatalogService
     {
         return new RemotePluginCatalog
         {
-            SchemaVersion = 1,
+            CatalogVersion = "1.0",
             LastUpdated = DateTime.UtcNow,
             Plugins = new List<RemotePluginItem>
             {

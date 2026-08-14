@@ -22,7 +22,10 @@ public sealed class AppRuntime
         Dispatcher = CommandRuntime.CreateDefault(CommandExecutor, NativeCore, Journal);
         PluginState = new PluginStateRepository();
         PluginHost = new DefaultPluginHost(Dispatcher);
-        PluginRegistry = new PluginRegistryService(PluginState);
+        PluginRegistry = new PluginRegistryService(
+            PluginState,
+            scriptHandlerFactory: (cmdId, scriptPath, pluginDir) => new PluginScriptCommandHandler(cmdId, scriptPath, pluginDir, new BoundedProcessRunner(NativeCore))
+        );
         CatalogService = new RemoteCatalogService();
         InstallerService = new PluginInstallerService();
     }
@@ -76,4 +79,10 @@ public sealed class AppRuntime
     /// Gets the plugin installer service instance.
     /// </summary>
     public IPluginInstallerService InstallerService { get; }
+
+    /// <summary>
+    /// Discovers and initializes plugins asynchronously on application startup.
+    /// </summary>
+    public Task InitializePluginsAsync(CancellationToken ct = default) =>
+        PluginRegistry.DiscoverAndInitializeAsync(PluginHost, ct);
 }

@@ -33,7 +33,7 @@
         <TextBlock x:Name="PluginDescriptionText" TextWrapping="Wrap" FontSize="13" Foreground="{ThemeResource SystemControlForegroundBaseHighBrush}" Text="Plugin description text goes here."/>
 
         <!-- Trust Boundary Warning Banner -->
-        <Border BorderThickness="1" BorderBrush="{ThemeResource SystemFillColorCautionBackgroundBrush}" CornerRadius="6" Padding="10" Background="{ThemeResource SystemFillColorCautionBackgroundBrush}">
+        <Border BorderThickness="1" BorderBrush="{ThemeResource SystemFillColorCautionBrush}" CornerRadius="6" Padding="10" Background="{ThemeResource SystemFillColorCautionBackgroundBrush}">
             <StackPanel Orientation="Horizontal" Spacing="10">
                 <FontIcon Glyph="&#xE7BA;" FontSize="16" Foreground="{ThemeResource SystemFillColorCautionBrush}" VerticalAlignment="Top" Margin="0,2,0,0"/>
                 <TextBlock Text="Full-Trust In-Process Execution: Installed plugins execute locally with your user privileges and system access. Only install packages from authors you trust."

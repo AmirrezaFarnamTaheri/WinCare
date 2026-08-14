@@ -22,7 +22,7 @@ namespace WinCare.Application.Tests
         }
 
         [Fact]
-        public async Task ModelManager_initializes_and_creates_directory()
+        public void ModelManager_initializes_and_creates_directory()
         {
             Assert.NotNull(_modelManager.ModelDirectory);
             Assert.EndsWith("doctor.onnx", _modelManager.DefaultModelPath);

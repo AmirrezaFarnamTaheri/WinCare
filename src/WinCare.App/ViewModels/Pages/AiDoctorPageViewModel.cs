@@ -130,15 +130,21 @@ public sealed class AiDoctorPageViewModel : INotifyPropertyChanged
             throw new ArgumentNullException(nameof(step));
         }
 
+        var emptyParams = System.Text.Json.JsonSerializer.SerializeToElement(new { });
+        var correlationId = Guid.NewGuid();
+        var approval = step.RiskLevel != CommandCatalog.Models.CommandRisk.ReadOnly
+            ? ApprovedMutationPlan.Create(step.CommandId, emptyParams, correlationId)
+            : null;
+
         var request = new CommandRequest(
             CommandId: step.CommandId,
-            ExecutionKind: ExecutionKind.Native,
-            ApprovedPlan: step.RiskLevel != CommandCatalog.Models.CommandRisk.ReadOnly
-                ? ApprovedMutationPlan.FromSingleAction(step.CommandId, "Executed via AI System Doctor Diagnosis Plan")
-                : null
+            Parameters: emptyParams,
+            Apply: true,
+            CorrelationId: correlationId,
+            Approval: approval
         );
 
-        return await _commandDispatcher.DispatchAsync(request, cancellationToken);
+        return await _commandDispatcher.ExecuteAsync(request, CommandExecutionOptions.Default, cancellationToken);
     }
 
     private void OnPropertyChanged([CallerMemberName] string? propertyName = null)

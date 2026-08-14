@@ -171,4 +171,132 @@ public sealed class PluginRegistryServiceTests
             Directory.Delete(tempUserPluginsDir, recursive: true);
         }
     }
+
+    [Fact]
+    public async Task PluginRegistryService_EndToEnd_Manifest_Registry_Host_Dispatcher_Handler_Execution()
+    {
+        var tempUserPluginsDir = Path.Combine(Path.GetTempPath(), "WinCareE2ETest_" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(tempUserPluginsDir);
+
+        var pluginDir = Path.Combine(tempUserPluginsDir, "e2e-plugin");
+        Directory.CreateDirectory(pluginDir);
+
+        var scriptPath = Path.Combine(pluginDir, "run.cmd");
+        File.WriteAllText(scriptPath, "@echo off\r\necho E2E_PLUGIN_SUCCESS\r\nexit /b 0\r\n");
+
+        var manifestJson = """
+        {
+          "id": "com.wincare.e2e",
+          "name": "E2E Plugin",
+          "version": "1.0.0",
+          "tools": [
+            {
+              "id": "e2e.tool1",
+              "title": "E2E Tool",
+              "area": "System care",
+              "section": "Diagnostics",
+              "script": "run.cmd",
+              "safetyLevel": "Safe",
+              "mutationType": "ReadOnly"
+            }
+          ]
+        }
+        """;
+        File.WriteAllText(Path.Combine(pluginDir, "wincare-plugin.json"), manifestJson);
+
+        var dispatcher = new CommandDispatcher(Array.Empty<CommandDefinition>(), Array.Empty<ICommandHandler>());
+        var host = new DefaultPluginHost(dispatcher, pluginsUserDirectory: tempUserPluginsDir);
+        var service = new PluginRegistryService(
+            scriptHandlerFactory: (s, t) => new WinCare.Infrastructure.Plugins.PluginScriptCommandHandler(s, t),
+            initialEnabledPluginIds: new HashSet<string> { "com.wincare.e2e" });
+
+        try
+        {
+            await service.DiscoverAndInitializeAsync(host);
+
+            Assert.True(dispatcher.TryGetDefinition("e2e.tool1", out var def));
+            Assert.NotNull(def);
+            Assert.Equal("E2E Tool", def.Title);
+
+            var request = new WinCare.Domain.Commands.CommandRequest
+            {
+                CommandId = "e2e.tool1",
+                InvocationReason = "Integration test verification"
+            };
+
+            var result = await dispatcher.ExecuteAsync(request, WinCare.Domain.Commands.CommandExecutionOptions.Default);
+            Assert.True(result.Success);
+            Assert.Contains("E2E_PLUGIN_SUCCESS", result.StandardOutput);
+
+            // Disable plugin dynamically and verify dispatcher unregistration
+            await service.DisablePluginAsync("com.wincare.e2e", host);
+            Assert.False(dispatcher.TryGetDefinition("e2e.tool1", out _));
+        }
+        finally
+        {
+            Directory.Delete(tempUserPluginsDir, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task PluginRegistryService_Duplicate_Command_Collision_Triggers_Rollback_And_Sets_Error_State()
+    {
+        var tempUserPluginsDir = Path.Combine(Path.GetTempPath(), "WinCareCollisionTest_" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(tempUserPluginsDir);
+
+        var pluginDir = Path.Combine(tempUserPluginsDir, "collision-plugin");
+        Directory.CreateDirectory(pluginDir);
+
+        var scriptPath = Path.Combine(pluginDir, "tool.cmd");
+        File.WriteAllText(scriptPath, "@echo off\r\necho OK\r\nexit /b 0\r\n");
+
+        var manifestJson = """
+        {
+          "id": "com.wincare.collision",
+          "name": "Collision Plugin",
+          "version": "1.0.0",
+          "tools": [
+            {
+              "id": "collision.tool1",
+              "title": "Tool 1",
+              "area": "System care",
+              "section": "Diagnostics",
+              "script": "tool.cmd"
+            },
+            {
+              "id": "collision.tool1",
+              "title": "Duplicate Tool 1",
+              "area": "System care",
+              "section": "Diagnostics",
+              "script": "tool.cmd"
+            }
+          ]
+        }
+        """;
+        File.WriteAllText(Path.Combine(pluginDir, "wincare-plugin.json"), manifestJson);
+
+        var dispatcher = new CommandDispatcher(Array.Empty<CommandDefinition>(), Array.Empty<ICommandHandler>());
+        var host = new DefaultPluginHost(dispatcher, pluginsUserDirectory: tempUserPluginsDir);
+        var service = new PluginRegistryService(
+            scriptHandlerFactory: (s, t) => new WinCare.Infrastructure.Plugins.PluginScriptCommandHandler(s, t),
+            initialEnabledPluginIds: new HashSet<string> { "com.wincare.collision" });
+
+        try
+        {
+            await service.DiscoverAndInitializeAsync(host);
+
+            var plugin = Assert.Single(service.GetAllPlugins());
+            Assert.Equal(PluginState.Error, plugin.State);
+            Assert.NotNull(plugin.ErrorMessage);
+            Assert.Contains("collision", plugin.ErrorMessage, StringComparison.OrdinalIgnoreCase);
+
+            // Verify rollback: no commands were left registered in host or dispatcher
+            Assert.Empty(host.RegisteredCommands);
+            Assert.False(dispatcher.TryGetDefinition("collision.tool1", out _));
+        }
+        finally
+        {
+            Directory.Delete(tempUserPluginsDir, recursive: true);
+        }
+    }
 }

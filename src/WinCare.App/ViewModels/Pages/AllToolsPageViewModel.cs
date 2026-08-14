@@ -54,11 +54,18 @@ public sealed class AllToolsPageViewModel : ObservableObject
         _selectedAreaOption = AreaOptions[0];
         _selectedRiskOption = RiskOptions[0];
         Execution = new ToolExecutionViewModel(dispatcher, RecordRecent);
+
+        _catalog.CatalogChanged += (s, e) =>
+        {
+            RebuildAreaOptions();
+            Refresh();
+        };
+
         Refresh();
     }
 
     public ObservableCollection<ToolRowViewModel> VisibleTools { get; } = new();
-    public IReadOnlyList<AreaFilterOption> AreaOptions { get; }
+    public IReadOnlyList<AreaFilterOption> AreaOptions { get; private set; }
     public IReadOnlyList<RiskFilterOption> RiskOptions { get; }
     public ToolExecutionViewModel Execution { get; }
 
@@ -250,6 +257,21 @@ public sealed class AllToolsPageViewModel : ObservableObject
         OnPropertyChanged(nameof(SelectedToolMetadata));
         OnPropertyChanged(nameof(SelectedToolTechnicalDetails));
         OnPropertyChanged(nameof(IsSelectedToolFavorite));
+    }
+
+    private void RebuildAreaOptions()
+    {
+        var currentSelectedArea = SelectedAreaOption?.Value;
+        AreaOptions = [
+            new AreaFilterOption("All areas", null),
+            .. _catalog.All.Select(command => command.Area)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(area => area, StringComparer.OrdinalIgnoreCase)
+                .Select(area => new AreaFilterOption(area, area))
+        ];
+        _selectedAreaOption = AreaOptions.FirstOrDefault(o => string.Equals(o.Value, currentSelectedArea, StringComparison.OrdinalIgnoreCase)) ?? AreaOptions[0];
+        OnPropertyChanged(nameof(AreaOptions));
+        OnPropertyChanged(nameof(SelectedAreaOption));
     }
 
     private void Refresh()

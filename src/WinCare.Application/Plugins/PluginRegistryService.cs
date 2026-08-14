@@ -5,6 +5,11 @@ using WinCare.Application.Commands;
 using WinCare.CommandCatalog.Models;
 
 /// <summary>
+/// Delegate factory for constructing script-backed command handlers for declarative plugin tools.
+/// </summary>
+public delegate ICommandHandler ScriptCommandHandlerFactory(string commandId, string scriptRelativePath, string pluginDirectory);
+
+/// <summary>
 /// Core implementation of IPluginRegistry discovering, isolating, and managing plugin state.
 /// </summary>
 public sealed class PluginRegistryService : IPluginRegistry
@@ -13,6 +18,7 @@ public sealed class PluginRegistryService : IPluginRegistry
     private readonly ConcurrentDictionary<string, (IWinCarePlugin Plugin, PluginLoadContext? LoadContext)> _instantiatedPlugins = new(StringComparer.OrdinalIgnoreCase);
     private readonly IPluginStateRepository? _stateRepository;
     private readonly HashSet<string> _enabledIds;
+    private readonly ScriptCommandHandlerFactory? _scriptHandlerFactory;
     private readonly SemaphoreSlim _gate = new(1, 1);
 
     /// <inheritdoc />
@@ -21,10 +27,14 @@ public sealed class PluginRegistryService : IPluginRegistry
     /// <summary>
     /// Initializes a new instance of <see cref="PluginRegistryService"/>.
     /// </summary>
-    public PluginRegistryService(IPluginStateRepository? stateRepository = null, HashSet<string>? initialEnabledPluginIds = null)
+    public PluginRegistryService(
+        IPluginStateRepository? stateRepository = null,
+        HashSet<string>? initialEnabledPluginIds = null,
+        ScriptCommandHandlerFactory? scriptHandlerFactory = null)
     {
         _stateRepository = stateRepository;
         _enabledIds = initialEnabledPluginIds ?? _stateRepository?.LoadEnabledPluginIds() ?? new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        _scriptHandlerFactory = scriptHandlerFactory;
     }
 
     /// <inheritdoc />
@@ -295,20 +305,40 @@ public sealed class PluginRegistryService : IPluginRegistry
             return;
         }
 
+        var registeredCommandIds = new List<string>();
         try
         {
-            if (!_instantiatedPlugins.ContainsKey(pluginId) && !string.IsNullOrEmpty(entry.SourceDirectoryPath))
+            PluginManifest? manifest = null;
+            if (!string.IsNullOrEmpty(entry.SourceDirectoryPath))
             {
                 var loadResult = JsonPluginLoader.LoadFromDirectory(entry.SourceDirectoryPath);
-                if (loadResult.Success && loadResult.Manifest != null &&
-                    loadResult.Manifest.EntryType.Equals("Assembly", StringComparison.OrdinalIgnoreCase) &&
-                    !string.IsNullOrWhiteSpace(loadResult.Manifest.AssemblyFileName))
+                if (loadResult.Success && loadResult.Manifest != null)
                 {
-                    InstantiateAssemblyPlugin(entry, loadResult.Manifest);
-                    if (!_instantiatedPlugins.ContainsKey(pluginId))
+                    manifest = loadResult.Manifest;
+                    if (manifest.EntryType.Equals("Assembly", StringComparison.OrdinalIgnoreCase) &&
+                        !string.IsNullOrWhiteSpace(manifest.AssemblyFileName))
                     {
-                        return;
+                        InstantiateAssemblyPlugin(entry, manifest);
+                        if (!_instantiatedPlugins.ContainsKey(pluginId))
+                        {
+                            return;
+                        }
                     }
+                }
+            }
+
+            // Global command collision check & reserved namespace protection
+            var existingRegistered = host.RegisteredCommands.Select(c => c.Id).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            foreach (var cmd in entry.Commands)
+            {
+                if (!entry.IsBuiltIn && (cmd.Id.StartsWith("wincare.core.", StringComparison.OrdinalIgnoreCase) || cmd.Id.StartsWith("system.", StringComparison.OrdinalIgnoreCase)))
+                {
+                    throw new InvalidOperationException($"Command '{cmd.Id}' collides with reserved core namespace.");
+                }
+
+                if (existingRegistered.Contains(cmd.Id))
+                {
+                    throw new InvalidOperationException($"Command ID '{cmd.Id}' is already registered by another plugin or host.");
                 }
             }
 
@@ -318,15 +348,32 @@ public sealed class PluginRegistryService : IPluginRegistry
             }
 
             // Register plugin commands with host and dispatcher
+            var toolMap = manifest?.Tools?.ToDictionary(t => t.Id, StringComparer.OrdinalIgnoreCase);
             foreach (var cmd in entry.Commands)
             {
-                host.RegisterCommand(cmd);
+                ICommandHandler? handler = null;
+                if (toolMap != null && toolMap.TryGetValue(cmd.Id, out var toolDef) &&
+                    !string.IsNullOrWhiteSpace(toolDef.ScriptPath) &&
+                    !string.IsNullOrWhiteSpace(entry.SourceDirectoryPath) &&
+                    _scriptHandlerFactory != null)
+                {
+                    handler = _scriptHandlerFactory(cmd.Id, toolDef.ScriptPath, entry.SourceDirectoryPath);
+                }
+
+                host.RegisterCommand(cmd, handler);
+                registeredCommandIds.Add(cmd.Id);
             }
 
             _entries[pluginId] = entry with { State = PluginState.Enabled, ErrorMessage = null };
         }
         catch (Exception ex)
         {
+            // Transactional rollback of any commands registered during this failed attempt
+            foreach (var cmdId in registeredCommandIds)
+            {
+                try { host.UnregisterCommand(cmdId); } catch { }
+            }
+
             _entries[pluginId] = entry with { State = PluginState.Error, ErrorMessage = $"Initialization failed: {ex.Message}" };
         }
     }

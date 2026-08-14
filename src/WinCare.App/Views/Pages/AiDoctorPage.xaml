@@ -8,7 +8,7 @@
         <!-- Header -->
         <StackPanel Grid.Row="0" Spacing="4" Margin="0,0,0,16">
             <TextBlock Text="AI System Doctor" Style="{StaticResource TitleTextBlockStyle}" Foreground="{ThemeResource AccentTealBrush}" FontWeight="SemiBold" />
-            <TextBlock Text="On-device intelligent diagnosis and automated remediation action plans powered by DirectML." Style="{StaticResource BodyTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+            <TextBlock Text="On-device intelligent diagnosis and automated remediation action plans (Heuristic &amp; DirectML Ready)." Style="{StaticResource BodyTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
         </StackPanel>
 
         <!-- Chat Conversation Area -->

@@ -14,7 +14,7 @@ using WinCare.Application.Plugins;
 /// <summary>
 /// ViewModel managing the Plugin Store catalog, search filtering, and package installation.
 /// </summary>
-public sealed class PluginStorePageViewModel : INotifyPropertyChanged
+public sealed class PluginStorePageViewModel : INotifyPropertyChanged, IDisposable
 {
     private readonly IPluginRegistry _registry;
     private readonly IRemoteCatalogService _catalogService;
@@ -24,6 +24,7 @@ public sealed class PluginStorePageViewModel : INotifyPropertyChanged
     private string _searchQuery = string.Empty;
     private string _selectedCategory = "All";
     private bool _isLoading;
+    private string? _errorMessage;
     private CancellationTokenSource? _searchCts;
 
     /// <summary>
@@ -71,8 +72,10 @@ public sealed class PluginStorePageViewModel : INotifyPropertyChanged
             {
                 _searchQuery = value;
                 OnPropertyChanged();
-                _searchCts?.Cancel();
+                var previous = _searchCts;
                 _searchCts = new CancellationTokenSource();
+                previous?.Cancel();
+                previous?.Dispose();
                 _ = TriggerDebouncedSearchAsync(_searchCts.Token);
             }
         }
@@ -91,6 +94,22 @@ public sealed class PluginStorePageViewModel : INotifyPropertyChanged
                 _selectedCategory = value;
                 OnPropertyChanged();
                 _ = RefreshPluginsAsync();
+            }
+        }
+    }
+
+    /// <summary>
+    /// Last error message from plugin operations, if any.
+    /// </summary>
+    public string? ErrorMessage
+    {
+        get => _errorMessage;
+        set
+        {
+            if (_errorMessage != value)
+            {
+                _errorMessage = value;
+                OnPropertyChanged();
             }
         }
     }
@@ -221,6 +240,7 @@ public sealed class PluginStorePageViewModel : INotifyPropertyChanged
             return false;
         }
 
+        ErrorMessage = null;
         try
         {
             await _installerService.InstallPluginFromPackageAsync(card.PackageUrl, card.Id, card.Sha256, cancellationToken).ConfigureAwait(true);
@@ -228,8 +248,10 @@ public sealed class PluginStorePageViewModel : INotifyPropertyChanged
             await RefreshPluginsAsync(forceRemoteRefresh: false, cancellationToken).ConfigureAwait(true);
             return true;
         }
-        catch
+        catch (Exception ex)
         {
+            ErrorMessage = $"Install failed: {ex.Message}";
+            System.Diagnostics.Debug.WriteLine($"[PluginStorePageViewModel] Install error: {ex.GetType().Name} - {ex.Message}");
             return false;
         }
     }
@@ -244,14 +266,17 @@ public sealed class PluginStorePageViewModel : INotifyPropertyChanged
             return false;
         }
 
+        ErrorMessage = null;
         try
         {
             await _registry.EnablePluginAsync(card.Id, _host, cancellationToken).ConfigureAwait(true);
             await RefreshPluginsAsync(forceRemoteRefresh: false, cancellationToken).ConfigureAwait(true);
             return true;
         }
-        catch
+        catch (Exception ex)
         {
+            ErrorMessage = $"Enable failed: {ex.Message}";
+            System.Diagnostics.Debug.WriteLine($"[PluginStorePageViewModel] Enable error: {ex.GetType().Name} - {ex.Message}");
             return false;
         }
     }
@@ -266,14 +291,17 @@ public sealed class PluginStorePageViewModel : INotifyPropertyChanged
             return false;
         }
 
+        ErrorMessage = null;
         try
         {
             await _registry.DisablePluginAsync(card.Id, _host, cancellationToken).ConfigureAwait(true);
             await RefreshPluginsAsync(forceRemoteRefresh: false, cancellationToken).ConfigureAwait(true);
             return true;
         }
-        catch
+        catch (Exception ex)
         {
+            ErrorMessage = $"Disable failed: {ex.Message}";
+            System.Diagnostics.Debug.WriteLine($"[PluginStorePageViewModel] Disable error: {ex.GetType().Name} - {ex.Message}");
             return false;
         }
     }
@@ -288,6 +316,7 @@ public sealed class PluginStorePageViewModel : INotifyPropertyChanged
             return false;
         }
 
+        ErrorMessage = null;
         try
         {
             await _registry.DisablePluginAsync(card.Id, _host, cancellationToken).ConfigureAwait(true);
@@ -296,8 +325,10 @@ public sealed class PluginStorePageViewModel : INotifyPropertyChanged
             await RefreshPluginsAsync(forceRemoteRefresh: false, cancellationToken).ConfigureAwait(true);
             return true;
         }
-        catch
+        catch (Exception ex)
         {
+            ErrorMessage = $"Uninstall failed: {ex.Message}";
+            System.Diagnostics.Debug.WriteLine($"[PluginStorePageViewModel] Uninstall error: {ex.GetType().Name} - {ex.Message}");
             return false;
         }
     }
@@ -328,5 +359,12 @@ public sealed class PluginStorePageViewModel : INotifyPropertyChanged
     private void OnPropertyChanged([CallerMemberName] string? propertyName = null)
     {
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+    }
+
+    /// <inheritdoc />
+    public void Dispose()
+    {
+        _searchCts?.Cancel();
+        _searchCts?.Dispose();
     }
 }

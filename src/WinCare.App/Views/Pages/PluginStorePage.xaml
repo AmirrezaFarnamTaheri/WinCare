@@ -73,12 +73,12 @@
                                     <Button Content="Details" Click="DetailsButton_Click" Tag="{x:Bind}" FontSize="12" AutomationProperties.Name="Plugin Details"/>
                                     
                                     <!-- Online Plugin Actions -->
-                                    <Button Content="Install" IsEnabled="{x:Bind CanInstall}" Click="InstallButton_Click" Tag="{x:Bind}" FontSize="12" Style="{StaticResource AccentButtonStyle}" AutomationProperties.Name="Install Plugin"/>
+                                    <Button Content="Install" Visibility="{x:Bind InstallVisibility}" IsEnabled="{x:Bind CanInstall}" Click="InstallButton_Click" Tag="{x:Bind}" FontSize="12" Style="{StaticResource AccentButtonStyle}" AutomationProperties.Name="Install Plugin"/>
                                     
                                     <!-- Installed Plugin Actions -->
-                                    <Button Content="Enable" IsEnabled="{x:Bind CanEnable}" Click="EnableButton_Click" Tag="{x:Bind}" FontSize="12" Style="{StaticResource AccentButtonStyle}" AutomationProperties.Name="Enable Plugin"/>
-                                    <Button Content="Disable" IsEnabled="{x:Bind CanDisable}" Click="DisableButton_Click" Tag="{x:Bind}" FontSize="12" AutomationProperties.Name="Disable Plugin"/>
-                                    <Button Content="Uninstall" IsEnabled="{x:Bind CanUninstall}" Click="UninstallButton_Click" Tag="{x:Bind}" FontSize="12" AutomationProperties.Name="Uninstall Plugin"/>
+                                    <Button Content="Enable" Visibility="{x:Bind EnableVisibility}" IsEnabled="{x:Bind CanEnable}" Click="EnableButton_Click" Tag="{x:Bind}" FontSize="12" Style="{StaticResource AccentButtonStyle}" AutomationProperties.Name="Enable Plugin"/>
+                                    <Button Content="Disable" Visibility="{x:Bind DisableVisibility}" IsEnabled="{x:Bind CanDisable}" Click="DisableButton_Click" Tag="{x:Bind}" FontSize="12" AutomationProperties.Name="Disable Plugin"/>
+                                    <Button Content="Uninstall" Visibility="{x:Bind UninstallVisibility}" IsEnabled="{x:Bind CanUninstall}" Click="UninstallButton_Click" Tag="{x:Bind}" FontSize="12" AutomationProperties.Name="Uninstall Plugin"/>
                                 </StackPanel>
                             </StackPanel>
                         </Grid>

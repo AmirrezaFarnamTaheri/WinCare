@@ -71,6 +71,14 @@ public class PluginInstallerService : IPluginInstallerService
         }
 
         // Enforce mandatory well-formed SHA-256 for remote downloads
+        if (uri.Scheme.Equals(Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase) || uri.Scheme.Equals(Uri.UriSchemeHttp, StringComparison.OrdinalIgnoreCase))
+        {
+            if (string.IsNullOrWhiteSpace(expectedSha256))
+            {
+                throw new ArgumentException("Remote package installation requires a non-empty expectedSha256 digest.", nameof(expectedSha256));
+            }
+        }
+
         if (!string.IsNullOrWhiteSpace(expectedSha256))
         {
             var cleanExpected = expectedSha256.Replace("-", string.Empty);
@@ -137,48 +145,50 @@ public class PluginInstallerService : IPluginInstallerService
             throw new ArgumentException($"Invalid plugin ID '{targetPluginId}'.", nameof(targetPluginId));
         }
 
-        // Mandatory SHA-256 validation if provided
-        if (!string.IsNullOrWhiteSpace(expectedSha256))
+        MemoryStream? ownedMemoryStream = null;
+        Stream workingStream = archiveStream;
+        if (!archiveStream.CanSeek)
         {
-            long originalPos = archiveStream.CanSeek ? archiveStream.Position : 0;
-            if (archiveStream.CanSeek)
-            {
-                archiveStream.Position = 0;
-            }
-
-            byte[] streamBytes;
-            if (archiveStream is MemoryStream ms)
-            {
-                streamBytes = ms.ToArray();
-            }
-            else
-            {
-                using var tempMs = new MemoryStream();
-                await archiveStream.CopyToAsync(tempMs, cancellationToken).ConfigureAwait(false);
-                streamBytes = tempMs.ToArray();
-                if (archiveStream.CanSeek)
-                {
-                    archiveStream.Position = originalPos;
-                }
-            }
-
-            var computedHash = Convert.ToHexString(SHA256.HashData(streamBytes));
-            var cleanExpected = expectedSha256.Replace("-", string.Empty);
-            if (!computedHash.Equals(cleanExpected, StringComparison.OrdinalIgnoreCase))
-            {
-                throw new InvalidOperationException($"Package integrity check failed. Expected SHA-256: {expectedSha256}, Actual: {computedHash}");
-            }
-
-            if (archiveStream.CanSeek)
-            {
-                archiveStream.Position = originalPos;
-            }
+            ownedMemoryStream = new MemoryStream();
+            await archiveStream.CopyToAsync(ownedMemoryStream, cancellationToken).ConfigureAwait(false);
+            ownedMemoryStream.Position = 0;
+            workingStream = ownedMemoryStream;
         }
 
-        var stagingBaseDir = Path.Combine(_pluginsBaseDirectory, ".staging");
-        var stagingBackupsDir = Path.Combine(stagingBaseDir, "backups");
-        Directory.CreateDirectory(stagingBaseDir);
-        Directory.CreateDirectory(stagingBackupsDir);
+        try
+        {
+            // Mandatory SHA-256 validation if provided
+            if (!string.IsNullOrWhiteSpace(expectedSha256))
+            {
+                long originalPos = workingStream.Position;
+                workingStream.Position = 0;
+
+                byte[] streamBytes;
+                if (workingStream is MemoryStream ms)
+                {
+                    streamBytes = ms.ToArray();
+                }
+                else
+                {
+                    using var tempMs = new MemoryStream();
+                    await workingStream.CopyToAsync(tempMs, cancellationToken).ConfigureAwait(false);
+                    streamBytes = tempMs.ToArray();
+                }
+
+                var computedHash = Convert.ToHexString(SHA256.HashData(streamBytes));
+                var cleanExpected = expectedSha256.Replace("-", string.Empty);
+                if (!computedHash.Equals(cleanExpected, StringComparison.OrdinalIgnoreCase))
+                {
+                    throw new InvalidOperationException($"Package integrity check failed. Expected SHA-256: {expectedSha256}, Actual: {computedHash}");
+                }
+
+                workingStream.Position = originalPos;
+            }
+
+            var stagingBaseDir = Path.Combine(_pluginsBaseDirectory, ".staging");
+            var stagingBackupsDir = Path.Combine(stagingBaseDir, "backups");
+            Directory.CreateDirectory(stagingBaseDir);
+            Directory.CreateDirectory(stagingBackupsDir);
 
         var tempExtractDir = Path.Combine(stagingBaseDir, $"install_{Guid.NewGuid():N}");
         Directory.CreateDirectory(tempExtractDir);
@@ -330,6 +340,10 @@ public class PluginInstallerService : IPluginInstallerService
                 }
             }
             throw;
+        }
+        finally
+        {
+            ownedMemoryStream?.Dispose();
         }
     }
 

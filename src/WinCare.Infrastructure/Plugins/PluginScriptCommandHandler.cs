@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using WinCare.Application.Commands;
+using WinCare.Domain.Commands;
 using WinCare.Infrastructure.Commands;
 
 namespace WinCare.Infrastructure.Plugins
@@ -56,15 +58,49 @@ namespace WinCare.Infrastructure.Plugins
                 string executable;
                 var arguments = new List<string>();
 
-                if (ext is ".cmd" or ".bat")
+                if (ext == ".ps1")
+                {
+                    executable = "powershell.exe";
+                    arguments.Add("-NoProfile");
+                    arguments.Add("-NonInteractive");
+                    arguments.Add("-ExecutionPolicy");
+                    arguments.Add("Bypass");
+                    arguments.Add("-File");
+                    arguments.Add(_scriptFullPath);
+
+                    if (request.Parameters.ValueKind == JsonValueKind.Object)
+                    {
+                        foreach (var prop in request.Parameters.EnumerateObject())
+                        {
+                            arguments.Add($"-{prop.Name}");
+                            arguments.Add(prop.Value.ToString());
+                        }
+                    }
+                }
+                else if (ext is ".cmd" or ".bat")
                 {
                     executable = "cmd.exe";
                     arguments.Add("/c");
                     arguments.Add(_scriptFullPath);
+
+                    if (request.Parameters.ValueKind == JsonValueKind.Object)
+                    {
+                        foreach (var prop in request.Parameters.EnumerateObject())
+                        {
+                            arguments.Add(prop.Value.ToString());
+                        }
+                    }
                 }
                 else
                 {
                     executable = _scriptFullPath;
+                    if (request.Parameters.ValueKind == JsonValueKind.Object)
+                    {
+                        foreach (var prop in request.Parameters.EnumerateObject())
+                        {
+                            arguments.Add(prop.Value.ToString());
+                        }
+                    }
                 }
 
                 var result = await _processRunner.RunAsync(

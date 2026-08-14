@@ -8,6 +8,7 @@ public sealed class PluginCardViewModel
 {
     public PluginCardViewModel(PluginRegistryEntry entry)
     {
+        ArgumentNullException.ThrowIfNull(entry);
         Id = entry.Id;
         Name = entry.Name;
         Version = entry.Version;
@@ -26,6 +27,7 @@ public sealed class PluginCardViewModel
 
     public PluginCardViewModel(RemotePluginItem item, bool isInstalled, PluginRegistryEntry? installedEntry = null)
     {
+        ArgumentNullException.ThrowIfNull(item);
         Id = item.Id;
         Name = item.Name;
         Version = item.Version;
@@ -38,7 +40,7 @@ public sealed class PluginCardViewModel
         InstalledState = installedEntry?.State;
         CommandCount = installedEntry?.Commands.Count ?? item.CommandsProvided.Count;
         ErrorMessage = installedEntry?.ErrorMessage;
-        Permissions = item.Permissions;
+        Permissions = item.Permissions != null ? new List<string>(item.Permissions) : new List<string>();
         PackageUrl = item.PackageUrl;
         Sha256 = item.Sha256;
     }
@@ -73,4 +75,9 @@ public sealed class PluginCardViewModel
     public bool CanEnable => IsInstalled && !IsBuiltIn && InstalledState == PluginState.Disabled;
     public bool CanDisable => IsInstalled && !IsBuiltIn && InstalledState == PluginState.Enabled;
     public bool CanUninstall => IsInstalled && !IsBuiltIn;
+
+    public Microsoft.UI.Xaml.Visibility InstallVisibility => CanInstall ? Microsoft.UI.Xaml.Visibility.Visible : Microsoft.UI.Xaml.Visibility.Collapsed;
+    public Microsoft.UI.Xaml.Visibility EnableVisibility => CanEnable ? Microsoft.UI.Xaml.Visibility.Visible : Microsoft.UI.Xaml.Visibility.Collapsed;
+    public Microsoft.UI.Xaml.Visibility DisableVisibility => CanDisable ? Microsoft.UI.Xaml.Visibility.Visible : Microsoft.UI.Xaml.Visibility.Collapsed;
+    public Microsoft.UI.Xaml.Visibility UninstallVisibility => CanUninstall ? Microsoft.UI.Xaml.Visibility.Visible : Microsoft.UI.Xaml.Visibility.Collapsed;
 }

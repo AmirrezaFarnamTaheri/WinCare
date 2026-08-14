@@ -74,7 +74,7 @@ public sealed class ToolCatalogServiceTests
     private sealed class MockPluginRegistry : IPluginRegistry
     {
         private readonly IReadOnlyList<CommandDefinition> _commands;
-        public event System.EventHandler? RegistryChanged;
+        public event System.EventHandler? RegistryChanged { add { } remove { } }
 
         public MockPluginRegistry(IReadOnlyList<CommandDefinition> commands)
         {

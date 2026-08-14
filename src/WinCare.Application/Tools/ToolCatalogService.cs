@@ -12,7 +12,10 @@ namespace WinCare.Application.Tools;
 public sealed class ToolCatalogService
 {
     private readonly IPluginRegistry? _pluginRegistry;
-    private readonly IReadOnlyList<CommandDefinition> _baseCommands;
+    /// <summary>
+    /// Event raised when the merged catalog changes (e.g. plugins enabled or disabled).
+    /// </summary>
+    public event EventHandler? CatalogChanged;
 
     /// <summary>
     /// Initializes the service against the embedded catalog and optional plugin registry.
@@ -20,6 +23,10 @@ public sealed class ToolCatalogService
     public ToolCatalogService(IPluginRegistry? pluginRegistry = null)
     {
         _pluginRegistry = pluginRegistry;
+        if (_pluginRegistry != null)
+        {
+            _pluginRegistry.RegistryChanged += (s, e) => CatalogChanged?.Invoke(this, EventArgs.Empty);
+        }
         _baseCommands = CommandCatalog.CommandCatalog.Load();
     }
 
