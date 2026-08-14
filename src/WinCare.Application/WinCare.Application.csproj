@@ -8,6 +8,6 @@
   <ItemGroup>
     <ProjectReference Include="..\WinCare.Domain\WinCare.Domain.csproj" />
     <ProjectReference Include="..\WinCare.CommandCatalog\WinCare.CommandCatalog.csproj" />
-    <ProjectReference Include="..\WinCare.SourceGenerators\WinCare.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\WinCare.SourceGenerators\WinCare.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" SetPlatform="Platform=AnyCPU" />
   </ItemGroup>
 </Project>

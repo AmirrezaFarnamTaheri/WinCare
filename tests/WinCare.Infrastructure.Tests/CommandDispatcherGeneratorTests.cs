@@ -51,10 +51,8 @@ namespace WinCare.Infrastructure.Handlers
                 references,
                 new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
 
-            var generator = new CommandDispatcherGenerator();
-            var driver = CSharpGeneratorDriver.Create(generator);
-
-            driver.RunGeneratorsAndUpdateCompilation(compilation, out var outputCompilation, out var diagnostics);
+            GeneratorDriver driver = CSharpGeneratorDriver.Create(generator);
+            driver = driver.RunGeneratorsAndUpdateCompilation(compilation, out var outputCompilation, out var diagnostics);
 
             Assert.Empty(diagnostics);
 
