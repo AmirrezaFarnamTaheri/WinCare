@@ -18,6 +18,9 @@ public sealed class PluginLoadContext : AssemblyLoadContext
         _resolver = new AssemblyDependencyResolver(pluginAssemblyPath);
     }
 
+    /// <summary>
+    /// Resolves and loads the requested managed assembly, delegating shared host dependencies to the default ALC.
+    /// </summary>
     protected override Assembly? Load(AssemblyName assemblyName)
     {
         if (assemblyName.Name != null)
@@ -39,6 +42,9 @@ public sealed class PluginLoadContext : AssemblyLoadContext
         return null;
     }
 
+    /// <summary>
+    /// Resolves and loads the requested unmanaged native library dependency.
+    /// </summary>
     protected override IntPtr LoadUnmanagedDll(string unmanagedDllName)
     {
         var libraryPath = _resolver.ResolveUnmanagedDllToPath(unmanagedDllName);
