@@ -352,7 +352,7 @@ public sealed class CommandSafetyTests
 
             executor.OnIntentPersistedAsync = key =>
             {
-                if (key == "preset-history")
+                if (key == "preset-history:Applying")
                 {
                     cts.Cancel();
                 }
@@ -373,6 +373,61 @@ public sealed class CommandSafetyTests
             JsonElement item = history[0];
             string? status = item.GetProperty("status").GetString();
             Assert.Equal("Cancelled", status);
+        }
+        finally
+        {
+            if (Directory.Exists(testRoot)) Directory.Delete(testRoot, true);
+        }
+    }
+
+    [Fact]
+    public async Task WindowsCommandExecutor_RemediationLateCancellation_DurablyPersistsAppliedState()
+    {
+        string testRoot = Path.Combine(Path.GetTempPath(), "WinCareLateCancelRemediationTest_" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            using WindowsCommandExecutor executor = new(testRoot);
+            using CancellationTokenSource cts = new();
+
+            executor.OnIntentPersistedAsync = key =>
+            {
+                if (key == "preset-history:Applied")
+                {
+                    cts.Cancel();
+                }
+                return Task.CompletedTask;
+            };
+
+            CommandDefinition presetDef = new(
+                Id: "preset",
+                Title: "Apply Remediation Preset",
+                Summary: "Apply preset",
+                Area: "Remediation",
+                Section: "Presets",
+                Risk: CommandRisk.Moderate,
+                ReadOnly: false,
+                AdministratorAccess: AdministratorAccess.No,
+                Restart: RestartExpectation.No,
+                LegacySource: "Remediation.ps1",
+                MigrationStatus: MigrationStatus.Implemented,
+                Keywords: Array.Empty<string>()
+            );
+
+            using JsonDocument paramsDoc = JsonDocument.Parse("""{ "PresetId": "privacy" }""");
+            CommandRequest request = CommandRequest.Execute("preset", paramsDoc.RootElement);
+
+            CommandHandlerOutcome outcome = await executor.ExecuteAsync(presetDef, request, cts.Token);
+            Assert.Equal(CommandResultStatus.Succeeded, outcome.Status);
+
+            CommandStateStore store = new(testRoot);
+            JsonElement history = await store.ReadArrayAsync("preset-history", CancellationToken.None);
+
+            Assert.Equal(JsonValueKind.Array, history.ValueKind);
+            Assert.True(history.GetArrayLength() > 0, "preset-history must durably contain intent record.");
+
+            JsonElement item = history[0];
+            string? status = item.GetProperty("status").GetString();
+            Assert.Equal("Applied", status);
         }
         finally
         {

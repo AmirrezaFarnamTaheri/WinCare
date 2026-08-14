@@ -22,7 +22,7 @@ internal sealed partial class WindowsCommandExecutor
         await AppendStateItemAsync("preset-history", intentRecord, CancellationToken.None).ConfigureAwait(false);
         if (OnIntentPersistedAsync is not null)
         {
-            await OnIntentPersistedAsync("preset-history").ConfigureAwait(false);
+            await OnIntentPersistedAsync("preset-history:Applying").ConfigureAwait(false);
         }
 
         string currentRuleId = "";
@@ -48,6 +48,15 @@ internal sealed partial class WindowsCommandExecutor
                     return CommandHandlerOutcome.Failed("preset.partial_failure", $"Preset '{preset.Title}' stopped at rule '{ruleId}': {outcome.Message}");
                 }
             }
+
+            JsonElement finalPreset = Data(new { id = executionId, presetId = preset.Id, preset.Title, status = "Applied", completedAt = DateTimeOffset.UtcNow, rules = results });
+            if (OnIntentPersistedAsync is not null)
+            {
+                await OnIntentPersistedAsync("preset-history:Applied").ConfigureAwait(false);
+            }
+            using CancellationTokenSource finalCleanupCts = new(TimeSpan.FromSeconds(5));
+            await TransitionStateItemAsync("preset-history", executionId, finalPreset, finalCleanupCts.Token).ConfigureAwait(false);
+            return Success("preset", $"Preset '{preset.Title}' applied through native remediation primitives.", finalPreset, undo: false);
         }
         catch (Exception ex)
         {
@@ -57,9 +66,6 @@ internal sealed partial class WindowsCommandExecutor
             await TransitionStateItemAsync("preset-history", executionId, partialPreset, cleanupCts.Token).ConfigureAwait(false);
             throw;
         }
-        JsonElement finalPreset = Data(new { id = executionId, presetId = preset.Id, preset.Title, status = "Applied", completedAt = DateTimeOffset.UtcNow, rules = results });
-        await TransitionStateItemAsync("preset-history", executionId, finalPreset, cancellationToken).ConfigureAwait(false);
-        return Success("preset", $"Preset '{preset.Title}' applied through native remediation primitives.", finalPreset, undo: false);
     }
 
     private async Task<CommandHandlerOutcome> ApplyRemediationRuleAsync(RemediationRule rule, CancellationToken cancellationToken)
@@ -82,7 +88,8 @@ internal sealed partial class WindowsCommandExecutor
                 changes.Add(new { change.Type, detail, appliedAt = DateTimeOffset.UtcNow });
             }
             JsonElement history = Data(new { id = executionId, ruleId = rule.Id, rule.Title, status = "Applied", completedAt = DateTimeOffset.UtcNow, changes });
-            await TransitionStateItemAsync("remediation-history", executionId, history, cancellationToken).ConfigureAwait(false);
+            using CancellationTokenSource finalRuleCleanupCts = new(TimeSpan.FromSeconds(5));
+            await TransitionStateItemAsync("remediation-history", executionId, history, finalRuleCleanupCts.Token).ConfigureAwait(false);
             return Success("preset", $"Rule '{rule.Title}' applied.", history, undo: rule.Reversible);
         }
         catch (Exception ex)
