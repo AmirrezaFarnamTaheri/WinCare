@@ -115,7 +115,7 @@ namespace WinCare.Infrastructure.Plugins
                     var msg = string.IsNullOrWhiteSpace(result.StandardOutput)
                         ? "Plugin script completed successfully."
                         : result.StandardOutput.Trim();
-                    return CommandHandlerOutcome.Succeeded(msg);
+                    return CommandHandlerOutcome.Succeeded("plugin.script.ok", msg);
                 }
 
                 var errorMsg = string.IsNullOrWhiteSpace(result.StandardError)
@@ -126,7 +126,7 @@ namespace WinCare.Infrastructure.Plugins
             }
             catch (OperationCanceledException)
             {
-                return CommandHandlerOutcome.Cancelled();
+                return CommandHandlerOutcome.Blocked("command.cancelled", "Operation was cancelled.");
             }
             catch (Exception ex)
             {

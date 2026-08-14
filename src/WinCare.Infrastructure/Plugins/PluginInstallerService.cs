@@ -146,6 +146,7 @@ public class PluginInstallerService : IPluginInstallerService
         }
 
         MemoryStream? ownedMemoryStream = null;
+        string? tempExtractDir = null;
         Stream workingStream = archiveStream;
         if (!archiveStream.CanSeek)
         {
@@ -190,7 +191,7 @@ public class PluginInstallerService : IPluginInstallerService
             Directory.CreateDirectory(stagingBaseDir);
             Directory.CreateDirectory(stagingBackupsDir);
 
-            var tempExtractDir = Path.Combine(stagingBaseDir, $"install_{Guid.NewGuid():N}");
+            tempExtractDir = Path.Combine(stagingBaseDir, $"install_{Guid.NewGuid():N}");
             Directory.CreateDirectory(tempExtractDir);
 
             using (var zipArchive = new ZipArchive(workingStream, ZipArchiveMode.Read, leaveOpen: true))
@@ -329,7 +330,7 @@ public class PluginInstallerService : IPluginInstallerService
         }
         catch
         {
-            if (Directory.Exists(tempExtractDir))
+            if (tempExtractDir != null && Directory.Exists(tempExtractDir))
             {
                 try { Directory.Delete(tempExtractDir, recursive: true); }
                 catch (Exception ex)
