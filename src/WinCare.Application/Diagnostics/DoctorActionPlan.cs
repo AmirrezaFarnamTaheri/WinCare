@@ -44,8 +44,15 @@ namespace WinCare.Application.Diagnostics
         string MetricName,
         string MeasuredValue,
         bool IndicatesPressure,
-        DiagnosticSeverity Severity
-    );
+        DiagnosticSeverity Severity,
+        string Source = "Windows System Diagnostic Telemetry",
+        string? CommandId = null,
+        DateTime? CapturedAtUtc = null
+    )
+    {
+        public DateTime TimestampUtc { get; init; } = CapturedAtUtc ?? DateTime.UtcNow;
+        public bool IsStale(TimeSpan maxAge) => (DateTime.UtcNow - TimestampUtc) > maxAge;
+    };
 
     public sealed class DoctorActionPlan
     {

@@ -343,4 +343,160 @@ public class PluginInstallerServiceTests
             if (Directory.Exists(tempPluginsDir)) Directory.Delete(tempPluginsDir, recursive: true);
         }
     }
+
+    [Fact]
+    public void VerifyManifestSignature_Rejects_Wrong_Publisher_Key()
+    {
+        using var rsaPublisherA = RSA.Create(2048);
+        using var rsaPublisherB = RSA.Create(2048);
+
+        var manifestContent = System.Text.Encoding.UTF8.GetBytes("{\"id\":\"com.adversarial.test\",\"version\":\"1.0.0\"}");
+        var signatureBytes = rsaPublisherA.SignData(manifestContent, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+        var signatureBase64 = Convert.ToBase64String(signatureBytes);
+
+        var wrongPublicKeyPem = rsaPublisherB.ExportRSAPublicKeyPem();
+
+        // Verification against wrong publisher public key must fail closed
+        var isValid = PluginInstallerService.VerifyManifestSignature(manifestContent, signatureBase64, wrongPublicKeyPem);
+        Assert.False(isValid);
+
+        Assert.False(PluginInstallerService.VerifyPublisherAuthenticity("Untrusted Publisher", signatureBase64, out var trustLevel, wrongPublicKeyPem, manifestContent));
+        Assert.Equal("Signature Verification Failed", trustLevel);
+    }
+
+    [Fact]
+    public void VerifyManifestSignature_Handles_Corrupted_Payloads_Gracefully()
+    {
+        var manifestContent = System.Text.Encoding.UTF8.GetBytes("{\"id\":\"com.adversarial.corrupted\"}");
+
+        Assert.False(PluginInstallerService.VerifyManifestSignature(manifestContent, "not-valid-base64!!!", "invalid-pem"));
+        Assert.False(PluginInstallerService.VerifyManifestSignature(Array.Empty<byte>(), "validBase64==", "validPem"));
+        Assert.False(PluginInstallerService.VerifyManifestSignature(manifestContent, string.Empty, string.Empty));
+    }
+
+    [Fact]
+    public async Task InstallPluginFromStreamAsync_Rejects_Package_With_Failed_Digital_Signature()
+    {
+        var tempPluginsDir = Path.Combine(Path.GetTempPath(), $"wincare_test_plugins_{Guid.NewGuid():N}");
+
+        try
+        {
+            using var rsa = RSA.Create(2048);
+            var publicKeyPem = rsa.ExportRSAPublicKeyPem();
+
+            using var memoryStream = new MemoryStream();
+            using (var zip = new ZipArchive(memoryStream, ZipArchiveMode.Create, leaveOpen: true))
+            {
+                var manifestEntry = zip.CreateEntry("wincare-plugin.json");
+                using (var writer = new StreamWriter(manifestEntry.Open()))
+                {
+                    writer.Write(JsonSerializer.Serialize(new 
+                    { 
+                        id = "com.wincare.forged.plugin", 
+                        name = "Forged Signature Plugin", 
+                        version = "1.0.0",
+                        signature = "Zm9yZ2VkLXNpZ25hdHVyZQ==", // forged base64 signature
+                        publicKey = publicKeyPem
+                    }));
+                }
+            }
+
+            memoryStream.Position = 0;
+            var installer = new PluginInstallerService(pluginsBaseDirectory: tempPluginsDir);
+
+            var ex = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+                installer.InstallPluginFromStreamAsync(memoryStream, "com.wincare.forged.plugin"));
+
+            Assert.Contains("Digital signature verification failed", ex.Message);
+        }
+        finally
+        {
+            if (Directory.Exists(tempPluginsDir))
+            {
+                Directory.Delete(tempPluginsDir, recursive: true);
+            }
+        }
+    }
+
+    [Fact]
+    public async Task InstallPluginFromStreamAsync_Creates_Isolated_Backup_On_Update()
+    {
+        var tempPluginsDir = Path.Combine(Path.GetTempPath(), $"wincare_test_plugins_{Guid.NewGuid():N}");
+
+        try
+        {
+            var installer = new PluginInstallerService(pluginsBaseDirectory: tempPluginsDir);
+
+            // 1. Initial installation of v1.0.0
+            using (var msV1 = new MemoryStream())
+            {
+                using (var zip1 = new ZipArchive(msV1, ZipArchiveMode.Create, leaveOpen: true))
+                {
+                    var mEntry = zip1.CreateEntry("wincare-plugin.json");
+                    using var writer = new StreamWriter(mEntry.Open());
+                    writer.Write(JsonSerializer.Serialize(new { id = "com.wincare.upgradeable", name = "Upgradeable Plugin", version = "1.0.0" }));
+                }
+
+                msV1.Position = 0;
+                await installer.InstallPluginFromStreamAsync(msV1, "com.wincare.upgradeable");
+            }
+
+            var pluginDir = Path.Combine(tempPluginsDir, "com.wincare.upgradeable");
+            Assert.True(Directory.Exists(pluginDir));
+
+            // 2. Install v2.0.0 update over existing directory
+            using (var msV2 = new MemoryStream())
+            {
+                using (var zip2 = new ZipArchive(msV2, ZipArchiveMode.Create, leaveOpen: true))
+                {
+                    var mEntry = zip2.CreateEntry("wincare-plugin.json");
+                    using var writer = new StreamWriter(mEntry.Open());
+                    writer.Write(JsonSerializer.Serialize(new { id = "com.wincare.upgradeable", name = "Upgradeable Plugin", version = "2.0.0" }));
+                }
+
+                msV2.Position = 0;
+                var updatedPath = await installer.InstallPluginFromStreamAsync(msV2, "com.wincare.upgradeable");
+                Assert.Equal(pluginDir, updatedPath);
+            }
+
+            // Verify isolated backup directory was established in .staging/backups
+            var stagingBackups = Path.Combine(tempPluginsDir, ".staging", "backups");
+            Assert.True(Directory.Exists(stagingBackups));
+            var backups = Directory.GetDirectories(stagingBackups);
+            Assert.NotEmpty(backups);
+        }
+        finally
+        {
+            if (Directory.Exists(tempPluginsDir))
+            {
+                Directory.Delete(tempPluginsDir, recursive: true);
+            }
+        }
+    }
+
+    [Fact]
+    public void TelemetryEvidence_Freshness_Validation_Detects_Stale_Metrics()
+    {
+        var freshEvidence = new WinCare.Application.Diagnostics.TelemetryEvidence(
+            HasMeasuredEvidence: true,
+            MetricName: "Fresh Metric",
+            MeasuredValue: "Optimal",
+            IndicatesPressure: false,
+            Severity: WinCare.Application.Diagnostics.DiagnosticSeverity.Healthy,
+            CapturedAtUtc: DateTime.UtcNow
+        );
+
+        Assert.False(freshEvidence.IsStale(TimeSpan.FromMinutes(1)));
+
+        var staleEvidence = new WinCare.Application.Diagnostics.TelemetryEvidence(
+            HasMeasuredEvidence: true,
+            MetricName: "Stale Metric",
+            MeasuredValue: "Low Storage",
+            IndicatesPressure: true,
+            Severity: WinCare.Application.Diagnostics.DiagnosticSeverity.Warning,
+            CapturedAtUtc: DateTime.UtcNow.AddMinutes(-10)
+        );
+
+        Assert.True(staleEvidence.IsStale(TimeSpan.FromMinutes(2)));
+    }
 }

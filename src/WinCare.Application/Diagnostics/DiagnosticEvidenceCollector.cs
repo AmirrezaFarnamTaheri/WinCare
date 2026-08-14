@@ -35,7 +35,9 @@ namespace WinCare.Application.Diagnostics
                             MetricName: "DNS Resolver Cache",
                             MeasuredValue: "Active Socket Table and DNS Entries Present",
                             IndicatesPressure: false,
-                            Severity: DiagnosticSeverity.Information
+                            Severity: DiagnosticSeverity.Information,
+                            Source: "Windows Network Stack Telemetry",
+                            CommandId: "wincare.utilities.dnstools"
                         ));
                         break;
 
@@ -52,7 +54,9 @@ namespace WinCare.Application.Diagnostics
                     MetricName: "Telemetry Probe Error",
                     MeasuredValue: ex.Message,
                     IndicatesPressure: false,
-                    Severity: DiagnosticSeverity.Information
+                    Severity: DiagnosticSeverity.Information,
+                    Source: "Diagnostic Probing Exception",
+                    CommandId: null
                 ));
             }
 
@@ -79,7 +83,9 @@ namespace WinCare.Application.Diagnostics
                             MetricName: $"Storage Free Space ({drive.Name.TrimEnd('\\')})",
                             MeasuredValue: $"{freeGb:F1} GB free of {totalGb:F1} GB ({freePercent:F0}% available)",
                             IndicatesPressure: isLow,
-                            Severity: isLow ? DiagnosticSeverity.Warning : DiagnosticSeverity.Healthy
+                            Severity: isLow ? DiagnosticSeverity.Warning : DiagnosticSeverity.Healthy,
+                            Source: "Kernel Storage Partition Telemetry",
+                            CommandId: "wincare.systemcare.diskcleaner"
                         ));
                     }
                 }
@@ -91,7 +97,9 @@ namespace WinCare.Application.Diagnostics
                     MetricName: "Storage Probe",
                     MeasuredValue: "Drive metrics unavailable",
                     IndicatesPressure: false,
-                    Severity: DiagnosticSeverity.Information
+                    Severity: DiagnosticSeverity.Information,
+                    Source: "Storage Partition Inspection",
+                    CommandId: "wincare.systemcare.diskcleaner"
                 ));
             }
 
@@ -116,7 +124,9 @@ namespace WinCare.Application.Diagnostics
                     MetricName: "System Memory Load",
                     MeasuredValue: totalBytes > 0 ? $"{memoryLoadPercent:F0}% utilized ({gcInfo.MemoryLoadBytes / (1024 * 1024):N0} MB in use)" : "Memory metrics measured",
                     IndicatesPressure: isHighMemory,
-                    Severity: isHighMemory ? DiagnosticSeverity.Warning : DiagnosticSeverity.Healthy
+                    Severity: isHighMemory ? DiagnosticSeverity.Warning : DiagnosticSeverity.Healthy,
+                    Source: "Windows Memory Subsystem Telemetry",
+                    CommandId: "wincare.systemcare.ramoptimizer"
                 ));
             }
             catch
@@ -126,7 +136,9 @@ namespace WinCare.Application.Diagnostics
                     MetricName: "Memory Probe",
                     MeasuredValue: "Memory load metrics unavailable",
                     IndicatesPressure: false,
-                    Severity: DiagnosticSeverity.Information
+                    Severity: DiagnosticSeverity.Information,
+                    Source: "Windows Memory Diagnostic",
+                    CommandId: "wincare.systemcare.ramoptimizer"
                 ));
             }
 
