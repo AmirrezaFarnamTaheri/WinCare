@@ -37,7 +37,9 @@ namespace WinCare.Application.Diagnostics
                             IndicatesPressure: false,
                             Severity: DiagnosticSeverity.Information,
                             Source: "Windows Network Stack Telemetry",
-                            CommandId: "wincare.utilities.dnstools"
+                            CommandId: "wincare.utilities.dnstools",
+                            Collector: "NetworkDiagnosticsCollector",
+                            CommandVersion: "1.0.0"
                         ));
                         break;
 
@@ -56,7 +58,9 @@ namespace WinCare.Application.Diagnostics
                     IndicatesPressure: false,
                     Severity: DiagnosticSeverity.Information,
                     Source: "Diagnostic Probing Exception",
-                    CommandId: null
+                    CommandId: null,
+                    Collector: "DiagnosticEvidenceCollector",
+                    CommandVersion: "1.0.0"
                 ));
             }
 
@@ -85,7 +89,9 @@ namespace WinCare.Application.Diagnostics
                             IndicatesPressure: isLow,
                             Severity: isLow ? DiagnosticSeverity.Warning : DiagnosticSeverity.Healthy,
                             Source: "Kernel Storage Partition Telemetry",
-                            CommandId: "wincare.systemcare.diskcleaner"
+                            CommandId: "wincare.systemcare.diskcleaner",
+                            Collector: "StorageDiagnosticsCollector",
+                            CommandVersion: "1.2.0"
                         ));
                     }
                 }
@@ -99,7 +105,9 @@ namespace WinCare.Application.Diagnostics
                     IndicatesPressure: false,
                     Severity: DiagnosticSeverity.Information,
                     Source: "Storage Partition Inspection",
-                    CommandId: "wincare.systemcare.diskcleaner"
+                    CommandId: "wincare.systemcare.diskcleaner",
+                    Collector: "StorageDiagnosticsCollector",
+                    CommandVersion: "1.2.0"
                 ));
             }
 
@@ -126,7 +134,9 @@ namespace WinCare.Application.Diagnostics
                     IndicatesPressure: isHighMemory,
                     Severity: isHighMemory ? DiagnosticSeverity.Warning : DiagnosticSeverity.Healthy,
                     Source: "Windows Memory Subsystem Telemetry",
-                    CommandId: "wincare.systemcare.ramoptimizer"
+                    CommandId: "wincare.systemcare.ramoptimizer",
+                    Collector: "MemoryDiagnosticsCollector",
+                    CommandVersion: "1.1.0"
                 ));
             }
             catch
@@ -138,7 +148,9 @@ namespace WinCare.Application.Diagnostics
                     IndicatesPressure: false,
                     Severity: DiagnosticSeverity.Information,
                     Source: "Windows Memory Diagnostic",
-                    CommandId: "wincare.systemcare.ramoptimizer"
+                    CommandId: "wincare.systemcare.ramoptimizer",
+                    Collector: "MemoryDiagnosticsCollector",
+                    CommandVersion: "1.1.0"
                 ));
             }
 

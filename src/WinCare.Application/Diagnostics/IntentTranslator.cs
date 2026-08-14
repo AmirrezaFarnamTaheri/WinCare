@@ -56,7 +56,7 @@ namespace WinCare.Application.Diagnostics
                     findings.Add(new DiagnosticFinding(
                         "finding.storage.temp",
                         hasTelemetryEvidence ? "Measured Observation: Storage Pressure on System Drive" : "Investigative Hypothesis: Temporary File Accumulation",
-                        hasTelemetryEvidence ? $"Live telemetry confirms {pressureEvidence!.MeasuredValue}." : "Natural language matched storage cleanup inquiry. Telemetry inspection is recommended to quantify reclaimable disk space.",
+                        hasTelemetryEvidence ? $"Live telemetry confirms {pressureEvidence!.MeasuredValue}.\n[Provenance: {pressureEvidence.ProvenanceSummary}]" : "Natural language matched storage cleanup inquiry. Telemetry inspection is recommended to quantify reclaimable disk space.",
                         severity,
                         "Storage (C:)",
                         IsVerifiedByTelemetry: hasTelemetryEvidence
@@ -73,7 +73,7 @@ namespace WinCare.Application.Diagnostics
                     findings.Add(new DiagnosticFinding(
                         "finding.memory.standby",
                         hasTelemetryEvidence ? "Measured Observation: High Memory Utilization" : "Investigative Hypothesis: Working Set & Standby List Pressure",
-                        hasTelemetryEvidence ? $"Live telemetry confirms {pressureEvidence!.MeasuredValue}." : "Natural language matched memory responsiveness inquiry. Run memory diagnostics to measure commit charge and working set sizes.",
+                        hasTelemetryEvidence ? $"Live telemetry confirms {pressureEvidence!.MeasuredValue}.\n[Provenance: {pressureEvidence.ProvenanceSummary}]" : "Natural language matched memory responsiveness inquiry. Run memory diagnostics to measure commit charge and working set sizes.",
                         severity,
                         "System RAM",
                         IsVerifiedByTelemetry: hasTelemetryEvidence

@@ -91,5 +91,18 @@ namespace WinCare.Application.Tests
             Assert.True(memoryProbe.HasMeasuredEvidence);
             Assert.False(string.IsNullOrEmpty(memoryProbe.MeasuredValue));
         }
+
+        [Fact]
+        public async Task TranslateAsync_attaches_provenance_to_findings()
+        {
+            var plan = await _translator.TranslateAsync("Check memory pressure");
+            Assert.NotNull(plan);
+            foreach (var evidence in plan.MeasuredEvidence)
+            {
+                Assert.NotNull(evidence.Collector);
+                Assert.NotNull(evidence.CommandVersion);
+                Assert.Contains(evidence.Collector, evidence.ProvenanceSummary);
+            }
+        }
     }
 }

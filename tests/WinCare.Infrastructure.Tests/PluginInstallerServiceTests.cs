@@ -507,4 +507,49 @@ public class PluginInstallerServiceTests
 
         Assert.True(staleEvidence.IsStale(TimeSpan.FromMinutes(2)));
     }
+
+    [Fact]
+    public void VerifyManifestSignature_Rejects_Modified_Signed_Package()
+    {
+        using var rsa = RSA.Create(2048);
+        var publicKeyPem = rsa.ExportRSAPublicKeyPem();
+
+        var originalManifest = "{\"id\":\"com.wincare.test\",\"name\":\"Original Test\",\"version\":\"1.0.0\"}";
+        var originalBytes = Encoding.UTF8.GetBytes(originalManifest);
+        var signatureBytes = rsa.SignData(originalBytes, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+        var signatureBase64 = Convert.ToBase64String(signatureBytes);
+
+        // Tamper with manifest content after signing
+        var tamperedManifest = "{\"id\":\"com.wincare.test\",\"name\":\"Tampered Test\",\"version\":\"1.0.0\"}";
+        var tamperedBytes = Encoding.UTF8.GetBytes(tamperedManifest);
+
+        var installer = new PluginInstallerService();
+        var isValid = installer.VerifyManifestSignature(tamperedBytes, signatureBase64, publicKeyPem, out var error);
+
+        Assert.False(isValid);
+        Assert.Contains("Invalid signature", error);
+    }
+
+    [Fact]
+    public void TelemetryEvidence_Provenance_Attributes_Are_Populated_And_Formatted()
+    {
+        var evidence = new WinCare.Application.Diagnostics.TelemetryEvidence(
+            HasMeasuredEvidence: true,
+            MetricName: "System RAM Usage",
+            MeasuredValue: "92% utilized",
+            IndicatesPressure: true,
+            Severity: WinCare.Application.Diagnostics.DiagnosticSeverity.Warning,
+            Source: "Windows Memory Subsystem Telemetry",
+            CommandId: "wincare.systemcare.ramoptimizer",
+            Collector: "MemoryDiagnosticsCollector",
+            CommandVersion: "1.1.0",
+            CapturedAtUtc: new DateTime(2026, 8, 15, 2, 30, 0, DateTimeKind.Utc)
+        );
+
+        Assert.Equal("MemoryDiagnosticsCollector", evidence.Collector);
+        Assert.Equal("1.1.0", evidence.CommandVersion);
+        Assert.Equal("wincare.systemcare.ramoptimizer", evidence.CommandId);
+        Assert.Contains("MemoryDiagnosticsCollector", evidence.ProvenanceSummary);
+        Assert.Contains("wincare.systemcare.ramoptimizer@1.1.0", evidence.ProvenanceSummary);
+    }
 }

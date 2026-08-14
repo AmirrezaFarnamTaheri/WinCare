@@ -47,11 +47,14 @@ namespace WinCare.Application.Diagnostics
         DiagnosticSeverity Severity,
         string Source = "Windows System Diagnostic Telemetry",
         string? CommandId = null,
-        DateTime? CapturedAtUtc = null
+        DateTime? CapturedAtUtc = null,
+        string Collector = "DiagnosticEvidenceCollector",
+        string CommandVersion = "1.0.0"
     )
     {
         public DateTime TimestampUtc { get; init; } = CapturedAtUtc ?? DateTime.UtcNow;
         public bool IsStale(TimeSpan maxAge) => (DateTime.UtcNow - TimestampUtc) > maxAge;
+        public string ProvenanceSummary => $"Source: {Source} | Collector: {Collector} | Command: {CommandId ?? "system.core"}@{CommandVersion} | Captured: {TimestampUtc:yyyy-MM-dd HH:mm:ss} UTC";
     };
 
     public sealed class DoctorActionPlan
