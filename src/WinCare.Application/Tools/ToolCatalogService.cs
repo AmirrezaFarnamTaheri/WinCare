@@ -10,11 +10,29 @@ public sealed class ToolCatalogService
     private readonly IReadOnlyList<CommandDefinition> _commands;
 
     /// <summary>
-    /// Initializes the service against the embedded catalog.
+    /// Initializes the service against the embedded catalog and optional plugin registry.
     /// </summary>
-    public ToolCatalogService()
-        : this(CommandCatalog.CommandCatalog.Load())
+    public ToolCatalogService(IPluginRegistry? pluginRegistry = null)
     {
+        var baseCommands = CommandCatalog.CommandCatalog.Load();
+        if (pluginRegistry == null)
+        {
+            _commands = baseCommands;
+        }
+        else
+        {
+            var activePluginCommands = pluginRegistry.GetActivePluginCommands();
+            var merged = new Dictionary<string, CommandDefinition>(StringComparer.OrdinalIgnoreCase);
+            foreach (var cmd in baseCommands)
+            {
+                merged[cmd.Id] = cmd;
+            }
+            foreach (var cmd in activePluginCommands)
+            {
+                merged[cmd.Id] = cmd;
+            }
+            _commands = merged.Values.ToList();
+        }
     }
 
     /// <summary>

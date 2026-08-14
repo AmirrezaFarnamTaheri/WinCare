@@ -1,0 +1,31 @@
+{
+  "id": "com.wincare.builtin.system_care",
+  "name": "System Care Pack",
+  "version": "2.4.0",
+  "author": "WinCare Core Team",
+  "description": "Essential system maintenance, storage cleanup, and memory optimization tools.",
+  "category": "System Care",
+  "entryType": "Manifest",
+  "tools": [
+    {
+      "id": "cleaner.system_temp",
+      "title": "System Temp Directory Purge",
+      "summary": "Safely removes temporary files from %TEMP% and %WINDIR%\\Temp.",
+      "area": "System care",
+      "section": "Storage",
+      "risk": "Low",
+      "readOnly": false,
+      "executorType": "Native"
+    },
+    {
+      "id": "cleaner.recycle_bin",
+      "title": "Empty Recycle Bin",
+      "summary": "Empties the Windows Recycle Bin across all drives.",
+      "area": "System care",
+      "section": "Storage",
+      "risk": "Low",
+      "readOnly": false,
+      "executorType": "Native"
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "id": "com.wincare.builtin.security",
+  "name": "Security & Protection Pack",
+  "version": "2.4.0",
+  "author": "WinCare Core Team",
+  "description": "Windows Security, Defender audit, firewall checks, and telemetry controls.",
+  "category": "Security",
+  "entryType": "Manifest",
+  "tools": [
+    {
+      "id": "security.defender_status",
+      "title": "Windows Defender Health Audit",
+      "summary": "Verifies active antivirus signature status and real-time monitoring.",
+      "area": "Security",
+      "section": "Protection",
+      "risk": "Low",
+      "readOnly": true,
+      "executorType": "Native"
+    }
+  ]
+}
