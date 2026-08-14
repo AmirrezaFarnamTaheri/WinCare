@@ -352,22 +352,20 @@ public sealed class CommandSafetyTests
 
             CommandRequest request = CommandRequest.Execute("preset", paramsDoc.RootElement);
 
-            // Pre-cancel token so rule loop cancellation is 100% deterministic
+            Task executionTask = executor.ExecuteAsync(presetDef, request, cts.Token);
             cts.Cancel();
 
-            await Assert.ThrowsAsync<OperationCanceledException>(() =>
-                executor.ExecuteAsync(presetDef, request, cts.Token));
+            await Assert.ThrowsAsync<OperationCanceledException>(() => executionTask);
 
             CommandStateStore store = new(testRoot);
-            JsonElement history = await store.ReadObjectAsync("preset-history", CancellationToken.None);
+            JsonElement history = await store.ReadArrayAsync("preset-history", CancellationToken.None);
 
             Assert.Equal(JsonValueKind.Array, history.ValueKind);
             Assert.True(history.GetArrayLength() > 0, "preset-history must durably contain intent record.");
 
             JsonElement item = history[0];
             string? status = item.GetProperty("status").GetString();
-            Assert.NotNull(status);
-            Assert.True(status is "Cancelled" or "PartiallyApplied", $"Expected terminal cancellation status 'Cancelled' or 'PartiallyApplied', but found '{status}'.");
+            Assert.Equal("Cancelled", status);
         }
         finally
         {
