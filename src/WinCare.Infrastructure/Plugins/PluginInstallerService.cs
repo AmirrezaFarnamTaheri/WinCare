@@ -131,6 +131,11 @@ public class PluginInstallerService : IPluginInstallerService
             throw new ArgumentNullException(nameof(archiveStream));
         }
 
+        if (string.IsNullOrWhiteSpace(targetPluginId) || (!targetPluginId.StartsWith("plugin_") && !PluginIdRegex.IsMatch(targetPluginId)))
+        {
+            throw new ArgumentException($"Invalid plugin ID '{targetPluginId}'.", nameof(targetPluginId));
+        }
+
         var stagingBaseDir = Path.Combine(_pluginsBaseDirectory, ".staging");
         Directory.CreateDirectory(stagingBaseDir);
         var tempExtractDir = Path.Combine(stagingBaseDir, $"install_{Guid.NewGuid():N}");
@@ -197,11 +202,6 @@ public class PluginInstallerService : IPluginInstallerService
             }
 
             var manifestId = idProp.GetString()!;
-            if (!string.IsNullOrWhiteSpace(targetPluginId) && !manifestId.Equals(targetPluginId, StringComparison.OrdinalIgnoreCase) && !targetPluginId.StartsWith("plugin_"))
-            {
-                throw new InvalidOperationException($"Package manifest ID '{manifestId}' does not match expected plugin ID '{targetPluginId}'.");
-            }
-
             var finalPluginId = manifestId;
             var finalTargetDir = ValidateAndGetPluginDirectory(finalPluginId);
 
@@ -246,7 +246,10 @@ public class PluginInstallerService : IPluginInstallerService
                             }
                             Directory.Move(backupDir, finalTargetDir);
                         }
-                        catch { }
+                        catch (Exception ex)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"[PluginInstaller] Failed restoring backup from '{backupDir}' to '{finalTargetDir}': {ex.GetType().Name} - {ex.Message}");
+                        }
                     }
                     throw;
                 }
@@ -259,7 +262,10 @@ public class PluginInstallerService : IPluginInstallerService
                 {
                     Directory.Delete(backupDir, recursive: true);
                 }
-                catch { }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[PluginInstaller] Failed cleaning up backup directory '{backupDir}': {ex.GetType().Name} - {ex.Message}");
+                }
             }
 
             return finalTargetDir;
@@ -268,7 +274,11 @@ public class PluginInstallerService : IPluginInstallerService
         {
             if (Directory.Exists(tempExtractDir))
             {
-                try { Directory.Delete(tempExtractDir, recursive: true); } catch { }
+                try { Directory.Delete(tempExtractDir, recursive: true); }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[PluginInstaller] Failed cleaning up temporary extract directory '{tempExtractDir}': {ex.GetType().Name} - {ex.Message}");
+                }
             }
             throw;
         }

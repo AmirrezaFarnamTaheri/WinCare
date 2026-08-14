@@ -37,7 +37,10 @@ public sealed class PluginRegistryService : IPluginRegistry
                     await kvp.Value.Plugin.ShutdownAsync(ct).ConfigureAwait(false);
                     await kvp.Value.Plugin.DisposeAsync().ConfigureAwait(false);
                 }
-                catch { }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[PluginRegistry] Failed shutting down plugin '{kvp.Key}': {ex.GetType().Name} - {ex.Message}");
+                }
                 kvp.Value.LoadContext?.Unload();
             }
             _instantiatedPlugins.Clear();
@@ -182,7 +185,10 @@ public sealed class PluginRegistryService : IPluginRegistry
                     await inst.Plugin.ShutdownAsync(ct).ConfigureAwait(false);
                     await inst.Plugin.DisposeAsync().ConfigureAwait(false);
                 }
-                catch { }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[PluginRegistry] Failed shutting down plugin '{pluginId}': {ex.GetType().Name} - {ex.Message}");
+                }
                 inst.LoadContext?.Unload();
             }
         }
