@@ -350,12 +350,19 @@ public sealed class CommandSafetyTests
             using JsonDocument paramsDoc = JsonDocument.Parse("""{ "PresetId": "privacy" }""");
             using CancellationTokenSource cts = new();
 
+            executor.OnIntentPersistedAsync = key =>
+            {
+                if (key == "preset-history")
+                {
+                    cts.Cancel();
+                }
+                return Task.CompletedTask;
+            };
+
             CommandRequest request = CommandRequest.Execute("preset", paramsDoc.RootElement);
 
-            Task executionTask = executor.ExecuteAsync(presetDef, request, cts.Token);
-            cts.Cancel();
-
-            await Assert.ThrowsAnyAsync<OperationCanceledException>(() => executionTask);
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+                executor.ExecuteAsync(presetDef, request, cts.Token));
 
             CommandStateStore store = new(testRoot);
             JsonElement history = await store.ReadArrayAsync("preset-history", CancellationToken.None);

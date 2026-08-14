@@ -20,6 +20,10 @@ internal sealed partial class WindowsCommandExecutor
         var results = new List<object>();
         JsonElement intentRecord = Data(new { id = executionId, presetId = preset.Id, preset.Title, status = "Applying", startedAt = DateTimeOffset.UtcNow, rules = results });
         await AppendStateItemAsync("preset-history", intentRecord, CancellationToken.None).ConfigureAwait(false);
+        if (OnIntentPersistedAsync is not null)
+        {
+            await OnIntentPersistedAsync("preset-history").ConfigureAwait(false);
+        }
 
         string currentRuleId = "";
         try

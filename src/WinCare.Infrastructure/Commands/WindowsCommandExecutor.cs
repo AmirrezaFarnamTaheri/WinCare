@@ -39,6 +39,8 @@ internal sealed partial class WindowsCommandExecutor : ICommandOperationExecutor
     private readonly ConcurrentDictionary<string, CancellationTokenSource> _operations = new(StringComparer.Ordinal);
     private bool _disposed;
 
+    internal Func<string, Task>? OnIntentPersistedAsync { get; set; }
+
     /// <summary>
     /// Initializes a new instance of <see cref="WindowsCommandExecutor"/> bound to a custom state store root path.
     /// </summary>
