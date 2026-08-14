@@ -29,9 +29,9 @@ public interface IPluginHost
     IReadOnlyCollection<CommandDefinition> RegisteredCommands { get; }
 
     /// <summary>
-    /// Registers a runtime tool command dynamically from a plugin.
+    /// Registers a runtime tool command dynamically from a plugin. Returns true if registered, false if rejected due to validation or collision.
     /// </summary>
-    void RegisterCommand(CommandDefinition command, ICommandHandler? handler = null);
+    bool RegisterCommand(CommandDefinition command, ICommandHandler? handler = null);
 
     /// <summary>
     /// Unregisters a runtime tool command dynamically.

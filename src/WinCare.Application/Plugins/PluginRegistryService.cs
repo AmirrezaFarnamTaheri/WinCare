@@ -3,6 +3,7 @@ namespace WinCare.Application.Plugins;
 using System.Collections.Concurrent;
 using WinCare.Application.Commands;
 using WinCare.CommandCatalog.Models;
+using WinCare.Domain.Commands;
 
 /// <summary>
 /// Delegate factory for constructing script-backed command handlers for declarative plugin tools.
@@ -359,8 +360,27 @@ public sealed class PluginRegistryService : IPluginRegistry
                 {
                     handler = _scriptHandlerFactory(cmd.Id, toolDef.ScriptPath, entry.SourceDirectoryPath);
                 }
+                else if (entry.IsBuiltIn)
+                {
+                    var targetCoreId = ResolveBuiltInCoreCommandId(cmd.Id);
+                    if (!string.IsNullOrWhiteSpace(targetCoreId))
+                    {
+                        try
+                        {
+                            handler = new BuiltInDelegatingHandler(cmd.Id, targetCoreId, host.CommandDispatcher);
+                        }
+                        catch
+                        {
+                            // If host has no dispatcher configured (e.g. mock host in unit tests), handler remains null
+                        }
+                    }
+                }
 
-                host.RegisterCommand(cmd, handler);
+                if (!host.RegisterCommand(cmd, handler))
+                {
+                    throw new InvalidOperationException($"Command registration for '{cmd.Id}' was rejected by the host.");
+                }
+
                 registeredCommandIds.Add(cmd.Id);
             }
 
@@ -376,6 +396,17 @@ public sealed class PluginRegistryService : IPluginRegistry
 
             _entries[pluginId] = entry with { State = PluginState.Error, ErrorMessage = $"Initialization failed: {ex.Message}" };
         }
+    }
+
+    private static string? ResolveBuiltInCoreCommandId(string commandId)
+    {
+        return commandId.ToLowerInvariant() switch
+        {
+            "cleaner.system_temp" => "cleaner-disk-pressure",
+            "cleaner.recycle_bin" => "cleaner-disk-pressure",
+            "security.defender_status" => "security-defender-audit",
+            _ => null
+        };
     }
 
     private void DiscoverEmbeddedBuiltInPlugins()
@@ -455,5 +486,44 @@ public sealed class PluginRegistryService : IPluginRegistry
         {
             // Best effort file load
         }
+    }
+}
+
+internal sealed class BuiltInDelegatingHandler : ICommandHandler
+{
+    private readonly string _commandId;
+    private readonly string _targetCoreCommandId;
+    private readonly ICommandDispatcher _dispatcher;
+
+    public BuiltInDelegatingHandler(string commandId, string targetCoreCommandId, ICommandDispatcher dispatcher)
+    {
+        _commandId = commandId;
+        _targetCoreCommandId = targetCoreCommandId;
+        _dispatcher = dispatcher ?? throw new ArgumentNullException(nameof(dispatcher));
+    }
+
+    public string CommandId => _commandId;
+
+    public async Task<CommandHandlerOutcome> ExecuteAsync(CommandRequest request, CancellationToken cancellationToken)
+    {
+        var mappedRequest = new CommandRequest(
+            _targetCoreCommandId,
+            request.Parameters,
+            request.Apply,
+            request.CorrelationId,
+            request.Approval
+        );
+
+        var options = request.Apply ? new CommandExecutionOptions(ReviewApproved: true) : CommandExecutionOptions.Default;
+        var result = await _dispatcher.ExecuteAsync(mappedRequest, options, cancellationToken).ConfigureAwait(false);
+        if (result.Status == CommandResultStatus.Succeeded)
+        {
+            return CommandHandlerOutcome.Succeeded(result.Code, result.Message, result.Data, result.UndoAvailable);
+        }
+        if (result.Status == CommandResultStatus.Blocked)
+        {
+            return CommandHandlerOutcome.Blocked(result.Code, result.Message);
+        }
+        return CommandHandlerOutcome.Failed(result.Code, result.Message, result.Data);
     }
 }

@@ -19,6 +19,7 @@ public partial class App : Microsoft.UI.Xaml.Application
         _window = new MainWindow();
         StartupTelemetry.Mark("WindowCreated");
         _window.Activate();
+        _ = Services.AppRuntime.Current.InitializePluginsAsync();
     }
 
     private static void OnUnhandledException(object sender, Microsoft.UI.Xaml.UnhandledExceptionEventArgs e)

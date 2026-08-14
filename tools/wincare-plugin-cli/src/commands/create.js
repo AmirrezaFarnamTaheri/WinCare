@@ -20,15 +20,23 @@ function createPlugin(targetName, options = {}) {
       name: pluginName.charAt(0).toUpperCase() + pluginName.slice(1),
       version: "1.0.0",
       author: options.author || "Community Developer",
+      description: options.description || "High performance managed assembly plugin",
       category: options.category || "Utilities",
-      assemblyEntry: "PluginAssembly.dll",
+      entryType: "Assembly",
+      assemblyFileName: "PluginAssembly.dll",
+      pluginClassName: `Community.${pluginName.replace(/[^a-zA-Z0-9]/g, '')}.PluginEntryPoint`,
       tools: [
         {
           id: `${safeId}.execute`,
-          name: `${pluginName} Execution Engine`,
-          description: "High performance managed assembly plugin",
-          riskLevel: "ReadOnly",
-          executionType: "Assembly"
+          title: `${pluginName} Execution Engine`,
+          summary: "High performance managed assembly plugin",
+          area: "Utilities",
+          section: "General",
+          risk: "ReadOnly",
+          readOnly: true,
+          administratorAccess: "No",
+          restart: "No",
+          executorType: "Assembly"
         }
       ]
     };
@@ -40,24 +48,41 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using WinCare.Application.Plugins;
+using WinCare.CommandCatalog.Models;
 
 namespace Community.${pluginName.replace(/[^a-zA-Z0-9]/g, '')}
 {
     public class PluginEntryPoint : IWinCarePlugin
     {
-        public Task InitializeAsync(IServiceProvider services, CancellationToken cancellationToken)
+        public string Id => "${safeId}";
+        public string Name => "${pluginName.charAt(0).toUpperCase() + pluginName.slice(1)}";
+        public string Version => "1.0.0";
+        public string Author => "${options.author || 'Community Developer'}";
+        public string Description => "${options.description || 'High performance managed assembly plugin'}";
+
+        public Task InitializeAsync(IPluginHost host, CancellationToken ct = default)
         {
             return Task.CompletedTask;
         }
 
-        public IEnumerable<object> GetCommands()
+        public Task ShutdownAsync(CancellationToken ct = default)
         {
-            yield break;
+            return Task.CompletedTask;
         }
 
-        public IEnumerable<object> GetWidgets()
+        public IReadOnlyList<CommandDefinition> GetCommands()
         {
-            yield break;
+            return Array.Empty<CommandDefinition>();
+        }
+
+        public IReadOnlyList<IPluginWidget> GetWidgets()
+        {
+            return Array.Empty<IPluginWidget>();
+        }
+
+        public ValueTask DisposeAsync()
+        {
+            return ValueTask.CompletedTask;
         }
     }
 }
@@ -76,14 +101,21 @@ namespace Community.${pluginName.replace(/[^a-zA-Z0-9]/g, '')}
       name: pluginName.charAt(0).toUpperCase() + pluginName.slice(1),
       version: "1.0.0",
       author: options.author || "Community Developer",
+      description: options.description || "Custom community script maintenance tool",
       category: options.category || "System Care",
+      entryType: "Manifest",
       tools: [
         {
           id: `${safeId}.clean`,
-          name: `Run ${pluginName}`,
-          description: "Custom community script maintenance tool",
-          riskLevel: "ReadOnly",
-          executionType: "Script",
+          title: `Run ${pluginName}`,
+          summary: "Custom community script maintenance tool",
+          area: "System care",
+          section: "Storage",
+          risk: "ReadOnly",
+          readOnly: true,
+          administratorAccess: "No",
+          restart: "No",
+          executorType: "Script",
           scriptPath: scriptRelativePath
         }
       ]

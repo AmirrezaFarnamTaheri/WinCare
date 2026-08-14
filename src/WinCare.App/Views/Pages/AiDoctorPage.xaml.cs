@@ -31,4 +31,22 @@ public sealed partial class AiDoctorPage : Page
             ChatScrollViewer?.ChangeView(null, ChatScrollViewer.ScrollableHeight, null);
         }
     }
+
+    private async void ExecuteStepButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button btn && btn.Tag is WinCare.Application.Diagnostics.ProposedActionStep step)
+        {
+            btn.IsEnabled = false;
+            try
+            {
+                var result = await ViewModel.ExecuteStepAsync(step);
+                btn.Content = result.Status == WinCare.Domain.Commands.CommandResultStatus.Succeeded ? "✓ Done" : "⚠ Failed";
+            }
+            catch (Exception ex)
+            {
+                btn.Content = "Error";
+                System.Diagnostics.Debug.WriteLine($"[AiDoctorPage] Step execution fault: {ex.Message}");
+            }
+        }
+    }
 }

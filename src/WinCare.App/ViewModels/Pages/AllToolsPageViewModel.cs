@@ -9,7 +9,7 @@ using WinCare.CommandCatalog.Models;
 
 namespace WinCare.App.ViewModels.Pages;
 
-public sealed class AllToolsPageViewModel : ObservableObject
+public sealed class AllToolsPageViewModel : ObservableObject, IDisposable
 {
     private readonly ToolCatalogService _catalog;
     private readonly HashSet<string> _favoriteIds = new(StringComparer.Ordinal);
@@ -55,11 +55,7 @@ public sealed class AllToolsPageViewModel : ObservableObject
         _selectedRiskOption = RiskOptions[0];
         Execution = new ToolExecutionViewModel(dispatcher, RecordRecent);
 
-        _catalog.CatalogChanged += (s, e) =>
-        {
-            RebuildAreaOptions();
-            Refresh();
-        };
+        _catalog.CatalogChanged += OnCatalogChanged;
 
         Refresh();
     }
@@ -315,6 +311,32 @@ public sealed class AllToolsPageViewModel : ObservableObject
         OnPropertyChanged(nameof(ResultCountText));
         OnPropertyChanged(nameof(IsEmpty));
         OnPropertyChanged(nameof(EmptyMessage));
+    }
+
+    private void OnCatalogChanged(object? sender, EventArgs e)
+    {
+        var dq = Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread();
+        if (dq != null && !dq.HasThreadAccess)
+        {
+            dq.TryEnqueue(() =>
+            {
+                RebuildAreaOptions();
+                Refresh();
+            });
+        }
+        else
+        {
+            RebuildAreaOptions();
+            Refresh();
+        }
+    }
+
+    public void Dispose()
+    {
+        _catalog.CatalogChanged -= OnCatalogChanged;
+        _searchCts?.Cancel();
+        _searchCts?.Dispose();
+        _searchCts = null;
     }
 }
 

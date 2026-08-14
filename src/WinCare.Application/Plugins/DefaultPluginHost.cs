@@ -52,16 +52,37 @@ public class DefaultPluginHost : IPluginHost
     public ICommandDispatcher CommandDispatcher => _commandDispatcher ?? throw new InvalidOperationException("No CommandDispatcher has been configured for this PluginHost.");
 
     /// <inheritdoc />
-    public void RegisterCommand(CommandDefinition command, ICommandHandler? handler = null)
+    public bool RegisterCommand(CommandDefinition command, ICommandHandler? handler = null)
     {
-        if (command != null && !string.IsNullOrWhiteSpace(command.Id))
+        if (command == null || string.IsNullOrWhiteSpace(command.Id))
         {
-            _registeredCommands[command.Id] = command;
-            if (handler != null && _commandDispatcher != null)
+            return false;
+        }
+
+        if (_registeredCommands.ContainsKey(command.Id))
+        {
+            return false;
+        }
+
+        if (_commandDispatcher != null && handler != null)
+        {
+            if (!_commandDispatcher.RegisterDynamicCommand(command, handler))
             {
-                _commandDispatcher.RegisterDynamicCommand(command, handler);
+                return false;
             }
         }
+        else if (_commandDispatcher != null && handler == null)
+        {
+            // Reject if command ID collides with core reserved commands/namespaces
+            if (command.Id.StartsWith("wincare.core.", StringComparison.OrdinalIgnoreCase) ||
+                command.Id.StartsWith("system.", StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+        }
+
+        _registeredCommands[command.Id] = command;
+        return true;
     }
 
     /// <inheritdoc />

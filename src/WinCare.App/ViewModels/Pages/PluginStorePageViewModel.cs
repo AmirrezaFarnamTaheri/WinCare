@@ -110,9 +110,15 @@ public sealed class PluginStorePageViewModel : INotifyPropertyChanged, IDisposab
             {
                 _errorMessage = value;
                 OnPropertyChanged();
+                OnPropertyChanged(nameof(HasError));
             }
         }
     }
+
+    /// <summary>
+    /// Whether an error banner should be displayed.
+    /// </summary>
+    public bool HasError => !string.IsNullOrWhiteSpace(_errorMessage);
 
     /// <summary>
     /// Whether the store catalog is currently fetching data or refreshing.

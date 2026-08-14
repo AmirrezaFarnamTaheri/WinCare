@@ -81,37 +81,44 @@ function validatePlugin(pluginDir) {
       if (!tool.id || typeof tool.id !== 'string') {
         errors.push(`${prefix} missing required string property "id"`);
       }
-      if (!tool.name || typeof tool.name !== 'string') {
-        errors.push(`${prefix} missing required string property "name"`);
+
+      const toolTitle = tool.title || tool.name;
+      if (!toolTitle || typeof toolTitle !== 'string') {
+        errors.push(`${prefix} missing required string property "title" (or "name")`);
       }
-      if (tool.riskLevel && !ALLOWED_RISK_LEVELS.includes(tool.riskLevel)) {
-        errors.push(`${prefix} invalid riskLevel "${tool.riskLevel}". Must be one of: ${ALLOWED_RISK_LEVELS.join(', ')}`);
+
+      const riskVal = tool.risk || tool.riskLevel;
+      if (riskVal && !['ReadOnly', 'Low', 'Moderate', 'High', 'Critical', 'Mutating', 'Elevated'].includes(riskVal)) {
+        errors.push(`${prefix} invalid risk "${riskVal}". Must be one of: ReadOnly, Low, Moderate, High, Critical (or Mutating, Elevated)`);
       }
-      if (tool.executionType && !ALLOWED_EXECUTION_TYPES.includes(tool.executionType)) {
-        errors.push(`${prefix} invalid executionType "${tool.executionType}". Must be one of: ${ALLOWED_EXECUTION_TYPES.join(', ')}`);
+
+      const execType = tool.executorType || tool.executionType;
+      if (execType && !['Script', 'NativeBinary', 'Assembly', 'PowerShell', 'Native'].includes(execType)) {
+        errors.push(`${prefix} invalid executorType "${execType}". Must be one of: Script, PowerShell, Assembly, Native, NativeBinary`);
       }
 
       // Check script/binary path security
-      if (tool.scriptPath) {
-        if (typeof tool.scriptPath !== 'string') {
+      const scriptPath = tool.scriptPath || tool.script;
+      if (scriptPath) {
+        if (typeof scriptPath !== 'string') {
           errors.push(`${prefix} "scriptPath" must be a relative string path`);
         } else {
           // Reject absolute paths
-          if (path.isAbsolute(tool.scriptPath) || tool.scriptPath.startsWith('/') || tool.scriptPath.startsWith('\\')) {
-            errors.push(`${prefix} "scriptPath" must not be an absolute path: "${tool.scriptPath}"`);
+          if (path.isAbsolute(scriptPath) || scriptPath.startsWith('/') || scriptPath.startsWith('\\')) {
+            errors.push(`${prefix} "scriptPath" must not be an absolute path: "${scriptPath}"`);
           }
           // Reject path traversal
-          if (tool.scriptPath.includes('..')) {
-            errors.push(`${prefix} "scriptPath" contains illegal path traversal (".."): "${tool.scriptPath}"`);
+          if (scriptPath.includes('..')) {
+            errors.push(`${prefix} "scriptPath" contains illegal path traversal (".."): "${scriptPath}"`);
           }
 
           // Verify file exists
-          const resolvedPath = path.resolve(pluginDir, tool.scriptPath);
+          const resolvedPath = path.resolve(pluginDir, scriptPath);
           const canonicalDir = path.resolve(pluginDir);
           if (!resolvedPath.startsWith(canonicalDir)) {
             errors.push(`${prefix} scriptPath escapes plugin root directory`);
           } else if (!fs.existsSync(resolvedPath)) {
-            errors.push(`${prefix} referenced script file does not exist: "${tool.scriptPath}"`);
+            errors.push(`${prefix} referenced script file does not exist: "${scriptPath}"`);
           }
         }
       }

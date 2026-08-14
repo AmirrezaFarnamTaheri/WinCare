@@ -105,7 +105,7 @@ public sealed class AiDoctorPageViewModel : INotifyPropertyChanged
             var plan = await _intentTranslator.TranslateAsync(prompt, cancellationToken);
             CurrentPlan = plan;
 
-            var responseText = $"**Diagnosis:** {plan.DiagnosisSummary}\n\nIdentified {plan.Findings.Count} findings and {plan.ProposedSteps.Count} recommended remediation steps.";
+            var responseText = $"**Suggested Plan:** {plan.DiagnosisSummary}\n\nIdentified {plan.Findings.Count} suggested findings and {plan.ProposedSteps.Count} recommended action steps.";
             Messages.Add(new DoctorChatMessage("AI System Doctor", responseText, IsUser: false, DateTime.UtcNow, plan));
         }
         catch (Exception ex)
@@ -130,21 +130,26 @@ public sealed class AiDoctorPageViewModel : INotifyPropertyChanged
             throw new ArgumentNullException(nameof(step));
         }
 
+        var isReadOnly = step.RiskLevel == CommandCatalog.Models.CommandRisk.ReadOnly;
         var emptyParams = System.Text.Json.JsonSerializer.SerializeToElement(new { });
         var correlationId = Guid.NewGuid();
-        var approval = step.RiskLevel != CommandCatalog.Models.CommandRisk.ReadOnly
+        var approval = !isReadOnly
             ? ApprovedMutationPlan.Create(step.CommandId, emptyParams, correlationId)
             : null;
 
         var request = new CommandRequest(
             CommandId: step.CommandId,
             Parameters: emptyParams,
-            Apply: true,
+            Apply: !isReadOnly,
             CorrelationId: correlationId,
             Approval: approval
         );
 
-        return await _commandDispatcher.ExecuteAsync(request, CommandExecutionOptions.Default, cancellationToken);
+        var options = isReadOnly
+            ? CommandExecutionOptions.Default
+            : new CommandExecutionOptions(ReviewApproved: true);
+
+        return await _commandDispatcher.ExecuteAsync(request, options, cancellationToken);
     }
 
     private void OnPropertyChanged([CallerMemberName] string? propertyName = null)

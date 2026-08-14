@@ -41,11 +41,11 @@ namespace WinCare.Application.Diagnostics
             {
                 case "intent.storage.cleanup":
                     severity = DiagnosticSeverity.Warning;
-                    summary = "Disk analysis detected accumulated temporary files and caches occupying storage.";
+                    summary = "Based on your storage query, recommended maintenance actions are available to inspect and reclaim temporary files and caches.";
                     findings.Add(new DiagnosticFinding(
                         "finding.storage.temp",
-                        "Elevated Temporary File Space",
-                        "System and user temporary directories contain cache files eligible for safe reclamation.",
+                        "Suggested Temporary File Maintenance",
+                        "System and user temporary directories can be inspected for safe cache reclamation.",
                         DiagnosticSeverity.Warning,
                         "Storage (C:)"
                     ));
@@ -55,10 +55,10 @@ namespace WinCare.Application.Diagnostics
 
                 case "intent.memory.optimize":
                     severity = DiagnosticSeverity.Warning;
-                    summary = "Memory pressure analysis identified working set overhead eligible for cache clearing.";
+                    summary = "Based on your memory query, recommended maintenance actions are available to evaluate working set and cache trimming.";
                     findings.Add(new DiagnosticFinding(
                         "finding.memory.standby",
-                        "High Standby Memory Usage",
+                        "Suggested Memory Cache Evaluation",
                         "Memory working sets and standby lists can be trimmed to improve system responsiveness.",
                         DiagnosticSeverity.Warning,
                         "System RAM"
@@ -69,10 +69,10 @@ namespace WinCare.Application.Diagnostics
 
                 case "intent.network.flush":
                     severity = DiagnosticSeverity.Information;
-                    summary = "Network diagnostic recommended flushing DNS cache and resetting socket state.";
+                    summary = "Based on your network query, recommended diagnostic actions are available to refresh DNS resolver and socket states.";
                     findings.Add(new DiagnosticFinding(
                         "finding.network.dns",
-                        "DNS Resolver Stale Cache",
+                        "Suggested DNS Resolver Refresh",
                         "Local DNS resolver cache can be refreshed to eliminate resolution latency.",
                         DiagnosticSeverity.Information,
                         "Network Adapter"
@@ -83,11 +83,11 @@ namespace WinCare.Application.Diagnostics
 
                 case "intent.privacy.harden":
                     severity = DiagnosticSeverity.Information;
-                    summary = "Privacy review identified active diagnostic telemetry and background tracking services.";
+                    summary = "Based on your privacy query, recommended actions are available to review diagnostic telemetry settings.";
                     findings.Add(new DiagnosticFinding(
                         "finding.privacy.telemetry",
-                        "Windows Diagnostic Telemetry Active",
-                        "Standard Windows diagnostic data collection and advertising ID are enabled.",
+                        "Suggested Privacy Review",
+                        "Standard Windows diagnostic data collection and advertising ID settings can be reviewed.",
                         DiagnosticSeverity.Information,
                         "Privacy Settings"
                     ));
@@ -97,10 +97,10 @@ namespace WinCare.Application.Diagnostics
 
                 case "intent.apps.update":
                     severity = DiagnosticSeverity.Information;
-                    summary = "Package manager inspection found potential software updates available via WinGet.";
+                    summary = "Based on your application query, recommended actions are available to scan for software updates via WinGet.";
                     findings.Add(new DiagnosticFinding(
                         "finding.apps.outdated",
-                        "Installed Applications Update Check",
+                        "Suggested Application Update Scan",
                         "Package repositories can be scanned for pending application updates.",
                         DiagnosticSeverity.Information,
                         "WinGet Package Manager"
@@ -111,11 +111,11 @@ namespace WinCare.Application.Diagnostics
 
                 default:
                     severity = DiagnosticSeverity.Healthy;
-                    summary = "General system diagnostics indicate overall operating system health is normal.";
+                    summary = "General system assistance and recommended diagnostic checks based on your inquiry.";
                     findings.Add(new DiagnosticFinding(
                         "finding.general.healthy",
-                        "System Baseline Nominal",
-                        "No critical disk space or memory anomalies were identified in query context.",
+                        "System Inquiry Interpreted",
+                        "Query interpreted without requiring immediate system remediation.",
                         DiagnosticSeverity.Healthy,
                         "System"
                     ));
