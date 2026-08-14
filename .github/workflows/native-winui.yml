@@ -131,10 +131,11 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           python tools/stage_release_assets.py
+          gh release upload v2.4.0-rc1 release_assets/* --clobber || \
           gh release create v2.4.0-rc1 release_assets/* \
             --title "WinCare v2.4.0-rc1 (Native WinUI & Core Release)" \
             --prerelease \
-            --clobber \
             --notes "Automated release candidate build generated from master commit \`${{ github.sha }}\`. Contains native MSIX packages (x64/ARM64), portable executables, and verified source finalization archives."
+
 
 

@@ -11,7 +11,7 @@ def main():
         print(f"Source directory '{src_dir}' not found!")
         sys.exit(1)
 
-    staged_files = []
+    staged = {}
 
     for root, dirs, files in os.walk(src_dir):
         for f in files:
@@ -21,6 +21,10 @@ def main():
 
             # Skip unneeded files
             if not any(f.endswith(ext) for ext in [".msix", ".zip", ".md", ".json"]):
+                continue
+
+            # For MSIX, only accept the final packaged MSIX
+            if f.endswith(".msix") and ("wincare.app" not in lower_name and "apppackages" not in lower_path):
                 continue
 
             # Identify platform from path or filename
@@ -43,9 +47,16 @@ def main():
                 dest_name = f
 
             target_path = os.path.join(dest_dir, dest_name)
-            shutil.copy2(full_path, target_path)
-            staged_files.append(target_path)
-            print(f"Staged release asset: '{dest_name}' ({os.path.getsize(target_path)} bytes)")
+            # Prefer larger file if duplicate dest_name exists
+            file_size = os.path.getsize(full_path)
+            if dest_name not in staged or file_size > staged[dest_name]["size"]:
+                staged[dest_name] = {"src": full_path, "dest": target_path, "size": file_size}
+
+    staged_files = []
+    for dest_name, item in sorted(staged.items()):
+        shutil.copy2(item["src"], item["dest"])
+        staged_files.append(item["dest"])
+        print(f"Staged release asset: '{dest_name}' ({item['size']} bytes)")
 
     print(f"\nTotal release assets staged: {len(staged_files)}")
     if not staged_files:
@@ -54,4 +65,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
