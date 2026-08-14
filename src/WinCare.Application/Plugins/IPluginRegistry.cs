@@ -7,8 +7,13 @@ using WinCare.CommandCatalog.Models;
 /// </summary>
 public enum PluginState
 {
+    /// <summary>Plugin is currently disabled.</summary>
     Disabled,
+
+    /// <summary>Plugin is currently enabled and active.</summary>
     Enabled,
+
+    /// <summary>Plugin encountered an error during initialization.</summary>
     Error
 }
 

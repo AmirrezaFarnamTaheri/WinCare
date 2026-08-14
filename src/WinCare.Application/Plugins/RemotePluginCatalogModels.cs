@@ -4,50 +4,98 @@ using System;
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
 
+/// <summary>
+/// Represents the root container for the remote plugin catalog downloaded from online sources.
+/// </summary>
 public class RemotePluginCatalog
 {
+    /// <summary>
+    /// Version schema identifier of the remote catalog format.
+    /// </summary>
     [JsonPropertyName("catalogVersion")]
     public string CatalogVersion { get; set; } = "1.0";
 
+    /// <summary>
+    /// Timestamp when the catalog was last generated or refreshed.
+    /// </summary>
     [JsonPropertyName("lastUpdated")]
     public DateTime LastUpdated { get; set; } = DateTime.UtcNow;
 
+    /// <summary>
+    /// List of plugin items offered in the catalog.
+    /// </summary>
     [JsonPropertyName("plugins")]
     public List<RemotePluginItem> Plugins { get; set; } = new();
 }
 
+/// <summary>
+/// Represents a single plugin entry in the online catalog.
+/// </summary>
 public class RemotePluginItem
 {
+    /// <summary>
+    /// Unique identifier of the plugin package.
+    /// </summary>
     [JsonPropertyName("id")]
     public string Id { get; set; } = string.Empty;
 
+    /// <summary>
+    /// Display name of the plugin package.
+    /// </summary>
     [JsonPropertyName("name")]
     public string Name { get; set; } = string.Empty;
 
+    /// <summary>
+    /// Summary description of the plugin functionality.
+    /// </summary>
     [JsonPropertyName("description")]
     public string Description { get; set; } = string.Empty;
 
+    /// <summary>
+    /// Author or organization publishing the plugin.
+    /// </summary>
     [JsonPropertyName("author")]
     public string Author { get; set; } = string.Empty;
 
+    /// <summary>
+    /// Package version string.
+    /// </summary>
     [JsonPropertyName("version")]
     public string Version { get; set; } = "1.0.0";
 
+    /// <summary>
+    /// URL to the plugin icon image.
+    /// </summary>
     [JsonPropertyName("iconUrl")]
     public string IconUrl { get; set; } = string.Empty;
 
+    /// <summary>
+    /// URL to download the zip package.
+    /// </summary>
     [JsonPropertyName("packageUrl")]
     public string PackageUrl { get; set; } = string.Empty;
 
+    /// <summary>
+    /// Category navigation bucket.
+    /// </summary>
     [JsonPropertyName("category")]
     public string Category { get; set; } = "General";
 
+    /// <summary>
+    /// Permissions requested by the plugin package.
+    /// </summary>
     [JsonPropertyName("permissions")]
     public List<string> Permissions { get; set; } = new();
 
+    /// <summary>
+    /// List of command IDs provided by the plugin package.
+    /// </summary>
     [JsonPropertyName("commandsProvided")]
     public List<string> CommandsProvided { get; set; } = new();
 
+    /// <summary>
+    /// Publication date timestamp.
+    /// </summary>
     [JsonPropertyName("publishedDate")]
     public DateTime PublishedDate { get; set; } = DateTime.UtcNow;
 }

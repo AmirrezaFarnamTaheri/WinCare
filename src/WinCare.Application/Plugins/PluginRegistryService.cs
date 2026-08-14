@@ -14,6 +14,9 @@ public sealed class PluginRegistryService : IPluginRegistry
     private readonly HashSet<string> _enabledIds;
     private readonly SemaphoreSlim _gate = new(1, 1);
 
+    /// <summary>
+    /// Initializes a new instance of <see cref="PluginRegistryService"/>.
+    /// </summary>
     public PluginRegistryService(IPluginStateRepository? stateRepository = null, HashSet<string>? initialEnabledPluginIds = null)
     {
         _stateRepository = stateRepository;

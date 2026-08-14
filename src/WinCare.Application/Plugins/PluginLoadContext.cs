@@ -10,6 +10,9 @@ public sealed class PluginLoadContext : AssemblyLoadContext
 {
     private readonly AssemblyDependencyResolver _resolver;
 
+    /// <summary>
+    /// Initializes a new collectible <see cref="PluginLoadContext"/> for the specified plugin assembly path.
+    /// </summary>
     public PluginLoadContext(string pluginAssemblyPath) : base(isCollectible: true)
     {
         _resolver = new AssemblyDependencyResolver(pluginAssemblyPath);

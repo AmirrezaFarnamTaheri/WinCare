@@ -17,6 +17,9 @@ public sealed record AssemblyPluginLoadResult(
 /// </summary>
 public static class AssemblyPluginLoader
 {
+    /// <summary>
+    /// Loads a plugin assembly from the specified file path into an isolated collectible ALC.
+    /// </summary>
     public static AssemblyPluginLoadResult LoadPluginAssembly(string assemblyPath, string? expectedPluginClassName = null)
     {
         if (string.IsNullOrWhiteSpace(assemblyPath) || !File.Exists(assemblyPath))

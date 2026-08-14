@@ -10,6 +10,9 @@ using WinCare.Application.Plugins;
 
 namespace WinCare.Infrastructure.Plugins;
 
+/// <summary>
+/// Infrastructure service for fetching online plugin catalog feed with 24h local disk caching.
+/// </summary>
 public class RemoteCatalogService : IRemoteCatalogService
 {
     private static readonly JsonSerializerOptions JsonOptions = new()
@@ -18,6 +21,9 @@ public class RemoteCatalogService : IRemoteCatalogService
         WriteIndented = true
     };
 
+    /// <summary>
+    /// Default GitHub Raw CDN endpoint for official plugin catalog feed.
+    /// </summary>
     public const string DefaultCatalogUrl = "https://raw.githubusercontent.com/WinCare/plugin-catalog/main/catalog.json";
     
     private readonly HttpClient _httpClient;
@@ -25,6 +31,9 @@ public class RemoteCatalogService : IRemoteCatalogService
     private readonly string _catalogUrl;
     private readonly TimeSpan _cacheDuration;
 
+    /// <summary>
+    /// Initializes a new instance of <see cref="RemoteCatalogService"/>.
+    /// </summary>
     public RemoteCatalogService(
         HttpClient? httpClient = null,
         string? cacheFilePath = null,

@@ -4,8 +4,14 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using WinCare.Application.Plugins;
 
+/// <summary>
+/// Serializable DTO for persisting enabled plugin IDs to JSON disk storage.
+/// </summary>
 public sealed class PluginStateFileModel
 {
+    /// <summary>
+    /// List of enabled plugin IDs.
+    /// </summary>
     [JsonPropertyName("enabledPluginIds")]
     public List<string> EnabledPluginIds { get; set; } = new();
 }
@@ -17,6 +23,9 @@ public sealed class PluginStateRepository : IPluginStateRepository
 {
     private readonly string _stateFilePath;
 
+    /// <summary>
+    /// Initializes a new instance of <see cref="PluginStateRepository"/>.
+    /// </summary>
     public PluginStateRepository(string? customStateFilePath = null)
     {
         if (!string.IsNullOrWhiteSpace(customStateFilePath))

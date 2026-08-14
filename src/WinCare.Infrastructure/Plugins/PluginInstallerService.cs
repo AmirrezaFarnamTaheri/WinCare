@@ -9,11 +9,17 @@ using WinCare.Application.Plugins;
 
 namespace WinCare.Infrastructure.Plugins;
 
+/// <summary>
+/// Infrastructure service for downloading, extracting, and staging plugin packages.
+/// </summary>
 public class PluginInstallerService : IPluginInstallerService
 {
     private readonly HttpClient _httpClient;
     private readonly string _pluginsBaseDirectory;
 
+    /// <summary>
+    /// Initializes a new instance of <see cref="PluginInstallerService"/>.
+    /// </summary>
     public PluginInstallerService(HttpClient? httpClient = null, string? pluginsBaseDirectory = null)
     {
         _httpClient = httpClient ?? new HttpClient();
