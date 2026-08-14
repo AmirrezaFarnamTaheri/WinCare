@@ -190,12 +190,10 @@ public class PluginInstallerService : IPluginInstallerService
             Directory.CreateDirectory(stagingBaseDir);
             Directory.CreateDirectory(stagingBackupsDir);
 
-        var tempExtractDir = Path.Combine(stagingBaseDir, $"install_{Guid.NewGuid():N}");
-        Directory.CreateDirectory(tempExtractDir);
+            var tempExtractDir = Path.Combine(stagingBaseDir, $"install_{Guid.NewGuid():N}");
+            Directory.CreateDirectory(tempExtractDir);
 
-        try
-        {
-            using (var zipArchive = new ZipArchive(archiveStream, ZipArchiveMode.Read, leaveOpen: true))
+            using (var zipArchive = new ZipArchive(workingStream, ZipArchiveMode.Read, leaveOpen: true))
             {
                 if (zipArchive.Entries.Count > MaxZipEntries)
                 {

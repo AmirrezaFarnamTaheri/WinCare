@@ -62,15 +62,7 @@ namespace WinCare.Application.Diagnostics
             await Task.Yield();
             var lower = prompt.ToLowerInvariant();
 
-            if (lower.Contains("disk") || lower.Contains("drive") || lower.Contains("storage") || lower.Contains("full") || lower.Contains("temp") || lower.Contains("junk"))
-            {
-                return "intent.storage.cleanup";
-            }
-            if (lower.Contains("ram") || lower.Contains("memory") || lower.Contains("slow") || lower.Contains("freeze") || lower.Contains("lag"))
-            {
-                return "intent.memory.optimize";
-            }
-            if (lower.Contains("dns") || lower.Contains("network") || lower.Contains("internet") || lower.Contains("ping") || lower.Contains("wifi"))
+            if (lower.Contains("dns") || lower.Contains("network") || lower.Contains("internet") || lower.Contains("ping") || lower.Contains("wifi") || lower.Contains("winsock"))
             {
                 return "intent.network.flush";
             }
@@ -78,9 +70,17 @@ namespace WinCare.Application.Diagnostics
             {
                 return "intent.privacy.harden";
             }
-            if (lower.Contains("update") || lower.Contains("winget") || lower.Contains("outdated") || lower.Contains("upgrade"))
+            if (lower.Contains("winget") || lower.Contains("outdated") || (lower.Contains("update") && !lower.Contains("clean_updates")))
             {
                 return "intent.apps.update";
+            }
+            if (lower.Contains("disk") || lower.Contains("drive") || lower.Contains("storage") || lower.Contains("full") || lower.Contains("temp") || lower.Contains("junk"))
+            {
+                return "intent.storage.cleanup";
+            }
+            if (lower.Contains("ram") || lower.Contains("memory") || lower.Contains("slow") || lower.Contains("freeze") || lower.Contains("lag"))
+            {
+                return "intent.memory.optimize";
             }
 
             return "intent.general.diagnose";
