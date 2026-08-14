@@ -3,11 +3,13 @@ namespace WinCare.Infrastructure.Tests;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using WinCare.Application.Commands;
 using WinCare.Application.Plugins;
 using WinCare.CommandCatalog.Models;
+using WinCare.Domain.Commands;
 using Xunit;
 
 public sealed class DummyPluginHost : IPluginHost
