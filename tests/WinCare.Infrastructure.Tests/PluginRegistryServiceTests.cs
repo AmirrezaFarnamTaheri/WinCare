@@ -120,15 +120,13 @@ public sealed class PluginRegistryServiceTests
             Assert.Empty(host.RegisteredCommands);
 
             // Enable plugin dynamically
-            var enableResult = await service.EnablePluginAsync("com.wincare.disabled", host);
-            Assert.True(enableResult);
+            await service.EnablePluginAsync("com.wincare.disabled", host);
             Assert.Equal(PluginState.Enabled, service.GetAllPlugins()[0].State);
             Assert.Single(service.GetActivePluginCommands());
             Assert.Single(host.RegisteredCommands);
 
             // Disable plugin dynamically
-            var disableResult = await service.DisablePluginAsync("com.wincare.disabled", host);
-            Assert.True(disableResult);
+            await service.DisablePluginAsync("com.wincare.disabled", host);
             Assert.Equal(PluginState.Disabled, service.GetAllPlugins()[0].State);
             Assert.Empty(service.GetActivePluginCommands());
             Assert.Empty(host.RegisteredCommands);

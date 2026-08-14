@@ -73,7 +73,7 @@ public sealed class PluginStorePageViewModel : INotifyPropertyChanged
                 OnPropertyChanged();
                 _searchCts?.Cancel();
                 _searchCts = new CancellationTokenSource();
-                TriggerDebouncedSearch(_searchCts.Token);
+                _ = TriggerDebouncedSearchAsync(_searchCts.Token);
             }
         }
     }
@@ -128,7 +128,7 @@ public sealed class PluginStorePageViewModel : INotifyPropertyChanged
         await RefreshPluginsAsync(forceRemoteRefresh: false, cancellationToken).ConfigureAwait(true);
     }
 
-    private async void TriggerDebouncedSearch(CancellationToken token)
+    private async Task TriggerDebouncedSearchAsync(CancellationToken token)
     {
         try
         {
