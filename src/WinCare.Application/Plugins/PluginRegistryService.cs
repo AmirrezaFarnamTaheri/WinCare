@@ -353,7 +353,10 @@ public sealed class PluginRegistryService : IPluginRegistry
             foreach (var cmd in entry.Commands)
             {
                 ICommandHandler? handler = null;
-                if (toolMap != null && toolMap.TryGetValue(cmd.Id, out var toolDef) &&
+                PluginToolDefinition? toolDef = null;
+                toolMap?.TryGetValue(cmd.Id, out toolDef);
+
+                if (toolDef != null &&
                     !string.IsNullOrWhiteSpace(toolDef.ScriptPath) &&
                     !string.IsNullOrWhiteSpace(entry.SourceDirectoryPath) &&
                     _scriptHandlerFactory != null)
