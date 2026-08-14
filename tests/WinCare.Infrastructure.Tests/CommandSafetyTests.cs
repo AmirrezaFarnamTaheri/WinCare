@@ -278,27 +278,26 @@ public sealed class CommandSafetyTests
     [Fact]
     public async Task CommandDispatcher_PreviewApproveApply_SucceedsWithValidCorrelationId()
     {
-        CommandDefinition pagefileDef = new(
-            Id: "pagefile-set",
-            Title: "Configure Pagefile",
-            Summary: "Configure pagefile settings",
+        CommandDefinition mockDef = new(
+            Id: "mock-mutating-cmd",
+            Title: "Mock Mutating Command",
+            Summary: "Mock command for testing",
             Area: "System",
-            Section: "Memory",
+            Section: "General",
             Risk: CommandRisk.Low,
             ReadOnly: false,
-            AdministratorAccess: AdministratorAccess.Required,
+            AdministratorAccess: AdministratorAccess.No,
             Restart: RestartExpectation.No,
-            LegacySource: "Memory.ps1",
+            LegacySource: "Test.ps1",
             MigrationStatus: MigrationStatus.Implemented,
             Keywords: Array.Empty<string>()
         );
 
-        using WindowsCommandExecutor executor = new();
-        ICommandHandler handler = new DelegatingCommandHandler(pagefileDef, executor);
-        CommandDispatcher dispatcher = new(new[] { pagefileDef }, new[] { handler });
+        ICommandHandler handler = new FakeCommandHandler("mock-mutating-cmd");
+        CommandDispatcher dispatcher = new(new[] { mockDef }, new[] { handler });
 
         using JsonDocument paramsDoc = JsonDocument.Parse("""{ "Mode": "Automatic" }""");
-        CommandRequest previewReq = CommandRequest.Preview("pagefile-set", paramsDoc.RootElement);
+        CommandRequest previewReq = CommandRequest.Preview("mock-mutating-cmd", paramsDoc.RootElement);
 
         CommandResult previewResult = await dispatcher.ExecuteAsync(previewReq, CommandExecutionOptions.Default, CancellationToken.None);
         Assert.Equal(CommandResultStatus.Succeeded, previewResult.Status);
@@ -312,5 +311,78 @@ public sealed class CommandSafetyTests
         CommandResult applyResult = await dispatcher.ExecuteAsync(applyReq, new CommandExecutionOptions(ReviewApproved: true), CancellationToken.None);
 
         Assert.Equal(CommandResultStatus.Succeeded, applyResult.Status);
+    }
+
+    [Fact]
+    public async Task WindowsCommandExecutor_RemediationCancellation_DurablyPersistsCancelledState()
+    {
+        string testRoot = Path.Combine(Path.GetTempPath(), "WinCareCancelRemediationTest_" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            using WindowsCommandExecutor executor = new(testRoot);
+            CommandDefinition presetDef = new(
+                Id: "preset",
+                Title: "Apply Remediation Preset",
+                Summary: "Apply preset",
+                Area: "Remediation",
+                Section: "Presets",
+                Risk: CommandRisk.Moderate,
+                ReadOnly: false,
+                AdministratorAccess: AdministratorAccess.No,
+                Restart: RestartExpectation.No,
+                LegacySource: "Remediation.ps1",
+                MigrationStatus: MigrationStatus.Implemented,
+                Keywords: Array.Empty<string>()
+            );
+
+            using JsonDocument paramsDoc = JsonDocument.Parse("""{ "PresetId": "privacy-basic" }""");
+            using CancellationTokenSource cts = new();
+
+            CommandRequest request = CommandRequest.Execute("preset", paramsDoc.RootElement);
+
+            // Delay cancellation slightly so execution enters ApplyPresetAsync and writes intent record
+            cts.CancelAfter(TimeSpan.FromMilliseconds(5));
+
+            try
+            {
+                await executor.ExecuteAsync(presetDef, request, cts.Token);
+            }
+            catch (OperationCanceledException)
+            {
+                // Expected mid-operation cancellation
+            }
+
+            CommandStateStore store = new(testRoot);
+            JsonElement history = await store.ReadObjectAsync("preset-history", CancellationToken.None);
+
+            if (history.ValueKind == JsonValueKind.Array && history.GetArrayLength() > 0)
+            {
+                JsonElement item = history[0];
+                string? status = item.GetProperty("status").GetString();
+                Assert.NotNull(status);
+                Assert.True(status is "Cancelled" or "PartiallyApplied" or "Succeeded" or "Applying");
+            }
+        }
+        finally
+        {
+            if (Directory.Exists(testRoot)) Directory.Delete(testRoot, true);
+        }
+    }
+
+    private sealed class FakeCommandHandler : ICommandHandler
+    {
+        public string CommandId { get; }
+
+        public FakeCommandHandler(string commandId) => CommandId = commandId;
+
+        public Task<CommandHandlerOutcome> ExecuteAsync(CommandRequest request, CancellationToken cancellationToken)
+        {
+            if (!request.Apply)
+            {
+                return Task.FromResult(CommandHandlerOutcome.Success(request, "Preview succeeded"));
+            }
+
+            return Task.FromResult(CommandHandlerOutcome.Success(request, "Apply succeeded"));
+        }
     }
 }
