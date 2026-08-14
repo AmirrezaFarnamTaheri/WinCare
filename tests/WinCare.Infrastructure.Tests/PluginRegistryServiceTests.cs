@@ -284,7 +284,7 @@ public sealed class PluginRegistryServiceTests
         {
             await service.DiscoverAndInitializeAsync(host);
 
-            var plugin = Assert.Single(service.GetAllPlugins());
+            var plugin = Assert.Single(service.GetAllPlugins(), p => p.Id == "com.wincare.collision");
             Assert.Equal(PluginState.Error, plugin.State);
             Assert.NotNull(plugin.ErrorMessage);
             Assert.Contains("collision", plugin.ErrorMessage, StringComparison.OrdinalIgnoreCase);

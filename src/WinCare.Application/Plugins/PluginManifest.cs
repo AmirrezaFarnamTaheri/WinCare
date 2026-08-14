@@ -92,9 +92,24 @@ public sealed class PluginToolDefinition
     [JsonPropertyName("restart")]
     public string Restart { get; init; } = "No";
 
+    private string _scriptPath = string.Empty;
+    private bool _readOnly;
+
     /// <summary>Whether command is read-only.</summary>
     [JsonPropertyName("readOnly")]
-    public bool ReadOnly { get; init; }
+    public bool ReadOnly
+    {
+        get => _readOnly;
+        init => _readOnly = value;
+    }
+
+    /// <summary>Mutation type alias.</summary>
+    [JsonPropertyName("mutationType")]
+    public string? MutationType
+    {
+        get => _readOnly ? "ReadOnly" : "Mutation";
+        init => _readOnly = string.Equals(value, "ReadOnly", StringComparison.OrdinalIgnoreCase);
+    }
 
     /// <summary>Executor engine type.</summary>
     [JsonPropertyName("executorType")]
@@ -102,7 +117,19 @@ public sealed class PluginToolDefinition
 
     /// <summary>Relative script path.</summary>
     [JsonPropertyName("scriptPath")]
-    public string ScriptPath { get; init; } = string.Empty;
+    public string ScriptPath
+    {
+        get => _scriptPath;
+        init => _scriptPath = value;
+    }
+
+    /// <summary>Script path alias.</summary>
+    [JsonPropertyName("script")]
+    public string Script
+    {
+        get => _scriptPath;
+        init => _scriptPath = value;
+    }
 
     /// <summary>
     /// Converts this plugin tool definition into a core <see cref="CommandDefinition"/>, failing closed on invalid metadata.
