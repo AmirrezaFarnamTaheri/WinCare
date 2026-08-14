@@ -44,7 +44,7 @@ jobs:
           components: rustfmt, clippy
       - name: Format
         shell: bash
-        run: cargo fmt --manifest-path native/Cargo.toml --check
+        run: cargo fmt --manifest-path native/Cargo.toml --all -- --check
       - name: Clippy
         shell: bash
         run: cargo clippy --manifest-path native/Cargo.toml --target ${{ matrix.target }} --all-targets --all-features -- -D warnings
@@ -102,18 +102,20 @@ jobs:
       - name: Build MSIX
         shell: bash
         run: dotnet build src/WinCare.App/WinCare.App.csproj -c Release -p:Platform=${{ matrix.platform }} -p:GenerateAppxPackageOnBuild=true --no-restore
-      - name: Publish portable
+      - name: Publish single binary executable
         shell: bash
-        run: dotnet publish src/WinCare.App/WinCare.App.csproj -c Release -p:Platform=${{ matrix.platform }} -r ${{ matrix.runtime }} -p:WindowsPackageType=None -p:WindowsAppSDKSelfContained=true -p:SelfContained=true -p:PublishSingleFile=false -o artifacts/portable/${{ matrix.runtime }}
-      - name: Create portable ZIP
+        run: dotnet publish src/WinCare.App/WinCare.App.csproj -c Release -p:Platform=${{ matrix.platform }} -r ${{ matrix.runtime }} -p:WindowsPackageType=None -p:WindowsAppSDKSelfContained=true -p:SelfContained=true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o artifacts/portable/${{ matrix.runtime }}
+      - name: Stage single binary executable
         shell: bash
-        run: python tools/package_portable.py artifacts/portable/${{ matrix.runtime }} artifacts/WinCare-${{ matrix.runtime }}-portable.zip
+        run: |
+          mkdir -p artifacts/release
+          cp artifacts/portable/${{ matrix.runtime }}/WinCare.App.exe artifacts/release/WinCare-v2.4.0-rc1-${{ matrix.platform }}.exe
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: WinCare-${{ matrix.platform }}
           path: |
             src/WinCare.App/AppPackages/**/*.msix
-            artifacts/WinCare-${{ matrix.runtime }}-portable.zip
+            artifacts/release/WinCare-v2.4.0-rc1-${{ matrix.platform }}.exe
 
   release-gate:
     needs: [verify-source, rust, managed-and-package]
@@ -135,7 +137,4 @@ jobs:
           gh release create v2.4.0-rc1 release_assets/* \
             --title "WinCare v2.4.0-rc1 (Native WinUI & Core Release)" \
             --prerelease \
-            --notes "Automated release candidate build generated from master commit \`${{ github.sha }}\`. Contains native MSIX packages (x64/ARM64), portable executables, and verified source finalization archives."
-
-
-
+            --notes "Automated release candidate build generated from master commit \`${{ github.sha }}\`. Contains native MSIX packages (x64/ARM64), single binary executables (WinCare-v2.4.0-rc1-x64.exe / WinCare-v2.4.0-rc1-ARM64.exe), and verified source finalization archives."

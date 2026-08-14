@@ -1,3 +1,4 @@
+using WinCare.CommandCatalog.Models;
 using WinCare.Domain.Commands;
 
 namespace WinCare.Application.Commands;
@@ -14,4 +15,14 @@ public interface ICommandDispatcher
         CommandRequest request,
         CommandExecutionOptions options,
         CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Dynamically registers a runtime command definition and its executable handler.
+    /// </summary>
+    bool RegisterDynamicCommand(CommandDefinition definition, ICommandHandler handler);
+
+    /// <summary>
+    /// Dynamically unregisters a runtime command by ID.
+    /// </summary>
+    bool UnregisterDynamicCommand(string commandId);
 }

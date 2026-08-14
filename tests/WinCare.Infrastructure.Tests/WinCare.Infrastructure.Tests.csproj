@@ -18,11 +18,13 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\WinCare.Domain\WinCare.Domain.csproj" />
     <ProjectReference Include="..\..\src\WinCare.CommandCatalog\WinCare.CommandCatalog.csproj" />
     <ProjectReference Include="..\..\src\WinCare.Application\WinCare.Application.csproj" />
     <ProjectReference Include="..\..\src\WinCare.Infrastructure\WinCare.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\WinCare.SourceGenerators\WinCare.SourceGenerators.csproj" />
   </ItemGroup>
 </Project>

@@ -9,5 +9,7 @@
     <EmbeddedResource Include="Data\commands.json" LogicalName="WinCare.CommandCatalog.Data.commands.json" />
     <EmbeddedResource Include="Data\remediation-rules.json" LogicalName="WinCare.CommandCatalog.Data.remediation-rules.json" />
     <EmbeddedResource Include="Data\presets.json" LogicalName="WinCare.CommandCatalog.Data.presets.json" />
+    <EmbeddedResource Include="Plugins\BuiltInSecurityPlugin.json" LogicalName="WinCare.CommandCatalog.Plugins.BuiltInSecurityPlugin.json" />
+    <EmbeddedResource Include="Plugins\BuiltInSystemCarePlugin.json" LogicalName="WinCare.CommandCatalog.Plugins.BuiltInSystemCarePlugin.json" />
   </ItemGroup>
 </Project>

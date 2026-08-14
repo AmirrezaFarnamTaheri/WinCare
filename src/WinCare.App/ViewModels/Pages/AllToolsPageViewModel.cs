@@ -9,7 +9,7 @@ using WinCare.CommandCatalog.Models;
 
 namespace WinCare.App.ViewModels.Pages;
 
-public sealed class AllToolsPageViewModel : ObservableObject
+public sealed class AllToolsPageViewModel : ObservableObject, IDisposable
 {
     private readonly ToolCatalogService _catalog;
     private readonly HashSet<string> _favoriteIds = new(StringComparer.Ordinal);
@@ -24,7 +24,7 @@ public sealed class AllToolsPageViewModel : ObservableObject
     private bool _isCompactLayout;
 
     public AllToolsPageViewModel()
-        : this(new ToolCatalogService(), AppRuntime.Current.Dispatcher)
+        : this(new ToolCatalogService(AppRuntime.Current.PluginRegistry), AppRuntime.Current.Dispatcher)
     {
     }
 
@@ -54,11 +54,14 @@ public sealed class AllToolsPageViewModel : ObservableObject
         _selectedAreaOption = AreaOptions[0];
         _selectedRiskOption = RiskOptions[0];
         Execution = new ToolExecutionViewModel(dispatcher, RecordRecent);
+
+        _catalog.CatalogChanged += OnCatalogChanged;
+
         Refresh();
     }
 
     public ObservableCollection<ToolRowViewModel> VisibleTools { get; } = new();
-    public IReadOnlyList<AreaFilterOption> AreaOptions { get; }
+    public IReadOnlyList<AreaFilterOption> AreaOptions { get; private set; }
     public IReadOnlyList<RiskFilterOption> RiskOptions { get; }
     public ToolExecutionViewModel Execution { get; }
 
@@ -252,6 +255,21 @@ public sealed class AllToolsPageViewModel : ObservableObject
         OnPropertyChanged(nameof(IsSelectedToolFavorite));
     }
 
+    private void RebuildAreaOptions()
+    {
+        var currentSelectedArea = SelectedAreaOption?.Value;
+        AreaOptions = [
+            new AreaFilterOption("All areas", null),
+            .. _catalog.All.Select(command => command.Area)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(area => area, StringComparer.OrdinalIgnoreCase)
+                .Select(area => new AreaFilterOption(area, area))
+        ];
+        _selectedAreaOption = AreaOptions.FirstOrDefault(o => string.Equals(o.Value, currentSelectedArea, StringComparison.OrdinalIgnoreCase)) ?? AreaOptions[0];
+        OnPropertyChanged(nameof(AreaOptions));
+        OnPropertyChanged(nameof(SelectedAreaOption));
+    }
+
     private void Refresh()
     {
         ToolFilter filter = new(
@@ -293,6 +311,32 @@ public sealed class AllToolsPageViewModel : ObservableObject
         OnPropertyChanged(nameof(ResultCountText));
         OnPropertyChanged(nameof(IsEmpty));
         OnPropertyChanged(nameof(EmptyMessage));
+    }
+
+    private void OnCatalogChanged(object? sender, EventArgs e)
+    {
+        var dq = Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread();
+        if (dq != null && !dq.HasThreadAccess)
+        {
+            dq.TryEnqueue(() =>
+            {
+                RebuildAreaOptions();
+                Refresh();
+            });
+        }
+        else
+        {
+            RebuildAreaOptions();
+            Refresh();
+        }
+    }
+
+    public void Dispose()
+    {
+        _catalog.CatalogChanged -= OnCatalogChanged;
+        _searchCts?.Cancel();
+        _searchCts?.Dispose();
+        _searchCts = null;
     }
 }
 

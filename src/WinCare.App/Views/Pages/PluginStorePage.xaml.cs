@@ -1,0 +1,130 @@
+using System;
+using System.Threading.Tasks;
+using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Controls;
+
+using WinCare.App.ViewModels.Pages;
+using WinCare.App.Views.Dialogs;
+
+namespace WinCare.App.Views.Pages;
+
+public sealed partial class PluginStorePage : Page
+{
+    private bool _initialized;
+    public PluginStorePageViewModel ViewModel { get; }
+
+    public PluginStorePage()
+    {
+        ViewModel = new PluginStorePageViewModel();
+        InitializeComponent();
+        Loaded += async (s, e) =>
+        {
+            if (_initialized)
+            {
+                return;
+            }
+
+            _initialized = true;
+            try
+            {
+                await ViewModel.InitializeAsync();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[PluginStorePage] Initialize failed: {ex.Message}");
+            }
+        };
+    }
+
+    private void SearchBox_TextChanged(AutoSuggestBox sender, AutoSuggestBoxTextChangedEventArgs args)
+    {
+        if (args.Reason == AutoSuggestionBoxTextChangeReason.UserInput)
+        {
+            ViewModel.SearchQuery = sender.Text;
+        }
+    }
+
+    private void CategoryButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button button && button.Tag is string category)
+        {
+            ViewModel.SelectedCategory = category;
+
+            foreach (var child in CategoryFilterPanel.Children)
+            {
+                if (child is Button b)
+                {
+                    b.Style = string.Equals(b.Tag as string, category, StringComparison.OrdinalIgnoreCase)
+                        ? (Style)Microsoft.UI.Xaml.Application.Current.Resources["AccentButtonStyle"]
+                        : null;
+                }
+            }
+        }
+    }
+
+    private async void DetailsButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button button && button.Tag is PluginCardViewModel card)
+        {
+            await ShowPluginDetailsDialogAsync(card);
+        }
+    }
+
+    private async void InstallButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button button && button.Tag is PluginCardViewModel card)
+        {
+            // Gate installation behind the capability and trust consent dialog
+            await ShowPluginDetailsDialogAsync(card);
+        }
+    }
+
+    private async void EnableButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button button && button.Tag is PluginCardViewModel card)
+        {
+            await ViewModel.EnablePluginAsync(card);
+        }
+    }
+
+    private async void DisableButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button button && button.Tag is PluginCardViewModel card)
+        {
+            await ViewModel.DisablePluginAsync(card);
+        }
+    }
+
+    private async void UninstallButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button button && button.Tag is PluginCardViewModel card)
+        {
+            await ViewModel.UninstallPluginAsync(card);
+        }
+    }
+
+    private async Task ShowPluginDetailsDialogAsync(PluginCardViewModel card)
+    {
+        var item = card.RemoteItem ?? new WinCare.Application.Plugins.RemotePluginItem
+        {
+            Id = card.Id,
+            Name = card.Name,
+            Author = card.Author,
+            Version = card.Version,
+            Description = card.Description,
+            Category = card.Category,
+            Permissions = card.Permissions
+        };
+
+        var dialog = new PluginDetailDialog(item)
+        {
+            XamlRoot = XamlRoot
+        };
+
+        var result = await dialog.ShowAsync();
+        if (result == ContentDialogResult.Primary && card.CanInstall)
+        {
+            await ViewModel.InstallPluginAsync(card);
+        }
+    }
+}

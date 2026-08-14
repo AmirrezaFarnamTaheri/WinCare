@@ -21,4 +21,6 @@ public enum NativeCoreStatus
     BufferTooSmall = 6,
     /// <summary>Operation completed partially due to limit or unreadable entries.</summary>
     Truncated = 7,
+    /// <summary>An unexpected native panic or internal error was caught at the C ABI boundary.</summary>
+    InternalError = -99,
 }

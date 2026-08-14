@@ -1,20 +1,35 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using WinCare.Application.Plugins;
 using WinCare.CommandCatalog.Models;
 
 namespace WinCare.Application.Tools;
 
 /// <summary>
-/// Filters and searches the frozen command catalog.
+/// Filters and searches the frozen command catalog and active plugin commands dynamically.
 /// </summary>
 public sealed class ToolCatalogService
 {
-    private readonly IReadOnlyList<CommandDefinition> _commands;
+    private readonly IPluginRegistry? _pluginRegistry;
+    private readonly IReadOnlyList<CommandDefinition> _baseCommands;
 
     /// <summary>
-    /// Initializes the service against the embedded catalog.
+    /// Event raised when the merged catalog changes (e.g. plugins enabled or disabled).
     /// </summary>
-    public ToolCatalogService()
-        : this(CommandCatalog.CommandCatalog.Load())
+    public event EventHandler? CatalogChanged;
+
+    /// <summary>
+    /// Initializes the service against the embedded catalog and optional plugin registry.
+    /// </summary>
+    public ToolCatalogService(IPluginRegistry? pluginRegistry = null)
     {
+        _pluginRegistry = pluginRegistry;
+        if (_pluginRegistry != null)
+        {
+            _pluginRegistry.RegistryChanged += (s, e) => CatalogChanged?.Invoke(this, EventArgs.Empty);
+        }
+        _baseCommands = CommandCatalog.CommandCatalog.Load();
     }
 
     /// <summary>
@@ -22,13 +37,14 @@ public sealed class ToolCatalogService
     /// </summary>
     public ToolCatalogService(IReadOnlyList<CommandDefinition> commands)
     {
-        _commands = commands ?? throw new ArgumentNullException(nameof(commands));
+        _baseCommands = commands ?? throw new ArgumentNullException(nameof(commands));
+        _pluginRegistry = null;
     }
 
     /// <summary>
-    /// Gets the complete command set.
+    /// Gets the complete command set, dynamically merging active plugin commands.
     /// </summary>
-    public IReadOnlyList<CommandDefinition> All => _commands;
+    public IReadOnlyList<CommandDefinition> All => GetMergedCommands();
 
     /// <summary>
     /// Searches and filters commands by area, risk, read-only status, and query.
@@ -38,7 +54,7 @@ public sealed class ToolCatalogService
         filter ??= ToolFilter.All;
         string normalizedQuery = query?.Trim() ?? string.Empty;
 
-        IEnumerable<CommandDefinition> result = _commands;
+        IEnumerable<CommandDefinition> result = GetMergedCommands();
 
         if (!string.IsNullOrWhiteSpace(filter.Area))
         {
@@ -65,6 +81,34 @@ public sealed class ToolCatalogService
             .OrderBy(command => command.Area, StringComparer.OrdinalIgnoreCase)
             .ThenBy(command => command.Title, StringComparer.OrdinalIgnoreCase)
             .ToArray();
+    }
+
+    private IReadOnlyList<CommandDefinition> GetMergedCommands()
+    {
+        if (_pluginRegistry == null)
+        {
+            return _baseCommands;
+        }
+
+        IReadOnlyList<CommandDefinition> activePluginCommands = _pluginRegistry.GetActivePluginCommands();
+        Dictionary<string, CommandDefinition> merged = new(StringComparer.OrdinalIgnoreCase);
+
+        // Built-in core commands take absolute precedence
+        foreach (CommandDefinition cmd in _baseCommands)
+        {
+            merged[cmd.Id] = cmd;
+        }
+
+        // Finding 5: Reserve core namespaces; do not overwrite core command definitions with plugin commands
+        foreach (CommandDefinition cmd in activePluginCommands)
+        {
+            if (!merged.ContainsKey(cmd.Id))
+            {
+                merged[cmd.Id] = cmd;
+            }
+        }
+
+        return merged.Values.ToList();
     }
 
     private static bool Matches(CommandDefinition command, string query)

@@ -79,14 +79,17 @@ NATIVE_DOCUMENT_FILES = (
     "docs/Architecture.md",
     "docs/README.md",
     "docs/migration/command-parity-ledger.md",
-    "docs/migration/command-runtime-first-slice-evidence.md",
     "docs/migration/finalization-status.md",
-    "docs/migration/native-foundation-evidence.md",
     "docs/migration/windows-validation.md",
-    "docs/superpowers/plans/2026-08-05-wincare-native-foundation.md",
-    "docs/superpowers/plans/2026-08-06-wincare-command-runtime-first-slice.md",
-    "docs/superpowers/plans/2026-08-06-wincare-project-finalization.md",
-    "docs/superpowers/specs/2026-08-05-wincare-winui3-csharp-rust-redesign.md",
+    "docs/plans/2026-08-14-ai-system-doctor-plan.md",
+    "docs/plans/2026-08-14-ai-system-doctor-requirements.md",
+    "docs/plans/2026-08-14-community-plugin-sdk-plan.md",
+    "docs/plans/2026-08-14-community-plugin-sdk-requirements.md",
+    "docs/plans/2026-08-14-plugin-store-and-modular-architecture-plan.md",
+    "docs/plans/2026-08-14-plugin-store-and-modular-architecture-requirements.md",
+    "docs/plans/2026-08-14-plugin-store-components-upgrade-plan.md",
+    "docs/plans/2026-08-14-rust-background-guard-service-plan.md",
+    "docs/plans/2026-08-14-rust-background-guard-service-requirements.md",
 )
 
 NATIVE_TOOL_FILES = (

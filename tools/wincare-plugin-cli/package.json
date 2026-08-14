@@ -1,0 +1,15 @@
+{
+  "name": "wincare-plugin-cli",
+  "version": "1.0.0",
+  "description": "Developer CLI for scaffolding, linting, testing, and packaging WinCare plugin archives",
+  "main": "bin/wincare-plugin.js",
+  "bin": {
+    "wincare-plugin": "bin/wincare-plugin.js"
+  },
+  "scripts": {
+    "test": "node --test"
+  },
+  "keywords": ["wincare", "plugin", "windows", "maintenance", "cli"],
+  "author": "WinCare Core Team",
+  "license": "Apache-2.0"
+}

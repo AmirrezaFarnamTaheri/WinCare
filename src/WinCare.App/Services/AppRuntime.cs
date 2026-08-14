@@ -1,7 +1,9 @@
 using WinCare.Application.Activity;
 using WinCare.Application.Commands;
+using WinCare.Application.Plugins;
 using WinCare.Infrastructure.Commands;
 using WinCare.Infrastructure.Native;
+using WinCare.Infrastructure.Plugins;
 
 namespace WinCare.App.Services;
 
@@ -18,6 +20,14 @@ public sealed class AppRuntime
         NativeCore = new NativeCoreService();
         CommandExecutor = new WindowsCommandExecutor(NativeCore);
         Dispatcher = CommandRuntime.CreateDefault(CommandExecutor, NativeCore, Journal);
+        PluginState = new PluginStateRepository();
+        PluginHost = new DefaultPluginHost(Dispatcher);
+        PluginRegistry = new PluginRegistryService(
+            PluginState,
+            scriptHandlerFactory: (cmdId, scriptPath, pluginDir) => new PluginScriptCommandHandler(cmdId, scriptPath, pluginDir, new BoundedProcessRunner())
+        );
+        CatalogService = new RemoteCatalogService();
+        InstallerService = new PluginInstallerService();
     }
 
     /// <summary>
@@ -44,4 +54,35 @@ public sealed class AppRuntime
     /// Gets the command dispatcher instance.
     /// </summary>
     public CommandDispatcher Dispatcher { get; }
+
+    /// <summary>
+    /// Gets the plugin state repository instance.
+    /// </summary>
+    public IPluginStateRepository PluginState { get; }
+
+    /// <summary>
+    /// Gets the shared plugin host instance.
+    /// </summary>
+    public IPluginHost PluginHost { get; }
+
+    /// <summary>
+    /// Gets the global plugin registry instance.
+    /// </summary>
+    public IPluginRegistry PluginRegistry { get; }
+
+    /// <summary>
+    /// Gets the remote plugin catalog service instance.
+    /// </summary>
+    public IRemoteCatalogService CatalogService { get; }
+
+    /// <summary>
+    /// Gets the plugin installer service instance.
+    /// </summary>
+    public IPluginInstallerService InstallerService { get; }
+
+    /// <summary>
+    /// Discovers and initializes plugins asynchronously on application startup.
+    /// </summary>
+    public Task InitializePluginsAsync(CancellationToken ct = default) =>
+        PluginRegistry.DiscoverAndInitializeAsync(PluginHost, ct);
 }
