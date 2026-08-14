@@ -1,0 +1,49 @@
+<Page
+    x:Class="WinCare.App.Views.Pages.PluginStorePage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:vm="using:WinCare.App.ViewModels.Pages">
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Padding="24" Spacing="20">
+            <!-- Header -->
+            <StackPanel Spacing="4">
+                <TextBlock Text="Plugin Store" Style="{StaticResource TitleTextBlockStyle}" Foreground="#00D2B4" FontWeight="SemiBold" />
+                <TextBlock Text="Discover, install, enable, and customize WinCare tool packs and extensions." Style="{StaticResource BodyTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+            </StackPanel>
+
+            <!-- Active Plugins Grid -->
+            <ItemsControl ItemsSource="{x:Bind ViewModel.Plugins, Mode=OneWay}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:PluginCardViewModel">
+                        <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                BorderThickness="1" CornerRadius="8" Padding="16" Margin="0,0,0,12">
+                            <Grid RowSpacing="8" ColumnSpacing="16">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                
+                                <StackPanel Grid.Column="0" Spacing="4">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <TextBlock Text="{x:Bind Name}" FontWeight="Bold" FontSize="16" />
+                                        <Border Background="#1A00D2B4" BorderBrush="#00D2B4" BorderThickness="1" CornerRadius="4" Padding="6,2">
+                                            <TextBlock Text="{x:Bind StatusBadgeText}" FontSize="10" FontWeight="Bold" Foreground="#00D2B4" />
+                                        </Border>
+                                    </StackPanel>
+                                    <TextBlock Text="{x:Bind Description}" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                                    <TextBlock Text="{x:Bind Category}" FontSize="12" Foreground="{ThemeResource TextFillColorTertiaryBrush}" Margin="0,4,0,0" />
+                                </StackPanel>
+
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <TextBlock Text="{x:Bind Version}" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" HorizontalAlignment="Right" />
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </StackPanel>
+    </ScrollViewer>
+</Page>
