@@ -12,6 +12,8 @@ namespace WinCare.Application.Tools;
 public sealed class ToolCatalogService
 {
     private readonly IPluginRegistry? _pluginRegistry;
+    private readonly IReadOnlyList<CommandDefinition> _baseCommands;
+
     /// <summary>
     /// Event raised when the merged catalog changes (e.g. plugins enabled or disabled).
     /// </summary>
@@ -88,17 +90,17 @@ public sealed class ToolCatalogService
             return _baseCommands;
         }
 
-        var activePluginCommands = _pluginRegistry.GetActivePluginCommands();
-        var merged = new Dictionary<string, CommandDefinition>(StringComparer.OrdinalIgnoreCase);
+        IReadOnlyList<CommandDefinition> activePluginCommands = _pluginRegistry.GetActivePluginCommands();
+        Dictionary<string, CommandDefinition> merged = new(StringComparer.OrdinalIgnoreCase);
 
         // Built-in core commands take absolute precedence
-        foreach (var cmd in _baseCommands)
+        foreach (CommandDefinition cmd in _baseCommands)
         {
             merged[cmd.Id] = cmd;
         }
 
         // Finding 5: Reserve core namespaces; do not overwrite core command definitions with plugin commands
-        foreach (var cmd in activePluginCommands)
+        foreach (CommandDefinition cmd in activePluginCommands)
         {
             if (!merged.ContainsKey(cmd.Id))
             {

@@ -24,6 +24,11 @@ public interface IPluginHost
     ICommandDispatcher CommandDispatcher { get; }
 
     /// <summary>
+    /// Gets all dynamically registered plugin commands.
+    /// </summary>
+    IReadOnlyCollection<CommandDefinition> RegisteredCommands { get; }
+
+    /// <summary>
     /// Registers a runtime tool command dynamically from a plugin.
     /// </summary>
     void RegisterCommand(CommandDefinition command, ICommandHandler? handler = null);

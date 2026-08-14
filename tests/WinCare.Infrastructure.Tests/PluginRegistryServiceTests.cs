@@ -12,19 +12,21 @@ using Xunit;
 
 public sealed class DummyPluginHost : IPluginHost
 {
+    private readonly List<CommandDefinition> _registeredCommands = new();
+
     public string ApplicationRootPath => Path.GetTempPath();
     public string PluginsUserDirectory { get; init; } = Path.GetTempPath();
     public ICommandDispatcher CommandDispatcher => null!;
-    public List<CommandDefinition> RegisteredCommands { get; } = new();
+    public IReadOnlyCollection<CommandDefinition> RegisteredCommands => _registeredCommands.AsReadOnly();
 
     public void RegisterCommand(CommandDefinition command, ICommandHandler? handler = null)
     {
-        RegisteredCommands.Add(command);
+        _registeredCommands.Add(command);
     }
 
     public void UnregisterCommand(string commandId)
     {
-        RegisteredCommands.RemoveAll(c => c.Id.Equals(commandId, StringComparison.OrdinalIgnoreCase));
+        _registeredCommands.RemoveAll(c => c.Id.Equals(commandId, StringComparison.OrdinalIgnoreCase));
     }
 }
 
