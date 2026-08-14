@@ -9,8 +9,10 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
+using WinCare.Application.Commands;
 using WinCare.Application.Plugins;
 using WinCare.CommandCatalog.Models;
+using WinCare.Domain.Commands;
 using WinCare.Infrastructure.Plugins;
 using Xunit;
 
