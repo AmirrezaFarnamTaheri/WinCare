@@ -46,7 +46,7 @@ public sealed class PluginManifest
     [JsonPropertyName("pluginClassName")]
     public string? PluginClassName { get; init; }
 
-    /// <summary>Declared security capabilities & permissions (e.g. filesystem.read, process.spawn).</summary>
+    /// <summary>Declared security capabilities and permissions (e.g. filesystem.read, process.spawn).</summary>
     [JsonPropertyName("declaredCapabilities")]
     public List<string> DeclaredCapabilities { get; init; } = new();
 
