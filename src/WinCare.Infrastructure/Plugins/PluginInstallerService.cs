@@ -18,9 +18,14 @@ public class PluginInstallerService : IPluginInstallerService
 {
     private static readonly Regex PluginIdRegex = new(@"^[a-zA-Z0-9][a-zA-Z0-9._-]{2,127}$", RegexOptions.Compiled);
 
-    public const long MaxDownloadSizeBytes = 50 * 1024 * 1024; // 50 MB
+    /// <summary>Maximum allowed plugin package download size (50 MB).</summary>
+    public const long MaxDownloadSizeBytes = 50 * 1024 * 1024;
+
+    /// <summary>Maximum allowed archive entry count (500 entries).</summary>
     public const int MaxZipEntries = 500;
-    public const long MaxUncompressedSizeBytes = 200 * 1024 * 1024; // 200 MB
+
+    /// <summary>Maximum allowed uncompressed extraction size (200 MB).</summary>
+    public const long MaxUncompressedSizeBytes = 200 * 1024 * 1024;
 
     private readonly HttpClient _httpClient;
     private readonly string _pluginsBaseDirectory;
