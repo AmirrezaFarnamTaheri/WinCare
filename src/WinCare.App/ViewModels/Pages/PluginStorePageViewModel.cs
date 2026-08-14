@@ -3,13 +3,18 @@ namespace WinCare.App.ViewModels.Pages;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
+using WinCare.App.Services;
 using WinCare.Application.Plugins;
-using WinCare.Infrastructure.Plugins;
 
-public sealed class PluginStorePageViewModel
+/// <summary>
+/// ViewModel managing the Plugin Store catalog, search filtering, and package installation.
+/// </summary>
+public sealed class PluginStorePageViewModel : INotifyPropertyChanged
 {
     private readonly IPluginRegistry _registry;
     private readonly IRemoteCatalogService _catalogService;
@@ -19,27 +24,44 @@ public sealed class PluginStorePageViewModel
     private string _searchQuery = string.Empty;
     private string _selectedCategory = "All";
     private bool _isLoading;
+    private CancellationTokenSource? _searchCts;
 
+    /// <summary>
+    /// Event fired when a property value changes.
+    /// </summary>
+    public event PropertyChangedEventHandler? PropertyChanged;
+
+    /// <summary>
+    /// Initializes a new instance of <see cref="PluginStorePageViewModel"/> using supplied or shared runtime services.
+    /// </summary>
     public PluginStorePageViewModel(
         IPluginRegistry? registry = null,
         IRemoteCatalogService? catalogService = null,
         IPluginInstallerService? installerService = null,
         IPluginHost? host = null)
     {
-        _host = host ?? new DefaultPluginHost();
-        _registry = registry ?? new PluginRegistryService();
-        _catalogService = catalogService ?? new RemoteCatalogService();
-        _installerService = installerService ?? new PluginInstallerService();
+        _host = host ?? AppRuntime.Current.PluginHost;
+        _registry = registry ?? AppRuntime.Current.PluginRegistry;
+        _catalogService = catalogService ?? AppRuntime.Current.CatalogService;
+        _installerService = installerService ?? AppRuntime.Current.InstallerService;
 
         Plugins = new ObservableCollection<PluginCardViewModel>();
         Categories = new ObservableCollection<string> { "All", "System Care", "Security", "Utilities", "Installed" };
     }
 
+    /// <summary>
+    /// Collection of visual plugin cards displayed in the store list.
+    /// </summary>
     public ObservableCollection<PluginCardViewModel> Plugins { get; }
+
+    /// <summary>
+    /// Collection of category tab filter names.
+    /// </summary>
     public ObservableCollection<string> Categories { get; }
 
-    private CancellationTokenSource? _searchCts;
-
+    /// <summary>
+    /// Search filter query string with debounced auto-filtering.
+    /// </summary>
     public string SearchQuery
     {
         get => _searchQuery;
@@ -48,25 +70,17 @@ public sealed class PluginStorePageViewModel
             if (_searchQuery != value)
             {
                 _searchQuery = value;
+                OnPropertyChanged();
                 _searchCts?.Cancel();
                 _searchCts = new CancellationTokenSource();
-                var token = _searchCts.Token;
-                _ = Task.Run(async () =>
-                {
-                    try
-                    {
-                        await Task.Delay(300, token).ConfigureAwait(true);
-                        await RefreshPluginsAsync(forceRemoteRefresh: false, token).ConfigureAwait(true);
-                    }
-                    catch (OperationCanceledException)
-                    {
-                        // Keystroke debounced
-                    }
-                }, token);
+                TriggerDebouncedSearch(_searchCts.Token);
             }
         }
     }
 
+    /// <summary>
+    /// Currently selected category filter.
+    /// </summary>
     public string SelectedCategory
     {
         get => _selectedCategory;
@@ -75,17 +89,64 @@ public sealed class PluginStorePageViewModel
             if (_selectedCategory != value)
             {
                 _selectedCategory = value;
+                OnPropertyChanged();
                 _ = RefreshPluginsAsync();
             }
         }
     }
 
+    /// <summary>
+    /// Whether the store catalog is currently fetching data or refreshing.
+    /// </summary>
     public bool IsLoading
     {
         get => _isLoading;
-        private set => _isLoading = value;
+        private set
+        {
+            if (_isLoading != value)
+            {
+                _isLoading = value;
+                OnPropertyChanged();
+            }
+        }
     }
 
+    /// <summary>
+    /// Initializes discovery and loads installed/online plugin catalog.
+    /// </summary>
+    public async Task InitializeAsync(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            await _registry.DiscoverAndInitializeAsync(_host, cancellationToken).ConfigureAwait(true);
+        }
+        catch
+        {
+            // Tolerate initial discovery faults to show offline state
+        }
+
+        await RefreshPluginsAsync(forceRemoteRefresh: false, cancellationToken).ConfigureAwait(true);
+    }
+
+    private async void TriggerDebouncedSearch(CancellationToken token)
+    {
+        try
+        {
+            await Task.Delay(300, token);
+            if (!token.IsCancellationRequested)
+            {
+                await RefreshPluginsAsync(forceRemoteRefresh: false, token);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Keystroke debounced
+        }
+    }
+
+    /// <summary>
+    /// Refreshes the active plugin catalog list from registry and remote store.
+    /// </summary>
     public async Task RefreshPluginsAsync(bool forceRemoteRefresh = false, CancellationToken cancellationToken = default)
     {
         IsLoading = true;
@@ -150,6 +211,9 @@ public sealed class PluginStorePageViewModel
         }
     }
 
+    /// <summary>
+    /// Installs a remote plugin package, runs discovery, and refreshes the store.
+    /// </summary>
     public async Task<bool> InstallPluginAsync(PluginCardViewModel card, CancellationToken cancellationToken = default)
     {
         if (card == null || card.IsInstalled || string.IsNullOrWhiteSpace(card.PackageUrl))
@@ -191,5 +255,10 @@ public sealed class PluginStorePageViewModel
                description.Contains(q, StringComparison.OrdinalIgnoreCase) ||
                author.Contains(q, StringComparison.OrdinalIgnoreCase) ||
                category.Contains(q, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private void OnPropertyChanged([CallerMemberName] string? propertyName = null)
+    {
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
     }
 }

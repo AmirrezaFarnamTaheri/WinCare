@@ -84,4 +84,69 @@ public class PluginInstallerServiceTests
             }
         }
     }
+
+    [Theory]
+    [InlineData("../malicious")]
+    [InlineData("..\\malicious")]
+    [InlineData("C:\\Windows\\System32")]
+    [InlineData("inv@lid*id!")]
+    [InlineData("a")]
+    [InlineData("")]
+    public async Task InstallPluginFromStreamAsync_RejectsInvalidPluginId(string invalidId)
+    {
+        var tempPluginsDir = Path.Combine(Path.GetTempPath(), $"wincare_test_plugins_{Guid.NewGuid():N}");
+
+        try
+        {
+            using var memoryStream = new MemoryStream();
+            using (var zip = new ZipArchive(memoryStream, ZipArchiveMode.Create, leaveOpen: true))
+            {
+                var manifestEntry = zip.CreateEntry("plugin.json");
+                using (var writer = new StreamWriter(manifestEntry.Open()))
+                {
+                    writer.Write(JsonSerializer.Serialize(new { id = invalidId, name = "Invalid Plugin", version = "1.0.0" }));
+                }
+            }
+
+            memoryStream.Position = 0;
+            var installer = new PluginInstallerService(pluginsBaseDirectory: tempPluginsDir);
+
+            await Assert.ThrowsAsync<ArgumentException>(() =>
+                installer.InstallPluginFromStreamAsync(memoryStream, invalidId));
+        }
+        finally
+        {
+            if (Directory.Exists(tempPluginsDir))
+            {
+                Directory.Delete(tempPluginsDir, recursive: true);
+            }
+        }
+    }
+
+    [Fact]
+    public async Task UninstallPluginAsync_SafelyRemovesPluginDirectory()
+    {
+        var tempPluginsDir = Path.Combine(Path.GetTempPath(), $"wincare_test_plugins_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempPluginsDir);
+
+        var pluginDir = Path.Combine(tempPluginsDir, "com.wincare.testuninstall");
+        Directory.CreateDirectory(pluginDir);
+        File.WriteAllText(Path.Combine(pluginDir, "plugin.json"), "{}");
+
+        try
+        {
+            var installer = new PluginInstallerService(pluginsBaseDirectory: tempPluginsDir);
+            var result = await installer.UninstallPluginAsync("com.wincare.testuninstall");
+
+            Assert.True(result);
+            Assert.False(Directory.Exists(pluginDir));
+        }
+        finally
+        {
+            if (Directory.Exists(tempPluginsDir))
+            {
+                Directory.Delete(tempPluginsDir, recursive: true);
+            }
+        }
+    }
 }

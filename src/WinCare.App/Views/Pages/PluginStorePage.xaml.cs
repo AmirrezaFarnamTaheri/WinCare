@@ -15,7 +15,7 @@ public sealed partial class PluginStorePage : Page
     {
         InitializeComponent();
         ViewModel = new PluginStorePageViewModel();
-        Loaded += async (s, e) => await ViewModel.RefreshPluginsAsync();
+        Loaded += async (s, e) => await ViewModel.InitializeAsync();
     }
 
     private void SearchBox_TextChanged(AutoSuggestBox sender, AutoSuggestBoxTextChangedEventArgs args)
@@ -26,7 +26,7 @@ public sealed partial class PluginStorePage : Page
         }
     }
 
-    private async void CategoryButton_Click(object sender, RoutedEventArgs e)
+    private void CategoryButton_Click(object sender, RoutedEventArgs e)
     {
         if (sender is Button button && button.Tag is string category)
         {
@@ -37,7 +37,7 @@ public sealed partial class PluginStorePage : Page
                 if (child is Button b)
                 {
                     b.Style = string.Equals(b.Tag as string, category, StringComparison.OrdinalIgnoreCase)
-                        ? (Style)Application.Current.Resources["AccentButtonStyle"]
+                        ? (Style)Microsoft.UI.Xaml.Application.Current.Resources["AccentButtonStyle"]
                         : null;
                 }
             }
