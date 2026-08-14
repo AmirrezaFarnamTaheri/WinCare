@@ -4,69 +4,79 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:vm="using:WinCare.App.ViewModels.Pages">
 
-    <ScrollViewer VerticalScrollBarVisibility="Auto">
-        <StackPanel Padding="24" Spacing="20">
-            <!-- Header -->
-            <Grid ColumnDefinitions="*,Auto">
-                <StackPanel Grid.Column="0" Spacing="4">
-                    <TextBlock Text="Plugin Store &amp; Catalog" Style="{StaticResource TitleTextBlockStyle}" Foreground="#00D2B4" FontWeight="SemiBold" />
-                    <TextBlock Text="Discover, 1-Click install, inspect permissions, and extend WinCare system tools." Style="{StaticResource BodyTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                </StackPanel>
-
-                <AutoSuggestBox Grid.Column="1" Width="260" VerticalAlignment="Center" PlaceholderText="Search plugins or authors..." QueryIcon="Find" TextChanged="SearchBox_TextChanged" AutomationProperties.Name="Search plugins or authors"/>
-            </Grid>
-
-            <!-- Category Filter Buttons -->
-            <StackPanel Orientation="Horizontal" Spacing="8" x:Name="CategoryFilterPanel">
-                <Button Content="All" Click="CategoryButton_Click" Tag="All" Style="{StaticResource AccentButtonStyle}" AutomationProperties.Name="Filter by All"/>
-                <Button Content="System Care" Click="CategoryButton_Click" Tag="System Care" AutomationProperties.Name="Filter by System Care"/>
-                <Button Content="Security" Click="CategoryButton_Click" Tag="Security" AutomationProperties.Name="Filter by Security"/>
-                <Button Content="Utilities" Click="CategoryButton_Click" Tag="Utilities" AutomationProperties.Name="Filter by Utilities"/>
-                <Button Content="Installed" Click="CategoryButton_Click" Tag="Installed" AutomationProperties.Name="Filter by Installed"/>
+    <Grid RowDefinitions="Auto,Auto,Auto,*">
+        <!-- Header -->
+        <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="24,24,24,12">
+            <StackPanel Grid.Column="0" Spacing="4">
+                <TextBlock Text="Plugin Store &amp; Catalog" Style="{StaticResource TitleTextBlockStyle}" Foreground="{ThemeResource AccentTealBrush}" FontWeight="SemiBold" />
+                <TextBlock Text="Discover, 1-Click install, inspect permissions, and extend WinCare system tools." Style="{StaticResource BodyTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
             </StackPanel>
 
-            <!-- Plugins List -->
-            <ItemsControl ItemsSource="{x:Bind ViewModel.Plugins, Mode=OneWay}">
-                <ItemsControl.ItemTemplate>
-                    <DataTemplate x:DataType="vm:PluginCardViewModel">
-                        <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                                BorderThickness="1" CornerRadius="8" Padding="16" Margin="0,0,0,12">
-                            <Grid RowSpacing="8" ColumnSpacing="16">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-                                
-                                <StackPanel Grid.Column="0" Spacing="6">
-                                    <StackPanel Orientation="Horizontal" Spacing="8">
-                                        <TextBlock Text="{x:Bind Name}" FontWeight="Bold" FontSize="16" />
-                                        <Border Background="#1A00D2B4" BorderBrush="#00D2B4" BorderThickness="1" CornerRadius="4" Padding="6,2">
-                                            <TextBlock Text="{x:Bind StatusBadgeText}" FontSize="10" FontWeight="Bold" Foreground="#00D2B4" />
-                                        </Border>
-                                    </StackPanel>
-                                    <TextBlock Text="{x:Bind Description}" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
-                                    
-                                    <StackPanel Orientation="Horizontal" Spacing="12" Margin="0,4,0,0">
-                                        <TextBlock Text="{x:Bind Category}" FontSize="12" Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
-                                        <TextBlock Text="•" FontSize="12" Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
-                                        <TextBlock Text="{x:Bind Author}" FontSize="12" Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
-                                    </StackPanel>
-                                </StackPanel>
+            <AutoSuggestBox Grid.Column="1" Width="260" VerticalAlignment="Center" PlaceholderText="Search plugins or authors..." QueryIcon="Find" TextChanged="SearchBox_TextChanged" AutomationProperties.Name="Search plugins or authors"/>
+        </Grid>
 
-                                <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="8">
-                                    <TextBlock Text="{x:Bind Version}" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" HorizontalAlignment="Right" />
-                                    
-                                    <StackPanel Orientation="Horizontal" Spacing="8">
-                                        <Button Content="Details" Click="DetailsButton_Click" Tag="{x:Bind}" FontSize="12" AutomationProperties.Name="Plugin Details"/>
-                                        <Button Content="{x:Bind InstallButtonText}" IsEnabled="{x:Bind CanInstall}" Click="InstallButton_Click" Tag="{x:Bind}" FontSize="12" Style="{StaticResource AccentButtonStyle}" AutomationProperties.Name="Install Plugin"/>
-                                    </StackPanel>
-                                </StackPanel>
-                            </Grid>
-                        </Border>
-                    </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
+        <!-- Category Filter Buttons -->
+        <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="8" Margin="24,0,24,16" x:Name="CategoryFilterPanel">
+            <Button Content="All" Click="CategoryButton_Click" Tag="All" Style="{StaticResource AccentButtonStyle}" AutomationProperties.Name="Filter by All"/>
+            <Button Content="System Care" Click="CategoryButton_Click" Tag="System Care" AutomationProperties.Name="Filter by System Care"/>
+            <Button Content="Security" Click="CategoryButton_Click" Tag="Security" AutomationProperties.Name="Filter by Security"/>
+            <Button Content="Utilities" Click="CategoryButton_Click" Tag="Utilities" AutomationProperties.Name="Filter by Utilities"/>
+            <Button Content="Installed" Click="CategoryButton_Click" Tag="Installed" AutomationProperties.Name="Filter by Installed"/>
         </StackPanel>
-    </ScrollViewer>
+
+        <!-- Loading Indicator -->
+        <ProgressRing Grid.Row="2" IsActive="{x:Bind ViewModel.IsLoading, Mode=OneWay}" Width="32" Height="32" Margin="0,8,0,16" HorizontalAlignment="Center"/>
+
+        <!-- Virtualized Plugins List -->
+        <ListView Grid.Row="3"
+                  ItemsSource="{x:Bind ViewModel.Plugins, Mode=OneWay}"
+                  SelectionMode="None"
+                  Padding="24,0,24,24">
+            <ListView.ItemContainerStyle>
+                <Style TargetType="ListViewItem">
+                    <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                    <Setter Property="Padding" Value="0,0,0,12"/>
+                </Style>
+            </ListView.ItemContainerStyle>
+            <ListView.ItemTemplate>
+                <DataTemplate x:DataType="vm:PluginCardViewModel">
+                    <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                            BorderThickness="1" CornerRadius="8" Padding="16">
+                        <Grid RowSpacing="8" ColumnSpacing="16">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            
+                            <StackPanel Grid.Column="0" Spacing="6">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <TextBlock Text="{x:Bind Name}" FontWeight="Bold" FontSize="16" />
+                                    <Border Background="{ThemeResource AccentTealSubtleBrush}" BorderBrush="{ThemeResource AccentTealBrush}" BorderThickness="1" CornerRadius="4" Padding="6,2">
+                                        <TextBlock Text="{x:Bind StatusBadgeText}" FontSize="10" FontWeight="Bold" Foreground="{ThemeResource AccentTealBrush}" />
+                                    </Border>
+                                </StackPanel>
+                                <TextBlock Text="{x:Bind Description}" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                                
+                                <StackPanel Orientation="Horizontal" Spacing="12" Margin="0,4,0,0">
+                                    <TextBlock Text="{x:Bind Category}" FontSize="12" Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
+                                    <TextBlock Text="•" FontSize="12" Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
+                                    <TextBlock Text="{x:Bind Author}" FontSize="12" Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
+                                </StackPanel>
+                            </StackPanel>
+
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="8">
+                                <TextBlock Text="{x:Bind Version}" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" HorizontalAlignment="Right" />
+                                
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <Button Content="Details" Click="DetailsButton_Click" Tag="{x:Bind}" FontSize="12" AutomationProperties.Name="Plugin Details"/>
+                                    <Button Content="{x:Bind InstallButtonText}" IsEnabled="{x:Bind CanInstall}" Click="InstallButton_Click" Tag="{x:Bind}" FontSize="12" Style="{StaticResource AccentButtonStyle}" AutomationProperties.Name="Install Plugin"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+                </DataTemplate>
+            </ListView.ItemTemplate>
+        </ListView>
+    </Grid>
 </Page>

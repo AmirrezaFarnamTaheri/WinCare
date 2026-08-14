@@ -14,6 +14,7 @@ public sealed class PluginStorePageViewModel
     private readonly IPluginRegistry _registry;
     private readonly IRemoteCatalogService _catalogService;
     private readonly IPluginInstallerService _installerService;
+    private readonly IPluginHost _host;
 
     private string _searchQuery = string.Empty;
     private string _selectedCategory = "All";
@@ -22,8 +23,10 @@ public sealed class PluginStorePageViewModel
     public PluginStorePageViewModel(
         IPluginRegistry? registry = null,
         IRemoteCatalogService? catalogService = null,
-        IPluginInstallerService? installerService = null)
+        IPluginInstallerService? installerService = null,
+        IPluginHost? host = null)
     {
+        _host = host ?? new DefaultPluginHost();
         _registry = registry ?? new PluginRegistryService();
         _catalogService = catalogService ?? new RemoteCatalogService();
         _installerService = installerService ?? new PluginInstallerService();
@@ -35,6 +38,8 @@ public sealed class PluginStorePageViewModel
     public ObservableCollection<PluginCardViewModel> Plugins { get; }
     public ObservableCollection<string> Categories { get; }
 
+    private CancellationTokenSource? _searchCts;
+
     public string SearchQuery
     {
         get => _searchQuery;
@@ -43,7 +48,21 @@ public sealed class PluginStorePageViewModel
             if (_searchQuery != value)
             {
                 _searchQuery = value;
-                _ = RefreshPluginsAsync();
+                _searchCts?.Cancel();
+                _searchCts = new CancellationTokenSource();
+                var token = _searchCts.Token;
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        await Task.Delay(300, token).ConfigureAwait(true);
+                        await RefreshPluginsAsync(forceRemoteRefresh: false, token).ConfigureAwait(true);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        // Keystroke debounced
+                    }
+                }, token);
             }
         }
     }
@@ -141,7 +160,7 @@ public sealed class PluginStorePageViewModel
         try
         {
             await _installerService.InstallPluginFromPackageAsync(card.PackageUrl, cancellationToken).ConfigureAwait(true);
-            await _registry.DiscoverAndInitializeAsync(cancellationToken).ConfigureAwait(true);
+            await _registry.DiscoverAndInitializeAsync(_host, cancellationToken).ConfigureAwait(true);
             await RefreshPluginsAsync(forceRemoteRefresh: false, cancellationToken).ConfigureAwait(true);
             return true;
         }

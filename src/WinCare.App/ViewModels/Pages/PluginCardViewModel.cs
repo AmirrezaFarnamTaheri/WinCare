@@ -1,9 +1,7 @@
 namespace WinCare.App.ViewModels.Pages;
 
 using System;
-using System.Collections.Generic;
 using WinCare.Application.Plugins;
-using WinCare.Infrastructure.Plugins;
 
 public sealed class PluginCardViewModel
 {

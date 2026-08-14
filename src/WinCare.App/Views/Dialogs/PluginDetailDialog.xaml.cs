@@ -2,7 +2,7 @@ using System;
 
 using Microsoft.UI.Xaml.Controls;
 
-using WinCare.Infrastructure.Plugins;
+using WinCare.Application.Plugins;
 
 namespace WinCare.App.Views.Dialogs;
 

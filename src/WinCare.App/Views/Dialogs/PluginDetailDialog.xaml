@@ -16,7 +16,7 @@
         <!-- Header & Metadata -->
         <Grid ColumnDefinitions="Auto,*">
             <Border Width="64" Height="64" CornerRadius="8" Background="{ThemeResource SystemControlBackgroundComponentMeshBrush}" Margin="0,0,16,0">
-                <FontIcon Glyph="&#xE74C;" FontSize="32" Foreground="{StaticResource PrimaryTealBrush}"/>
+                <FontIcon Glyph="&#xE74C;" FontSize="32" Foreground="{ThemeResource AccentTealBrush}"/>
             </Border>
 
             <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="4">
@@ -48,14 +48,14 @@
         <Border BorderThickness="1" BorderBrush="{ThemeResource SystemControlBackgroundListLowBrush}" CornerRadius="6" Padding="12" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
             <StackPanel Spacing="8">
                 <StackPanel Orientation="Horizontal" Spacing="8">
-                    <FontIcon Glyph="&#xE72E;" FontSize="14" Foreground="{StaticResource PrimaryTealBrush}"/>
+                    <FontIcon Glyph="&#xE72E;" FontSize="14" Foreground="{ThemeResource AccentTealBrush}"/>
                     <TextBlock Text="Requested Permissions" FontSize="12" FontWeight="SemiBold"/>
                 </StackPanel>
                 <ItemsControl x:Name="PermissionsItemsControl">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate x:DataType="x:String">
                             <Grid ColumnDefinitions="Auto,*" Margin="0,2">
-                                <FontIcon Glyph="&#xE73E;" FontSize="12" Foreground="{StaticResource PrimaryTealBrush}" Margin="0,0,8,0"/>
+                                <FontIcon Glyph="&#xE73E;" FontSize="12" Foreground="{ThemeResource AccentTealBrush}" Margin="0,0,8,0"/>
                                 <TextBlock Grid.Column="1" Text="{x:Bind}" FontSize="12" FontFamily="Consolas"/>
                             </Grid>
                         </DataTemplate>

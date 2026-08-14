@@ -33,7 +33,11 @@ public static class JsonPluginLoader
         var manifestPath = Path.Combine(pluginDirectoryPath, ManifestFileName);
         if (!File.Exists(manifestPath))
         {
-            return new PluginLoadResult(false, null, Array.Empty<CommandDefinition>(), $"Manifest file missing: {ManifestFileName}");
+            manifestPath = Path.Combine(pluginDirectoryPath, "plugin.json");
+            if (!File.Exists(manifestPath))
+            {
+                return new PluginLoadResult(false, null, Array.Empty<CommandDefinition>(), $"Manifest file missing: {ManifestFileName}");
+            }
         }
 
         try

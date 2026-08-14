@@ -13,7 +13,7 @@ public sealed class PluginStateFileModel
 /// <summary>
 /// Persists plugin enabled/disabled state to local storage (%LocalAppData%/WinCare/plugins.json).
 /// </summary>
-public sealed class PluginStateRepository
+public sealed class PluginStateRepository : IPluginStateRepository
 {
     private readonly string _stateFilePath;
 
@@ -67,7 +67,9 @@ public sealed class PluginStateRepository
             };
 
             var json = JsonSerializer.Serialize(model, new JsonSerializerOptions { WriteIndented = true });
-            File.WriteAllText(_stateFilePath, json);
+            var tempFilePath = _stateFilePath + ".tmp." + Guid.NewGuid().ToString("N");
+            File.WriteAllText(tempFilePath, json);
+            File.Move(tempFilePath, _stateFilePath, overwrite: true);
         }
         catch
         {

@@ -1,8 +1,8 @@
+namespace WinCare.Application.Plugins;
+
 using System;
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
-
-namespace WinCare.Infrastructure.Plugins;
 
 public class RemotePluginCatalog
 {

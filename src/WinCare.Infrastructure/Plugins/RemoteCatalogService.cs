@@ -6,14 +6,9 @@ using System.Net.Http;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using WinCare.Application.Plugins;
 
 namespace WinCare.Infrastructure.Plugins;
-
-public interface IRemoteCatalogService
-{
-    Task<RemotePluginCatalog> GetCatalogAsync(bool forceRefresh = false, CancellationToken cancellationToken = default);
-    Task<IReadOnlyList<RemotePluginItem>> SearchPluginsAsync(string query, string? category = null, CancellationToken cancellationToken = default);
-}
 
 public class RemoteCatalogService : IRemoteCatalogService
 {
@@ -37,6 +32,10 @@ public class RemoteCatalogService : IRemoteCatalogService
         TimeSpan? cacheDuration = null)
     {
         _httpClient = httpClient ?? new HttpClient();
+        if (!_httpClient.DefaultRequestHeaders.UserAgent.Any())
+        {
+            _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("WinCare/1.0 (Windows NT 10.0)");
+        }
         _catalogUrl = catalogUrl ?? DefaultCatalogUrl;
         _cacheDuration = cacheDuration ?? TimeSpan.FromHours(24);
 
@@ -75,11 +74,11 @@ public class RemoteCatalogService : IRemoteCatalogService
 
         try
         {
-            var response = await _httpClient.GetAsync(_catalogUrl, cancellationToken).ConfigureAwait(false);
+            using var response = await _httpClient.GetAsync(_catalogUrl, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
 
-            var json = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
-            var catalog = JsonSerializer.Deserialize<RemotePluginCatalog>(json, JsonOptions)
+            await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
+            var catalog = await JsonSerializer.DeserializeAsync<RemotePluginCatalog>(stream, JsonOptions, cancellationToken).ConfigureAwait(false)
                 ?? new RemotePluginCatalog();
 
             catalog.LastUpdated = DateTime.UtcNow;
@@ -147,7 +146,9 @@ public class RemoteCatalogService : IRemoteCatalogService
         try
         {
             var json = JsonSerializer.Serialize(catalog, JsonOptions);
-            await File.WriteAllTextAsync(_cacheFilePath, json, cancellationToken).ConfigureAwait(false);
+            var tempFilePath = _cacheFilePath + ".tmp." + Guid.NewGuid().ToString("N");
+            await File.WriteAllTextAsync(tempFilePath, json, cancellationToken).ConfigureAwait(false);
+            File.Move(tempFilePath, _cacheFilePath, overwrite: true);
         }
         catch
         {

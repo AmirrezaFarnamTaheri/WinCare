@@ -38,7 +38,7 @@ public sealed partial class PluginStorePage : Page
                 {
                     b.Style = string.Equals(b.Tag as string, category, StringComparison.OrdinalIgnoreCase)
                         ? (Style)Application.Current.Resources["AccentButtonStyle"]
-                        : (Style)Application.Current.Resources["DefaultButtonStyle"];
+                        : null;
                 }
             }
         }
@@ -48,7 +48,7 @@ public sealed partial class PluginStorePage : Page
     {
         if (sender is Button button && button.Tag is PluginCardViewModel card)
         {
-            var item = card.RemoteItem ?? new WinCare.Infrastructure.Plugins.RemotePluginItem
+            var item = card.RemoteItem ?? new WinCare.Application.Plugins.RemotePluginItem
             {
                 Id = card.Id,
                 Name = card.Name,

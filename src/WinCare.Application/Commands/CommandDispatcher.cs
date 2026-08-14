@@ -11,7 +11,7 @@ namespace WinCare.Application.Commands;
 /// <summary>
 /// Admission, policy, and dispatch for the native WinCare command plane.
 /// </summary>
-public sealed class CommandDispatcher
+public sealed class CommandDispatcher : ICommandDispatcher
 {
     private readonly IReadOnlyDictionary<string, CommandDefinition> _definitions;
     private readonly IReadOnlyDictionary<string, ICommandHandler> _handlers;

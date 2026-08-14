@@ -17,6 +17,16 @@ public sealed class PluginLoadContext : AssemblyLoadContext
 
     protected override Assembly? Load(AssemblyName assemblyName)
     {
+        if (assemblyName.Name != null)
+        {
+            if (assemblyName.Name.StartsWith("WinCare.", StringComparison.OrdinalIgnoreCase) ||
+                assemblyName.Name.StartsWith("Microsoft.UI.Xaml", StringComparison.OrdinalIgnoreCase) ||
+                assemblyName.Name.StartsWith("Microsoft.WindowsAppRuntime", StringComparison.OrdinalIgnoreCase))
+            {
+                return null; // Delegate shared host assemblies to Default AssemblyLoadContext
+            }
+        }
+
         var assemblyPath = _resolver.ResolveAssemblyToPath(assemblyName);
         if (assemblyPath != null)
         {

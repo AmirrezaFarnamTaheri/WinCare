@@ -1,11 +1,13 @@
-namespace WinCare.Application.Plugins;
-
+using System;
+using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 using WinCare.CommandCatalog.Models;
 
 /// <summary>
 /// Contract implemented by compiled C# WinCare plugins (.dll).
 /// </summary>
-public interface IWinCarePlugin
+public interface IWinCarePlugin : IAsyncDisposable
 {
     /// <summary>
     /// Unique reverse-domain package identifier (e.g., com.wincare.plugins.disk_cleaner).
@@ -36,6 +38,11 @@ public interface IWinCarePlugin
     /// Initializes the plugin with the host environment.
     /// </summary>
     Task InitializeAsync(IPluginHost host, CancellationToken ct = default);
+
+    /// <summary>
+    /// Gracefully shuts down plugin resources, unregisters event handlers, and cancels timers.
+    /// </summary>
+    Task ShutdownAsync(CancellationToken ct = default);
 
     /// <summary>
     /// Returns all command definitions exposed by this plugin.

@@ -10,37 +10,65 @@ public sealed class PluginRegistryService : IPluginRegistry
 {
     private readonly ConcurrentDictionary<string, PluginRegistryEntry> _entries = new(StringComparer.OrdinalIgnoreCase);
     private readonly ConcurrentDictionary<string, (IWinCarePlugin Plugin, PluginLoadContext? LoadContext)> _instantiatedPlugins = new(StringComparer.OrdinalIgnoreCase);
+    private readonly IPluginStateRepository? _stateRepository;
     private readonly HashSet<string> _enabledIds;
+    private readonly SemaphoreSlim _gate = new(1, 1);
 
-    public PluginRegistryService(HashSet<string>? initialEnabledPluginIds = null)
+    public PluginRegistryService(IPluginStateRepository? stateRepository = null, HashSet<string>? initialEnabledPluginIds = null)
     {
-        _enabledIds = initialEnabledPluginIds ?? new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        _stateRepository = stateRepository;
+        _enabledIds = initialEnabledPluginIds ?? _stateRepository?.LoadEnabledPluginIds() ?? new HashSet<string>(StringComparer.OrdinalIgnoreCase);
     }
 
     public async Task DiscoverAndInitializeAsync(IPluginHost host, CancellationToken ct = default)
     {
-        _entries.Clear();
-        foreach (var kvp in _instantiatedPlugins)
+        await _gate.WaitAsync(ct).ConfigureAwait(false);
+        try
         {
-            kvp.Value.LoadContext?.Unload();
-        }
-        _instantiatedPlugins.Clear();
-
-        if (Directory.Exists(host.PluginsUserDirectory))
-        {
-            var pluginDirectories = Directory.GetDirectories(host.PluginsUserDirectory);
-            foreach (var dir in pluginDirectories)
+            _entries.Clear();
+            foreach (var kvp in _instantiatedPlugins)
             {
-                LoadPluginDirectory(dir, isBuiltIn: false);
+                try
+                {
+                    await kvp.Value.Plugin.ShutdownAsync(ct).ConfigureAwait(false);
+                    await kvp.Value.Plugin.DisposeAsync().ConfigureAwait(false);
+                }
+                catch { }
+                kvp.Value.LoadContext?.Unload();
+            }
+            _instantiatedPlugins.Clear();
+
+            // Scan built-in plugins in ApplicationRootPath/Plugins
+            var builtInDir = Path.Combine(host.ApplicationRootPath, "Plugins");
+            if (Directory.Exists(builtInDir))
+            {
+                foreach (var dir in Directory.GetDirectories(builtInDir))
+                {
+                    LoadPluginDirectory(dir, isBuiltIn: true);
+                }
+            }
+
+            // Scan user-installed plugins in PluginsUserDirectory
+            if (Directory.Exists(host.PluginsUserDirectory))
+            {
+                var pluginDirectories = Directory.GetDirectories(host.PluginsUserDirectory);
+                foreach (var dir in pluginDirectories)
+                {
+                    LoadPluginDirectory(dir, isBuiltIn: false);
+                }
+            }
+
+            foreach (var entry in _entries.Values)
+            {
+                if (_enabledIds.Contains(entry.Id) || entry.IsBuiltIn)
+                {
+                    await EnablePluginInternalAsync(entry.Id, host, ct);
+                }
             }
         }
-
-        foreach (var entry in _entries.Values)
+        finally
         {
-            if (_enabledIds.Contains(entry.Id) || entry.IsBuiltIn)
-            {
-                await EnablePluginInternalAsync(entry.Id, host, ct);
-            }
+            _gate.Release();
         }
     }
 
@@ -90,29 +118,52 @@ public sealed class PluginRegistryService : IPluginRegistry
 
     public async Task EnablePluginAsync(string pluginId, IPluginHost host, CancellationToken ct = default)
     {
-        _enabledIds.Add(pluginId);
-        await EnablePluginInternalAsync(pluginId, host, ct);
+        await _gate.WaitAsync(ct).ConfigureAwait(false);
+        try
+        {
+            _enabledIds.Add(pluginId);
+            _stateRepository?.SaveEnabledPluginIds(_enabledIds);
+            await EnablePluginInternalAsync(pluginId, host, ct);
+        }
+        finally
+        {
+            _gate.Release();
+        }
     }
 
-    public Task DisablePluginAsync(string pluginId, IPluginHost host, CancellationToken ct = default)
+    public async Task DisablePluginAsync(string pluginId, IPluginHost host, CancellationToken ct = default)
     {
-        _enabledIds.Remove(pluginId);
-        if (_entries.TryGetValue(pluginId, out var entry))
+        await _gate.WaitAsync(ct).ConfigureAwait(false);
+        try
         {
-            foreach (var cmd in entry.Commands)
+            _enabledIds.Remove(pluginId);
+            _stateRepository?.SaveEnabledPluginIds(_enabledIds);
+
+            if (_entries.TryGetValue(pluginId, out var entry))
             {
-                host.UnregisterCommand(cmd.Id);
+                foreach (var cmd in entry.Commands)
+                {
+                    host.UnregisterCommand(cmd.Id);
+                }
+
+                _entries[pluginId] = entry with { State = PluginState.Disabled };
             }
 
-            _entries[pluginId] = entry with { State = PluginState.Disabled };
+            if (_instantiatedPlugins.TryRemove(pluginId, out var inst))
+            {
+                try
+                {
+                    await inst.Plugin.ShutdownAsync(ct).ConfigureAwait(false);
+                    await inst.Plugin.DisposeAsync().ConfigureAwait(false);
+                }
+                catch { }
+                inst.LoadContext?.Unload();
+            }
         }
-
-        if (_instantiatedPlugins.TryRemove(pluginId, out var inst))
+        finally
         {
-            inst.LoadContext?.Unload();
+            _gate.Release();
         }
-
-        return Task.CompletedTask;
     }
 
     private void LoadPluginDirectory(string dirPath, bool isBuiltIn)
@@ -144,24 +195,29 @@ public sealed class PluginRegistryService : IPluginRegistry
 
         if (manifest.EntryType.Equals("Assembly", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrWhiteSpace(manifest.AssemblyFileName))
         {
-            var canonicalDir = Path.GetFullPath(dirPath);
-            var assemblyPath = Path.GetFullPath(Path.Combine(canonicalDir, manifest.AssemblyFileName));
-            var relativePath = Path.GetRelativePath(canonicalDir, assemblyPath);
-            if (relativePath.StartsWith("..", StringComparison.Ordinal) || Path.IsPathRooted(relativePath))
-            {
-                _entries[manifest.Id] = entry with { State = PluginState.Error, ErrorMessage = "Security Violation: Assembly file path traverses outside plugin directory." };
-                return;
-            }
+            InstantiateAssemblyPlugin(entry, manifest);
+        }
+    }
 
-            var asmResult = AssemblyPluginLoader.LoadPluginAssembly(assemblyPath, manifest.PluginClassName);
-            if (asmResult.Success && asmResult.Plugin != null)
-            {
-                _instantiatedPlugins[manifest.Id] = (asmResult.Plugin, asmResult.LoadContext);
-            }
-            else if (!asmResult.Success)
-            {
-                _entries[manifest.Id] = entry with { State = PluginState.Error, ErrorMessage = asmResult.ErrorMessage ?? "Assembly load failed." };
-            }
+    private void InstantiateAssemblyPlugin(PluginRegistryEntry entry, PluginManifest manifest)
+    {
+        var canonicalDir = Path.GetFullPath(entry.SourceDirectoryPath);
+        var assemblyPath = Path.GetFullPath(Path.Combine(canonicalDir, manifest.AssemblyFileName!));
+        var relativePath = Path.GetRelativePath(canonicalDir, assemblyPath);
+        if (relativePath.StartsWith("..", StringComparison.Ordinal) || Path.IsPathRooted(relativePath))
+        {
+            _entries[manifest.Id] = entry with { State = PluginState.Error, ErrorMessage = "Security Violation: Assembly file path traverses outside plugin directory." };
+            return;
+        }
+
+        var asmResult = AssemblyPluginLoader.LoadPluginAssembly(assemblyPath, manifest.PluginClassName);
+        if (asmResult.Success && asmResult.Plugin != null)
+        {
+            _instantiatedPlugins[manifest.Id] = (asmResult.Plugin, asmResult.LoadContext);
+        }
+        else if (!asmResult.Success)
+        {
+            _entries[manifest.Id] = entry with { State = PluginState.Error, ErrorMessage = asmResult.ErrorMessage ?? "Assembly load failed." };
         }
     }
 
@@ -174,6 +230,17 @@ public sealed class PluginRegistryService : IPluginRegistry
 
         try
         {
+            if (!_instantiatedPlugins.ContainsKey(pluginId) && !string.IsNullOrEmpty(entry.SourceDirectoryPath))
+            {
+                var loadResult = JsonPluginLoader.LoadFromDirectory(entry.SourceDirectoryPath);
+                if (loadResult.Success && loadResult.Manifest != null &&
+                    loadResult.Manifest.EntryType.Equals("Assembly", StringComparison.OrdinalIgnoreCase) &&
+                    !string.IsNullOrWhiteSpace(loadResult.Manifest.AssemblyFileName))
+                {
+                    InstantiateAssemblyPlugin(entry, loadResult.Manifest);
+                }
+            }
+
             if (_instantiatedPlugins.TryGetValue(pluginId, out var inst))
             {
                 // Host Exception Isolation Boundary: Wrap third-party InitializeAsync in exception handler

@@ -5,14 +5,9 @@ using System.Net.Http;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using WinCare.Application.Plugins;
 
 namespace WinCare.Infrastructure.Plugins;
-
-public interface IPluginInstallerService
-{
-    Task<string> InstallPluginFromPackageAsync(string packageUrl, CancellationToken cancellationToken = default);
-    Task<string> InstallPluginFromStreamAsync(Stream archiveStream, string targetPluginId, CancellationToken cancellationToken = default);
-}
 
 public class PluginInstallerService : IPluginInstallerService
 {
@@ -69,7 +64,9 @@ public class PluginInstallerService : IPluginInstallerService
             throw new ArgumentNullException(nameof(archiveStream));
         }
 
-        var tempExtractDir = Path.Combine(Path.GetTempPath(), $"wincare_install_{Guid.NewGuid():N}");
+        var stagingBaseDir = Path.Combine(_pluginsBaseDirectory, ".staging");
+        Directory.CreateDirectory(stagingBaseDir);
+        var tempExtractDir = Path.Combine(stagingBaseDir, $"install_{Guid.NewGuid():N}");
         Directory.CreateDirectory(tempExtractDir);
 
         try
@@ -102,7 +99,12 @@ public class PluginInstallerService : IPluginInstallerService
                 }
             }
 
-            var manifestPath = Path.Combine(tempExtractDir, "plugin.json");
+            var manifestPath = Path.Combine(tempExtractDir, "wincare-plugin.json");
+            if (!File.Exists(manifestPath))
+            {
+                manifestPath = Path.Combine(tempExtractDir, "plugin.json");
+            }
+
             var finalPluginId = targetPluginId;
 
             if (File.Exists(manifestPath))
@@ -129,7 +131,15 @@ public class PluginInstallerService : IPluginInstallerService
             }
 
             Directory.CreateDirectory(Path.GetDirectoryName(finalTargetDir)!);
-            Directory.Move(tempExtractDir, finalTargetDir);
+            try
+            {
+                Directory.Move(tempExtractDir, finalTargetDir);
+            }
+            catch (IOException)
+            {
+                CopyDirectoryRecursive(tempExtractDir, finalTargetDir);
+                Directory.Delete(tempExtractDir, recursive: true);
+            }
 
             return finalTargetDir;
         }
@@ -140,6 +150,21 @@ public class PluginInstallerService : IPluginInstallerService
                 try { Directory.Delete(tempExtractDir, recursive: true); } catch { }
             }
             throw;
+        }
+    }
+
+    private static void CopyDirectoryRecursive(string sourceDir, string destinationDir)
+    {
+        Directory.CreateDirectory(destinationDir);
+        foreach (var file in Directory.GetFiles(sourceDir))
+        {
+            var destFile = Path.Combine(destinationDir, Path.GetFileName(file));
+            File.Copy(file, destFile, overwrite: true);
+        }
+        foreach (var subDir in Directory.GetDirectories(sourceDir))
+        {
+            var destSubDir = Path.Combine(destinationDir, Path.GetFileName(subDir));
+            CopyDirectoryRecursive(subDir, destSubDir);
         }
     }
 }

@@ -18,8 +18,5 @@
     <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
       <_Parameter1>WinCare.Infrastructure.Tests</_Parameter1>
     </AssemblyAttribute>
-    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
-      <_Parameter1>WinCare.App</_Parameter1>
-    </AssemblyAttribute>
   </ItemGroup>
 </Project>

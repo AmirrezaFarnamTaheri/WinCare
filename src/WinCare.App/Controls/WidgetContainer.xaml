@@ -5,7 +5,7 @@
     xmlns:plugins="using:WinCare.Application.Plugins">
 
     <StackPanel Spacing="12">
-        <TextBlock Text="Active Plugin Widgets" Style="{StaticResource SubtitleTextBlockStyle}" Foreground="#00D2B4" />
+        <TextBlock Text="Active Plugin Widgets" Style="{StaticResource SubtitleTextBlockStyle}" Foreground="{ThemeResource AccentTealBrush}" />
         <ItemsControl x:Name="WidgetsList">
             <ItemsControl.ItemTemplate>
                 <DataTemplate x:DataType="plugins:IPluginWidget">
@@ -21,7 +21,7 @@
                                 <TextBlock Text="{x:Bind Title}" FontWeight="SemiBold" FontSize="14" />
                                 <TextBlock Text="{x:Bind StatusSummary}" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                             </StackPanel>
-                            <TextBlock Grid.Column="1" Text="{x:Bind Category}" FontSize="11" Foreground="#00D2B4" VerticalAlignment="Center" />
+                            <TextBlock Grid.Column="1" Text="{x:Bind Category}" FontSize="11" Foreground="{ThemeResource AccentTealBrush}" VerticalAlignment="Center" />
                         </Grid>
                     </Border>
                 </DataTemplate>
