@@ -175,7 +175,7 @@ namespace Community.GoldenSdkPlugin
             Assert.True(registeredCmd.ReadOnly);
 
             // 8. Execute dynamically registered command through CommandDispatcher
-            var execOutcome = await dispatcher.ExecuteAsync(CommandRequest.Preview("com.community.goldensdk.execute"));
+            var execOutcome = await dispatcher.ExecuteAsync(CommandRequest.Preview("com.community.goldensdk.execute"), CommandExecutionOptions.Default);
             Assert.Equal(CommandResultStatus.Succeeded, execOutcome.Status);
             Assert.Equal("GOLDEN_SUCCESS", execOutcome.Code);
             Assert.Equal("Execution verified from dynamically loaded assembly", execOutcome.Message);
