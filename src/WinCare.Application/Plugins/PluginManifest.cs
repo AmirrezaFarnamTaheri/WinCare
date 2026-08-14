@@ -85,10 +85,10 @@ public sealed class PluginToolDefinition
             Section: Section,
             Risk: parsedRisk,
             ReadOnly: ReadOnly,
-            AdministratorAccess: AdministratorAccess.None,
-            Restart: RestartExpectation.None,
+            AdministratorAccess: AdministratorAccess.No,
+            Restart: RestartExpectation.No,
             LegacySource: $"plugin:{pluginId}",
-            MigrationStatus: MigrationStatus.NativeReady,
+            MigrationStatus: MigrationStatus.Implemented,
             Keywords: new[] { Id, Title, Area, Section, pluginId }
         );
     }
