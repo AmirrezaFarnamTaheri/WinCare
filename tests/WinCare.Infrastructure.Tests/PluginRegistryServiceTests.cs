@@ -21,9 +21,12 @@ public sealed class DummyPluginHost : IPluginHost
     public ICommandDispatcher CommandDispatcher => null!;
     public IReadOnlyCollection<CommandDefinition> RegisteredCommands => _registeredCommands.AsReadOnly();
 
-    public void RegisterCommand(CommandDefinition command, ICommandHandler? handler = null)
+    public bool RegisterCommand(CommandDefinition command, ICommandHandler? handler = null)
     {
+        if (command == null || string.IsNullOrWhiteSpace(command.Id)) return false;
+        if (_registeredCommands.Any(c => c.Id.Equals(command.Id, StringComparison.OrdinalIgnoreCase))) return false;
         _registeredCommands.Add(command);
+        return true;
     }
 
     public void UnregisterCommand(string commandId)
@@ -291,6 +294,71 @@ public sealed class PluginRegistryServiceTests
 
             // Verify rollback: no collision commands were left registered in host
             Assert.DoesNotContain(host.RegisteredCommands, c => c.Id == "collision.tool1");
+        }
+        finally
+        {
+            Directory.Delete(tempUserPluginsDir, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task PluginRegistryService_Loads_CliGenerated_Manifest_With_Aliases_And_Executes_Correctly()
+    {
+        var tempUserPluginsDir = Path.Combine(Path.GetTempPath(), "WinCareCliCompatTest_" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(tempUserPluginsDir);
+
+        var pluginDir = Path.Combine(tempUserPluginsDir, "cli-tool");
+        Directory.CreateDirectory(pluginDir);
+        var scriptsDir = Path.Combine(pluginDir, "scripts");
+        Directory.CreateDirectory(scriptsDir);
+
+        File.WriteAllText(Path.Combine(scriptsDir, "clean_temp.cmd"), "@echo off\necho CLI test executed\nexit /b 0\n");
+
+        var manifestJson = """
+        {
+          "id": "com.community.mycustomtool",
+          "name": "My Custom Tool",
+          "version": "1.0.0",
+          "author": "Community Developer",
+          "description": "Custom community script maintenance tool",
+          "category": "System Care",
+          "entryType": "Manifest",
+          "tools": [
+            {
+              "id": "com.community.mycustomtool.clean",
+              "title": "Run My Custom Tool",
+              "summary": "Custom community script maintenance tool",
+              "area": "System care",
+              "section": "Storage",
+              "risk": "ReadOnly",
+              "readOnly": true,
+              "administratorAccess": "No",
+              "restart": "No",
+              "executorType": "Script",
+              "scriptPath": "scripts/clean_temp.cmd"
+            }
+          ]
+        }
+        """;
+        File.WriteAllText(Path.Combine(pluginDir, "wincare-plugin.json"), manifestJson);
+
+        var dispatcher = new CommandDispatcher(Array.Empty<CommandDefinition>(), Array.Empty<ICommandHandler>());
+        var host = new DefaultPluginHost(dispatcher, pluginsUserDirectory: tempUserPluginsDir);
+        var service = new PluginRegistryService(
+            scriptHandlerFactory: (cmdId, scriptPath, pDir) => new WinCare.Infrastructure.Plugins.PluginScriptCommandHandler(cmdId, scriptPath, pDir),
+            initialEnabledPluginIds: new HashSet<string> { "com.community.mycustomtool" });
+
+        try
+        {
+            await service.DiscoverAndInitializeAsync(host);
+
+            var plugin = Assert.Single(service.GetAllPlugins(), p => p.Id == "com.community.mycustomtool");
+            Assert.Equal(PluginState.Enabled, plugin.State);
+            Assert.Null(plugin.ErrorMessage);
+
+            var registeredCmd = Assert.Single(host.RegisteredCommands, c => c.Id == "com.community.mycustomtool.clean");
+            Assert.True(registeredCmd.ReadOnly);
+            Assert.Equal(CommandRisk.ReadOnly, registeredCmd.Risk);
         }
         finally
         {
