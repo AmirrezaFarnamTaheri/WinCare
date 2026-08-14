@@ -23,7 +23,11 @@ mod tests {
 
     #[test]
     fn test_toast_xml_generation() {
-        let xml = generate_toast_xml("Storage Alert", "Drive C has less than 5 GB free", "clean_temp");
+        let xml = generate_toast_xml(
+            "Storage Alert",
+            "Drive C has less than 5 GB free",
+            "clean_temp",
+        );
         assert!(xml.contains("Storage Alert"));
         assert!(xml.contains("Drive C has less than 5 GB free"));
         assert!(xml.contains("wincare://open/clean_temp"));

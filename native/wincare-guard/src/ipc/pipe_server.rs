@@ -1,7 +1,7 @@
 //! Named Pipe IPC Server for WinCare Guard.
 
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 pub const PIPE_NAME: &str = r"\\.\pipe\WinCareGuardIPC";
 

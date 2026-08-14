@@ -16,7 +16,10 @@ pub fn sample_system_health() -> SystemHealthSnapshot {
     let thermal = thermal::check_thermal_and_power();
 
     let is_disk_critical = disk.as_ref().map(|d| d.is_low_space).unwrap_or(false);
-    let is_ram_critical = ram.as_ref().map(|r| r.is_critical_pressure).unwrap_or(false);
+    let is_ram_critical = ram
+        .as_ref()
+        .map(|r| r.is_critical_pressure)
+        .unwrap_or(false);
 
     SystemHealthSnapshot {
         disk,

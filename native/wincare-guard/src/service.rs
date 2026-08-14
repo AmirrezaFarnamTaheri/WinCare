@@ -1,9 +1,9 @@
 //! Service Control Manager & background daemon loop.
 
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::Arc;
-use std::time::Duration;
 use crate::monitors;
+use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::time::Duration;
 
 pub struct GuardDaemon {
     running: Arc<AtomicBool>,

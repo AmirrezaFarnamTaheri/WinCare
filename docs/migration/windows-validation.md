@@ -14,7 +14,7 @@
 ```text
 python tools/verify_native_foundation.py
 python -m unittest discover -s tests/native -v
-cargo fmt --manifest-path native/Cargo.toml --check
+cargo fmt --manifest-path native/Cargo.toml --all -- --check
 cargo clippy --manifest-path native/Cargo.toml --all-targets --all-features -- -D warnings
 cargo test --manifest-path native/Cargo.toml
 dotnet restore WinCare.Native.sln -p:Platform=x64

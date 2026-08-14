@@ -28,7 +28,11 @@ fn test_daemon_loop_terminates_cleanly() {
 
 #[test]
 fn test_toast_notification_schema() {
-    let xml = toast::generate_toast_xml("Disk Cleanup Recommended", "Temporary files exceed 10 GB", "clean_temp");
+    let xml = toast::generate_toast_xml(
+        "Disk Cleanup Recommended",
+        "Temporary files exceed 10 GB",
+        "clean_temp",
+    );
     assert!(xml.contains("Disk Cleanup Recommended"));
     assert!(xml.contains("Temporary files exceed 10 GB"));
 }

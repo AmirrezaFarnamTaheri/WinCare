@@ -5,8 +5,8 @@ pub mod monitors;
 pub mod notifications;
 pub mod service;
 
-use std::time::Duration;
 use service::GuardDaemon;
+use std::time::Duration;
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();
