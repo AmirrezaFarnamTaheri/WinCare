@@ -5,6 +5,7 @@
     <IsRoslynComponent>true</IsRoslynComponent>
     <IncludeBuildOutput>false</IncludeBuildOutput>
     <Nullable>enable</Nullable>
+    <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
     <ManagePackageVersionsCentrally>false</ManagePackageVersionsCentrally>
   </PropertyGroup>
 
