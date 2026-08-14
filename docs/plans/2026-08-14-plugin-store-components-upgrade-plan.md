@@ -3,7 +3,7 @@
 - **Date:** 2026-08-14
 - **Status:** Completed (`artifact_readiness: completed`)
 - **Contract Version:** `ce-unified-plan/v1`
-- **Origin Specification:** `docs/superpowers/specs/2026-08-14-plugin-store-components-design.md`
+- **Origin Specification:** `docs/plans/2026-08-14-plugin-store-and-modular-architecture-requirements.md`
 
 ---
 
