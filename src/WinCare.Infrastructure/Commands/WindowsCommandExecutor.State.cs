@@ -3,7 +3,7 @@ using System.Text.Json.Nodes;
 using WinCare.Application.Commands;
 namespace WinCare.Infrastructure.Commands;
 
-public sealed partial class WindowsCommandExecutor
+internal sealed partial class WindowsCommandExecutor
 {
     private async Task AppendStateItemAsync(string key, JsonElement item, CancellationToken cancellationToken)
     {

@@ -19,7 +19,7 @@ using WinCare.Application.Commands;
 
 namespace WinCare.Infrastructure.Commands;
 
-public sealed partial class WindowsCommandExecutor
+internal sealed partial class WindowsCommandExecutor
 {
     private CommandHandlerOutcome StaticProfileCatalog(string profileFamily)
     {

@@ -10,7 +10,7 @@ using WinCare.Domain.Commands;
 
 namespace WinCare.Infrastructure.Commands;
 
-public sealed partial class WindowsCommandExecutor
+internal sealed partial class WindowsCommandExecutor
 {
     private CommandHandlerOutcome WindowInventory(CommandParameters p)
     {

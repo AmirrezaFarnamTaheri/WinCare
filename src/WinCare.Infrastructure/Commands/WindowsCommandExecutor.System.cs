@@ -13,7 +13,7 @@ using WinCare.Domain.Commands;
 
 namespace WinCare.Infrastructure.Commands;
 
-public sealed partial class WindowsCommandExecutor
+internal sealed partial class WindowsCommandExecutor
 {
     private async Task<CommandHandlerOutcome> SystemOverviewAsync(CancellationToken cancellationToken)
     {

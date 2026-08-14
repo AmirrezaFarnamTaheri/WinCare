@@ -84,7 +84,7 @@ public sealed record ApprovedMutationPlan(
             case JsonValueKind.Object:
                 var sortedProps = element.EnumerateObject()
                     .OrderBy(p => p.Name, StringComparer.Ordinal)
-                    .Select(p => $"\"{p.Name}\":{CanonicalizeJson(p.Value)}");
+                    .Select(p => $"{JsonSerializer.Serialize(p.Name)}:{CanonicalizeJson(p.Value)}");
                 return "{" + string.Join(",", sortedProps) + "}";
             case JsonValueKind.Array:
                 var items = element.EnumerateArray().Select(CanonicalizeJson);

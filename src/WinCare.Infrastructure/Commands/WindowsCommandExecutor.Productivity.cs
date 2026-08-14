@@ -15,7 +15,7 @@ using WinCare.Application.Commands;
 using System.Runtime.InteropServices;
 namespace WinCare.Infrastructure.Commands;
 
-public sealed partial class WindowsCommandExecutor
+internal sealed partial class WindowsCommandExecutor
 {
     private static readonly EnumerationOptions SafeRecursiveEnumeration = new()
     {

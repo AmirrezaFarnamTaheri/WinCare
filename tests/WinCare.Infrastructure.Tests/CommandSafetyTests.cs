@@ -314,6 +314,18 @@ public sealed class CommandSafetyTests
     }
 
     [Fact]
+    public void ApprovedMutationPlan_AdversarialPropertyNames_NoCollision()
+    {
+        using JsonDocument json1 = JsonDocument.Parse("""{ "a": 1, "b": 2 }""");
+        using JsonDocument json2 = JsonDocument.Parse("""{ "a\":1,\"b": 2 }""");
+
+        ApprovedMutationPlan plan1 = ApprovedMutationPlan.Create("test-cmd", json1.RootElement);
+        ApprovedMutationPlan plan2 = ApprovedMutationPlan.Create("test-cmd", json2.RootElement);
+
+        Assert.NotEqual(plan1.ParametersDigest, plan2.ParametersDigest);
+    }
+
+    [Fact]
     public async Task WindowsCommandExecutor_RemediationCancellation_DurablyPersistsCancelledState()
     {
         string testRoot = Path.Combine(Path.GetTempPath(), "WinCareCancelRemediationTest_" + Guid.NewGuid().ToString("N"));
@@ -335,13 +347,13 @@ public sealed class CommandSafetyTests
                 Keywords: Array.Empty<string>()
             );
 
-            using JsonDocument paramsDoc = JsonDocument.Parse("""{ "PresetId": "privacy-basic" }""");
+            using JsonDocument paramsDoc = JsonDocument.Parse("""{ "PresetId": "privacy" }""");
             using CancellationTokenSource cts = new();
 
             CommandRequest request = CommandRequest.Execute("preset", paramsDoc.RootElement);
 
-            // Delay cancellation slightly so execution enters ApplyPresetAsync and writes intent record
-            cts.CancelAfter(TimeSpan.FromMilliseconds(5));
+            // Trigger cancellation after 10ms so execution enters ApplyPresetAsync, writes "Applying", and gets cancelled mid-loop
+            cts.CancelAfter(TimeSpan.FromMilliseconds(10));
 
             try
             {
@@ -355,13 +367,13 @@ public sealed class CommandSafetyTests
             CommandStateStore store = new(testRoot);
             JsonElement history = await store.ReadObjectAsync("preset-history", CancellationToken.None);
 
-            if (history.ValueKind == JsonValueKind.Array && history.GetArrayLength() > 0)
-            {
-                JsonElement item = history[0];
-                string? status = item.GetProperty("status").GetString();
-                Assert.NotNull(status);
-                Assert.True(status is "Cancelled" or "PartiallyApplied" or "Succeeded" or "Applying");
-            }
+            Assert.Equal(JsonValueKind.Array, history.ValueKind);
+            Assert.True(history.GetArrayLength() > 0, "preset-history must durably contain intent record.");
+
+            JsonElement item = history[0];
+            string? status = item.GetProperty("status").GetString();
+            Assert.NotNull(status);
+            Assert.True(status is "Cancelled" or "PartiallyApplied", $"Expected terminal cancellation status 'Cancelled' or 'PartiallyApplied', but found '{status}'.");
         }
         finally
         {

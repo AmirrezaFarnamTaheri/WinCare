@@ -24,7 +24,7 @@ namespace WinCare.Infrastructure.Commands;
 /// Native Windows implementation for the complete stable WinCare command catalog.
 /// Uses BCL/Win32 APIs and bounded native child processes only; PowerShell is never invoked.
 /// </summary>
-public sealed partial class WindowsCommandExecutor : ICommandOperationExecutor, IDisposable
+internal sealed partial class WindowsCommandExecutor : ICommandOperationExecutor, IDisposable
 {
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -42,7 +42,7 @@ public sealed partial class WindowsCommandExecutor : ICommandOperationExecutor, 
     /// <summary>
     /// Initializes a new instance of <see cref="WindowsCommandExecutor"/> bound to a custom state store root path.
     /// </summary>
-    public WindowsCommandExecutor(string stateRootPath)
+    internal WindowsCommandExecutor(string stateRootPath)
         : this(null, null, new CommandStateStore(stateRootPath), null)
     {
     }
@@ -50,7 +50,7 @@ public sealed partial class WindowsCommandExecutor : ICommandOperationExecutor, 
     /// <summary>
     /// Initializes a new instance of <see cref="WindowsCommandExecutor"/>.
     /// </summary>
-    public WindowsCommandExecutor(
+    internal WindowsCommandExecutor(
         INativeCoreService? nativeCore = null,
         BoundedProcessRunner? process = null,
         CommandStateStore? state = null,
