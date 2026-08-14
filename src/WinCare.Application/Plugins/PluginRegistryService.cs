@@ -352,6 +352,13 @@ public sealed class PluginRegistryService : IPluginRegistry
             var toolMap = manifest?.Tools?.ToDictionary(t => t.Id, StringComparer.OrdinalIgnoreCase);
             foreach (var cmd in entry.Commands)
             {
+                if (host.RegisteredCommands.Any(c => string.Equals(c.Id, cmd.Id, StringComparison.OrdinalIgnoreCase)))
+                {
+                    // Command was already registered by the plugin's own InitializeAsync
+                    registeredCommandIds.Add(cmd.Id);
+                    continue;
+                }
+
                 ICommandHandler? handler = null;
                 PluginToolDefinition? toolDef = null;
                 toolMap?.TryGetValue(cmd.Id, out toolDef);
