@@ -524,11 +524,9 @@ public class PluginInstallerServiceTests
         var tamperedManifest = "{\"id\":\"com.wincare.test\",\"name\":\"Tampered Test\",\"version\":\"1.0.0\"}";
         var tamperedBytes = Encoding.UTF8.GetBytes(tamperedManifest);
 
-        var installer = new PluginInstallerService();
-        var isValid = installer.VerifyManifestSignature(tamperedBytes, signatureBase64, publicKeyPem, out var error);
+        var isValid = PluginInstallerService.VerifyManifestSignature(tamperedBytes, signatureBase64, publicKeyPem);
 
         Assert.False(isValid);
-        Assert.Contains("Invalid signature", error);
     }
 
     [Fact]
