@@ -350,7 +350,7 @@ public sealed class CommandSafetyTests
             using JsonDocument paramsDoc = JsonDocument.Parse("""{ "PresetId": "privacy" }""");
             using CancellationTokenSource cts = new();
 
-            executor.RuleExecutorSeam = (rule, ct) => Task.FromResult(CommandHandlerOutcome.Success("preset", $"Rule '{rule.Title}' fake applied.", null, false));
+            executor.RuleExecutorSeam = (rule, ct) => Task.FromResult(CommandHandlerOutcome.Succeeded("preset", $"Rule '{rule.Title}' fake applied.", null, false));
             executor.OnIntentPersistedAsync = key =>
             {
                 if (key == "preset-history:Applying")
@@ -390,7 +390,7 @@ public sealed class CommandSafetyTests
             using WindowsCommandExecutor executor = new(testRoot);
             using CancellationTokenSource cts = new();
 
-            executor.RuleExecutorSeam = (rule, ct) => Task.FromResult(CommandHandlerOutcome.Success("preset", $"Rule '{rule.Title}' fake applied.", null, false));
+            executor.RuleExecutorSeam = (rule, ct) => Task.FromResult(CommandHandlerOutcome.Succeeded("preset", $"Rule '{rule.Title}' fake applied.", null, false));
             executor.OnIntentPersistedAsync = key =>
             {
                 if (key == "preset-history:Applied")
