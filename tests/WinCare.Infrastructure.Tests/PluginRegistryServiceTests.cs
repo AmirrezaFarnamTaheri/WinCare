@@ -209,30 +209,25 @@ public sealed class PluginRegistryServiceTests
         var dispatcher = new CommandDispatcher(Array.Empty<CommandDefinition>(), Array.Empty<ICommandHandler>());
         var host = new DefaultPluginHost(dispatcher, pluginsUserDirectory: tempUserPluginsDir);
         var service = new PluginRegistryService(
-            scriptHandlerFactory: (s, t) => new WinCare.Infrastructure.Plugins.PluginScriptCommandHandler(s, t),
+            scriptHandlerFactory: (cmdId, scriptPath, pluginDir) => new WinCare.Infrastructure.Plugins.PluginScriptCommandHandler(cmdId, scriptPath, pluginDir),
             initialEnabledPluginIds: new HashSet<string> { "com.wincare.e2e" });
 
         try
         {
             await service.DiscoverAndInitializeAsync(host);
 
-            Assert.True(dispatcher.TryGetDefinition("e2e.tool1", out var def));
-            Assert.NotNull(def);
+            Assert.Contains(host.RegisteredCommands, c => c.Id == "e2e.tool1");
+            var def = host.RegisteredCommands.First(c => c.Id == "e2e.tool1");
             Assert.Equal("E2E Tool", def.Title);
 
-            var request = new WinCare.Domain.Commands.CommandRequest
-            {
-                CommandId = "e2e.tool1",
-                InvocationReason = "Integration test verification"
-            };
-
-            var result = await dispatcher.ExecuteAsync(request, WinCare.Domain.Commands.CommandExecutionOptions.Default);
-            Assert.True(result.Success);
-            Assert.Contains("E2E_PLUGIN_SUCCESS", result.StandardOutput);
+            var request = CommandRequest.Preview("e2e.tool1");
+            var result = await dispatcher.ExecuteAsync(request, WinCare.Application.Commands.CommandExecutionOptions.Default, CancellationToken.None);
+            Assert.Equal(CommandResultStatus.Succeeded, result.Status);
+            Assert.Contains("E2E_PLUGIN_SUCCESS", result.Message);
 
             // Disable plugin dynamically and verify dispatcher unregistration
             await service.DisablePluginAsync("com.wincare.e2e", host);
-            Assert.False(dispatcher.TryGetDefinition("e2e.tool1", out _));
+            Assert.DoesNotContain(host.RegisteredCommands, c => c.Id == "e2e.tool1");
         }
         finally
         {
@@ -280,7 +275,7 @@ public sealed class PluginRegistryServiceTests
         var dispatcher = new CommandDispatcher(Array.Empty<CommandDefinition>(), Array.Empty<ICommandHandler>());
         var host = new DefaultPluginHost(dispatcher, pluginsUserDirectory: tempUserPluginsDir);
         var service = new PluginRegistryService(
-            scriptHandlerFactory: (s, t) => new WinCare.Infrastructure.Plugins.PluginScriptCommandHandler(s, t),
+            scriptHandlerFactory: (cmdId, scriptPath, pluginDir) => new WinCare.Infrastructure.Plugins.PluginScriptCommandHandler(cmdId, scriptPath, pluginDir),
             initialEnabledPluginIds: new HashSet<string> { "com.wincare.collision" });
 
         try
@@ -294,7 +289,7 @@ public sealed class PluginRegistryServiceTests
 
             // Verify rollback: no commands were left registered in host or dispatcher
             Assert.Empty(host.RegisteredCommands);
-            Assert.False(dispatcher.TryGetDefinition("collision.tool1", out _));
+            Assert.DoesNotContain(host.RegisteredCommands, c => c.Id == "collision.tool1");
         }
         finally
         {

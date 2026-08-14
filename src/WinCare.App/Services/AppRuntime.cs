@@ -24,7 +24,7 @@ public sealed class AppRuntime
         PluginHost = new DefaultPluginHost(Dispatcher);
         PluginRegistry = new PluginRegistryService(
             PluginState,
-            scriptHandlerFactory: (cmdId, scriptPath, pluginDir) => new PluginScriptCommandHandler(cmdId, scriptPath, pluginDir, new BoundedProcessRunner(NativeCore))
+            scriptHandlerFactory: (cmdId, scriptPath, pluginDir) => new PluginScriptCommandHandler(cmdId, scriptPath, pluginDir, new BoundedProcessRunner())
         );
         CatalogService = new RemoteCatalogService();
         InstallerService = new PluginInstallerService();
