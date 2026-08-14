@@ -1,9 +1,10 @@
 # WinCare AI System Doctor — Product & Technical Requirements Specification
 
 - **Date:** 2026-08-14
-- **Status:** Requirements Specification (`artifact_readiness: requirements-only`)
+- **Status:** Implementation-Ready Specification (`artifact_readiness: implementation-ready`)
 - **Contract Version:** `ce-unified-plan/v1`
-- **Source:** `/ce-ideate` -> `/ce-brainstorm`
+- **Implementation Plan:** `docs/plans/2026-08-14-ai-system-doctor-plan.md`
+- **Source:** `/ce-ideate` -> `/ce-brainstorm` -> `/ce-plan`
 
 ---
 
