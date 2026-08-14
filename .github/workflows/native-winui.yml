@@ -130,11 +130,11 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          mkdir -p release_assets
-          find artifacts/downloads -type f \( -name "*.msix" -o -name "*.zip" -o -name "*.md" \) -exec cp {} release_assets/ \;
+          python tools/stage_release_assets.py
           gh release create v2.4.0-rc1 release_assets/* \
             --title "WinCare v2.4.0-rc1 (Native WinUI & Core Release)" \
             --prerelease \
             --clobber \
             --notes "Automated release candidate build generated from master commit \`${{ github.sha }}\`. Contains native MSIX packages (x64/ARM64), portable executables, and verified source finalization archives."
+
 
