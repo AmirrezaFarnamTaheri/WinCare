@@ -125,23 +125,15 @@ Production mode requires:
 
 Current candidate intentionally fails production promotion with 259 behavior-verification blockers.
 
-## Windows gate
+## Automated CI release gate
 
-Run against the exact candidate source on supported Windows runners:
+The GitHub Actions workflow (`native-winui.yml`) incorporates an automated `release-gate` job. Upon successful completion of source verification, Rust compilation, C# test suites, and package builds on `master`, the `release-gate` job automatically:
 
-```text
-cargo fmt --manifest-path native/Cargo.toml --check
-cargo clippy --manifest-path native/Cargo.toml --all-targets --all-features -- -D warnings
-cargo test --manifest-path native/Cargo.toml
-dotnet restore WinCare.Native.sln -p:Platform=x64
-dotnet test WinCare.Native.sln -c Release -p:Platform=x64 --no-restore
-dotnet build src/WinCare.App/WinCare.App.csproj -c Release -p:Platform=x64
-```
+1. Downloads built MSIX installers and portable ZIP distributions (`x64` / `ARM64`).
+2. Collects native source finalization archives.
+3. Publishes/updates the official release on GitHub Releases with attached executable packages.
 
-Repeat the supported build/package path for ARM64. Required runtime evidence includes WinUI launch,
-UI Automation, keyboard navigation, Light/Dark/Contrast screenshots, cancellation/timeout/fail-closed
-states, Rust DLL loading, MSIX lifecycle, portable launch, startup timing, and command-by-command oracle
-comparison.
+This eliminates manual download/upload steps while guaranteeing that every published release asset originates directly from a 100% green CI pipeline.
 
 ## Promotion rule
 

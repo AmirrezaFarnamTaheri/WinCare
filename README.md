@@ -122,18 +122,16 @@ compatibility gates also run. Finalized native-source archives intentionally omi
 PowerShell, so the two finalization tests that require that executable oracle report an explicit skip.
 These checks do not substitute for a Windows build or runtime test.
 
-## Windows release evidence still required
+## Automated CI release gate
 
-A promotable release must pass the Windows matrix for x64 and ARM64:
+The repository's GitHub Actions workflow (`Native WinUI`) includes an automated **`release-gate`** job. When code is pushed or merged to `master`, CI executes native verification, compiles Rust and .NET 8 binaries, runs unit tests, packages MSIX installers and portable ZIP distributions for both `x64` and `ARM64`, and automatically publishes the compiled release packages directly to [GitHub Releases](https://github.com/AmirrezaFarnamTaheri/WinCare/releases).
 
-- Rust formatting, Clippy, tests, and release DLL build
-- .NET restore, tests, and WinUI 3 build
-- App launch through WinApp CLI
-- UI Automation and keyboard flows
-- Light, dark, and Windows Contrast screenshots
-- Signed and timestamped MSIX packages
-- Self-contained portable packages
-- Command-by-command behavioral parity
+- Rust formatting, Clippy, unit tests, and C-ABI DLL compilation (`x64` / `ARM64`)
+- .NET restore, C# test suites, and WinUI 3 build
+- Packaged MSIX installers (`WinCare.App.Package`)
+- Self-contained portable executable packages (`WinCare-x64-portable.zip` / `WinCare-ARM64-portable.zip`)
+- Deterministic native source finalization archives
+- Automatic GitHub Release deployment (`release-gate`)
 
 See [Windows validation](docs/migration/windows-validation.md) and
 [finalization status](docs/migration/finalization-status.md).

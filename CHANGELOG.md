@@ -9,6 +9,7 @@ Released: 2026-08-09
 - Replaced the WPF product surface with an approved WinUI 3 shell using task-based navigation,
   page-level tabs, responsive tabular lists, system theming, keyboard support, and UI Automation metadata.
 - Preserved all 259 stable command IDs in a typed embedded catalog.
+- Added automated `release-gate` CI job in `native-winui.yml` to compile, package, and automatically publish MSIX and Portable executable ZIP releases directly to GitHub Releases upon master branch pushes.
 
 ### Cyber-Teal visual identity
 

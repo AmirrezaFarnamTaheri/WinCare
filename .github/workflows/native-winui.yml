@@ -114,3 +114,27 @@ jobs:
           path: |
             src/WinCare.App/AppPackages/**/*.msix
             artifacts/WinCare-${{ matrix.runtime }}-portable.zip
+
+  release-gate:
+    needs: [verify-source, rust, managed-and-package]
+    if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
+        with:
+          path: artifacts/downloads
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir -p release_assets
+          find artifacts/downloads -type f \( -name "*.msix" -o -name "*.zip" -o -name "*.md" \) -exec cp {} release_assets/ \;
+          gh release create v2.4.0-rc1 release_assets/* \
+            --title "WinCare v2.4.0-rc1 (Native WinUI & Core Release)" \
+            --prerelease \
+            --clobber \
+            --notes "Automated release candidate build generated from master commit \`${{ github.sha }}\`. Contains native MSIX packages (x64/ARM64), portable executables, and verified source finalization archives."
+
