@@ -419,7 +419,7 @@ public class PluginInstallerServiceTests
     }
 
     [Fact]
-    public async Task InstallPluginFromStreamAsync_Creates_Isolated_Backup_On_Update()
+    public async Task InstallPluginFromStreamAsync_Promotes_Update_And_Cleans_Staging()
     {
         var tempPluginsDir = Path.Combine(Path.GetTempPath(), $"wincare_test_plugins_{Guid.NewGuid():N}");
 
@@ -443,6 +443,8 @@ public class PluginInstallerServiceTests
 
             var pluginDir = Path.Combine(tempPluginsDir, "com.wincare.upgradeable");
             Assert.True(Directory.Exists(pluginDir));
+            var v1Manifest = await File.ReadAllTextAsync(Path.Combine(pluginDir, "wincare-plugin.json"));
+            Assert.Contains("\"1.0.0\"", v1Manifest);
 
             // 2. Install v2.0.0 update over existing directory
             using (var msV2 = new MemoryStream())
@@ -459,11 +461,17 @@ public class PluginInstallerServiceTests
                 Assert.Equal(pluginDir, updatedPath);
             }
 
-            // Verify isolated backup directory was established in .staging/backups
-            var stagingBackups = Path.Combine(tempPluginsDir, ".staging", "backups");
-            Assert.True(Directory.Exists(stagingBackups));
-            var backups = Directory.GetDirectories(stagingBackups);
-            Assert.NotEmpty(backups);
+            // Verify updated manifest content was promoted
+            var v2Manifest = await File.ReadAllTextAsync(Path.Combine(pluginDir, "wincare-plugin.json"));
+            Assert.Contains("\"2.0.0\"", v2Manifest);
+
+            // Verify temporary staging extraction folders were cleaned up
+            var stagingDir = Path.Combine(tempPluginsDir, ".staging");
+            if (Directory.Exists(stagingDir))
+            {
+                var extractFolders = Directory.GetDirectories(stagingDir, "install_*");
+                Assert.Empty(extractFolders);
+            }
         }
         finally
         {
