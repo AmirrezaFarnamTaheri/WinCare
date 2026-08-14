@@ -1,3 +1,6 @@
+#!/usr/bin/env python3
+"""Stage single binary executables (.exe) and MSIX packages for GitHub release uploads."""
+
 import os
 import shutil
 import sys
@@ -19,8 +22,12 @@ def main():
             lower_path = full_path.lower()
             lower_name = f.lower()
 
-            # Skip unneeded files
-            if not any(f.endswith(ext) for ext in [".msix", ".zip", ".md", ".json"]):
+            # Include .msix, single binary .exe, .md, .json
+            if not any(f.endswith(ext) for ext in [".msix", ".exe", ".md", ".json"]):
+                continue
+
+            # Skip intermediate build executables
+            if f.endswith(".exe") and ("wincare" not in lower_name and "release" not in lower_path and "portable" not in lower_path):
                 continue
 
             # For MSIX, only accept the final packaged MSIX
@@ -35,19 +42,15 @@ def main():
             else:
                 platform_tag = ""
 
-            # Standardize destination filenames
+            # Standardize destination filenames for single binary executables & MSIX
             if f.endswith(".msix"):
                 dest_name = f"WinCare-v2.4.0-rc1-{platform_tag}.msix" if platform_tag else f
-            elif f.endswith(".zip"):
-                if "portable" in lower_name or "win-" in lower_name:
-                    dest_name = f"WinCare-v2.4.0-rc1-{platform_tag}-portable.zip" if platform_tag else f
-                else:
-                    dest_name = f
+            elif f.endswith(".exe"):
+                dest_name = f"WinCare-v2.4.0-rc1-{platform_tag}.exe" if platform_tag else f
             else:
                 dest_name = f
 
             target_path = os.path.join(dest_dir, dest_name)
-            # Prefer larger file if duplicate dest_name exists
             file_size = os.path.getsize(full_path)
             if dest_name not in staged or file_size > staged[dest_name]["size"]:
                 staged[dest_name] = {"src": full_path, "dest": target_path, "size": file_size}
@@ -65,5 +68,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
