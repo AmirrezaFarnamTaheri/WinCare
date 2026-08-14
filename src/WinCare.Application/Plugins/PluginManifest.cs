@@ -1,7 +1,7 @@
 namespace WinCare.Application.Plugins;
 
 using System.Text.Json.Serialization;
-using WinCare.CommandCatalog;
+using WinCare.CommandCatalog.Models;
 
 /// <summary>
 /// Represents the declarative manifest (wincare-plugin.json) for a WinCare plugin package.
@@ -76,14 +76,20 @@ public sealed class PluginToolDefinition
     /// </summary>
     public CommandDefinition ToCommandDefinition(string pluginId)
     {
+        Enum.TryParse<CommandRisk>(Risk, true, out var parsedRisk);
         return new CommandDefinition(
             Id: Id,
             Title: Title,
             Summary: Summary,
             Area: Area,
             Section: Section,
-            Risk: Risk,
-            ReadOnly: ReadOnly
+            Risk: parsedRisk,
+            ReadOnly: ReadOnly,
+            AdministratorAccess: AdministratorAccess.None,
+            Restart: RestartExpectation.None,
+            LegacySource: $"plugin:{pluginId}",
+            MigrationStatus: MigrationStatus.NativeReady,
+            Keywords: new[] { Id, Title, Area, Section, pluginId }
         );
     }
 }

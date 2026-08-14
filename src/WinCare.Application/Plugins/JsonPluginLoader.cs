@@ -1,7 +1,7 @@
 namespace WinCare.Application.Plugins;
 
 using System.Text.Json;
-using WinCare.CommandCatalog;
+using WinCare.CommandCatalog.Models;
 
 /// <summary>
 /// Result of loading a plugin package.
@@ -54,10 +54,11 @@ public static class JsonPluginLoader
                 if (!string.IsNullOrWhiteSpace(tool.ScriptPath))
                 {
                     var resolvedScriptPath = Path.GetFullPath(Path.Combine(canonicalDir, tool.ScriptPath));
-                    // Path Traversal Security Gate: Ensure script path stays inside plugin directory root
-                    if (!resolvedScriptPath.StartsWith(canonicalDir, StringComparison.OrdinalIgnoreCase))
+                    var relativePath = Path.GetRelativePath(canonicalDir, resolvedScriptPath);
+                    // Path Traversal Security Gate: Ensure script path stays strictly inside plugin directory root
+                    if (relativePath.StartsWith("..", StringComparison.Ordinal) || Path.IsPathRooted(relativePath))
                     {
-                        return new PluginLoadResult(false, null, Array.Empty<CommandDefinition>(), $"Security Violation: Script path '{tool.ScriptPath}' traverses outside plugin directory.");
+                        return new PluginLoadResult(false, null, Array.Empty<CommandDefinition>(), "Security Violation: Script path traverses outside plugin directory.");
                     }
                 }
 

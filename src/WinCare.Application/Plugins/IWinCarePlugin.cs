@@ -1,6 +1,6 @@
 namespace WinCare.Application.Plugins;
 
-using WinCare.CommandCatalog;
+using WinCare.CommandCatalog.Models;
 
 /// <summary>
 /// Contract implemented by compiled C# WinCare plugins (.dll).

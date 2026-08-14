@@ -1,6 +1,6 @@
 namespace WinCare.Application.Plugins;
 
-using WinCare.CommandCatalog;
+using WinCare.CommandCatalog.Models;
 
 /// <summary>
 /// Status of a discovered plugin in the registry.

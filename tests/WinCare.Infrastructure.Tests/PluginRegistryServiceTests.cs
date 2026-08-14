@@ -1,8 +1,8 @@
 namespace WinCare.Infrastructure.Tests;
 
-using WinCare.Application.Dispatching;
+using WinCare.Application.Commands;
 using WinCare.Application.Plugins;
-using WinCare.CommandCatalog;
+using WinCare.CommandCatalog.Models;
 
 public sealed class DummyPluginHost : IPluginHost
 {

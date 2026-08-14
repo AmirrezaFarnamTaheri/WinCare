@@ -1,7 +1,7 @@
 namespace WinCare.Application.Plugins;
 
-using WinCare.Application.Dispatching;
-using WinCare.CommandCatalog;
+using WinCare.Application.Commands;
+using WinCare.CommandCatalog.Models;
 
 /// <summary>
 /// Host context provided to plugins during initialization.

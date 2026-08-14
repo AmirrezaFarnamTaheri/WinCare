@@ -1,7 +1,7 @@
 namespace WinCare.Application.Plugins;
 
 using System.Collections.Concurrent;
-using WinCare.CommandCatalog;
+using WinCare.CommandCatalog.Models;
 
 /// <summary>
 /// Core implementation of IPluginRegistry discovering, isolating, and managing plugin state.
@@ -144,11 +144,23 @@ public sealed class PluginRegistryService : IPluginRegistry
 
         if (manifest.EntryType.Equals("Assembly", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrWhiteSpace(manifest.AssemblyFileName))
         {
-            var assemblyPath = Path.Combine(dirPath, manifest.AssemblyFileName);
+            var canonicalDir = Path.GetFullPath(dirPath);
+            var assemblyPath = Path.GetFullPath(Path.Combine(canonicalDir, manifest.AssemblyFileName));
+            var relativePath = Path.GetRelativePath(canonicalDir, assemblyPath);
+            if (relativePath.StartsWith("..", StringComparison.Ordinal) || Path.IsPathRooted(relativePath))
+            {
+                _entries[manifest.Id] = entry with { State = PluginState.Error, ErrorMessage = "Security Violation: Assembly file path traverses outside plugin directory." };
+                return;
+            }
+
             var asmResult = AssemblyPluginLoader.LoadPluginAssembly(assemblyPath, manifest.PluginClassName);
             if (asmResult.Success && asmResult.Plugin != null)
             {
                 _instantiatedPlugins[manifest.Id] = (asmResult.Plugin, asmResult.LoadContext);
+            }
+            else if (!asmResult.Success)
+            {
+                _entries[manifest.Id] = entry with { State = PluginState.Error, ErrorMessage = asmResult.ErrorMessage ?? "Assembly load failed." };
             }
         }
     }
