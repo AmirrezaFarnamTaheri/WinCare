@@ -176,6 +176,57 @@ public sealed class CommandDispatcherTests
             [definition], [new RecordingHandler("read"), new RecordingHandler("read")]));
     }
 
+    [Fact]
+    public async Task Dynamic_command_registration_and_execution_succeeds()
+    {
+        CommandDispatcher dispatcher = CreateDispatcher([], []);
+        CommandDefinition dynamicDef = Definition("plugin.custom_clean", MigrationStatus.Implemented, readOnly: true);
+        RecordingHandler dynamicHandler = new("plugin.custom_clean");
+
+        bool registered = dispatcher.RegisterDynamicCommand(dynamicDef, dynamicHandler);
+        Assert.True(registered);
+
+        CommandResult result = await dispatcher.ExecuteAsync(
+            Request("plugin.custom_clean"), CommandExecutionOptions.Default, CancellationToken.None);
+
+        Assert.Equal(CommandResultStatus.Succeeded, result.Status);
+        Assert.Equal(1, dynamicHandler.InvocationCount);
+
+        bool unregistered = dispatcher.UnregisterDynamicCommand("plugin.custom_clean");
+        Assert.True(unregistered);
+
+        CommandResult afterResult = await dispatcher.ExecuteAsync(
+            Request("plugin.custom_clean"), CommandExecutionOptions.Default, CancellationToken.None);
+        Assert.Equal(CommandResultStatus.Blocked, afterResult.Status);
+        Assert.Equal("command.not_found", afterResult.Code);
+    }
+
+    [Fact]
+    public void Dynamic_registration_fails_closed_on_core_namespace_collision()
+    {
+        CommandDefinition coreDef = Definition("core_cmd", MigrationStatus.Implemented, readOnly: true);
+        RecordingHandler coreHandler = new("core_cmd");
+        CommandDispatcher dispatcher = CreateDispatcher([coreDef], [coreHandler]);
+
+        // Attempt to overwrite existing core command
+        bool overwriteAttempt = dispatcher.RegisterDynamicCommand(
+            Definition("core_cmd", MigrationStatus.Implemented, readOnly: true),
+            new RecordingHandler("core_cmd"));
+        Assert.False(overwriteAttempt);
+
+        // Attempt to register in reserved wincare.core.* namespace
+        bool reservedAttempt = dispatcher.RegisterDynamicCommand(
+            Definition("wincare.core.critical_tool", MigrationStatus.Implemented, readOnly: true),
+            new RecordingHandler("wincare.core.critical_tool"));
+        Assert.False(reservedAttempt);
+
+        // Attempt to register in system.* namespace
+        bool systemAttempt = dispatcher.RegisterDynamicCommand(
+            Definition("system.reboot", MigrationStatus.Implemented, readOnly: true),
+            new RecordingHandler("system.reboot"));
+        Assert.False(systemAttempt);
+    }
+
     private static CommandDispatcher CreateDispatcher(
         IReadOnlyList<CommandDefinition> definitions,
         IReadOnlyList<ICommandHandler> handlers) =>

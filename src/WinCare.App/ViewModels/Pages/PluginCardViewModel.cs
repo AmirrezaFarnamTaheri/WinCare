@@ -1,6 +1,7 @@
 namespace WinCare.App.ViewModels.Pages;
 
 using System;
+using System.Collections.Generic;
 using WinCare.Application.Plugins;
 
 public sealed class PluginCardViewModel
@@ -18,7 +19,7 @@ public sealed class PluginCardViewModel
         InstalledState = entry.State;
         CommandCount = entry.Commands.Count;
         ErrorMessage = entry.ErrorMessage;
-        Permissions = new List<string> { "Installed Local Plugin" };
+        Permissions = new List<string> { "In-Process Execution", "System Access" };
         PackageUrl = string.Empty;
         Sha256 = string.Empty;
     }
@@ -61,7 +62,7 @@ public sealed class PluginCardViewModel
     public string StatusBadgeText => IsInstalled switch
     {
         true when IsBuiltIn => "BUILT-IN",
-        true when InstalledState == PluginState.Enabled => "INSTALLED",
+        true when InstalledState == PluginState.Enabled => "ENABLED",
         true when InstalledState == PluginState.Disabled => "DISABLED",
         true when InstalledState == PluginState.Error => "ERROR",
         _ => "ONLINE CATALOG"
@@ -69,4 +70,7 @@ public sealed class PluginCardViewModel
 
     public string InstallButtonText => IsInstalled ? "Installed" : "Install";
     public bool CanInstall => !IsInstalled && !string.IsNullOrEmpty(PackageUrl);
+    public bool CanEnable => IsInstalled && !IsBuiltIn && InstalledState == PluginState.Disabled;
+    public bool CanDisable => IsInstalled && !IsBuiltIn && InstalledState == PluginState.Enabled;
+    public bool CanUninstall => IsInstalled && !IsBuiltIn;
 }

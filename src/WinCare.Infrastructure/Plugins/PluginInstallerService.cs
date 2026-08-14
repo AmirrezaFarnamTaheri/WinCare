@@ -17,6 +17,7 @@ namespace WinCare.Infrastructure.Plugins;
 public class PluginInstallerService : IPluginInstallerService
 {
     private static readonly Regex PluginIdRegex = new(@"^[a-zA-Z0-9][a-zA-Z0-9._-]{2,127}$", RegexOptions.Compiled);
+    private static readonly Regex Sha256HexRegex = new(@"^[0-9a-fA-F]{64}$", RegexOptions.Compiled);
 
     /// <summary>Maximum allowed plugin package download size (50 MB).</summary>
     public const long MaxDownloadSizeBytes = 50 * 1024 * 1024;
@@ -69,6 +70,16 @@ public class PluginInstallerService : IPluginInstallerService
             throw new ArgumentException("Package URL must use the HTTPS scheme.", nameof(packageUrl));
         }
 
+        // Enforce mandatory well-formed SHA-256 for remote downloads
+        if (!string.IsNullOrWhiteSpace(expectedSha256))
+        {
+            var cleanExpected = expectedSha256.Replace("-", string.Empty);
+            if (!Sha256HexRegex.IsMatch(cleanExpected))
+            {
+                throw new ArgumentException($"Invalid expected SHA-256 digest format: '{expectedSha256}'. Must be 64-character hex.", nameof(expectedSha256));
+            }
+        }
+
         string pluginId;
         if (!string.IsNullOrWhiteSpace(expectedPluginId))
         {
@@ -106,16 +117,6 @@ public class PluginInstallerService : IPluginInstallerService
 
         memoryStream.Position = 0;
 
-        if (!string.IsNullOrWhiteSpace(expectedSha256))
-        {
-            var computedHash = Convert.ToHexString(SHA256.HashData(memoryStream.ToArray()));
-            if (!computedHash.Equals(expectedSha256.Replace("-", string.Empty), StringComparison.OrdinalIgnoreCase))
-            {
-                throw new InvalidOperationException($"Package integrity check failed. Expected SHA-256: {expectedSha256}, Actual: {computedHash}");
-            }
-            memoryStream.Position = 0;
-        }
-
         return await InstallPluginFromStreamAsync(memoryStream, pluginId, expectedSha256, cancellationToken).ConfigureAwait(false);
     }
 
@@ -136,8 +137,49 @@ public class PluginInstallerService : IPluginInstallerService
             throw new ArgumentException($"Invalid plugin ID '{targetPluginId}'.", nameof(targetPluginId));
         }
 
+        // Mandatory SHA-256 validation if provided
+        if (!string.IsNullOrWhiteSpace(expectedSha256))
+        {
+            long originalPos = archiveStream.CanSeek ? archiveStream.Position : 0;
+            if (archiveStream.CanSeek)
+            {
+                archiveStream.Position = 0;
+            }
+
+            byte[] streamBytes;
+            if (archiveStream is MemoryStream ms)
+            {
+                streamBytes = ms.ToArray();
+            }
+            else
+            {
+                using var tempMs = new MemoryStream();
+                await archiveStream.CopyToAsync(tempMs, cancellationToken).ConfigureAwait(false);
+                streamBytes = tempMs.ToArray();
+                if (archiveStream.CanSeek)
+                {
+                    archiveStream.Position = originalPos;
+                }
+            }
+
+            var computedHash = Convert.ToHexString(SHA256.HashData(streamBytes));
+            var cleanExpected = expectedSha256.Replace("-", string.Empty);
+            if (!computedHash.Equals(cleanExpected, StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException($"Package integrity check failed. Expected SHA-256: {expectedSha256}, Actual: {computedHash}");
+            }
+
+            if (archiveStream.CanSeek)
+            {
+                archiveStream.Position = originalPos;
+            }
+        }
+
         var stagingBaseDir = Path.Combine(_pluginsBaseDirectory, ".staging");
+        var stagingBackupsDir = Path.Combine(stagingBaseDir, "backups");
         Directory.CreateDirectory(stagingBaseDir);
+        Directory.CreateDirectory(stagingBackupsDir);
+
         var tempExtractDir = Path.Combine(stagingBaseDir, $"install_{Guid.NewGuid():N}");
         Directory.CreateDirectory(tempExtractDir);
 
@@ -202,14 +244,21 @@ public class PluginInstallerService : IPluginInstallerService
             }
 
             var manifestId = idProp.GetString()!;
+
+            // Finding 3: Enforce strict equality between manifest ID and catalog/expected targetPluginId
+            if (!string.IsNullOrWhiteSpace(targetPluginId) && !targetPluginId.StartsWith("plugin_") && !string.Equals(manifestId, targetPluginId, StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException($"Package admission rejected: Manifest ID '{manifestId}' does not match expected target plugin ID '{targetPluginId}'.");
+            }
+
             var finalPluginId = manifestId;
             var finalTargetDir = ValidateAndGetPluginDirectory(finalPluginId);
 
-            // Atomic promotion with rollback support
+            // Atomic promotion with isolated staging backup support
             string? backupDir = null;
             if (Directory.Exists(finalTargetDir))
             {
-                backupDir = finalTargetDir + ".bak." + Guid.NewGuid().ToString("N");
+                backupDir = Path.Combine(stagingBackupsDir, $"{finalPluginId}_{Guid.NewGuid():N}");
                 try
                 {
                     Directory.Move(finalTargetDir, backupDir);
@@ -235,7 +284,7 @@ public class PluginInstallerService : IPluginInstallerService
                 }
                 catch
                 {
-                    // If promotion failed, restore backup
+                    // If promotion failed, restore backup from isolated staging
                     if (backupDir != null && Directory.Exists(backupDir))
                     {
                         try

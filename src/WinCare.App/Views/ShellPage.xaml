@@ -39,6 +39,9 @@
             <NavigationViewItem Content="Plugin store" Tag="plugin-store" AutomationProperties.AutomationId="NavPluginStore" AutomationProperties.Name="Plugin store">
                 <NavigationViewItem.Icon><FontIcon Glyph="&#xEA86;" /></NavigationViewItem.Icon>
             </NavigationViewItem>
+            <NavigationViewItem Content="AI Doctor" Tag="ai-doctor" AutomationProperties.AutomationId="NavAiDoctor" AutomationProperties.Name="AI Doctor">
+                <NavigationViewItem.Icon><FontIcon Glyph="&#xE99A;" /></NavigationViewItem.Icon>
+            </NavigationViewItem>
         </NavigationView.MenuItems>
         <NavigationView.FooterMenuItems>
             <NavigationViewItem Content="Settings" Tag="settings" AutomationProperties.AutomationId="NavSettings" AutomationProperties.Name="Settings">

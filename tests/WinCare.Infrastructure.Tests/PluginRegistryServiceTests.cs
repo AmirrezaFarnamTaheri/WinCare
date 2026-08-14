@@ -1,8 +1,14 @@
 namespace WinCare.Infrastructure.Tests;
 
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Threading;
+using System.Threading.Tasks;
 using WinCare.Application.Commands;
 using WinCare.Application.Plugins;
 using WinCare.CommandCatalog.Models;
+using Xunit;
 
 public sealed class DummyPluginHost : IPluginHost
 {
@@ -11,7 +17,7 @@ public sealed class DummyPluginHost : IPluginHost
     public ICommandDispatcher CommandDispatcher => null!;
     public List<CommandDefinition> RegisteredCommands { get; } = new();
 
-    public void RegisterCommand(CommandDefinition command)
+    public void RegisterCommand(CommandDefinition command, ICommandHandler? handler = null)
     {
         RegisteredCommands.Add(command);
     }
@@ -25,7 +31,7 @@ public sealed class DummyPluginHost : IPluginHost
 public sealed class PluginRegistryServiceTests
 {
     [Fact]
-    public async Task PluginRegistryService_Discovers_And_Enables_Plugins()
+    public async Task PluginRegistryService_Discovers_And_Enables_Plugins_And_Fires_RegistryChanged()
     {
         // Arrange
         var tempUserPluginsDir = Path.Combine(Path.GetTempPath(), "WinCareUserPluginsTest_" + Guid.NewGuid().ToString("N"));
@@ -55,17 +61,53 @@ public sealed class PluginRegistryServiceTests
         var enabledIds = new HashSet<string> { "com.wincare.sample" };
         var service = new PluginRegistryService(initialEnabledPluginIds: enabledIds);
 
+        int eventCount = 0;
+        service.RegistryChanged += (s, e) => eventCount++;
+
         try
         {
             // Act
             await service.DiscoverAndInitializeAsync(host);
 
             // Assert
+            Assert.True(eventCount >= 1);
             var plugins = service.GetAllPlugins();
             Assert.Contains(plugins, p => p.Id == "com.wincare.sample" && p.State == PluginState.Enabled);
 
             var activeCommands = service.GetActivePluginCommands();
             Assert.Contains(activeCommands, c => c.Id == "sample.tool1");
+        }
+        finally
+        {
+            Directory.Delete(tempUserPluginsDir, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task PluginRegistryService_Ignores_Staging_And_Bak_Directories()
+    {
+        var tempUserPluginsDir = Path.Combine(Path.GetTempPath(), "WinCareUserPluginsTest_" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(tempUserPluginsDir);
+
+        // Staging directory
+        var stagingDir = Path.Combine(tempUserPluginsDir, ".staging", "backups", "old_plugin");
+        Directory.CreateDirectory(stagingDir);
+        File.WriteAllText(Path.Combine(stagingDir, "wincare-plugin.json"), """{"id": "staged.backup.plugin", "name": "Backup", "version": "0.1"}""");
+
+        // .bak directory
+        var bakDir = Path.Combine(tempUserPluginsDir, "legacy_plugin.bak");
+        Directory.CreateDirectory(bakDir);
+        File.WriteAllText(Path.Combine(bakDir, "wincare-plugin.json"), """{"id": "legacy.bak.plugin", "name": "Bak", "version": "0.1"}""");
+
+        var host = new DummyPluginHost { PluginsUserDirectory = tempUserPluginsDir };
+        var service = new PluginRegistryService();
+
+        try
+        {
+            await service.DiscoverAndInitializeAsync(host);
+            var allPlugins = service.GetAllPlugins();
+            Assert.DoesNotContain(allPlugins, p => p.Id == "staged.backup.plugin");
+            Assert.DoesNotContain(allPlugins, p => p.Id == "legacy.bak.plugin");
         }
         finally
         {

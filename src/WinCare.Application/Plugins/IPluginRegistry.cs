@@ -40,6 +40,11 @@ public sealed record PluginRegistryEntry(
 public interface IPluginRegistry
 {
     /// <summary>
+    /// Event raised whenever plugins are discovered, enabled, or disabled.
+    /// </summary>
+    event EventHandler? RegistryChanged;
+
+    /// <summary>
     /// Scans built-in and user directories (%LocalAppData%/WinCare/Plugins) and initializes enabled plugins.
     /// </summary>
     Task DiscoverAndInitializeAsync(IPluginHost host, CancellationToken ct = default);

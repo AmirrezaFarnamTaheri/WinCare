@@ -52,11 +52,15 @@ public class DefaultPluginHost : IPluginHost
     public ICommandDispatcher CommandDispatcher => _commandDispatcher ?? throw new InvalidOperationException("No CommandDispatcher has been configured for this PluginHost.");
 
     /// <inheritdoc />
-    public void RegisterCommand(CommandDefinition command)
+    public void RegisterCommand(CommandDefinition command, ICommandHandler? handler = null)
     {
         if (command != null && !string.IsNullOrWhiteSpace(command.Id))
         {
             _registeredCommands[command.Id] = command;
+            if (handler != null && _commandDispatcher != null)
+            {
+                _commandDispatcher.RegisterDynamicCommand(command, handler);
+            }
         }
     }
 
@@ -66,6 +70,7 @@ public class DefaultPluginHost : IPluginHost
         if (!string.IsNullOrWhiteSpace(commandId))
         {
             _registeredCommands.TryRemove(commandId, out _);
+            _commandDispatcher?.UnregisterDynamicCommand(commandId);
         }
     }
 }

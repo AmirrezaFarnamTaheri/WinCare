@@ -26,7 +26,7 @@ public interface IPluginHost
     /// <summary>
     /// Registers a runtime tool command dynamically from a plugin.
     /// </summary>
-    void RegisterCommand(CommandDefinition command);
+    void RegisterCommand(CommandDefinition command, ICommandHandler? handler = null);
 
     /// <summary>
     /// Unregisters a runtime tool command dynamically.

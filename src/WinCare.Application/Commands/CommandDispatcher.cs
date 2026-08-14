@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
 using System.Text.Json;
 using WinCare.Application.Activity;
@@ -15,6 +16,8 @@ public sealed class CommandDispatcher : ICommandDispatcher
 {
     private readonly IReadOnlyDictionary<string, CommandDefinition> _definitions;
     private readonly IReadOnlyDictionary<string, ICommandHandler> _handlers;
+    private readonly ConcurrentDictionary<string, CommandDefinition> _dynamicDefinitions = new(StringComparer.OrdinalIgnoreCase);
+    private readonly ConcurrentDictionary<string, ICommandHandler> _dynamicHandlers = new(StringComparer.OrdinalIgnoreCase);
     private readonly TimeProvider _timeProvider;
     private readonly IActivityJournalService? _journal;
 
@@ -84,6 +87,38 @@ public sealed class CommandDispatcher : ICommandDispatcher
         _timeProvider = timeProvider ?? TimeProvider.System;
     }
 
+    /// <inheritdoc />
+    public bool RegisterDynamicCommand(CommandDefinition definition, ICommandHandler handler)
+    {
+        if (definition == null || handler == null || string.IsNullOrWhiteSpace(definition.Id))
+        {
+            return false;
+        }
+
+        // Security / Invariant Protection: Core commands and namespaces cannot be overridden by dynamic plugins
+        if (_definitions.ContainsKey(definition.Id) ||
+            definition.Id.StartsWith("wincare.core.", StringComparison.OrdinalIgnoreCase) ||
+            definition.Id.StartsWith("system.", StringComparison.OrdinalIgnoreCase))
+        {
+            System.Diagnostics.Debug.WriteLine($"[CommandDispatcher] Dynamic registration rejected: '{definition.Id}' collides with reserved core namespace.");
+            return false;
+        }
+
+        _dynamicDefinitions[definition.Id] = definition;
+        _dynamicHandlers[definition.Id] = handler;
+        return true;
+    }
+
+    /// <inheritdoc />
+    public bool UnregisterDynamicCommand(string commandId)
+    {
+        if (string.IsNullOrWhiteSpace(commandId)) return false;
+
+        var defRemoved = _dynamicDefinitions.TryRemove(commandId, out _);
+        var handlerRemoved = _dynamicHandlers.TryRemove(commandId, out _);
+        return defRemoved || handlerRemoved;
+    }
+
     /// <summary>
     /// Executes a typed command request through admission and, when admitted, the registered handler.
     /// </summary>
@@ -120,7 +155,8 @@ public sealed class CommandDispatcher : ICommandDispatcher
                 startedAt);
         }
 
-        if (!_definitions.TryGetValue(request.CommandId, out CommandDefinition? definition))
+        if (!_dynamicDefinitions.TryGetValue(request.CommandId, out CommandDefinition? definition) &&
+            !_definitions.TryGetValue(request.CommandId, out definition))
         {
             return CreateResult(
                 request,
@@ -144,7 +180,8 @@ public sealed class CommandDispatcher : ICommandDispatcher
                 startedAt);
         }
 
-        if (!_handlers.TryGetValue(request.CommandId, out ICommandHandler? handler))
+        if (!_dynamicHandlers.TryGetValue(request.CommandId, out ICommandHandler? handler) &&
+            !_handlers.TryGetValue(request.CommandId, out handler))
         {
             return CreateResult(
                 request,

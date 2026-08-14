@@ -234,6 +234,74 @@ public sealed class PluginStorePageViewModel : INotifyPropertyChanged
         }
     }
 
+    /// <summary>
+    /// Enables an installed plugin.
+    /// </summary>
+    public async Task<bool> EnablePluginAsync(PluginCardViewModel card, CancellationToken cancellationToken = default)
+    {
+        if (card == null || !card.IsInstalled || card.IsBuiltIn)
+        {
+            return false;
+        }
+
+        try
+        {
+            await _registry.EnablePluginAsync(card.Id, _host, cancellationToken).ConfigureAwait(true);
+            await RefreshPluginsAsync(forceRemoteRefresh: false, cancellationToken).ConfigureAwait(true);
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Disables an installed plugin.
+    /// </summary>
+    public async Task<bool> DisablePluginAsync(PluginCardViewModel card, CancellationToken cancellationToken = default)
+    {
+        if (card == null || !card.IsInstalled || card.IsBuiltIn)
+        {
+            return false;
+        }
+
+        try
+        {
+            await _registry.DisablePluginAsync(card.Id, _host, cancellationToken).ConfigureAwait(true);
+            await RefreshPluginsAsync(forceRemoteRefresh: false, cancellationToken).ConfigureAwait(true);
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Uninstalls an installed plugin.
+    /// </summary>
+    public async Task<bool> UninstallPluginAsync(PluginCardViewModel card, CancellationToken cancellationToken = default)
+    {
+        if (card == null || !card.IsInstalled || card.IsBuiltIn)
+        {
+            return false;
+        }
+
+        try
+        {
+            await _registry.DisablePluginAsync(card.Id, _host, cancellationToken).ConfigureAwait(true);
+            await _installerService.UninstallPluginAsync(card.Id, cancellationToken).ConfigureAwait(true);
+            await _registry.DiscoverAndInitializeAsync(_host, cancellationToken).ConfigureAwait(true);
+            await RefreshPluginsAsync(forceRemoteRefresh: false, cancellationToken).ConfigureAwait(true);
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
     private bool MatchesCategory(string category)
     {
         if (string.Equals(_selectedCategory, "All", StringComparison.OrdinalIgnoreCase))

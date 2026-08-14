@@ -1,6 +1,7 @@
 namespace WinCare.Application.Plugins;
 
 using System.Collections.Concurrent;
+using WinCare.Application.Commands;
 using WinCare.CommandCatalog.Models;
 
 /// <summary>
@@ -13,6 +14,9 @@ public sealed class PluginRegistryService : IPluginRegistry
     private readonly IPluginStateRepository? _stateRepository;
     private readonly HashSet<string> _enabledIds;
     private readonly SemaphoreSlim _gate = new(1, 1);
+
+    /// <inheritdoc />
+    public event EventHandler? RegistryChanged;
 
     /// <summary>
     /// Initializes a new instance of <see cref="PluginRegistryService"/>.
@@ -54,6 +58,7 @@ public sealed class PluginRegistryService : IPluginRegistry
             {
                 foreach (var dir in Directory.GetDirectories(builtInDir))
                 {
+                    if (IsIgnoredDirectory(dir)) continue;
                     LoadPluginDirectory(dir, isBuiltIn: true);
                 }
 
@@ -63,12 +68,13 @@ public sealed class PluginRegistryService : IPluginRegistry
                 }
             }
 
-            // Scan user-installed plugins in PluginsUserDirectory
+            // Scan user-installed plugins in PluginsUserDirectory (ignoring staging & backups)
             if (Directory.Exists(host.PluginsUserDirectory))
             {
                 var pluginDirectories = Directory.GetDirectories(host.PluginsUserDirectory);
                 foreach (var dir in pluginDirectories)
                 {
+                    if (IsIgnoredDirectory(dir)) continue;
                     LoadPluginDirectory(dir, isBuiltIn: false);
                 }
             }
@@ -84,6 +90,7 @@ public sealed class PluginRegistryService : IPluginRegistry
         finally
         {
             _gate.Release();
+            RegistryChanged?.Invoke(this, EventArgs.Empty);
         }
     }
 
@@ -114,7 +121,6 @@ public sealed class PluginRegistryService : IPluginRegistry
             {
                 try
                 {
-                    // Host Exception Isolation Boundary: Wrap third-party GetWidgets() in exception handler
                     var pluginWidgets = kvp.Value.Plugin.GetWidgets();
                     if (pluginWidgets != null)
                     {
@@ -156,6 +162,7 @@ public sealed class PluginRegistryService : IPluginRegistry
         finally
         {
             _gate.Release();
+            RegistryChanged?.Invoke(this, EventArgs.Empty);
         }
     }
 
@@ -195,7 +202,18 @@ public sealed class PluginRegistryService : IPluginRegistry
         finally
         {
             _gate.Release();
+            RegistryChanged?.Invoke(this, EventArgs.Empty);
         }
+    }
+
+    private static bool IsIgnoredDirectory(string dirPath)
+    {
+        var name = Path.GetFileName(dirPath);
+        return string.IsNullOrWhiteSpace(name) ||
+               name.StartsWith(".", StringComparison.Ordinal) ||
+               name.StartsWith("_", StringComparison.Ordinal) ||
+               name.EndsWith(".bak", StringComparison.OrdinalIgnoreCase) ||
+               name.Contains(".bak.", StringComparison.OrdinalIgnoreCase);
     }
 
     private void LoadPluginDirectory(string dirPath, bool isBuiltIn)
@@ -207,6 +225,28 @@ public sealed class PluginRegistryService : IPluginRegistry
         }
 
         var manifest = loadResult.Manifest;
+
+        // Finding 5: Fail-closed duplicate & reserved namespace protection
+        if (_entries.TryGetValue(manifest.Id, out var existing))
+        {
+            if (existing.IsBuiltIn && !isBuiltIn)
+            {
+                System.Diagnostics.Debug.WriteLine($"[PluginRegistry] Rejected user plugin '{manifest.Id}': cannot overwrite built-in plugin.");
+                return;
+            }
+            if (!isBuiltIn)
+            {
+                System.Diagnostics.Debug.WriteLine($"[PluginRegistry] Duplicate user plugin '{manifest.Id}' rejected.");
+                return;
+            }
+        }
+
+        if (!isBuiltIn && (manifest.Id.StartsWith("wincare.core.", StringComparison.OrdinalIgnoreCase) || manifest.Id.StartsWith("system.", StringComparison.OrdinalIgnoreCase)))
+        {
+            System.Diagnostics.Debug.WriteLine($"[PluginRegistry] Rejected user plugin '{manifest.Id}': collides with reserved core namespace.");
+            return;
+        }
+
         var initialState = _enabledIds.Contains(manifest.Id) || isBuiltIn ? PluginState.Enabled : PluginState.Disabled;
 
         var entry = new PluginRegistryEntry(
@@ -274,10 +314,10 @@ public sealed class PluginRegistryService : IPluginRegistry
 
             if (_instantiatedPlugins.TryGetValue(pluginId, out var inst))
             {
-                // Host Exception Isolation Boundary: Wrap third-party InitializeAsync in exception handler
                 await inst.Plugin.InitializeAsync(host, ct);
             }
 
+            // Register plugin commands with host and dispatcher
             foreach (var cmd in entry.Commands)
             {
                 host.RegisterCommand(cmd);
@@ -345,6 +385,8 @@ public sealed class PluginRegistryService : IPluginRegistry
             if (loadResult.Success && loadResult.Manifest != null)
             {
                 var manifest = loadResult.Manifest;
+                if (_entries.ContainsKey(manifest.Id) && !isBuiltIn) return;
+
                 var initialState = isBuiltIn ? PluginState.Disabled : (_enabledIds.Contains(manifest.Id) ? PluginState.Enabled : PluginState.Disabled);
                 var entry = new PluginRegistryEntry(
                     Id: manifest.Id,

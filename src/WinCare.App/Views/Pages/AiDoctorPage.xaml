@@ -1,0 +1,55 @@
+<Page
+    x:Class="WinCare.App.Views.Pages.AiDoctorPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:vm="using:WinCare.App.ViewModels.Pages">
+
+    <Grid RowDefinitions="Auto,*,Auto" Margin="24,24,24,24">
+        <!-- Header -->
+        <StackPanel Grid.Row="0" Spacing="4" Margin="0,0,0,16">
+            <TextBlock Text="AI System Doctor" Style="{StaticResource TitleTextBlockStyle}" Foreground="{ThemeResource AccentTealBrush}" FontWeight="SemiBold" />
+            <TextBlock Text="On-device intelligent diagnosis and automated remediation action plans powered by DirectML." Style="{StaticResource BodyTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+        </StackPanel>
+
+        <!-- Chat Conversation Area -->
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" x:Name="ChatScrollViewer" Margin="0,0,0,16">
+            <ItemsControl ItemsSource="{x:Bind ViewModel.Messages, Mode=OneWay}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:DoctorChatMessage">
+                        <Grid Margin="0,0,0,16">
+                            <Border CornerRadius="8" Padding="14,10" MaxWidth="720"
+                                    HorizontalAlignment="{x:Bind IsUser, Converter={StaticResource BooleanToHorizontalAlignmentConverter}, FallbackValue=Left}"
+                                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                    BorderThickness="1">
+                                <StackPanel Spacing="6">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <TextBlock Text="{x:Bind Sender}" FontWeight="Bold" FontSize="13" Foreground="{ThemeResource AccentTealBrush}" />
+                                    </StackPanel>
+                                    <TextBlock Text="{x:Bind Text}" TextWrapping="Wrap" Style="{StaticResource BodyTextBlockStyle}" />
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
+
+        <!-- Prompt Input Bar -->
+        <Grid Grid.Row="2" ColumnDefinitions="*,Auto" ColumnSpacing="12">
+            <TextBox Grid.Column="0"
+                     PlaceholderText="Describe your PC issue (e.g., 'Clean up temp files on C drive', 'Why is RAM high?')..."
+                     Text="{x:Bind ViewModel.UserPrompt, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                     KeyDown="PromptTextBox_KeyDown"
+                     IsEnabled="{x:Bind ViewModel.IsAnalyzing, Converter={StaticResource InverseBooleanConverter}, Mode=OneWay, FallbackValue=True}"
+                     AutomationProperties.Name="AI Doctor Prompt Input"/>
+
+            <Button Grid.Column="1"
+                    Content="Ask Doctor"
+                    Style="{StaticResource AccentButtonStyle}"
+                    Click="SendButton_Click"
+                    IsEnabled="{x:Bind ViewModel.IsAnalyzing, Converter={StaticResource InverseBooleanConverter}, Mode=OneWay, FallbackValue=True}"
+                    AutomationProperties.Name="Submit Diagnosis Prompt"/>
+        </Grid>
+    </Grid>
+</Page>

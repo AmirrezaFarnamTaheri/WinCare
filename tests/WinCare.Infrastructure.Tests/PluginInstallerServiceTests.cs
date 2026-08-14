@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.IO.Compression;
+using System.Security.Cryptography;
 using System.Text.Json;
 using System.Threading.Tasks;
 using WinCare.Infrastructure.Plugins;
@@ -36,12 +37,83 @@ public class PluginInstallerServiceTests
             memoryStream.Position = 0;
 
             var installer = new PluginInstallerService(pluginsBaseDirectory: tempPluginsDir);
-            var installedPath = await installer.InstallPluginFromStreamAsync(memoryStream, "fallback_id");
+            var installedPath = await installer.InstallPluginFromStreamAsync(memoryStream, "com.wincare.customplugin");
 
             Assert.True(Directory.Exists(installedPath));
             Assert.EndsWith("com.wincare.customplugin", installedPath);
             Assert.True(File.Exists(Path.Combine(installedPath, "plugin.json")));
             Assert.True(File.Exists(Path.Combine(installedPath, "CustomPlugin.dll")));
+        }
+        finally
+        {
+            if (Directory.Exists(tempPluginsDir))
+            {
+                Directory.Delete(tempPluginsDir, recursive: true);
+            }
+        }
+    }
+
+    [Fact]
+    public async Task InstallPluginFromStreamAsync_RejectsManifestIdMismatch()
+    {
+        var tempPluginsDir = Path.Combine(Path.GetTempPath(), $"wincare_test_plugins_{Guid.NewGuid():N}");
+
+        try
+        {
+            using var memoryStream = new MemoryStream();
+            using (var zip = new ZipArchive(memoryStream, ZipArchiveMode.Create, leaveOpen: true))
+            {
+                var manifestEntry = zip.CreateEntry("wincare-plugin.json");
+                using var writer = new StreamWriter(manifestEntry.Open());
+                writer.Write(JsonSerializer.Serialize(new { id = "actual.plugin.id", name = "Actual Plugin", version = "1.0.0" }));
+            }
+
+            memoryStream.Position = 0;
+            var installer = new PluginInstallerService(pluginsBaseDirectory: tempPluginsDir);
+
+            // Attempt to install archive whose manifest says 'actual.plugin.id' with expected target 'expected.plugin.id'
+            await Assert.ThrowsAsync<InvalidOperationException>(() =>
+                installer.InstallPluginFromStreamAsync(memoryStream, "expected.plugin.id"));
+        }
+        finally
+        {
+            if (Directory.Exists(tempPluginsDir))
+            {
+                Directory.Delete(tempPluginsDir, recursive: true);
+            }
+        }
+    }
+
+    [Fact]
+    public async Task InstallPluginFromStreamAsync_EnforcesStreamSha256Digest()
+    {
+        var tempPluginsDir = Path.Combine(Path.GetTempPath(), $"wincare_test_plugins_{Guid.NewGuid():N}");
+
+        try
+        {
+            using var memoryStream = new MemoryStream();
+            using (var zip = new ZipArchive(memoryStream, ZipArchiveMode.Create, leaveOpen: true))
+            {
+                var manifestEntry = zip.CreateEntry("wincare-plugin.json");
+                using var writer = new StreamWriter(manifestEntry.Open());
+                writer.Write(JsonSerializer.Serialize(new { id = "hash.test.plugin", name = "Hash Test", version = "1.0.0" }));
+            }
+
+            byte[] bytes = memoryStream.ToArray();
+            string validHash = Convert.ToHexString(SHA256.HashData(bytes));
+            string invalidHash = "0000000000000000000000000000000000000000000000000000000000000000";
+
+            var installer = new PluginInstallerService(pluginsBaseDirectory: tempPluginsDir);
+
+            // 1. Mismatched SHA-256 throws InvalidOperationException
+            memoryStream.Position = 0;
+            await Assert.ThrowsAsync<InvalidOperationException>(() =>
+                installer.InstallPluginFromStreamAsync(memoryStream, "hash.test.plugin", invalidHash));
+
+            // 2. Correct SHA-256 succeeds
+            memoryStream.Position = 0;
+            var installedPath = await installer.InstallPluginFromStreamAsync(memoryStream, "hash.test.plugin", validHash);
+            Assert.True(Directory.Exists(installedPath));
         }
         finally
         {
@@ -191,42 +263,6 @@ public class PluginInstallerServiceTests
 
             await Assert.ThrowsAsync<InvalidOperationException>(() =>
                 installer.InstallPluginFromStreamAsync(memoryStream, "com.wincare.nomanifest"));
-        }
-        finally
-        {
-            if (Directory.Exists(tempPluginsDir))
-            {
-                Directory.Delete(tempPluginsDir, recursive: true);
-            }
-        }
-    }
-
-    [Fact]
-    public async Task InstallPluginFromStreamAsync_EnforcesSha256Verification()
-    {
-        var tempPluginsDir = Path.Combine(Path.GetTempPath(), $"wincare_test_plugins_{Guid.NewGuid():N}");
-
-        try
-        {
-            using var memoryStream = new MemoryStream();
-            using (var zip = new ZipArchive(memoryStream, ZipArchiveMode.Create, leaveOpen: true))
-            {
-                var manifestEntry = zip.CreateEntry("wincare-plugin.json");
-                using var writer = new StreamWriter(manifestEntry.Open());
-                writer.Write(JsonSerializer.Serialize(new { id = "com.wincare.validhash", name = "Valid Hash", version = "1.0.0" }));
-            }
-
-            memoryStream.Position = 0;
-            var installer = new PluginInstallerService(pluginsBaseDirectory: tempPluginsDir);
-
-            // Valid installation with null expectedSha256
-            var installedPath = await installer.InstallPluginFromStreamAsync(memoryStream, "com.wincare.validhash");
-            Assert.True(Directory.Exists(installedPath));
-
-            // Tampered hash check via Package URL installation validation
-            var invalidHash = "0000000000000000000000000000000000000000000000000000000000000000";
-            await Assert.ThrowsAsync<ArgumentException>(() =>
-                installer.InstallPluginFromPackageAsync("http://insecure.example.com/plugin.zip", "com.wincare.validhash", invalidHash));
         }
         finally
         {

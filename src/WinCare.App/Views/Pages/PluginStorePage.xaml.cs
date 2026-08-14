@@ -1,4 +1,5 @@
 using System;
+using System.Threading.Tasks;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 
@@ -48,33 +49,63 @@ public sealed partial class PluginStorePage : Page
     {
         if (sender is Button button && button.Tag is PluginCardViewModel card)
         {
-            var item = card.RemoteItem ?? new WinCare.Application.Plugins.RemotePluginItem
-            {
-                Id = card.Id,
-                Name = card.Name,
-                Author = card.Author,
-                Version = card.Version,
-                Description = card.Description,
-                Category = card.Category,
-                Permissions = card.Permissions
-            };
-
-            var dialog = new PluginDetailDialog(item)
-            {
-                XamlRoot = XamlRoot
-            };
-
-            var result = await dialog.ShowAsync();
-            if (result == ContentDialogResult.Primary && card.CanInstall)
-            {
-                await ViewModel.InstallPluginAsync(card);
-            }
+            await ShowPluginDetailsDialogAsync(card);
         }
     }
 
     private async void InstallButton_Click(object sender, RoutedEventArgs e)
     {
         if (sender is Button button && button.Tag is PluginCardViewModel card)
+        {
+            // Gate installation behind the capability and trust consent dialog
+            await ShowPluginDetailsDialogAsync(card);
+        }
+    }
+
+    private async void EnableButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button button && button.Tag is PluginCardViewModel card)
+        {
+            await ViewModel.EnablePluginAsync(card);
+        }
+    }
+
+    private async void DisableButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button button && button.Tag is PluginCardViewModel card)
+        {
+            await ViewModel.DisablePluginAsync(card);
+        }
+    }
+
+    private async void UninstallButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button button && button.Tag is PluginCardViewModel card)
+        {
+            await ViewModel.UninstallPluginAsync(card);
+        }
+    }
+
+    private async Task ShowPluginDetailsDialogAsync(PluginCardViewModel card)
+    {
+        var item = card.RemoteItem ?? new WinCare.Application.Plugins.RemotePluginItem
+        {
+            Id = card.Id,
+            Name = card.Name,
+            Author = card.Author,
+            Version = card.Version,
+            Description = card.Description,
+            Category = card.Category,
+            Permissions = card.Permissions
+        };
+
+        var dialog = new PluginDetailDialog(item)
+        {
+            XamlRoot = XamlRoot
+        };
+
+        var result = await dialog.ShowAsync();
+        if (result == ContentDialogResult.Primary && card.CanInstall)
         {
             await ViewModel.InstallPluginAsync(card);
         }

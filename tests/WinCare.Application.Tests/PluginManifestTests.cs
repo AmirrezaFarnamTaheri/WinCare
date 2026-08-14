@@ -1,5 +1,6 @@
 namespace WinCare.Application.Tests;
 
+using System;
 using System.Text.Json;
 using WinCare.Application.Plugins;
 using Xunit;
@@ -19,6 +20,7 @@ public sealed class PluginManifestTests
           "description": "Test plugin description",
           "category": "System Care",
           "entryType": "Manifest",
+          "declaredCapabilities": ["filesystem.read", "filesystem.write"],
           "tools": [
             {
               "id": "test.deep_clean",
@@ -46,6 +48,7 @@ public sealed class PluginManifestTests
         Assert.Equal("WinCare Devs", manifest.Author);
         Assert.Equal("System Care", manifest.Category);
         Assert.Equal("Manifest", manifest.EntryType);
+        Assert.Equal(2, manifest.DeclaredCapabilities.Count);
         Assert.Single(manifest.Tools);
 
         var tool = manifest.Tools[0];
@@ -57,5 +60,28 @@ public sealed class PluginManifestTests
         Assert.Equal("test.deep_clean", commandDef.Id);
         Assert.Equal("Deep Temp Purge", commandDef.Title);
         Assert.Equal("System care", commandDef.Area);
+    }
+
+    [Fact]
+    public void PluginManifest_FailsClosed_On_Invalid_Risk_Or_Admin_Value()
+    {
+        var invalidRiskTool = new PluginToolDefinition
+        {
+            Id = "test.bad_risk",
+            Title = "Bad",
+            Risk = "ExtremelyDangerous" // Invalid enum value
+        };
+
+        Assert.Throws<FormatException>(() => invalidRiskTool.ToCommandDefinition("test.plugin"));
+
+        var invalidAdminTool = new PluginToolDefinition
+        {
+            Id = "test.bad_admin",
+            Title = "Bad",
+            Risk = "Low",
+            AdministratorAccess = "RootUserOnly" // Invalid enum value
+        };
+
+        Assert.Throws<FormatException>(() => invalidAdminTool.ToCommandDefinition("test.plugin"));
     }
 }

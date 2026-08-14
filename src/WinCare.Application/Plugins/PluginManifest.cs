@@ -1,5 +1,7 @@
 namespace WinCare.Application.Plugins;
 
+using System;
+using System.Collections.Generic;
 using System.Text.Json.Serialization;
 using WinCare.CommandCatalog.Models;
 
@@ -43,6 +45,10 @@ public sealed class PluginManifest
     /// <summary>Optional plugin class name for binary C# plugins.</summary>
     [JsonPropertyName("pluginClassName")]
     public string? PluginClassName { get; init; }
+
+    /// <summary>Declared security capabilities & permissions (e.g. filesystem.read, process.spawn).</summary>
+    [JsonPropertyName("declaredCapabilities")]
+    public List<string> DeclaredCapabilities { get; init; } = new();
 
     /// <summary>List of tool command definitions provided by the plugin.</summary>
     [JsonPropertyName("tools")]
@@ -99,23 +105,23 @@ public sealed class PluginToolDefinition
     public string ScriptPath { get; init; } = string.Empty;
 
     /// <summary>
-    /// Converts this plugin tool definition into a core <see cref="CommandDefinition"/>.
+    /// Converts this plugin tool definition into a core <see cref="CommandDefinition"/>, failing closed on invalid metadata.
     /// </summary>
     public CommandDefinition ToCommandDefinition(string pluginId)
     {
         if (!Enum.TryParse<CommandRisk>(Risk, true, out var parsedRisk))
         {
-            parsedRisk = CommandRisk.Low;
+            throw new FormatException($"Invalid declared Risk tier '{Risk}' in plugin '{pluginId}'. Must be ReadOnly, Low, Moderate, High, or Critical.");
         }
 
         if (!Enum.TryParse<AdministratorAccess>(AdministratorAccess, true, out var parsedAdmin))
         {
-            parsedAdmin = WinCare.CommandCatalog.Models.AdministratorAccess.No;
+            throw new FormatException($"Invalid declared AdministratorAccess '{AdministratorAccess}' in plugin '{pluginId}'. Must be No, MayBeRequired, or Required.");
         }
 
         if (!Enum.TryParse<RestartExpectation>(Restart, true, out var parsedRestart))
         {
-            parsedRestart = RestartExpectation.No;
+            throw new FormatException($"Invalid declared Restart expectation '{Restart}' in plugin '{pluginId}'. Must be No, MayBeRequired, or Required.");
         }
 
         return new CommandDefinition(
@@ -129,7 +135,7 @@ public sealed class PluginToolDefinition
             AdministratorAccess: parsedAdmin,
             Restart: parsedRestart,
             LegacySource: $"plugin:{pluginId}",
-            MigrationStatus: MigrationStatus.Implemented,
+            MigrationStatus: MigrationStatus.BehaviorVerified,
             Keywords: new[] { Id, Title, Area, Section, pluginId }
         );
     }
