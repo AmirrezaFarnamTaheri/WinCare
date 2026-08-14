@@ -52,6 +52,7 @@ This plan details the implementation of the **WinCare Plugin Store & Modular Ext
 
 - **Acceptance Criteria:**
   - [ ] `JsonPluginLoader` parses plugin directories containing `wincare-plugin.json` and returns executable command definitions.
+  - [ ] `JsonPluginLoader` enforces strict path canonicalization to prevent `scriptPath` path traversal (`../`) outside the plugin directory.
   - [ ] `AssemblyPluginLoader` instantiates `IWinCarePlugin` via isolated `AssemblyLoadContext` without DLL locking or context leak.
   - [ ] Invalid plugin manifests or incompatible assembly versions return clear diagnostic error results without crashing host.
 
@@ -71,6 +72,7 @@ This plan details the implementation of the **WinCare Plugin Store & Modular Ext
 
 - **Acceptance Criteria:**
   - [ ] `PluginRegistryService` discovers built-in category plugins and user plugins in `%LocalAppData%/WinCare/Plugins`.
+  - [ ] Exception boundaries wrap all third-party plugin `InitializeAsync` and `GetWidgets()` calls to isolate plugin crashes from the WinCare host.
   - [ ] Toggling plugin enabled/disabled state updates `plugins.json` and immediately updates active command catalog.
   - [ ] Dynamic catalog query merges core commands with all enabled plugin commands.
 
