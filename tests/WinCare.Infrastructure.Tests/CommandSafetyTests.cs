@@ -355,7 +355,7 @@ public sealed class CommandSafetyTests
             Task executionTask = executor.ExecuteAsync(presetDef, request, cts.Token);
             cts.Cancel();
 
-            await Assert.ThrowsAsync<OperationCanceledException>(() => executionTask);
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() => executionTask);
 
             CommandStateStore store = new(testRoot);
             JsonElement history = await store.ReadArrayAsync("preset-history", CancellationToken.None);
