@@ -39,6 +39,14 @@ namespace WinCare.Application.Diagnostics
         public string ActionButtonText => IsReadOnly ? "Run Diagnostic Check" : "Review & Apply Fix";
     }
 
+    public sealed record TelemetryEvidence(
+        bool HasMeasuredEvidence,
+        string MetricName,
+        string MeasuredValue,
+        bool IndicatesPressure,
+        DiagnosticSeverity Severity
+    );
+
     public sealed class DoctorActionPlan
     {
         public required string PlanId { get; init; }
@@ -47,6 +55,7 @@ namespace WinCare.Application.Diagnostics
         public required DiagnosticSeverity OverallSeverity { get; init; }
         public required IReadOnlyList<DiagnosticFinding> Findings { get; init; }
         public required IReadOnlyList<ProposedActionStep> ProposedSteps { get; init; }
+        public IReadOnlyList<TelemetryEvidence> MeasuredEvidence { get; init; } = Array.Empty<TelemetryEvidence>();
         public bool HasMutatingActions => ProposedSteps.Any(s => s.RiskLevel != CommandRisk.ReadOnly);
         public DateTime GeneratedAtUtc { get; init; } = DateTime.UtcNow;
     }

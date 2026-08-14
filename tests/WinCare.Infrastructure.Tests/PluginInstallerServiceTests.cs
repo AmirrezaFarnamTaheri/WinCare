@@ -290,6 +290,31 @@ public class PluginInstallerServiceTests
     }
 
     [Fact]
+    public void VerifyManifestSignature_Validates_Cryptographic_RSA_Signatures()
+    {
+        using var rsa = RSA.Create(2048);
+        var publicKeyPem = rsa.ExportRSAPublicKeyPem();
+        var manifestContent = System.Text.Encoding.UTF8.GetBytes("{\"id\":\"com.signed.tool\",\"version\":\"1.0.0\"}");
+        var signatureBytes = rsa.SignData(manifestContent, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+        var signatureBase64 = Convert.ToBase64String(signatureBytes);
+
+        // 1. Valid signature check
+        var isValid = PluginInstallerService.VerifyManifestSignature(manifestContent, signatureBase64, publicKeyPem);
+        Assert.True(isValid);
+
+        // 2. Full publisher authenticity check with cryptographic verification
+        Assert.True(PluginInstallerService.VerifyPublisherAuthenticity("Independent Developer", signatureBase64, out var trustLevel, publicKeyPem, manifestContent));
+        Assert.Equal("Digitally Signed (Cryptographically Verified)", trustLevel);
+
+        // 3. Tampered content verification check
+        var tamperedContent = System.Text.Encoding.UTF8.GetBytes("{\"id\":\"com.signed.tool\",\"version\":\"2.0.0-tampered\"}");
+        var isTamperedValid = PluginInstallerService.VerifyManifestSignature(tamperedContent, signatureBase64, publicKeyPem);
+        Assert.False(isTamperedValid);
+        Assert.False(PluginInstallerService.VerifyPublisherAuthenticity("Independent Developer", signatureBase64, out var tamperedTrust, publicKeyPem, tamperedContent));
+        Assert.Equal("Signature Verification Failed", tamperedTrust);
+    }
+
+    [Fact]
     public async Task InstallPluginFromPackageAsync_Installs_From_File_Uri_Successfully()
     {
         var tempPluginsDir = Path.Combine(Path.GetTempPath(), $"wincare_test_plugins_{Guid.NewGuid():N}");

@@ -155,7 +155,7 @@ public class PluginInstallerService : IPluginInstallerService
     /// <summary>
     /// Validates package publisher authenticity against known trusted publishers and package certificates.
     /// </summary>
-    public static bool VerifyPublisherAuthenticity(string author, string? signature, out string trustLevel)
+    public static bool VerifyPublisherAuthenticity(string author, string? signature, out string trustLevel, string? publicKeyPem = null, byte[]? manifestBytes = null)
     {
         if (string.Equals(author, "WinCare Official", StringComparison.OrdinalIgnoreCase) ||
             string.Equals(author, "WinCare Community", StringComparison.OrdinalIgnoreCase) ||
@@ -167,12 +167,61 @@ public class PluginInstallerService : IPluginInstallerService
 
         if (!string.IsNullOrWhiteSpace(signature))
         {
+            if (!string.IsNullOrWhiteSpace(publicKeyPem) && manifestBytes != null && manifestBytes.Length > 0)
+            {
+                if (VerifyManifestSignature(manifestBytes, signature, publicKeyPem))
+                {
+                    trustLevel = "Digitally Signed (Cryptographically Verified)";
+                    return true;
+                }
+
+                trustLevel = "Signature Verification Failed";
+                return false;
+            }
+
             trustLevel = "Digitally Signed";
             return true;
         }
 
         trustLevel = "Community / Unsigned";
         return false;
+    }
+
+    /// <summary>
+    /// Cryptographically verifies a digital signature over manifest content bytes using an RSA or ECDsa public key.
+    /// </summary>
+    public static bool VerifyManifestSignature(byte[] manifestBytes, string signatureBase64, string publicKeyPem)
+    {
+        if (manifestBytes == null || manifestBytes.Length == 0 || string.IsNullOrWhiteSpace(signatureBase64) || string.IsNullOrWhiteSpace(publicKeyPem))
+        {
+            return false;
+        }
+
+        try
+        {
+            byte[] signatureBytes = Convert.FromBase64String(signatureBase64);
+
+            // Attempt RSA PKCS#1 verification
+            using var rsa = RSA.Create();
+            rsa.ImportFromPem(publicKeyPem.AsSpan());
+            return rsa.VerifyData(manifestBytes, signatureBytes, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+        }
+        catch
+        {
+            try
+            {
+                byte[] signatureBytes = Convert.FromBase64String(signatureBase64);
+
+                // Attempt ECDSA verification
+                using var ecdsa = ECDsa.Create();
+                ecdsa.ImportFromPem(publicKeyPem.AsSpan());
+                return ecdsa.VerifyData(manifestBytes, signatureBytes, HashAlgorithmName.SHA256);
+            }
+            catch
+            {
+                return false;
+            }
+        }
     }
 
     /// <inheritdoc />

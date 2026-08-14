@@ -362,7 +362,7 @@ public sealed class PluginRegistryService : IPluginRegistry
                 }
                 else if (entry.IsBuiltIn)
                 {
-                    var targetCoreId = ResolveBuiltInCoreCommandId(cmd.Id);
+                    var targetCoreId = ResolveBuiltInCoreCommandId(cmd.Id, toolDef);
                     if (!string.IsNullOrWhiteSpace(targetCoreId))
                     {
                         try
@@ -398,8 +398,13 @@ public sealed class PluginRegistryService : IPluginRegistry
         }
     }
 
-    private static string? ResolveBuiltInCoreCommandId(string commandId)
+    private static string? ResolveBuiltInCoreCommandId(string commandId, PluginToolDeclaration? toolDef = null)
     {
+        if (!string.IsNullOrWhiteSpace(toolDef?.AliasOf))
+        {
+            return toolDef.AliasOf;
+        }
+
         return commandId.ToLowerInvariant() switch
         {
             "cleaner.system_temp" => "cleaner-disk-pressure",

@@ -79,5 +79,17 @@ namespace WinCare.Application.Tests
             Assert.Equal(DiagnosticSeverity.Healthy, plan.OverallSeverity);
             Assert.Contains(plan.Findings, f => f.Severity == DiagnosticSeverity.Healthy);
         }
+
+        [Fact]
+        public async Task TranslateAsync_collects_live_telemetry_evidence()
+        {
+            var plan = await _translator.TranslateAsync("My computer memory is running slow and lagging");
+
+            Assert.NotNull(plan);
+            Assert.NotEmpty(plan.MeasuredEvidence);
+            var memoryProbe = Assert.Single(plan.MeasuredEvidence, e => e.MetricName.Contains("Memory", StringComparison.OrdinalIgnoreCase));
+            Assert.True(memoryProbe.HasMeasuredEvidence);
+            Assert.False(string.IsNullOrEmpty(memoryProbe.MeasuredValue));
+        }
     }
 }

@@ -105,7 +105,10 @@ public sealed class AiDoctorPageViewModel : INotifyPropertyChanged
             var plan = await _intentTranslator.TranslateAsync(prompt, cancellationToken);
             CurrentPlan = plan;
 
-            var responseText = $"**Inferred Investigation Plan:** {plan.DiagnosisSummary}\n\nIdentified {plan.Findings.Count} possible areas of interest (unverified hypotheses) and {plan.ProposedSteps.Count} suggested steps. Run read-only diagnostic checks to gather live telemetry before executing any remediation.";
+            var responseText = $"**Telemetry-Assisted Diagnostic Plan:** {plan.DiagnosisSummary}\n\n" +
+                $"• **Measured Probes:** {plan.MeasuredEvidence.Count} live telemetry probes collected.\n" +
+                $"• **Investigation Scope:** {plan.Findings.Count} diagnostic findings identified.\n" +
+                $"• **Recommended Steps:** {plan.ProposedSteps.Count} steps available. Review measured evidence and run read-only diagnostic checks before executing mutations.";
             Messages.Add(new DoctorChatMessage("AI System Doctor", responseText, IsUser: false, DateTime.UtcNow, plan));
         }
         catch (Exception ex)

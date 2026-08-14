@@ -330,6 +330,10 @@ public sealed class PluginToolDefinition
         }
     }
 
+    /// <summary>Optional target core command ID for built-in or alias plugin commands.</summary>
+    [JsonPropertyName("aliasOf")]
+    public string? AliasOf { get; init; }
+
     /// <summary>
     /// Converts this plugin tool definition into a core <see cref="CommandDefinition"/>, failing closed on invalid metadata.
     /// </summary>

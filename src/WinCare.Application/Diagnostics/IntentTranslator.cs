@@ -17,11 +17,16 @@ namespace WinCare.Application.Diagnostics
     {
         private readonly IOnnxInferenceEngine _inferenceEngine;
         private readonly ToolCatalogService _catalogService;
+        private readonly IDiagnosticEvidenceCollector _evidenceCollector;
 
-        public IntentTranslator(IOnnxInferenceEngine inferenceEngine, ToolCatalogService catalogService)
+        public IntentTranslator(
+            IOnnxInferenceEngine inferenceEngine, 
+            ToolCatalogService catalogService,
+            IDiagnosticEvidenceCollector? evidenceCollector = null)
         {
             _inferenceEngine = inferenceEngine ?? throw new ArgumentNullException(nameof(inferenceEngine));
             _catalogService = catalogService ?? throw new ArgumentNullException(nameof(catalogService));
+            _evidenceCollector = evidenceCollector ?? new DiagnosticEvidenceCollector();
         }
 
         public async Task<DoctorActionPlan> TranslateAsync(string prompt, CancellationToken cancellationToken = default)
@@ -32,38 +37,46 @@ namespace WinCare.Application.Diagnostics
             }
 
             var intent = await _inferenceEngine.PredictIntentAsync(prompt, cancellationToken);
+            var evidence = await _evidenceCollector.CollectEvidenceAsync(intent, cancellationToken);
             var findings = new List<DiagnosticFinding>();
             var proposedSteps = new List<ProposedActionStep>();
             DiagnosticSeverity severity = DiagnosticSeverity.Information;
             string summary;
 
+            var pressureEvidence = evidence.FirstOrDefault(e => e.IndicatesPressure);
+            bool hasTelemetryEvidence = pressureEvidence != null;
+
             switch (intent)
             {
                 case "intent.storage.cleanup":
-                    severity = DiagnosticSeverity.Warning;
-                    summary = "Inferred area of interest: Storage optimization. Run the read-only inspection check to measure disk pressure and cache sizes before applying changes.";
+                    severity = hasTelemetryEvidence ? DiagnosticSeverity.Warning : DiagnosticSeverity.Information;
+                    summary = hasTelemetryEvidence 
+                        ? $"Storage pressure verified by telemetry: {pressureEvidence!.MetricName} ({pressureEvidence.MeasuredValue}). Cleanup is recommended."
+                        : "Inferred area of interest: Storage optimization. Diagnostic probe gathered drive metrics. Run inspection to measure cache sizes.";
                     findings.Add(new DiagnosticFinding(
                         "finding.storage.temp",
-                        "Possible Cause: Temporary File Accumulation (Pending Verification)",
-                        "Natural language matched storage cleanup inquiry. Telemetry inspection is recommended to quantify reclaimable disk space.",
-                        DiagnosticSeverity.Warning,
+                        hasTelemetryEvidence ? "Measured Observation: Storage Pressure on System Drive" : "Investigative Hypothesis: Temporary File Accumulation",
+                        hasTelemetryEvidence ? $"Live telemetry confirms {pressureEvidence!.MeasuredValue}." : "Natural language matched storage cleanup inquiry. Telemetry inspection is recommended to quantify reclaimable disk space.",
+                        severity,
                         "Storage (C:)",
-                        IsVerifiedByTelemetry: false
+                        IsVerifiedByTelemetry: hasTelemetryEvidence
                     ));
 
                     AddMatchingCommands(proposedSteps, new[] { "clean_temp", "clean_updates", "clean_recycle_bin", "clean_dns" });
                     break;
 
                 case "intent.memory.optimize":
-                    severity = DiagnosticSeverity.Warning;
-                    summary = "Inferred area of interest: Memory working sets. Run the read-only inspection check to evaluate memory metrics before trimming caches.";
+                    severity = hasTelemetryEvidence ? DiagnosticSeverity.Warning : DiagnosticSeverity.Information;
+                    summary = hasTelemetryEvidence
+                        ? $"Memory pressure verified by telemetry: {pressureEvidence!.MetricName} ({pressureEvidence.MeasuredValue}). Optimization is recommended."
+                        : "Inferred area of interest: Memory working sets. Diagnostic probe gathered current memory load. Run inspection before trimming caches.";
                     findings.Add(new DiagnosticFinding(
                         "finding.memory.standby",
-                        "Possible Cause: Working Set & Standby List Pressure (Pending Verification)",
-                        "Natural language matched memory responsiveness inquiry. Run memory diagnostics to measure commit charge and working set sizes.",
-                        DiagnosticSeverity.Warning,
+                        hasTelemetryEvidence ? "Measured Observation: High Memory Utilization" : "Investigative Hypothesis: Working Set & Standby List Pressure",
+                        hasTelemetryEvidence ? $"Live telemetry confirms {pressureEvidence!.MeasuredValue}." : "Natural language matched memory responsiveness inquiry. Run memory diagnostics to measure commit charge and working set sizes.",
+                        severity,
                         "System RAM",
-                        IsVerifiedByTelemetry: false
+                        IsVerifiedByTelemetry: hasTelemetryEvidence
                     ));
 
                     AddMatchingCommands(proposedSteps, new[] { "clear_standby_list", "flush_working_sets", "restart_explorer" });
@@ -151,7 +164,8 @@ namespace WinCare.Application.Diagnostics
                 DiagnosisSummary = summary,
                 OverallSeverity = severity,
                 Findings = findings,
-                ProposedSteps = proposedSteps
+                ProposedSteps = proposedSteps,
+                MeasuredEvidence = evidence
             };
         }
 

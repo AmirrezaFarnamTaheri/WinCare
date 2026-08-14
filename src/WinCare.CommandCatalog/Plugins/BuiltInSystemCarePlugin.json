@@ -15,7 +15,8 @@
       "section": "Storage",
       "risk": "Low",
       "readOnly": false,
-      "executorType": "Native"
+      "executorType": "Native",
+      "aliasOf": "cleaner-disk-pressure"
     },
     {
       "id": "cleaner.recycle_bin",
@@ -25,7 +26,8 @@
       "section": "Storage",
       "risk": "Low",
       "readOnly": false,
-      "executorType": "Native"
+      "executorType": "Native",
+      "aliasOf": "cleaner-disk-pressure"
     }
   ]
 }
