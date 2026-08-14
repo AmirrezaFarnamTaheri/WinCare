@@ -8,8 +8,15 @@ namespace WinCare.Domain.Attributes
     [AttributeUsage(AttributeTargets.Class, AllowMultiple = false, Inherited = false)]
     public sealed class CommandHandlerAttribute : Attribute
     {
+        /// <summary>
+        /// Gets the target catalog command ID handled by the decorated class.
+        /// </summary>
         public string CommandId { get; }
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="CommandHandlerAttribute"/> class with the specified command ID.
+        /// </summary>
+        /// <param name="commandId">The unique command identifier.</param>
         public CommandHandlerAttribute(string commandId)
         {
             CommandId = commandId ?? throw new ArgumentNullException(nameof(commandId));
