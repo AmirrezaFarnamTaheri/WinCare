@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""WinCare 2.4.0-rc1 source checklist runner.
+"""WinCare native source checklist runner.
 Runs self-contained source checks and, when the migration workspace still contains the
 executable historical oracle, also verifies RC source finalization. Windows build/runtime
 gates remain owned by the Windows workflows.
