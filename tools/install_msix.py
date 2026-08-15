@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """WinCare 1-Click MSIX Sideloading & Installation Helper.
 
-Performs robust host architecture detection, signing certificate trust verification,
-and secure MSIX package installation without shell string interpolation.
+Performs robust host architecture detection, signer pinning, certificate trust
+establishment, and secure MSIX package installation without shell interpolation.
 """
 
 from __future__ import annotations
@@ -41,12 +41,9 @@ def detect_architecture() -> str:
 
 def find_canonical_package(search_dir: Path, arch: str) -> Path | None:
     """Find the best matching .msix package for the given architecture."""
-    # First check exact arch-matching files
     for candidate in sorted(search_dir.glob("*.msix")):
-        name_lower = candidate.name.lower()
-        if arch.lower() in name_lower:
+        if arch.lower() in candidate.name.lower():
             return candidate
-    # Fallback to any single msix
     all_msix = list(search_dir.glob("*.msix"))
     if len(all_msix) == 1:
         return all_msix[0]
@@ -62,25 +59,21 @@ def main() -> int:
     script_dir = Path(__file__).resolve().parent
     arch = detect_architecture()
 
-    # Resolve package
     package_path: Path | None = args.package
     if package_path is None:
         package_path = find_canonical_package(script_dir, arch) or find_canonical_package(script_dir.parent, arch)
 
     if package_path is None or not package_path.is_file():
         print(f"[-] Error: Could not locate a valid WinCare MSIX package for architecture '{arch}'.")
-        print(f"    Please specify the path using --package <file.msix>.")
+        print("    Please specify the path using --package <file.msix>.")
         return 1
-
     package_path = package_path.resolve()
 
-    # Resolve certificate
     cert_path: Path | None = args.certificate
     if cert_path is None:
-        cert_candidates = list(script_dir.glob("*.cer")) + list(script_dir.parent.glob("*.cer"))
+        cert_candidates = sorted(script_dir.glob("*.cer")) + sorted(script_dir.parent.glob("*.cer"))
         if cert_candidates:
             cert_path = cert_candidates[0]
-
     if cert_path is not None:
         cert_path = cert_path.resolve()
 
@@ -89,45 +82,62 @@ def main() -> int:
         "WINCARE_CERT_PATH": str(cert_path) if cert_path and cert_path.is_file() else "",
     }
 
-    print(f"[*] Validating signature and trust for WinCare MSIX package: {package_path.name} ({arch})...")
+    print(f"[*] Validating signer and trust for WinCare MSIX package: {package_path.name} ({arch})...")
 
-    # PowerShell validation and trust establishment script (strictly uses env vars, zero string interpolation)
     verify_and_trust_script = """
 $ErrorActionPreference = 'Stop'
 $pkgPath = $env:WINCARE_PKG_PATH
 $certPath = $env:WINCARE_CERT_PATH
 
-if (-not (Test-Path -Path $pkgPath -PathType Leaf)) {
-    Write-Error "Package file not found: $pkgPath"
-    exit 1
+if (-not (Test-Path -LiteralPath $pkgPath -PathType Leaf)) {
+    throw "Package file not found: $pkgPath"
 }
 
-# Verify Authenticode signature on MSIX
-$sig = Get-AuthenticodeSignature -FilePath $pkgPath
-if ($sig.Status -ne 'Valid') {
-    Write-Error "MSIX signature verification failed (Status: $($sig.Status), Detail: $($sig.StatusMessage)). Package is not signed or signature is invalid."
-    exit 2
+# Authenticode can expose the signer even when a self-signed certificate is not
+# trusted yet. Pin that signer before importing any certificate.
+$initialSig = Get-AuthenticodeSignature -LiteralPath $pkgPath
+if (-not $initialSig.SignerCertificate) {
+    throw "MSIX package does not expose a signer certificate (Status: $($initialSig.Status), Detail: $($initialSig.StatusMessage))."
+}
+if ($initialSig.SignerCertificate.Subject -ne 'CN=WinCare Development') {
+    throw "Untrusted signer subject '$($initialSig.SignerCertificate.Subject)'. Expected exactly 'CN=WinCare Development'."
 }
 
-$signerSubject = $sig.SignerCertificate.Subject
-if ($signerSubject -notmatch 'CN=WinCare Development') {
-    Write-Error "Untrusted signer subject '$signerSubject'. Expected publisher 'CN=WinCare Development'."
-    exit 3
-}
-
-Write-Output "Signature Verified: Valid ($signerSubject)"
-Write-Output "Signer Thumbprint: $($sig.SignerCertificate.Thumbprint)"
-
-# If certificate file is provided, verify thumbprint match and import into TrustedPeople
-if ($certPath -and (Test-Path -Path $certPath -PathType Leaf)) {
+if ($certPath) {
+    if (-not (Test-Path -LiteralPath $certPath -PathType Leaf)) {
+        throw "Certificate file not found: $certPath"
+    }
     $cert = [System.Security.Cryptography.X509Certificates.X509Certificate2]::new($certPath)
-    if ($cert.Thumbprint -ne $sig.SignerCertificate.Thumbprint) {
-        Write-Error "Provided certificate thumbprint ($($cert.Thumbprint)) does not match package signer thumbprint ($($sig.SignerCertificate.Thumbprint))."
-        exit 4
+    if ($cert.Subject -ne 'CN=WinCare Development') {
+        throw "Provided certificate subject '$($cert.Subject)' does not match expected publisher."
+    }
+    if ($cert.Thumbprint -ne $initialSig.SignerCertificate.Thumbprint) {
+        throw "Provided certificate thumbprint ($($cert.Thumbprint)) does not match package signer thumbprint ($($initialSig.SignerCertificate.Thumbprint))."
     }
     $imported = Import-Certificate -FilePath $certPath -CertStoreLocation 'Cert:\\CurrentUser\\TrustedPeople'
-    Write-Output "Imported Certificate: $($imported.Thumbprint) into CurrentUser\\TrustedPeople"
+    if (-not $imported) {
+        throw 'Certificate import did not return an imported certificate.'
+    }
+    Write-Output "Imported pinned signer certificate: $($cert.Thumbprint)"
 }
+elseif ($initialSig.Status -ne 'Valid') {
+    throw "Package signer is not already trusted and no matching --certificate was provided (Status: $($initialSig.Status), Detail: $($initialSig.StatusMessage))."
+}
+
+# Re-run trust validation after importing the exact pinned certificate.
+$finalSig = Get-AuthenticodeSignature -LiteralPath $pkgPath
+if ($finalSig.Status -ne 'Valid') {
+    throw "MSIX signature validation failed after trust setup (Status: $($finalSig.Status), Detail: $($finalSig.StatusMessage))."
+}
+if (-not $finalSig.SignerCertificate -or $finalSig.SignerCertificate.Subject -ne 'CN=WinCare Development') {
+    throw 'MSIX signer changed or no longer matches the expected publisher after trust setup.'
+}
+if ($certPath -and $finalSig.SignerCertificate.Thumbprint -ne $cert.Thumbprint) {
+    throw 'MSIX signer thumbprint changed after trust setup.'
+}
+
+Write-Output "Signature Verified: Valid ($($finalSig.SignerCertificate.Subject))"
+Write-Output "Signer Thumbprint: $($finalSig.SignerCertificate.Thumbprint)"
 """
 
     verify_res = _run_powershell_script(verify_and_trust_script, env_params)
