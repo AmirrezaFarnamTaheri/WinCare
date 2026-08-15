@@ -110,15 +110,17 @@ jobs:
           $ErrorActionPreference = 'Stop'
           $signDir = "$PWD/artifacts/signing"
           New-Item -ItemType Directory -Force -Path $signDir | Out-Null
-          $cert = New-SelfSignedCertificate \
-            -Type Custom \
-            -KeyUsage DigitalSignature \
-            -KeySpec Signature \
-            -Subject 'CN=WinCare Development' \
-            -FriendlyName 'WinCare Development Package' \
-            -CertStoreLocation 'Cert:\CurrentUser\My' \
-            -HashAlgorithm SHA256 \
-            -TextExtension @('2.5.29.37={text}1.3.6.1.5.5.7.3.3', '2.5.29.19={text}')
+          $certificateParameters = @{
+            Type = 'Custom'
+            KeyUsage = 'DigitalSignature'
+            KeySpec = 'Signature'
+            Subject = 'CN=WinCare Development'
+            FriendlyName = 'WinCare Development Package'
+            CertStoreLocation = 'Cert:\CurrentUser\My'
+            HashAlgorithm = 'SHA256'
+            TextExtension = @('2.5.29.37={text}1.3.6.1.5.5.7.3.3', '2.5.29.19={text}')
+          }
+          $cert = New-SelfSignedCertificate @certificateParameters
           Export-Certificate -Cert $cert -FilePath "$signDir/WinCare.cer" | Out-Null
           "WINCARE_SIGNING_THUMBPRINT=$($cert.Thumbprint)" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           'WINCARE_DEVELOPMENT_SIGNING=true' | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
@@ -141,14 +143,15 @@ jobs:
           try {
             [IO.File]::WriteAllBytes($pfxPath, [Convert]::FromBase64String($env:CERT_B64))
             $password = ConvertTo-SecureString -String $env:CERT_PASS -Force -AsPlainText
-            $cert = Import-PfxCertificate -FilePath $pfxPath -CertStoreLocation 'Cert:\CurrentUser\My' -Password $password
+            $importedCertificates = @(Import-PfxCertificate -FilePath $pfxPath -CertStoreLocation 'Cert:\CurrentUser\My' -Password $password)
+            $cert = $importedCertificates | Where-Object { $_.HasPrivateKey } | Select-Object -First 1
           }
           finally {
             if (Test-Path $pfxPath) { Remove-Item -Force $pfxPath }
           }
 
-          if (-not $cert.HasPrivateKey) {
-            throw 'Release signing certificate does not contain an accessible private key.'
+          if (-not $cert -or -not $cert.HasPrivateKey) {
+            throw 'Release signing PFX does not contain an accessible private key certificate.'
           }
           if ($cert.Subject -ne 'CN=WinCare Development') {
             throw "Release signing certificate subject '$($cert.Subject)' does not exactly match the MSIX publisher 'CN=WinCare Development'."
@@ -192,7 +195,7 @@ jobs:
 
           foreach ($file in $msixFiles) {
             Write-Output "Signing MSIX: $($file.FullName)"
-            & $signtoolPath sign /fd SHA256 /sha1 $env:WINCARE_SIGNING_THUMBPRINT $file.FullName
+            & $signtoolPath sign /fd SHA256 /s My /sha1 $env:WINCARE_SIGNING_THUMBPRINT $file.FullName
             if ($LASTEXITCODE -ne 0) {
               throw "SignTool failed for '$($file.Name)' with exit code $LASTEXITCODE."
             }
