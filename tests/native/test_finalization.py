@@ -137,6 +137,24 @@ class FinalizationTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "Conflicting release assets"):
                 stage_assets(src, dst, version="2.5.0-rc1")
 
+    def test_stage_release_assets_ignores_vendor_dependency_msix(self) -> None:
+        from tools.stage_release_assets import stage_assets
+        with tempfile.TemporaryDirectory() as src_dir, tempfile.TemporaryDirectory() as dst_dir:
+            src = Path(src_dir)
+            dst = Path(dst_dir)
+            package_dir = src / "WinCare-x64" / "AppPackages" / "WinCare.App_2.5.0.0_x64_Test"
+            dependency_dir = package_dir / "Dependencies" / "x64"
+            dependency_dir.mkdir(parents=True)
+            app_msix = package_dir / "WinCare.App_2.5.0.0_x64.msix"
+            dependency_msix = dependency_dir / "Microsoft.WindowsAppRuntime.2.msix"
+            app_msix.write_bytes(b"WINCARE")
+            dependency_msix.write_bytes(b"VENDOR")
+
+            staged = stage_assets(src, dst, version="2.5.0-rc1")
+            self.assertEqual([dst.resolve() / "WinCare-v2.5.0-rc1-x64.msix"], staged)
+            self.assertEqual(b"WINCARE", staged[0].read_bytes())
+            self.assertFalse(any("WindowsAppRuntime" in path.name for path in staged))
+
     def test_finalizer_rejects_unsafe_version_labels(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             with self.assertRaisesRegex(ValueError, "version label"):
@@ -216,6 +234,9 @@ class FinalizationTests(unittest.TestCase):
         self.assertIn("Tagged releases require WINCARE_SIGNING_CERT_BASE64", workflow)
         self.assertIn("WINCARE_DEVELOPMENT_SIGNING=true", workflow)
         self.assertIn("WINCARE_DEVELOPMENT_SIGNING=false", workflow)
+        self.assertIn("WinCare.App_*.msix", workflow)
+        self.assertIn("Dependencies", workflow)
+        self.assertNotIn("AppPackages/**/*.msix", workflow)
 
         development_start = workflow.index("Prepare development signing identity")
         release_start = workflow.index("Prepare release signing identity")
