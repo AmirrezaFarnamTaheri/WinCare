@@ -18,7 +18,7 @@ on:
           - production
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   finalize:
@@ -57,3 +57,21 @@ jobs:
           name: WinCare-${{ inputs.version }}-${{ inputs.mode }}-finalization
           path: artifacts/finalization/*
           if-no-files-found: error
+      - name: Publish or Update GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG_NAME="v${WINCARE_VERSION#v}"
+          if [[ "${{ inputs.mode }}" == "rc" ]]; then
+            RELEASE_FLAGS="--prerelease"
+            TITLE="WinCare $TAG_NAME (Native Source Release Candidate)"
+          else
+            RELEASE_FLAGS="--latest"
+            TITLE="WinCare $TAG_NAME (Production Release)"
+          fi
+          gh release upload "$TAG_NAME" artifacts/finalization/* --clobber || \
+          gh release create "$TAG_NAME" artifacts/finalization/* \
+            --title "$TITLE" \
+            $RELEASE_FLAGS \
+            --notes "WinCare $TAG_NAME finalization artifacts generated in \`${{ inputs.mode }}\` mode from commit \`${{ github.sha }}\`."
+

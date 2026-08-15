@@ -110,12 +110,14 @@ jobs:
         run: |
           mkdir -p artifacts/release
           cp artifacts/portable/${{ matrix.runtime }}/WinCare.App.exe artifacts/release/WinCare-v2.4.0-rc1-${{ matrix.platform }}.exe
+          python tools/package_portable.py artifacts/portable/${{ matrix.runtime }} artifacts/release/WinCare-v2.4.0-rc1-${{ matrix.platform }}-portable.zip
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: WinCare-${{ matrix.platform }}
           path: |
             src/WinCare.App/AppPackages/**/*.msix
             artifacts/release/WinCare-v2.4.0-rc1-${{ matrix.platform }}.exe
+            artifacts/release/WinCare-v2.4.0-rc1-${{ matrix.platform }}-portable.zip
 
   release-gate:
     needs: [verify-source, rust, managed-and-package]
@@ -125,16 +127,34 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
       - uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
         with:
           path: artifacts/downloads
+      - name: Determine release version and publish gate
+        shell: bash
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            RELEASE_TAG="${GITHUB_REF#refs/tags/}"
+          else
+            RELEASE_TAG="v2.4.0-rc1"
+          fi
+          echo "RELEASE_TAG=$RELEASE_TAG" >> $GITHUB_ENV
+          if [[ "$RELEASE_TAG" == *"-rc"* || "$RELEASE_TAG" == *"-beta"* || "$RELEASE_TAG" == *"-alpha"* ]]; then
+            echo "RELEASE_FLAGS=--prerelease" >> $GITHUB_ENV
+          else
+            echo "RELEASE_FLAGS=--latest" >> $GITHUB_ENV
+          fi
       - name: Publish GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          python tools/stage_release_assets.py
-          gh release upload v2.4.0-rc1 release_assets/* --clobber || \
-          gh release create v2.4.0-rc1 release_assets/* \
-            --title "WinCare v2.4.0-rc1 (Native WinUI & Core Release)" \
-            --prerelease \
-            --notes "Automated release candidate build generated from master commit \`${{ github.sha }}\`. Contains native MSIX packages (x64/ARM64), single binary executables (WinCare-v2.4.0-rc1-x64.exe / WinCare-v2.4.0-rc1-ARM64.exe), and verified source finalization archives."
+          python tools/stage_release_assets.py --version "$RELEASE_TAG"
+          gh release upload "$RELEASE_TAG" release_assets/* --clobber || \
+          gh release create "$RELEASE_TAG" release_assets/* \
+            --title "WinCare $RELEASE_TAG (Native WinUI & Core Release)" \
+            $RELEASE_FLAGS \
+            --notes "Automated release build generated from commit \`${{ github.sha }}\`. Contains native MSIX packages (x64/ARM64), single binary standalone executables, portable ZIP distributions, and verified source finalization archives."
+

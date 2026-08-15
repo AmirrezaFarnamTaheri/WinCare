@@ -1,101 +1,119 @@
-# Native validation and promotion
+# Native Validation and Promotion Policy
 
-WinCare separates source validation, Windows runtime evidence, package verification, and
-command-by-command parity. Passing one evidence class never substitutes for another.
+WinCare establishes strict boundaries between static source validation, unit test execution, Windows runtime evidence, package verification, and command parity. Passing one verification class never substitutes for another.
 
-## Evidence terms
+---
 
-- **Verified:** behavior executed successfully in the named environment.
-- **Statically validated:** source or artifact structure checked without executing Windows behavior.
-- **Reviewed:** implementation or evidence inspected against its contract.
-- **Pending:** required evidence was unavailable in the current environment.
-- **Blocked:** a declared prerequisite or safety gate prevented execution.
-- **Failed:** a check ran and did not satisfy its contract.
+## 🏷️ Evidence Classifications
 
-## Current 2.5.0-rc1 evidence
+| Evidence Term | Definition & Contract |
+|---|---|
+| **Verified** | Behavior executed and confirmed passing in the targeted Windows execution environment |
+| **Statically Validated** | Source code, AST, or artifact structure confirmed via automated analysis tools |
+| **Reviewed** | Implementation, design tokens, or contract inspected manually or against specifications |
+| **Pending** | Required evidence cannot be collected in the current environment (e.g. non-Windows host) |
+| **Blocked** | A declared prerequisite, platform capability, or safety gate prevented execution |
+| **Failed** | A check ran and did not satisfy its acceptance contract |
 
-### Source, Rust, and Python verification checks in this workspace
+---
 
-- [x] `python tools/verify_native_foundation.py` — 259/259 unique command IDs verified with exact frozen oracle parity
-- [x] `python -m unittest discover -s tests/native -v` — 56/56 unit tests passed (1 symlink test skipped on Windows)
-- [x] `cargo test --manifest-path native/Cargo.toml` — 29/29 Rust workspace tests passed (18 unit + 5 FFI contract + 6 Guard daemon)
-- [x] `cargo clippy --manifest-path native/Cargo.toml --all-targets --all-features -- -D warnings` — 0 warnings under `-D warnings`
-- [x] `python tests/tools/test_plugin_cli.py -v` — 3/3 Plugin CLI tests passed (linter, scaffolding, packaging)
-- [x] `python tools/verify_visual_tokens.py` — 33/33 visual tokens verified across Light, Dark, and High Contrast dictionaries
-- [x] `python tools/verify_pill_contrast.py` — All 8 status pill pairs pass WCAG 2.1 AA (up to 14.68:1 contrast)
-- [x] Native source scan contains no executable PowerShell/WPF runtime dependency
-- [x] All 259 catalog IDs have an explicit executor route + dynamic plugin dispatch support
-- [x] All 104 mutating IDs have explicit parameter preflight before approval
-- [x] Plugin package admission strictly verifies manifest ID == target ID and stream SHA-256 integrity
-- [x] Plugin backups isolated to `.staging/backups/` outside live discovery directory
-- [x] ViewModels contain no `Microsoft.UI.Xaml` dependency
+## 🧪 Current Verification Matrix
 
-### Windows-only checks not executed in this environment
+### 1. Source, Rust, and Structural Verification Gates
 
-- [ ] WinUI launch with WinApp CLI — **Pending**
-- [ ] UI Automation, keyboard flows, theme screenshots, and runtime accessibility — **Pending**
-- [ ] MSIX install/launch/repair/upgrade/uninstall — **Pending**
-- [ ] Command-by-command Windows comparison with historical oracle — **Pending**
+- [x] **Native Foundation Gate (`tools/verify_native_foundation.py`)**:
+  - Exact 259/259 unique command ID parity with frozen oracle (`migration/oracle/legacy-command-ids.json`).
+  - Zero PowerShell or WPF dependencies in native roots.
+  - Required WinUI 3 pages, navigation items, and telemetry instrumentation verified.
+- [x] **Native Structural & Safety Unit Tests (`tests/native/`)**:
+  - 56/56 unit tests passed covering fail-closed execution, PII exception sanitization, reparse-point safety, and bounded process runners.
+- [x] **Rust 2024 Workspace Suites (`native/Cargo.toml`)**:
+  - 29/29 tests passed across `wincare-core` (FFI contract, unwind safety, hashing) and `wincare-guard` (RAM/thermal monitors, Named Pipe IPC, Windows Toast XML notifications).
+  - Clean `cargo clippy` with zero warnings under `-D warnings`.
+- [x] **Community Plugin SDK & CLI Tests (`tests/tools/test_plugin_cli.py`)**:
+  - Scaffolding, manifest linting, SemVer validation, and ZipSlip path traversal rejection verified.
+- [x] **Visual Token Consistency (`tools/verify_visual_tokens.py`)**:
+  - 33/33 visual tokens verified across Light, Dark, and High Contrast theme dictionaries.
+- [x] **WCAG 2.1 AA Contrast Compliance (`tools/verify_pill_contrast.py`)**:
+  - All 8 status pill pairs pass WCAG 2.1 AA (≥ 4.5:1), achieving up to 14.68:1 contrast.
 
-The current execution environment does not provide the WinApp CLI test runner required
-for those runtime gates. They therefore remain pending rather than being inferred from source checks.
+### 2. Live Windows Runtime Evidence (Pending Physical Validation)
 
-## Safety evidence
+- [ ] **WinUI 3 Shell Launch & WinApp CLI execution** — *Pending live Windows runner*
+- [ ] **UI Automation, keyboard accelerators, and contrast theme rendering** — *Pending live Windows runner*
+- [ ] **Signed MSIX install, repair, upgrade, and uninstall cycles** — *Pending live Windows runner*
+- [ ] **Command-by-command Windows behavior comparison against historical oracle** — *Pending live Windows runner*
 
-- [x] `CommandDispatcher` journals only exception type names; exception messages are not copied into user-visible activity history.
-- [x] Dynamic command registration enforces core namespace protection (`wincare.core.*`, `system.*`).
-- [x] A single application-scoped `ActivityJournalService` is shared by command execution and Activity UI.
-- [x] Activity refreshes from that journal when its cached page is navigated to.
-- [x] File and cleanup roots are canonicalized and reject reparse-point operation roots; recursive work skips reparse descendants and uses bounded iterative traversal.
-- [x] Process execution uses argument lists rather than shell command construction for native tool calls.
-- [x] All Rust FFI exports are wrapped in `catch_unwind` — panics cannot cross the FFI boundary.
+---
 
-## Design and accessibility source checks
+## 🛡️ Core Safety Evidence
 
-- [x] All eight status-pill color pairs satisfy the repository's WCAG 2.1 AA contrast gate.
-- [x] Required visual tokens exist in Light, Dark, and HighContrast dictionaries.
-- [x] Primary WinUI navigation, table, command, and automation metadata pass structural validation.
-- [x] Dynamic ViewModel status styling is resolved in the view layer rather than returning XAML brushes from ViewModels.
-- [x] Parameter JSON editor has automation metadata and malformed/non-object JSON is blocked locally.
+- **Exception Sanitization**: `CommandDispatcher` logs only exception type names; sensitive file paths or credentials in `ex.Message` are never copied to the activity journal.
+- **Namespace Reservation**: Dynamic plugin registration strictly prohibits overwriting core command namespaces (`wincare.core.*`, `system.*`).
+- **Shared Activity Journal**: A single application-scoped `ActivityJournalService` is shared across execution and UI layers, automatically refreshing upon page navigation.
+- **Junction & Reparse Safety**: File cleanup canonicalizes roots, rejects reparse-point roots, and skips symlink descendants during traversal.
+- **Process Isolation**: Process invocation passes discrete argument arrays, avoiding shell interpolation and injection vectors.
+- **FFI Unwind Safety**: Every Rust FFI export is wrapped in `std::panic::catch_unwind`, preventing panics from crossing the C-ABI boundary into .NET.
 
-## Finalized native-source gate
+---
 
-Run from the repository root of the **finalized native source archive**:
+## 🚀 Running the Local Verification Gate
+
+To run the complete suite of deterministic source, design, and plugin checks:
 
 ```bash
+# 1. Verify foundation and command parity
 python tools/verify_native_foundation.py
+
+# 2. Run Python regression suite
 python -m unittest discover -s tests/native -v
+
+# 3. Run Rust unit, FFI, and Guard tests
 cargo test --manifest-path native/Cargo.toml
+
+# 4. Run Plugin CLI developer suite
 python tests/tools/test_plugin_cli.py -v
+
+# 5. Verify design tokens and WCAG contrast
 python tools/verify_visual_tokens.py
 python tools/verify_pill_contrast.py
+
+# 6. Run Release Checklist
+python tools/release_checklist.py
 ```
 
-A passing source gate means **statically validated & unit-tested**, not Windows behavior verified.
+---
 
-## Release-candidate finalization
+## 📦 Deterministic Release Finalization
+
+To generate auditable release archives and separation reports:
 
 ```bash
 python tools/finalize_native_release.py \
   --output artifacts/finalization \
-  --version 2.5.0-rc1 \
+  --version 2.4.0-rc1 \
   --mode rc
 ```
 
-The finalization manifest records artifact paths, file counts, SHA-256 hashes, migration counts, and
-production readiness. Native source contains zero `.ps1`, `.psm1`, and `.psd1` files. Historical
-executable PowerShell remains isolated in the legacy-oracle archive.
+The finalization tool produces:
+- `WinCare-<version>-native-source.zip`: Pure C# and Rust source tree (zero PowerShell files).
+- `WinCare-<version>-legacy-oracle.zip`: Isolated historical legacy oracle for parity tracking.
+- `WinCare-<version>-finalization-report.md`: Markdown audit report detailing file counts, SHA-256 digests, and readiness metrics.
+- `WinCare-<version>-finalization-manifest.json`: Machine-readable JSON manifest of all artifacts.
 
-## Automated CI release gate
+> [!IMPORTANT]
+> Running with `--mode production` will exit with a non-zero error code until all 259 commands reach `BehaviorVerified`.
 
-The GitHub Actions workflow (`native-winui.yml`) incorporates an automated `release-gate` job. Upon successful completion of source verification, Rust compilation, C# test suites, and package builds on `master`, the `release-gate` job automatically:
+---
 
-1. Downloads built MSIX installers and portable ZIP distributions (`x64` / `ARM64`).
-2. Collects native source finalization archives.
-3. Publishes/updates the official release on GitHub Releases with attached executable packages.
+## 🤖 Automated CI Release Pipeline
 
-## Rollback model
+The GitHub Actions workflow (`.github/workflows/native-winui.yml`) executes the following on `master` branch pushes and release tags:
 
-Source rollback is Git-based in the hosted repository. Runtime mutation rollback is command-specific and
-must never be inferred from a generic success flag. Where a safe native compensation path does not exist,
-the command reports no generic undo capability.
+1. **Source Verification**: Runs Python foundation and unit tests on Ubuntu runner.
+2. **Rust Core Build & Test**: Compiles and tests `wincare-core` and `wincare-guard` across `x86_64-pc-windows-msvc` and `aarch64-pc-windows-msvc`.
+3. **Managed Build & Packaging**: Compiles WinCare WinUI 3 desktop application for `x64` and `ARM64`, generating:
+   - Signed MSIX packages (`.msix`)
+   - Single-file standalone executables (`.exe`)
+   - Portable self-contained ZIP distributions (`-portable.zip`)
+4. **Release Gate**: Dynamically determines version tag, stages all assets via `tools/stage_release_assets.py`, and publishes or updates the release on GitHub Releases.

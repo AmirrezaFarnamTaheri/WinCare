@@ -78,6 +78,7 @@ NATIVE_DESIGN_FILES = (
 NATIVE_DOCUMENT_FILES = (
     "docs/Architecture.md",
     "docs/README.md",
+    "docs/User-Guide.md",
     "docs/migration/command-parity-ledger.md",
     "docs/migration/finalization-status.md",
     "docs/migration/windows-validation.md",

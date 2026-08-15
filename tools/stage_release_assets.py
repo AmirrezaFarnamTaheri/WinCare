@@ -1,14 +1,27 @@
 #!/usr/bin/env python3
-"""Stage single binary executables (.exe) and MSIX packages for GitHub release uploads."""
+"""Stage single binary executables (.exe), MSIX packages, and portable ZIP archives for GitHub release uploads."""
 
+import argparse
 import os
 import shutil
 import sys
 
 def main():
-    dest_dir = "release_assets"
+    parser = argparse.ArgumentParser(description="Stage release assets for GitHub releases.")
+    parser.add_argument("--version", default=os.getenv("WINCARE_VERSION", "v2.4.0-rc1"), help="Release version string (e.g. v2.4.0-rc1 or v2.4.0)")
+    parser.add_argument("--downloads", default="artifacts/downloads", help="Directory containing downloaded workflow artifacts")
+    parser.add_argument("--output", default="release_assets", help="Target release assets staging directory")
+    args = parser.parse_args()
+
+    version_str = args.version
+    if not version_str.startswith("v") and not version_str.startswith("V"):
+        version_tag = f"v{version_str}"
+    else:
+        version_tag = version_str
+
+    dest_dir = args.output
     os.makedirs(dest_dir, exist_ok=True)
-    src_dir = "artifacts/downloads"
+    src_dir = args.downloads
 
     if not os.path.exists(src_dir):
         print(f"Source directory '{src_dir}' not found!")
@@ -22,8 +35,8 @@ def main():
             lower_path = full_path.lower()
             lower_name = f.lower()
 
-            # Include .msix, single binary .exe, .md, .json
-            if not any(f.endswith(ext) for ext in [".msix", ".exe", ".md", ".json"]):
+            # Include .msix, single binary .exe, .zip, .md, .json
+            if not any(f.endswith(ext) for ext in [".msix", ".exe", ".zip", ".md", ".json"]):
                 continue
 
             # Skip intermediate build executables
@@ -42,11 +55,13 @@ def main():
             else:
                 platform_tag = ""
 
-            # Standardize destination filenames for single binary executables & MSIX
+            # Standardize destination filenames
             if f.endswith(".msix"):
-                dest_name = f"WinCare-v2.4.0-rc1-{platform_tag}.msix" if platform_tag else f
+                dest_name = f"WinCare-{version_tag}-{platform_tag}.msix" if platform_tag else f
             elif f.endswith(".exe"):
-                dest_name = f"WinCare-v2.4.0-rc1-{platform_tag}.exe" if platform_tag else f
+                dest_name = f"WinCare-{version_tag}-{platform_tag}.exe" if platform_tag else f
+            elif f.endswith(".zip") and "portable" in lower_name:
+                dest_name = f"WinCare-{version_tag}-{platform_tag}-portable.zip" if platform_tag else f
             else:
                 dest_name = f
 

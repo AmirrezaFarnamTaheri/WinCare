@@ -15,10 +15,11 @@ CHECKS = [
     ("Visual tokens check", [PYTHON, "tools/verify_visual_tokens.py"], 120),
     ("Pill contrast check", [PYTHON, "tools/verify_pill_contrast.py"], 120),
     ("Native foundation gate", [PYTHON, "tools/verify_native_foundation.py"], 120),
-    ("Rust format check", ["cargo", "fmt", "--manifest-path", "native/Cargo.toml", "--check"], 300),
+    ("Rust format check", ["cargo", "fmt", "--manifest-path", "native/Cargo.toml", "--all", "--", "--check"], 300),
     ("Rust unit tests", ["cargo", "test", "--manifest-path", "native/Cargo.toml"], 900),
     ("Rust clippy lints", ["cargo", "clippy", "--manifest-path", "native/Cargo.toml", "--all-targets", "--all-features", "--", "-D", "warnings"], 900),
     ("Python native tests", [PYTHON, "-m", "unittest", "discover", "-s", "tests/native", "-v"], 300),
+    ("Plugin CLI developer tests", [PYTHON, "tests/tools/test_plugin_cli.py", "-v"], 120),
 ]
 
 if (ROOT / "src/WinCare/WinCare.psm1").is_file():
