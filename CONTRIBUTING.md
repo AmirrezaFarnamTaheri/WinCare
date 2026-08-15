@@ -1,65 +1,93 @@
 # Contributing to WinCare
 
-WinCare accepts changes that preserve its safety, evidence, accessibility, and compatibility contracts.
+Thank you for your interest in contributing to **WinCare**! We welcome contributions that preserve WinCare's safety, evidence, performance, accessibility, and platform contracts.
 
-## Required environment
+---
 
-The complete development environment uses:
+## 🛠️ Required Development Environment
 
-- supported Windows 10 or Windows 11
-- .NET 8 SDK
-- Windows App SDK build tools and WinApp CLI
-- Rust stable with x64 and ARM64 MSVC targets as needed
-- Python 3.13 for structural validation and deterministic packaging
-- Developer Mode for local WinUI deployment
+The complete development environment requires:
 
-PowerShell is not a dependency of the native source project. Historical PowerShell source exists only in the separate legacy oracle used for controlled parity work.
+- **Operating System**: Supported 64-bit Windows 10 (version 2004 / build 19041+) or Windows 11
+- **.NET SDK**: .NET 8 SDK (8.0.416 or newer)
+- **Windows App SDK**: Build tools and WinApp CLI
+- **Rust Toolchain**: Rust stable (1.97.1) with `x86_64-pc-windows-msvc` and/or `aarch64-pc-windows-msvc` targets
+- **Python**: Python 3.11+ (Python 3.13 recommended) for structural validation, contrast checks, and deterministic packaging
+- **Node.js**: Node.js 18+ (for developer plugin CLI under `tools/wincare-plugin-cli`)
+- **Windows Developer Mode**: Enabled in Windows Settings for local WinUI 3 loose package execution
 
-## Ownership
+> [!NOTE]
+> PowerShell is not a dependency of the native source project. Historical PowerShell source exists solely in the separate legacy oracle archive used for controlled parity work.
 
-- C# owns UI, workflows, command admission, policy, evidence, journaling, recovery, elevation, and packaging.
-- Rust owns bounded native primitives justified by measurement or safety.
-- Python owns source validation, parity-fixture validation, and deterministic source packaging.
+---
 
-Do not duplicate business rules across C# and Rust. Do not add a PowerShell runtime, script, module, or build dependency to the native source tree.
+## 📐 Project Ownership & Language Boundaries
 
-## Change workflow
+To maintain clean separation of concerns and avoid duplicated logic:
 
-1. Create a focused branch from the current default branch.
-2. Read `README.md`, `DESIGN.md`, `docs/Architecture.md`, and the relevant migration ledger.
-3. Write a failing test for the behavior or invariant being changed.
-4. Implement the smallest coherent change.
-5. Run focused tests, then the complete native source gate.
-6. Run the applicable Windows gate.
-7. Update the command migration state only when its required evidence exists.
-8. Update affected documentation in the same pull request.
-9. Record exact checks and limitations in the pull-request description.
+| Language | Responsibility & Domain |
+|---|---|
+| **C# (.NET 8)** | WinUI 3 presentation, MVVM view models, command catalog admission, dynamic plugin host, AI Doctor diagnostic engine, activity journaling, recovery workflows, and packaging |
+| **Rust 2024** | Bounded native system primitives (`sys_info`, `dir_size`, `sha256`) via versioned C ABI (`wincare-core`) and low-overhead background health monitoring service (`wincare-guard`) |
+| **Python 3.13** | Source validation gates, visual token and WCAG AA contrast verification, parity-fixture comparison, and deterministic release packaging |
+| **Node.js / JS**| Developer Plugin CLI toolkit (`tools/wincare-plugin-cli`) for scaffolding, linting, validating, and packaging community extensions |
 
-## Command migration
+- **No Business Logic Duplication**: Do not implement duplicate business rules across C# and Rust.
+- **No PowerShell Runtimes**: Do not introduce PowerShell runtime components or script wrappers into the native source tree.
 
-A command advances through `Cataloged`, `ContractVerified`, `Implemented`, and `BehaviorVerified`. Do not skip a state or mark a command behavior-verified from source inspection alone.
+---
 
-Every command implementation must define:
+## 🔄 Contribution Workflow
 
-- typed inputs and outputs
-- current-state observation
-- privilege and compatibility rules
-- preview and approval behavior for mutations
-- cancellation and deadline handling
-- bounded output
-- evidence and postconditions
-- journal and recovery behavior where applicable
-- positive, negative, blocked, and unsupported tests
+1. **Create a Branch**: Create a focused topic branch from `master` (e.g. `feature/my-enhancement` or `fix/issue-description`).
+2. **Review Specifications**: Read [README.md](README.md), [DESIGN.md](DESIGN.md), [docs/Architecture.md](docs/Architecture.md), and the relevant migration ledger in [docs/migration/](docs/migration/).
+3. **Test-First Discipline**: Write a unit test covering the invariant or behavior before implementing changes.
+4. **Implement Minimally**: Make the smallest, most focused change that satisfies the requirement.
+5. **Run Local Verification**:
+   ```bash
+   # 1. Native structural gate
+   python tools/verify_native_foundation.py
 
-## Required checks
+   # 2. Python test suite
+   python -m unittest discover -s tests/native -v
 
-```text
-python tools/verify_native_foundation.py
-python -m unittest discover -s tests/native -v
-```
+   # 3. Rust format, lints, and tests
+   cargo fmt --manifest-path native/Cargo.toml --all -- --check
+   cargo clippy --manifest-path native/Cargo.toml --all-targets --all-features -- -D warnings
+   cargo test --manifest-path native/Cargo.toml
 
-On Windows, also run the Rust, .NET, WinUI, UI Automation, and packaging checks in `docs/migration/windows-validation.md`.
+   # 4. Plugin CLI tests
+   python tests/tools/test_plugin_cli.py -v
 
-## Pull-request evidence
+   # 5. Visual token & contrast checks
+   python tools/verify_visual_tokens.py
+   python tools/verify_pill_contrast.py
 
-State what changed, authority impact, command migration state, exact tests run, Windows evidence, packaging impact, residual risk, and documentation updated. Never describe a check as run when it was only inspected or inferred.
+   # 6. .NET C# tests
+   dotnet test WinCare.Native.sln -c Release -p:Platform=x64
+   ```
+6. **Windows Runtime Validation**: If touching UI or Windows integration, execute the Windows build and validation steps in [docs/migration/windows-validation.md](docs/migration/windows-validation.md).
+7. **Document Changes**: Update relevant documentation and [CHANGELOG.md](CHANGELOG.md) within the same pull request.
+
+---
+
+## 📋 Command Parity & Migration Rules
+
+A command advances through four immutable states:
+1. `Cataloged`: Stable command ID, summary, risk rating, and metadata defined.
+2. `ContractVerified`: Typed request/result contracts and frozen oracle parity fixture verified.
+3. `Implemented`: Native fail-closed route exists and validates parameters before approval.
+4. `BehaviorVerified`: Behavior executed and validated against live Windows behavior.
+
+> [!CAUTION]
+> Never mark a command `BehaviorVerified` from code inspection alone. Live execution evidence is strictly required.
+
+---
+
+## 📝 Pull Request Guidelines
+
+Every pull request must include:
+- **Summary**: Concise description of what changed and why.
+- **Scope Impact**: Affected subsystems (WinUI, Dispatcher, Plugins, Rust Core, CLI, Packaging).
+- **Verification Evidence**: Output logs of tests executed locally.
+- **Residual Risk**: Any assumptions, limitations, or pending Windows-only validation.

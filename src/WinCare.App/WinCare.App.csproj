@@ -24,6 +24,9 @@
     <ProjectReference Include="..\WinCare.Infrastructure\WinCare.Infrastructure.csproj" />
   </ItemGroup>
   <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <DebugType>none</DebugType>
+    <AppxPackageSigningEnabled Condition="'$(PackageCertificateKeyFile)' != ''">true</AppxPackageSigningEnabled>
     <_WinCareRustTarget Condition="'$(Platform)' == 'x64'">x86_64-pc-windows-msvc</_WinCareRustTarget>
     <_WinCareRustTarget Condition="'$(Platform)' == 'ARM64'">aarch64-pc-windows-msvc</_WinCareRustTarget>
   </PropertyGroup>

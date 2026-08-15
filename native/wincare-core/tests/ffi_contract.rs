@@ -27,7 +27,7 @@ fn test_wincare_core_version() {
     let status_ok = unsafe { wincare_core_version(buf.as_mut_ptr(), buf.len(), &mut written) };
     assert_eq!(status_ok, 0);
     let version_str = std::str::from_utf8(&buf[..written]).unwrap();
-    assert_eq!(version_str, "2.4.0");
+    assert_eq!(version_str, "2.5.0");
 }
 
 #[test]

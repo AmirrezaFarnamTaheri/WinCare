@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""WinCare 2.4.0-rc1 source checklist runner.
+"""WinCare native source checklist runner.
 Runs self-contained source checks and, when the migration workspace still contains the
 executable historical oracle, also verifies RC source finalization. Windows build/runtime
 gates remain owned by the Windows workflows.
@@ -11,20 +11,31 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 PYTHON = sys.executable
 
+def _get_product_version() -> str:
+    props_path = ROOT / "Directory.Build.props"
+    if props_path.is_file():
+        import xml.etree.ElementTree as ET
+        tree = ET.parse(props_path)
+        prefix = tree.findtext(".//VersionPrefix", "2.5.0")
+        suffix = tree.findtext(".//VersionSuffix", "")
+        return f"{prefix}-{suffix}" if suffix else prefix
+    return "2.5.0-rc1"
+
 CHECKS = [
     ("Visual tokens check", [PYTHON, "tools/verify_visual_tokens.py"], 120),
     ("Pill contrast check", [PYTHON, "tools/verify_pill_contrast.py"], 120),
     ("Native foundation gate", [PYTHON, "tools/verify_native_foundation.py"], 120),
-    ("Rust format check", ["cargo", "fmt", "--manifest-path", "native/Cargo.toml", "--check"], 300),
+    ("Rust format check", ["cargo", "fmt", "--manifest-path", "native/Cargo.toml", "--all", "--", "--check"], 300),
     ("Rust unit tests", ["cargo", "test", "--manifest-path", "native/Cargo.toml"], 900),
     ("Rust clippy lints", ["cargo", "clippy", "--manifest-path", "native/Cargo.toml", "--all-targets", "--all-features", "--", "-D", "warnings"], 900),
     ("Python native tests", [PYTHON, "-m", "unittest", "discover", "-s", "tests/native", "-v"], 300),
+    ("Plugin CLI developer tests", [PYTHON, "tests/tools/test_plugin_cli.py", "-v"], 120),
 ]
 
 if (ROOT / "src/WinCare/WinCare.psm1").is_file():
     CHECKS.append((
         "RC source finalization",
-        [PYTHON, "tools/finalize_native_release.py", "--version", "2.4.0-rc1", "--output", "artifacts/"],
+        [PYTHON, "tools/finalize_native_release.py", "--version", _get_product_version(), "--output", "artifacts/"],
         300,
     ))
 

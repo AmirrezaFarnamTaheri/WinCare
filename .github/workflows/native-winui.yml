@@ -3,12 +3,18 @@ name: Native WinUI
 on:
   push:
     branches: [master, main]
+    tags: ['v*']
   pull_request:
   workflow_dispatch:
+
+concurrency:
+  group: native-winui-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   verify-source:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
@@ -18,11 +24,16 @@ jobs:
         run: python tools/verify_native_foundation.py
       - name: Run structural tests
         run: python -m unittest discover -s tests/native -v
+      - name: Extract product version
+        shell: bash
+        run: |
+          VERSION=$(python -c "import xml.etree.ElementTree as ET; props = ET.parse('Directory.Build.props').getroot(); prefix = props.find('.//VersionPrefix').text; suffix = props.find('.//VersionSuffix').text if props.find('.//VersionSuffix') is not None else ''; print(f'{prefix}-{suffix}' if suffix else prefix)")
+          echo "PRODUCT_VERSION=$VERSION" >> $GITHUB_ENV
       - name: Finalize native release candidate source
         run: >-
           python tools/finalize_native_release.py
           --output artifacts/finalization
-          --version 2.4.0-rc1
+          --version "${{ env.PRODUCT_VERSION }}"
           --mode rc
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
@@ -32,6 +43,7 @@ jobs:
 
   rust:
     runs-on: windows-latest
+    timeout-minutes: 15
     strategy:
       matrix:
         target: [x86_64-pc-windows-msvc, aarch64-pc-windows-msvc]
@@ -42,56 +54,53 @@ jobs:
           toolchain: 1.97.1
           targets: ${{ matrix.target }}
           components: rustfmt, clippy
-      - name: Format
-        shell: bash
+      - name: Check Rust formatting
         run: cargo fmt --manifest-path native/Cargo.toml --all -- --check
-      - name: Clippy
-        shell: bash
+      - name: Run clippy
         run: cargo clippy --manifest-path native/Cargo.toml --target ${{ matrix.target }} --all-targets --all-features -- -D warnings
-      - name: Test
+      - name: Run Rust unit tests
         if: matrix.target == 'x86_64-pc-windows-msvc'
-        shell: bash
-        run: cargo test --manifest-path native/Cargo.toml --target ${{ matrix.target }}
-      - name: Build release library
-        shell: bash
+        run: cargo test --manifest-path native/Cargo.toml
+      - name: Build Rust core
         run: cargo build --manifest-path native/Cargo.toml --target ${{ matrix.target }} --release
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: native-${{ matrix.target }}
           path: native/target/${{ matrix.target }}/release/wincare_core.dll
+          if-no-files-found: error
 
   managed-and-package:
+    needs: [verify-source, rust]
     runs-on: windows-latest
+    timeout-minutes: 20
     strategy:
-      fail-fast: false
       matrix:
         include:
           - platform: x64
             runtime: win-x64
-            rustTarget: x86_64-pc-windows-msvc
+            target: x86_64-pc-windows-msvc
           - platform: ARM64
             runtime: win-arm64
-            rustTarget: aarch64-pc-windows-msvc
+            target: aarch64-pc-windows-msvc
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: actions/setup-dotnet@c97148f4733f57845eed08c03153ce9975bd616a # v6.0.0
+      - uses: actions/setup-dotnet@c97148f4733f57845eed08c03153ce9975bd616a # v4.1.0
         with:
-          dotnet-version: 8.0.416
+          dotnet-version: "8.0.416"
+          global-json-file: global.json
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.13"
-      - uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772 # master 2026-08-05
+      - uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
         with:
-          toolchain: 1.97.1
-          targets: ${{ matrix.rustTarget }}
-      - name: Build Rust core
-        shell: bash
-        run: cargo build --manifest-path native/Cargo.toml --target ${{ matrix.rustTarget }} --release
+          name: native-${{ matrix.target }}
+          path: artifacts/native
       - name: Stage Rust core
         shell: bash
         run: |
+          test -f artifacts/native/wincare_core.dll
           mkdir -p src/WinCare.App/Native/${{ matrix.platform }}
-          cp native/target/${{ matrix.rustTarget }}/release/wincare_core.dll src/WinCare.App/Native/${{ matrix.platform }}/wincare_core.dll
+          cp artifacts/native/wincare_core.dll src/WinCare.App/Native/${{ matrix.platform }}/wincare_core.dll
       - name: Restore
         shell: bash
         run: dotnet restore WinCare.Native.sln -p:Platform=${{ matrix.platform }}
@@ -99,42 +108,281 @@ jobs:
         if: matrix.platform == 'x64'
         shell: bash
         run: dotnet test WinCare.Native.sln -c Release -p:Platform=${{ matrix.platform }} --no-restore
-      - name: Build MSIX
-        shell: bash
-        run: dotnet build src/WinCare.App/WinCare.App.csproj -c Release -p:Platform=${{ matrix.platform }} -p:GenerateAppxPackageOnBuild=true --no-restore
-      - name: Publish single binary executable
-        shell: bash
-        run: dotnet publish src/WinCare.App/WinCare.App.csproj -c Release -p:Platform=${{ matrix.platform }} -r ${{ matrix.runtime }} -p:WindowsPackageType=None -p:WindowsAppSDKSelfContained=true -p:SelfContained=true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o artifacts/portable/${{ matrix.runtime }}
-      - name: Stage single binary executable
+      - name: Prepare development signing identity
+        if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $signDir = "$PWD/artifacts/signing"
+          New-Item -ItemType Directory -Force -Path $signDir | Out-Null
+          $certificateParameters = @{
+            Type = 'Custom'
+            KeyUsage = 'DigitalSignature'
+            KeySpec = 'Signature'
+            Subject = 'CN=WinCare Development'
+            FriendlyName = 'WinCare Development Package'
+            CertStoreLocation = 'Cert:\CurrentUser\My'
+            HashAlgorithm = 'SHA256'
+            TextExtension = @('2.5.29.37={text}1.3.6.1.5.5.7.3.3', '2.5.29.19={text}')
+          }
+          $cert = New-SelfSignedCertificate @certificateParameters
+          Export-Certificate -Cert $cert -FilePath "$signDir/WinCare.cer" | Out-Null
+          "WINCARE_SIGNING_THUMBPRINT=$($cert.Thumbprint)" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          'WINCARE_DEVELOPMENT_SIGNING=true' | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          Write-Output "Development signing identity ready. Thumbprint: $($cert.Thumbprint)"
+      - name: Prepare release signing identity
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: pwsh
+        env:
+          CERT_B64: ${{ secrets.WINCARE_SIGNING_CERT_BASE64 }}
+          CERT_PASS: ${{ secrets.WINCARE_SIGNING_CERT_PASSWORD }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if (-not $env:CERT_B64 -or -not $env:CERT_PASS) {
+            throw 'Tagged releases require WINCARE_SIGNING_CERT_BASE64 and WINCARE_SIGNING_CERT_PASSWORD.'
+          }
+
+          $signDir = "$PWD/artifacts/signing"
+          New-Item -ItemType Directory -Force -Path $signDir | Out-Null
+          $pfxPath = Join-Path $env:RUNNER_TEMP 'wincare-release-signing.pfx'
+          try {
+            [IO.File]::WriteAllBytes($pfxPath, [Convert]::FromBase64String($env:CERT_B64))
+            $password = ConvertTo-SecureString -String $env:CERT_PASS -Force -AsPlainText
+            $importedCertificates = @(Import-PfxCertificate -FilePath $pfxPath -CertStoreLocation 'Cert:\CurrentUser\My' -Password $password)
+            $cert = $importedCertificates | Where-Object { $_.HasPrivateKey } | Select-Object -First 1
+          }
+          finally {
+            if (Test-Path $pfxPath) { Remove-Item -Force $pfxPath }
+          }
+
+          if (-not $cert -or -not $cert.HasPrivateKey) {
+            throw 'Release signing PFX does not contain an accessible private key certificate.'
+          }
+          if ($cert.Subject -ne 'CN=WinCare Development') {
+            throw "Release signing certificate subject '$($cert.Subject)' does not exactly match the MSIX publisher 'CN=WinCare Development'."
+          }
+
+          Export-Certificate -Cert $cert -FilePath "$signDir/WinCare.cer" | Out-Null
+          "WINCARE_SIGNING_THUMBPRINT=$($cert.Thumbprint)" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          'WINCARE_DEVELOPMENT_SIGNING=false' | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          Write-Output "Release signing identity loaded runner-locally. Thumbprint: $($cert.Thumbprint)"
+      - name: Build unsigned MSIX package
         shell: bash
         run: |
+          dotnet build src/WinCare.App/WinCare.App.csproj -c Release -p:Platform=${{ matrix.platform }} \
+            -p:GenerateAppxPackageOnBuild=true \
+            -p:AppxPackageSigningEnabled=false \
+            --no-restore
+      - name: Sign MSIX package with runner-local certificate
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $msixFiles = @(
+            Get-ChildItem -Recurse -Filter 'WinCare.App_*.msix' src/WinCare.App/AppPackages |
+              Where-Object { $_.FullName -notmatch '[\\/]Dependencies[\\/]' }
+          )
+          if ($msixFiles.Count -ne 1) {
+            throw "Expected exactly one WinCare application MSIX, found $($msixFiles.Count)."
+          }
+
+          $signtoolCommand = Get-Command signtool.exe -ErrorAction SilentlyContinue
+          if ($signtoolCommand) {
+            $signtoolPath = $signtoolCommand.Source
+          }
+          else {
+            $kitsRoot = "${env:ProgramFiles(x86)}\Windows Kits\10\bin"
+            $signtoolCandidate = Get-ChildItem $kitsRoot -Recurse -Filter signtool.exe -ErrorAction SilentlyContinue |
+              Where-Object { $_.FullName -match '\\x64\\signtool\.exe$' } |
+              Sort-Object FullName -Descending |
+              Select-Object -First 1
+            if (-not $signtoolCandidate) {
+              throw 'signtool.exe was not found on the Windows runner.'
+            }
+            $signtoolPath = $signtoolCandidate.FullName
+          }
+
+          $file = $msixFiles[0]
+          Write-Output "Signing WinCare MSIX: $($file.FullName)"
+          & $signtoolPath sign /fd SHA256 /s My /sha1 $env:WINCARE_SIGNING_THUMBPRINT $file.FullName
+          if ($LASTEXITCODE -ne 0) {
+            throw "SignTool failed for '$($file.Name)' with exit code $LASTEXITCODE."
+          }
+      - name: Verify MSIX signature and publisher
+        timeout-minutes: 3
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $cerPath = "$PWD/artifacts/signing/WinCare.cer"
+          $expectedCer = [System.Security.Cryptography.X509Certificates.X509Certificate2]::new($cerPath)
+          if ($expectedCer.Subject -ne 'CN=WinCare Development') {
+            throw "Exported certificate subject '$($expectedCer.Subject)' does not match expected publisher."
+          }
+
+          function Assert-WinCareSignature {
+            param(
+              [Parameter(Mandatory = $true)][string] $Path,
+              [Parameter(Mandatory = $true)][System.Security.Cryptography.X509Certificates.X509Certificate2] $ExpectedCertificate,
+              [Parameter(Mandatory = $true)][bool] $DevelopmentSigning
+            )
+
+            $sig = Get-AuthenticodeSignature -LiteralPath $Path
+            Write-Output "Signature status for $([IO.Path]::GetFileName($Path)): $($sig.Status)"
+            if (-not $sig.SignerCertificate) {
+              throw "MSIX '$Path' does not expose a signer certificate (status: $($sig.Status))."
+            }
+            if ($sig.SignerCertificate.Subject -ne 'CN=WinCare Development') {
+              throw "MSIX '$Path' signer '$($sig.SignerCertificate.Subject)' does not exactly match the package publisher."
+            }
+            if ($sig.SignerCertificate.Thumbprint -ne $ExpectedCertificate.Thumbprint) {
+              throw "MSIX '$Path' signer thumbprint does not match WinCare.cer."
+            }
+
+            if (-not $DevelopmentSigning) {
+              if ($sig.Status -ne 'Valid') {
+                throw "Release MSIX '$Path' signature status is '$($sig.Status)' ($($sig.StatusMessage))."
+              }
+              return
+            }
+
+            if ($sig.Status -notin @('Valid', 'UnknownError')) {
+              throw "Development MSIX '$Path' signature status is '$($sig.Status)' ($($sig.StatusMessage))."
+            }
+
+            $chain = [System.Security.Cryptography.X509Certificates.X509Chain]::new()
+            try {
+              $chain.ChainPolicy.TrustMode = [System.Security.Cryptography.X509Certificates.X509ChainTrustMode]::CustomRootTrust
+              [void]$chain.ChainPolicy.CustomTrustStore.Add($ExpectedCertificate)
+              $chain.ChainPolicy.RevocationMode = [System.Security.Cryptography.X509Certificates.X509RevocationMode]::NoCheck
+              if (-not $chain.Build($sig.SignerCertificate)) {
+                $statuses = ($chain.ChainStatus | ForEach-Object { $_.Status.ToString() }) -join ', '
+                throw "Development signer certificate chain failed custom-root validation: $statuses"
+              }
+            }
+            finally {
+              $chain.Dispose()
+            }
+          }
+
+          $msixFiles = @(
+            Get-ChildItem -Recurse -Filter 'WinCare.App_*.msix' src/WinCare.App/AppPackages |
+              Where-Object { $_.FullName -notmatch '[\\/]Dependencies[\\/]' }
+          )
+          if ($msixFiles.Count -ne 1) {
+            throw "Expected exactly one WinCare application MSIX for verification, found $($msixFiles.Count)."
+          }
+          $file = $msixFiles[0]
+          $developmentSigning = $env:WINCARE_DEVELOPMENT_SIGNING -eq 'true'
+          Assert-WinCareSignature -Path $file.FullName -ExpectedCertificate $expectedCer -DevelopmentSigning $developmentSigning
+
+          # Runtime negative test: mutate a copy and prove the verifier rejects it.
+          $tamperedPath = Join-Path $env:RUNNER_TEMP "WinCare-tampered-${{ matrix.platform }}.msix"
+          Copy-Item -LiteralPath $file.FullName -Destination $tamperedPath -Force
+          try {
+            $stream = [IO.File]::Open($tamperedPath, [IO.FileMode]::Open, [IO.FileAccess]::ReadWrite, [IO.FileShare]::None)
+            try {
+              if ($stream.Length -lt 128) { throw 'MSIX is unexpectedly too small for tamper smoke test.' }
+              $position = $stream.Length - 128
+              $stream.Position = $position
+              $original = $stream.ReadByte()
+              $stream.Position = $position
+              $stream.WriteByte($original -bxor 1)
+            }
+            finally {
+              $stream.Dispose()
+            }
+
+            $tamperRejected = $false
+            try {
+              Assert-WinCareSignature -Path $tamperedPath -ExpectedCertificate $expectedCer -DevelopmentSigning $developmentSigning
+            }
+            catch {
+              $tamperRejected = $true
+              Write-Output "Tamper smoke test rejected modified MSIX: $($_.Exception.Message)"
+            }
+            if (-not $tamperRejected) {
+              throw 'Tamper smoke test unexpectedly accepted a modified MSIX.'
+            }
+          }
+          finally {
+            Remove-Item -Force $tamperedPath -ErrorAction SilentlyContinue
+          }
+      - name: Clean runner-local signing identity
+        if: always()
+        shell: pwsh
+        run: |
+          if ($env:WINCARE_SIGNING_THUMBPRINT) {
+            Remove-Item -Force "Cert:\CurrentUser\My\$env:WINCARE_SIGNING_THUMBPRINT" -ErrorAction SilentlyContinue
+          }
+          Remove-Item -Force "$env:RUNNER_TEMP\wincare-release-signing.pfx" -ErrorAction SilentlyContinue
+      - name: Publish single binary executable
+        shell: bash
+        run: dotnet publish src/WinCare.App/WinCare.App.csproj -c Release -p:Platform=${{ matrix.platform }} -r ${{ matrix.runtime }} -p:WindowsPackageType=None -p:WindowsAppSDKSelfContained=true -p:SelfContained=true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:DebugType=none -p:DebugSymbols=false -o artifacts/portable/${{ matrix.runtime }}
+      - name: Stage single binary executable and portable archive
+        shell: bash
+        run: |
+          VERSION=$(python -c "import xml.etree.ElementTree as ET; props = ET.parse('Directory.Build.props').getroot(); prefix = props.find('.//VersionPrefix').text; suffix = props.find('.//VersionSuffix').text if props.find('.//VersionSuffix') is not None else ''; print(f'{prefix}-{suffix}' if suffix else prefix)")
           mkdir -p artifacts/release
-          cp artifacts/portable/${{ matrix.runtime }}/WinCare.App.exe artifacts/release/WinCare-v2.4.0-rc1-${{ matrix.platform }}.exe
+          cp artifacts/portable/${{ matrix.runtime }}/WinCare.App.exe artifacts/release/WinCare-v${VERSION}-${{ matrix.platform }}.exe
+          python tools/package_portable.py artifacts/portable/${{ matrix.runtime }} artifacts/release/WinCare-v${VERSION}-${{ matrix.platform }}-portable.zip
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: WinCare-${{ matrix.platform }}
           path: |
-            src/WinCare.App/AppPackages/**/*.msix
-            artifacts/release/WinCare-v2.4.0-rc1-${{ matrix.platform }}.exe
+            src/WinCare.App/AppPackages/**/WinCare.App_*.msix
+            artifacts/signing/WinCare.cer
+            tools/install_msix.py
+            artifacts/release/*.exe
+            artifacts/release/*.zip
+          if-no-files-found: error
 
   release-gate:
     needs: [verify-source, rust, managed-and-package]
-    if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
+    if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     permissions:
       contents: write
+    env:
+      RELEASE_TAG: ${{ github.ref_name }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
       - uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
         with:
           path: artifacts/downloads
-      - name: Publish GitHub Release
+      - name: Validate tag matches product version
+        shell: bash
+        run: |
+          echo "Validating tag: $RELEASE_TAG against checked-in metadata..."
+          python - <<'PY'
+          import os
+          import xml.etree.ElementTree as ET
+
+          props = ET.parse('Directory.Build.props').getroot()
+          prefix = props.find('.//VersionPrefix').text
+          suffix = props.find('.//VersionSuffix').text if props.find('.//VersionSuffix') is not None else ''
+          expected = f'v{prefix}-{suffix}' if suffix else f'v{prefix}'
+          actual = os.environ['RELEASE_TAG']
+          assert actual == expected, f'Release tag {actual} does not match product version {expected}'
+          PY
+          if [[ "$RELEASE_TAG" == *"-rc"* || "$RELEASE_TAG" == *"-beta"* || "$RELEASE_TAG" == *"-alpha"* ]]; then
+            echo "RELEASE_FLAGS=--prerelease" >> $GITHUB_ENV
+          else
+            echo "RELEASE_FLAGS=--latest" >> $GITHUB_ENV
+          fi
+      - name: Publish immutable GitHub release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          python tools/stage_release_assets.py
-          gh release upload v2.4.0-rc1 release_assets/* --clobber || \
-          gh release create v2.4.0-rc1 release_assets/* \
-            --title "WinCare v2.4.0-rc1 (Native WinUI & Core Release)" \
-            --prerelease \
-            --notes "Automated release candidate build generated from master commit \`${{ github.sha }}\`. Contains native MSIX packages (x64/ARM64), single binary executables (WinCare-v2.4.0-rc1-x64.exe / WinCare-v2.4.0-rc1-ARM64.exe), and verified source finalization archives."
+          python tools/stage_release_assets.py --version "$RELEASE_TAG"
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            echo "Error: Release '$RELEASE_TAG' already exists. SemVer tagged releases are immutable."
+            exit 1
+          fi
+          gh release create "$RELEASE_TAG" release_assets/* \
+            --title "WinCare $RELEASE_TAG (Native WinUI & Core Release)" \
+            $RELEASE_FLAGS \
+            --target "${{ github.sha }}" \
+            --notes "Automated immutable release build generated from commit \`${{ github.sha }}\`. Contains verified native MSIX packages (x64/ARM64), single binary standalone executables, portable ZIP distributions, and verified source finalization archives."

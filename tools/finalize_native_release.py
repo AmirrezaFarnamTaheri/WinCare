@@ -28,6 +28,7 @@ from tools.package_portable import create_portable_archive
 EXPECTED_COMMAND_COUNT = 259
 VERSION_LABEL_PATTERN = re.compile(r"^[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z]+(?:[.-][0-9A-Za-z]+)*)?$")
 POWERSHELL_SUFFIXES = {".ps1", ".psm1", ".psd1"}
+SECRET_KEY_SUFFIXES = {".pfx", ".p12", ".key", ".pem", ".snk", ".secret", ".token"}
 IGNORED_DIRECTORY_NAMES = {".git", ".vs", ".pytest_cache", "__pycache__", "artifacts", "bin", "obj", "target"}
 IGNORED_FILE_SUFFIXES = {".pyc", ".pyo"}
 ReleaseMode = Literal["rc", "production"]
@@ -78,6 +79,7 @@ NATIVE_DESIGN_FILES = (
 NATIVE_DOCUMENT_FILES = (
     "docs/Architecture.md",
     "docs/README.md",
+    "docs/User-Guide.md",
     "docs/migration/command-parity-ledger.md",
     "docs/migration/finalization-status.md",
     "docs/migration/windows-validation.md",
@@ -95,8 +97,10 @@ NATIVE_DOCUMENT_FILES = (
 NATIVE_TOOL_FILES = (
     "tools/__init__.py",
     "tools/finalize_native_release.py",
+    "tools/install_msix.py",
     "tools/package_portable.py",
     "tools/release_checklist.py",
+    "tools/stage_release_assets.py",
     "tools/verify_native_foundation.py",
     "tools/verify_visual_tokens.py",
     "tools/verify_pill_contrast.py",
@@ -250,6 +254,26 @@ def _copy_matching_files(root: Path, destination: Path, relative: str, suffixes:
 def stage_native_source(root: Path, destination: Path) -> Path:
     root = root.resolve()
     destination = destination.resolve()
+
+    # Pre-staging scan across native source directories to ensure source repo contains no secret signing keys
+    for relative in (
+        NATIVE_TOP_LEVEL_FILES
+        + NATIVE_DESIGN_FILES
+        + NATIVE_DOCUMENT_FILES
+        + NATIVE_TOOL_FILES
+        + NATIVE_WORKFLOW_FILES
+    ):
+        file_path = root / relative
+        if file_path.is_file() and file_path.suffix.lower() in SECRET_KEY_SUFFIXES:
+            raise ValueError(f"native source contains secret/signing key file: {relative}")
+
+    for relative in NATIVE_DIRECTORIES:
+        source_dir = root / relative
+        if source_dir.is_dir():
+            for path in source_dir.rglob("*"):
+                if path.is_file() and path.suffix.lower() in SECRET_KEY_SUFFIXES:
+                    raise ValueError(f"native source tree contains secret/signing key file: {path.relative_to(root).as_posix()}")
+
     destination.mkdir(parents=True, exist_ok=False)
 
     for relative in (
@@ -270,6 +294,14 @@ def stage_native_source(root: Path, destination: Path) -> Path:
     ]
     if powershell:
         raise ValueError(f"native source staging contains PowerShell files: {powershell}")
+
+    secrets = [
+        path.relative_to(destination).as_posix()
+        for path in destination.rglob("*")
+        if path.is_file() and path.suffix.lower() in SECRET_KEY_SUFFIXES
+    ]
+    if secrets:
+        raise ValueError(f"native source staging contains secret/signing key files: {secrets}")
     return destination
 
 

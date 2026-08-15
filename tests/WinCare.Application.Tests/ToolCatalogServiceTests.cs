@@ -60,6 +60,26 @@ public sealed class ToolCatalogServiceTests
     }
 
     [Fact]
+    public void Catalog_cache_is_invalidated_when_RegistryChanged_fires()
+    {
+        var fakeRegistry = new MutableFakePluginRegistry();
+        var service = new ToolCatalogService(fakeRegistry);
+
+        // Initially no plugin commands
+        Assert.DoesNotContain(service.All, c => c.Id == "dynamic.tool");
+        Assert.DoesNotContain(service.Search("dynamic"), c => c.Id == "dynamic.tool");
+
+        // Add a new command and fire event
+        fakeRegistry.SetCommands([
+            new CommandDefinition("dynamic.tool", "Dynamic Tool", "Dynamic Summary", "Utilities", "General", CommandRisk.Low, true, AdministratorAccess.No, RestartExpectation.No, "plugin", MigrationStatus.BehaviorVerified, ["dynamic"])
+        ]);
+
+        // Cache must be invalidated and return the new tool in All and Search
+        Assert.Contains(service.All, c => c.Id == "dynamic.tool");
+        Assert.Contains(service.Search("dynamic"), c => c.Id == "dynamic.tool");
+    }
+
+    [Fact]
     public void Navigation_catalog_matches_the_approved_primary_structure()
     {
         string[] labels = NavigationCatalog.Items.Select(item => item.Label).ToArray();
@@ -69,6 +89,25 @@ public sealed class ToolCatalogServiceTests
             labels);
         Assert.Equal(["Commands", "Categories", "Favorites", "Recent", "Presets"],
             NavigationCatalog.Items.Single(item => item.Id == "all-tools").Tabs);
+    }
+
+    private sealed class MutableFakePluginRegistry : IPluginRegistry
+    {
+        private IReadOnlyList<CommandDefinition> _commands = [];
+        public event System.EventHandler? RegistryChanged;
+
+        public void SetCommands(IReadOnlyList<CommandDefinition> commands)
+        {
+            _commands = commands;
+            RegistryChanged?.Invoke(this, System.EventArgs.Empty);
+        }
+
+        public Task DiscoverAndInitializeAsync(IPluginHost host, CancellationToken ct = default) => Task.CompletedTask;
+        public IReadOnlyList<PluginRegistryEntry> GetAllPlugins() => [];
+        public IReadOnlyList<CommandDefinition> GetActivePluginCommands() => _commands;
+        public IReadOnlyList<IPluginWidget> GetActivePluginWidgets() => [];
+        public Task EnablePluginAsync(string pluginId, IPluginHost host, CancellationToken ct = default) => Task.CompletedTask;
+        public Task DisablePluginAsync(string pluginId, IPluginHost host, CancellationToken ct = default) => Task.CompletedTask;
     }
 
     private sealed class MockPluginRegistry : IPluginRegistry

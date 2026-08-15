@@ -1,64 +1,90 @@
-# WinCare security policy and model
+# WinCare Security Policy and Security Model
 
-WinCare performs privileged and potentially destructive Windows operations. Security is a product contract, not an optional hardening layer.
+WinCare performs privileged, low-level, and potentially mutating Windows operating system tasks. Security, auditability, and deterministic failure are core architectural contracts.
 
-## Reporting a vulnerability
+---
 
-Do not publish an undisclosed vulnerability, exploit, credential, machine identifier, or sensitive log in a public issue or pull request. Use GitHub private vulnerability reporting or a private maintainer channel. Include the affected version, Windows build and architecture, privilege level, reproduction steps with non-sensitive data, observed impact, and redacted evidence.
+## 🛡️ Vulnerability Reporting
 
-## Supported security scope
+If you discover a security vulnerability in WinCare, please do **not** disclose it publicly via GitHub Issues or discussions.
 
-Security fixes target the current default branch, the latest supported production release, and release tooling used to produce supported artifacts. The 2.4.0-rc1 source release candidate is not a supported production release.
+- **Reporting Channel**: Use [GitHub Private Vulnerability Reporting](https://github.com/AmirrezaFarnamTaheri/WinCare/security/advisories/new) or contact the project maintainers directly.
+- **Report Contents**:
+  - Affected version / commit SHA
+  - Windows version, build number, and architecture (x64 / ARM64)
+  - Execution context and privilege level (Standard User vs. Administrator)
+  - Detailed reproduction steps with non-sensitive data
+  - Observed impact and potential attack vector
+  - Redacted logs or diagnostic evidence
 
-## Core invariants
+We will acknowledge receipt within 48 hours and provide status updates as we investigate and remediate the issue.
 
-### Explicit authority
+---
 
-Observation does not imply mutation authority. Planning does not imply execution authority. Search, navigation, UI state, Rust results, and catalog presence cannot grant elevation or mutation authority.
+## 🎯 Supported Versions
 
-### Fail closed
+| Version Line | Supported | Notes |
+|---|:---:|---|
+| `2.5.x` | ✅ Yes | Current development and release candidate line |
+| `2.4.x` | ✅ Yes | Supported release candidate baseline |
+| `< 2.4.0` | ❌ No | Historical legacy releases (PowerShell/WPF) |
 
-Missing dependencies, unsupported platforms, denied policy, unverifiable identity, unsafe paths, failed postconditions, native errors, cancelled work, timeouts, and incomplete migration remain explicit failures or blocked results. They never become success.
+---
 
-### Bounded resources
+## 🔒 Core Security Invariants
 
-Filesystem traversal, archive processing, process output, network responses, event collection, and native buffers require explicit limits. Unsafe archive paths, links, collisions, duplicates, suspicious expansion, and unmanifested content are rejected.
+### 1. Explicit Authority & Two-Phase Approval
+- Observation does not grant mutation authority.
+- Planning does not grant execution authority.
+- Every mutating command requires an explicit two-phase approval sequence (`request.Apply = true` and `options.ReviewApproved = true`).
+- UI previews perform parameter validation and preflight checks before the user can grant mutation authority.
 
-### Exact identity
+### 2. Fail-Closed Operation
+- Missing dependencies, unsupported architectures, denied elevation, unverifiable certificates, path traversal attempts, postcondition violations, native FFI errors, cancelled operations, and timeouts result in explicit blocked or failed states.
+- Under no circumstances does a failed or unavailable operation fabricate a success result.
 
-Security-sensitive operations bind to canonical paths, hashes, manifests, receipts, product identity, admitted executables, or provider-specific identifiers. Display names and mutable ambient state are not authority.
+### 3. Bounded Resources & Process Limits
+- Filesystem enumeration uses bounded iterative traversal (`BoundedProcessRunner` / native core).
+- Recursive file traversals canonicalize roots, reject reparse-point operation roots, and skip symlink/junction descendants.
+- Process execution uses strict argument lists rather than raw shell concatenation, preventing command injection.
 
-### No implicit egress
+### 4. PII-Safe Activity Journaling
+- `CommandDispatcher` exception handlers log only exception type names (e.g. `UnauthorizedAccessException`, `FileNotFoundException`).
+- `ex.Message` is never written to user-visible activity journals or telemetry, eliminating accidental path or PII exposure.
 
-WinCare does not infer remote destinations, upload hidden telemetry, attach interceptors, or broaden network authority as a fallback. Network operations require admitted endpoints and bounded request and response behavior.
+### 5. Plugin Trust & Cryptographic Package Admission
+- Plugins execute in-process with user privileges.
+- Manifest IDs must strictly equal the target package ID (`manifest.Id == targetPluginId`).
+- Every remote and local package is validated with full-stream SHA-256 integrity verification.
+- Packages support digital signatures (`wincare-plugin.sig` or manifest `signature`) verified against RSA SHA-256 and ECDSA public keys (`publisher.pem`).
+- Core namespaces (`wincare.core.*`, `system.*`) are strictly reserved and cannot be overwritten.
+- Plugin updates create isolated backups in `.staging/backups/` outside active discovery paths.
 
-### Evidence before assurance
+### 6. Rust FFI Boundary Safety
+- All Rust FFI exports in `native/wincare-core` wrap execution in `std::panic::catch_unwind`.
+- Unhandled panics in native Rust code cannot unwind across the C-ABI boundary into the .NET runtime, preventing undefined behavior and memory corruption.
 
-Source inspection, successful compilation, configuration state, and a smoke test are not command-equivalence evidence. Production promotion requires command-by-command Windows behavior verification.
+---
 
-## Trust boundaries
+## 🧱 Trust Boundaries
 
-| Boundary | Security expectation |
+| Boundary | Invariant & Security Expectation |
 |---|---|
-| User input | parsed as data and validated against typed command contracts |
-| WinUI | presentation only; cannot bypass dispatcher admission or safety policy |
-| Command dispatcher | rejects unknown, disabled, unavailable, and unmigrated commands |
-| Filesystem | canonical containment, link rejection, bounded enumeration, and identity re-checks |
-| External process | exact executable identity, bounded arguments and output, timeout, and exit evidence |
-| Network | explicit target admission, redirect and credential restrictions, and response ceilings |
-| Rust ABI | versioned interface, explicit lengths, bounded buffers, status codes, and no business policy |
-| Archive and package | safe paths, deterministic entries, manifest closure, hashes, signatures, and provenance |
-| Elevation | narrow operation-specific broker after review, never shell access |
-| Recovery | durable journal, explicit partial-failure state, and compensation when supported |
+| **User Input / Search** | Treated as untrusted text and validated against typed schema definitions |
+| **WinUI 3 Presentation** | Presentation-only; cannot bypass dispatcher admission or safety checks |
+| **Command Dispatcher** | Authoritative gate; rejects unknown, disabled, or unmigrated commands |
+| **Plugin Subsystem** | Full-trust warnings, capability consent review, signature verification, and blocklist enforcement |
+| **Filesystem Operations** | Canonical path containment, reparse-point rejection, and bounded enumeration |
+| **External Processes** | Executable path resolution prefers Windows `System32`, bounded arguments, timeout enforcement |
+| **Rust C ABI** | Versioned interface, caller-owned buffers, pointer validation, and unwind safety |
+| **Cloud Sync** | AES-256-GCM authenticated encryption with PBKDF2/SHA-256 key derivation for all synced profiles |
 
-## Deliberately excluded behavior
+---
 
-WinCare does not claim or ship covert interception, kernel patching, automatic unsigned-driver installation, arbitrary remote command execution, hidden telemetry, unrestricted plugins, or autonomous production changes.
+## 🚫 Deliberately Excluded Behaviors
 
-## Release integrity
-
-A development artifact is not a production release. Promotion requires the exact artifact bytes to pass the source, Windows runtime, command parity, deterministic package, signature, installation, repair, upgrade, and uninstall gates in [Validation](VALIDATION.md) and [finalization status](docs/migration/finalization-status.md).
-
-## Diagnostics
-
-Before sharing diagnostics, remove credentials, keys, user and host names, internal URLs, and personal paths unless essential. Preserve timestamps, status codes, hashes, schema versions, and bounded error context needed for reproduction. Use a private channel for exploit material or sensitive evidence.
+WinCare does not implement or ship:
+- Covert network telemetry or background analytics without consent
+- Unrestricted arbitrary remote script execution
+- Kernel hooks, hidden drivers, or unverified driver signing bypasses
+- Silent modification of Windows security settings without explicit review
