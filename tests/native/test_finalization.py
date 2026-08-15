@@ -237,6 +237,8 @@ class FinalizationTests(unittest.TestCase):
         self.assertIn("WinCare.App_*.msix", workflow)
         self.assertIn("Dependencies", workflow)
         self.assertNotIn("AppPackages/**/*.msix", workflow)
+        self.assertIn("Cert:\\CurrentUser\\Root", workflow)
+        self.assertIn('if ($env:WINCARE_DEVELOPMENT_SIGNING -eq \'true\')', workflow)
 
         development_start = workflow.index("Prepare development signing identity")
         release_start = workflow.index("Prepare release signing identity")
@@ -244,15 +246,28 @@ class FinalizationTests(unittest.TestCase):
         self.assertNotIn("WINCARE_SIGNING_CERT_BASE64", development_block)
         self.assertNotIn("WINCARE_SIGNING_CERT_PASSWORD", development_block)
 
+        verification_start = workflow.index("Verify MSIX signature and publisher")
+        cleanup_start = workflow.index("Clean runner-local signing identity")
+        verification_block = workflow[verification_start:cleanup_start]
+        self.assertIn("Cert:\\CurrentUser\\Root", verification_block)
+        self.assertIn('if ($env:WINCARE_DEVELOPMENT_SIGNING -eq \'true\')', verification_block)
+        self.assertIn("Remove-Item -Force \"Cert:\\CurrentUser\\Root", verification_block)
+
     def test_installer_pins_signer_before_trust_and_revalidates_after_import(self) -> None:
         installer = (ROOT / "tools/install_msix.py").read_text(encoding="utf-8")
         initial_index = installer.index("$initialSig = Get-AuthenticodeSignature")
-        import_index = installer.index("Import-Certificate")
+        thumbprint_index = installer.index("does not match package signer thumbprint")
+        trusted_people_index = installer.index("Cert:\\\\CurrentUser\\\\TrustedPeople")
+        root_index = installer.index("Cert:\\\\CurrentUser\\\\Root")
         final_index = installer.index("$finalSig = Get-AuthenticodeSignature")
-        self.assertLess(initial_index, import_index)
-        self.assertLess(import_index, final_index)
-        self.assertIn("does not match package signer thumbprint", installer)
+        root_remove_index = installer.index('Remove-Item -Force "Cert:\\\\CurrentUser\\\\Root')
+        self.assertLess(initial_index, thumbprint_index)
+        self.assertLess(thumbprint_index, trusted_people_index)
+        self.assertLess(trusted_people_index, root_index)
+        self.assertLess(root_index, final_index)
+        self.assertLess(final_index, root_remove_index)
         self.assertIn("no matching --certificate was provided", installer)
+        self.assertIn("TrustedPeople remains", installer)
 
     def test_ci_runs_finalization_gates_on_master_and_main(self) -> None:
         native_workflow = (ROOT / ".github/workflows/native-winui.yml").read_text(encoding="utf-8")
