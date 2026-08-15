@@ -93,8 +93,8 @@ if (-not (Test-Path -LiteralPath $pkgPath -PathType Leaf)) {
     throw "Package file not found: $pkgPath"
 }
 
-# Authenticode can expose the signer even when a self-signed certificate is not
-# trusted yet. Pin that signer before importing any certificate.
+# Authenticode exposes the signer certificate even when a self-signed signer is
+# not trusted yet. Pin the signer before importing any trust material.
 $initialSig = Get-AuthenticodeSignature -LiteralPath $pkgPath
 if (-not $initialSig.SignerCertificate) {
     throw "MSIX package does not expose a signer certificate (Status: $($initialSig.Status), Detail: $($initialSig.StatusMessage))."
@@ -103,41 +103,60 @@ if ($initialSig.SignerCertificate.Subject -ne 'CN=WinCare Development') {
     throw "Untrusted signer subject '$($initialSig.SignerCertificate.Subject)'. Expected exactly 'CN=WinCare Development'."
 }
 
-if ($certPath) {
-    if (-not (Test-Path -LiteralPath $certPath -PathType Leaf)) {
-        throw "Certificate file not found: $certPath"
-    }
-    $cert = [System.Security.Cryptography.X509Certificates.X509Certificate2]::new($certPath)
-    if ($cert.Subject -ne 'CN=WinCare Development') {
-        throw "Provided certificate subject '$($cert.Subject)' does not match expected publisher."
-    }
-    if ($cert.Thumbprint -ne $initialSig.SignerCertificate.Thumbprint) {
-        throw "Provided certificate thumbprint ($($cert.Thumbprint)) does not match package signer thumbprint ($($initialSig.SignerCertificate.Thumbprint))."
-    }
-    $imported = Import-Certificate -FilePath $certPath -CertStoreLocation 'Cert:\\CurrentUser\\TrustedPeople'
-    if (-not $imported) {
-        throw 'Certificate import did not return an imported certificate.'
-    }
-    Write-Output "Imported pinned signer certificate: $($cert.Thumbprint)"
-}
-elseif ($initialSig.Status -ne 'Valid') {
-    throw "Package signer is not already trusted and no matching --certificate was provided (Status: $($initialSig.Status), Detail: $($initialSig.StatusMessage))."
-}
+$temporaryRootThumbprint = $null
+try {
+    if ($certPath) {
+        if (-not (Test-Path -LiteralPath $certPath -PathType Leaf)) {
+            throw "Certificate file not found: $certPath"
+        }
+        $cert = [System.Security.Cryptography.X509Certificates.X509Certificate2]::new($certPath)
+        if ($cert.Subject -ne 'CN=WinCare Development') {
+            throw "Provided certificate subject '$($cert.Subject)' does not match expected publisher."
+        }
+        if ($cert.Thumbprint -ne $initialSig.SignerCertificate.Thumbprint) {
+            throw "Provided certificate thumbprint ($($cert.Thumbprint)) does not match package signer thumbprint ($($initialSig.SignerCertificate.Thumbprint))."
+        }
 
-# Re-run trust validation after importing the exact pinned certificate.
-$finalSig = Get-AuthenticodeSignature -LiteralPath $pkgPath
-if ($finalSig.Status -ne 'Valid') {
-    throw "MSIX signature validation failed after trust setup (Status: $($finalSig.Status), Detail: $($finalSig.StatusMessage))."
-}
-if (-not $finalSig.SignerCertificate -or $finalSig.SignerCertificate.Subject -ne 'CN=WinCare Development') {
-    throw 'MSIX signer changed or no longer matches the expected publisher after trust setup.'
-}
-if ($certPath -and $finalSig.SignerCertificate.Thumbprint -ne $cert.Thumbprint) {
-    throw 'MSIX signer thumbprint changed after trust setup.'
-}
+        # TrustedPeople is retained for MSIX deployment. A self-signed package signer
+        # also needs to be a trust anchor for WinVerifyTrust, so temporarily add the
+        # already-pinned certificate to CurrentUser\Root only for validation below.
+        $imported = Import-Certificate -FilePath $certPath -CertStoreLocation 'Cert:\\CurrentUser\\TrustedPeople'
+        if (-not $imported) {
+            throw 'Certificate import did not return an imported certificate.'
+        }
+        $rootImport = Import-Certificate -FilePath $certPath -CertStoreLocation 'Cert:\\CurrentUser\\Root'
+        if (-not $rootImport) {
+            throw 'Temporary root certificate import did not return an imported certificate.'
+        }
+        $temporaryRootThumbprint = $cert.Thumbprint
+        Write-Output "Imported pinned signer certificate: $($cert.Thumbprint)"
+    }
+    elseif ($initialSig.Status -ne 'Valid') {
+        throw "Package signer is not already trusted and no matching --certificate was provided (Status: $($initialSig.Status), Detail: $($initialSig.StatusMessage))."
+    }
 
-Write-Output "Signature Verified: Valid ($($finalSig.SignerCertificate.Subject))"
-Write-Output "Signer Thumbprint: $($finalSig.SignerCertificate.Thumbprint)"
+    # Re-run Authenticode validation after establishing trust for the exact pinned signer.
+    $finalSig = Get-AuthenticodeSignature -LiteralPath $pkgPath
+    if ($finalSig.Status -ne 'Valid') {
+        throw "MSIX signature validation failed after trust setup (Status: $($finalSig.Status), Detail: $($finalSig.StatusMessage))."
+    }
+    if (-not $finalSig.SignerCertificate -or $finalSig.SignerCertificate.Subject -ne 'CN=WinCare Development') {
+        throw 'MSIX signer changed or no longer matches the expected publisher after trust setup.'
+    }
+    if ($certPath -and $finalSig.SignerCertificate.Thumbprint -ne $cert.Thumbprint) {
+        throw 'MSIX signer thumbprint changed after trust setup.'
+    }
+
+    Write-Output "Signature Verified: Valid ($($finalSig.SignerCertificate.Subject))"
+    Write-Output "Signer Thumbprint: $($finalSig.SignerCertificate.Thumbprint)"
+}
+finally {
+    # TrustedPeople remains so Windows can deploy/run the package. Root trust was
+    # only needed to make the self-signed chain verifiable and is removed immediately.
+    if ($temporaryRootThumbprint) {
+        Remove-Item -Force "Cert:\\CurrentUser\\Root\\$temporaryRootThumbprint" -ErrorAction SilentlyContinue
+    }
+}
 """
 
     verify_res = _run_powershell_script(verify_and_trust_script, env_params)
