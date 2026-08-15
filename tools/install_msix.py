@@ -103,61 +103,59 @@ if ($initialSig.SignerCertificate.Subject -ne 'CN=WinCare Development') {
     throw "Untrusted signer subject '$($initialSig.SignerCertificate.Subject)'. Expected exactly 'CN=WinCare Development'."
 }
 
-$temporaryRootThumbprint = $null
-try {
-    if ($certPath) {
-        if (-not (Test-Path -LiteralPath $certPath -PathType Leaf)) {
-            throw "Certificate file not found: $certPath"
-        }
-        $cert = [System.Security.Cryptography.X509Certificates.X509Certificate2]::new($certPath)
-        if ($cert.Subject -ne 'CN=WinCare Development') {
-            throw "Provided certificate subject '$($cert.Subject)' does not match expected publisher."
-        }
-        if ($cert.Thumbprint -ne $initialSig.SignerCertificate.Thumbprint) {
-            throw "Provided certificate thumbprint ($($cert.Thumbprint)) does not match package signer thumbprint ($($initialSig.SignerCertificate.Thumbprint))."
-        }
+if ($certPath) {
+    if (-not (Test-Path -LiteralPath $certPath -PathType Leaf)) {
+        throw "Certificate file not found: $certPath"
+    }
+    $cert = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2($certPath)
+    if ($cert.Subject -ne 'CN=WinCare Development') {
+        throw "Provided certificate subject '$($cert.Subject)' does not match expected publisher."
+    }
+    if ($cert.Thumbprint -ne $initialSig.SignerCertificate.Thumbprint) {
+        throw "Provided certificate thumbprint ($($cert.Thumbprint)) does not match package signer thumbprint ($($initialSig.SignerCertificate.Thumbprint))."
+    }
 
-        # TrustedPeople is retained for MSIX deployment. A self-signed package signer
-        # also needs to be a trust anchor for WinVerifyTrust, so temporarily add the
-        # already-pinned certificate to CurrentUser\Root only for validation below.
-        $imported = Import-Certificate -FilePath $certPath -CertStoreLocation 'Cert:\\CurrentUser\\TrustedPeople'
+    $trustedPeoplePath = "Cert:\\LocalMachine\\TrustedPeople\\$($cert.Thumbprint)"
+    if (-not (Test-Path -LiteralPath $trustedPeoplePath)) {
+        $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
+        $principal = New-Object Security.Principal.WindowsPrincipal($identity)
+        if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+            throw 'Trusting a self-signed MSIX certificate requires an elevated Administrator terminal. Re-run this installer as Administrator.'
+        }
+        $imported = Import-Certificate -FilePath $certPath -CertStoreLocation 'Cert:\\LocalMachine\\TrustedPeople'
         if (-not $imported) {
-            throw 'Certificate import did not return an imported certificate.'
+            throw 'Certificate import into LocalMachine\\TrustedPeople did not return an imported certificate.'
         }
-        $rootImport = Import-Certificate -FilePath $certPath -CertStoreLocation 'Cert:\\CurrentUser\\Root'
-        if (-not $rootImport) {
-            throw 'Temporary root certificate import did not return an imported certificate.'
-        }
-        $temporaryRootThumbprint = $cert.Thumbprint
-        Write-Output "Imported pinned signer certificate: $($cert.Thumbprint)"
+        Write-Output "Imported pinned signer certificate into LocalMachine\\TrustedPeople: $($cert.Thumbprint)"
     }
-    elseif ($initialSig.Status -ne 'Valid') {
-        throw "Package signer is not already trusted and no matching --certificate was provided (Status: $($initialSig.Status), Detail: $($initialSig.StatusMessage))."
-    }
-
-    # Re-run Authenticode validation after establishing trust for the exact pinned signer.
-    $finalSig = Get-AuthenticodeSignature -LiteralPath $pkgPath
-    if ($finalSig.Status -ne 'Valid') {
-        throw "MSIX signature validation failed after trust setup (Status: $($finalSig.Status), Detail: $($finalSig.StatusMessage))."
-    }
-    if (-not $finalSig.SignerCertificate -or $finalSig.SignerCertificate.Subject -ne 'CN=WinCare Development') {
-        throw 'MSIX signer changed or no longer matches the expected publisher after trust setup.'
-    }
-    if ($certPath -and $finalSig.SignerCertificate.Thumbprint -ne $cert.Thumbprint) {
-        throw 'MSIX signer thumbprint changed after trust setup.'
-    }
-
-    Write-Output "Signature Verified: Valid ($($finalSig.SignerCertificate.Subject))"
-    Write-Output "Signer Thumbprint: $($finalSig.SignerCertificate.Thumbprint)"
-}
-finally {
-    # TrustedPeople remains so Windows can deploy/run the package. Root trust was
-    # only needed to make the self-signed chain verifiable and is removed immediately.
-    if ($temporaryRootThumbprint) {
-        Remove-Item -Force "Cert:\\CurrentUser\\Root\\$temporaryRootThumbprint" -ErrorAction SilentlyContinue
+    else {
+        Write-Output "Pinned signer certificate is already trusted in LocalMachine\\TrustedPeople: $($cert.Thumbprint)"
     }
 }
+elif ($initialSig.Status -ne 'Valid') {
+    throw "Package signer is not already trusted and no matching --certificate was provided (Status: $($initialSig.Status), Detail: $($initialSig.StatusMessage))."
+}
+
+# Re-run Authenticode after establishing MSIX trust in Trusted People. No
+# Trusted Root Authorities mutation is performed.
+$finalSig = Get-AuthenticodeSignature -LiteralPath $pkgPath
+if ($finalSig.Status -ne 'Valid') {
+    throw "MSIX signature validation failed after trust setup (Status: $($finalSig.Status), Detail: $($finalSig.StatusMessage))."
+}
+if (-not $finalSig.SignerCertificate -or $finalSig.SignerCertificate.Subject -ne 'CN=WinCare Development') {
+    throw 'MSIX signer changed or no longer matches the expected publisher after trust setup.'
+}
+if ($certPath -and $finalSig.SignerCertificate.Thumbprint -ne $cert.Thumbprint) {
+    throw 'MSIX signer thumbprint changed after trust setup.'
+}
+
+Write-Output "Signature Verified: Valid ($($finalSig.SignerCertificate.Subject))"
+Write-Output "Signer Thumbprint: $($finalSig.SignerCertificate.Thumbprint)"
 """
+
+    # PowerShell's keyword is "elseif"; keep the script text readable above and
+    # avoid interpolating any user-controlled path into it.
+    verify_and_trust_script = verify_and_trust_script.replace("\nelif (", "\nelseif (")
 
     verify_res = _run_powershell_script(verify_and_trust_script, env_params)
     if verify_res.returncode != 0:
