@@ -192,14 +192,46 @@ class FinalizationTests(unittest.TestCase):
         self.assertIn('components = ["rustfmt", "clippy"]', toolchain)
 
     def test_release_workflows_enforce_immutability_and_version_checks(self) -> None:
-        for relative in (
-            ".github/workflows/native-winui.yml",
-            ".github/workflows/native-release-candidate.yml",
-        ):
-            workflow = (ROOT / relative).read_text(encoding="utf-8")
+        native_workflow = (ROOT / ".github/workflows/native-winui.yml").read_text(encoding="utf-8")
+        release_workflow = (ROOT / ".github/workflows/native-release-candidate.yml").read_text(encoding="utf-8")
+        for workflow in (native_workflow, release_workflow):
             self.assertIn("SemVer tagged releases are immutable", workflow)
             self.assertIn("Validate", workflow)
             self.assertNotIn("--clobber", workflow)
+
+        self.assertIn('gh release create "$RELEASE_TAG" release_assets/*', native_workflow)
+        self.assertIn('gh release create "$TAG_NAME" artifacts/finalization/*', release_workflow)
+        self.assertIn("Require primary branch dispatch", release_workflow)
+        self.assertIn("refs/heads/master", release_workflow)
+        self.assertIn("refs/heads/main", release_workflow)
+
+    def test_signing_private_keys_never_cross_job_or_non_release_boundaries(self) -> None:
+        workflow = (ROOT / ".github/workflows/native-winui.yml").read_text(encoding="utf-8")
+        self.assertNotIn("release-signing-identity", workflow)
+        self.assertNotIn("artifacts/signing/*", workflow)
+        self.assertNotIn("temp_signing_key.pfx", workflow)
+        self.assertNotIn("PackageCertificatePassword=", workflow)
+        self.assertIn("Prepare development signing identity", workflow)
+        self.assertIn("Prepare release signing identity", workflow)
+        self.assertIn("Tagged releases require WINCARE_SIGNING_CERT_BASE64", workflow)
+        self.assertIn("WINCARE_DEVELOPMENT_SIGNING=true", workflow)
+        self.assertIn("WINCARE_DEVELOPMENT_SIGNING=false", workflow)
+
+        development_start = workflow.index("Prepare development signing identity")
+        release_start = workflow.index("Prepare release signing identity")
+        development_block = workflow[development_start:release_start]
+        self.assertNotIn("WINCARE_SIGNING_CERT_BASE64", development_block)
+        self.assertNotIn("WINCARE_SIGNING_CERT_PASSWORD", development_block)
+
+    def test_installer_pins_signer_before_trust_and_revalidates_after_import(self) -> None:
+        installer = (ROOT / "tools/install_msix.py").read_text(encoding="utf-8")
+        initial_index = installer.index("$initialSig = Get-AuthenticodeSignature")
+        import_index = installer.index("Import-Certificate")
+        final_index = installer.index("$finalSig = Get-AuthenticodeSignature")
+        self.assertLess(initial_index, import_index)
+        self.assertLess(import_index, final_index)
+        self.assertIn("does not match package signer thumbprint", installer)
+        self.assertIn("no matching --certificate was provided", installer)
 
     def test_ci_runs_finalization_gates_on_master_and_main(self) -> None:
         native_workflow = (ROOT / ".github/workflows/native-winui.yml").read_text(encoding="utf-8")
