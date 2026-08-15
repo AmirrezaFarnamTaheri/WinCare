@@ -63,42 +63,8 @@ jobs:
           path: native/target/${{ matrix.target }}/release/wincare_core.dll
           if-no-files-found: error
 
-  setup-signing-identity:
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - name: Generate or Decode Release Signing Identity
-        shell: pwsh
-        env:
-          CERT_B64: ${{ secrets.WINCARE_SIGNING_CERT_BASE64 }}
-          CERT_PASS: ${{ secrets.WINCARE_SIGNING_CERT_PASSWORD }}
-        run: |
-          $signDir = "$PWD/artifacts/signing"
-          New-Item -ItemType Directory -Force -Path $signDir | Out-Null
-          $pfxPath = "$signDir/temp_signing_key.pfx"
-          $cerPath = "$signDir/WinCare.cer"
-          $password = "WinCareDev123!"
-          if ($env:CERT_B64) {
-            [IO.File]::WriteAllBytes($pfxPath, [Convert]::FromBase64String($env:CERT_B64))
-            if ($env:CERT_PASS) { $password = $env:CERT_PASS }
-            $cert = [System.Security.Cryptography.X509Certificates.X509Certificate2]::new($pfxPath, $password)
-            $cerBytes = $cert.Export([System.Security.Cryptography.X509Certificates.X509ContentType]::Cert)
-            [System.IO.File]::WriteAllBytes($cerPath, $cerBytes)
-          } else {
-            $cert = New-SelfSignedCertificate -Type Custom -Subject "CN=WinCare Development" -KeyUsage DigitalSignature -FriendlyName "WinCare Development Package" -CertStoreLocation "Cert:\CurrentUser\My" -TextExtension @("2.5.29.37={text}1.3.6.1.5.5.7.3.3")
-            $secPassword = ConvertTo-SecureString -String $password -Force -AsPlainText
-            Export-PfxCertificate -Cert $cert -FilePath $pfxPath -Password $secPassword -CryptoAlgorithmOption TripleDES_SHA1 | Out-Null
-            Export-Certificate -Cert $cert -FilePath $cerPath | Out-Null
-          }
-          Write-Output "Signing certificate prepared. Thumbprint: $($cert.Thumbprint)"
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: release-signing-identity
-          path: artifacts/signing/*
-          retention-days: 1
-
   managed-and-package:
-    needs: [verify-source, rust, setup-signing-identity]
+    needs: [verify-source, rust]
     runs-on: windows-latest
     strategy:
       matrix:
@@ -137,55 +103,145 @@ jobs:
         if: matrix.platform == 'x64'
         shell: bash
         run: dotnet test WinCare.Native.sln -c Release -p:Platform=${{ matrix.platform }} --no-restore
-      - uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
-        with:
-          name: release-signing-identity
-          path: artifacts/signing
-      - name: Build MSIX Package
+      - name: Prepare runner-local signing identity
+        shell: pwsh
+        env:
+          CERT_B64: ${{ secrets.WINCARE_SIGNING_CERT_BASE64 }}
+          CERT_PASS: ${{ secrets.WINCARE_SIGNING_CERT_PASSWORD }}
+          IS_RELEASE: ${{ startsWith(github.ref, 'refs/tags/v') }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $signDir = "$PWD/artifacts/signing"
+          New-Item -ItemType Directory -Force -Path $signDir | Out-Null
+          $cerPath = "$signDir/WinCare.cer"
+
+          if ($env:IS_RELEASE -eq 'true' -and (-not $env:CERT_B64 -or -not $env:CERT_PASS)) {
+            throw 'Tagged releases require WINCARE_SIGNING_CERT_BASE64 and WINCARE_SIGNING_CERT_PASSWORD.'
+          }
+
+          if ($env:CERT_B64) {
+            if (-not $env:CERT_PASS) {
+              throw 'WINCARE_SIGNING_CERT_PASSWORD is required when WINCARE_SIGNING_CERT_BASE64 is configured.'
+            }
+            $pfxPath = Join-Path $env:RUNNER_TEMP 'wincare-release-signing.pfx'
+            try {
+              [IO.File]::WriteAllBytes($pfxPath, [Convert]::FromBase64String($env:CERT_B64))
+              $password = ConvertTo-SecureString -String $env:CERT_PASS -Force -AsPlainText
+              $cert = Import-PfxCertificate -FilePath $pfxPath -CertStoreLocation 'Cert:\CurrentUser\My' -Password $password
+            }
+            finally {
+              if (Test-Path $pfxPath) { Remove-Item -Force $pfxPath }
+            }
+          }
+          else {
+            $cert = New-SelfSignedCertificate \
+              -Type Custom \
+              -KeyUsage DigitalSignature \
+              -Subject 'CN=WinCare Development' \
+              -FriendlyName 'WinCare Development Package' \
+              -CertStoreLocation 'Cert:\CurrentUser\My' \
+              -HashAlgorithm SHA256 \
+              -TextExtension @('2.5.29.37={text}1.3.6.1.5.5.7.3.3', '2.5.29.19={text}')
+          }
+
+          if (-not $cert.HasPrivateKey) {
+            throw 'Signing certificate does not contain an accessible private key.'
+          }
+          if ($cert.Subject -ne 'CN=WinCare Development') {
+            throw "Signing certificate subject '$($cert.Subject)' does not exactly match the MSIX publisher 'CN=WinCare Development'."
+          }
+
+          Export-Certificate -Cert $cert -FilePath $cerPath | Out-Null
+          "WINCARE_SIGNING_THUMBPRINT=$($cert.Thumbprint)" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          Write-Output "Runner-local signing identity ready. Thumbprint: $($cert.Thumbprint)"
+      - name: Build unsigned MSIX package
         shell: bash
         run: |
           dotnet build src/WinCare.App/WinCare.App.csproj -c Release -p:Platform=${{ matrix.platform }} \
             -p:GenerateAppxPackageOnBuild=true \
-            -p:AppxPackageSigningEnabled=true \
-            -p:PackageCertificateKeyFile="$PWD/artifacts/signing/temp_signing_key.pfx" \
-            -p:PackageCertificatePassword=WinCareDev123! \
+            -p:AppxPackageSigningEnabled=false \
             --no-restore
-      - name: Verify MSIX Signature
+      - name: Sign MSIX package with runner-local certificate
         shell: pwsh
         run: |
-          $msixFiles = Get-ChildItem -Recurse -Filter "*.msix" src/WinCare.App/AppPackages
+          $ErrorActionPreference = 'Stop'
+          $msixFiles = @(Get-ChildItem -Recurse -Filter '*.msix' src/WinCare.App/AppPackages)
           if ($msixFiles.Count -eq 0) {
-            Write-Error "No MSIX packages found in src/WinCare.App/AppPackages."
-            exit 1
+            throw 'No MSIX packages found in src/WinCare.App/AppPackages.'
           }
-          $expectedCer = [System.Security.Cryptography.X509Certificates.X509Certificate2]::new("$PWD/artifacts/signing/WinCare.cer")
+
+          $signtoolCommand = Get-Command signtool.exe -ErrorAction SilentlyContinue
+          if ($signtoolCommand) {
+            $signtoolPath = $signtoolCommand.Source
+          }
+          else {
+            $kitsRoot = "${env:ProgramFiles(x86)}\Windows Kits\10\bin"
+            $signtoolCandidate = Get-ChildItem $kitsRoot -Recurse -Filter signtool.exe -ErrorAction SilentlyContinue |
+              Where-Object { $_.FullName -match '\\x64\\signtool\.exe$' } |
+              Sort-Object FullName -Descending |
+              Select-Object -First 1
+            if (-not $signtoolCandidate) {
+              throw 'signtool.exe was not found on the Windows runner.'
+            }
+            $signtoolPath = $signtoolCandidate.FullName
+          }
+
           foreach ($file in $msixFiles) {
-            Write-Output "Verifying MSIX signature for: $($file.FullName)"
-            $sig = Get-AuthenticodeSignature $file.FullName
-            Write-Output "Status: $($sig.Status)"
-            Write-Output "Signer: $($sig.SignerCertificate.Subject)"
-            Write-Output "Thumbprint: $($sig.SignerCertificate.Thumbprint)"
-            if ($sig.Status -ne 'Valid') {
-              Write-Error "MSIX package '$($file.Name)' signature status is '$($sig.Status)' ($($sig.StatusMessage)). Signature verification failed!"
-              exit 1
-            }
-            if ($sig.SignerCertificate.Subject -notmatch 'CN=WinCare Development') {
-              Write-Error "MSIX package '$($file.Name)' signer subject '$($sig.SignerCertificate.Subject)' does not match expected publisher 'CN=WinCare Development'!"
-              exit 1
-            }
-            if ($sig.SignerCertificate.Thumbprint -ne $expectedCer.Thumbprint) {
-              Write-Error "MSIX package '$($file.Name)' was signed by thumbprint $($sig.SignerCertificate.Thumbprint), expected $($expectedCer.Thumbprint)!"
-              exit 1
+            Write-Output "Signing MSIX: $($file.FullName)"
+            & $signtoolPath sign /fd SHA256 /sha1 $env:WINCARE_SIGNING_THUMBPRINT $file.FullName
+            if ($LASTEXITCODE -ne 0) {
+              throw "SignTool failed for '$($file.Name)' with exit code $LASTEXITCODE."
             }
           }
-          Write-Output "All MSIX packages passed strict signature and publisher verification."
-      - name: Clean Ephemeral Private Key
+      - name: Verify MSIX signature and publisher
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $cerPath = "$PWD/artifacts/signing/WinCare.cer"
+          $expectedCer = [System.Security.Cryptography.X509Certificates.X509Certificate2]::new($cerPath)
+          if ($expectedCer.Subject -ne 'CN=WinCare Development') {
+            throw "Exported certificate subject '$($expectedCer.Subject)' does not match expected publisher."
+          }
+
+          # Trust the exact public certificate only on this ephemeral CI runner so WinVerifyTrust
+          # can distinguish a valid self-signed development signature from an invalid signature.
+          $trusted = Import-Certificate -FilePath $cerPath -CertStoreLocation 'Cert:\CurrentUser\TrustedPeople'
+          try {
+            $msixFiles = @(Get-ChildItem -Recurse -Filter '*.msix' src/WinCare.App/AppPackages)
+            if ($msixFiles.Count -eq 0) {
+              throw 'No MSIX packages found in src/WinCare.App/AppPackages.'
+            }
+            foreach ($file in $msixFiles) {
+              $sig = Get-AuthenticodeSignature -FilePath $file.FullName
+              Write-Output "Signature status for $($file.Name): $($sig.Status)"
+              if ($sig.Status -ne 'Valid') {
+                throw "MSIX '$($file.Name)' signature status is '$($sig.Status)' ($($sig.StatusMessage))."
+              }
+              if (-not $sig.SignerCertificate) {
+                throw "MSIX '$($file.Name)' does not expose a signer certificate."
+              }
+              if ($sig.SignerCertificate.Subject -ne 'CN=WinCare Development') {
+                throw "MSIX '$($file.Name)' signer '$($sig.SignerCertificate.Subject)' does not exactly match the package publisher."
+              }
+              if ($sig.SignerCertificate.Thumbprint -ne $expectedCer.Thumbprint) {
+                throw "MSIX '$($file.Name)' signer thumbprint does not match WinCare.cer."
+              }
+            }
+          }
+          finally {
+            if ($trusted) {
+              Remove-Item -Force "Cert:\CurrentUser\TrustedPeople\$($expectedCer.Thumbprint)" -ErrorAction SilentlyContinue
+            }
+          }
+      - name: Clean runner-local signing identity
         if: always()
         shell: pwsh
         run: |
-          if (Test-Path "$PWD/artifacts/signing/temp_signing_key.pfx") {
-            Remove-Item -Force "$PWD/artifacts/signing/temp_signing_key.pfx"
+          if ($env:WINCARE_SIGNING_THUMBPRINT) {
+            Remove-Item -Force "Cert:\CurrentUser\My\$env:WINCARE_SIGNING_THUMBPRINT" -ErrorAction SilentlyContinue
+            Remove-Item -Force "Cert:\CurrentUser\TrustedPeople\$env:WINCARE_SIGNING_THUMBPRINT" -ErrorAction SilentlyContinue
           }
+          Remove-Item -Force "$env:RUNNER_TEMP\wincare-release-signing.pfx" -ErrorAction SilentlyContinue
       - name: Publish single binary executable
         shell: bash
         run: dotnet publish src/WinCare.App/WinCare.App.csproj -c Release -p:Platform=${{ matrix.platform }} -r ${{ matrix.runtime }} -p:WindowsPackageType=None -p:WindowsAppSDKSelfContained=true -p:SelfContained=true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:DebugType=none -p:DebugSymbols=false -o artifacts/portable/${{ matrix.runtime }}
@@ -205,6 +261,7 @@ jobs:
             tools/install_msix.py
             artifacts/release/*.exe
             artifacts/release/*.zip
+          if-no-files-found: error
 
   release-gate:
     needs: [verify-source, rust, managed-and-package]
@@ -240,7 +297,7 @@ jobs:
           else
             echo "RELEASE_FLAGS=--latest" >> $GITHUB_ENV
           fi
-      - name: Publish Immutable GitHub Release
+      - name: Publish immutable GitHub release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -249,9 +306,8 @@ jobs:
             echo "Error: Release '$RELEASE_TAG' already exists. SemVer tagged releases are immutable."
             exit 1
           fi
-          gh release create "$RELEASE_TAG" \
+          gh release create "$RELEASE_TAG" release_assets/* \
             --title "WinCare $RELEASE_TAG (Native WinUI & Core Release)" \
             $RELEASE_FLAGS \
             --target "${{ github.sha }}" \
             --notes "Automated immutable release build generated from commit \`${{ github.sha }}\`. Contains verified native MSIX packages (x64/ARM64), single binary standalone executables, portable ZIP distributions, and verified source finalization archives."
-          gh release upload "$RELEASE_TAG" release_assets/*
