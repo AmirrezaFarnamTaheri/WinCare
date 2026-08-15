@@ -57,9 +57,12 @@ def stage_assets(src_dir: Path, dest_dir: Path, version: str) -> list[Path]:
             if f.endswith(".exe") and ("wincare" not in lower_name and "release" not in lower_path and "portable" not in lower_path):
                 continue
 
-            # For MSIX, only accept the final packaged MSIX
-            if f.endswith(".msix") and ("wincare.app" not in lower_name and "apppackages" not in lower_path):
-                continue
+            # Only the WinCare application MSIX is a releasable package. Windows App Runtime
+            # dependencies under AppPackages/**/Dependencies are vendor-signed inputs and must
+            # neither be re-signed nor promoted as WinCare release assets.
+            if f.endswith(".msix"):
+                if "wincare.app_" not in lower_name or "/dependencies/" in lower_path:
+                    continue
 
             # Identify platform from path or filename
             if "x64" in lower_path or "x86_64" in lower_path or "win-x64" in lower_path:
