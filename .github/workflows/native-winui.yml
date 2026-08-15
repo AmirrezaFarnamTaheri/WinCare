@@ -7,9 +7,14 @@ on:
   pull_request:
   workflow_dispatch:
 
+concurrency:
+  group: native-winui-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   verify-source:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
@@ -38,6 +43,7 @@ jobs:
 
   rust:
     runs-on: windows-latest
+    timeout-minutes: 15
     strategy:
       matrix:
         target: [x86_64-pc-windows-msvc, aarch64-pc-windows-msvc]
@@ -66,6 +72,7 @@ jobs:
   managed-and-package:
     needs: [verify-source, rust]
     runs-on: windows-latest
+    timeout-minutes: 20
     strategy:
       matrix:
         include:
@@ -84,18 +91,16 @@ jobs:
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.13"
-      - uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772 # master 2026-08-05
+      - uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
         with:
-          toolchain: 1.97.1
-          targets: ${{ matrix.target }}
-      - name: Build Rust core
-        shell: bash
-        run: cargo build --manifest-path native/Cargo.toml --target ${{ matrix.target }} --release
+          name: native-${{ matrix.target }}
+          path: artifacts/native
       - name: Stage Rust core
         shell: bash
         run: |
+          test -f artifacts/native/wincare_core.dll
           mkdir -p src/WinCare.App/Native/${{ matrix.platform }}
-          cp native/target/${{ matrix.target }}/release/wincare_core.dll src/WinCare.App/Native/${{ matrix.platform }}/wincare_core.dll
+          cp artifacts/native/wincare_core.dll src/WinCare.App/Native/${{ matrix.platform }}/wincare_core.dll
       - name: Restore
         shell: bash
         run: dotnet restore WinCare.Native.sln -p:Platform=${{ matrix.platform }}
@@ -203,6 +208,7 @@ jobs:
             throw "SignTool failed for '$($file.Name)' with exit code $LASTEXITCODE."
           }
       - name: Verify MSIX signature and publisher
+        timeout-minutes: 3
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
@@ -212,41 +218,93 @@ jobs:
             throw "Exported certificate subject '$($expectedCer.Subject)' does not match expected publisher."
           }
 
-          $trustedRoot = $null
-          if ($env:WINCARE_DEVELOPMENT_SIGNING -eq 'true') {
-            # Development builds use a disposable self-signed leaf. Trust the exact pinned
-            # certificate as a root only on this ephemeral runner so WinVerifyTrust can
-            # validate the cryptographic signature. Tagged releases never take this path.
-            $trustedRoot = Import-Certificate -FilePath $cerPath -CertStoreLocation 'Cert:\CurrentUser\Root'
-          }
-          try {
-            $msixFiles = @(
-              Get-ChildItem -Recurse -Filter 'WinCare.App_*.msix' src/WinCare.App/AppPackages |
-                Where-Object { $_.FullName -notmatch '[\\/]Dependencies[\\/]' }
+          function Assert-WinCareSignature {
+            param(
+              [Parameter(Mandatory = $true)][string] $Path,
+              [Parameter(Mandatory = $true)][System.Security.Cryptography.X509Certificates.X509Certificate2] $ExpectedCertificate,
+              [Parameter(Mandatory = $true)][bool] $DevelopmentSigning
             )
-            if ($msixFiles.Count -ne 1) {
-              throw "Expected exactly one WinCare application MSIX for verification, found $($msixFiles.Count)."
-            }
-            $file = $msixFiles[0]
-            $sig = Get-AuthenticodeSignature -FilePath $file.FullName
-            Write-Output "Signature status for $($file.Name): $($sig.Status)"
-            if ($sig.Status -ne 'Valid') {
-              throw "MSIX '$($file.Name)' signature status is '$($sig.Status)' ($($sig.StatusMessage))."
-            }
+
+            $sig = Get-AuthenticodeSignature -LiteralPath $Path
+            Write-Output "Signature status for $([IO.Path]::GetFileName($Path)): $($sig.Status)"
             if (-not $sig.SignerCertificate) {
-              throw "MSIX '$($file.Name)' does not expose a signer certificate."
+              throw "MSIX '$Path' does not expose a signer certificate (status: $($sig.Status))."
             }
             if ($sig.SignerCertificate.Subject -ne 'CN=WinCare Development') {
-              throw "MSIX '$($file.Name)' signer '$($sig.SignerCertificate.Subject)' does not exactly match the package publisher."
+              throw "MSIX '$Path' signer '$($sig.SignerCertificate.Subject)' does not exactly match the package publisher."
             }
-            if ($sig.SignerCertificate.Thumbprint -ne $expectedCer.Thumbprint) {
-              throw "MSIX '$($file.Name)' signer thumbprint does not match WinCare.cer."
+            if ($sig.SignerCertificate.Thumbprint -ne $ExpectedCertificate.Thumbprint) {
+              throw "MSIX '$Path' signer thumbprint does not match WinCare.cer."
+            }
+
+            if (-not $DevelopmentSigning) {
+              if ($sig.Status -ne 'Valid') {
+                throw "Release MSIX '$Path' signature status is '$($sig.Status)' ($($sig.StatusMessage))."
+              }
+              return
+            }
+
+            if ($sig.Status -notin @('Valid', 'UnknownError')) {
+              throw "Development MSIX '$Path' signature status is '$($sig.Status)' ($($sig.StatusMessage))."
+            }
+
+            $chain = [System.Security.Cryptography.X509Certificates.X509Chain]::new()
+            try {
+              $chain.ChainPolicy.TrustMode = [System.Security.Cryptography.X509Certificates.X509ChainTrustMode]::CustomRootTrust
+              [void]$chain.ChainPolicy.CustomTrustStore.Add($ExpectedCertificate)
+              $chain.ChainPolicy.RevocationMode = [System.Security.Cryptography.X509Certificates.X509RevocationMode]::NoCheck
+              if (-not $chain.Build($sig.SignerCertificate)) {
+                $statuses = ($chain.ChainStatus | ForEach-Object { $_.Status.ToString() }) -join ', '
+                throw "Development signer certificate chain failed custom-root validation: $statuses"
+              }
+            }
+            finally {
+              $chain.Dispose()
+            }
+          }
+
+          $msixFiles = @(
+            Get-ChildItem -Recurse -Filter 'WinCare.App_*.msix' src/WinCare.App/AppPackages |
+              Where-Object { $_.FullName -notmatch '[\\/]Dependencies[\\/]' }
+          )
+          if ($msixFiles.Count -ne 1) {
+            throw "Expected exactly one WinCare application MSIX for verification, found $($msixFiles.Count)."
+          }
+          $file = $msixFiles[0]
+          $developmentSigning = $env:WINCARE_DEVELOPMENT_SIGNING -eq 'true'
+          Assert-WinCareSignature -Path $file.FullName -ExpectedCertificate $expectedCer -DevelopmentSigning $developmentSigning
+
+          # Runtime negative test: mutate a copy and prove the verifier rejects it.
+          $tamperedPath = Join-Path $env:RUNNER_TEMP "WinCare-tampered-${{ matrix.platform }}.msix"
+          Copy-Item -LiteralPath $file.FullName -Destination $tamperedPath -Force
+          try {
+            $stream = [IO.File]::Open($tamperedPath, [IO.FileMode]::Open, [IO.FileAccess]::ReadWrite, [IO.FileShare]::None)
+            try {
+              if ($stream.Length -lt 128) { throw 'MSIX is unexpectedly too small for tamper smoke test.' }
+              $position = $stream.Length - 128
+              $stream.Position = $position
+              $original = $stream.ReadByte()
+              $stream.Position = $position
+              $stream.WriteByte($original -bxor 1)
+            }
+            finally {
+              $stream.Dispose()
+            }
+
+            $tamperRejected = $false
+            try {
+              Assert-WinCareSignature -Path $tamperedPath -ExpectedCertificate $expectedCer -DevelopmentSigning $developmentSigning
+            }
+            catch {
+              $tamperRejected = $true
+              Write-Output "Tamper smoke test rejected modified MSIX: $($_.Exception.Message)"
+            }
+            if (-not $tamperRejected) {
+              throw 'Tamper smoke test unexpectedly accepted a modified MSIX.'
             }
           }
           finally {
-            if ($trustedRoot) {
-              Remove-Item -Force "Cert:\CurrentUser\Root\$($expectedCer.Thumbprint)" -ErrorAction SilentlyContinue
-            }
+            Remove-Item -Force $tamperedPath -ErrorAction SilentlyContinue
           }
       - name: Clean runner-local signing identity
         if: always()
@@ -254,7 +312,6 @@ jobs:
         run: |
           if ($env:WINCARE_SIGNING_THUMBPRINT) {
             Remove-Item -Force "Cert:\CurrentUser\My\$env:WINCARE_SIGNING_THUMBPRINT" -ErrorAction SilentlyContinue
-            Remove-Item -Force "Cert:\CurrentUser\Root\$env:WINCARE_SIGNING_THUMBPRINT" -ErrorAction SilentlyContinue
           }
           Remove-Item -Force "$env:RUNNER_TEMP\wincare-release-signing.pfx" -ErrorAction SilentlyContinue
       - name: Publish single binary executable
@@ -282,8 +339,11 @@ jobs:
     needs: [verify-source, rust, managed-and-package]
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     permissions:
       contents: write
+    env:
+      RELEASE_TAG: ${{ github.ref_name }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
@@ -295,18 +355,18 @@ jobs:
       - name: Validate tag matches product version
         shell: bash
         run: |
-          RELEASE_TAG="${GITHUB_REF#refs/tags/}"
           echo "Validating tag: $RELEASE_TAG against checked-in metadata..."
-          python -c "
+          python - <<'PY'
+          import os
           import xml.etree.ElementTree as ET
+
           props = ET.parse('Directory.Build.props').getroot()
           prefix = props.find('.//VersionPrefix').text
           suffix = props.find('.//VersionSuffix').text if props.find('.//VersionSuffix') is not None else ''
           expected = f'v{prefix}-{suffix}' if suffix else f'v{prefix}'
-          actual = '${RELEASE_TAG}'
+          actual = os.environ['RELEASE_TAG']
           assert actual == expected, f'Release tag {actual} does not match product version {expected}'
-          "
-          echo "RELEASE_TAG=$RELEASE_TAG" >> $GITHUB_ENV
+          PY
           if [[ "$RELEASE_TAG" == *"-rc"* || "$RELEASE_TAG" == *"-beta"* || "$RELEASE_TAG" == *"-alpha"* ]]; then
             echo "RELEASE_FLAGS=--prerelease" >> $GITHUB_ENV
           else
