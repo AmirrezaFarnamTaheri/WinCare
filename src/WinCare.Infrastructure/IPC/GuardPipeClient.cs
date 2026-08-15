@@ -30,6 +30,11 @@ namespace WinCare.Infrastructure.IPC
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"[GuardPipeClient] Connection failed: {ex.Message}");
+                if (_pipeStream != null)
+                {
+                    try { _pipeStream.Dispose(); } catch { }
+                    _pipeStream = null;
+                }
                 return false;
             }
             finally
@@ -59,6 +64,11 @@ namespace WinCare.Infrastructure.IPC
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"[GuardPipeClient] SendCommand error: {ex.Message}");
+                if (_pipeStream != null)
+                {
+                    try { _pipeStream.Dispose(); } catch { }
+                    _pipeStream = null;
+                }
                 return null;
             }
             finally

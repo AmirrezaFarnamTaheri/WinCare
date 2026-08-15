@@ -1,60 +1,45 @@
-# Native command parity ledger
+# Native Command Parity Ledger
 
-The frozen oracle preserves all stable command IDs from the historical implementation. The native
-catalog has exact 259-ID parity. Catalog and implementation coverage do not imply Windows behavioral
-parity.
+The frozen oracle preserves all 259 stable command IDs from the historical implementation. The native catalog enforces exact 259-ID parity. Catalog and implementation coverage do not imply Windows behavioral parity.
 
-## Summary
+---
 
-| State | Count |
-|---|---:|
-| Total stable IDs | 259 |
-| Unique native catalog IDs | 259 |
-| Cataloged | 259 |
-| Contract verified or later | 259 |
-| Implemented or later | 259 |
-| Behavior verified | 0 |
-| Native implementation blockers | 0 |
-| Production behavior-verification blockers | 259 |
+## 📊 Summary Ledger
 
-All 259 commands are registered through the same catalog-driven command runtime and native executor.
-There is no generated handler directory. Read-only commands gather host evidence or durable WinCare
-state; mutating commands must pass explicit parameter validation during preview before approval can be
-granted. Unsupported dependencies and safety preconditions return blocked/failed outcomes and never
-fall back to success.
+| State | Count | Definition |
+|---|:---:|---|
+| **Total Stable Legacy IDs** | **259** | Complete command catalog preserved from frozen legacy oracle |
+| **Unique Native Catalog IDs** | **259** | Typed command definitions registered in `WinCare.CommandCatalog` |
+| **Cataloged** | **259** | Metadata, summaries, risks, and privilege boundaries defined |
+| **Contract Verified** | **259** | Typed request/result contracts and frozen parity fixtures reviewed |
+| **Implemented** | **259** | Native routes implemented in `WindowsCommandExecutor.cs` with fail-closed handling |
+| **Behavior Verified** | **0** | Live comparative execution on physical Windows test hosts |
+| **Native Implementation Blockers** | **0** | Zero blocking code or routing omissions |
+| **Production Verification Blockers** | **259** | Production promotion blocked until all 259 reach `BehaviorVerified` |
 
-### Important safety exception
+---
 
-The legacy temporary security-maintenance feature required authenticated snapshots plus automatic
-timed restoration after protection was reduced. The native application does not yet have a separately
-launchable recovery host that can provide that guarantee if the UI process exits. Therefore
-`security-control-reduce` and its restore path are deliberately fail-closed and perform no mutation.
-The former incorrect firewall substitution has been removed. This is an admitted safety boundary, not
-behavior-verification evidence.
+## 🔒 Execution & Safety Invariants
 
-## State definitions
+All 259 commands route through the same catalog-driven command runtime and native executor (`WindowsCommandExecutor.cs`):
+- **Read-Only Commands (155)**: Gather live Windows telemetry or durable WinCare state without modifying system settings.
+- **Mutating Commands (104)**: Require explicit parameter validation and preflight checks during preview before execution approval can be granted.
+- **Fail-Closed Guarantees**: Unsupported dependencies, elevation denials, and unmet safety preconditions return explicit blocked/failed outcomes and never fall back to fabricated success.
 
-| State | Required evidence |
-|---|---|
-| `Cataloged` | Stable ID, title, summary, area, section, risk, privilege, restart, and keywords |
-| `ContractVerified` | Typed request/result contract and frozen parity fixture reviewed |
-| `Implemented` | Native route exists, validates its admitted inputs, and fails closed outside its supported/safe scope |
-| `BehaviorVerified` | Native and historical behavior compared on supported Windows environments with matching safety and result semantics |
+---
 
-## Promotion rule
+## 🛑 Specific Safety Boundaries
 
-Production finalization requires exactly 259 `BehaviorVerified` records. An implemented route without
-Windows behavior evidence remains a production blocker.
+The legacy temporary security-maintenance feature required authenticated snapshots plus automatic timed restoration after protection was reduced. The native application does not yet have a separately launchable recovery host that can provide that guarantee if the UI process exits.
 
-## Oracle provenance
+Therefore, `security-control-reduce` and its restore path are deliberately fail-closed and perform no mutation. The former incorrect firewall substitution has been removed. This is an admitted safety boundary, not behavior-verification evidence.
 
-Frozen fixtures live under `migration/oracle/`:
+---
 
-- `legacy-command-ids.json`
-- `remediation-rules.json`
-- `presets.json`
-- `provenance.json`
+## 🏛️ Oracle Provenance & Fixtures
 
-The provenance file records the historical source commit and SHA-256 hash of authoritative inputs.
-The native source archive uses non-executable fixtures. Executable historical PowerShell source is
-kept only in the separate legacy-oracle archive and is not a native runtime dependency.
+Authoritative non-executable fixtures are stored under `migration/oracle/`:
+- `legacy-command-ids.json`: Master list of all 259 stable command IDs.
+- `remediation-rules.json`: Frozen remediation rules and issue mappings.
+- `presets.json`: Standard, aggressive, and custom diagnostic presets.
+- `provenance.json`: Source commit hash (`83567c4dbf3cf85e44217855d39604b0193623e3`) and SHA-256 digests of upstream artifacts.

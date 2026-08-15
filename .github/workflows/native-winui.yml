@@ -3,6 +3,7 @@ name: Native WinUI
 on:
   push:
     branches: [master, main]
+    tags: ['v*']
   pull_request:
   workflow_dispatch:
 
@@ -18,11 +19,16 @@ jobs:
         run: python tools/verify_native_foundation.py
       - name: Run structural tests
         run: python -m unittest discover -s tests/native -v
+      - name: Extract product version
+        shell: bash
+        run: |
+          VERSION=$(python -c "import xml.etree.ElementTree as ET; props = ET.parse('Directory.Build.props').getroot(); prefix = props.find('.//VersionPrefix').text; suffix = props.find('.//VersionSuffix').text if props.find('.//VersionSuffix') is not None else ''; print(f'{prefix}-{suffix}' if suffix else prefix)")
+          echo "PRODUCT_VERSION=$VERSION" >> $GITHUB_ENV
       - name: Finalize native release candidate source
         run: >-
           python tools/finalize_native_release.py
           --output artifacts/finalization
-          --version 2.4.0-rc1
+          --version "${{ env.PRODUCT_VERSION }}"
           --mode rc
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
@@ -42,56 +48,88 @@ jobs:
           toolchain: 1.97.1
           targets: ${{ matrix.target }}
           components: rustfmt, clippy
-      - name: Format
-        shell: bash
+      - name: Check Rust formatting
         run: cargo fmt --manifest-path native/Cargo.toml --all -- --check
-      - name: Clippy
-        shell: bash
+      - name: Run clippy
         run: cargo clippy --manifest-path native/Cargo.toml --target ${{ matrix.target }} --all-targets --all-features -- -D warnings
-      - name: Test
+      - name: Run Rust unit tests
         if: matrix.target == 'x86_64-pc-windows-msvc'
-        shell: bash
-        run: cargo test --manifest-path native/Cargo.toml --target ${{ matrix.target }}
-      - name: Build release library
-        shell: bash
+        run: cargo test --manifest-path native/Cargo.toml
+      - name: Build Rust core
         run: cargo build --manifest-path native/Cargo.toml --target ${{ matrix.target }} --release
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: native-${{ matrix.target }}
           path: native/target/${{ matrix.target }}/release/wincare_core.dll
+          if-no-files-found: error
+
+  setup-signing-identity:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Generate or Decode Release Signing Identity
+        shell: pwsh
+        env:
+          CERT_B64: ${{ secrets.WINCARE_SIGNING_CERT_BASE64 }}
+          CERT_PASS: ${{ secrets.WINCARE_SIGNING_CERT_PASSWORD }}
+        run: |
+          $signDir = "$PWD/artifacts/signing"
+          New-Item -ItemType Directory -Force -Path $signDir | Out-Null
+          $pfxPath = "$signDir/temp_signing_key.pfx"
+          $cerPath = "$signDir/WinCare.cer"
+          $password = "WinCareDev123!"
+          if ($env:CERT_B64) {
+            [IO.File]::WriteAllBytes($pfxPath, [Convert]::FromBase64String($env:CERT_B64))
+            if ($env:CERT_PASS) { $password = $env:CERT_PASS }
+            $cert = [System.Security.Cryptography.X509Certificates.X509Certificate2]::new($pfxPath, $password)
+            $cerBytes = $cert.Export([System.Security.Cryptography.X509Certificates.X509ContentType]::Cert)
+            [System.IO.File]::WriteAllBytes($cerPath, $cerBytes)
+          } else {
+            $cert = New-SelfSignedCertificate -Type Custom -Subject "CN=WinCare Development" -KeyUsage DigitalSignature -FriendlyName "WinCare Development Package" -CertStoreLocation "Cert:\CurrentUser\My" -TextExtension @("2.5.29.37={text}1.3.6.1.5.5.7.3.3")
+            $secPassword = ConvertTo-SecureString -String $password -Force -AsPlainText
+            Export-PfxCertificate -Cert $cert -FilePath $pfxPath -Password $secPassword -CryptoAlgorithmOption TripleDES_SHA1 | Out-Null
+            Export-Certificate -Cert $cert -FilePath $cerPath | Out-Null
+          }
+          Write-Output "Signing certificate prepared. Thumbprint: $($cert.Thumbprint)"
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: release-signing-identity
+          path: artifacts/signing/*
+          retention-days: 1
 
   managed-and-package:
+    needs: [verify-source, rust, setup-signing-identity]
     runs-on: windows-latest
     strategy:
-      fail-fast: false
       matrix:
         include:
           - platform: x64
             runtime: win-x64
-            rustTarget: x86_64-pc-windows-msvc
+            target: x86_64-pc-windows-msvc
           - platform: ARM64
             runtime: win-arm64
-            rustTarget: aarch64-pc-windows-msvc
+            target: aarch64-pc-windows-msvc
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: actions/setup-dotnet@c97148f4733f57845eed08c03153ce9975bd616a # v6.0.0
+      - uses: actions/setup-dotnet@c97148f4733f57845eed08c03153ce9975bd616a # v4.1.0
         with:
-          dotnet-version: 8.0.416
+          dotnet-version: "8.0.416"
+          global-json-file: global.json
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.13"
       - uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772 # master 2026-08-05
         with:
           toolchain: 1.97.1
-          targets: ${{ matrix.rustTarget }}
+          targets: ${{ matrix.target }}
       - name: Build Rust core
         shell: bash
-        run: cargo build --manifest-path native/Cargo.toml --target ${{ matrix.rustTarget }} --release
+        run: cargo build --manifest-path native/Cargo.toml --target ${{ matrix.target }} --release
       - name: Stage Rust core
         shell: bash
         run: |
           mkdir -p src/WinCare.App/Native/${{ matrix.platform }}
-          cp native/target/${{ matrix.rustTarget }}/release/wincare_core.dll src/WinCare.App/Native/${{ matrix.platform }}/wincare_core.dll
+          cp native/target/${{ matrix.target }}/release/wincare_core.dll src/WinCare.App/Native/${{ matrix.platform }}/wincare_core.dll
       - name: Restore
         shell: bash
         run: dotnet restore WinCare.Native.sln -p:Platform=${{ matrix.platform }}
@@ -99,42 +137,121 @@ jobs:
         if: matrix.platform == 'x64'
         shell: bash
         run: dotnet test WinCare.Native.sln -c Release -p:Platform=${{ matrix.platform }} --no-restore
-      - name: Build MSIX
-        shell: bash
-        run: dotnet build src/WinCare.App/WinCare.App.csproj -c Release -p:Platform=${{ matrix.platform }} -p:GenerateAppxPackageOnBuild=true --no-restore
-      - name: Publish single binary executable
-        shell: bash
-        run: dotnet publish src/WinCare.App/WinCare.App.csproj -c Release -p:Platform=${{ matrix.platform }} -r ${{ matrix.runtime }} -p:WindowsPackageType=None -p:WindowsAppSDKSelfContained=true -p:SelfContained=true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o artifacts/portable/${{ matrix.runtime }}
-      - name: Stage single binary executable
+      - uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
+        with:
+          name: release-signing-identity
+          path: artifacts/signing
+      - name: Build MSIX Package
         shell: bash
         run: |
+          dotnet build src/WinCare.App/WinCare.App.csproj -c Release -p:Platform=${{ matrix.platform }} \
+            -p:GenerateAppxPackageOnBuild=true \
+            -p:AppxPackageSigningEnabled=true \
+            -p:PackageCertificateKeyFile="$PWD/artifacts/signing/temp_signing_key.pfx" \
+            -p:PackageCertificatePassword=WinCareDev123! \
+            --no-restore
+      - name: Verify MSIX Signature
+        shell: pwsh
+        run: |
+          $msixFiles = Get-ChildItem -Recurse -Filter "*.msix" src/WinCare.App/AppPackages
+          if ($msixFiles.Count -eq 0) {
+            Write-Error "No MSIX packages found in src/WinCare.App/AppPackages."
+            exit 1
+          }
+          $expectedCer = [System.Security.Cryptography.X509Certificates.X509Certificate2]::new("$PWD/artifacts/signing/WinCare.cer")
+          foreach ($file in $msixFiles) {
+            Write-Output "Verifying MSIX signature for: $($file.FullName)"
+            $sig = Get-AuthenticodeSignature $file.FullName
+            Write-Output "Status: $($sig.Status)"
+            Write-Output "Signer: $($sig.SignerCertificate.Subject)"
+            Write-Output "Thumbprint: $($sig.SignerCertificate.Thumbprint)"
+            if ($sig.Status -ne 'Valid') {
+              Write-Error "MSIX package '$($file.Name)' signature status is '$($sig.Status)' ($($sig.StatusMessage)). Signature verification failed!"
+              exit 1
+            }
+            if ($sig.SignerCertificate.Subject -notmatch 'CN=WinCare Development') {
+              Write-Error "MSIX package '$($file.Name)' signer subject '$($sig.SignerCertificate.Subject)' does not match expected publisher 'CN=WinCare Development'!"
+              exit 1
+            }
+            if ($sig.SignerCertificate.Thumbprint -ne $expectedCer.Thumbprint) {
+              Write-Error "MSIX package '$($file.Name)' was signed by thumbprint $($sig.SignerCertificate.Thumbprint), expected $($expectedCer.Thumbprint)!"
+              exit 1
+            }
+          }
+          Write-Output "All MSIX packages passed strict signature and publisher verification."
+      - name: Clean Ephemeral Private Key
+        if: always()
+        shell: pwsh
+        run: |
+          if (Test-Path "$PWD/artifacts/signing/temp_signing_key.pfx") {
+            Remove-Item -Force "$PWD/artifacts/signing/temp_signing_key.pfx"
+          }
+      - name: Publish single binary executable
+        shell: bash
+        run: dotnet publish src/WinCare.App/WinCare.App.csproj -c Release -p:Platform=${{ matrix.platform }} -r ${{ matrix.runtime }} -p:WindowsPackageType=None -p:WindowsAppSDKSelfContained=true -p:SelfContained=true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:DebugType=none -p:DebugSymbols=false -o artifacts/portable/${{ matrix.runtime }}
+      - name: Stage single binary executable and portable archive
+        shell: bash
+        run: |
+          VERSION=$(python -c "import xml.etree.ElementTree as ET; props = ET.parse('Directory.Build.props').getroot(); prefix = props.find('.//VersionPrefix').text; suffix = props.find('.//VersionSuffix').text if props.find('.//VersionSuffix') is not None else ''; print(f'{prefix}-{suffix}' if suffix else prefix)")
           mkdir -p artifacts/release
-          cp artifacts/portable/${{ matrix.runtime }}/WinCare.App.exe artifacts/release/WinCare-v2.4.0-rc1-${{ matrix.platform }}.exe
+          cp artifacts/portable/${{ matrix.runtime }}/WinCare.App.exe artifacts/release/WinCare-v${VERSION}-${{ matrix.platform }}.exe
+          python tools/package_portable.py artifacts/portable/${{ matrix.runtime }} artifacts/release/WinCare-v${VERSION}-${{ matrix.platform }}-portable.zip
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: WinCare-${{ matrix.platform }}
           path: |
             src/WinCare.App/AppPackages/**/*.msix
-            artifacts/release/WinCare-v2.4.0-rc1-${{ matrix.platform }}.exe
+            artifacts/signing/WinCare.cer
+            tools/install_msix.py
+            artifacts/release/*.exe
+            artifacts/release/*.zip
 
   release-gate:
     needs: [verify-source, rust, managed-and-package]
-    if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
+    if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
       - uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
         with:
           path: artifacts/downloads
-      - name: Publish GitHub Release
+      - name: Validate tag matches product version
+        shell: bash
+        run: |
+          RELEASE_TAG="${GITHUB_REF#refs/tags/}"
+          echo "Validating tag: $RELEASE_TAG against checked-in metadata..."
+          python -c "
+          import xml.etree.ElementTree as ET
+          props = ET.parse('Directory.Build.props').getroot()
+          prefix = props.find('.//VersionPrefix').text
+          suffix = props.find('.//VersionSuffix').text if props.find('.//VersionSuffix') is not None else ''
+          expected = f'v{prefix}-{suffix}' if suffix else f'v{prefix}'
+          actual = '${RELEASE_TAG}'
+          assert actual == expected, f'Release tag {actual} does not match product version {expected}'
+          "
+          echo "RELEASE_TAG=$RELEASE_TAG" >> $GITHUB_ENV
+          if [[ "$RELEASE_TAG" == *"-rc"* || "$RELEASE_TAG" == *"-beta"* || "$RELEASE_TAG" == *"-alpha"* ]]; then
+            echo "RELEASE_FLAGS=--prerelease" >> $GITHUB_ENV
+          else
+            echo "RELEASE_FLAGS=--latest" >> $GITHUB_ENV
+          fi
+      - name: Publish Immutable GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          python tools/stage_release_assets.py
-          gh release upload v2.4.0-rc1 release_assets/* --clobber || \
-          gh release create v2.4.0-rc1 release_assets/* \
-            --title "WinCare v2.4.0-rc1 (Native WinUI & Core Release)" \
-            --prerelease \
-            --notes "Automated release candidate build generated from master commit \`${{ github.sha }}\`. Contains native MSIX packages (x64/ARM64), single binary executables (WinCare-v2.4.0-rc1-x64.exe / WinCare-v2.4.0-rc1-ARM64.exe), and verified source finalization archives."
+          python tools/stage_release_assets.py --version "$RELEASE_TAG"
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            echo "Error: Release '$RELEASE_TAG' already exists. SemVer tagged releases are immutable."
+            exit 1
+          fi
+          gh release create "$RELEASE_TAG" \
+            --title "WinCare $RELEASE_TAG (Native WinUI & Core Release)" \
+            $RELEASE_FLAGS \
+            --target "${{ github.sha }}" \
+            --notes "Automated immutable release build generated from commit \`${{ github.sha }}\`. Contains verified native MSIX packages (x64/ARM64), single binary standalone executables, portable ZIP distributions, and verified source finalization archives."
+          gh release upload "$RELEASE_TAG" release_assets/*

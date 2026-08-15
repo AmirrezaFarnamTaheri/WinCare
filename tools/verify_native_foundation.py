@@ -387,6 +387,13 @@ def verify() -> list[Finding]:
         if "CopyToPublishDirectory" not in project_text:
             findings.append(Finding("native-publish", "WinCare.App does not copy the Rust DLL to portable output"))
 
+    secret_suffixes = {".pfx", ".p12", ".key", ".pem", ".snk", ".secret", ".token"}
+    for root_dir in NATIVE_ROOTS:
+        if root_dir.is_dir():
+            for path in root_dir.rglob("*"):
+                if path.is_file() and path.suffix.lower() in secret_suffixes:
+                    findings.append(Finding("secret-key-present", f"Secret signing key file committed to native root: {_relative(path)}"))
+
     return findings
 
 

@@ -14,6 +14,9 @@ public sealed class ToolCatalogService
     private readonly IPluginRegistry? _pluginRegistry;
     private readonly IReadOnlyList<CommandDefinition> _baseCommands;
 
+    private readonly object _syncLock = new();
+    private IReadOnlyList<CommandDefinition>? _cachedMergedCommands;
+
     /// <summary>
     /// Event raised when the merged catalog changes (e.g. plugins enabled or disabled).
     /// </summary>
@@ -27,7 +30,14 @@ public sealed class ToolCatalogService
         _pluginRegistry = pluginRegistry;
         if (_pluginRegistry != null)
         {
-            _pluginRegistry.RegistryChanged += (s, e) => CatalogChanged?.Invoke(this, EventArgs.Empty);
+            _pluginRegistry.RegistryChanged += (s, e) =>
+            {
+                lock (_syncLock)
+                {
+                    _cachedMergedCommands = null;
+                }
+                CatalogChanged?.Invoke(this, EventArgs.Empty);
+            };
         }
         _baseCommands = CommandCatalog.CommandCatalog.Load();
     }
@@ -90,25 +100,34 @@ public sealed class ToolCatalogService
             return _baseCommands;
         }
 
-        IReadOnlyList<CommandDefinition> activePluginCommands = _pluginRegistry.GetActivePluginCommands();
-        Dictionary<string, CommandDefinition> merged = new(StringComparer.OrdinalIgnoreCase);
-
-        // Built-in core commands take absolute precedence
-        foreach (CommandDefinition cmd in _baseCommands)
+        lock (_syncLock)
         {
-            merged[cmd.Id] = cmd;
-        }
+            if (_cachedMergedCommands != null)
+            {
+                return _cachedMergedCommands;
+            }
 
-        // Finding 5: Reserve core namespaces; do not overwrite core command definitions with plugin commands
-        foreach (CommandDefinition cmd in activePluginCommands)
-        {
-            if (!merged.ContainsKey(cmd.Id))
+            IReadOnlyList<CommandDefinition> activePluginCommands = _pluginRegistry.GetActivePluginCommands();
+            Dictionary<string, CommandDefinition> merged = new(StringComparer.OrdinalIgnoreCase);
+
+            // Built-in core commands take absolute precedence
+            foreach (CommandDefinition cmd in _baseCommands)
             {
                 merged[cmd.Id] = cmd;
             }
-        }
 
-        return merged.Values.ToList();
+            // Finding 5: Reserve core namespaces; do not overwrite core command definitions with plugin commands
+            foreach (CommandDefinition cmd in activePluginCommands)
+            {
+                if (!merged.ContainsKey(cmd.Id))
+                {
+                    merged[cmd.Id] = cmd;
+                }
+            }
+
+            _cachedMergedCommands = merged.Values.ToList();
+            return _cachedMergedCommands;
+        }
     }
 
     private static bool Matches(CommandDefinition command, string query)

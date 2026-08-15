@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: Release version label
+        description: Release version label (must match checked-in product version)
         required: true
-        default: 2.4.0-rc1
+        default: 2.5.0-rc1
         type: string
       mode:
         description: Finalization gate
@@ -18,7 +18,7 @@ on:
           - production
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   finalize:
@@ -32,6 +32,18 @@ jobs:
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.13"
+      - name: Validate version matches product metadata
+        shell: bash
+        run: |
+          python -c "
+          import xml.etree.ElementTree as ET
+          props = ET.parse('Directory.Build.props').getroot()
+          prefix = props.find('.//VersionPrefix').text
+          suffix = props.find('.//VersionSuffix').text if props.find('.//VersionSuffix') is not None else ''
+          expected = f'{prefix}-{suffix}' if suffix else prefix
+          actual = '${WINCARE_VERSION#v}'
+          assert actual == expected, f'Input version {actual} does not match product version {expected}'
+          "
       - name: Verify native source contract
         run: python tools/verify_native_foundation.py
       - name: Run native structural tests
@@ -57,3 +69,26 @@ jobs:
           name: WinCare-${{ inputs.version }}-${{ inputs.mode }}-finalization
           path: artifacts/finalization/*
           if-no-files-found: error
+      - name: Publish Immutable GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG_NAME="v${WINCARE_VERSION#v}"
+          if [[ "${{ inputs.mode }}" == "rc" ]]; then
+            RELEASE_FLAGS="--prerelease"
+            TITLE="WinCare $TAG_NAME (Native Source Release Candidate)"
+          else
+            RELEASE_FLAGS="--latest"
+            TITLE="WinCare $TAG_NAME (Production Release)"
+          fi
+          if gh release view "$TAG_NAME" >/dev/null 2>&1; then
+            echo "Error: Release '$TAG_NAME' already exists. SemVer tagged releases are immutable."
+            exit 1
+          fi
+          gh release create "$TAG_NAME" \
+            --title "$TITLE" \
+            $RELEASE_FLAGS \
+            --target "${{ github.sha }}" \
+            --notes "WinCare $TAG_NAME immutable finalization artifacts generated in \`${{ inputs.mode }}\` mode from commit \`${{ github.sha }}\`."
+          gh release upload "$TAG_NAME" artifacts/finalization/*
+

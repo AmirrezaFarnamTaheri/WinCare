@@ -67,7 +67,7 @@ class FinalizationTests(unittest.TestCase):
     def test_rc_finalization_separates_native_source_and_legacy_oracle(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             output = Path(directory)
-            result = finalize_release(ROOT, output, version="2.4.0-rc1", mode="rc")
+            result = finalize_release(ROOT, output, version="2.5.0-rc1", mode="rc")
 
             self.assertTrue(result.native_archive.is_file())
             self.assertTrue(result.oracle_archive.is_file())
@@ -83,6 +83,7 @@ class FinalizationTests(unittest.TestCase):
                 names = archive.namelist()
                 self.assertTrue(names)
                 self.assertFalse(any(name.lower().endswith((".ps1", ".psm1", ".psd1")) for name in names))
+                self.assertFalse(any(name.lower().endswith((".pfx", ".p12", ".key", ".pem", ".snk", ".secret", ".token")) for name in names))
                 self.assertFalse(any("__pycache__" in name or name.lower().endswith((".pyc", ".pyo")) for name in names))
                 self.assertIn("migration/oracle/legacy-command-ids.json", names)
                 self.assertIn("docs/migration/finalization-status.md", names)
@@ -101,7 +102,7 @@ class FinalizationTests(unittest.TestCase):
                     self.assertEqual((1980, 1, 1, 0, 0, 0), entry.date_time)
 
             manifest = json.loads(result.manifest_path.read_text(encoding="utf-8"))
-            self.assertEqual("2.4.0-rc1", manifest["version"])
+            self.assertEqual("2.5.0-rc1", manifest["version"])
             self.assertEqual("rc", manifest["mode"])
             self.assertEqual(259, manifest["readiness"]["cataloged"])
             self.assertEqual("AmirrezaFarnamTaheri/WinCare", manifest["oracleProvenance"]["repository"])
@@ -111,6 +112,30 @@ class FinalizationTests(unittest.TestCase):
             )
             self.assertRegex(manifest["artifacts"]["nativeSource"]["sha256"], r"^[0-9a-f]{64}$")
             self.assertRegex(manifest["artifacts"]["legacyOracle"]["sha256"], r"^[0-9a-f]{64}$")
+
+    def test_stage_native_source_strictly_rejects_secret_signing_keys(self) -> None:
+        from tools.finalize_native_release import stage_native_source
+        with tempfile.TemporaryDirectory() as src_dir, tempfile.TemporaryDirectory() as dst_dir:
+            src = Path(src_dir)
+            dst = Path(dst_dir)
+            (src / "src/WinCare.App").mkdir(parents=True)
+            (src / "src/WinCare.App/compromised_key.pfx").write_text("SECRET", encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "secret/signing key"):
+                stage_native_source(src, dst / "staged")
+
+    def test_stage_release_assets_rejects_conflicting_certificates(self) -> None:
+        from tools.stage_release_assets import stage_assets
+        with tempfile.TemporaryDirectory() as src_dir, tempfile.TemporaryDirectory() as dst_dir:
+            src = Path(src_dir)
+            dst = Path(dst_dir)
+            job_a = src / "job_a"
+            job_b = src / "job_b"
+            job_a.mkdir()
+            job_b.mkdir()
+            (job_a / "WinCare.cer").write_text("CERT_A_CONTENT", encoding="utf-8")
+            (job_b / "WinCare.cer").write_text("CERT_B_CONTENT", encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "Conflicting release assets"):
+                stage_assets(src, dst, version="2.5.0-rc1")
 
     def test_finalizer_rejects_unsafe_version_labels(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -126,7 +151,7 @@ class FinalizationTests(unittest.TestCase):
                     "--output",
                     directory,
                     "--version",
-                    "2.4.0-rc1",
+                    "2.5.0-rc1",
                     "--mode",
                     "rc",
                 ],
@@ -136,19 +161,19 @@ class FinalizationTests(unittest.TestCase):
                 check=False,
             )
             self.assertEqual(0, result.returncode, result.stdout + result.stderr)
-            self.assertTrue((Path(directory) / "WinCare-2.4.0-rc1-native-source.zip").is_file())
+            self.assertTrue((Path(directory) / "WinCare-2.5.0-rc1-native-source.zip").is_file())
 
     def test_release_metadata_is_pinned_to_native_release_candidate(self) -> None:
         props = (ROOT / "Directory.Build.props").read_text(encoding="utf-8")
         manifest = (ROOT / "src/WinCare.App/Package.appxmanifest").read_text(encoding="utf-8")
         cargo = (ROOT / "native/wincare-core/Cargo.toml").read_text(encoding="utf-8")
         rust_source = (ROOT / "native/wincare-core/src/lib.rs").read_text(encoding="utf-8")
-        self.assertIn("<VersionPrefix>2.4.0</VersionPrefix>", props)
+        self.assertIn("<VersionPrefix>2.5.0</VersionPrefix>", props)
         self.assertIn("<VersionSuffix>rc1</VersionSuffix>", props)
-        self.assertIn("<InformationalVersion>2.4.0-rc1</InformationalVersion>", props)
-        self.assertIn('Version="2.4.0.0"', manifest)
-        self.assertIn('version = "2.4.0"', cargo)
-        self.assertIn('const VERSION: &[u8] = b"2.4.0";', rust_source)
+        self.assertIn("<InformationalVersion>2.5.0-rc1</InformationalVersion>", props)
+        self.assertIn('Version="2.5.0.0"', manifest)
+        self.assertIn('version = "2.5.0"', cargo)
+        self.assertIn('const VERSION: &[u8] = b"2.5.0";', rust_source)
 
     def test_native_workflows_pin_actions_and_rust_toolchain(self) -> None:
         for relative in (
@@ -165,6 +190,16 @@ class FinalizationTests(unittest.TestCase):
         toolchain = (ROOT / "rust-toolchain.toml").read_text(encoding="utf-8")
         self.assertIn('channel = "1.97.1"', toolchain)
         self.assertIn('components = ["rustfmt", "clippy"]', toolchain)
+
+    def test_release_workflows_enforce_immutability_and_version_checks(self) -> None:
+        for relative in (
+            ".github/workflows/native-winui.yml",
+            ".github/workflows/native-release-candidate.yml",
+        ):
+            workflow = (ROOT / relative).read_text(encoding="utf-8")
+            self.assertIn("SemVer tagged releases are immutable", workflow)
+            self.assertIn("Validate", workflow)
+            self.assertNotIn("--clobber", workflow)
 
     def test_ci_runs_finalization_gates_on_master_and_main(self) -> None:
         native_workflow = (ROOT / ".github/workflows/native-winui.yml").read_text(encoding="utf-8")

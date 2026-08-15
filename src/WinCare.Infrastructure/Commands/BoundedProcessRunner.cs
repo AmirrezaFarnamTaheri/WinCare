@@ -102,6 +102,10 @@ public sealed class BoundedProcessRunner
         }
     }
 
+    private static readonly string? CachedSystemDirectory = OperatingSystem.IsWindows()
+        ? Environment.GetFolderPath(Environment.SpecialFolder.System)
+        : null;
+
     private static string ResolveExecutable(string fileName)
     {
         if (Path.IsPathRooted(fileName))
@@ -112,10 +116,9 @@ public sealed class BoundedProcessRunner
         {
             return Path.GetFullPath(fileName);
         }
-        if (OperatingSystem.IsWindows())
+        if (CachedSystemDirectory != null)
         {
-            string systemDirectory = Environment.GetFolderPath(Environment.SpecialFolder.System);
-            string systemCandidate = Path.Combine(systemDirectory, fileName);
+            string systemCandidate = Path.Combine(CachedSystemDirectory, fileName);
             if (File.Exists(systemCandidate))
             {
                 return systemCandidate;
@@ -141,29 +144,36 @@ public sealed class BoundedProcessRunner
         int maxCharacters,
         CancellationToken cancellationToken)
     {
-        char[] buffer = new char[4096];
-        var text = new StringBuilder(Math.Min(maxCharacters, 64 * 1024));
-        bool truncated = false;
-        while (true)
+        char[] rented = System.Buffers.ArrayPool<char>.Shared.Rent(4096);
+        try
         {
-            int read = await reader.ReadAsync(buffer.AsMemory(0, buffer.Length), cancellationToken).ConfigureAwait(false);
-            if (read == 0)
+            var text = new StringBuilder(Math.Min(maxCharacters, 64 * 1024));
+            bool truncated = false;
+            while (true)
             {
-                break;
+                int read = await reader.ReadAsync(rented.AsMemory(0, rented.Length), cancellationToken).ConfigureAwait(false);
+                if (read == 0)
+                {
+                    break;
+                }
+                int remaining = maxCharacters - text.Length;
+                if (remaining > 0)
+                {
+                    int copy = Math.Min(remaining, read);
+                    text.Append(rented, 0, copy);
+                    truncated |= copy < read;
+                }
+                else
+                {
+                    truncated = true;
+                }
             }
-            int remaining = maxCharacters - text.Length;
-            if (remaining > 0)
-            {
-                int copy = Math.Min(remaining, read);
-                text.Append(buffer, 0, copy);
-                truncated |= copy < read;
-            }
-            else
-            {
-                truncated = true;
-            }
+            return (text.ToString(), truncated);
         }
-        return (text.ToString(), truncated);
+        finally
+        {
+            System.Buffers.ArrayPool<char>.Shared.Return(rented);
+        }
     }
 
     private static void TryKill(Process process)

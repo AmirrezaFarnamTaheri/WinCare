@@ -79,7 +79,7 @@ mod win32 {
 }
 
 const ABI_VERSION: u32 = 1;
-const VERSION: &[u8] = b"2.4.0";
+const VERSION: &[u8] = b"2.5.0";
 const SHA256_LENGTH: usize = 32;
 const READ_BUFFER_LENGTH: usize = 64 * 1024;
 
@@ -375,6 +375,8 @@ fn compose_sys_info_json(buf: &mut [u8; 512]) -> Option<&[u8]> {
     #[cfg(target_os = "windows")]
     {
         use self::win32::*;
+        use std::io::Write;
+
         // SAFETY: SYSTEM_INFO is a POD type with no validity invariants; zeroed init is sound. GetSystemInfo writes the struct per Win32 contract.
         let mut si = unsafe { std::mem::zeroed::<SYSTEM_INFO>() };
         unsafe { GetSystemInfo(&mut si) };
@@ -387,18 +389,25 @@ fn compose_sys_info_json(buf: &mut [u8; 512]) -> Option<&[u8]> {
             return None;
         }
 
-        let os_build = read_registry_os_build().unwrap_or_else(|| "unknown".to_owned());
+        let mut os_build_buf = [0u8; 32];
+        let os_build = read_registry_os_build_bytes(&mut os_build_buf).unwrap_or("unknown");
 
-        let json = format!(
+        let mut cursor = std::io::Cursor::new(&mut buf[..]);
+        if write!(
+            cursor,
             r#"{{"logical_cpus":{logical_cpus},"total_physical_memory_bytes":{total},"available_physical_memory_bytes":{avail},"os_build":"{os_build}"}}"#,
             logical_cpus = logical_cpus,
             total = ms.ullTotalPhys,
             avail = ms.ullAvailPhys,
             os_build = os_build,
-        );
-        let len = json.len().min(buf.len());
-        buf[..len].copy_from_slice(&json.as_bytes()[..len]);
-        Some(&buf[..len])
+        )
+        .is_ok()
+        {
+            let len = cursor.position() as usize;
+            Some(&buf[..len])
+        } else {
+            None
+        }
     }
     #[cfg(not(target_os = "windows"))]
     {
@@ -410,28 +419,93 @@ fn compose_sys_info_json(buf: &mut [u8; 512]) -> Option<&[u8]> {
 }
 
 #[cfg(target_os = "windows")]
-fn read_registry_os_build() -> Option<String> {
+fn read_registry_os_build_bytes(out_buf: &mut [u8; 32]) -> Option<&str> {
     use self::win32::*;
+
+    // Wide string null-terminated constants to avoid dynamic heap Vec allocations.
+    const SUBKEY: &[u16] = &[
+        b'S' as u16,
+        b'O' as u16,
+        b'F' as u16,
+        b'T' as u16,
+        b'W' as u16,
+        b'A' as u16,
+        b'R' as u16,
+        b'E' as u16,
+        b'\\' as u16,
+        b'M' as u16,
+        b'i' as u16,
+        b'c' as u16,
+        b'r' as u16,
+        b'o' as u16,
+        b's' as u16,
+        b'o' as u16,
+        b'f' as u16,
+        b't' as u16,
+        b'\\' as u16,
+        b'W' as u16,
+        b'i' as u16,
+        b'n' as u16,
+        b'd' as u16,
+        b'o' as u16,
+        b'w' as u16,
+        b's' as u16,
+        b' ' as u16,
+        b'N' as u16,
+        b'T' as u16,
+        b'\\' as u16,
+        b'C' as u16,
+        b'u' as u16,
+        b'r' as u16,
+        b'r' as u16,
+        b'e' as u16,
+        b'n' as u16,
+        b't' as u16,
+        b'V' as u16,
+        b'e' as u16,
+        b'r' as u16,
+        b's' as u16,
+        b'i' as u16,
+        b'o' as u16,
+        b'n' as u16,
+        0,
+    ];
+    const VALUE_NAME: &[u16] = &[
+        b'C' as u16,
+        b'u' as u16,
+        b'r' as u16,
+        b'r' as u16,
+        b'e' as u16,
+        b'n' as u16,
+        b't' as u16,
+        b'B' as u16,
+        b'u' as u16,
+        b'i' as u16,
+        b'l' as u16,
+        b'd' as u16,
+        b'N' as u16,
+        b'u' as u16,
+        b'm' as u16,
+        b'b' as u16,
+        b'e' as u16,
+        b'r' as u16,
+        0,
+    ];
 
     // SAFETY: Win32 registry APIs are called with valid null-terminated UTF-16 string pointers and proper buffer lengths. HKEYs are managed correctly.
     unsafe {
         let mut hkey: HKEY = std::ptr::null_mut();
-        let subkey: Vec<u16> = "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\0"
-            .encode_utf16()
-            .collect();
-        if RegOpenKeyExW(HKEY_LOCAL_MACHINE, subkey.as_ptr(), 0, KEY_READ, &mut hkey) != 0 {
+        if RegOpenKeyExW(HKEY_LOCAL_MACHINE, SUBKEY.as_ptr(), 0, KEY_READ, &mut hkey) != 0 {
             return None;
         }
 
-        let value_name: Vec<u16> = "CurrentBuildNumber\0".encode_utf16().collect();
-        // Use an aligned [u16] buffer to avoid undefined behaviour from u8-to-u16 pointer casting.
         let mut buf = [0u16; 64];
         let mut buf_len = (buf.len() * std::mem::size_of::<u16>()) as u32;
         let mut value_type = REG_SZ;
 
         let status = RegQueryValueExW(
             hkey,
-            value_name.as_ptr(),
+            VALUE_NAME.as_ptr(),
             std::ptr::null_mut(),
             &mut value_type,
             buf.as_mut_ptr() as *mut u8,
@@ -440,11 +514,18 @@ fn read_registry_os_build() -> Option<String> {
 
         let _ = RegCloseKey(hkey);
 
-        // Require success, REG_SZ type, at least one u16 code unit, and even length.
         if status == 0 && value_type == REG_SZ && buf_len >= 2 && buf_len % 2 == 0 {
-            // Exclude the null-terminator code unit.
             let u16_count = (buf_len as usize / 2).saturating_sub(1);
-            return String::from_utf16(&buf[..u16_count]).ok();
+            let mut out_len = 0;
+            for &unit in &buf[..u16_count] {
+                if unit < 128 && out_len < out_buf.len() {
+                    out_buf[out_len] = unit as u8;
+                    out_len += 1;
+                } else {
+                    return None;
+                }
+            }
+            return std::str::from_utf8(&out_buf[..out_len]).ok();
         }
         None
     }

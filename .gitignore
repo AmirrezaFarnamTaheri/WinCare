@@ -17,3 +17,9 @@ scratch/
 /.agents
 build_out.txt
 .review-fix/
+*.pfx
+*.p12
+*.key
+*.snk
+*.pem
+*.secret

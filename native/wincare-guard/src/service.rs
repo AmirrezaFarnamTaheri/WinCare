@@ -19,11 +19,11 @@ impl GuardDaemon {
     }
 
     pub fn stop(&self) {
-        self.running.store(false, Ordering::SeqCst);
+        self.running.store(false, Ordering::Release);
     }
 
     pub fn is_running(&self) -> bool {
-        self.running.load(Ordering::SeqCst)
+        self.running.load(Ordering::Acquire)
     }
 
     pub fn run_single_tick(&self) -> monitors::SystemHealthSnapshot {

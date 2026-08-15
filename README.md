@@ -1,141 +1,223 @@
 <p align="center">
-  <img src="design/WinCare-Wordmark.svg" width="520" alt="WinCare" />
+  <img src="design/WinCare-Wordmark.svg" width="540" alt="WinCare" />
 </p>
 
-# WinCare
+<p align="center">
+  <strong>Native Windows Care, Diagnostics, Security, Repair, and Recovery Engine</strong><br />
+  Built with WinUI 3, .NET 8, and Rust 2024.
+</p>
 
-WinCare is a native Windows care, diagnostics, security, repair, and recovery application built
-with WinUI 3, C#, and Rust.
+<p align="center">
+  <a href="https://github.com/AmirrezaFarnamTaheri/WinCare/actions/workflows/native-winui.yml"><img src="https://img.shields.io/github/actions/workflow/status/AmirrezaFarnamTaheri/WinCare/native-winui.yml?branch=master&label=Native%20WinUI%20CI&logo=github" alt="CI Status" /></a>
+  <img src="https://img.shields.io/badge/Platform-Windows%2010%20%7C%20Windows%2011-0078D4?logo=windows" alt="Platform: Windows" />
+  <img src="https://img.shields.io/badge/.NET-8.0-512BD4?logo=dotnet" alt=".NET 8" />
+  <img src="https://img.shields.io/badge/Rust-2024%20(1.97.1)-DEA584?logo=rust" alt="Rust 2024" />
+  <img src="https://img.shields.io/badge/UI-WinUI%203%20%7C%20Windows%20App%20SDK-007A99" alt="WinUI 3" />
+  <img src="https://img.shields.io/badge/Accessibility-WCAG%202.1%20AA%20(14.68%3A1)-047857" alt="WCAG AA" />
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache%202.0-blue.svg" alt="License: Apache 2.0" /></a>
+</p>
 
-This repository snapshot is a **native source release candidate**, not a production-ready
-replacement for version 2.2.0. It finalizes the native architecture, modular plugin platform,
-AI System Doctor, user interface, command catalog, source packaging, and promotion controls while
-refusing to hide incomplete command migration.
+---
 
-## Exact readiness
+## 📖 Overview
 
-| Measure | Count |
-|---|---:|
-| Stable command IDs preserved | 259 of 259 |
-| Typed command contracts routed | 259 of 259 |
-| Native command routes implemented | 259 of 259 |
-| Behavior verified on Windows | 0 of 259 |
-| Native implementation blockers | 0 |
-| Production behavior-verification blockers | 259 |
+**WinCare** is a native, modern Windows diagnostic, optimization, security, and recovery system engineered from the ground up to replace legacy scripting wrappers with a memory-safe, fail-closed desktop application.
 
-All 259 stable command IDs route through one fail-closed native executor. The executor validates
-mutating parameters before approval, distinguishes preview from apply, uses bounded native
-process/file operations, and returns blocked/failed results instead of fabricated success when a
-dependency, platform capability, or safety precondition is unavailable.
+Combining a **WinUI 3 Fluent Mica** interface, a **.NET 8** domain engine, and high-performance **Rust 2024** native extensions, WinCare delivers deep system insights, an AI-assisted diagnostic copilot, and a modular community plugin platform—all without sacrificing security, determinism, or system stability.
 
-## Native architecture
+> [!IMPORTANT]
+> **Release Candidate Status**: This repository represents the **native release candidate** line. All 259 legacy command contracts have been mapped to native, fail-closed executor routes. Production promotion is strictly gated until all 259 commands pass live Windows behavioral validation.
 
-```text
-WinCare.App                 WinUI 3 shell, pages, accessibility, lifecycle, AI Doctor UI
-WinCare.Application         search, navigation, dynamic command dispatch, plugins, AI diagnostics
-WinCare.Domain              typed requests, results, activity, sync models, recovery contracts
-WinCare.Infrastructure      Windows integration, telemetry, process runner, Rust interop, cloud sync
-WinCare.CommandCatalog      all 259 stable command definitions + built-in plugin manifests
-native/wincare-core         bounded native primitives through a versioned C ABI
-native/wincare-guard        Rust 2024 background health daemon (RAM/disk/thermal + Toast notifications)
-tools/wincare-plugin-cli    Node.js developer CLI for creating, validating, and packaging plugins
+---
+
+## ✨ Core Pillars & Capabilities
+
+```
++----------------------------------------------------------------------------------------------------+
+|                                      WinCare Architecture                                         |
++------------------------------------+----------------------------------+----------------------------+
+|        WinUI 3 Desktop Shell       |      .NET 8 Application Core     |    Rust Native Engine      |
+|  - Mica / Acrylic backdrop         |  - Fail-Closed Dispatcher        |  - Bounded C-ABI primitives|
+|  - Cascadia Code telemetry pills   |  - AI Doctor Intent Translator   |  - Memory-safe FFI wrapper |
+|  - High-contrast Cyber-Teal theme  |  - Dynamic Plugin Host           |  - Background Guard Monitor|
+|  - Compact responsive layout (<920)|  - Encrypted Cloud Sync (AES-GCM)|  - Toast XML Notification  |
++------------------------------------+----------------------------------+----------------------------+
 ```
 
-C# owns product policy, workflows, approvals, evidence, journaling, recovery, and packaging.
-Rust owns bounded native primitives and background health monitoring that provide measured
-performance or safety benefits.
+### 1. 🖥️ Native WinUI 3 Desktop Experience
+- **Fluent Mica Surfaces**: Crisp Obsidian Slate (`#202020` Dark) and Mica Light (`#F3F3F3` Light) depth layers with zero artificial blur or decorative clutter.
+- **Tactile Telemetry Badges**: High-contrast, monospaced status pills (`[ READ-ONLY ]`, `[ MUTATING ]`, `[ ELEVATED ]`, `[ NOT READY ]`) verified up to 14.68:1 contrast against WCAG 2.1 AA standards.
+- **Ergonomic Keyboard & Responsive Layout**: Full `Ctrl+K` and `Ctrl+F` search palettes, visible focus rings, and an adaptive 920 DIP breakpoint for ultrabook displays.
 
-## Modular Plugin Store & Architecture
+### 2. 🦀 Rust 2024 Native Foundation & Background Guard
+- **Memory-Safe FFI Core (`wincare-core`)**: Bounded native file enumeration (`dir_size`), system topology (`sys_info`), and hashing (`sha256`) exported via a versioned C ABI. Every export wraps internal logic in `std::panic::catch_unwind` to prevent unwinding across FFI boundaries.
+- **Background Health Daemon (`wincare-guard`)**: Standalone background service performing sub-millisecond RAM pressure, disk quota, and thermal checks, triggering native Windows Toast XML notifications upon critical resource thresholds (with structured Named Pipe IPC client scaffolding in development).
 
-WinCare provides a high-security modular plugin platform:
-- **Dynamic Command Dispatcher**: Plugins register tools directly into All Tools dynamically with zero UI freezing.
-- **Native Script Execution**: Safe execution of script-based extensions (`.cmd`, `.bat`, native binaries) via `BoundedProcessRunner` with process limits and strict path traversal isolation.
-- **Package Integrity & Admission**: Enforces strict package ID matching and full-stream SHA-256 digest validation on all remote and local packages.
-- **Declared Capabilities & Security Disclosure**: Full-trust in-process execution warning modals and capability consent reviews before any installation.
-- **Developer CLI SDK**: Complete developer toolkit (`tools/wincare-plugin-cli`) for linting, validating, and bundling plugins.
+### 3. 🧩 Modular Plugin Store & Community SDK
+- **Dynamic Command Dispatcher**: Thread-safe dynamic extension plane registering tools directly into *All Tools* without application restarts.
+- **Cryptographic Package Admission**: Enforces package ID equality, full-stream SHA-256 validation, and RSA/ECDSA digital signature verification (`publisher.pem` / `wincare-plugin.sig`).
+- **Capability Disclosure**: Strict full-trust in-process execution warning modals and capability consent reviews before installation.
+- **Developer CLI SDK (`tools/wincare-plugin-cli`)**: Node.js developer CLI with `create`, `validate`, `lint`, and `pack` commands for JSON packs and C# binary plugins.
 
-## AI System Doctor
+### 4. 🧠 AI System Doctor (Local ONNX & DirectML)
+- **Zero-Cloud Privacy**: Offline diagnostic inference powered by DirectML GPU acceleration with sub-1.5s cold-start latency.
+- **Intent Translation**: Natural-language symptom parsing into validated, two-phase `DoctorActionPlan` sequences.
+- **Two-Phase Confirmation**: Read-only evidence collection is performed first; mutative repairs require explicit step-by-step user approval.
 
-- Local ONNX DirectML inference runtime with sub-1.5s cold-start latency.
-- Natural-language `IntentTranslator` mapping user diagnostic queries into verified two-phase `DoctorActionPlan` sequences.
-- Cyber-Teal diagnostic interface with real-time status chat bubbles and 1-click execution cards.
+### 5. 🛡️ Fail-Closed Security & Governance
+- **Zero Fabricated State**: Commands report unavailable, blocked, or failed when dependencies or preconditions fail—never pretending success.
+- **Reparse-Point & Path Traversal Immunity**: Traversal canonicalizes roots, rejects reparse-point roots, and skips symlink descendants.
+- **PII-Clean Activity Journal**: Exception logs record exception type names only, preventing path or credential leakage.
 
-## Visual design system
+---
 
-The Cyber-Teal UI implements a unified visual identity across WinUI 3 Light, Dark, and High
-Contrast themes:
+## 📊 Parity & Migration Readiness
 
-| Token | Light | Dark |
-|---|---|---|
-| `AccentTealBrush` | `#007A99` (5.1:1 contrast) | `#00D2B4` |
-| `PillReadOnlyBgBrush` | `#047857` + white text (5.48:1) | `#047857` + white text |
-| `PillMutatingBgBrush` | `#DC2626` + white text (4.83:1) | `#C41A1A` + white text (5.98:1) |
-| `PillElevatedBgBrush` | `#D97706` + `#1A1A1A` (5.46:1) | `#F59E0B` + `#1A1A1A` (**8.10:1**) |
-| `PillNotReadyBgBrush` | `#E2E8F0` + `#1A1A1A` (**14.12:1**) | `#1F2937` + `#94A3B8` |
+WinCare enforces an auditable migration accounting ledger:
 
-All pairs verified by `tools/verify_pill_contrast.py` against WCAG 2.1 AA (≥ 4.5:1).
+| Metric | Status | Details |
+|---|:---:|---|
+| **Preserved Legacy Command IDs** | **259 / 259** | 100% frozen oracle parity (`migration/oracle/legacy-command-ids.json`) |
+| **Typed Command Contracts** | **259 / 259** | Fully typed request/result contracts in `WinCare.Domain` |
+| **Native Executor Routes** | **259 / 259** | Fail-closed routing in `WindowsCommandExecutor.cs` |
+| **Mutating Commands Preflighted** | **104 / 104** | Parameter validation executed during preview before approval |
+| **Legacy PowerShell in Native Roots** | **0 Files** | 100% clean C#/Rust source tree |
+| **Live Windows Behavioral Evidence** | **0 / 259** | Pending live execution verification on physical Windows hosts |
+| **Production Promotion Blockers** | **259** | Production promotion blocked until all 259 commands reach `BehaviorVerified` |
 
-## Product navigation
+---
 
-The approved native shell provides:
+## 🏗️ Repository Architecture
 
-- **Home**
-- **Checkup**
-- **System care**
-- **Security**
-- **Repair & recovery**
-- **All tools**
-- **AI Doctor** (Local ONNX-powered intelligent system diagnostics)
-- **Plugin Store** (Browse, install, and manage extensions)
-- **Activity**
+```text
+WinCare/
+├── .github/workflows/          # Pinned CI/CD workflows for WinUI, Rust, and Releases
+├── design/                     # Brand assets, logos, and visual token manifests
+├── docs/                       # Architectural specifications and migration ledgers
+│   ├── Architecture.md         # Component boundaries, trust model, and IPC
+│   ├── migration/              # Command parity ledgers and validation guides
+│   └── plans/                  # Approved architectural upgrade specifications
+├── migration/oracle/           # Non-executable frozen legacy oracle parity fixtures
+├── native/                     # Rust 2024 native crates
+│   ├── wincare-core/           # C-ABI DLL export library
+│   └── wincare-guard/          # Background health monitoring daemon
+├── src/                        # .NET 8 C# solution
+│   ├── WinCare.App/            # WinUI 3 desktop presentation layer
+│   ├── WinCare.Application/    # Use cases, dispatching, plugins, AI doctor
+│   ├── WinCare.CommandCatalog/ # Embedded typed catalog of 259 commands
+│   ├── WinCare.Domain/         # Domain models, contracts, and telemetry
+│   └── WinCare.Infrastructure/ # Windows APIs, Rust interop, process runners
+├── tests/                      # Python structural, Rust, and C# unit test suites
+└── tools/                      # Deterministic validation, packaging, and plugin CLI
+```
 
-Settings, Help and documentation, and About WinCare are in the navigation footer.
+---
 
-## Local source verification
+## 🚀 Getting Started
 
+### Prerequisites
+- **Operating System**: Windows 10 (version 2004 / build 19041+) or Windows 11 (x64 or ARM64)
+- **.NET SDK**: 8.0.416 or newer
+- **Rust Toolchain**: 1.97.1 stable with `x86_64-pc-windows-msvc` or `aarch64-pc-windows-msvc` target
+- **Python**: 3.11+ (Python 3.13 recommended) for validation and deterministic packaging
+- **Node.js**: 18+ (for `tools/wincare-plugin-cli`)
+- **Windows Developer Mode**: Enabled for local WinUI 3 package deployment
+
+### 1. Clone & Setup
 ```bash
-# Verify native catalog parity & frozen oracle
+git clone https://github.com/AmirrezaFarnamTaheri/WinCare.git
+cd WinCare
+```
+
+### 2. Run Local Verification Gates
+```bash
+# Verify native foundation & 259-command parity
 python tools/verify_native_foundation.py
 
-# Run Python regression test suite
+# Run Python regression and structural tests
 python -m unittest discover -s tests/native -v
 
-# Run Rust native core & guard test suites
+# Run Rust unit, FFI, and Guard daemon tests
 cargo test --manifest-path native/Cargo.toml
 
 # Run Community Plugin CLI tests
 python tests/tools/test_plugin_cli.py -v
 
-# Verify design tokens & WCAG accessibility contrast
+# Verify visual design tokens and WCAG AA contrast compliance
 python tools/verify_visual_tokens.py
 python tools/verify_pill_contrast.py
 ```
 
-## Automated CI release gate
+### 3. Build & Run Desktop Application
+```bash
+# 1. Build Rust native core DLL
+cargo build --manifest-path native/Cargo.toml --target x86_64-pc-windows-msvc --release
 
-The repository's GitHub Actions workflow (`Native WinUI`) includes an automated **`release-gate`** job. When code is pushed or merged to `master`, CI executes native verification, compiles Rust and .NET 8 binaries, runs unit tests, packages MSIX installers and portable ZIP distributions for both `x64` and `ARM64`, and automatically publishes the compiled release packages directly to [GitHub Releases](https://github.com/AmirrezaFarnamTaheri/WinCare/releases).
+# 2. Stage native library for WinUI
+mkdir -p src/WinCare.App/Native/x64
+cp native/target/x86_64-pc-windows-msvc/release/wincare_core.dll src/WinCare.App/Native/x64/wincare_core.dll
 
-## Security invariants
+# 3. Restore and build WinCare solution
+dotnet restore WinCare.Native.sln -p:Platform=x64
+dotnet build src/WinCare.App/WinCare.App.csproj -c Debug -p:Platform=x64
+```
 
-- File and cleanup operations canonicalize user-selected paths, reject reparse-point operation roots, skip reparse-point descendants during recursive traversal, and use bounded iterative enumeration.
-- `CommandDispatcher` exception journals emit only the exception type name — `ex.Message` is never written to the activity journal, avoiding file-path or PII leakage.
-- Native plugins execute in-process and are gated behind explicit trust disclosures and package SHA-256 verification. Core namespaces (`wincare.core.*`, `system.*`) are strictly reserved.
-- All Rust FFI exports are wrapped in `catch_unwind` — panics cannot cross the FFI boundary.
+### 4. Create Standalone Packages
+```bash
+# Publish portable single-file binary
+dotnet publish src/WinCare.App/WinCare.App.csproj -c Release -p:Platform=x64 -r win-x64 \
+  -p:WindowsPackageType=None -p:WindowsAppSDKSelfContained=true -p:SelfContained=true \
+  -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true \
+  -o artifacts/portable/win-x64
 
-## Documentation
+# Package into deterministic ZIP distribution
+python tools/package_portable.py artifacts/portable/win-x64 artifacts/WinCare-v2.5.0-rc1-x64-portable.zip
+```
 
-| Document | Purpose |
+---
+
+## 📦 Releases & Distributions
+
+Official signed releases are published immutably via GitHub Actions upon tagged commits (`refs/tags/v*`), while master and PR builds produce verified CI workflow artifacts:
+
+- **MSIX Package (`.msix`)**: Standard modern Windows application installer with auto-update support.
+- **Standalone Binary (`.exe`)**: Single-file self-contained executable requiring zero external runtime installation.
+- **Portable Distribution (`.zip`)**: Standalone archive suitable for USB repair toolkits and offline maintenance environments.
+- **Native Source Archive (`.zip`)**: Deterministic release archive containing verified pure C# and Rust source code.
+
+Explore existing releases on the [GitHub Releases Page](https://github.com/AmirrezaFarnamTaheri/WinCare/releases).
+
+---
+
+## 📚 Documentation Index
+
+| Document | Description |
 |---|---|
-| `CHANGELOG.md` | version history and release notes |
-| `DESIGN.md` | approved native interaction and visual system |
-| `docs/Architecture.md` | native component and trust boundaries |
-| `docs/migration/command-parity-ledger.md` | exact command migration accounting |
-| `docs/migration/finalization-status.md` | release-candidate and production status |
-| `docs/migration/windows-validation.md` | Windows build, UI, and package validation |
-| `VALIDATION.md` | evidence vocabulary and promotion gates |
-| `CONTRIBUTING.md` | contribution guidelines |
-| `SECURITY.md` | security policy and vulnerability reporting |
+| [User Guide](docs/User-Guide.md) | Comprehensive end-to-end user manual, page walkthroughs, and FAQ |
+| [Architecture Specification](docs/Architecture.md) | Component architecture, trust boundaries, IPC, and lifecycle |
+| [Design System & Visual Spec](DESIGN.md) | Cyber-Teal design tokens, typography, and WCAG contrast matrix |
+| [Validation & Promotion Policy](VALIDATION.md) | Evidence classifications, test suites, and promotion gates |
+| [Command Parity Ledger](docs/migration/command-parity-ledger.md) | Detailed 259-command migration status and accounting |
+| [Finalization Status](docs/migration/finalization-status.md) | Current candidate release status, blockers, and artifact manifests |
+| [Windows Validation Guide](docs/migration/windows-validation.md) | Windows build, WinApp CLI, and UI Automation test instructions |
+| [Contributing Guidelines](CONTRIBUTING.md) | Code standards, ownership rules, and pull request workflow |
+| [Security Policy](SECURITY.md) | Security invariants, threat boundaries, and vulnerability reporting |
+| [Changelog](CHANGELOG.md) | Full version history and detailed release notes |
+| [Third-Party Notices](THIRD-PARTY-NOTICES.md) | Third-party software dependencies and license attributions |
 
-## License
+---
 
-See `LICENSE`.
+## 🔒 Security & Vulnerability Reporting
+
+WinCare executes privileged and system-level operations. Security is treated as a fundamental product contract.
+
+- Please do not submit vulnerability reports through public GitHub issues.
+- Report security issues privately through [GitHub Private Vulnerability Reporting](https://github.com/AmirrezaFarnamTaheri/WinCare/security/advisories) or contact the project maintainers directly.
+- Full details regarding our security model and threat invariants are detailed in [SECURITY.md](SECURITY.md).
+
+---
+
+## 📄 License
+
+WinCare is licensed under the [Apache License, Version 2.0](LICENSE).
+Copyright © 2026 Amirreza Farnam Taheri and WinCare Contributors.
