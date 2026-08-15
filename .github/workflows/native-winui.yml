@@ -212,9 +212,12 @@ jobs:
             throw "Exported certificate subject '$($expectedCer.Subject)' does not match expected publisher."
           }
 
-          $trusted = $null
+          $trustedRoot = $null
           if ($env:WINCARE_DEVELOPMENT_SIGNING -eq 'true') {
-            $trusted = Import-Certificate -FilePath $cerPath -CertStoreLocation 'Cert:\CurrentUser\TrustedPeople'
+            # Development builds use a disposable self-signed leaf. Trust the exact pinned
+            # certificate as a root only on this ephemeral runner so WinVerifyTrust can
+            # validate the cryptographic signature. Tagged releases never take this path.
+            $trustedRoot = Import-Certificate -FilePath $cerPath -CertStoreLocation 'Cert:\CurrentUser\Root'
           }
           try {
             $msixFiles = @(
@@ -241,8 +244,8 @@ jobs:
             }
           }
           finally {
-            if ($trusted) {
-              Remove-Item -Force "Cert:\CurrentUser\TrustedPeople\$($expectedCer.Thumbprint)" -ErrorAction SilentlyContinue
+            if ($trustedRoot) {
+              Remove-Item -Force "Cert:\CurrentUser\Root\$($expectedCer.Thumbprint)" -ErrorAction SilentlyContinue
             }
           }
       - name: Clean runner-local signing identity
@@ -251,7 +254,7 @@ jobs:
         run: |
           if ($env:WINCARE_SIGNING_THUMBPRINT) {
             Remove-Item -Force "Cert:\CurrentUser\My\$env:WINCARE_SIGNING_THUMBPRINT" -ErrorAction SilentlyContinue
-            Remove-Item -Force "Cert:\CurrentUser\TrustedPeople\$env:WINCARE_SIGNING_THUMBPRINT" -ErrorAction SilentlyContinue
+            Remove-Item -Force "Cert:\CurrentUser\Root\$env:WINCARE_SIGNING_THUMBPRINT" -ErrorAction SilentlyContinue
           }
           Remove-Item -Force "$env:RUNNER_TEMP\wincare-release-signing.pfx" -ErrorAction SilentlyContinue
       - name: Publish single binary executable
