@@ -172,9 +172,12 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
-          $msixFiles = @(Get-ChildItem -Recurse -Filter '*.msix' src/WinCare.App/AppPackages)
-          if ($msixFiles.Count -eq 0) {
-            throw 'No MSIX packages found in src/WinCare.App/AppPackages.'
+          $msixFiles = @(
+            Get-ChildItem -Recurse -Filter 'WinCare.App_*.msix' src/WinCare.App/AppPackages |
+              Where-Object { $_.FullName -notmatch '[\\/]Dependencies[\\/]' }
+          )
+          if ($msixFiles.Count -ne 1) {
+            throw "Expected exactly one WinCare application MSIX, found $($msixFiles.Count)."
           }
 
           $signtoolCommand = Get-Command signtool.exe -ErrorAction SilentlyContinue
@@ -193,12 +196,11 @@ jobs:
             $signtoolPath = $signtoolCandidate.FullName
           }
 
-          foreach ($file in $msixFiles) {
-            Write-Output "Signing MSIX: $($file.FullName)"
-            & $signtoolPath sign /fd SHA256 /s My /sha1 $env:WINCARE_SIGNING_THUMBPRINT $file.FullName
-            if ($LASTEXITCODE -ne 0) {
-              throw "SignTool failed for '$($file.Name)' with exit code $LASTEXITCODE."
-            }
+          $file = $msixFiles[0]
+          Write-Output "Signing WinCare MSIX: $($file.FullName)"
+          & $signtoolPath sign /fd SHA256 /s My /sha1 $env:WINCARE_SIGNING_THUMBPRINT $file.FullName
+          if ($LASTEXITCODE -ne 0) {
+            throw "SignTool failed for '$($file.Name)' with exit code $LASTEXITCODE."
           }
       - name: Verify MSIX signature and publisher
         shell: pwsh
@@ -215,25 +217,27 @@ jobs:
             $trusted = Import-Certificate -FilePath $cerPath -CertStoreLocation 'Cert:\CurrentUser\TrustedPeople'
           }
           try {
-            $msixFiles = @(Get-ChildItem -Recurse -Filter '*.msix' src/WinCare.App/AppPackages)
-            if ($msixFiles.Count -eq 0) {
-              throw 'No MSIX packages found in src/WinCare.App/AppPackages.'
+            $msixFiles = @(
+              Get-ChildItem -Recurse -Filter 'WinCare.App_*.msix' src/WinCare.App/AppPackages |
+                Where-Object { $_.FullName -notmatch '[\\/]Dependencies[\\/]' }
+            )
+            if ($msixFiles.Count -ne 1) {
+              throw "Expected exactly one WinCare application MSIX for verification, found $($msixFiles.Count)."
             }
-            foreach ($file in $msixFiles) {
-              $sig = Get-AuthenticodeSignature -FilePath $file.FullName
-              Write-Output "Signature status for $($file.Name): $($sig.Status)"
-              if ($sig.Status -ne 'Valid') {
-                throw "MSIX '$($file.Name)' signature status is '$($sig.Status)' ($($sig.StatusMessage))."
-              }
-              if (-not $sig.SignerCertificate) {
-                throw "MSIX '$($file.Name)' does not expose a signer certificate."
-              }
-              if ($sig.SignerCertificate.Subject -ne 'CN=WinCare Development') {
-                throw "MSIX '$($file.Name)' signer '$($sig.SignerCertificate.Subject)' does not exactly match the package publisher."
-              }
-              if ($sig.SignerCertificate.Thumbprint -ne $expectedCer.Thumbprint) {
-                throw "MSIX '$($file.Name)' signer thumbprint does not match WinCare.cer."
-              }
+            $file = $msixFiles[0]
+            $sig = Get-AuthenticodeSignature -FilePath $file.FullName
+            Write-Output "Signature status for $($file.Name): $($sig.Status)"
+            if ($sig.Status -ne 'Valid') {
+              throw "MSIX '$($file.Name)' signature status is '$($sig.Status)' ($($sig.StatusMessage))."
+            }
+            if (-not $sig.SignerCertificate) {
+              throw "MSIX '$($file.Name)' does not expose a signer certificate."
+            }
+            if ($sig.SignerCertificate.Subject -ne 'CN=WinCare Development') {
+              throw "MSIX '$($file.Name)' signer '$($sig.SignerCertificate.Subject)' does not exactly match the package publisher."
+            }
+            if ($sig.SignerCertificate.Thumbprint -ne $expectedCer.Thumbprint) {
+              throw "MSIX '$($file.Name)' signer thumbprint does not match WinCare.cer."
             }
           }
           finally {
@@ -264,7 +268,7 @@ jobs:
         with:
           name: WinCare-${{ matrix.platform }}
           path: |
-            src/WinCare.App/AppPackages/**/*.msix
+            src/WinCare.App/AppPackages/**/WinCare.App_*.msix
             artifacts/signing/WinCare.cer
             tools/install_msix.py
             artifacts/release/*.exe
