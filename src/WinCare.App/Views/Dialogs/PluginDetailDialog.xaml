@@ -5,14 +5,15 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     mc:Ignorable="d"
-    Title="Plugin Details &amp; Security Consent"
-    PrimaryButtonText="Trust &amp; Install"
+    Title="Review plugin"
+    PrimaryButtonText="Trust and install"
     CloseButtonText="Cancel"
     DefaultButton="Close"
     CornerRadius="8"
     Style="{ThemeResource DefaultContentDialogStyle}">
 
-    <StackPanel Width="460" Spacing="16">
+    <ScrollViewer MaxHeight="620" VerticalScrollBarVisibility="Auto">
+        <StackPanel MaxWidth="460" Spacing="16">
         <!-- Header & Metadata -->
         <Grid ColumnDefinitions="Auto,*">
             <Border Width="64" Height="64" CornerRadius="8" Background="{ThemeResource SystemControlBackgroundComponentMeshBrush}" Margin="0,0,16,0">
@@ -58,7 +59,7 @@
             <StackPanel Spacing="8">
                 <StackPanel Orientation="Horizontal" Spacing="8">
                     <FontIcon Glyph="&#xE72E;" FontSize="14" Foreground="{ThemeResource AccentTealBrush}"/>
-                    <TextBlock Text="Declared Capabilities" FontSize="12" FontWeight="SemiBold"/>
+                    <TextBlock Text="Declared capabilities" FontSize="12" FontWeight="SemiBold"/>
                 </StackPanel>
                 <ItemsControl x:Name="PermissionsItemsControl">
                     <ItemsControl.ItemTemplate>
@@ -78,7 +79,7 @@
             <Grid ColumnDefinitions="Auto,*">
                 <FontIcon Glyph="&#xE8D7;" FontSize="14" Foreground="{ThemeResource AccentTealBrush}" Margin="0,0,10,0" VerticalAlignment="Center"/>
                 <StackPanel Grid.Column="1" Spacing="2">
-                    <TextBlock Text="Publisher Authenticity" FontSize="11" Foreground="{ThemeResource SystemControlForegroundBaseMediumBrush}"/>
+                    <TextBlock Text="Publisher verification" FontSize="11" Foreground="{ThemeResource SystemControlForegroundBaseMediumBrush}"/>
                     <TextBlock x:Name="PublisherTrustText" FontSize="12" FontWeight="SemiBold" Text="Community / Unverified"/>
                 </StackPanel>
             </Grid>
@@ -88,15 +89,16 @@
         <Border x:Name="RevocationBanner" Visibility="Collapsed" BorderThickness="1" BorderBrush="{ThemeResource SystemFillColorCriticalBrush}" CornerRadius="6" Padding="10" Background="{ThemeResource SystemFillColorCriticalBackgroundBrush}">
             <StackPanel Orientation="Horizontal" Spacing="10">
                 <FontIcon Glyph="&#xEB90;" FontSize="16" Foreground="{ThemeResource SystemFillColorCriticalBrush}" VerticalAlignment="Top" Margin="0,2,0,0"/>
-                <TextBlock x:Name="RevocationReasonText" Text="REVOCATION ADVISORY: This package has been marked as revoked by security policy."
+                <TextBlock x:Name="RevocationReasonText" Text="This package was revoked by security policy."
                            TextWrapping="Wrap" FontSize="12" Foreground="{ThemeResource SystemControlForegroundBaseHighBrush}"/>
             </StackPanel>
         </Border>
 
         <!-- Commands Provided -->
         <StackPanel Spacing="4">
-            <TextBlock Text="Commands Provided:" FontSize="12" FontWeight="SemiBold"/>
+            <TextBlock Text="Commands provided" FontSize="12" FontWeight="SemiBold"/>
             <TextBlock x:Name="CommandsProvidedText" FontSize="12" Foreground="{ThemeResource SystemControlForegroundBaseMediumBrush}" TextWrapping="Wrap" Text="None"/>
         </StackPanel>
-    </StackPanel>
+        </StackPanel>
+    </ScrollViewer>
 </ContentDialog>

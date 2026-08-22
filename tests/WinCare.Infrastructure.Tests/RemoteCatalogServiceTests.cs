@@ -13,6 +13,30 @@ namespace WinCare.Infrastructure.Tests;
 
 public class RemoteCatalogServiceTests
 {
+    [Fact]
+    public async Task SearchPluginsAsync_NormalizesNullCollectionsAndTextFromRemoteCatalog()
+    {
+        string cachePath = Path.Combine(Path.GetTempPath(), $"wincare_catalog_{Guid.NewGuid():N}.json");
+        try
+        {
+            var handler = new FakeHttpMessageHandler(_ => new HttpResponseMessage(System.Net.HttpStatusCode.OK)
+            {
+                Content = new StringContent("""{"plugins":[{"id":"test.plugin","name":null,"description":null,"author":null,"category":null,"commandsProvided":null,"permissions":null}],"revokedPackages":null,"revokedPublishers":null}""")
+            });
+            var service = new RemoteCatalogService(new HttpClient(handler), cachePath);
+
+            IReadOnlyList<RemotePluginItem> results = await service.SearchPluginsAsync("test.plugin");
+
+            Assert.Single(results);
+            Assert.Equal(string.Empty, results[0].Category);
+            Assert.Empty(results[0].CommandsProvided);
+            Assert.Empty(results[0].Permissions);
+        }
+        finally
+        {
+            if (File.Exists(cachePath)) File.Delete(cachePath);
+        }
+    }
     private class FakeHttpMessageHandler : HttpMessageHandler
     {
         private readonly Func<HttpRequestMessage, HttpResponseMessage> _handler;

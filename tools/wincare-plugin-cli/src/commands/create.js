@@ -4,6 +4,9 @@ const path = require('path');
 function createPlugin(targetName, options = {}) {
   const pluginName = targetName || 'my-custom-tool';
   const templateType = options.template || 'json-pack';
+  if (!['json-pack', 'csharp-plugin'].includes(templateType)) {
+    throw new Error(`Unsupported template '${templateType}'. Use json-pack or csharp-plugin.`);
+  }
   const targetDir = path.resolve(options.outDir || pluginName);
 
   if (fs.existsSync(targetDir)) {

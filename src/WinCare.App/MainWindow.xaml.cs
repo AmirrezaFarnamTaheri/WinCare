@@ -1,3 +1,4 @@
+using System;
 using System.Runtime.InteropServices;
 using Microsoft.UI;
 using Microsoft.UI.Composition.SystemBackdrops;
@@ -63,5 +64,29 @@ public sealed partial class MainWindow : Window
     private void GlobalSearchBox_QuerySubmitted(AutoSuggestBox sender, AutoSuggestBoxQuerySubmittedEventArgs args)
     {
         Shell.OpenGlobalSearch(args.QueryText);
+    }
+
+    public void HandleProtocolActivation(string arguments)
+    {
+        if (Uri.TryCreate(arguments, UriKind.Absolute, out var uri))
+        {
+            HandleProtocolActivation(uri);
+        }
+    }
+
+    public void HandleProtocolActivation(Uri uri)
+    {
+        ArgumentNullException.ThrowIfNull(uri);
+
+        if (
+            !string.Equals(uri.Scheme, "wincare", StringComparison.OrdinalIgnoreCase) ||
+            (uri.Host is not ("action" or "open")))
+        {
+            return;
+        }
+
+        string encodedSegment = uri.AbsolutePath.Trim('/');
+        if (string.IsNullOrEmpty(encodedSegment)) return;
+        Shell.OpenGlobalSearch(Uri.UnescapeDataString(encodedSegment));
     }
 }

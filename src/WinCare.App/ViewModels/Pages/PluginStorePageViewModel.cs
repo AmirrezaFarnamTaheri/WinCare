@@ -20,12 +20,14 @@ public sealed class PluginStorePageViewModel : INotifyPropertyChanged, IDisposab
     private readonly IRemoteCatalogService _catalogService;
     private readonly IPluginInstallerService _installerService;
     private readonly IPluginHost _host;
+    private readonly bool _usesSharedRuntime;
 
     private string _searchQuery = string.Empty;
     private string _selectedCategory = "All";
     private bool _isLoading;
     private string? _errorMessage;
     private CancellationTokenSource? _searchCts;
+    private long _refreshVersion;
 
     /// <summary>
     /// Event fired when a property value changes.
@@ -41,6 +43,7 @@ public sealed class PluginStorePageViewModel : INotifyPropertyChanged, IDisposab
         IPluginInstallerService? installerService = null,
         IPluginHost? host = null)
     {
+        _usesSharedRuntime = registry is null && host is null;
         _host = host ?? AppRuntime.Current.PluginHost;
         _registry = registry ?? AppRuntime.Current.PluginRegistry;
         _catalogService = catalogService ?? AppRuntime.Current.CatalogService;
@@ -93,7 +96,7 @@ public sealed class PluginStorePageViewModel : INotifyPropertyChanged, IDisposab
             {
                 _selectedCategory = value;
                 OnPropertyChanged();
-                _ = RefreshPluginsAsync();
+                _ = RefreshAfterFilterChangeAsync();
             }
         }
     }
@@ -120,6 +123,8 @@ public sealed class PluginStorePageViewModel : INotifyPropertyChanged, IDisposab
     /// </summary>
     public bool HasError => !string.IsNullOrWhiteSpace(_errorMessage);
 
+    public bool IsEmpty => !IsLoading && Plugins.Count == 0;
+
     /// <summary>
     /// Whether the store catalog is currently fetching data or refreshing.
     /// </summary>
@@ -132,6 +137,7 @@ public sealed class PluginStorePageViewModel : INotifyPropertyChanged, IDisposab
             {
                 _isLoading = value;
                 OnPropertyChanged();
+                OnPropertyChanged(nameof(IsEmpty));
             }
         }
     }
@@ -143,7 +149,14 @@ public sealed class PluginStorePageViewModel : INotifyPropertyChanged, IDisposab
     {
         try
         {
-            await _registry.DiscoverAndInitializeAsync(_host, cancellationToken).ConfigureAwait(true);
+            if (_usesSharedRuntime)
+            {
+                await AppRuntime.Current.InitializePluginsAsync(cancellationToken).ConfigureAwait(true);
+            }
+            else
+            {
+                await _registry.DiscoverAndInitializeAsync(_host, cancellationToken).ConfigureAwait(true);
+            }
         }
         catch
         {
@@ -167,6 +180,24 @@ public sealed class PluginStorePageViewModel : INotifyPropertyChanged, IDisposab
         {
             // Keystroke debounced
         }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Search refresh failed: {ex.Message}";
+            System.Diagnostics.Debug.WriteLine($"[PluginStorePageViewModel] Search refresh error: {ex}");
+        }
+    }
+
+    private async Task RefreshAfterFilterChangeAsync()
+    {
+        try
+        {
+            await RefreshPluginsAsync().ConfigureAwait(true);
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Catalog refresh failed: {ex.Message}";
+            System.Diagnostics.Debug.WriteLine($"[PluginStorePageViewModel] Filter refresh error: {ex}");
+        }
     }
 
     /// <summary>
@@ -174,65 +205,84 @@ public sealed class PluginStorePageViewModel : INotifyPropertyChanged, IDisposab
     /// </summary>
     public async Task RefreshPluginsAsync(bool forceRemoteRefresh = false, CancellationToken cancellationToken = default)
     {
+        var refreshVersion = Interlocked.Increment(ref _refreshVersion);
+        var selectedCategory = _selectedCategory;
+        var searchQuery = _searchQuery;
         IsLoading = true;
         try
         {
-            Plugins.Clear();
-
             var installedPlugins = _registry.GetAllPlugins().ToDictionary(p => p.Id, StringComparer.OrdinalIgnoreCase);
+            var cards = new List<PluginCardViewModel>();
 
-            if (string.Equals(_selectedCategory, "Installed", StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(selectedCategory, "Installed", StringComparison.OrdinalIgnoreCase))
             {
                 foreach (var installed in installedPlugins.Values)
                 {
-                    if (MatchesSearch(installed.Name, installed.Description, installed.Author, installed.Category))
+                    if (MatchesSearch(searchQuery, installed.Id, installed.Name, installed.Description, installed.Author, installed.Category, installed.Commands.Select(command => command.Id)))
                     {
-                        Plugins.Add(new PluginCardViewModel(installed));
+                        cards.Add(new PluginCardViewModel(installed));
                     }
                 }
+            }
+            else
+            {
+                // Fetch online catalog
+                RemotePluginCatalog catalog;
+                try
+                {
+                    catalog = await _catalogService.GetCatalogAsync(forceRemoteRefresh, cancellationToken).ConfigureAwait(true);
+                }
+                catch
+                {
+                    catalog = new RemotePluginCatalog();
+                }
+
+                // Combine installed and remote catalog items
+                var seenIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+                foreach (var item in catalog.Plugins)
+                {
+                    seenIds.Add(item.Id);
+                    var isInstalled = installedPlugins.TryGetValue(item.Id, out var installedEntry);
+
+                    if (MatchesCategory(item.Category, selectedCategory) && MatchesSearch(searchQuery, item.Id, item.Name, item.Description, item.Author, item.Category, item.CommandsProvided))
+                    {
+                        cards.Add(new PluginCardViewModel(item, isInstalled, installedEntry));
+                    }
+                }
+
+                // Add installed plugins not present in online catalog
+                foreach (var installed in installedPlugins.Values)
+                {
+                    if (!seenIds.Contains(installed.Id) &&
+                        MatchesCategory(installed.Category, selectedCategory) &&
+                        MatchesSearch(searchQuery, installed.Id, installed.Name, installed.Description, installed.Author, installed.Category, installed.Commands.Select(command => command.Id)))
+                    {
+                        cards.Add(new PluginCardViewModel(installed));
+                    }
+                }
+            }
+
+            // A more recent search/category request owns the collection. Older async
+            // requests may finish later, but must never overwrite its visible results.
+            if (refreshVersion != Volatile.Read(ref _refreshVersion))
+            {
                 return;
             }
 
-            // Fetch online catalog
-            RemotePluginCatalog catalog;
-            try
+            Plugins.Clear();
+            foreach (var card in cards)
             {
-                catalog = await _catalogService.GetCatalogAsync(forceRemoteRefresh, cancellationToken).ConfigureAwait(true);
+                Plugins.Add(card);
             }
-            catch
-            {
-                catalog = new RemotePluginCatalog();
-            }
-
-            // Combine installed and remote catalog items
-            var seenIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-            foreach (var item in catalog.Plugins)
-            {
-                seenIds.Add(item.Id);
-                var isInstalled = installedPlugins.TryGetValue(item.Id, out var installedEntry);
-
-                if (MatchesCategory(item.Category) && MatchesSearch(item.Name, item.Description, item.Author, item.Category))
-                {
-                    Plugins.Add(new PluginCardViewModel(item, isInstalled, installedEntry));
-                }
-            }
-
-            // Add installed plugins not present in online catalog
-            foreach (var installed in installedPlugins.Values)
-            {
-                if (!seenIds.Contains(installed.Id))
-                {
-                    if (MatchesCategory(installed.Category) && MatchesSearch(installed.Name, installed.Description, installed.Author, installed.Category))
-                    {
-                        Plugins.Add(new PluginCardViewModel(installed));
-                    }
-                }
-            }
+            OnPropertyChanged(nameof(IsEmpty));
         }
         finally
         {
-            IsLoading = false;
+            if (refreshVersion == Volatile.Read(ref _refreshVersion))
+            {
+                IsLoading = false;
+            }
         }
     }
 
@@ -249,6 +299,8 @@ public sealed class PluginStorePageViewModel : INotifyPropertyChanged, IDisposab
         ErrorMessage = null;
         try
         {
+            // The remote catalog is transport metadata, not an independent publisher trust
+            // root. Never let it choose the key used to establish package authenticity.
             await _installerService.InstallPluginFromPackageAsync(card.PackageUrl, card.Id, card.Sha256, cancellationToken).ConfigureAwait(true);
             await _registry.DiscoverAndInitializeAsync(_host, cancellationToken).ConfigureAwait(true);
             await RefreshPluginsAsync(forceRemoteRefresh: false, cancellationToken).ConfigureAwait(true);
@@ -339,27 +391,29 @@ public sealed class PluginStorePageViewModel : INotifyPropertyChanged, IDisposab
         }
     }
 
-    private bool MatchesCategory(string category)
+    private static bool MatchesCategory(string category, string selectedCategory)
     {
-        if (string.Equals(_selectedCategory, "All", StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(selectedCategory, "All", StringComparison.OrdinalIgnoreCase))
         {
             return true;
         }
-        return string.Equals(category, _selectedCategory, StringComparison.OrdinalIgnoreCase);
+        return string.Equals(category, selectedCategory, StringComparison.OrdinalIgnoreCase);
     }
 
-    private bool MatchesSearch(string name, string description, string author, string category)
+    private static bool MatchesSearch(string searchQuery, string id, string name, string description, string author, string category, IEnumerable<string> commands)
     {
-        if (string.IsNullOrWhiteSpace(_searchQuery))
+        if (string.IsNullOrWhiteSpace(searchQuery))
         {
             return true;
         }
 
-        var q = _searchQuery.Trim();
-        return name.Contains(q, StringComparison.OrdinalIgnoreCase) ||
+        var q = searchQuery.Trim();
+        return id.Contains(q, StringComparison.OrdinalIgnoreCase) ||
+               name.Contains(q, StringComparison.OrdinalIgnoreCase) ||
                description.Contains(q, StringComparison.OrdinalIgnoreCase) ||
                author.Contains(q, StringComparison.OrdinalIgnoreCase) ||
-               category.Contains(q, StringComparison.OrdinalIgnoreCase);
+               category.Contains(q, StringComparison.OrdinalIgnoreCase) ||
+               commands.Any(command => command.Contains(q, StringComparison.OrdinalIgnoreCase));
     }
 
     private void OnPropertyChanged([CallerMemberName] string? propertyName = null)

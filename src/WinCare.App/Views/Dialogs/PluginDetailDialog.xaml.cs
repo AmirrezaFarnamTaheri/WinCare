@@ -38,7 +38,7 @@ public sealed partial class PluginDetailDialog : ContentDialog
         if (item.IsRevoked)
         {
             RevocationBanner.Visibility = Microsoft.UI.Xaml.Visibility.Visible;
-            RevocationReasonText.Text = $"REVOCATION ADVISORY: {item.RevocationReason ?? "This package has been revoked by security policy."}";
+            RevocationReasonText.Text = item.RevocationReason ?? "This package has been revoked by security policy.";
             IsPrimaryButtonEnabled = false;
         }
 

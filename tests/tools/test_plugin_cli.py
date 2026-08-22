@@ -5,11 +5,15 @@ import unittest
 import subprocess
 import zipfile
 import json
+from pathlib import Path
+
+
+ROOT = Path(__file__).resolve().parents[2]
 
 class PluginCliTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.cli_path = os.path.abspath("tools/wincare-plugin-cli/bin/wincare-plugin.js")
+        cls.cli_path = str(ROOT / "tools/wincare-plugin-cli/bin/wincare-plugin.js")
 
     def setUp(self):
         self.test_dir = tempfile.mkdtemp(prefix="wincare_cli_test_")
@@ -127,6 +131,29 @@ class PluginCliTests(unittest.TestCase):
                 manifest_data = json.loads(mf.read().decode('utf-8'))
                 self.assertEqual(manifest_data["id"], "com.community.testassemblytool")
                 self.assertEqual(manifest_data["entryType"], "Assembly")
+
+    def test_create_rejects_unsupported_template(self):
+        out_dir = os.path.join(self.test_dir, "invalid_template")
+        result = subprocess.run(
+            ["node", self.cli_path, "create", "bad_template", "--template", "unknown", "--outDir", out_dir],
+            capture_output=True, text=True)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("Unsupported template", result.stderr)
+        self.assertFalse(os.path.exists(out_dir))
+
+    def test_repeated_pack_does_not_include_previous_archive(self):
+        out_dir = os.path.join(self.test_dir, "repeat_pack")
+        result = subprocess.run(
+            ["node", self.cli_path, "create", "repeat_pack", "--outDir", out_dir],
+            capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, msg=result.stderr)
+
+        archive_path = os.path.join(out_dir, "com.community.repeatpack-1.0.0.wincare-plugin")
+        for _ in range(2):
+            result = subprocess.run(["node", self.cli_path, "pack", out_dir], capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0, msg=result.stderr)
+            with zipfile.ZipFile(archive_path, "r") as zf:
+                self.assertNotIn(os.path.basename(archive_path), zf.namelist())
 
 if __name__ == "__main__":
     unittest.main()

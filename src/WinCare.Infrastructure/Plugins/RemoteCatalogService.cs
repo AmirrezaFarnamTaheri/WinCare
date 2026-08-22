@@ -94,6 +94,7 @@ public class RemoteCatalogService : IRemoteCatalogService
                 ?? new RemotePluginCatalog();
 
             catalog.LastUpdated = DateTime.UtcNow;
+            NormalizeCatalog(catalog);
             ApplyRevocationPolicy(catalog);
             await SaveToCacheAsync(catalog, cancellationToken).ConfigureAwait(false);
 
@@ -136,6 +137,7 @@ public class RemoteCatalogService : IRemoteCatalogService
         {
             var q = query.Trim();
             plugins = plugins.Where(p =>
+                p.Id.Contains(q, StringComparison.OrdinalIgnoreCase) ||
                 p.Name.Contains(q, StringComparison.OrdinalIgnoreCase) ||
                 p.Description.Contains(q, StringComparison.OrdinalIgnoreCase) ||
                 p.Author.Contains(q, StringComparison.OrdinalIgnoreCase) ||
@@ -168,6 +170,24 @@ public class RemoteCatalogService : IRemoteCatalogService
                 plugin.IsRevoked = true;
                 plugin.RevocationReason ??= "Author entity is listed on the security revocation advisory.";
             }
+        }
+    }
+
+    private static void NormalizeCatalog(RemotePluginCatalog catalog)
+    {
+        catalog.Plugins ??= new List<RemotePluginItem>();
+        catalog.RevokedPackages ??= new List<string>();
+        catalog.RevokedPublishers ??= new List<string>();
+
+        foreach (RemotePluginItem plugin in catalog.Plugins)
+        {
+            plugin.Id ??= string.Empty;
+            plugin.Name ??= string.Empty;
+            plugin.Description ??= string.Empty;
+            plugin.Author ??= string.Empty;
+            plugin.Category ??= string.Empty;
+            plugin.CommandsProvided ??= new List<string>();
+            plugin.Permissions ??= new List<string>();
         }
     }
 
@@ -219,7 +239,12 @@ public class RemoteCatalogService : IRemoteCatalogService
             }
 
             var json = await File.ReadAllTextAsync(_cacheFilePath, cancellationToken).ConfigureAwait(false);
-            return JsonSerializer.Deserialize<RemotePluginCatalog>(json, JsonOptions);
+            RemotePluginCatalog? catalog = JsonSerializer.Deserialize<RemotePluginCatalog>(json, JsonOptions);
+            if (catalog != null)
+            {
+                NormalizeCatalog(catalog);
+            }
+            return catalog;
         }
         catch (OperationCanceledException)
         {

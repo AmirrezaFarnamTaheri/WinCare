@@ -27,6 +27,16 @@ fn test_daemon_loop_terminates_cleanly() {
 }
 
 #[test]
+fn test_daemon_zero_tick_limit_does_not_sample() {
+    let daemon = GuardDaemon::new(Duration::ZERO);
+    let mut ticks_received = 0;
+
+    daemon.run_loop(Some(0), |_snapshot| ticks_received += 1);
+
+    assert_eq!(ticks_received, 0);
+}
+
+#[test]
 fn test_toast_notification_schema() {
     let xml = toast::generate_toast_xml(
         "Disk Cleanup Recommended",

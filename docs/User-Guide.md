@@ -53,11 +53,7 @@ WinCare offers multiple distribution formats to match your deployment workflow:
    ```bash
    python tools/install_msix.py --package WinCare-v<version>-<arch>.msix --certificate WinCare.cer
    ```
-   *Or install directly via PowerShell:*
-   ```powershell
-   Import-Certificate -FilePath .\WinCare.cer -CertStoreLocation Cert:\CurrentUser\TrustedPeople
-   Add-AppxPackage -Path .\WinCare-v<version>-<arch>.msix
-   ```
+   Run this command from an elevated terminal when the certificate is not already trusted. The helper verifies that the package signer is exactly `CN=WinCare Development`, requires the certificate thumbprint to match the package signer, imports only that certificate into `LocalMachine\TrustedPeople`, and verifies the signature again before installation. Do not import an unverified certificate manually.
 3. WinCare is now installed in your Windows Start Menu with full Windows App SDK integration.
 
 ### Option B: Standalone Single-File Binary (`.exe`)
@@ -233,21 +229,20 @@ Customize your WinCare experience:
 WinCare includes a comprehensive developer toolkit for creating custom plugins:
 
 ```bash
-# 1. Install or navigate to the CLI
+# 1. Navigate to the CLI
 cd tools/wincare-plugin-cli
 
 # 2. Scaffold a new plugin project
-node wincare-plugin.js create my-custom-cleaner --type json-pack
+node bin/wincare-plugin.js create my-custom-cleaner --template json-pack
 
-# 3. Lint and validate the manifest
-node wincare-plugin.js lint my-custom-cleaner
-node wincare-plugin.js validate my-custom-cleaner
+# 3. Lint and validate the manifest and package boundaries
+node bin/wincare-plugin.js validate my-custom-cleaner
 
-# 4. Bundle into a distributable .zip package
-node wincare-plugin.js pack my-custom-cleaner --output my-custom-cleaner.zip
+# 4. Bundle into a distributable .wincare-plugin archive
+node bin/wincare-plugin.js pack my-custom-cleaner my-custom-cleaner.wincare-plugin
 ```
 
-Distribute the resulting `.zip` package or submit it to the community catalog!
+The second positional argument to `pack` is optional. If omitted, the CLI writes `<plugin-id>-<version>.wincare-plugin` inside the plugin directory. Review generated scripts and declared capabilities before installing or distributing the archive; plugins execute in-process with the permissions of WinCare.
 
 ---
 

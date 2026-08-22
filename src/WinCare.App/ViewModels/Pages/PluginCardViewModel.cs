@@ -89,7 +89,9 @@ public sealed class PluginCardViewModel
     public bool IsRevoked => RemoteItem?.IsRevoked == true;
 
     public string InstallButtonText => IsRevoked ? "Revoked" : (IsInstalled ? "Installed" : "Install");
-    public bool CanInstall => !IsInstalled && !string.IsNullOrEmpty(PackageUrl) && !IsRevoked;
+    // The current remote catalog is not independently signed or pinned. Do not turn
+    // catalog-provided publisher data into a package-install trust root.
+    public bool CanInstall => !IsInstalled && !string.IsNullOrEmpty(PackageUrl) && !IsRevoked && IsVerifiedPublisher;
     public bool CanEnable => IsInstalled && !IsBuiltIn && InstalledState == PluginState.Disabled && !IsRevoked;
     public bool CanDisable => IsInstalled && !IsBuiltIn && InstalledState == PluginState.Enabled;
     public bool CanUninstall => IsInstalled && !IsBuiltIn;

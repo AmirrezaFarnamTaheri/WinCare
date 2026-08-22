@@ -13,6 +13,8 @@ namespace WinCare.App.Services;
 public sealed class AppRuntime
 {
     private static readonly Lazy<AppRuntime> CurrentValue = new(() => new AppRuntime());
+    private readonly object _pluginInitializationLock = new();
+    private Task? _pluginInitializationTask;
 
     private AppRuntime()
     {
@@ -83,6 +85,30 @@ public sealed class AppRuntime
     /// <summary>
     /// Discovers and initializes plugins asynchronously on application startup.
     /// </summary>
-    public Task InitializePluginsAsync(CancellationToken ct = default) =>
-        PluginRegistry.DiscoverAndInitializeAsync(PluginHost, ct);
+    public Task InitializePluginsAsync(CancellationToken ct = default)
+    {
+        lock (_pluginInitializationLock)
+        {
+            // Startup discovery is process-wide work. Sharing the task prevents parallel
+            // registry initialization when a page opens while app startup is still running.
+            return _pluginInitializationTask ??= InitializePluginsCoreAsync(ct);
+        }
+    }
+
+    private async Task InitializePluginsCoreAsync(CancellationToken ct)
+    {
+        try
+        {
+            await PluginRegistry.DiscoverAndInitializeAsync(PluginHost, ct).ConfigureAwait(false);
+        }
+        catch
+        {
+            lock (_pluginInitializationLock)
+            {
+                _pluginInitializationTask = null;
+            }
+
+            throw;
+        }
+    }
 }

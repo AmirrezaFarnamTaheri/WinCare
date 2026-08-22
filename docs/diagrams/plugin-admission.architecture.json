@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "WinCare Plugin Admission Trust Flow",
+    "subtitle": "Verified current topology — unresolved trust gaps are shown explicitly",
+    "output": "docs/diagrams/plugin-admission.html",
+    "quality_profile": "showcase",
+    "views": [
+      { "id": "catalog-path", "label": "Catalog path", "focus": ["catalog", "catalog-service", "cache", "catalog-item", "view-model"], "note": "Trace unsigned catalog metadata into the application." },
+      { "id": "admission-path", "label": "Package admission", "focus": ["package-host", "installer", "plugin-dir", "registry"], "note": "Follow downloaded bytes through validation into in-process execution." },
+      { "id": "trust-gap", "label": "Trust gap", "focus": ["catalog", "cache", "missing-root", "installer"], "note": "The catalog and cache currently supply assertions without an independent trust root." }
+    ]
+  },
+  "components": [
+    { "id": "catalog", "type": "external", "label": "Remote catalog", "sublabel": "Unsigned HTTPS JSON", "pos": [35, 95], "size": [145, 66], "tag": "Untrusted input" },
+    { "id": "catalog-service", "type": "backend", "label": "RemoteCatalogService", "sublabel": "Fetch + normalize", "pos": [235, 95], "size": [165, 66] },
+    { "id": "cache", "type": "database", "label": "Catalog cache", "sublabel": "%LocalAppData%", "pos": [235, 225], "size": [165, 66], "tag": "User-writable" },
+    { "id": "catalog-item", "type": "backend", "label": "RemotePluginItem", "sublabel": "URL, hash, key, signature", "pos": [455, 95], "size": [175, 66] },
+    { "id": "view-model", "type": "backend", "label": "Plugin Store", "sublabel": "UI revocation gate", "pos": [685, 95], "size": [155, 66] },
+    { "id": "missing-root", "type": "security", "label": "Independent trust root", "sublabel": "Not implemented", "pos": [455, 225], "size": [175, 66], "tag": "Required" },
+    { "id": "package-host", "type": "external", "label": "Package host", "sublabel": "HTTPS / local file", "pos": [35, 385], "size": [145, 66], "tag": "Untrusted bytes" },
+    { "id": "installer", "type": "security", "label": "PluginInstallerService", "sublabel": "Admission boundary", "pos": [300, 385], "size": [185, 70], "tag": "50 MB bound" },
+    { "id": "plugin-dir", "type": "database", "label": "Plugin directory", "sublabel": "Staging → active", "pos": [555, 385], "size": [155, 66] },
+    { "id": "registry", "type": "backend", "label": "Plugin registry", "sublabel": "In-process execution", "pos": [780, 385], "size": [165, 66], "tag": "Privilege boundary" }
+  ],
+  "boundaries": [
+    { "kind": "region", "label": "External and user-controlled inputs", "wraps": ["catalog", "cache", "package-host"] },
+    { "kind": "security-group", "label": "WinCare process", "wraps": ["catalog-service", "catalog-item", "view-model", "missing-root", "installer", "plugin-dir", "registry"] }
+  ],
+  "connections": [
+    { "id": "catalog-fetch", "from": "catalog", "to": "catalog-service", "label": "HTTPS fetch", "variant": "dashed", "labelAt": [208, 175] },
+    { "id": "cache-write-read", "from": "catalog-service", "to": "cache", "label": "read / write", "variant": "dashed", "labelAt": [318, 190] },
+    { "id": "catalog-deserialize", "from": "catalog-service", "to": "catalog-item", "label": "deserialize", "labelAt": [428, 175] },
+    { "id": "catalog-to-ui", "from": "catalog-item", "to": "view-model", "label": "metadata + revocation", "labelAt": [658, 175] },
+    { "id": "admission-request", "from": "view-model", "to": "installer", "label": "URL + hash + key + signature", "variant": "security", "fromSide": "bottom", "toSide": "top", "via": [[762, 330], [392, 330]] },
+    { "id": "missing-anchor", "from": "missing-root", "to": "installer", "label": "missing", "variant": "dashed", "fromSide": "bottom", "toSide": "top", "labelAt": [520, 302] },
+    { "id": "package-download", "from": "package-host", "to": "installer", "label": "bounded stream", "variant": "emphasis" },
+    { "id": "promote-plugin", "from": "installer", "to": "plugin-dir", "label": "validate + promote", "labelAt": [520, 469] },
+    { "id": "load-plugin", "from": "plugin-dir", "to": "registry", "label": "discover + load", "variant": "security", "labelAt": [745, 465] }
+  ],
+  "cards": [
+    { "dot": "rose", "title": "Current trust gap", "items": ["Catalog and cache can replace URL, digest, key, and signature together", "No independently pinned catalog or publisher key currently terminates trust"] },
+    { "dot": "cyan", "title": "Admission controls", "items": ["HTTPS packages require a digest", "Streams are size-bounded", "Archive paths and manifest identity are validated", "Signatures are checked only when external metadata is supplied"] },
+    { "dot": "amber", "title": "Revocation boundary", "items": ["Catalog marks entries revoked before installation", "Installer and registry do not yet enforce authenticated revocation independently"] }
+  ]
+}

@@ -72,9 +72,9 @@ public class PluginInstallerServiceTests
             memoryStream.Position = 0;
             var installer = new PluginInstallerService(pluginsBaseDirectory: tempPluginsDir);
 
-            // Attempt to install archive whose manifest says 'actual.plugin.id' with expected target 'expected.plugin.id'
+            // A generated-looking plugin_ prefix must not bypass manifest/catalog identity binding.
             await Assert.ThrowsAsync<InvalidOperationException>(() =>
-                installer.InstallPluginFromStreamAsync(memoryStream, "expected.plugin.id"));
+                installer.InstallPluginFromStreamAsync(memoryStream, "plugin_expected.id"));
         }
         finally
         {
@@ -165,6 +165,7 @@ public class PluginInstallerServiceTests
     [InlineData("inv@lid*id!")]
     [InlineData("a")]
     [InlineData("")]
+    [InlineData("plugin_..\\malicious")]
     public async Task InstallPluginFromStreamAsync_RejectsInvalidPluginId(string invalidId)
     {
         var tempPluginsDir = Path.Combine(Path.GetTempPath(), $"wincare_test_plugins_{Guid.NewGuid():N}");
@@ -245,6 +246,31 @@ public class PluginInstallerServiceTests
     }
 
     [Fact]
+    public async Task InstallPluginFromPackageAsync_RequiresIndependentPublisherTrustForRemotePackages()
+    {
+        var tempPluginsDir = Path.Combine(Path.GetTempPath(), $"wincare_test_plugins_{Guid.NewGuid():N}");
+        try
+        {
+            var installer = new PluginInstallerService(pluginsBaseDirectory: tempPluginsDir);
+
+            var exception = await Assert.ThrowsAsync<ArgumentException>(() =>
+                installer.InstallPluginFromPackageAsync(
+                    "https://example.com/plugin.wincare-plugin",
+                    "com.wincare.remote",
+                    new string('a', 64)));
+
+            Assert.Contains("independently trusted catalog boundary", exception.Message, StringComparison.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            if (Directory.Exists(tempPluginsDir))
+            {
+                Directory.Delete(tempPluginsDir, recursive: true);
+            }
+        }
+    }
+
+    [Fact]
     public async Task InstallPluginFromStreamAsync_RejectsMissingManifest()
     {
         var tempPluginsDir = Path.Combine(Path.GetTempPath(), $"wincare_test_plugins_{Guid.NewGuid():N}");
@@ -275,16 +301,16 @@ public class PluginInstallerServiceTests
     }
 
     [Fact]
-    public void VerifyPublisherAuthenticity_Identifies_Known_Organizations_And_Signed_Packages()
+    public void VerifyPublisherAuthenticity_DoesNotTrustUnverifiedClaims()
     {
-        Assert.True(PluginInstallerService.VerifyPublisherAuthenticity("WinCare Official", null, out var officialTrust));
-        Assert.Equal("Verified Organization", officialTrust);
+        Assert.False(PluginInstallerService.VerifyPublisherAuthenticity("WinCare Official", null, out var officialTrust));
+        Assert.Equal("Community / Unsigned", officialTrust);
 
-        Assert.True(PluginInstallerService.VerifyPublisherAuthenticity("WinCare Community", null, out var commTrust));
-        Assert.Equal("Verified Organization", commTrust);
+        Assert.False(PluginInstallerService.VerifyPublisherAuthenticity("WinCare Community", null, out var commTrust));
+        Assert.Equal("Community / Unsigned", commTrust);
 
-        Assert.True(PluginInstallerService.VerifyPublisherAuthenticity("ThirdParty Developer", "signature_hash_data", out var signedTrust));
-        Assert.Equal("Digitally Signed", signedTrust);
+        Assert.False(PluginInstallerService.VerifyPublisherAuthenticity("ThirdParty Developer", "signature_hash_data", out var signedTrust));
+        Assert.Equal("Signature Not Verified", signedTrust);
 
         Assert.False(PluginInstallerService.VerifyPublisherAuthenticity("Unknown Developer", null, out var unsignedTrust));
         Assert.Equal("Community / Unsigned", unsignedTrust);
@@ -406,7 +432,12 @@ public class PluginInstallerServiceTests
             var installer = new PluginInstallerService(pluginsBaseDirectory: tempPluginsDir);
 
             var ex = await Assert.ThrowsAsync<InvalidOperationException>(() =>
-                installer.InstallPluginFromStreamAsync(memoryStream, "com.wincare.forged.plugin"));
+                installer.InstallPluginFromStreamAsync(
+                    memoryStream,
+                    "com.wincare.forged.plugin",
+                    expectedSha256: null,
+                    expectedPublisherPublicKeyPem: publicKeyPem,
+                    expectedPublisherSignature: "Zm9yZ2VkLXNpZ25hdHVyZQ=="));
 
             Assert.Contains("Digital signature verification failed", ex.Message);
         }
@@ -416,6 +447,75 @@ public class PluginInstallerServiceTests
             {
                 Directory.Delete(tempPluginsDir, recursive: true);
             }
+        }
+    }
+
+    [Fact]
+    public async Task InstallPluginFromStreamAsync_RejectsPackageSuppliedKeyAsTrustAnchor()
+    {
+        string pluginsDirectory = Path.Combine(Path.GetTempPath(), $"wincare_test_plugins_{Guid.NewGuid():N}");
+        try
+        {
+            using var rsa = RSA.Create(2048);
+            using var archive = new MemoryStream();
+            using (var zip = new ZipArchive(archive, ZipArchiveMode.Create, leaveOpen: true))
+            {
+                var manifest = zip.CreateEntry("wincare-plugin.json");
+                using var writer = new StreamWriter(manifest.Open());
+                writer.Write(JsonSerializer.Serialize(new
+                {
+                    id = "com.attacker.selfsigned",
+                    signature = Convert.ToBase64String(new byte[] { 1, 2, 3 }),
+                    publicKey = rsa.ExportRSAPublicKeyPem()
+                }));
+            }
+            archive.Position = 0;
+
+            var installer = new PluginInstallerService(pluginsBaseDirectory: pluginsDirectory);
+            InvalidOperationException error = await Assert.ThrowsAsync<InvalidOperationException>(
+                () => installer.InstallPluginFromStreamAsync(archive, "com.attacker.selfsigned"));
+
+            Assert.Contains("not an independent trust assertion", error.Message);
+        }
+        finally
+        {
+            if (Directory.Exists(pluginsDirectory)) Directory.Delete(pluginsDirectory, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task InstallPluginFromStreamAsync_AcceptsExternallyAnchoredManifestSignature()
+    {
+        string pluginsDirectory = Path.Combine(Path.GetTempPath(), $"wincare_test_plugins_{Guid.NewGuid():N}");
+        try
+        {
+            const string manifestJson = "{\"id\":\"com.publisher.signed\",\"name\":\"Signed Plugin\",\"version\":\"1.0.0\"}";
+            byte[] manifestBytes = Encoding.UTF8.GetBytes(manifestJson);
+            using var rsa = RSA.Create(2048);
+            string signature = Convert.ToBase64String(
+                rsa.SignData(manifestBytes, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1));
+            using var archive = new MemoryStream();
+            using (var zip = new ZipArchive(archive, ZipArchiveMode.Create, leaveOpen: true))
+            {
+                var manifest = zip.CreateEntry("wincare-plugin.json");
+                using Stream stream = manifest.Open();
+                stream.Write(manifestBytes);
+            }
+            archive.Position = 0;
+
+            var installer = new PluginInstallerService(pluginsBaseDirectory: pluginsDirectory);
+            string installedPath = await installer.InstallPluginFromStreamAsync(
+                archive,
+                "com.publisher.signed",
+                expectedSha256: null,
+                expectedPublisherPublicKeyPem: rsa.ExportRSAPublicKeyPem(),
+                expectedPublisherSignature: signature);
+
+            Assert.True(Directory.Exists(installedPath));
+        }
+        finally
+        {
+            if (Directory.Exists(pluginsDirectory)) Directory.Delete(pluginsDirectory, recursive: true);
         }
     }
 

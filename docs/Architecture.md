@@ -90,16 +90,15 @@ The dispatcher fails closed for unknown, unavailable, disabled, or unmigrated co
 
 ## 4. Plugin Subsystem Trust Model & Package Admission
 
-1. **Publisher Authenticity & Digital Signatures**: Package manifests support digital signatures (`wincare-plugin.sig` or manifest `signature` field) verified against RSA SHA-256 PKCS#1 and ECDSA public keys (`publisher.pem` / `publicKeyPem`). Catalog entries enforce 3 trust levels:
-   - `Verified Organization`: Official WinCare repositories.
-   - `Digitally Signed (Cryptographically Verified)`: Third-party packages with verified cryptographic signatures.
-   - `Community / Unsigned`: Unsigned community contributions.
-2. **Catalog Policy & Revocation Lists**: The remote catalog maintains `revokedPublishers` and `revokedPackages` blocklists. Revoked packages are immediately barred from installation and execution in both UI and infrastructure layers.
+1. **Publisher Signatures**: Remote catalog entries may provide a publisher public key and signature used to verify manifest bytes. Package-local keys and author names never establish trust. The current catalog is not independently signed or pinned, so this proves catalog/package consistency rather than publisher identity; an independently anchored catalog or publisher-key policy remains required.
+2. **Catalog Policy & Revocation Lists**: The remote catalog supplies `revokedPublishers` and `revokedPackages` lists. Revocation currently disables installation in the catalog UI; enforcement inside the installer and registry remains an explicit security gap.
 3. **Declared Capabilities & In-Process Disclosure**: Plugins execute in-process with user privileges. `PluginDetailDialog` presents explicit full-trust warnings, publisher trust badges, and capability declarations before installation.
 4. **Package ID Equality**: Package archive manifests must strictly match the target plugin ID before extraction and filesystem promotion.
-5. **Mandatory SHA-256 Digest**: Every stream and URL package undergoes full byte-level SHA-256 integrity verification.
+5. **SHA-256 Digest**: HTTPS catalog downloads require and verify a SHA-256 digest. Local file and direct-stream installation paths accept an optional digest for development and test scenarios.
 6. **Staging & Backup Isolation**: Updates create rollback snapshots in `.staging/backups/`, completely isolated from active discovery routines.
 7. **Dynamic Lifecycle Management**: Discovered plugins are managed via `IPluginRegistry.RegistryChanged`, updating `ToolCatalogService` dynamically.
+
+The validated current-state trust flow, including unresolved boundaries, is available in the standalone [plugin admission architecture diagram](diagrams/plugin-admission.html). Its renderer input is checked in beside it as `plugin-admission.architecture.json`.
 
 ---
 

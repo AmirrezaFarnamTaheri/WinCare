@@ -669,23 +669,20 @@ mod tests {
 
     #[test]
     fn dir_size_on_empty_dir_returns_zero() {
-        let dir = std::env::temp_dir().join("wc_test_empty_dir_size");
-        let _ = std::fs::remove_dir_all(&dir);
-        std::fs::create_dir_all(&dir).unwrap();
+        let temporary_directory = tempfile::tempdir().unwrap();
+        let dir = temporary_directory.path();
         let path = dir.to_str().unwrap();
         let mut out: u64 = 99;
         let r = unsafe { wincare_core_dir_size(path.as_ptr(), path.len(), &mut out) };
         assert_eq!(r, 0);
         assert_eq!(out, 0);
-        let _ = std::fs::remove_dir_all(&dir);
     }
 
     #[test]
     fn dir_size_on_known_file_dir_returns_correct_size() {
         use std::io::Write;
-        let dir = std::env::temp_dir().join("wc_test_dir_size_known");
-        let _ = std::fs::remove_dir_all(&dir);
-        std::fs::create_dir_all(&dir).unwrap();
+        let temporary_directory = tempfile::tempdir().unwrap();
+        let dir = temporary_directory.path();
         std::fs::File::create(dir.join("a.txt"))
             .unwrap()
             .write_all(&[0u8; 1024])
@@ -695,15 +692,13 @@ mod tests {
         let r = unsafe { wincare_core_dir_size(path.as_ptr(), path.len(), &mut out) };
         assert_eq!(r, 0);
         assert_eq!(out, 1024);
-        let _ = std::fs::remove_dir_all(&dir);
     }
 
     #[test]
     fn dir_size_handles_deep_directory_tree_without_recursion() {
-        let root = std::env::temp_dir().join("wc_test_dir_size_deep");
-        let _ = std::fs::remove_dir_all(&root);
-        let mut current = root.clone();
-        std::fs::create_dir_all(&current).unwrap();
+        let temporary_directory = tempfile::tempdir().unwrap();
+        let root = temporary_directory.path();
+        let mut current = root.to_path_buf();
         for index in 0..96 {
             current = current.join(format!("d{index}"));
             std::fs::create_dir(&current).unwrap();
@@ -716,7 +711,6 @@ mod tests {
 
         assert_eq!(Status::Ok.code(), status);
         assert_eq!(17, out);
-        let _ = std::fs::remove_dir_all(&root);
     }
 
     #[test]
