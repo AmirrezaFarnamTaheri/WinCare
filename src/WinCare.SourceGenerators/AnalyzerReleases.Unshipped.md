@@ -1,5 +1,3 @@
-# Release Notes
-
 ## Unreleased
 
 ### New Rules
