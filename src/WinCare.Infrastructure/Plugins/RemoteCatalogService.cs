@@ -137,6 +137,7 @@ public class RemoteCatalogService : IRemoteCatalogService
         {
             var q = query.Trim();
             plugins = plugins.Where(p =>
+                p.Id.Contains(q, StringComparison.OrdinalIgnoreCase) ||
                 p.Name.Contains(q, StringComparison.OrdinalIgnoreCase) ||
                 p.Description.Contains(q, StringComparison.OrdinalIgnoreCase) ||
                 p.Author.Contains(q, StringComparison.OrdinalIgnoreCase) ||
