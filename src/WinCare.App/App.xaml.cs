@@ -1,6 +1,6 @@
 using Microsoft.UI.Xaml;
 using Microsoft.Windows.AppLifecycle;
-using Windows.ApplicationModel.Activation;
+using ProtocolActivatedEventArgs = Windows.ApplicationModel.Activation.ProtocolActivatedEventArgs;
 using WinCare.Infrastructure.Observability;
 
 namespace WinCare.App;
