@@ -5,7 +5,7 @@ namespace WinCare.App;
 
 public partial class App : Microsoft.UI.Xaml.Application
 {
-    private Window? _window;
+    private MainWindow? _window;
 
     public App()
     {
