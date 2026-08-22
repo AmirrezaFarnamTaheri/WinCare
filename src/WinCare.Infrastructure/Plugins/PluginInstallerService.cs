@@ -58,10 +58,10 @@ public class PluginInstallerService : IPluginInstallerService
     /// <inheritdoc />
     public async Task<string> InstallPluginFromPackageAsync(
         string packageUrl,
-        string? expectedPluginId = null,
-        string? expectedSha256 = null,
-        string? expectedPublisherPublicKeyPem = null,
-        string? expectedPublisherSignature = null,
+        string? expectedPluginId,
+        string? expectedSha256,
+        string? expectedPublisherPublicKeyPem,
+        string? expectedPublisherSignature,
         CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(packageUrl))
@@ -230,9 +230,9 @@ public class PluginInstallerService : IPluginInstallerService
     public async Task<string> InstallPluginFromStreamAsync(
         Stream archiveStream,
         string targetPluginId,
-        string? expectedSha256 = null,
-        string? expectedPublisherPublicKeyPem = null,
-        string? expectedPublisherSignature = null,
+        string? expectedSha256,
+        string? expectedPublisherPublicKeyPem,
+        string? expectedPublisherSignature,
         CancellationToken cancellationToken = default)
     {
         if (archiveStream == null)
