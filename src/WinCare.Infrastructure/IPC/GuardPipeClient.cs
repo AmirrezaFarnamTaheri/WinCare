@@ -27,14 +27,15 @@ namespace WinCare.Infrastructure.IPC
                 await _pipeStream.ConnectAsync(timeoutMs, cancellationToken);
                 return true;
             }
+            catch (OperationCanceledException)
+            {
+                ResetConnection();
+                throw;
+            }
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"[GuardPipeClient] Connection failed: {ex.Message}");
-                if (_pipeStream != null)
-                {
-                    try { _pipeStream.Dispose(); } catch { }
-                    _pipeStream = null;
-                }
+                ResetConnection();
                 return false;
             }
             finally
@@ -59,22 +60,36 @@ namespace WinCare.Infrastructure.IPC
                 await _pipeStream.FlushAsync(cancellationToken);
 
                 using var reader = new StreamReader(_pipeStream, Encoding.UTF8, leaveOpen: true);
-                return await reader.ReadLineAsync(cancellationToken);
+                var response = await reader.ReadLineAsync(cancellationToken);
+                if (response == null)
+                {
+                    ResetConnection();
+                }
+
+                return response;
+            }
+            catch (OperationCanceledException)
+            {
+                ResetConnection();
+                throw;
             }
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"[GuardPipeClient] SendCommand error: {ex.Message}");
-                if (_pipeStream != null)
-                {
-                    try { _pipeStream.Dispose(); } catch { }
-                    _pipeStream = null;
-                }
+                ResetConnection();
                 return null;
             }
             finally
             {
                 _lock.Release();
             }
+        }
+
+        private void ResetConnection()
+        {
+            if (_pipeStream == null) return;
+            try { _pipeStream.Dispose(); } catch { }
+            _pipeStream = null;
         }
 
         public async ValueTask DisposeAsync()

@@ -84,7 +84,7 @@ public sealed class AiDoctorPageViewModel : INotifyPropertyChanged
 
         // Greeting message
         Messages.Add(new DoctorChatMessage(
-            "AI System Doctor",
+            "AI Doctor",
             "Hello! I am your on-device WinCare AI System Doctor. Describe any issue with your PC (e.g. storage full, high RAM, lag, network ping) and I will diagnose it and generate a safe, verifiable action plan.",
             IsUser: false,
             DateTime.UtcNow
@@ -97,7 +97,7 @@ public sealed class AiDoctorPageViewModel : INotifyPropertyChanged
         if (string.IsNullOrWhiteSpace(prompt) || IsAnalyzing) return;
 
         UserPrompt = string.Empty;
-        Messages.Add(new DoctorChatMessage("You", prompt, IsUser: true, DateTime.UtcNow));
+        Messages.Add(new DoctorChatMessage("User", prompt, IsUser: true, DateTime.UtcNow));
 
         IsAnalyzing = true;
         try
@@ -109,12 +109,12 @@ public sealed class AiDoctorPageViewModel : INotifyPropertyChanged
                 $"• **Measured Probes:** {plan.MeasuredEvidence.Count} live telemetry probes collected.\n" +
                 $"• **Investigation Scope:** {plan.Findings.Count} diagnostic findings identified.\n" +
                 $"• **Recommended Steps:** {plan.ProposedSteps.Count} steps available. Review measured evidence and run read-only diagnostic checks before executing mutations.";
-            Messages.Add(new DoctorChatMessage("AI System Doctor", responseText, IsUser: false, DateTime.UtcNow, plan));
+            Messages.Add(new DoctorChatMessage("AI Doctor", responseText, IsUser: false, DateTime.UtcNow, plan));
         }
         catch (Exception ex)
         {
             Messages.Add(new DoctorChatMessage(
-                "AI System Doctor",
+                "AI Doctor",
                 $"An error occurred while analyzing: {ex.Message}",
                 IsUser: false,
                 DateTime.UtcNow

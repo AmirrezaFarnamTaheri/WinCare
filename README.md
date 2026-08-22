@@ -180,7 +180,7 @@ python tools/package_portable.py artifacts/portable/win-x64 artifacts/WinCare-v2
 
 Official signed releases are published immutably via GitHub Actions upon tagged commits (`refs/tags/v*`), while master and PR builds produce verified CI workflow artifacts:
 
-- **MSIX Package (`.msix`)**: Standard modern Windows application installer with auto-update support.
+- **MSIX Package (`.msix`)**: Standard modern Windows application installer. This repository does not define an App Installer feed or automatic-update configuration; install newer releases explicitly.
 - **Standalone Binary (`.exe`)**: Single-file self-contained executable requiring zero external runtime installation.
 - **Portable Distribution (`.zip`)**: Standalone archive suitable for USB repair toolkits and offline maintenance environments.
 - **Native Source Archive (`.zip`)**: Deterministic release archive containing verified pure C# and Rust source code.

@@ -120,6 +120,8 @@ public sealed class PluginStorePageViewModel : INotifyPropertyChanged, IDisposab
     /// </summary>
     public bool HasError => !string.IsNullOrWhiteSpace(_errorMessage);
 
+    public bool IsEmpty => !IsLoading && Plugins.Count == 0;
+
     /// <summary>
     /// Whether the store catalog is currently fetching data or refreshing.
     /// </summary>
@@ -132,6 +134,7 @@ public sealed class PluginStorePageViewModel : INotifyPropertyChanged, IDisposab
             {
                 _isLoading = value;
                 OnPropertyChanged();
+                OnPropertyChanged(nameof(IsEmpty));
             }
         }
     }
@@ -178,6 +181,7 @@ public sealed class PluginStorePageViewModel : INotifyPropertyChanged, IDisposab
         try
         {
             Plugins.Clear();
+            OnPropertyChanged(nameof(IsEmpty));
 
             var installedPlugins = _registry.GetAllPlugins().ToDictionary(p => p.Id, StringComparer.OrdinalIgnoreCase);
 
@@ -249,6 +253,8 @@ public sealed class PluginStorePageViewModel : INotifyPropertyChanged, IDisposab
         ErrorMessage = null;
         try
         {
+            // The remote catalog is transport metadata, not an independent publisher trust
+            // root. Never let it choose the key used to establish package authenticity.
             await _installerService.InstallPluginFromPackageAsync(card.PackageUrl, card.Id, card.Sha256, cancellationToken).ConfigureAwait(true);
             await _registry.DiscoverAndInitializeAsync(_host, cancellationToken).ConfigureAwait(true);
             await RefreshPluginsAsync(forceRemoteRefresh: false, cancellationToken).ConfigureAwait(true);

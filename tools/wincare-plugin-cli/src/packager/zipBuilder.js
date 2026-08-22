@@ -124,6 +124,7 @@ for (let i = 0; i < 256; i++) {
  */
 function packPlugin(pluginDir, outputPath) {
   const resolvedDir = path.resolve(pluginDir);
+  const targetOutput = path.resolve(outputPath || path.join(resolvedDir, 'plugin.wincare-plugin'));
   const zip = new DeterministicZipWriter();
 
   function scanDir(currentDir, baseDir) {
@@ -136,6 +137,7 @@ function packPlugin(pluginDir, outputPath) {
         scanDir(fullPath, baseDir);
       } else if (stat.isFile()) {
         const relativePath = path.relative(baseDir, fullPath);
+        if (path.resolve(fullPath) === targetOutput) continue;
         const data = fs.readFileSync(fullPath);
         zip.addFile(relativePath, data);
       }
@@ -145,7 +147,6 @@ function packPlugin(pluginDir, outputPath) {
   scanDir(resolvedDir, resolvedDir);
 
   const archiveBuffer = zip.build();
-  const targetOutput = outputPath || path.join(resolvedDir, 'plugin.wincare-plugin');
   fs.writeFileSync(targetOutput, archiveBuffer);
 
   return {

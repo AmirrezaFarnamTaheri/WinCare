@@ -28,8 +28,7 @@ CHECKS = [
     ("Rust format check", ["cargo", "fmt", "--manifest-path", "native/Cargo.toml", "--all", "--", "--check"], 300),
     ("Rust unit tests", ["cargo", "test", "--manifest-path", "native/Cargo.toml"], 900),
     ("Rust clippy lints", ["cargo", "clippy", "--manifest-path", "native/Cargo.toml", "--all-targets", "--all-features", "--", "-D", "warnings"], 900),
-    ("Python native tests", [PYTHON, "-m", "unittest", "discover", "-s", "tests/native", "-v"], 300),
-    ("Plugin CLI developer tests", [PYTHON, "tests/tools/test_plugin_cli.py", "-v"], 120),
+    ("Python repository tests", [PYTHON, "-m", "unittest", "discover", "-s", "tests", "-t", ".", "-v"], 300),
 ]
 
 if (ROOT / "src/WinCare/WinCare.psm1").is_file():

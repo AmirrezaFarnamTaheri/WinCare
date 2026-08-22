@@ -21,7 +21,9 @@ typedef enum wincore_status {
     WINCARE_STATUS_NOT_FOUND = 3,
     WINCARE_STATUS_FILE_TOO_LARGE = 4,
     WINCARE_STATUS_IO_ERROR = 5,
-    WINCARE_STATUS_BUFFER_TOO_SMALL = 6
+    WINCARE_STATUS_BUFFER_TOO_SMALL = 6,
+    WINCARE_STATUS_TRUNCATED = 7,
+    WINCARE_STATUS_INTERNAL_ERROR = -99
 } wincore_status;
 
 WINCARE_API uint32_t wincare_core_abi_version(void);

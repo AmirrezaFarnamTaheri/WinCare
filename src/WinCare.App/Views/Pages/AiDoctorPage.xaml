@@ -5,11 +5,11 @@
     xmlns:vm="using:WinCare.App.ViewModels.Pages"
     xmlns:diag="using:WinCare.Application.Diagnostics">
 
-    <Grid RowDefinitions="Auto,*,Auto" Margin="24,24,24,24">
+    <Grid RowDefinitions="Auto,*,Auto" Padding="32,24,32,32">
         <!-- Header -->
         <StackPanel Grid.Row="0" Spacing="4" Margin="0,0,0,16">
-            <TextBlock Text="AI System Doctor" Style="{StaticResource TitleTextBlockStyle}" Foreground="{ThemeResource AccentTealBrush}" FontWeight="SemiBold" />
-            <TextBlock Text="On-device intelligent diagnosis and automated remediation action plans (Heuristic &amp; DirectML Ready)." Style="{StaticResource BodyTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+            <TextBlock Text="AI Doctor" Style="{StaticResource PageTitleTextStyle}" />
+            <TextBlock MaxWidth="760" HorizontalAlignment="Left" Text="Describe a Windows problem to get an on-device diagnosis and a reviewable action plan." Style="{StaticResource PageDescriptionTextStyle}" />
         </StackPanel>
 
         <!-- Chat Conversation Area -->
@@ -24,9 +24,7 @@
                                     BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                                     BorderThickness="1">
                                 <StackPanel Spacing="6">
-                                    <StackPanel Orientation="Horizontal" Spacing="8">
-                                        <TextBlock Text="{x:Bind Sender}" FontWeight="Bold" FontSize="13" Foreground="{ThemeResource AccentTealBrush}" />
-                                    </StackPanel>
+                                    <TextBlock Text="{x:Bind Sender}" FontWeight="SemiBold" FontSize="13" Foreground="{ThemeResource AccentTealBrush}" />
                                     <TextBlock Text="{x:Bind Text}" TextWrapping="Wrap" Style="{StaticResource BodyTextBlockStyle}" />
                                     
                                     <!-- Proposed Action Steps -->
@@ -73,18 +71,20 @@
         <!-- Prompt Input Bar -->
         <Grid Grid.Row="2" ColumnDefinitions="*,Auto" ColumnSpacing="12">
             <TextBox Grid.Column="0"
-                     PlaceholderText="Describe your PC issue (e.g., 'Clean up temp files on C drive', 'Why is RAM high?')..."
+                     PlaceholderText="Describe the Windows problem"
                      Text="{x:Bind ViewModel.UserPrompt, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                      KeyDown="PromptTextBox_KeyDown"
                      IsEnabled="{x:Bind ViewModel.IsAnalyzing, Converter={StaticResource InverseBooleanConverter}, Mode=OneWay, FallbackValue=True}"
-                     AutomationProperties.Name="AI Doctor Prompt Input"/>
+                     AutomationProperties.AutomationId="DoctorPrompt"
+                     AutomationProperties.Name="Describe the Windows problem"/>
 
             <Button Grid.Column="1"
-                    Content="Ask Doctor"
+                    Content="Diagnose"
                     Style="{StaticResource AccentButtonStyle}"
                     Click="SendButton_Click"
                     IsEnabled="{x:Bind ViewModel.IsAnalyzing, Converter={StaticResource InverseBooleanConverter}, Mode=OneWay, FallbackValue=True}"
-                    AutomationProperties.Name="Submit Diagnosis Prompt"/>
+                    AutomationProperties.AutomationId="DiagnoseProblem"
+                    AutomationProperties.Name="Diagnose the described problem"/>
         </Grid>
     </Grid>
 </Page>

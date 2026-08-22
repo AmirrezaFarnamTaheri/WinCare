@@ -26,9 +26,9 @@ WinCare establishes strict boundaries between static source validation, unit tes
   - Zero PowerShell or WPF dependencies in native roots.
   - Required WinUI 3 pages, navigation items, and telemetry instrumentation verified.
 - [x] **Native Structural & Safety Unit Tests (`tests/native/`)**:
-  - 56/56 unit tests passed covering fail-closed execution, PII exception sanitization, reparse-point safety, and bounded process runners.
+  - 63 tests discovered: 62 passed and 1 symlink-dependent test skipped on the current host, covering fail-closed execution, PII exception sanitization, reparse-point safety, and bounded process runners.
 - [x] **Rust 2024 Workspace Suites (`native/Cargo.toml`)**:
-  - 29/29 tests passed across `wincare-core` (FFI contract, unwind safety, hashing) and `wincare-guard` (RAM/thermal monitors, local threshold evaluations, Windows Toast XML notifications).
+  - 42/42 test executions passed across `wincare-core` (23 unit and FFI-contract tests) and `wincare-guard` (19 library, binary, and integration test executions). The six Guard unit tests are intentionally compiled for both its library and binary targets.
   - Clean `cargo clippy` with zero warnings under `-D warnings`.
 - [x] **Community Plugin SDK & CLI Tests (`tests/tools/test_plugin_cli.py`)**:
   - Scaffolding, manifest linting, SemVer validation, and ZipSlip path traversal rejection verified.
@@ -91,7 +91,7 @@ To generate auditable release archives and separation reports:
 ```bash
 python tools/finalize_native_release.py \
   --output artifacts/finalization \
-  --version 2.4.0-rc1 \
+  --version 2.5.0-rc1 \
   --mode rc
 ```
 
@@ -116,4 +116,8 @@ The GitHub Actions workflow (`.github/workflows/native-winui.yml`) executes the 
    - Signed MSIX packages (`.msix`)
    - Single-file standalone executables (`.exe`)
    - Portable self-contained ZIP distributions (`-portable.zip`)
-4. **Release Gate**: Dynamically determines version tag, stages all assets via `tools/stage_release_assets.py`, and publishes or updates the release on GitHub Releases.
+4. **Release Gate**: Requires the pushed tag to exactly match `Directory.Build.props`, stages all assets via `tools/stage_release_assets.py`, and creates a GitHub release. It fails if that release tag already exists; published SemVer releases are immutable.
+
+Tagged binary releases also require `WINCARE_SIGNING_CERT_BASE64` and `WINCARE_SIGNING_CERT_PASSWORD`. The certificate must contain a private key and have the exact subject `CN=WinCare Development`; otherwise the packaging job fails before release publication. Non-tag CI builds use an ephemeral development certificate and produce workflow artifacts, not official release assets.
+
+The separate manual workflow, `.github/workflows/native-release-candidate.yml`, publishes source-finalization artifacts only. Dispatch it from `master` or `main` with a version matching `Directory.Build.props`; choose `production` only after all commands are `BehaviorVerified`. Because both workflows enforce immutable tags, do not run the manual workflow for a tag that already exists or is about to be created by the tagged binary workflow.
