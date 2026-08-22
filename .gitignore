@@ -1,5 +1,7 @@
 artifacts/
 **/bin/
+!tools/wincare-plugin-cli/bin/
+!tools/wincare-plugin-cli/bin/wincare-plugin.js
 **/obj/
 native/target/
 *.zip
