@@ -52,6 +52,10 @@ public class PluginInstallerService : IPluginInstallerService
     }
 
     /// <inheritdoc />
+    public Task<string> InstallPluginFromPackageAsync(string packageUrl, string? expectedPluginId = null, string? expectedSha256 = null, CancellationToken cancellationToken = default)
+        => InstallPluginFromPackageAsync(packageUrl, expectedPluginId, expectedSha256, null, null, cancellationToken);
+
+    /// <inheritdoc />
     public async Task<string> InstallPluginFromPackageAsync(
         string packageUrl,
         string? expectedPluginId = null,
@@ -217,6 +221,10 @@ public class PluginInstallerService : IPluginInstallerService
             }
         }
     }
+
+    /// <inheritdoc />
+    public Task<string> InstallPluginFromStreamAsync(Stream archiveStream, string targetPluginId, string? expectedSha256 = null, CancellationToken cancellationToken = default)
+        => InstallPluginFromStreamAsync(archiveStream, targetPluginId, expectedSha256, null, null, cancellationToken);
 
     /// <inheritdoc />
     public async Task<string> InstallPluginFromStreamAsync(

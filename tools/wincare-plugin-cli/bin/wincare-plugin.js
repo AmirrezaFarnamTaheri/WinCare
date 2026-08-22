@@ -43,6 +43,10 @@ try {
       }
     }
 
+    if (!['json-pack', 'csharp-plugin'].includes(template)) {
+      throw new Error(`Unsupported template '${template}'. Use json-pack or csharp-plugin.`);
+    }
+
     const result = createPlugin(name, { template, outDir });
     console.log(`✓ Created plugin "${result.id}" using template "${result.template}" in ${result.targetDir}`);
   } else if (command === 'validate') {

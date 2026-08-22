@@ -19,6 +19,10 @@ public partial class App : Microsoft.UI.Xaml.Application
         _window = new MainWindow();
         StartupTelemetry.Mark("WindowCreated");
         _window.Activate();
+        if (!string.IsNullOrWhiteSpace(args.Arguments))
+        {
+            _window.HandleProtocolActivation(args.Arguments);
+        }
         _ = Services.AppRuntime.Current.InitializePluginsAsync();
     }
 

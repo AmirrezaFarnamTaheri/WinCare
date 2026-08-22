@@ -59,7 +59,8 @@ pub fn check_disk_space(drive: char) -> Option<DiskTelemetry> {
     {
         // Mock fallback for cross-platform unit tests
         total_bytes = 512 * 1024 * 1024 * 1024;
-        free_bytes = 20 * 1024 * 1024 * 1024;
+        // Keep the non-Windows test fixture above the percentage threshold.
+        free_bytes = 100 * 1024 * 1024 * 1024;
     }
 
     Some(DiskTelemetry {

@@ -60,7 +60,13 @@ namespace WinCare.Infrastructure.IPC
                 await _pipeStream.FlushAsync(cancellationToken);
 
                 using var reader = new StreamReader(_pipeStream, Encoding.UTF8, leaveOpen: true);
-                return await reader.ReadLineAsync(cancellationToken);
+                var response = await reader.ReadLineAsync(cancellationToken);
+                if (response == null)
+                {
+                    ResetConnection();
+                }
+
+                return response;
             }
             catch (OperationCanceledException)
             {

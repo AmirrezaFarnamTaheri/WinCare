@@ -253,7 +253,9 @@ public sealed class PluginStorePageViewModel : INotifyPropertyChanged, IDisposab
         ErrorMessage = null;
         try
         {
-            await _installerService.InstallPluginFromPackageAsync(card.PackageUrl, card.Id, card.Sha256, card.RemoteItem?.PublicKeyPem, card.RemoteItem?.Signature, cancellationToken).ConfigureAwait(true);
+            // The remote catalog is transport metadata, not an independent publisher trust
+            // root. Never let it choose the key used to establish package authenticity.
+            await _installerService.InstallPluginFromPackageAsync(card.PackageUrl, card.Id, card.Sha256, cancellationToken).ConfigureAwait(true);
             await _registry.DiscoverAndInitializeAsync(_host, cancellationToken).ConfigureAwait(true);
             await RefreshPluginsAsync(forceRemoteRefresh: false, cancellationToken).ConfigureAwait(true);
             return true;

@@ -22,6 +22,9 @@ pub fn generate_toast_xml(title: &str, message: &str, action_tag: &str) -> Strin
 
 fn escape_xml(value: &str) -> String {
     value
+        .chars()
+        .filter(|character| matches!(character, '\u{9}' | '\u{A}' | '\u{D}' | '\u{20}'..='\u{D7FF}' | '\u{E000}'..='\u{FFFD}' | '\u{10000}'..='\u{10FFFF}'))
+        .collect::<String>()
         .replace('&', "&amp;")
         .replace('<', "&lt;")
         .replace('>', "&gt;")
@@ -70,5 +73,16 @@ mod tests {
         assert!(xml.contains("Free space: &quot;low&quot;"));
         assert!(xml.contains("clean%2Ftemp%3Fforce%3Dtrue%26source%3Dguard"));
         assert!(!xml.contains("clean/temp?force=true"));
+    }
+
+    #[test]
+    fn removes_xml_invalid_control_characters() {
+        let xml = generate_toast_xml("title\0\u{1}\u{8}\u{B}\u{C}\u{B}ok", "message", "tag");
+        assert!(xml.contains("titleok"));
+        assert!(!xml.contains('\0'));
+        assert!(!xml.contains('\u{1}'));
+        assert!(!xml.contains('\u{8}'));
+        assert!(!xml.contains('\u{B}'));
+        assert!(!xml.contains('\u{C}'));
     }
 }
