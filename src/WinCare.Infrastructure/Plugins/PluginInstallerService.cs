@@ -30,6 +30,7 @@ public class PluginInstallerService : IPluginInstallerService
 
     private readonly HttpClient _httpClient;
     private readonly string _pluginsBaseDirectory;
+    private readonly string _operationLocksDirectory;
 
     /// <summary>
     /// Initializes a new instance of <see cref="PluginInstallerService"/>.
@@ -49,6 +50,7 @@ public class PluginInstallerService : IPluginInstallerService
         }
 
         Directory.CreateDirectory(_pluginsBaseDirectory);
+        _operationLocksDirectory = Path.Combine(_pluginsBaseDirectory, ".locks");
     }
 
     /// <inheritdoc />
@@ -82,6 +84,13 @@ public class PluginInstallerService : IPluginInstallerService
             if (string.IsNullOrWhiteSpace(expectedSha256))
             {
                 throw new ArgumentException("Remote package installation requires a non-empty expectedSha256 digest.", nameof(expectedSha256));
+            }
+
+            if (string.IsNullOrWhiteSpace(expectedPublisherPublicKeyPem) || string.IsNullOrWhiteSpace(expectedPublisherSignature))
+            {
+                throw new ArgumentException(
+                    "Remote package installation requires a publisher key and manifest signature supplied by an independently trusted catalog boundary.",
+                    nameof(expectedPublisherPublicKeyPem));
             }
         }
 
@@ -245,6 +254,7 @@ public class PluginInstallerService : IPluginInstallerService
             throw new ArgumentException($"Invalid plugin ID '{targetPluginId}'.", nameof(targetPluginId));
         }
 
+        using var operationLock = await AcquirePluginOperationLockAsync(targetPluginId, cancellationToken).ConfigureAwait(false);
         MemoryStream? ownedMemoryStream = null;
         string? tempExtractDir = null;
         Stream workingStream = archiveStream;
@@ -479,16 +489,48 @@ public class PluginInstallerService : IPluginInstallerService
     }
 
     /// <inheritdoc />
-    public Task<bool> UninstallPluginAsync(string pluginId, CancellationToken cancellationToken = default)
+    public async Task<bool> UninstallPluginAsync(string pluginId, CancellationToken cancellationToken = default)
     {
         var pluginDir = ValidateAndGetPluginDirectory(pluginId);
+        using var operationLock = await AcquirePluginOperationLockAsync(pluginId, cancellationToken).ConfigureAwait(false);
+        cancellationToken.ThrowIfCancellationRequested();
         if (Directory.Exists(pluginDir))
         {
             Directory.Delete(pluginDir, recursive: true);
-            return Task.FromResult(true);
+            return true;
         }
 
-        return Task.FromResult(false);
+        return false;
+    }
+
+    /// <summary>
+    /// Acquires an exclusive, cross-process lock for mutations to a single plugin.
+    /// The lock file is intentionally retained after release; the handle's sharing
+    /// mode, not file deletion, defines ownership and avoids delete/create races.
+    /// </summary>
+    private async Task<FileStream> AcquirePluginOperationLockAsync(string pluginId, CancellationToken cancellationToken)
+    {
+        Directory.CreateDirectory(_operationLocksDirectory);
+        var lockPath = Path.Combine(_operationLocksDirectory, $"{pluginId}.lock");
+
+        while (true)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            try
+            {
+                return new FileStream(
+                    lockPath,
+                    FileMode.OpenOrCreate,
+                    FileAccess.ReadWrite,
+                    FileShare.None,
+                    bufferSize: 1,
+                    FileOptions.Asynchronous);
+            }
+            catch (IOException)
+            {
+                await Task.Delay(TimeSpan.FromMilliseconds(50), cancellationToken).ConfigureAwait(false);
+            }
+        }
     }
 
     private static async Task CopyBoundedAsync(Stream source, Stream destination, long maximumBytes, CancellationToken cancellationToken)

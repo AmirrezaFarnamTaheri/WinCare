@@ -246,6 +246,31 @@ public class PluginInstallerServiceTests
     }
 
     [Fact]
+    public async Task InstallPluginFromPackageAsync_RequiresIndependentPublisherTrustForRemotePackages()
+    {
+        var tempPluginsDir = Path.Combine(Path.GetTempPath(), $"wincare_test_plugins_{Guid.NewGuid():N}");
+        try
+        {
+            var installer = new PluginInstallerService(pluginsBaseDirectory: tempPluginsDir);
+
+            var exception = await Assert.ThrowsAsync<ArgumentException>(() =>
+                installer.InstallPluginFromPackageAsync(
+                    "https://example.com/plugin.wincare-plugin",
+                    "com.wincare.remote",
+                    new string('a', 64)));
+
+            Assert.Contains("independently trusted catalog boundary", exception.Message, StringComparison.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            if (Directory.Exists(tempPluginsDir))
+            {
+                Directory.Delete(tempPluginsDir, recursive: true);
+            }
+        }
+    }
+
+    [Fact]
     public async Task InstallPluginFromStreamAsync_RejectsMissingManifest()
     {
         var tempPluginsDir = Path.Combine(Path.GetTempPath(), $"wincare_test_plugins_{Guid.NewGuid():N}");
