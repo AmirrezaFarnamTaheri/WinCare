@@ -27,13 +27,13 @@
         <uap:DefaultTile Wide310x150Logo="Assets\Wide310x150Logo.png" />
         <uap:SplashScreen Image="Assets\SplashScreen.png" BackgroundColor="#F3F3F3" />
       </uap:VisualElements>
-      <uap:Extensions>
+      <Extensions>
         <uap:Extension Category="windows.protocol">
           <uap:Protocol Name="wincare">
             <uap:DisplayName>WinCare</uap:DisplayName>
           </uap:Protocol>
         </uap:Extension>
-      </uap:Extensions>
+      </Extensions>
     </Application>
   </Applications>
   <Capabilities>
