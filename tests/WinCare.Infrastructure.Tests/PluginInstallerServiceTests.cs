@@ -410,6 +410,7 @@ public class PluginInstallerServiceTests
                 installer.InstallPluginFromStreamAsync(
                     memoryStream,
                     "com.wincare.forged.plugin",
+                    expectedSha256: null,
                     expectedPublisherPublicKeyPem: publicKeyPem,
                     expectedPublisherSignature: "Zm9yZ2VkLXNpZ25hdHVyZQ=="));
 
@@ -481,6 +482,7 @@ public class PluginInstallerServiceTests
             string installedPath = await installer.InstallPluginFromStreamAsync(
                 archive,
                 "com.publisher.signed",
+                expectedSha256: null,
                 expectedPublisherPublicKeyPem: rsa.ExportRSAPublicKeyPem(),
                 expectedPublisherSignature: signature);
 
