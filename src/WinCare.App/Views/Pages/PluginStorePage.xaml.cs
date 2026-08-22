@@ -13,6 +13,8 @@ public sealed partial class PluginStorePage : Page
     private bool _initialized;
     public PluginStorePageViewModel ViewModel { get; }
 
+    public static Visibility BoolToVisibility(bool value) => value ? Visibility.Visible : Visibility.Collapsed;
+
     public PluginStorePage()
     {
         ViewModel = new PluginStorePageViewModel();
@@ -41,24 +43,6 @@ public sealed partial class PluginStorePage : Page
         if (args.Reason == AutoSuggestionBoxTextChangeReason.UserInput)
         {
             ViewModel.SearchQuery = sender.Text;
-        }
-    }
-
-    private void CategoryButton_Click(object sender, RoutedEventArgs e)
-    {
-        if (sender is Button button && button.Tag is string category)
-        {
-            ViewModel.SelectedCategory = category;
-
-            foreach (var child in CategoryFilterPanel.Children)
-            {
-                if (child is Button b)
-                {
-                    b.Style = string.Equals(b.Tag as string, category, StringComparison.OrdinalIgnoreCase)
-                        ? (Style)Microsoft.UI.Xaml.Application.Current.Resources["AccentButtonStyle"]
-                        : null;
-                }
-            }
         }
     }
 

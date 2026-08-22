@@ -56,6 +56,8 @@ public class PluginInstallerService : IPluginInstallerService
         string packageUrl,
         string? expectedPluginId = null,
         string? expectedSha256 = null,
+        string? expectedPublisherPublicKeyPem = null,
+        string? expectedPublisherSignature = null,
         CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(packageUrl))
@@ -140,7 +142,7 @@ public class PluginInstallerService : IPluginInstallerService
             }
 
             memoryStream.Position = 0;
-            return await InstallPluginFromStreamAsync(memoryStream, pluginId, expectedSha256, cancellationToken).ConfigureAwait(false);
+            return await InstallPluginFromStreamAsync(memoryStream, pluginId, expectedSha256, expectedPublisherPublicKeyPem, expectedPublisherSignature, cancellationToken).ConfigureAwait(false);
         }
         finally
         {
@@ -157,14 +159,6 @@ public class PluginInstallerService : IPluginInstallerService
     /// </summary>
     public static bool VerifyPublisherAuthenticity(string author, string? signature, out string trustLevel, string? publicKeyPem = null, byte[]? manifestBytes = null)
     {
-        if (string.Equals(author, "WinCare Official", StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(author, "WinCare Community", StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(author, "WinCare Network Group", StringComparison.OrdinalIgnoreCase))
-        {
-            trustLevel = "Verified Organization";
-            return true;
-        }
-
         if (!string.IsNullOrWhiteSpace(signature))
         {
             if (!string.IsNullOrWhiteSpace(publicKeyPem) && manifestBytes != null && manifestBytes.Length > 0)
@@ -179,8 +173,8 @@ public class PluginInstallerService : IPluginInstallerService
                 return false;
             }
 
-            trustLevel = "Digitally Signed";
-            return true;
+            trustLevel = "Signature Not Verified";
+            return false;
         }
 
         trustLevel = "Community / Unsigned";
@@ -229,6 +223,8 @@ public class PluginInstallerService : IPluginInstallerService
         Stream archiveStream,
         string targetPluginId,
         string? expectedSha256 = null,
+        string? expectedPublisherPublicKeyPem = null,
+        string? expectedPublisherSignature = null,
         CancellationToken cancellationToken = default)
     {
         if (archiveStream == null)
@@ -236,7 +232,7 @@ public class PluginInstallerService : IPluginInstallerService
             throw new ArgumentNullException(nameof(archiveStream));
         }
 
-        if (string.IsNullOrWhiteSpace(targetPluginId) || (!targetPluginId.StartsWith("plugin_") && !PluginIdRegex.IsMatch(targetPluginId)))
+        if (string.IsNullOrWhiteSpace(targetPluginId) || !PluginIdRegex.IsMatch(targetPluginId))
         {
             throw new ArgumentException($"Invalid plugin ID '{targetPluginId}'.", nameof(targetPluginId));
         }
@@ -247,9 +243,21 @@ public class PluginInstallerService : IPluginInstallerService
         if (!archiveStream.CanSeek)
         {
             ownedMemoryStream = new MemoryStream();
-            await archiveStream.CopyToAsync(ownedMemoryStream, cancellationToken).ConfigureAwait(false);
+            try
+            {
+                await CopyBoundedAsync(archiveStream, ownedMemoryStream, MaxDownloadSizeBytes, cancellationToken).ConfigureAwait(false);
+            }
+            catch
+            {
+                ownedMemoryStream.Dispose();
+                throw;
+            }
             ownedMemoryStream.Position = 0;
             workingStream = ownedMemoryStream;
+        }
+        else if (archiveStream.Length - archiveStream.Position > MaxDownloadSizeBytes)
+        {
+            throw new InvalidOperationException($"Package stream exceeds maximum allowed size of {MaxDownloadSizeBytes} bytes.");
         }
 
         try
@@ -259,20 +267,8 @@ public class PluginInstallerService : IPluginInstallerService
             {
                 long originalPos = workingStream.Position;
                 workingStream.Position = 0;
-
-                byte[] streamBytes;
-                if (workingStream is MemoryStream ms)
-                {
-                    streamBytes = ms.ToArray();
-                }
-                else
-                {
-                    using var tempMs = new MemoryStream();
-                    await workingStream.CopyToAsync(tempMs, cancellationToken).ConfigureAwait(false);
-                    streamBytes = tempMs.ToArray();
-                }
-
-                var computedHash = Convert.ToHexString(SHA256.HashData(streamBytes));
+                var computedHash = Convert.ToHexString(
+                    await SHA256.HashDataAsync(workingStream, cancellationToken).ConfigureAwait(false));
                 var cleanExpected = expectedSha256.Replace("-", string.Empty);
                 if (!computedHash.Equals(cleanExpected, StringComparison.OrdinalIgnoreCase))
                 {
@@ -350,8 +346,7 @@ public class PluginInstallerService : IPluginInstallerService
 
             var manifestId = idProp.GetString()!;
 
-            // Finding 3: Enforce strict equality between manifest ID and catalog/expected targetPluginId
-            if (!string.IsNullOrWhiteSpace(targetPluginId) && !targetPluginId.StartsWith("plugin_") && !string.Equals(manifestId, targetPluginId, StringComparison.OrdinalIgnoreCase))
+            if (!string.Equals(manifestId, targetPluginId, StringComparison.OrdinalIgnoreCase))
             {
                 throw new InvalidOperationException($"Package admission rejected: Manifest ID '{manifestId}' does not match expected target plugin ID '{targetPluginId}'.");
             }
@@ -371,28 +366,22 @@ public class PluginInstallerService : IPluginInstallerService
                 }
             }
 
-            string? manifestPublicKey = null;
-            if (doc.RootElement.TryGetProperty("publicKey", out var pkProp) && !string.IsNullOrWhiteSpace(pkProp.GetString()))
-            {
-                manifestPublicKey = pkProp.GetString();
-            }
-            else
-            {
-                var pkFilePath = Path.Combine(tempExtractDir, "publisher.pem");
-                if (File.Exists(pkFilePath))
-                {
-                    manifestPublicKey = await File.ReadAllTextAsync(pkFilePath, cancellationToken).ConfigureAwait(false);
-                }
-            }
-
             var author = doc.RootElement.TryGetProperty("author", out var authorProp) ? authorProp.GetString() ?? string.Empty : string.Empty;
             byte[] manifestRawBytes = await File.ReadAllBytesAsync(manifestPath, cancellationToken).ConfigureAwait(false);
-            if (!VerifyPublisherAuthenticity(author, manifestSignature, out var trustLevel, manifestPublicKey, manifestRawBytes))
+            if (manifestSignature != null && string.IsNullOrWhiteSpace(expectedPublisherSignature))
             {
-                if (trustLevel.Contains("Failed", StringComparison.OrdinalIgnoreCase))
-                {
-                    throw new InvalidOperationException($"Package admission rejected: Digital signature verification failed ({trustLevel}).");
-                }
+                throw new InvalidOperationException("Package admission rejected: Package-supplied signature is not an independent trust assertion.");
+            }
+            bool hasExpectedKey = !string.IsNullOrWhiteSpace(expectedPublisherPublicKeyPem);
+            bool hasExpectedSignature = !string.IsNullOrWhiteSpace(expectedPublisherSignature);
+            if (hasExpectedKey != hasExpectedSignature)
+            {
+                throw new InvalidOperationException("Package admission rejected: Publisher key and signature must both be supplied by the trusted catalog boundary.");
+            }
+            if (hasExpectedSignature &&
+                !VerifyPublisherAuthenticity(author, expectedPublisherSignature, out var trustLevel, expectedPublisherPublicKeyPem, manifestRawBytes))
+            {
+                throw new InvalidOperationException($"Package admission rejected: Digital signature verification failed ({trustLevel}).");
             }
 
             var finalPluginId = manifestId;
@@ -492,6 +481,23 @@ public class PluginInstallerService : IPluginInstallerService
         }
 
         return Task.FromResult(false);
+    }
+
+    private static async Task CopyBoundedAsync(Stream source, Stream destination, long maximumBytes, CancellationToken cancellationToken)
+    {
+        byte[] buffer = new byte[81920];
+        long totalBytes = 0;
+        while (true)
+        {
+            int bytesRead = await source.ReadAsync(buffer, cancellationToken).ConfigureAwait(false);
+            if (bytesRead == 0) return;
+            totalBytes += bytesRead;
+            if (totalBytes > maximumBytes)
+            {
+                throw new InvalidOperationException($"Package stream exceeds maximum allowed size of {maximumBytes} bytes.");
+            }
+            await destination.WriteAsync(buffer.AsMemory(0, bytesRead), cancellationToken).ConfigureAwait(false);
+        }
     }
 
     private string ValidateAndGetPluginDirectory(string pluginId)

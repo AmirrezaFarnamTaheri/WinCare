@@ -9,6 +9,14 @@ pub struct DiskTelemetry {
 }
 
 pub const LOW_SPACE_THRESHOLD_BYTES: u64 = 5 * 1024 * 1024 * 1024; // 5 GB
+pub const LOW_SPACE_THRESHOLD_PERCENT: u64 = 10;
+
+fn is_low_space(total_bytes: u64, free_bytes: u64) -> bool {
+    free_bytes < LOW_SPACE_THRESHOLD_BYTES
+        || (total_bytes > 0
+            && u128::from(free_bytes) * 100
+                < u128::from(total_bytes) * u128::from(LOW_SPACE_THRESHOLD_PERCENT))
+}
 
 #[cfg(target_os = "windows")]
 mod win32 {
@@ -58,7 +66,7 @@ pub fn check_disk_space(drive: char) -> Option<DiskTelemetry> {
         drive_letter: drive.to_ascii_uppercase(),
         total_bytes,
         free_bytes,
-        is_low_space: free_bytes < LOW_SPACE_THRESHOLD_BYTES,
+        is_low_space: is_low_space(total_bytes, free_bytes),
     })
 }
 
@@ -75,5 +83,15 @@ mod tests {
             is_low_space: true,
         };
         assert!(mock_telemetry.is_low_space);
+    }
+
+    #[test]
+    fn flags_low_percentage_on_large_drive() {
+        assert!(is_low_space(2_000_000_000_000, 150_000_000_000));
+    }
+
+    #[test]
+    fn accepts_space_above_both_thresholds() {
+        assert!(!is_low_space(100_000_000_000, 20_000_000_000));
     }
 }

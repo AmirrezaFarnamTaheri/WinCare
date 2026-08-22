@@ -24,6 +24,8 @@ jobs:
         run: python tools/verify_native_foundation.py
       - name: Run structural tests
         run: python -m unittest discover -s tests/native -v
+      - name: Run plugin CLI tests
+        run: python tests/tools/test_plugin_cli.py -v
       - name: Extract product version
         shell: bash
         run: |

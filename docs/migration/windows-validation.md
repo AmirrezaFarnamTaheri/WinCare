@@ -55,22 +55,20 @@ cp native/target/x86_64-pc-windows-msvc/release/wincare_core.dll src/WinCare.App
 # 3. Build WinCare WinUI 3 application
 dotnet build src/WinCare.App/WinCare.App.csproj -c Debug -p:Platform=x64
 
-# 4. Launch with WinApp CLI
+# 4. Launch with WinApp CLI from the repository root
 winapp run src/WinCare.App/bin/x64/Debug/net8.0-windows10.0.19041.0/win-x64
 ```
 
 ---
 
-## 🤖 Step 3: Run UI Automation & Visual Inspection
+## 🤖 Step 3: Perform UI & Accessibility Inspection
 
-Run the UI Automation smoke test against the process ID (PID) printed by `winapp run`:
+No UI Automation runner is checked into this repository. Record the launched process ID and perform the following manual checks in **Light**, **Dark**, and **High Contrast** themes:
 
-```bash
-python tests/ui/test_winui_shell.py --pid <PID> --output artifacts/ui
-```
-
-- Inspect the generated screenshots under `artifacts/ui/` in **Light**, **Dark**, and **High Contrast** themes.
-- Confirm that text labels are unclipped, table columns adjust responsively, and focus rings are visible on keyboard navigation.
+- Confirm the shell opens without an unhandled error and every navigation destination loads.
+- Confirm text labels are unclipped, tables adapt at narrow widths, and keyboard focus indicators remain visible.
+- Verify `Ctrl+K`, `Ctrl+F`, `Tab`, `Shift+Tab`, `Enter`, `Space`, and `Esc` in the contexts documented by the user guide.
+- Capture screenshots and the commit SHA with the validation record. Manual inspection is runtime evidence, but it is not automated UI-test evidence.
 
 ---
 
@@ -90,7 +88,7 @@ dotnet publish src/WinCare.App/WinCare.App.csproj -c Release -p:Platform=x64 -r 
   -o artifacts/portable/win-x64
 
 # Package into deterministic ZIP archive
-python tools/package_portable.py artifacts/portable/win-x64 artifacts/WinCare-v2.4.0-rc1-x64-portable.zip
+python tools/package_portable.py artifacts/portable/win-x64 artifacts/WinCare-v2.5.0-rc1-x64-portable.zip
 ```
 
 ---
@@ -100,5 +98,7 @@ python tools/package_portable.py artifacts/portable/win-x64 artifacts/WinCare-v2
 After completing all verification matrices, generate the deterministic release candidate archives:
 
 ```bash
-python tools/finalize_native_release.py --output artifacts/finalization --version 2.4.0-rc1 --mode rc
+python tools/finalize_native_release.py --output artifacts/finalization --version 2.5.0-rc1 --mode rc
 ```
+
+The version must match `VersionPrefix` plus the optional `VersionSuffix` in `Directory.Build.props`. Production mode fails closed while any catalog command lacks `BehaviorVerified` status.

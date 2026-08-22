@@ -66,5 +66,49 @@ namespace WinCare.Infrastructure.Handlers
             Assert.Contains("handlerTypeName = \"WinCare.Infrastructure.Handlers.SampleCommandHandler\";", generatedSource);
             Assert.Contains("return true;", generatedSource);
         }
+
+        [Fact]
+        public void CommandDispatcherGenerator_RejectsCaseInsensitiveDuplicateRoutes()
+        {
+            const string sourceCode = """
+namespace WinCare.Domain.Attributes
+{
+    [System.AttributeUsage(System.AttributeTargets.Class, AllowMultiple = false)]
+    public sealed class CommandHandlerAttribute : System.Attribute
+    {
+        public CommandHandlerAttribute(string commandId) { }
+    }
+}
+
+namespace WinCare.Domain.Commands
+{
+    public interface ICommandHandler { }
+}
+
+namespace WinCare.Infrastructure.Handlers
+{
+    [WinCare.Domain.Attributes.CommandHandler("test.\"quoted\"")]
+    public sealed class FirstHandler { }
+
+    [WinCare.Domain.Attributes.CommandHandler("TEST.\"QUOTED\"")]
+    public sealed class DuplicateHandler { }
+}
+""";
+            var compilation = CSharpCompilation.Create(
+                "TestAssembly",
+                new[] { CSharpSyntaxTree.ParseText(sourceCode) },
+                new[] { MetadataReference.CreateFromFile(typeof(object).Assembly.Location) },
+                new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
+
+            GeneratorDriver driver = CSharpGeneratorDriver.Create(new CommandDispatcherGenerator());
+            driver = driver.RunGeneratorsAndUpdateCompilation(compilation, out var outputCompilation, out var generatorDiagnostics);
+
+            Diagnostic duplicate = Assert.Single(generatorDiagnostics, diagnostic => diagnostic.Id == "WINCARE001");
+            Assert.Equal(DiagnosticSeverity.Error, duplicate.Severity);
+            Assert.Contains("FirstHandler", duplicate.GetMessage());
+            Assert.Contains("DuplicateHandler", duplicate.GetMessage());
+            string generatedSource = driver.GetRunResult().GeneratedTrees.Single().ToString();
+            Assert.DoesNotContain("case \"test.\\\"quoted\\\"\":", generatedSource);
+        }
     }
 }

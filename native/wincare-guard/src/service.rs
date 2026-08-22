@@ -34,6 +34,10 @@ impl GuardDaemon {
     where
         F: FnMut(&monitors::SystemHealthSnapshot),
     {
+        if max_ticks == Some(0) {
+            return;
+        }
+
         let mut count = 0;
         while self.is_running() {
             let snapshot = self.run_single_tick();

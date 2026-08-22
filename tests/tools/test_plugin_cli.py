@@ -5,11 +5,15 @@ import unittest
 import subprocess
 import zipfile
 import json
+from pathlib import Path
+
+
+ROOT = Path(__file__).resolve().parents[2]
 
 class PluginCliTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.cli_path = os.path.abspath("tools/wincare-plugin-cli/bin/wincare-plugin.js")
+        cls.cli_path = str(ROOT / "tools/wincare-plugin-cli/bin/wincare-plugin.js")
 
     def setUp(self):
         self.test_dir = tempfile.mkdtemp(prefix="wincare_cli_test_")

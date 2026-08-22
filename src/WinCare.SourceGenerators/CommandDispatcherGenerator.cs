@@ -10,6 +10,14 @@ namespace WinCare.SourceGenerators
     [Generator]
     public sealed class CommandDispatcherGenerator : IIncrementalGenerator
     {
+        private static readonly DiagnosticDescriptor DuplicateCommandId = new(
+            id: "WINCARE001",
+            title: "Duplicate command handler ID",
+            messageFormat: "Command ID '{0}' is assigned to both '{1}' and '{2}'",
+            category: "WinCare.Commands",
+            defaultSeverity: DiagnosticSeverity.Error,
+            isEnabledByDefault: true);
+
         public void Initialize(IncrementalGeneratorInitializationContext context)
         {
             var classDeclarations = context.SyntaxProvider
@@ -65,8 +73,9 @@ namespace WinCare.SourceGenerators
             builder.AppendLine("            switch (commandId?.ToLowerInvariant())");
             builder.AppendLine("            {");
 
-            var distinctClasses = classes.Distinct();
-            foreach (var classDecl in distinctClasses)
+            var routes = new SortedDictionary<string, (string Handler, Location? Location)>(System.StringComparer.OrdinalIgnoreCase);
+            var ambiguousIds = new HashSet<string>(System.StringComparer.OrdinalIgnoreCase);
+            foreach (var classDecl in classes.Distinct())
             {
                 var model = compilation.GetSemanticModel(classDecl.SyntaxTree);
                 if (model.GetDeclaredSymbol(classDecl) is INamedTypeSymbol classSymbol)
@@ -77,15 +86,45 @@ namespace WinCare.SourceGenerators
                             attr.ConstructorArguments.Length > 0)
                         {
                             var cmdId = attr.ConstructorArguments[0].Value?.ToString();
-                            if (!string.IsNullOrEmpty(cmdId))
+                            if (string.IsNullOrEmpty(cmdId))
                             {
-                                builder.AppendLine($"                case \"{cmdId!.ToLowerInvariant()}\":");
-                                builder.AppendLine($"                    handlerTypeName = \"{classSymbol.ToDisplayString()}\";");
-                                builder.AppendLine("                    return true;");
+                                continue;
+                            }
+
+                            string handler = classSymbol.ToDisplayString();
+                            Location? location = classDecl.Identifier.GetLocation();
+                            if (routes.TryGetValue(cmdId!, out var existing))
+                            {
+                                if (!string.Equals(existing.Handler, handler, System.StringComparison.Ordinal))
+                                {
+                                    ambiguousIds.Add(cmdId!);
+                                    context.ReportDiagnostic(Diagnostic.Create(
+                                        DuplicateCommandId,
+                                        location,
+                                        cmdId,
+                                        existing.Handler,
+                                        handler));
+                                }
+                            }
+                            else
+                            {
+                                routes.Add(cmdId!, (handler, location));
                             }
                         }
                     }
                 }
+            }
+
+            foreach (var route in routes)
+            {
+                if (ambiguousIds.Contains(route.Key))
+                {
+                    continue;
+                }
+
+                builder.AppendLine($"                case {Microsoft.CodeAnalysis.CSharp.SymbolDisplay.FormatLiteral(route.Key.ToLowerInvariant(), quote: true)}:");
+                builder.AppendLine($"                    handlerTypeName = {Microsoft.CodeAnalysis.CSharp.SymbolDisplay.FormatLiteral(route.Value.Handler, quote: true)};");
+                builder.AppendLine("                    return true;");
             }
 
             builder.AppendLine("                default:");

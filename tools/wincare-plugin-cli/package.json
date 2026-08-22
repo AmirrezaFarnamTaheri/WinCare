@@ -7,7 +7,7 @@
     "wincare-plugin": "bin/wincare-plugin.js"
   },
   "scripts": {
-    "test": "node --test"
+    "test": "python ../../tests/tools/test_plugin_cli.py -v"
   },
   "keywords": ["wincare", "plugin", "windows", "maintenance", "cli"],
   "author": "WinCare Core Team",
