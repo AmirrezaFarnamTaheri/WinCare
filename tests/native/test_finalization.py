@@ -209,16 +209,15 @@ class FinalizationTests(unittest.TestCase):
         self.assertIn('channel = "1.97.1"', toolchain)
         self.assertIn('components = ["rustfmt", "clippy"]', toolchain)
 
-    def test_release_workflows_enforce_immutability_and_version_checks(self) -> None:
+    def test_release_workflows_hold_versioned_artifacts_for_manual_publication(self) -> None:
         native_workflow = (ROOT / ".github/workflows/native-winui.yml").read_text(encoding="utf-8")
         release_workflow = (ROOT / ".github/workflows/native-release-candidate.yml").read_text(encoding="utf-8")
-        for workflow in (native_workflow, release_workflow):
-            self.assertIn("SemVer tagged releases are immutable", workflow)
-            self.assertIn("Validate", workflow)
-            self.assertNotIn("--clobber", workflow)
-
-        self.assertIn('gh release create "$RELEASE_TAG" release_assets/*', native_workflow)
-        self.assertIn('gh release create "$TAG_NAME" artifacts/finalization/*', release_workflow)
+        self.assertIn("Validate tag matches product version", native_workflow)
+        self.assertIn("Prepare manually reviewed release assets", native_workflow)
+        self.assertIn("WinCare-manual-release-${{ github.ref_name }}", native_workflow)
+        self.assertIn("Hold artifacts for manual publication", release_workflow)
+        self.assertNotIn("gh release create", native_workflow)
+        self.assertNotIn("gh release create", release_workflow)
         self.assertIn("Require primary branch dispatch", release_workflow)
         self.assertIn("refs/heads/master", release_workflow)
         self.assertIn("refs/heads/main", release_workflow)
