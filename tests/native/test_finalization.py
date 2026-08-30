@@ -137,6 +137,28 @@ class FinalizationTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "Conflicting release assets"):
                 stage_assets(src, dst, version="2.5.0-rc1")
 
+    def test_stage_release_assets_keeps_architecture_specific_certificates(self) -> None:
+        from tools.stage_release_assets import stage_assets
+        with tempfile.TemporaryDirectory() as src_dir, tempfile.TemporaryDirectory() as dst_dir:
+            src = Path(src_dir)
+            dst = Path(dst_dir)
+            x64 = src / "WinCare-x64" / "artifacts" / "signing"
+            arm64 = src / "WinCare-ARM64" / "artifacts" / "signing"
+            x64.mkdir(parents=True)
+            arm64.mkdir(parents=True)
+            (x64 / "WinCare.cer").write_text("CERT_X64_CONTENT", encoding="utf-8")
+            (arm64 / "WinCare.cer").write_text("CERT_ARM64_CONTENT", encoding="utf-8")
+
+            staged = stage_assets(src, dst, version="2.5.0-rc1")
+
+            self.assertEqual(
+                [
+                    dst.resolve() / "WinCare-v2.5.0-rc1-ARM64.cer",
+                    dst.resolve() / "WinCare-v2.5.0-rc1-x64.cer",
+                ],
+                staged,
+            )
+
     def test_stage_release_assets_ignores_vendor_dependency_msix(self) -> None:
         from tools.stage_release_assets import stage_assets
         with tempfile.TemporaryDirectory() as src_dir, tempfile.TemporaryDirectory() as dst_dir:
