@@ -301,10 +301,8 @@ public sealed class PluginStorePageViewModel : INotifyPropertyChanged, IDisposab
         {
             // The remote catalog is transport metadata, not an independent publisher trust
             // root. Never let it choose the key used to establish package authenticity.
-            await _installerService.InstallPluginFromPackageAsync(card.PackageUrl, card.Id, card.Sha256, cancellationToken).ConfigureAwait(true);
-            await _registry.DiscoverAndInitializeAsync(_host, cancellationToken).ConfigureAwait(true);
-            await RefreshPluginsAsync(forceRemoteRefresh: false, cancellationToken).ConfigureAwait(true);
-            return true;
+            ErrorMessage = "Remote plugin installation is disabled for this release.";
+            return false;
         }
         catch (Exception ex)
         {

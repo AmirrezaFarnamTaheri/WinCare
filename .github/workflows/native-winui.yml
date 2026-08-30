@@ -343,7 +343,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
-      contents: write
+      contents: read
     env:
       RELEASE_TAG: ${{ github.ref_name }}
     steps:
@@ -374,17 +374,11 @@ jobs:
           else
             echo "RELEASE_FLAGS=--latest" >> $GITHUB_ENV
           fi
-      - name: Publish immutable GitHub release
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Prepare manually reviewed release assets
         run: |
           python tools/stage_release_assets.py --version "$RELEASE_TAG"
-          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
-            echo "Error: Release '$RELEASE_TAG' already exists. SemVer tagged releases are immutable."
-            exit 1
-          fi
-          gh release create "$RELEASE_TAG" release_assets/* \
-            --title "WinCare $RELEASE_TAG (Native WinUI & Core Release)" \
-            $RELEASE_FLAGS \
-            --target "${{ github.sha }}" \
-            --notes "Automated immutable release build generated from commit \`${{ github.sha }}\`. Contains verified native MSIX packages (x64/ARM64), single binary standalone executables, portable ZIP distributions, and verified source finalization archives."
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: WinCare-manual-release-${{ github.ref_name }}
+          path: release_assets/*
+          if-no-files-found: error

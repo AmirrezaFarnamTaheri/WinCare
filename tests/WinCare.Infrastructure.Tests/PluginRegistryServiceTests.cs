@@ -384,6 +384,7 @@ public sealed class PluginRegistryServiceTests
           "description": "High performance managed assembly plugin",
           "category": "Utilities",
           "entryType": "Assembly",
+          "targetFramework": "net8.0-windows10.0.19041.0",
           "assemblyFileName": "PluginAssembly.dll",
           "pluginClassName": "Community.MyCSharpTool.PluginEntryPoint",
           "tools": [

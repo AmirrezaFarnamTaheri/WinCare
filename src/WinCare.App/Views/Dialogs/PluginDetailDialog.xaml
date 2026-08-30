@@ -93,6 +93,8 @@
                            TextWrapping="Wrap" FontSize="12" Foreground="{ThemeResource SystemControlForegroundBaseHighBrush}"/>
             </StackPanel>
         </Border>
+        <TextBlock Text="Remote installations remain disabled until this app is configured with an independently signed catalog. Catalog metadata alone is never treated as publisher trust."
+                   TextWrapping="Wrap" FontSize="12" Foreground="{ThemeResource SystemControlForegroundBaseMediumBrush}" />
 
         <!-- Commands Provided -->
         <StackPanel Spacing="4">

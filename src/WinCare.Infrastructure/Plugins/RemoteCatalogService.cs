@@ -260,8 +260,8 @@ public class RemoteCatalogService : IRemoteCatalogService
     {
         try
         {
-            var json = JsonSerializer.Serialize(catalog, JsonOptions);
             var tempFilePath = _cacheFilePath + ".tmp." + Guid.NewGuid().ToString("N");
+            var json = JsonSerializer.Serialize(catalog, JsonOptions);
             await File.WriteAllTextAsync(tempFilePath, json, cancellationToken).ConfigureAwait(false);
             File.Move(tempFilePath, _cacheFilePath, overwrite: true);
         }

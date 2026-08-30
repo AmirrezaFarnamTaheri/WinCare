@@ -57,6 +57,7 @@ Combining a **WinUI 3 Fluent Mica** interface, a **.NET 8** domain engine, and h
 - **Dynamic Command Dispatcher**: Thread-safe dynamic extension plane registering tools directly into *All Tools* without application restarts.
 - **Cryptographic Package Admission**: Enforces package ID equality, full-stream SHA-256 validation, and RSA/ECDSA digital signature verification (`publisher.pem` / `wincare-plugin.sig`).
 - **Capability Disclosure**: Strict full-trust in-process execution warning modals and capability consent reviews before installation.
+- **Catalog Trust Gate**: Remote installation stays disabled unless an independently signed and pinned catalog trust boundary is configured; catalog-provided publisher keys are never trusted directly.
 - **Developer CLI SDK (`tools/wincare-plugin-cli`)**: Node.js developer CLI with `create`, `validate`, `lint`, and `pack` commands for JSON packs and C# binary plugins.
 
 ### 4. 🧠 AI System Doctor (Local ONNX & DirectML)
