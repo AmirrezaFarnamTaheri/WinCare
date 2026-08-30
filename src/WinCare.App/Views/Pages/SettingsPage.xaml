@@ -81,8 +81,8 @@
                                         </Grid.ColumnDefinitions>
                                         <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="{x:Bind Title}" TextWrapping="Wrap" />
                                         <TextBlock Grid.Column="1" Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind Description}" TextWrapping="Wrap" />
-                                        <TextBlock Grid.Column="2" Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind State}" TextWrapping="Wrap" />
-                                        <TextBlock Grid.Column="3" Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind Detail}" TextWrapping="Wrap" />
+                                        <TextBlock Grid.Column="2" Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind State, Mode=OneWay}" TextWrapping="Wrap" />
+                                        <TextBlock Grid.Column="3" Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind Detail, Mode=OneWay}" TextWrapping="Wrap" />
                                     </Grid>
                                     <StackPanel
                                         Spacing="5"
@@ -95,7 +95,7 @@
                                                 <ColumnDefinition Width="*" />
                                             </Grid.ColumnDefinitions>
                                             <TextBlock FontWeight="SemiBold" Style="{StaticResource RowSecondaryTextStyle}" Text="State" />
-                                            <TextBlock Grid.Column="1" Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind State}" TextWrapping="Wrap" />
+                                            <TextBlock Grid.Column="1" Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind State, Mode=OneWay}" TextWrapping="Wrap" />
                                         </Grid>
                                         <Grid ColumnSpacing="8">
                                             <Grid.ColumnDefinitions>
@@ -103,7 +103,7 @@
                                                 <ColumnDefinition Width="*" />
                                             </Grid.ColumnDefinitions>
                                             <TextBlock FontWeight="SemiBold" Style="{StaticResource RowSecondaryTextStyle}" Text="Notes" />
-                                            <TextBlock Grid.Column="1" Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind Detail}" TextWrapping="Wrap" />
+                                            <TextBlock Grid.Column="1" Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind Detail, Mode=OneWay}" TextWrapping="Wrap" />
                                         </Grid>
                                     </StackPanel>
                                 </Grid>

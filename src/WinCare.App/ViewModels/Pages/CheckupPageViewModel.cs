@@ -7,6 +7,7 @@ namespace WinCare.App.ViewModels.Pages;
 
 public sealed class CheckupPageViewModel : TabbedPageViewModel
 {
+    private const int ResultsSectionIndex = 1;
     private static readonly (string CommandId, string RowTitle)[] QuickCheckCommands =
     [
         ("system", "Windows and hardware"),
@@ -20,6 +21,7 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
     private string _runSummary = "No check has been run yet.";
     private string _healthScoreText = "—";
     private string _healthScoreDetail = "awaiting check";
+    private bool _hasResults;
 
     public CheckupPageViewModel() : this(AppRuntime.Current.Dispatcher) { }
 
@@ -30,10 +32,6 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
                 new PageRow("Storage", "Free space, volume state, and pressure thresholds.", "Ready", "Read-only"),
                 new PageRow("Security", "Windows Security, firewall, updates, and restart state.", "Ready", "Read-only"),
                 new PageRow("Updates", "Search Windows Update readiness without installing anything.", "Ready", "Read-only")]),
-            new PageSection("Full check", "A full check has not been run.", [
-                new PageRow("Complete diagnostic set", "Runs every admitted read-only check with individual progress and deadlines.", "Ready", "Cancellable")]),
-            new PageSection("Custom check", "Choose at least one area to build a custom check.", [
-                new PageRow("Select areas", "Choose system, storage, security, applications, network, or advanced checks.", "Ready", "Read-only")]),
             new PageSection("Results", "Completed check results will be listed here.", [])])
     {
         _dispatcher = dispatcher ?? throw new ArgumentNullException(nameof(dispatcher));
@@ -75,6 +73,28 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
         private set => SetProperty(ref _healthScoreDetail, value);
     }
 
+    public override void SelectSection(int index)
+    {
+        base.SelectSection(index);
+        if (index != ResultsSectionIndex)
+        {
+            return;
+        }
+
+        CurrentRows.Clear();
+        if (_hasResults)
+        {
+            foreach (PageRow row in Sections[0].Rows)
+            {
+                row.IsCompact = IsCompactLayout;
+                CurrentRows.Add(row);
+            }
+        }
+
+        OnPropertyChanged(nameof(IsEmpty));
+        OnPropertyChanged(nameof(EmptyMessage));
+    }
+
     private async Task RunQuickCheckAsync()
     {
         IsRunning = true;
@@ -83,45 +103,58 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
         HealthScoreDetail = "checking";
 
         int succeeded = 0;
-        foreach ((string commandId, string rowTitle) in QuickCheckCommands)
+        try
         {
-            PageRow? row = CurrentRows.FirstOrDefault(candidate => candidate.Title == rowTitle);
-            if (row is not null)
+            foreach ((string commandId, string rowTitle) in QuickCheckCommands)
             {
-                row.State = "Checking";
-                row.Detail = "Read-only";
+                PageRow? row = Sections[0].Rows.FirstOrDefault(candidate => candidate.Title == rowTitle);
+                if (row is not null)
+                {
+                    row.State = "Checking";
+                    row.Detail = "Read-only";
+                }
+
+                CommandResult result;
+                try
+                {
+                    result = await _dispatcher.ExecuteAsync(
+                        CommandRequest.Preview(commandId),
+                        new CommandExecutionOptions(false, DateTimeOffset.UtcNow.AddMinutes(2)),
+                        CancellationToken.None);
+                }
+                catch (Exception)
+                {
+                    result = new CommandResult(commandId, Guid.NewGuid(), CommandResultStatus.Failed,
+                        "checkup.dispatch_exception", "WinCare could not complete this read-only check.", null,
+                        DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, false);
+                }
+
+                if (result.Status == CommandResultStatus.Succeeded)
+                {
+                    succeeded++;
+                }
+
+                if (row is not null)
+                {
+                    row.State = result.Status == CommandResultStatus.Succeeded ? "Checked" : "Needs review";
+                    row.Detail = result.Message;
+                }
             }
 
-            CommandResult result;
-            try
-            {
-                result = await _dispatcher.ExecuteAsync(
-                    CommandRequest.Preview(commandId),
-                    new CommandExecutionOptions(false, DateTimeOffset.UtcNow.AddMinutes(2)),
-                    CancellationToken.None);
-            }
-            catch (Exception)
-            {
-                result = new CommandResult(commandId, Guid.NewGuid(), CommandResultStatus.Failed,
-                    "checkup.dispatch_exception", "WinCare could not complete this read-only check.", null,
-                    DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, false);
-            }
+            _hasResults = true;
+            HealthScoreText = "—";
+            HealthScoreDetail = succeeded == QuickCheckCommands.Length ? "evidence collected" : "review results";
+            RunSummary = $"{succeeded} of {QuickCheckCommands.Length} read-only checks completed. Review category details before taking any action.";
 
-            if (result.Status == CommandResultStatus.Succeeded)
+            if (SelectedIndex == ResultsSectionIndex)
             {
-                succeeded++;
-            }
-
-            if (row is not null)
-            {
-                row.State = result.Status == CommandResultStatus.Succeeded ? "Checked" : "Needs review";
-                row.Detail = result.Message;
+                SelectSection(0);
+                SelectSection(ResultsSectionIndex);
             }
         }
-
-        HealthScoreText = "—";
-        HealthScoreDetail = succeeded == QuickCheckCommands.Length ? "evidence collected" : "review results";
-        RunSummary = $"{succeeded} of {QuickCheckCommands.Length} read-only checks completed. Review category details before taking any action.";
-        IsRunning = false;
+        finally
+        {
+            IsRunning = false;
+        }
     }
 }

@@ -37,6 +37,28 @@ public sealed partial class ShellPage : Page
         PrimaryNavigation.SelectedItem = target;
     }
 
+    public void NavigateTo(string key)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(key);
+        NavigationViewItem? target = PrimaryNavigation.MenuItems
+            .Concat(PrimaryNavigation.FooterMenuItems)
+            .OfType<NavigationViewItem>()
+            .SingleOrDefault(item => string.Equals(item.Tag as string, key, StringComparison.Ordinal));
+
+        if (target is null)
+        {
+            throw new KeyNotFoundException($"Unknown navigation key '{key}'.");
+        }
+
+        if (ReferenceEquals(PrimaryNavigation.SelectedItem, target))
+        {
+            _pageService.Navigate(ContentFrame, key);
+            return;
+        }
+
+        PrimaryNavigation.SelectedItem = target;
+    }
+
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
         NavigationViewItem home = PrimaryNavigation.MenuItems.OfType<NavigationViewItem>().First();

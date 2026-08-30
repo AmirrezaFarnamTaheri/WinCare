@@ -79,8 +79,8 @@
                                 <Grid ColumnSpacing="16">
                                     <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="150" /><ColumnDefinition Width="220" /></Grid.ColumnDefinitions>
                                     <StackPanel Spacing="4"><TextBlock Style="{StaticResource RowTitleTextStyle}" Text="{x:Bind Title}" /><TextBlock Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap" Text="{x:Bind Description}" /></StackPanel>
-                                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center"><FontIcon Glyph="&#xE73E;" Foreground="{ThemeResource AccentTealBrush}" /><TextBlock Foreground="{ThemeResource AccentTealBrush}" Text="{x:Bind State}" /></StackPanel>
-                                    <TextBlock Grid.Column="2" Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap" Text="{x:Bind Detail}" VerticalAlignment="Center" />
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center"><FontIcon Glyph="&#xE73E;" Foreground="{ThemeResource AccentTealBrush}" /><TextBlock Foreground="{ThemeResource AccentTealBrush}" Text="{x:Bind State, Mode=OneWay}" /></StackPanel>
+                                    <TextBlock Grid.Column="2" Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap" Text="{x:Bind Detail, Mode=OneWay}" VerticalAlignment="Center" />
                                 </Grid>
                             </Border>
                         </DataTemplate>
@@ -90,8 +90,6 @@
 
             <SelectorBar x:Name="SectionSelector" Grid.Row="3" SelectionChanged="SectionSelector_SelectionChanged" AutomationProperties.AutomationId="CheckupPageTabs" AutomationProperties.Name="Checkup sections">
                 <SelectorBarItem Text="Quick check" AutomationProperties.Name="Quick check" />
-                <SelectorBarItem Text="Full check" AutomationProperties.Name="Full check" />
-                <SelectorBarItem Text="Custom check" AutomationProperties.Name="Custom check" />
                 <SelectorBarItem Text="Results" AutomationProperties.Name="Results" />
             </SelectorBar>
         </Grid>

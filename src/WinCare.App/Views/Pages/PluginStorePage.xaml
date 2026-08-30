@@ -95,12 +95,12 @@
                                     <Button Content="Details" Click="DetailsButton_Click" Tag="{x:Bind}" AutomationProperties.Name="View plugin details"/>
                                     
                                     <!-- Online Plugin Actions -->
-                                    <Button Content="Install" Visibility="{x:Bind local:PluginStorePage.BoolToVisibility(CanInstall), Mode=OneWay}" Click="InstallButton_Click" Tag="{x:Bind}" Style="{StaticResource AccentButtonStyle}" AutomationProperties.Name="Review and install plugin"/>
+                                    <Button Content="Install" Visibility="{x:Bind local:PluginStorePage.BoolToVisibility(CanInstall), Mode=OneTime}" Click="InstallButton_Click" Tag="{x:Bind}" Style="{StaticResource AccentButtonStyle}" AutomationProperties.Name="Review and install plugin"/>
                                     
                                     <!-- Installed Plugin Actions -->
-                                    <Button Content="Enable" Visibility="{x:Bind local:PluginStorePage.BoolToVisibility(CanEnable), Mode=OneWay}" Click="EnableButton_Click" Tag="{x:Bind}" Style="{StaticResource AccentButtonStyle}" AutomationProperties.Name="Enable plugin"/>
-                                    <Button Content="Disable" Visibility="{x:Bind local:PluginStorePage.BoolToVisibility(CanDisable), Mode=OneWay}" Click="DisableButton_Click" Tag="{x:Bind}" AutomationProperties.Name="Disable plugin"/>
-                                    <Button Content="Uninstall" Visibility="{x:Bind local:PluginStorePage.BoolToVisibility(CanUninstall), Mode=OneWay}" Click="UninstallButton_Click" Tag="{x:Bind}" AutomationProperties.Name="Uninstall plugin"/>
+                                    <Button Content="Enable" Visibility="{x:Bind local:PluginStorePage.BoolToVisibility(CanEnable), Mode=OneTime}" Click="EnableButton_Click" Tag="{x:Bind}" Style="{StaticResource AccentButtonStyle}" AutomationProperties.Name="Enable plugin"/>
+                                    <Button Content="Disable" Visibility="{x:Bind local:PluginStorePage.BoolToVisibility(CanDisable), Mode=OneTime}" Click="DisableButton_Click" Tag="{x:Bind}" AutomationProperties.Name="Disable plugin"/>
+                                    <Button Content="Uninstall" Visibility="{x:Bind local:PluginStorePage.BoolToVisibility(CanUninstall), Mode=OneTime}" Click="UninstallButton_Click" Tag="{x:Bind}" AutomationProperties.Name="Uninstall plugin"/>
                                 </StackPanel>
                             </StackPanel>
                         </Grid>

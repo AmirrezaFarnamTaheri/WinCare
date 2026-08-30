@@ -28,7 +28,7 @@
                                     <TextBlock Text="{x:Bind Text}" TextWrapping="Wrap" Style="{StaticResource BodyTextBlockStyle}" />
                                     
                                     <!-- Proposed Action Steps -->
-                                    <ItemsControl ItemsSource="{x:Bind ActionPlan.ProposedSteps, Mode=OneWay}" Margin="0,8,0,0">
+                                    <ItemsControl ItemsSource="{x:Bind ActionPlan.ProposedSteps, Mode=OneTime}" Margin="0,8,0,0">
                                         <ItemsControl.ItemTemplate>
                                             <DataTemplate x:DataType="diag:ProposedActionStep">
                                                 <Border Margin="0,6,0,6" Padding="12" Background="{ThemeResource LayerFillColorDefaultBrush}" CornerRadius="8" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">

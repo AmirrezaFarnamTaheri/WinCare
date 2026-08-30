@@ -15,6 +15,7 @@ public sealed partial class ActivityPage : Page
     }
 
     public ActivityPageViewModel ViewModel { get; }
+
     public bool IsCompact => ViewModel.IsCompactLayout;
 
     protected override void OnNavigatedTo(NavigationEventArgs e)
@@ -41,4 +42,3 @@ public sealed partial class ActivityPage : Page
         ViewModel.SetCompactLayout(compact);
     }
 }
-

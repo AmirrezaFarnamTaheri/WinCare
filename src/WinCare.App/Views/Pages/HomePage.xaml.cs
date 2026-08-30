@@ -1,5 +1,7 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Media;
+using WinCare.App.Views;
 using WinCare.App.ViewModels.Pages;
 
 namespace WinCare.App.Views.Pages;
@@ -12,14 +14,29 @@ public sealed partial class HomePage : Page
     {
         ViewModel = new HomePageViewModel();
         InitializeComponent();
-        SectionSelector.SelectedItem = SectionSelector.Items[0] as SelectorBarItem;
     }
 
     public HomePageViewModel ViewModel { get; }
 
-    private void SectionSelector_SelectionChanged(SelectorBar sender, SelectorBarSelectionChangedEventArgs args)
+    private void RunCheckupButton_Click(object sender, RoutedEventArgs e) => NavigateTo("checkup");
+
+    private void ViewActivityButton_Click(object sender, RoutedEventArgs e) => NavigateTo("activity");
+
+    private void BrowseToolsButton_Click(object sender, RoutedEventArgs e) => NavigateTo("all-tools");
+
+    private void NavigateTo(string key)
     {
-        ViewModel.SelectSection(sender.Items.IndexOf(sender.SelectedItem));
+        DependencyObject? current = this;
+        while (current is not null)
+        {
+            if (current is ShellPage shell)
+            {
+                shell.NavigateTo(key);
+                return;
+            }
+
+            current = VisualTreeHelper.GetParent(current);
+        }
     }
 
     private void Page_SizeChanged(object sender, SizeChangedEventArgs e)

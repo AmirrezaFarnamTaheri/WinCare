@@ -105,8 +105,7 @@ EXPECTED_NAVIGATION = {
 }
 
 EXPECTED_PAGE_TABS = {
-    "HomePage.xaml": ("Overview", "Recommendations", "Favorites"),
-    "CheckupPage.xaml": ("Quick check", "Full check", "Custom check", "Results"),
+    "CheckupPage.xaml": ("Quick check", "Results"),
     "SystemCarePage.xaml": ("Clean up", "Performance", "Apps & startup", "Network & updates", "Routines"),
     "SecurityPage.xaml": ("Status", "Protection", "Privacy", "Hardening"),
     "RepairRecoveryPage.xaml": ("Repair", "Restore", "Undo", "Backup", "Reset & media"),

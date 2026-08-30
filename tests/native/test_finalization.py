@@ -209,9 +209,9 @@ class FinalizationTests(unittest.TestCase):
         cargo = (ROOT / "native/wincare-core/Cargo.toml").read_text(encoding="utf-8")
         rust_source = (ROOT / "native/wincare-core/src/lib.rs").read_text(encoding="utf-8")
         self.assertIn("<VersionPrefix>2.5.0</VersionPrefix>", props)
-        self.assertIn("<VersionSuffix>rc3</VersionSuffix>", props)
-        self.assertIn("<InformationalVersion>2.5.0-rc3</InformationalVersion>", props)
-        self.assertIn('Version="2.5.0.4"', manifest)
+        self.assertIn("<VersionSuffix>rc4</VersionSuffix>", props)
+        self.assertIn("<InformationalVersion>2.5.0-rc4</InformationalVersion>", props)
+        self.assertIn('Version="2.5.0.5"', manifest)
         self.assertIn('version = "2.5.0"', cargo)
         self.assertIn('const VERSION: &[u8] = b"2.5.0";', rust_source)
 

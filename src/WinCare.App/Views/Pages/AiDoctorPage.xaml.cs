@@ -12,8 +12,8 @@ public sealed partial class AiDoctorPage : Page
 
     public AiDoctorPage()
     {
-        InitializeComponent();
         ViewModel = new AiDoctorPageViewModel();
+        InitializeComponent();
     }
 
     private async void SendButton_Click(object sender, RoutedEventArgs e)

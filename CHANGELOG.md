@@ -4,6 +4,17 @@ All notable changes to WinCare are documented in this file in accordance with [K
 
 ---
 
+## [2.5.0-rc4] - 2026-08-31
+
+### Fixed
+
+- **Live check results**: Corrected one-time bindings that prevented completed check states and evidence details from updating onscreen.
+- **Reliable Checkup lifecycle**: Results now populate independently of the selected tab, the running state always clears after failures, and unimplemented Full/Custom modes no longer masquerade as usable features.
+- **AI Doctor startup**: Constructed its view model before compiled bindings initialize, eliminating a startup-time null binding path.
+- **Fresh activity and clean page lifetimes**: Cached Activity refreshes from the journal on every visit, while disposable tool and plugin-store models release subscriptions and cancellation sources when leaving their pages.
+- **Working Home actions**: Replaced disconnected Home tabs with direct, sidebar-synchronized navigation to Checkup, Activity, and All Tools.
+- **Interaction regression coverage**: Added a structural gate that rejects button-like controls without a command, click handler, or navigation target.
+
 ## [2.5.0-rc3] - 2026-08-30
 
 ### Fixed
