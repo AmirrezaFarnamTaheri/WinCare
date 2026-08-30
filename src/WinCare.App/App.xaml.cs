@@ -9,6 +9,8 @@ public partial class App : Microsoft.UI.Xaml.Application
 {
     private MainWindow? _window;
 
+    public MainWindow? MainWindow => _window;
+
     public App()
     {
         StartupTelemetry.Mark("AppConstructed");

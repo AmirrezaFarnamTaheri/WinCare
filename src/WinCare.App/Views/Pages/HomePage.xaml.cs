@@ -1,6 +1,5 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Media;
 using WinCare.App.Views;
 using WinCare.App.ViewModels.Pages;
 
@@ -24,20 +23,7 @@ public sealed partial class HomePage : Page
 
     private void BrowseToolsButton_Click(object sender, RoutedEventArgs e) => NavigateTo("all-tools");
 
-    private void NavigateTo(string key)
-    {
-        DependencyObject? current = this;
-        while (current is not null)
-        {
-            if (current is ShellPage shell)
-            {
-                shell.NavigateTo(key);
-                return;
-            }
-
-            current = VisualTreeHelper.GetParent(current);
-        }
-    }
+    private void NavigateTo(string key) => PageNavigation.NavigateTo(this, key);
 
     private void Page_SizeChanged(object sender, SizeChangedEventArgs e)
     {

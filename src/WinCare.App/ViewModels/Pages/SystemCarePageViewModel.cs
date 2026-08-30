@@ -2,6 +2,15 @@ namespace WinCare.App.ViewModels.Pages;
 
 public sealed class SystemCarePageViewModel : TabbedPageViewModel
 {
+    public string ToolSearchQuery => SelectedIndex switch
+    {
+        0 => "storage cleanup",
+        1 => "performance",
+        2 => "startup applications",
+        3 => "network update",
+        _ => "preset",
+    };
+
     public SystemCarePageViewModel() : base([
         new PageSection("Clean up", "No cleanup assessment is available.", [
             new PageRow("Storage cleanup", "Review temporary files, caches, downloads, and bounded cleanup targets.", "Available", "Preview first"),

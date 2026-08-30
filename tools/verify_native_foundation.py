@@ -111,7 +111,6 @@ EXPECTED_PAGE_TABS = {
     "RepairRecoveryPage.xaml": ("Repair", "Restore", "Undo", "Backup", "Reset & media"),
     "AllToolsPage.xaml": ("Commands", "Categories", "Favorites", "Recent", "Presets"),
     "ActivityPage.xaml": ("Running", "Needs attention", "Completed", "Reports"),
-    "SettingsPage.xaml": ("General", "Appearance", "Safety", "Notifications", "Data", "Advanced"),
 }
 
 

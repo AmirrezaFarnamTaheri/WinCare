@@ -2,6 +2,14 @@ namespace WinCare.App.ViewModels.Pages;
 
 public sealed class SecurityPageViewModel : TabbedPageViewModel
 {
+    public string ToolSearchQuery => SelectedIndex switch
+    {
+        0 => "security",
+        1 => "defender firewall",
+        2 => "privacy",
+        _ => "hardening",
+    };
+
     public SecurityPageViewModel() : base([
         new PageSection("Status", "No security status has been collected.", [
             new PageRow("Windows Security", "Protection state, recent threats, and update freshness.", "Not checked", "Read-only"),

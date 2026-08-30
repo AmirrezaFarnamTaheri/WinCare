@@ -6,7 +6,7 @@ on:
       version:
         description: Release version label (must match checked-in product version)
         required: true
-        default: 2.5.0-rc4
+        default: 2.5.0-rc5
         type: string
       mode:
         description: Finalization gate

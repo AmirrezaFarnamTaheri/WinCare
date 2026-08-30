@@ -16,6 +16,7 @@
         <StackPanel Spacing="6">
             <TextBlock Style="{StaticResource PageTitleTextStyle}" Text="System care" />
             <TextBlock MaxWidth="760" HorizontalAlignment="Left" Style="{StaticResource PageDescriptionTextStyle}" Text="Clean up, improve responsiveness, manage apps, and maintain Windows." />
+            <Button HorizontalAlignment="Left" Content="Open matching tools" Click="OpenToolsButton_Click" AutomationProperties.AutomationId="SystemCareOpenTools" AutomationProperties.Name="Open matching system care tools" />
         </StackPanel>
 
         <SelectorBar

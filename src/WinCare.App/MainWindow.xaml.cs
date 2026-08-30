@@ -9,6 +9,7 @@ using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using Windows.Graphics;
 using WinCare.Infrastructure.Observability;
+using WinCare.App.Services;
 
 namespace WinCare.App;
 
@@ -20,12 +21,23 @@ public sealed partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        ApplyTheme(AppPreferences.Theme);
         ExtendsContentIntoTitleBar = true;
         SetTitleBar(AppTitleBar);
         ConfigureBackdrop();
         ResizeWindow(1280, 800);
         WindowRoot.Loaded += OnWindowRootLoaded;
         Activated += OnWindowActivated;
+    }
+
+    public void ApplyTheme(string theme)
+    {
+        WindowRoot.RequestedTheme = theme switch
+        {
+            "Light" => ElementTheme.Light,
+            "Dark" => ElementTheme.Dark,
+            _ => ElementTheme.Default,
+        };
     }
 
 

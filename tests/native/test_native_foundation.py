@@ -25,7 +25,7 @@ class NativeFoundationTests(unittest.TestCase):
         page_names = (
             "HomePage.xaml", "CheckupPage.xaml", "SystemCarePage.xaml",
             "SecurityPage.xaml", "RepairRecoveryPage.xaml",
-            "ActivityPage.xaml", "SettingsPage.xaml",
+            "ActivityPage.xaml",
         )
         for name in page_names:
             text = (root / "src/WinCare.App/Views/Pages" / name).read_text(encoding="utf-8")
@@ -42,6 +42,10 @@ class NativeFoundationTests(unittest.TestCase):
             self.assertIn("Notes", text, name)
             self.assertIn("IsCompact", text, name)
             self.assertIn("SizeChanged", text, name)
+
+        settings = (root / "src/WinCare.App/Views/Pages/SettingsPage.xaml").read_text(encoding="utf-8")
+        self.assertIn("ThemeSelector", settings)
+        self.assertIn("OpenDataFolderButton_Click", settings)
 
     def test_interactive_controls_are_wired_and_mutable_rows_use_live_bindings(self) -> None:
         root = __import__("pathlib").Path(__file__).resolve().parents[2]
@@ -64,7 +68,6 @@ class NativeFoundationTests(unittest.TestCase):
             "SystemCarePage.xaml",
             "SecurityPage.xaml",
             "RepairRecoveryPage.xaml",
-            "SettingsPage.xaml",
         )
         for name in mutable_row_pages:
             text = (pages / name).read_text(encoding="utf-8")

@@ -4,6 +4,14 @@ All notable changes to WinCare are documented in this file in accordance with [K
 
 ---
 
+## [2.5.0-rc5] - 2026-08-31
+
+### Fixed
+
+- **Functional Settings**: Replaced the placeholder settings table with a persistent System/Light/Dark theme control, immediate theme application, and a working local-data-folder action.
+- **Actionable capability pages**: System Care, Security, and Repair & Recovery now open the real filtered command catalog for the selected section instead of ending at descriptive rows.
+- **Shared in-shell routing**: Consolidated page-to-shell navigation so Home and capability actions keep the sidebar and content frame synchronized.
+
 ## [2.5.0-rc4] - 2026-08-31
 
 ### Fixed

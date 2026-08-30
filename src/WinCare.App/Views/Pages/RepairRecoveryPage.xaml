@@ -16,6 +16,7 @@
         <StackPanel Spacing="6">
             <TextBlock Style="{StaticResource PageTitleTextStyle}" Text="Repair &amp; recovery" />
             <TextBlock MaxWidth="760" HorizontalAlignment="Left" Style="{StaticResource PageDescriptionTextStyle}" Text="Diagnose faults, restore safely, and keep recovery options visible." />
+            <Button HorizontalAlignment="Left" Content="Open matching tools" Click="OpenToolsButton_Click" AutomationProperties.AutomationId="RepairOpenTools" AutomationProperties.Name="Open matching repair and recovery tools" />
         </StackPanel>
 
         <SelectorBar
