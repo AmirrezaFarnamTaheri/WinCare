@@ -239,6 +239,7 @@ class FinalizationTests(unittest.TestCase):
         self.assertIn("WinCare-release-${{ github.ref_name }}", native_workflow)
         self.assertIn("contents: write", native_workflow)
         self.assertIn("Publish GitHub release", native_workflow)
+        self.assertIn("GH_TOKEN: ${{ github.token }}", native_workflow)
         self.assertIn("gh release create", native_workflow)
         self.assertIn("gh release upload", native_workflow)
         self.assertIn("Hold artifacts for manual publication", release_workflow)
