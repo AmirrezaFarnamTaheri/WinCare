@@ -1,6 +1,9 @@
 # WinCare User Guide
 
-Welcome to the **WinCare User Guide**. This guide provides end-to-end instructions for installing, configuring, navigating, and maximizing the capabilities of the WinCare desktop application.
+Use this guide to install WinCare, understand its safety prompts, and choose the right workflow for a diagnostic or repair. WinCare is a release candidate: review every planned change before approving it.
+
+> [!TIP]
+> See the [interface screenshots](Screenshots.md) before you begin. They include real v2.5.0-rc1 runtime captures and the original concepts for comparison.
 
 ---
 
@@ -48,10 +51,12 @@ Welcome to the **WinCare User Guide**. This guide provides end-to-end instructio
 WinCare offers multiple distribution formats to match your deployment workflow:
 
 ### Option A: MSIX Modern App Package (App SDK Integration)
-1. Download `WinCare-v<version>-<arch>.msix` from the [GitHub Releases Page](https://github.com/AmirrezaFarnamTaheri/WinCare/releases).
-2. If using a development build with a self-signed certificate, download the accompanying `WinCare.cer` and run the helper:
+1. Download `WinCare-v<version>-<arch>.msix` from the [GitHub Releases Page](https://github.com/AmirrezaFarnamTaheri/WinCare/releases). Choose `x64` for most Intel and AMD PCs; choose `ARM64` for Windows on ARM.
+2. If the release uses a development certificate, download the matching `WinCare-v<version>-<arch>.cer` and run the helper:
    ```bash
-   python tools/install_msix.py --package WinCare-v<version>-<arch>.msix --certificate WinCare.cer
+   python install_msix.py \
+     --package WinCare-v<version>-x64.msix \
+     --certificate WinCare-v<version>-x64.cer
    ```
    Run this command from an elevated terminal when the certificate is not already trusted. The helper verifies that the package signer is exactly `CN=WinCare Development`, requires the certificate thumbprint to match the package signer, imports only that certificate into `LocalMachine\TrustedPeople`, and verifies the signature again before installation. Do not import an unverified certificate manually.
 3. WinCare is now installed in your Windows Start Menu with full Windows App SDK integration.
@@ -105,6 +110,10 @@ WinCare records every executed command and diagnostic check to a local activity 
 ---
 
 ## 4. Navigation & Workspace Overview
+
+![WinCare Home screen captured from the installed v2.5.0-rc1 release](images/runtime-dashboard.png)
+
+<em>Conceptual interface preview. The shipped application may differ as features evolve.</em>
 
 WinCare's interface uses native **Windows Fluent Mica** depth layering and a clean **Cyber-Teal** visual identity:
 

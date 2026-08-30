@@ -4,11 +4,18 @@ All notable changes to WinCare are documented in this file in accordance with [K
 
 ---
 
-## [2.5.0-rc1] - 2026-08-15
+## [2.5.0-rc2] - 2026-08-30
+
+### Changed
+
+- **Native Dashboard Refresh**: Reworked the Home and System Checkup views around a dark, card-based desktop dashboard with transparent status states before a system check has run.
+- **Runtime Documentation**: Added real native-runtime captures alongside the design-concept references, so the project documentation shows the application rather than mockups alone.
+
+## [2.5.0-rc1] - 2026-08-30
 
 ### 🔒 Security, Signing & Packaging Hardening
 - **Immutable Tag-Gated Releases**: CI release pipelines trigger strictly upon tag pushes (`refs/tags/v*`), validating tag versions against checked-in metadata and preventing release mutations.
-- **Ephemeral & Secret-Backed MSIX Code Signing**: Replaced committed developer certificates with secure repository secret handling (`WINCARE_SIGNING_CERT_BASE64`) and TripleDES-compatible ephemeral runner-local signing keys with strict post-build signature verification gates.
+- **Runner-Local MSIX Code Signing**: Removed release-blocking signing-secret dependencies. Each architecture is signed with a temporary runner-local development certificate, verified (including a tamper-rejection check), and published with its matching public `.cer` file.
 - **Fail-Closed MSIX Installer**: `tools/install_msix.py` performs host architecture auto-detection (`x64` / `ARM64`), validates package signatures, and imports certificates using environment variable bindings to eliminate shell script interpolation.
 - **Secret Key Prevention**: Added hard assertions in release source packaging and structural gates to strictly reject private keys (`.pfx`, `.p12`, `.key`, `.pem`, `.snk`, `.secret`).
 

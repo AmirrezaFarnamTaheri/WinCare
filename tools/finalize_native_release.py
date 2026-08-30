@@ -29,7 +29,7 @@ EXPECTED_COMMAND_COUNT = 259
 VERSION_LABEL_PATTERN = re.compile(r"^[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z]+(?:[.-][0-9A-Za-z]+)*)?$")
 POWERSHELL_SUFFIXES = {".ps1", ".psm1", ".psd1"}
 SECRET_KEY_SUFFIXES = {".pfx", ".p12", ".key", ".pem", ".snk", ".secret", ".token"}
-IGNORED_DIRECTORY_NAMES = {".git", ".vs", ".pytest_cache", "__pycache__", "artifacts", "bin", "obj", "target"}
+IGNORED_DIRECTORY_NAMES = {".git", ".vs", ".pytest_cache", "__pycache__", "artifacts", "bin", "obj", "target", "AppPackages"}
 IGNORED_FILE_SUFFIXES = {".pyc", ".pyo"}
 ReleaseMode = Literal["rc", "production"]
 

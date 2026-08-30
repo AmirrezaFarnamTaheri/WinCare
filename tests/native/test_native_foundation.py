@@ -28,6 +28,12 @@ class NativeFoundationTests(unittest.TestCase):
         )
         for name in page_names:
             text = (root / "src/WinCare.App/Views/Pages" / name).read_text(encoding="utf-8")
+            if name in {"HomePage.xaml", "CheckupPage.xaml"}:
+                self.assertIn("DashboardCardStyle", text, name)
+                self.assertIn("Review before applying", text, name)
+                self.assertIn("SelectorBar", text, name)
+                self.assertIn("SizeChanged", text, name)
+                continue
             self.assertIn("ListView", text, name)
             self.assertIn("What it does", text, name)
             self.assertIn("State", text, name)

@@ -21,10 +21,25 @@ def _run_powershell_script(script_text: str, env_vars: dict[str, str] | None = N
     encoded_bytes = script_text.encode("utf-16le")
     encoded_b64 = base64.b64encode(encoded_bytes).decode("ascii")
     run_env = os.environ.copy()
+    system_root = Path(os.environ.get("SystemRoot", r"C:\\Windows"))
+    # Do not inherit a PowerShell 7 module path into Windows PowerShell. Its
+    # module manifests can shadow the inbox security module and make the
+    # Authenticode cmdlet unavailable even when powershell.exe is used.
+    run_env["PSModulePath"] = os.pathsep.join(
+        [
+            str(Path(os.environ.get("USERPROFILE", "")) / "Documents" / "WindowsPowerShell" / "Modules"),
+            str(Path(os.environ.get("ProgramFiles", r"C:\\Program Files")) / "WindowsPowerShell" / "Modules"),
+            str(system_root / "System32" / "WindowsPowerShell" / "v1.0" / "Modules"),
+        ]
+    )
     if env_vars:
         run_env.update(env_vars)
+    windows_powershell = system_root / "System32" / "WindowsPowerShell" / "v1.0" / "powershell.exe"
     return subprocess.run(
-        ["powershell", "-NoProfile", "-NonInteractive", "-EncodedCommand", encoded_b64],
+        # Get-AuthenticodeSignature and Add-AppxPackage are Windows PowerShell
+        # cmdlets. Use the inbox executable directly so a PATH-preferred
+        # PowerShell 7 installation cannot make MSIX verification fail.
+        [str(windows_powershell), "-NoProfile", "-NonInteractive", "-EncodedCommand", encoded_b64],
         capture_output=True,
         text=True,
         env=run_env,

@@ -3,13 +3,13 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     <Style x:Key="AppTitleTextStyle" TargetType="TextBlock">
         <Setter Property="FontFamily" Value="Segoe UI Variable Display" />
-        <Setter Property="FontSize" Value="14" />
+        <Setter Property="FontSize" Value="18" />
         <Setter Property="FontWeight" Value="SemiBold" />
         <Setter Property="Foreground" Value="{ThemeResource TextPrimaryBrush}" />
     </Style>
     <Style x:Key="PageTitleTextStyle" TargetType="TextBlock">
         <Setter Property="FontFamily" Value="Segoe UI Variable Display" />
-        <Setter Property="FontSize" Value="28" />
+        <Setter Property="FontSize" Value="32" />
         <Setter Property="FontWeight" Value="SemiBold" />
         <Setter Property="Foreground" Value="{ThemeResource TextPrimaryBrush}" />
     </Style>
@@ -37,10 +37,19 @@
         <Setter Property="TextTrimming" Value="CharacterEllipsis" />
     </Style>
     <Style x:Key="SurfaceBorderStyle" TargetType="Border">
-        <Setter Property="Background" Value="{ThemeResource SurfaceBrush}" />
-        <Setter Property="BorderBrush" Value="{ThemeResource BorderSubtleBrush}" />
+        <Setter Property="Background" Value="{ThemeResource CardSurfaceBrush}" />
+        <Setter Property="BorderBrush" Value="{ThemeResource CardBorderBrush}" />
         <Setter Property="BorderThickness" Value="1" />
-        <Setter Property="CornerRadius" Value="12" />
+        <Setter Property="CornerRadius" Value="14" />
+    </Style>
+    <Style x:Key="DashboardCardStyle" TargetType="Border" BasedOn="{StaticResource SurfaceBorderStyle}">
+        <Setter Property="Padding" Value="24" />
+    </Style>
+    <Style x:Key="AccentButtonStyle" TargetType="Button">
+        <Setter Property="Background" Value="{ThemeResource AccentGradientBrush}" />
+        <Setter Property="Foreground" Value="#06151C" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Padding" Value="18,10" />
     </Style>
     <ControlTemplate x:Key="StatusPillTemplate" TargetType="ContentControl">
         <Border

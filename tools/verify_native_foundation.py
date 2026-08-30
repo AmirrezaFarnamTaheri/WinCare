@@ -138,11 +138,12 @@ def load_oracle_commands() -> tuple[str, ...]:
 
 def _iter_text_files(paths: Iterable[Path]) -> Iterable[Path]:
     extensions = {".cs", ".csproj", ".props", ".targets", ".xaml", ".xml", ".json", ".toml", ".rs", ".h", ".yml", ".yaml"}
+    ignored_directories = {".git", ".vs", ".pytest_cache", "__pycache__", "artifacts", "bin", "obj", "target", "AppPackages"}
     for root in paths:
         if not root.exists():
             continue
         for path in root.rglob("*"):
-            if path.is_file() and path.suffix.lower() in extensions:
+            if not any(part in ignored_directories for part in path.relative_to(root).parts) and path.is_file() and path.suffix.lower() in extensions:
                 yield path
 
 
@@ -296,10 +297,11 @@ def verify() -> list[Finding]:
         if path.suffix.lower() in {".ps1", ".psm1", ".psd1"}:
             findings.append(Finding("native-powershell", _relative(path)))
 
-    xml_paths = []
-    for root in NATIVE_ROOTS:
-        if root.exists():
-            xml_paths.extend(path for path in root.rglob("*") if path.suffix.lower() in {".xaml", ".csproj", ".props", ".targets", ".xml"})
+    xml_paths = [
+        path
+        for path in _iter_text_files(NATIVE_ROOTS)
+        if path.suffix.lower() in {".xaml", ".csproj", ".props", ".targets", ".xml"}
+    ]
     manifest = ROOT / "src/WinCare.App/Package.appxmanifest"
     if manifest.is_file():
         xml_paths.append(manifest)

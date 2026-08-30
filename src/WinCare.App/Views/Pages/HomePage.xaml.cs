@@ -24,10 +24,6 @@ public sealed partial class HomePage : Page
 
     private void Page_SizeChanged(object sender, SizeChangedEventArgs e)
     {
-        bool compact = e.NewSize.Width < CompactThreshold;
-        ViewModel.SetCompactLayout(compact);
-        DescriptionHeader.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
-        StateHeader.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
-        NotesHeader.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
+        ViewModel.SetCompactLayout(e.NewSize.Width < CompactThreshold);
     }
 }

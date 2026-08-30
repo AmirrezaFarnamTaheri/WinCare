@@ -4,7 +4,7 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:views="using:WinCare.App.Views"
     Title="WinCare">
-    <Grid x:Name="WindowRoot" Background="Transparent">
+    <Grid x:Name="WindowRoot" RequestedTheme="Dark" Background="{ThemeResource PageBackgroundBrush}">
         <Grid.RowDefinitions>
             <RowDefinition Height="48" />
             <RowDefinition Height="*" />
@@ -13,7 +13,7 @@
         <Grid
             x:Name="AppTitleBar"
             Grid.Row="0"
-            Padding="16,0,138,0"
+            Padding="20,0,138,0"
             Background="{ThemeResource TitleBarBackgroundBrush}">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto" />
@@ -22,7 +22,7 @@
             </Grid.ColumnDefinitions>
 
             <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
-                <Image Width="24" Height="24" Source="Assets/Square44x44Logo.png" />
+                <Image Width="26" Height="26" Source="Assets/Square44x44Logo.png" />
                 <TextBlock x:Name="AppTitleText" Style="{StaticResource AppTitleTextStyle}" Text="WinCare" />
             </StackPanel>
 
