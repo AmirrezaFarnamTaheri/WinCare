@@ -67,7 +67,7 @@ class FinalizationTests(unittest.TestCase):
     def test_rc_finalization_separates_native_source_and_legacy_oracle(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             output = Path(directory)
-            result = finalize_release(ROOT, output, version="2.5.0-rc2", mode="rc")
+            result = finalize_release(ROOT, output, version="2.5.0-rc3", mode="rc")
 
             self.assertTrue(result.native_archive.is_file())
             self.assertTrue(result.oracle_archive.is_file())
@@ -102,7 +102,7 @@ class FinalizationTests(unittest.TestCase):
                     self.assertEqual((1980, 1, 1, 0, 0, 0), entry.date_time)
 
             manifest = json.loads(result.manifest_path.read_text(encoding="utf-8"))
-            self.assertEqual("2.5.0-rc2", manifest["version"])
+            self.assertEqual("2.5.0-rc3", manifest["version"])
             self.assertEqual("rc", manifest["mode"])
             self.assertEqual(259, manifest["readiness"]["cataloged"])
             self.assertEqual("AmirrezaFarnamTaheri/WinCare", manifest["oracleProvenance"]["repository"])
@@ -191,7 +191,7 @@ class FinalizationTests(unittest.TestCase):
                     "--output",
                     directory,
                     "--version",
-                    "2.5.0-rc2",
+                    "2.5.0-rc3",
                     "--mode",
                     "rc",
                 ],
@@ -201,7 +201,7 @@ class FinalizationTests(unittest.TestCase):
                 check=False,
             )
             self.assertEqual(0, result.returncode, result.stdout + result.stderr)
-            self.assertTrue((Path(directory) / "WinCare-2.5.0-rc2-native-source.zip").is_file())
+            self.assertTrue((Path(directory) / "WinCare-2.5.0-rc3-native-source.zip").is_file())
 
     def test_release_metadata_is_pinned_to_native_release_candidate(self) -> None:
         props = (ROOT / "Directory.Build.props").read_text(encoding="utf-8")
@@ -209,9 +209,9 @@ class FinalizationTests(unittest.TestCase):
         cargo = (ROOT / "native/wincare-core/Cargo.toml").read_text(encoding="utf-8")
         rust_source = (ROOT / "native/wincare-core/src/lib.rs").read_text(encoding="utf-8")
         self.assertIn("<VersionPrefix>2.5.0</VersionPrefix>", props)
-        self.assertIn("<VersionSuffix>rc2</VersionSuffix>", props)
-        self.assertIn("<InformationalVersion>2.5.0-rc2</InformationalVersion>", props)
-        self.assertIn('Version="2.5.0.3"', manifest)
+        self.assertIn("<VersionSuffix>rc3</VersionSuffix>", props)
+        self.assertIn("<InformationalVersion>2.5.0-rc3</InformationalVersion>", props)
+        self.assertIn('Version="2.5.0.4"', manifest)
         self.assertIn('version = "2.5.0"', cargo)
         self.assertIn('const VERSION: &[u8] = b"2.5.0";', rust_source)
 

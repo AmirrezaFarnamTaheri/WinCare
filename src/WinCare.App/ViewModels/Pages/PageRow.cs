@@ -10,14 +10,26 @@ public sealed class PageRow : ObservableObject
     {
         Title = title;
         Description = description;
-        State = state;
-        Detail = detail;
+        _state = state;
+        _detail = detail;
     }
 
     public string Title { get; }
     public string Description { get; }
-    public string State { get; }
-    public string Detail { get; }
+    private string _state;
+    private string _detail;
+
+    public string State
+    {
+        get => _state;
+        set => SetProperty(ref _state, value);
+    }
+
+    public string Detail
+    {
+        get => _detail;
+        set => SetProperty(ref _detail, value);
+    }
 
     public bool IsCompact
     {

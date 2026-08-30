@@ -4,6 +4,12 @@ All notable changes to WinCare are documented in this file in accordance with [K
 
 ---
 
+## [2.5.0-rc3] - 2026-08-30
+
+### Fixed
+
+- **Functional Checkup**: Restored the Quick check action as a real read-only execution pipeline. It now runs native system, storage, security, and Windows Update checks and displays each actual outcome instead of presenting an inert dashboard.
+
 ## [2.5.0-rc2] - 2026-08-30
 
 ### Changed

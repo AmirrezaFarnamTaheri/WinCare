@@ -7,11 +7,93 @@
     SizeChanged="Page_SizeChanged">
     <ScrollViewer VerticalScrollBarVisibility="Auto">
         <Grid Padding="40,30,40,40" RowSpacing="20">
-            <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
-            <StackPanel Spacing="6"><TextBlock Style="{StaticResource PageTitleTextStyle}" Text="System Checkup" /><TextBlock Style="{StaticResource PageDescriptionTextStyle}" Text="Inspect first. Review the evidence before choosing any action." /></StackPanel>
-            <Border Grid.Row="1" Style="{StaticResource DashboardCardStyle}" Background="{ThemeResource HeroBackgroundBrush}"><Grid ColumnSpacing="26"><Grid.ColumnDefinitions><ColumnDefinition Width="190" /><ColumnDefinition Width="*" /><ColumnDefinition Width="1" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions><Border Width="144" Height="144" CornerRadius="72" BorderThickness="10" BorderBrush="{ThemeResource AccentTealBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"><StackPanel HorizontalAlignment="Center" VerticalAlignment="Center"><TextBlock FontFamily="Segoe UI Variable Display" FontSize="42" FontWeight="SemiBold" HorizontalAlignment="Center" Text="—" /><TextBlock Style="{StaticResource RowSecondaryTextStyle}" HorizontalAlignment="Center" Text="awaiting check" /></StackPanel></Border><StackPanel Grid.Column="1" Spacing="8" VerticalAlignment="Center"><TextBlock FontSize="20" FontWeight="SemiBold" Foreground="{ThemeResource TextPrimaryBrush}" Text="Health score" /><TextBlock Style="{StaticResource PageDescriptionTextStyle}" TextWrapping="Wrap" Text="A score appears only after WinCare has current evidence from a completed check." /><Border HorizontalAlignment="Left" Padding="10,5" Background="{ThemeResource AccentTealSubtleBrush}" CornerRadius="8"><TextBlock Foreground="{ThemeResource AccentTealBrush}" Text="Run a read-only check" /></Border></StackPanel><Border Grid.Column="2" Width="1" Background="{ThemeResource CardBorderBrush}" Margin="0,8" /><StackPanel Grid.Column="3" Spacing="8" VerticalAlignment="Center"><StackPanel Orientation="Horizontal" Spacing="10"><Border Width="42" Height="42" CornerRadius="21" BorderThickness="1" BorderBrush="{ThemeResource AccentTealBrush}"><FontIcon Glyph="&#xE8C8;" Foreground="{ThemeResource AccentTealBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" /></Border><TextBlock FontSize="20" FontWeight="SemiBold" Foreground="{ThemeResource TextPrimaryBrush}" VerticalAlignment="Center" Text="Review before applying" /></StackPanel><TextBlock Style="{StaticResource PageDescriptionTextStyle}" TextWrapping="Wrap" Text="Checks observe your device. Any recommended repair stays a proposal until you review and approve it." /></StackPanel></Grid></Border>
-            <Grid Grid.Row="2" RowSpacing="10"><Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions><Grid Padding="16,0"><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="150" /><ColumnDefinition Width="220" /></Grid.ColumnDefinitions><TextBlock Style="{StaticResource ColumnHeaderTextStyle}" Text="Category" /><TextBlock Grid.Column="1" Style="{StaticResource ColumnHeaderTextStyle}" Text="Status" /><TextBlock Grid.Column="2" Style="{StaticResource ColumnHeaderTextStyle}" Text="Action preview" /></Grid><ListView Grid.Row="1" ItemsSource="{x:Bind ViewModel.CurrentRows, Mode=OneWay}" SelectionMode="None" AutomationProperties.AutomationId="CheckupPageRows" AutomationProperties.Name="Checkup information"><ListView.ItemContainerStyle><Style TargetType="ListViewItem"><Setter Property="HorizontalContentAlignment" Value="Stretch" /><Setter Property="Padding" Value="0" /><Setter Property="Margin" Value="0,0,0,8" /></Style></ListView.ItemContainerStyle><ListView.ItemTemplate><DataTemplate x:DataType="vm:PageRow"><Border Style="{StaticResource SurfaceBorderStyle}" Padding="18,15"><Grid ColumnSpacing="16"><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="150" /><ColumnDefinition Width="220" /></Grid.ColumnDefinitions><StackPanel Spacing="4"><TextBlock Style="{StaticResource RowTitleTextStyle}" Text="{x:Bind Title}" /><TextBlock Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap" Text="{x:Bind Description}" /></StackPanel><StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center"><FontIcon Glyph="&#xE73E;" Foreground="{ThemeResource AccentTealBrush}" /><TextBlock Foreground="{ThemeResource AccentTealBrush}" Text="{x:Bind State}" /></StackPanel><StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center"><TextBlock Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind Detail}" /><FontIcon Glyph="&#xE76C;" HorizontalAlignment="Right" /></StackPanel></Grid></Border></DataTemplate></ListView.ItemTemplate></ListView></Grid>
-            <SelectorBar x:Name="SectionSelector" Grid.Row="3" SelectionChanged="SectionSelector_SelectionChanged" AutomationProperties.AutomationId="CheckupPageTabs" AutomationProperties.Name="Checkup sections"><SelectorBarItem Text="Quick check" AutomationProperties.Name="Quick check" /><SelectorBarItem Text="Full check" AutomationProperties.Name="Full check" /><SelectorBarItem Text="Custom check" AutomationProperties.Name="Custom check" /><SelectorBarItem Text="Results" AutomationProperties.Name="Results" /></SelectorBar>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <StackPanel Spacing="6">
+                <TextBlock Style="{StaticResource PageTitleTextStyle}" Text="System Checkup" />
+                <TextBlock Style="{StaticResource PageDescriptionTextStyle}" Text="Inspect first. Review the evidence before choosing any action." />
+            </StackPanel>
+
+            <Border Grid.Row="1" Style="{StaticResource DashboardCardStyle}" Background="{ThemeResource HeroBackgroundBrush}">
+                <Grid ColumnSpacing="26">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="190" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="1" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Border Width="144" Height="144" CornerRadius="72" BorderThickness="10" BorderBrush="{ThemeResource AccentTealBrush}" HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <TextBlock FontFamily="Segoe UI Variable Display" FontSize="42" FontWeight="SemiBold" HorizontalAlignment="Center" Text="{x:Bind ViewModel.HealthScoreText, Mode=OneWay}" />
+                            <TextBlock Style="{StaticResource RowSecondaryTextStyle}" HorizontalAlignment="Center" Text="{x:Bind ViewModel.HealthScoreDetail, Mode=OneWay}" />
+                        </StackPanel>
+                    </Border>
+                    <StackPanel Grid.Column="1" Spacing="8" VerticalAlignment="Center">
+                        <TextBlock FontSize="20" FontWeight="SemiBold" Foreground="{ThemeResource TextPrimaryBrush}" Text="Health score" />
+                        <TextBlock Style="{StaticResource PageDescriptionTextStyle}" TextWrapping="Wrap" Text="{x:Bind ViewModel.RunSummary, Mode=OneWay}" />
+                        <Button
+                            HorizontalAlignment="Left"
+                            Style="{StaticResource PrimaryActionButtonStyle}"
+                            Command="{x:Bind ViewModel.RunQuickCheckCommand}"
+                            AutomationProperties.AutomationId="RunQuickCheck"
+                            AutomationProperties.Name="Run a read-only quick check">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <ProgressRing Width="16" Height="16" IsActive="{x:Bind ViewModel.IsRunning, Mode=OneWay}" />
+                                <TextBlock Text="{x:Bind ViewModel.RunActionText, Mode=OneWay}" />
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+                    <Border Grid.Column="2" Width="1" Background="{ThemeResource CardBorderBrush}" Margin="0,8" />
+                    <StackPanel Grid.Column="3" Spacing="8" VerticalAlignment="Center">
+                        <StackPanel Orientation="Horizontal" Spacing="10">
+                            <Border Width="42" Height="42" CornerRadius="21" BorderThickness="1" BorderBrush="{ThemeResource AccentTealBrush}">
+                                <FontIcon Glyph="&#xE8C8;" Foreground="{ThemeResource AccentTealBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            </Border>
+                            <TextBlock FontSize="20" FontWeight="SemiBold" Foreground="{ThemeResource TextPrimaryBrush}" VerticalAlignment="Center" Text="Review before applying" />
+                        </StackPanel>
+                        <TextBlock Style="{StaticResource PageDescriptionTextStyle}" TextWrapping="Wrap" Text="Checks observe your device. Any recommended repair stays a proposal until you review and approve it." />
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <Grid Grid.Row="2" RowSpacing="10">
+                <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
+                <Grid Padding="16,0">
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="150" /><ColumnDefinition Width="220" /></Grid.ColumnDefinitions>
+                    <TextBlock Style="{StaticResource ColumnHeaderTextStyle}" Text="Category" />
+                    <TextBlock Grid.Column="1" Style="{StaticResource ColumnHeaderTextStyle}" Text="Status" />
+                    <TextBlock Grid.Column="2" Style="{StaticResource ColumnHeaderTextStyle}" Text="Evidence" />
+                </Grid>
+                <ListView Grid.Row="1" ItemsSource="{x:Bind ViewModel.CurrentRows, Mode=OneWay}" SelectionMode="None" AutomationProperties.AutomationId="CheckupPageRows" AutomationProperties.Name="Checkup information">
+                    <ListView.ItemContainerStyle>
+                        <Style TargetType="ListViewItem"><Setter Property="HorizontalContentAlignment" Value="Stretch" /><Setter Property="Padding" Value="0" /><Setter Property="Margin" Value="0,0,0,8" /></Style>
+                    </ListView.ItemContainerStyle>
+                    <ListView.ItemTemplate>
+                        <DataTemplate x:DataType="vm:PageRow">
+                            <Border Style="{StaticResource SurfaceBorderStyle}" Padding="18,15">
+                                <Grid ColumnSpacing="16">
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="150" /><ColumnDefinition Width="220" /></Grid.ColumnDefinitions>
+                                    <StackPanel Spacing="4"><TextBlock Style="{StaticResource RowTitleTextStyle}" Text="{x:Bind Title}" /><TextBlock Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap" Text="{x:Bind Description}" /></StackPanel>
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center"><FontIcon Glyph="&#xE73E;" Foreground="{ThemeResource AccentTealBrush}" /><TextBlock Foreground="{ThemeResource AccentTealBrush}" Text="{x:Bind State}" /></StackPanel>
+                                    <TextBlock Grid.Column="2" Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap" Text="{x:Bind Detail}" VerticalAlignment="Center" />
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </ListView.ItemTemplate>
+                </ListView>
+            </Grid>
+
+            <SelectorBar x:Name="SectionSelector" Grid.Row="3" SelectionChanged="SectionSelector_SelectionChanged" AutomationProperties.AutomationId="CheckupPageTabs" AutomationProperties.Name="Checkup sections">
+                <SelectorBarItem Text="Quick check" AutomationProperties.Name="Quick check" />
+                <SelectorBarItem Text="Full check" AutomationProperties.Name="Full check" />
+                <SelectorBarItem Text="Custom check" AutomationProperties.Name="Custom check" />
+                <SelectorBarItem Text="Results" AutomationProperties.Name="Results" />
+            </SelectorBar>
         </Grid>
     </ScrollViewer>
 </Page>
