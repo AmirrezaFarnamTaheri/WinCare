@@ -209,14 +209,17 @@ class FinalizationTests(unittest.TestCase):
         self.assertIn('channel = "1.97.1"', toolchain)
         self.assertIn('components = ["rustfmt", "clippy"]', toolchain)
 
-    def test_release_workflows_hold_versioned_artifacts_for_manual_publication(self) -> None:
+    def test_tagged_release_workflow_publishes_verified_versioned_assets(self) -> None:
         native_workflow = (ROOT / ".github/workflows/native-winui.yml").read_text(encoding="utf-8")
         release_workflow = (ROOT / ".github/workflows/native-release-candidate.yml").read_text(encoding="utf-8")
         self.assertIn("Validate tag matches product version", native_workflow)
-        self.assertIn("Prepare manually reviewed release assets", native_workflow)
-        self.assertIn("WinCare-manual-release-${{ github.ref_name }}", native_workflow)
+        self.assertIn("Prepare release assets", native_workflow)
+        self.assertIn("WinCare-release-${{ github.ref_name }}", native_workflow)
+        self.assertIn("contents: write", native_workflow)
+        self.assertIn("Publish GitHub release", native_workflow)
+        self.assertIn("gh release create", native_workflow)
+        self.assertIn("gh release upload", native_workflow)
         self.assertIn("Hold artifacts for manual publication", release_workflow)
-        self.assertNotIn("gh release create", native_workflow)
         self.assertNotIn("gh release create", release_workflow)
         self.assertIn("Require primary branch dispatch", release_workflow)
         self.assertIn("refs/heads/master", release_workflow)
@@ -226,17 +229,16 @@ class FinalizationTests(unittest.TestCase):
         self.assertNotIn("${{ github.ref }}", release_workflow)
         self.assertIn("$GITHUB_REF", release_workflow)
 
-    def test_signing_private_keys_never_cross_job_or_non_release_boundaries(self) -> None:
+    def test_runner_local_signing_identity_never_leaves_the_packaging_job(self) -> None:
         workflow = (ROOT / ".github/workflows/native-winui.yml").read_text(encoding="utf-8")
         self.assertNotIn("release-signing-identity", workflow)
         self.assertNotIn("artifacts/signing/*", workflow)
         self.assertNotIn("temp_signing_key.pfx", workflow)
         self.assertNotIn("PackageCertificatePassword=", workflow)
-        self.assertIn("Prepare development signing identity", workflow)
-        self.assertIn("Prepare release signing identity", workflow)
-        self.assertIn("Tagged releases require WINCARE_SIGNING_CERT_BASE64", workflow)
+        self.assertIn("Prepare runner-local package signing identity", workflow)
+        self.assertNotIn("WINCARE_SIGNING_CERT_BASE64", workflow)
+        self.assertNotIn("WINCARE_SIGNING_CERT_PASSWORD", workflow)
         self.assertIn("WINCARE_DEVELOPMENT_SIGNING=true", workflow)
-        self.assertIn("WINCARE_DEVELOPMENT_SIGNING=false", workflow)
         self.assertIn("WinCare.App_*.msix", workflow)
         self.assertIn("Dependencies", workflow)
         self.assertNotIn("AppPackages/**/*.msix", workflow)
@@ -246,12 +248,6 @@ class FinalizationTests(unittest.TestCase):
         self.assertIn("CustomTrustStore", workflow)
         self.assertIn("cancel-in-progress: true", workflow)
         self.assertIn("timeout-minutes: 20", workflow)
-
-        development_start = workflow.index("Prepare development signing identity")
-        release_start = workflow.index("Prepare release signing identity")
-        development_block = workflow[development_start:release_start]
-        self.assertNotIn("WINCARE_SIGNING_CERT_BASE64", development_block)
-        self.assertNotIn("WINCARE_SIGNING_CERT_PASSWORD", development_block)
 
         verification_start = workflow.index("Verify MSIX signature and publisher")
         cleanup_start = workflow.index("Clean runner-local signing identity")
