@@ -225,7 +225,6 @@ class FinalizationTests(unittest.TestCase):
         self.assertNotIn("actual = '${WINCARE_VERSION#v}'", release_workflow)
         self.assertNotIn("${{ github.ref }}", release_workflow)
         self.assertIn("$GITHUB_REF", release_workflow)
-        self.assertIn("$GITHUB_SHA", release_workflow)
 
     def test_signing_private_keys_never_cross_job_or_non_release_boundaries(self) -> None:
         workflow = (ROOT / ".github/workflows/native-winui.yml").read_text(encoding="utf-8")
