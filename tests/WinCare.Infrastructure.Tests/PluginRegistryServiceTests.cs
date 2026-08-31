@@ -429,4 +429,57 @@ public sealed class PluginRegistryServiceTests
             Directory.Delete(tempUserPluginsDir, recursive: true);
         }
     }
+
+    [Fact]
+    public async Task PluginRegistryService_Invalid_TargetFramework_Rejects_And_Cleans_Up_State()
+    {
+        var tempUserPluginsDir = Path.Combine(Path.GetTempPath(), "WinCareTfmTest_" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(tempUserPluginsDir);
+
+        var pluginDir = Path.Combine(tempUserPluginsDir, "bad-tfm-plugin");
+        Directory.CreateDirectory(pluginDir);
+
+        var manifestJson = """
+        {
+          "id": "com.community.badtfm",
+          "name": "Bad TFM Plugin",
+          "version": "1.0.0",
+          "author": "Community Developer",
+          "category": "Utilities",
+          "entryType": "Assembly",
+          "targetFramework": "net7.0",
+          "assemblyFileName": "PluginAssembly.dll",
+          "pluginClassName": "Community.BadTfm.PluginEntryPoint",
+          "tools": [
+            {
+              "id": "com.community.badtfm.execute",
+              "title": "Bad TFM Tool",
+              "area": "Utilities",
+              "section": "General",
+              "risk": "ReadOnly",
+              "executorType": "Assembly"
+            }
+          ]
+        }
+        """;
+        File.WriteAllText(Path.Combine(pluginDir, "wincare-plugin.json"), manifestJson);
+
+        var dispatcher = new CommandDispatcher(Array.Empty<CommandDefinition>(), Array.Empty<ICommandHandler>());
+        var host = new DefaultPluginHost(dispatcher, pluginsUserDirectory: tempUserPluginsDir);
+        var service = new PluginRegistryService(initialEnabledPluginIds: new HashSet<string> { "com.community.badtfm" });
+
+        try
+        {
+            await service.DiscoverAndInitializeAsync(host);
+
+            var plugin = Assert.Single(service.GetAllPlugins(), p => p.Id == "com.community.badtfm");
+            Assert.Equal(PluginState.Error, plugin.State);
+            Assert.Contains("targetFramework", plugin.ErrorMessage, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain(host.RegisteredCommands, c => c.Id == "com.community.badtfm.execute");
+        }
+        finally
+        {
+            Directory.Delete(tempUserPluginsDir, recursive: true);
+        }
+    }
 }

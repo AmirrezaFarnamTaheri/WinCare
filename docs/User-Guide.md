@@ -3,7 +3,7 @@
 Use this guide to install WinCare, understand its safety prompts, and choose the right workflow for a diagnostic or repair. WinCare is a release candidate: review every planned change before approving it.
 
 > [!TIP]
-> See the [interface screenshots](Screenshots.md) before you begin. They include real v2.5.0-rc1 runtime captures and the original concepts for comparison.
+> See the [interface screenshots](Screenshots.md) before you begin. They include real v2.5.0-rc5 runtime captures and the original concepts for comparison.
 
 ---
 
@@ -111,9 +111,9 @@ WinCare records every executed command and diagnostic check to a local activity 
 
 ## 4. Navigation & Workspace Overview
 
-![WinCare Home screen captured from the installed v2.5.0-rc1 release](images/runtime-dashboard.png)
+![WinCare Home screen captured from the installed v2.5.0-rc5 release candidate](images/runtime-dashboard.png)
 
-<em>Conceptual interface preview. The shipped application may differ as features evolve.</em>
+<em>Runtime interface capture from the v2.5.0-rc5 candidate release.</em>
 
 WinCare's interface uses native **Windows Fluent Mica** depth layering and a clean **Cyber-Teal** visual identity:
 
