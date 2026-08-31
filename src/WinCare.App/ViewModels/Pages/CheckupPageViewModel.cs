@@ -105,7 +105,7 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
         int succeeded = 0;
         try
         {
-            foreach ((string commandId, string rowTitle) in QuickCheckCommands)
+            foreach ((_, string rowTitle) in QuickCheckCommands)
             {
                 PageRow? row = Sections[0].Rows.FirstOrDefault(candidate => candidate.Title == rowTitle);
                 if (row is not null)
@@ -113,14 +113,23 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
                     row.State = "Checking";
                     row.Detail = "Read-only";
                 }
+            }
 
+            var parallelOptions = new ParallelOptions
+            {
+                MaxDegreeOfParallelism = Math.Min(Environment.ProcessorCount, QuickCheckCommands.Length),
+            };
+
+            await Parallel.ForEachAsync(QuickCheckCommands, parallelOptions, async (item, ct) =>
+            {
+                (string commandId, string rowTitle) = item;
                 CommandResult result;
                 try
                 {
                     result = await _dispatcher.ExecuteAsync(
                         CommandRequest.Preview(commandId),
                         new CommandExecutionOptions(false, DateTimeOffset.UtcNow.AddMinutes(2)),
-                        CancellationToken.None);
+                        ct);
                 }
                 catch (Exception)
                 {
@@ -131,15 +140,16 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
 
                 if (result.Status == CommandResultStatus.Succeeded)
                 {
-                    succeeded++;
+                    Interlocked.Increment(ref succeeded);
                 }
 
+                PageRow? row = Sections[0].Rows.FirstOrDefault(candidate => candidate.Title == rowTitle);
                 if (row is not null)
                 {
                     row.State = result.Status == CommandResultStatus.Succeeded ? "Checked" : "Needs review";
                     row.Detail = result.Message;
                 }
-            }
+            });
 
             _hasResults = true;
             HealthScoreText = "—";

@@ -13,6 +13,7 @@
     <ContinuousIntegrationBuild Condition="'$(CI)' == 'true'">true</ContinuousIntegrationBuild>
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <TieredPGO>true</TieredPGO>
   </PropertyGroup>
   <PropertyGroup Condition="$(MSBuildProjectName) != 'WinCare.App'">
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
