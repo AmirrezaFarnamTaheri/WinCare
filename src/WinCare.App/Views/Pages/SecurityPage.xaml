@@ -16,6 +16,7 @@
         <StackPanel Spacing="6">
             <TextBlock Style="{StaticResource PageTitleTextStyle}" Text="Security" />
             <TextBlock MaxWidth="760" HorizontalAlignment="Left" Style="{StaticResource PageDescriptionTextStyle}" Text="Understand protection state and review security changes before applying them." />
+            <Button HorizontalAlignment="Left" Content="Open matching tools" Click="OpenToolsButton_Click" AutomationProperties.AutomationId="SecurityOpenTools" AutomationProperties.Name="Open matching security tools" />
         </StackPanel>
 
         <SelectorBar
@@ -79,8 +80,8 @@
                                         </Grid.ColumnDefinitions>
                                         <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="{x:Bind Title}" TextWrapping="Wrap" />
                                         <TextBlock Grid.Column="1" Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind Description}" TextWrapping="Wrap" />
-                                        <TextBlock Grid.Column="2" Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind State}" TextWrapping="Wrap" />
-                                        <TextBlock Grid.Column="3" Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind Detail}" TextWrapping="Wrap" />
+                                        <TextBlock Grid.Column="2" Style="{StaticResource RowSecondaryTextStyle}" FontFamily="{StaticResource TelemetryFontFamily}" Text="{x:Bind State, Mode=OneWay}" TextWrapping="Wrap" />
+                                        <TextBlock Grid.Column="3" Style="{StaticResource RowSecondaryTextStyle}" FontFamily="{StaticResource TelemetryFontFamily}" Text="{x:Bind Detail, Mode=OneWay}" TextWrapping="Wrap" />
                                     </Grid>
                                     <StackPanel
                                         Spacing="5"
@@ -93,7 +94,7 @@
                                                 <ColumnDefinition Width="*" />
                                             </Grid.ColumnDefinitions>
                                             <TextBlock FontWeight="SemiBold" Style="{StaticResource RowSecondaryTextStyle}" Text="State" />
-                                            <TextBlock Grid.Column="1" Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind State}" TextWrapping="Wrap" />
+                                            <TextBlock Grid.Column="1" Style="{StaticResource RowSecondaryTextStyle}" FontFamily="{StaticResource TelemetryFontFamily}" Text="{x:Bind State, Mode=OneWay}" TextWrapping="Wrap" />
                                         </Grid>
                                         <Grid ColumnSpacing="8">
                                             <Grid.ColumnDefinitions>
@@ -101,7 +102,7 @@
                                                 <ColumnDefinition Width="*" />
                                             </Grid.ColumnDefinitions>
                                             <TextBlock FontWeight="SemiBold" Style="{StaticResource RowSecondaryTextStyle}" Text="Notes" />
-                                            <TextBlock Grid.Column="1" Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind Detail}" TextWrapping="Wrap" />
+                                            <TextBlock Grid.Column="1" Style="{StaticResource RowSecondaryTextStyle}" FontFamily="{StaticResource TelemetryFontFamily}" Text="{x:Bind Detail, Mode=OneWay}" TextWrapping="Wrap" />
                                         </Grid>
                                     </StackPanel>
                                 </Grid>

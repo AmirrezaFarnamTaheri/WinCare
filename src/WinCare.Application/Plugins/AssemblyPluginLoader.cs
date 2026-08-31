@@ -1,6 +1,7 @@
 namespace WinCare.Application.Plugins;
 
 using System.Reflection;
+using System.Runtime.Versioning;
 
 /// <summary>
 /// Result of loading an assembly plugin.
@@ -17,6 +18,7 @@ public sealed record AssemblyPluginLoadResult(
 /// </summary>
 public static class AssemblyPluginLoader
 {
+    public const string SupportedTargetFramework = "net8.0-windows10.0.19041.0";
     /// <summary>
     /// Loads a plugin assembly from the specified file path into an isolated collectible ALC.
     /// </summary>
@@ -32,6 +34,21 @@ public static class AssemblyPluginLoader
         {
             loadContext = new PluginLoadContext(assemblyPath);
             var assembly = loadContext.LoadFromAssemblyPath(assemblyPath);
+            var targetFramework = assembly.GetCustomAttribute<TargetFrameworkAttribute>()?.FrameworkName;
+            if (!string.Equals(targetFramework, ".NETCoreApp,Version=v8.0", StringComparison.Ordinal))
+            {
+                loadContext.Unload();
+                return new AssemblyPluginLoadResult(false, null, null,
+                    $"Plugin targets '{targetFramework ?? "an unknown framework"}'. Compiled plugins must target {SupportedTargetFramework}.");
+            }
+
+            var supportedOs = assembly.GetCustomAttribute<SupportedOSPlatformAttribute>()?.PlatformName;
+            if (!string.Equals(supportedOs, "windows10.0.19041.0", StringComparison.OrdinalIgnoreCase))
+            {
+                loadContext.Unload();
+                return new AssemblyPluginLoadResult(false, null, null,
+                    $"Plugin is missing SupportedOSPlatform('windows10.0.19041.0'). Compiled plugins must target {SupportedTargetFramework}.");
+            }
 
             Type? pluginType = null;
 

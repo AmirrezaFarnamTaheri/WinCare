@@ -47,6 +47,7 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 15
     strategy:
+      fail-fast: false
       matrix:
         target: [x86_64-pc-windows-msvc, aarch64-pc-windows-msvc]
     steps:
@@ -76,6 +77,7 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 20
     strategy:
+      fail-fast: false
       matrix:
         include:
           - platform: x64
@@ -110,8 +112,7 @@ jobs:
         if: matrix.platform == 'x64'
         shell: bash
         run: dotnet test WinCare.Native.sln -c Release -p:Platform=${{ matrix.platform }} --no-restore
-      - name: Prepare development signing identity
-        if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
+      - name: Prepare runner-local package signing identity
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
@@ -131,43 +132,7 @@ jobs:
           Export-Certificate -Cert $cert -FilePath "$signDir/WinCare.cer" | Out-Null
           "WINCARE_SIGNING_THUMBPRINT=$($cert.Thumbprint)" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           'WINCARE_DEVELOPMENT_SIGNING=true' | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-          Write-Output "Development signing identity ready. Thumbprint: $($cert.Thumbprint)"
-      - name: Prepare release signing identity
-        if: startsWith(github.ref, 'refs/tags/v')
-        shell: pwsh
-        env:
-          CERT_B64: ${{ secrets.WINCARE_SIGNING_CERT_BASE64 }}
-          CERT_PASS: ${{ secrets.WINCARE_SIGNING_CERT_PASSWORD }}
-        run: |
-          $ErrorActionPreference = 'Stop'
-          if (-not $env:CERT_B64 -or -not $env:CERT_PASS) {
-            throw 'Tagged releases require WINCARE_SIGNING_CERT_BASE64 and WINCARE_SIGNING_CERT_PASSWORD.'
-          }
-
-          $signDir = "$PWD/artifacts/signing"
-          New-Item -ItemType Directory -Force -Path $signDir | Out-Null
-          $pfxPath = Join-Path $env:RUNNER_TEMP 'wincare-release-signing.pfx'
-          try {
-            [IO.File]::WriteAllBytes($pfxPath, [Convert]::FromBase64String($env:CERT_B64))
-            $password = ConvertTo-SecureString -String $env:CERT_PASS -Force -AsPlainText
-            $importedCertificates = @(Import-PfxCertificate -FilePath $pfxPath -CertStoreLocation 'Cert:\CurrentUser\My' -Password $password)
-            $cert = $importedCertificates | Where-Object { $_.HasPrivateKey } | Select-Object -First 1
-          }
-          finally {
-            if (Test-Path $pfxPath) { Remove-Item -Force $pfxPath }
-          }
-
-          if (-not $cert -or -not $cert.HasPrivateKey) {
-            throw 'Release signing PFX does not contain an accessible private key certificate.'
-          }
-          if ($cert.Subject -ne 'CN=WinCare Development') {
-            throw "Release signing certificate subject '$($cert.Subject)' does not exactly match the MSIX publisher 'CN=WinCare Development'."
-          }
-
-          Export-Certificate -Cert $cert -FilePath "$signDir/WinCare.cer" | Out-Null
-          "WINCARE_SIGNING_THUMBPRINT=$($cert.Thumbprint)" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-          'WINCARE_DEVELOPMENT_SIGNING=false' | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-          Write-Output "Release signing identity loaded runner-locally. Thumbprint: $($cert.Thumbprint)"
+          Write-Output "Runner-local package signing identity ready. Thumbprint: $($cert.Thumbprint)"
       - name: Build unsigned MSIX package
         shell: bash
         run: |
@@ -315,7 +280,6 @@ jobs:
           if ($env:WINCARE_SIGNING_THUMBPRINT) {
             Remove-Item -Force "Cert:\CurrentUser\My\$env:WINCARE_SIGNING_THUMBPRINT" -ErrorAction SilentlyContinue
           }
-          Remove-Item -Force "$env:RUNNER_TEMP\wincare-release-signing.pfx" -ErrorAction SilentlyContinue
       - name: Publish single binary executable
         shell: bash
         run: dotnet publish src/WinCare.App/WinCare.App.csproj -c Release -p:Platform=${{ matrix.platform }} -r ${{ matrix.runtime }} -p:WindowsPackageType=None -p:WindowsAppSDKSelfContained=true -p:SelfContained=true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:DebugType=none -p:DebugSymbols=false -o artifacts/portable/${{ matrix.runtime }}
@@ -374,17 +338,25 @@ jobs:
           else
             echo "RELEASE_FLAGS=--latest" >> $GITHUB_ENV
           fi
-      - name: Publish immutable GitHub release
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Prepare release assets
         run: |
           python tools/stage_release_assets.py --version "$RELEASE_TAG"
-          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
-            echo "Error: Release '$RELEASE_TAG' already exists. SemVer tagged releases are immutable."
-            exit 1
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: WinCare-release-${{ github.ref_name }}
+          path: release_assets/*
+          if-no-files-found: error
+      - name: Publish GitHub release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload "$RELEASE_TAG" release_assets/* --clobber --repo "$GITHUB_REPOSITORY"
+          else
+            gh release create "$RELEASE_TAG" release_assets/* \
+              --title "WinCare $RELEASE_TAG" \
+              --generate-notes \
+              $RELEASE_FLAGS \
+              --repo "$GITHUB_REPOSITORY"
           fi
-          gh release create "$RELEASE_TAG" release_assets/* \
-            --title "WinCare $RELEASE_TAG (Native WinUI & Core Release)" \
-            $RELEASE_FLAGS \
-            --target "${{ github.sha }}" \
-            --notes "Automated immutable release build generated from commit \`${{ github.sha }}\`. Contains verified native MSIX packages (x64/ARM64), single binary standalone executables, portable ZIP distributions, and verified source finalization archives."

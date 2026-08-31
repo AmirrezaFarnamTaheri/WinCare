@@ -1,3 +1,4 @@
+using System.Buffers;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -69,9 +70,28 @@ public sealed record ApprovedMutationPlan(
     public static string ComputeCanonicalDigest(JsonElement element)
     {
         string canonicalJson = CanonicalizeJson(element);
-        byte[] bytes = Encoding.UTF8.GetBytes(canonicalJson);
-        byte[] hash = SHA256.HashData(bytes);
-        return Convert.ToHexString(hash);
+        int byteCount = Encoding.UTF8.GetByteCount(canonicalJson);
+        Span<byte> hashBuffer = stackalloc byte[32];
+        if (byteCount <= 512)
+        {
+            Span<byte> utf8Bytes = stackalloc byte[byteCount];
+            Encoding.UTF8.GetBytes(canonicalJson, utf8Bytes);
+            SHA256.HashData(utf8Bytes, hashBuffer);
+        }
+        else
+        {
+            byte[] rented = ArrayPool<byte>.Shared.Rent(byteCount);
+            try
+            {
+                int written = Encoding.UTF8.GetBytes(canonicalJson, rented);
+                SHA256.HashData(rented.AsSpan(0, written), hashBuffer);
+            }
+            finally
+            {
+                ArrayPool<byte>.Shared.Return(rented);
+            }
+        }
+        return Convert.ToHexString(hashBuffer);
     }
 
     /// <summary>

@@ -1,33 +1,32 @@
+using System.Diagnostics;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using WinCare.App.Services;
 using WinCare.App.ViewModels.Pages;
 
 namespace WinCare.App.Views.Pages;
 
 public sealed partial class SettingsPage : Page
 {
-    private const double CompactThreshold = 820;
-
     public SettingsPage()
     {
         ViewModel = new SettingsPageViewModel();
         InitializeComponent();
-        SectionSelector.SelectedItem = SectionSelector.Items[0] as SelectorBarItem;
     }
 
     public SettingsPageViewModel ViewModel { get; }
 
-    private void SectionSelector_SelectionChanged(SelectorBar sender, SelectorBarSelectionChangedEventArgs args)
+    private void ThemeSelector_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        ViewModel.SelectSection(sender.Items.IndexOf(sender.SelectedItem));
+        if (Microsoft.UI.Xaml.Application.Current is App app && app.MainWindow is not null)
+        {
+            app.MainWindow.ApplyTheme(ViewModel.SelectedTheme);
+        }
     }
 
-    private void Page_SizeChanged(object sender, SizeChangedEventArgs e)
+    private void OpenDataFolderButton_Click(object sender, RoutedEventArgs e)
     {
-        bool compact = e.NewSize.Width < CompactThreshold;
-        ViewModel.SetCompactLayout(compact);
-        DescriptionHeader.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
-        StateHeader.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
-        NotesHeader.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
+        Directory.CreateDirectory(AppPreferences.DataDirectory);
+        Process.Start(new ProcessStartInfo { FileName = AppPreferences.DataDirectory, UseShellExecute = true });
     }
 }

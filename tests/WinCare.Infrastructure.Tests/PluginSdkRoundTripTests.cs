@@ -35,6 +35,7 @@ public class PluginSdkRoundTripTests
         {
             // 1. Scaffold C# Source Code matching CLI Golden Template
             var sourceCode = @"
+using System.Runtime.Versioning;
 using System;
 using System.Collections.Generic;
 using System.Threading;
@@ -43,6 +44,9 @@ using WinCare.Application.Commands;
 using WinCare.Application.Plugins;
 using WinCare.CommandCatalog.Models;
 using WinCare.Domain.Commands;
+
+[assembly: TargetFramework("".NETCoreApp,Version=v8.0"")]
+[assembly: SupportedOSPlatform(""windows10.0.19041.0"")]
 
 namespace Community.GoldenSdkPlugin
 {
@@ -129,6 +133,7 @@ namespace Community.GoldenSdkPlugin
               "description": "End-to-end compiled C# plugin",
               "category": "Utilities",
               "entryType": "Assembly",
+              "targetFramework": "net8.0-windows10.0.19041.0",
               "assemblyFileName": "PluginAssembly.dll",
               "pluginClassName": "Community.GoldenSdkPlugin.GoldenPluginEntryPoint",
               "tools": [

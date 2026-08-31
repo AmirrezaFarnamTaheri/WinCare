@@ -26,6 +26,7 @@ function createPlugin(targetName, options = {}) {
       description: options.description || "High performance managed assembly plugin",
       category: options.category || "Utilities",
       entryType: "Assembly",
+      targetFramework: "net8.0-windows10.0.19041.0",
       assemblyFileName: "PluginAssembly.dll",
       pluginClassName: `Community.${pluginName.replace(/[^a-zA-Z0-9]/g, '')}.PluginEntryPoint`,
       tools: [
@@ -45,6 +46,24 @@ function createPlugin(targetName, options = {}) {
     };
 
     fs.writeFileSync(path.join(targetDir, 'wincare-plugin.json'), JSON.stringify(manifest, null, 2));
+
+    const projectContent = `<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
+    <SupportedOSPlatformVersion>10.0.19041.0</SupportedOSPlatformVersion>
+    <GenerateSupportedOSPlatformAttribute>true</GenerateSupportedOSPlatformAttribute>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>PluginAssembly</AssemblyName>
+  </PropertyGroup>
+  <!-- Set WinCareSdkRoot to a directory containing WinCare contract assemblies. -->
+  <ItemGroup>
+    <Reference Include="WinCare.Application" HintPath="$(WinCareSdkRoot)\\WinCare.Application.dll" Private="false" />
+    <Reference Include="WinCare.CommandCatalog" HintPath="$(WinCareSdkRoot)\\WinCare.CommandCatalog.dll" Private="false" />
+  </ItemGroup>
+</Project>
+`;
+    fs.writeFileSync(path.join(targetDir, 'PluginAssembly.csproj'), projectContent);
 
     const csContent = `using System;
 using System.Collections.Generic;

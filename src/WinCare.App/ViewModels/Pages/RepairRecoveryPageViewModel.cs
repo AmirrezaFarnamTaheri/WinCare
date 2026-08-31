@@ -2,6 +2,15 @@ namespace WinCare.App.ViewModels.Pages;
 
 public sealed class RepairRecoveryPageViewModel : TabbedPageViewModel
 {
+    public string ToolSearchQuery => SelectedIndex switch
+    {
+        0 => "repair",
+        1 => "restore",
+        2 => "undo",
+        3 => "export backup",
+        _ => "recovery reset",
+    };
+
     public RepairRecoveryPageViewModel() : base([
         new PageSection("Repair", "No repair assessment is available.", [
             new PageRow("Windows components", "Diagnose component store, update, service, and package issues.", "Available", "Evidence required"),

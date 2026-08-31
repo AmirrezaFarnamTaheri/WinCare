@@ -67,7 +67,7 @@ class FinalizationTests(unittest.TestCase):
     def test_rc_finalization_separates_native_source_and_legacy_oracle(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             output = Path(directory)
-            result = finalize_release(ROOT, output, version="2.5.0-rc1", mode="rc")
+            result = finalize_release(ROOT, output, version="2.5.0-rc3", mode="rc")
 
             self.assertTrue(result.native_archive.is_file())
             self.assertTrue(result.oracle_archive.is_file())
@@ -102,7 +102,7 @@ class FinalizationTests(unittest.TestCase):
                     self.assertEqual((1980, 1, 1, 0, 0, 0), entry.date_time)
 
             manifest = json.loads(result.manifest_path.read_text(encoding="utf-8"))
-            self.assertEqual("2.5.0-rc1", manifest["version"])
+            self.assertEqual("2.5.0-rc3", manifest["version"])
             self.assertEqual("rc", manifest["mode"])
             self.assertEqual(259, manifest["readiness"]["cataloged"])
             self.assertEqual("AmirrezaFarnamTaheri/WinCare", manifest["oracleProvenance"]["repository"])
@@ -137,6 +137,28 @@ class FinalizationTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "Conflicting release assets"):
                 stage_assets(src, dst, version="2.5.0-rc1")
 
+    def test_stage_release_assets_keeps_architecture_specific_certificates(self) -> None:
+        from tools.stage_release_assets import stage_assets
+        with tempfile.TemporaryDirectory() as src_dir, tempfile.TemporaryDirectory() as dst_dir:
+            src = Path(src_dir)
+            dst = Path(dst_dir)
+            x64 = src / "WinCare-x64" / "artifacts" / "signing"
+            arm64 = src / "WinCare-ARM64" / "artifacts" / "signing"
+            x64.mkdir(parents=True)
+            arm64.mkdir(parents=True)
+            (x64 / "WinCare.cer").write_text("CERT_X64_CONTENT", encoding="utf-8")
+            (arm64 / "WinCare.cer").write_text("CERT_ARM64_CONTENT", encoding="utf-8")
+
+            staged = stage_assets(src, dst, version="2.5.0-rc1")
+
+            self.assertEqual(
+                [
+                    dst.resolve() / "WinCare-v2.5.0-rc1-ARM64.cer",
+                    dst.resolve() / "WinCare-v2.5.0-rc1-x64.cer",
+                ],
+                staged,
+            )
+
     def test_stage_release_assets_ignores_vendor_dependency_msix(self) -> None:
         from tools.stage_release_assets import stage_assets
         with tempfile.TemporaryDirectory() as src_dir, tempfile.TemporaryDirectory() as dst_dir:
@@ -169,7 +191,7 @@ class FinalizationTests(unittest.TestCase):
                     "--output",
                     directory,
                     "--version",
-                    "2.5.0-rc1",
+                    "2.5.0-rc3",
                     "--mode",
                     "rc",
                 ],
@@ -179,7 +201,7 @@ class FinalizationTests(unittest.TestCase):
                 check=False,
             )
             self.assertEqual(0, result.returncode, result.stdout + result.stderr)
-            self.assertTrue((Path(directory) / "WinCare-2.5.0-rc1-native-source.zip").is_file())
+            self.assertTrue((Path(directory) / "WinCare-2.5.0-rc3-native-source.zip").is_file())
 
     def test_release_metadata_is_pinned_to_native_release_candidate(self) -> None:
         props = (ROOT / "Directory.Build.props").read_text(encoding="utf-8")
@@ -187,9 +209,9 @@ class FinalizationTests(unittest.TestCase):
         cargo = (ROOT / "native/wincare-core/Cargo.toml").read_text(encoding="utf-8")
         rust_source = (ROOT / "native/wincare-core/src/lib.rs").read_text(encoding="utf-8")
         self.assertIn("<VersionPrefix>2.5.0</VersionPrefix>", props)
-        self.assertIn("<VersionSuffix>rc1</VersionSuffix>", props)
-        self.assertIn("<InformationalVersion>2.5.0-rc1</InformationalVersion>", props)
-        self.assertIn('Version="2.5.0.0"', manifest)
+        self.assertIn("<VersionSuffix>rc5</VersionSuffix>", props)
+        self.assertIn("<InformationalVersion>2.5.0-rc5</InformationalVersion>", props)
+        self.assertIn('Version="2.5.0.6"', manifest)
         self.assertIn('version = "2.5.0"', cargo)
         self.assertIn('const VERSION: &[u8] = b"2.5.0";', rust_source)
 
@@ -209,16 +231,19 @@ class FinalizationTests(unittest.TestCase):
         self.assertIn('channel = "1.97.1"', toolchain)
         self.assertIn('components = ["rustfmt", "clippy"]', toolchain)
 
-    def test_release_workflows_enforce_immutability_and_version_checks(self) -> None:
+    def test_tagged_release_workflow_publishes_verified_versioned_assets(self) -> None:
         native_workflow = (ROOT / ".github/workflows/native-winui.yml").read_text(encoding="utf-8")
         release_workflow = (ROOT / ".github/workflows/native-release-candidate.yml").read_text(encoding="utf-8")
-        for workflow in (native_workflow, release_workflow):
-            self.assertIn("SemVer tagged releases are immutable", workflow)
-            self.assertIn("Validate", workflow)
-            self.assertNotIn("--clobber", workflow)
-
-        self.assertIn('gh release create "$RELEASE_TAG" release_assets/*', native_workflow)
-        self.assertIn('gh release create "$TAG_NAME" artifacts/finalization/*', release_workflow)
+        self.assertIn("Validate tag matches product version", native_workflow)
+        self.assertIn("Prepare release assets", native_workflow)
+        self.assertIn("WinCare-release-${{ github.ref_name }}", native_workflow)
+        self.assertIn("contents: write", native_workflow)
+        self.assertIn("Publish GitHub release", native_workflow)
+        self.assertIn("GH_TOKEN: ${{ github.token }}", native_workflow)
+        self.assertIn("gh release create", native_workflow)
+        self.assertIn("gh release upload", native_workflow)
+        self.assertIn("Hold artifacts for manual publication", release_workflow)
+        self.assertNotIn("gh release create", release_workflow)
         self.assertIn("Require primary branch dispatch", release_workflow)
         self.assertIn("refs/heads/master", release_workflow)
         self.assertIn("refs/heads/main", release_workflow)
@@ -226,19 +251,17 @@ class FinalizationTests(unittest.TestCase):
         self.assertNotIn("actual = '${WINCARE_VERSION#v}'", release_workflow)
         self.assertNotIn("${{ github.ref }}", release_workflow)
         self.assertIn("$GITHUB_REF", release_workflow)
-        self.assertIn("$GITHUB_SHA", release_workflow)
 
-    def test_signing_private_keys_never_cross_job_or_non_release_boundaries(self) -> None:
+    def test_runner_local_signing_identity_never_leaves_the_packaging_job(self) -> None:
         workflow = (ROOT / ".github/workflows/native-winui.yml").read_text(encoding="utf-8")
         self.assertNotIn("release-signing-identity", workflow)
         self.assertNotIn("artifacts/signing/*", workflow)
         self.assertNotIn("temp_signing_key.pfx", workflow)
         self.assertNotIn("PackageCertificatePassword=", workflow)
-        self.assertIn("Prepare development signing identity", workflow)
-        self.assertIn("Prepare release signing identity", workflow)
-        self.assertIn("Tagged releases require WINCARE_SIGNING_CERT_BASE64", workflow)
+        self.assertIn("Prepare runner-local package signing identity", workflow)
+        self.assertNotIn("WINCARE_SIGNING_CERT_BASE64", workflow)
+        self.assertNotIn("WINCARE_SIGNING_CERT_PASSWORD", workflow)
         self.assertIn("WINCARE_DEVELOPMENT_SIGNING=true", workflow)
-        self.assertIn("WINCARE_DEVELOPMENT_SIGNING=false", workflow)
         self.assertIn("WinCare.App_*.msix", workflow)
         self.assertIn("Dependencies", workflow)
         self.assertNotIn("AppPackages/**/*.msix", workflow)
@@ -248,12 +271,6 @@ class FinalizationTests(unittest.TestCase):
         self.assertIn("CustomTrustStore", workflow)
         self.assertIn("cancel-in-progress: true", workflow)
         self.assertIn("timeout-minutes: 20", workflow)
-
-        development_start = workflow.index("Prepare development signing identity")
-        release_start = workflow.index("Prepare release signing identity")
-        development_block = workflow[development_start:release_start]
-        self.assertNotIn("WINCARE_SIGNING_CERT_BASE64", development_block)
-        self.assertNotIn("WINCARE_SIGNING_CERT_PASSWORD", development_block)
 
         verification_start = workflow.index("Verify MSIX signature and publisher")
         cleanup_start = workflow.index("Clean runner-local signing identity")
@@ -279,6 +296,8 @@ class FinalizationTests(unittest.TestCase):
         self.assertIn("TrustedPeople", installer)
         self.assertIn("elevated Administrator terminal", installer)
         self.assertIn("no matching --certificate was provided", installer)
+        self.assertIn("WindowsPowerShell", installer)
+        self.assertIn('run_env["PSModulePath"]', installer)
         self.assertNotIn("Cert:\\\\CurrentUser\\\\Root", installer)
         self.assertNotIn("Cert:\\\\LocalMachine\\\\Root", installer)
 

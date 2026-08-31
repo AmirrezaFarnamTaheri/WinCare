@@ -97,7 +97,9 @@ class FullNativeMigrationTests(unittest.TestCase):
             str(path.relative_to(ROOT))
             for root in native_roots
             for path in root.rglob("*")
-            if path.is_file() and path.suffix.lower() in {".ps1", ".psm1", ".psd1"}
+            if path.is_file()
+            and not {"AppPackages", "bin", "obj", "target"}.intersection(path.relative_to(root).parts)
+            and path.suffix.lower() in {".ps1", ".psm1", ".psd1"}
         ]
         self.assertEqual([], powershell)
 

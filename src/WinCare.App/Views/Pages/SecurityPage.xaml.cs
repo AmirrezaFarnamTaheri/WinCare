@@ -1,5 +1,6 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using WinCare.App.Views;
 using WinCare.App.ViewModels.Pages;
 
 namespace WinCare.App.Views.Pages;
@@ -16,6 +17,9 @@ public sealed partial class SecurityPage : Page
     }
 
     public SecurityPageViewModel ViewModel { get; }
+
+    private void OpenToolsButton_Click(object sender, RoutedEventArgs e) =>
+        PageNavigation.OpenTools(this, ViewModel.ToolSearchQuery);
 
     private void SectionSelector_SelectionChanged(SelectorBar sender, SelectorBarSelectionChangedEventArgs args)
     {

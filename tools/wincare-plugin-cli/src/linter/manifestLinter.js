@@ -73,6 +73,10 @@ function validatePlugin(pluginDir) {
   }
 
   // Validate Tools
+  if (manifest.entryType === 'Assembly' && manifest.targetFramework !== 'net8.0-windows10.0.19041.0') {
+    errors.push('Assembly plugins must declare targetFramework "net8.0-windows10.0.19041.0"');
+  }
+
   if (!Array.isArray(manifest.tools) || manifest.tools.length === 0) {
     errors.push('Manifest must contain a non-empty "tools" array');
   } else {

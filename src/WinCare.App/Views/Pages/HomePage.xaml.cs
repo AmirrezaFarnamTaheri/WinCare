@@ -1,5 +1,6 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using WinCare.App.Views;
 using WinCare.App.ViewModels.Pages;
 
 namespace WinCare.App.Views.Pages;
@@ -12,22 +13,32 @@ public sealed partial class HomePage : Page
     {
         ViewModel = new HomePageViewModel();
         InitializeComponent();
-        SectionSelector.SelectedItem = SectionSelector.Items[0] as SelectorBarItem;
     }
 
     public HomePageViewModel ViewModel { get; }
 
-    private void SectionSelector_SelectionChanged(SelectorBar sender, SelectorBarSelectionChangedEventArgs args)
-    {
-        ViewModel.SelectSection(sender.Items.IndexOf(sender.SelectedItem));
-    }
+    private void RunCheckupButton_Click(object sender, RoutedEventArgs e) => NavigateTo("checkup");
+
+    private void ViewActivityButton_Click(object sender, RoutedEventArgs e) => NavigateTo("activity");
+
+    private void BrowseToolsButton_Click(object sender, RoutedEventArgs e) => NavigateTo("all-tools");
+
+    private void NavCategory_System_Click(object sender, RoutedEventArgs e) => NavigateTo("system-care");
+
+    private void NavCategory_Security_Click(object sender, RoutedEventArgs e) => NavigateTo("security");
+
+    private void NavCategory_Performance_Click(object sender, RoutedEventArgs e) => NavigateTo("checkup");
+
+    private void NavCategory_Storage_Click(object sender, RoutedEventArgs e) => NavigateTo("system-care");
+
+    private void NavCategory_Updates_Click(object sender, RoutedEventArgs e) => NavigateTo("repair-recovery");
+
+    private void NavCategory_Activity_Click(object sender, RoutedEventArgs e) => NavigateTo("activity");
+
+    private void NavigateTo(string key) => PageNavigation.NavigateTo(this, key);
 
     private void Page_SizeChanged(object sender, SizeChangedEventArgs e)
     {
-        bool compact = e.NewSize.Width < CompactThreshold;
-        ViewModel.SetCompactLayout(compact);
-        DescriptionHeader.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
-        StateHeader.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
-        NotesHeader.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
+        ViewModel.SetCompactLayout(e.NewSize.Width < CompactThreshold);
     }
 }

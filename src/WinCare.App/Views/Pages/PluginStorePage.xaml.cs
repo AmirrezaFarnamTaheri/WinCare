@@ -2,6 +2,7 @@ using System;
 using System.Threading.Tasks;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Navigation;
 
 using WinCare.App.ViewModels.Pages;
 using WinCare.App.Views.Dialogs;
@@ -110,5 +111,11 @@ public sealed partial class PluginStorePage : Page
         {
             await ViewModel.InstallPluginAsync(card);
         }
+    }
+
+    protected override void OnNavigatedFrom(NavigationEventArgs e)
+    {
+        ViewModel.Dispose();
+        base.OnNavigatedFrom(e);
     }
 }

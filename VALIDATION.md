@@ -116,8 +116,8 @@ The GitHub Actions workflow (`.github/workflows/native-winui.yml`) executes the 
    - Signed MSIX packages (`.msix`)
    - Single-file standalone executables (`.exe`)
    - Portable self-contained ZIP distributions (`-portable.zip`)
-4. **Release Gate**: Requires the pushed tag to exactly match `Directory.Build.props`, stages all assets via `tools/stage_release_assets.py`, and creates a GitHub release. It fails if that release tag already exists; published SemVer releases are immutable.
+4. **Release Gate**: Requires the pushed tag to exactly match `Directory.Build.props`, stages all assets via `tools/stage_release_assets.py`, and creates or refreshes the GitHub prerelease assets for that tag.
 
-Tagged binary releases also require `WINCARE_SIGNING_CERT_BASE64` and `WINCARE_SIGNING_CERT_PASSWORD`. The certificate must contain a private key and have the exact subject `CN=WinCare Development`; otherwise the packaging job fails before release publication. Non-tag CI builds use an ephemeral development certificate and produce workflow artifacts, not official release assets.
+Release builds do not require repository signing secrets. Each packaging job generates a temporary, runner-local development certificate, signs its architecture-specific MSIX, verifies its publisher and rejection of a tampered package, then removes the private identity. The matching public `.cer` is published with the release. Non-tag CI builds produce workflow artifacts, not GitHub release assets.
 
-The separate manual workflow, `.github/workflows/native-release-candidate.yml`, publishes source-finalization artifacts only. Dispatch it from `master` or `main` with a version matching `Directory.Build.props`; choose `production` only after all commands are `BehaviorVerified`. Because both workflows enforce immutable tags, do not run the manual workflow for a tag that already exists or is about to be created by the tagged binary workflow.
+The separate manual workflow, `.github/workflows/native-release-candidate.yml`, publishes source-finalization artifacts only. Dispatch it from `master` or `main` with a version matching `Directory.Build.props`; choose `production` only after all commands are `BehaviorVerified`.

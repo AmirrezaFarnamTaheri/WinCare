@@ -4,11 +4,43 @@ All notable changes to WinCare are documented in this file in accordance with [K
 
 ---
 
-## [2.5.0-rc1] - 2026-08-15
+## [2.5.0-rc5] - 2026-08-31
+
+### Fixed
+
+- **Functional Settings**: Replaced the placeholder settings table with a persistent System/Light/Dark theme control, immediate theme application, and a working local-data-folder action.
+- **Actionable capability pages**: System Care, Security, and Repair & Recovery now open the real filtered command catalog for the selected section instead of ending at descriptive rows.
+- **Shared in-shell routing**: Consolidated page-to-shell navigation so Home and capability actions keep the sidebar and content frame synchronized.
+
+## [2.5.0-rc4] - 2026-08-31
+
+### Fixed
+
+- **Live check results**: Corrected one-time bindings that prevented completed check states and evidence details from updating onscreen.
+- **Reliable Checkup lifecycle**: Results now populate independently of the selected tab, the running state always clears after failures, and unimplemented Full/Custom modes no longer masquerade as usable features.
+- **AI Doctor startup**: Constructed its view model before compiled bindings initialize, eliminating a startup-time null binding path.
+- **Fresh activity and clean page lifetimes**: Cached Activity refreshes from the journal on every visit, while disposable tool and plugin-store models release subscriptions and cancellation sources when leaving their pages.
+- **Working Home actions**: Replaced disconnected Home tabs with direct, sidebar-synchronized navigation to Checkup, Activity, and All Tools.
+- **Interaction regression coverage**: Added a structural gate that rejects button-like controls without a command, click handler, or navigation target.
+
+## [2.5.0-rc3] - 2026-08-30
+
+### Fixed
+
+- **Functional Checkup**: Restored the Quick check action as a real read-only execution pipeline. It now runs native system, storage, security, and Windows Update checks and displays each actual outcome instead of presenting an inert dashboard.
+
+## [2.5.0-rc2] - 2026-08-30
+
+### Changed
+
+- **Native Dashboard Refresh**: Reworked the Home and System Checkup views around a dark, card-based desktop dashboard with transparent status states before a system check has run.
+- **Runtime Documentation**: Added real native-runtime captures alongside the design-concept references, so the project documentation shows the application rather than mockups alone.
+
+## [2.5.0-rc1] - 2026-08-30
 
 ### 🔒 Security, Signing & Packaging Hardening
 - **Immutable Tag-Gated Releases**: CI release pipelines trigger strictly upon tag pushes (`refs/tags/v*`), validating tag versions against checked-in metadata and preventing release mutations.
-- **Ephemeral & Secret-Backed MSIX Code Signing**: Replaced committed developer certificates with secure repository secret handling (`WINCARE_SIGNING_CERT_BASE64`) and TripleDES-compatible ephemeral runner-local signing keys with strict post-build signature verification gates.
+- **Runner-Local MSIX Code Signing**: Removed release-blocking signing-secret dependencies. Each architecture is signed with a temporary runner-local development certificate, verified (including a tamper-rejection check), and published with its matching public `.cer` file.
 - **Fail-Closed MSIX Installer**: `tools/install_msix.py` performs host architecture auto-detection (`x64` / `ARM64`), validates package signatures, and imports certificates using environment variable bindings to eliminate shell script interpolation.
 - **Secret Key Prevention**: Added hard assertions in release source packaging and structural gates to strictly reject private keys (`.pfx`, `.p12`, `.key`, `.pem`, `.snk`, `.secret`).
 

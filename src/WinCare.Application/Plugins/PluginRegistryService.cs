@@ -288,6 +288,12 @@ public sealed class PluginRegistryService : IPluginRegistry
             return;
         }
 
+        if (!string.Equals(manifest.TargetFramework, AssemblyPluginLoader.SupportedTargetFramework, StringComparison.OrdinalIgnoreCase))
+        {
+            _entries[manifest.Id] = entry with { State = PluginState.Error, ErrorMessage = $"Assembly plugins must declare targetFramework '{AssemblyPluginLoader.SupportedTargetFramework}'." };
+            return;
+        }
+
         var asmResult = AssemblyPluginLoader.LoadPluginAssembly(assemblyPath, manifest.PluginClassName);
         if (asmResult.Success && asmResult.Plugin != null)
         {

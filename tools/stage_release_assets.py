@@ -72,13 +72,17 @@ def stage_assets(src_dir: Path, dest_dir: Path, version: str) -> list[Path]:
             else:
                 platform_tag = ""
 
-            # Standardize destination filenames
+            # Standardize destination filenames. Runner-local MSIX signing identities are
+            # intentionally architecture-specific, so their public certificates must retain
+            # the architecture in their release filenames instead of colliding as WinCare.cer.
             if f.endswith(".msix"):
                 dest_name = f"WinCare-{version_tag}-{platform_tag}.msix" if platform_tag else f
             elif f.endswith(".exe"):
                 dest_name = f"WinCare-{version_tag}-{platform_tag}.exe" if platform_tag else f
             elif f.endswith(".zip") and "portable" in lower_name:
                 dest_name = f"WinCare-{version_tag}-{platform_tag}-portable.zip" if platform_tag else f
+            elif f.endswith(".cer"):
+                dest_name = f"WinCare-{version_tag}-{platform_tag}.cer" if platform_tag else f
             else:
                 dest_name = f
 

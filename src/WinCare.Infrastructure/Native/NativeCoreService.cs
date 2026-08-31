@@ -1,3 +1,4 @@
+using System.Buffers;
 using System.Text;
 using WinCare.Application.Native;
 
@@ -107,38 +108,45 @@ public sealed class NativeCoreService : INativeCoreService
         {
             ct.ThrowIfCancellationRequested();
             int length = checked((int)required);
-            byte[] buffer = new byte[length];
+            byte[] buffer = ArrayPool<byte>.Shared.Rent(length);
 
-            fixed (byte* pointer = buffer)
+            try
             {
-                nuint written = 0;
-                NativeCoreStatus status = (NativeCoreStatus)WinCareCoreNative.WinCareCoreSysInfo(
-                    pointer,
-                    (nuint)buffer.Length,
-                    &written);
-
-                if (status == NativeCoreStatus.Ok)
+                fixed (byte* pointer = buffer)
                 {
-                    if (written > (nuint)buffer.Length)
+                    nuint written = 0;
+                    NativeCoreStatus status = (NativeCoreStatus)WinCareCoreNative.WinCareCoreSysInfo(
+                        pointer,
+                        (nuint)buffer.Length,
+                        &written);
+
+                    if (status == NativeCoreStatus.Ok)
                     {
-                        throw new InvalidOperationException("wincare_core_sys_info wrote an invalid output length.");
+                        if (written > (nuint)buffer.Length)
+                        {
+                            throw new InvalidOperationException("wincare_core_sys_info wrote an invalid output length.");
+                        }
+
+                        return Encoding.UTF8.GetString(buffer, 0, checked((int)written));
                     }
 
-                    return Encoding.UTF8.GetString(buffer, 0, checked((int)written));
-                }
+                    if (status != NativeCoreStatus.BufferTooSmall)
+                    {
+                        throw SystemInfoException(status);
+                    }
 
-                if (status != NativeCoreStatus.BufferTooSmall)
-                {
-                    throw SystemInfoException(status);
-                }
+                    if (written <= (nuint)buffer.Length)
+                    {
+                        throw new InvalidOperationException("wincare_core_sys_info returned BufferTooSmall without increasing the required length.");
+                    }
 
-                if (written <= (nuint)buffer.Length)
-                {
-                    throw new InvalidOperationException("wincare_core_sys_info returned BufferTooSmall without increasing the required length.");
+                    required = written;
+                    ValidateSystemInfoLength(required);
                 }
-
-                required = written;
-                ValidateSystemInfoLength(required);
+            }
+            finally
+            {
+                ArrayPool<byte>.Shared.Return(buffer);
             }
         }
 

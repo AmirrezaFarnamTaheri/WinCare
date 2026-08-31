@@ -289,29 +289,18 @@ public sealed class PluginStorePageViewModel : INotifyPropertyChanged, IDisposab
     /// <summary>
     /// Installs a remote plugin package, runs discovery, and refreshes the store.
     /// </summary>
-    public async Task<bool> InstallPluginAsync(PluginCardViewModel card, CancellationToken cancellationToken = default)
+    public Task<bool> InstallPluginAsync(PluginCardViewModel card, CancellationToken cancellationToken = default)
     {
         if (card == null || card.IsInstalled || string.IsNullOrWhiteSpace(card.PackageUrl))
         {
-            return false;
+            return Task.FromResult(false);
         }
 
         ErrorMessage = null;
-        try
-        {
-            // The remote catalog is transport metadata, not an independent publisher trust
-            // root. Never let it choose the key used to establish package authenticity.
-            await _installerService.InstallPluginFromPackageAsync(card.PackageUrl, card.Id, card.Sha256, cancellationToken).ConfigureAwait(true);
-            await _registry.DiscoverAndInitializeAsync(_host, cancellationToken).ConfigureAwait(true);
-            await RefreshPluginsAsync(forceRemoteRefresh: false, cancellationToken).ConfigureAwait(true);
-            return true;
-        }
-        catch (Exception ex)
-        {
-            ErrorMessage = $"Install failed: {ex.Message}";
-            System.Diagnostics.Debug.WriteLine($"[PluginStorePageViewModel] Install error: {ex.GetType().Name} - {ex.Message}");
-            return false;
-        }
+        // The remote catalog is transport metadata, not an independent publisher trust
+        // root. Never let it choose the key used to establish package authenticity.
+        ErrorMessage = "Remote plugin installation is disabled for this release.";
+        return Task.FromResult(false);
     }
 
     /// <summary>

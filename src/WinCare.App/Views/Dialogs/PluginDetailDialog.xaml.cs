@@ -26,14 +26,9 @@ public sealed partial class PluginDetailDialog : ContentDialog
             ? item.Permissions 
             : new[] { "Standard Execution (No special permissions)" };
 
-        // Surface Publisher Authenticity & Signature Verification Status
-        WinCare.Infrastructure.Plugins.PluginInstallerService.VerifyPublisherAuthenticity(
-            item.Author, 
-            item.Signature, 
-            out var trustLevel, 
-            item.PublicKeyPem);
-
-        PublisherTrustText.Text = trustLevel;
+        PublisherTrustText.Text = item.IsRevoked ? "Revoked" : "Remote installation disabled for this release";
+        IsPrimaryButtonEnabled = false;
+        PrimaryButtonText = "Installation unavailable";
 
         if (item.IsRevoked)
         {

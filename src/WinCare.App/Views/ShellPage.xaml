@@ -9,8 +9,9 @@
         IsSettingsVisible="False"
         IsTitleBarAutoPaddingEnabled="False"
         PaneDisplayMode="Auto"
-        OpenPaneLength="240"
+        OpenPaneLength="260"
         CompactPaneLength="48"
+        Background="{ThemeResource PageBackgroundBrush}"
         SelectionChanged="PrimaryNavigation_SelectionChanged"
         AutomationProperties.AutomationId="PrimaryNavigation"
         AutomationProperties.Name="Primary navigation">

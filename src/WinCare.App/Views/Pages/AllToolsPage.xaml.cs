@@ -30,6 +30,12 @@ public sealed partial class AllToolsPage : Page
         }
     }
 
+    protected override void OnNavigatedFrom(NavigationEventArgs e)
+    {
+        ViewModel.Dispose();
+        base.OnNavigatedFrom(e);
+    }
+
     private void ToolTabs_SelectionChanged(SelectorBar sender, SelectorBarSelectionChangedEventArgs args)
     {
         if (sender.SelectedItem is SelectorBarItem item)
@@ -56,4 +62,3 @@ public sealed partial class AllToolsPage : Page
         args.Handled = true;
     }
 }
-

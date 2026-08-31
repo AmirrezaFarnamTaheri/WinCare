@@ -38,12 +38,28 @@ Visual System Architecture (Tactile Telemetry & Cyber-Operate)
 
 ---
 
-## 🔤 Typography Hierarchy
+## 🔤 Typography Hierarchy & Centralized Tokens
 
-- **Page Titles (H1)**: `Segoe UI Variable Display` (`28px`, SemiBold, `-0.5px` tracking).
-- **Section Headers (H2)**: `Segoe UI Variable Display` (`20px`, Medium).
-- **Body & Controls**: `Segoe UI Variable Text` (`14px`, Regular).
-- **Telemetry Data & IDs**: **`Cascadia Code`** / `Fira Code` (`12px`, Monospaced) for command IDs, file hashes, byte counts, and execution status pills.
+- **Display Font Token (`DisplayFontFamily`)**: `Segoe UI Variable Display, Segoe UI, sans-serif`
+  - **Page Titles (H1)**: `32px`, SemiBold (`PageTitleTextStyle`)
+  - **Hero Readouts**: `42px - 54px`, SemiBold
+  - **App Title**: `18px`, SemiBold (`AppTitleTextStyle`)
+- **Body Font Token (`BodyFontFamily`)**: `Segoe UI Variable Text, Segoe UI, sans-serif`
+  - **Section Descriptions**: `14px`, Regular (`PageDescriptionTextStyle`)
+  - **Row Titles**: `14px`, SemiBold (`RowTitleTextStyle`)
+  - **Secondary Subtext**: `12px`, Regular (`RowSecondaryTextStyle`)
+  - **Column Headers**: `12px`, SemiBold (`ColumnHeaderTextStyle`)
+- **Telemetry Font Token (`TelemetryFontFamily`)**: `Cascadia Code, Cascadia Mono, Consolas, Courier New`
+  - Monospaced telemetry readouts, command IDs, parameter JSON, capability tags, file hashes, byte counts, and status pills (`TelemetryTextStyle`, `StatusPillTemplate`).
+
+---
+
+## 🔘 Standardized Corner Radius Scale
+
+All interactive controls and structural surfaces adhere strictly to a locked 3-tier corner radius scale:
+- **`RadiusPill` (`4px`)**: Status pill tags, badge containers, micro-indicators.
+- **`RadiusControl` (`8px`)**: Buttons, text inputs, combo boxes, dialog panels, card inner tiles.
+- **`RadiusCard` (`12px`)**: Main dashboard cards, surface containers, split-view panels (`SurfaceBorderStyle`, `DashboardCardStyle`).
 
 ---
 

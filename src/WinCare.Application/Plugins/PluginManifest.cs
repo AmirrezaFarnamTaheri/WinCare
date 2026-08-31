@@ -19,6 +19,7 @@ public sealed class PluginManifest
     private string _entryType = "Manifest";
     private string? _assemblyFileName;
     private string? _pluginClassName;
+    private string? _targetFramework;
 
     /// <summary>Unique plugin package ID.</summary>
     [JsonPropertyName("id")]
@@ -88,6 +89,10 @@ public sealed class PluginManifest
     /// <summary>Optional plugin class name for binary C# plugins.</summary>
     [JsonPropertyName("pluginClassName")]
     public string? PluginClassName { get => _pluginClassName; init => _pluginClassName = value; }
+
+    /// <summary>Target framework required by a compiled assembly plugin.</summary>
+    [JsonPropertyName("targetFramework")]
+    public string? TargetFramework { get => _targetFramework; init => _targetFramework = value; }
 
     /// <summary>Optional plugin class alias.</summary>
     [JsonPropertyName("entryClass")]
@@ -372,4 +377,3 @@ public sealed class PluginToolDefinition
         );
     }
 }
-

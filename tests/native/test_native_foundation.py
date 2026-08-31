@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import unittest
+import xml.etree.ElementTree as ET
 
 from tools.verify_native_foundation import load_oracle_commands, verify
 
@@ -24,16 +25,61 @@ class NativeFoundationTests(unittest.TestCase):
         page_names = (
             "HomePage.xaml", "CheckupPage.xaml", "SystemCarePage.xaml",
             "SecurityPage.xaml", "RepairRecoveryPage.xaml",
-            "ActivityPage.xaml", "SettingsPage.xaml",
+            "ActivityPage.xaml",
         )
         for name in page_names:
             text = (root / "src/WinCare.App/Views/Pages" / name).read_text(encoding="utf-8")
+            if name in {"HomePage.xaml", "CheckupPage.xaml"}:
+                self.assertIn("DashboardCardStyle", text, name)
+                self.assertIn("Review before applying", text, name)
+                if name == "CheckupPage.xaml":
+                    self.assertIn("SelectorBar", text, name)
+                self.assertIn("SizeChanged", text, name)
+                continue
             self.assertIn("ListView", text, name)
             self.assertIn("What it does", text, name)
             self.assertIn("State", text, name)
             self.assertIn("Notes", text, name)
             self.assertIn("IsCompact", text, name)
             self.assertIn("SizeChanged", text, name)
+
+        settings = (root / "src/WinCare.App/Views/Pages/SettingsPage.xaml").read_text(encoding="utf-8")
+        self.assertIn("ThemeSelector", settings)
+        self.assertIn("OpenDataFolderButton_Click", settings)
+
+    def test_interactive_controls_are_wired_and_mutable_rows_use_live_bindings(self) -> None:
+        root = __import__("pathlib").Path(__file__).resolve().parents[2]
+        pages = root / "src/WinCare.App/Views/Pages"
+        inert_controls: list[str] = []
+
+        for path in pages.glob("*.xaml"):
+            document = ET.fromstring(path.read_text(encoding="utf-8"))
+            for element in document.iter():
+                control = element.tag.rsplit("}", 1)[-1]
+                if control in {"Button", "ToggleButton", "HyperlinkButton", "MenuFlyoutItem"}:
+                    if not any(name.rsplit("}", 1)[-1] in {"Click", "Command", "NavigateUri"} for name in element.attrib):
+                        inert_controls.append(f"{path.name}: {control} {element.attrib.get('Content', '')}")
+
+        self.assertEqual([], inert_controls)
+
+        mutable_row_pages = (
+            "ActivityPage.xaml",
+            "CheckupPage.xaml",
+            "SystemCarePage.xaml",
+            "SecurityPage.xaml",
+            "RepairRecoveryPage.xaml",
+        )
+        for name in mutable_row_pages:
+            text = (pages / name).read_text(encoding="utf-8")
+            self.assertNotIn('Text="{x:Bind State}"', text, name)
+            self.assertNotIn('Text="{x:Bind Detail}"', text, name)
+
+        doctor = (pages / "AiDoctorPage.xaml.cs").read_text(encoding="utf-8")
+        self.assertLess(doctor.index("ViewModel = new AiDoctorPageViewModel()"), doctor.index("InitializeComponent()"))
+
+        checkup = (pages / "CheckupPage.xaml").read_text(encoding="utf-8")
+        self.assertNotIn('Text="Full check"', checkup)
+        self.assertNotIn('Text="Custom check"', checkup)
 
     def test_package_profiles_are_clean_and_stage_native_core(self) -> None:
         root = __import__("pathlib").Path(__file__).resolve().parents[2]
