@@ -18,43 +18,43 @@
                 <ItemsControl.ItemTemplate>
                     <DataTemplate x:DataType="vm:DoctorChatMessage">
                         <Grid Margin="0,0,0,16">
-                            <Border CornerRadius="8" Padding="14,10" MaxWidth="720"
+                            <Border CornerRadius="{StaticResource RadiusControl}" Padding="16,12" MaxWidth="720"
                                     HorizontalAlignment="{x:Bind IsUser, Converter={StaticResource BooleanToHorizontalAlignmentConverter}, FallbackValue=Left}"
-                                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                    Background="{ThemeResource CardSurfaceBrush}"
+                                    BorderBrush="{ThemeResource BorderSubtleBrush}"
                                     BorderThickness="1">
                                 <StackPanel Spacing="6">
                                     <TextBlock Text="{x:Bind Sender}" FontWeight="SemiBold" FontSize="13" Foreground="{ThemeResource AccentTealBrush}" />
-                                    <TextBlock Text="{x:Bind Text}" TextWrapping="Wrap" Style="{StaticResource BodyTextBlockStyle}" />
+                                    <TextBlock Text="{x:Bind Text}" TextWrapping="Wrap" Foreground="{ThemeResource TextPrimaryBrush}" FontSize="14" />
                                     
                                     <!-- Proposed Action Steps -->
                                     <ItemsControl ItemsSource="{x:Bind ActionPlan.ProposedSteps, Mode=OneTime}" Margin="0,8,0,0">
                                         <ItemsControl.ItemTemplate>
                                             <DataTemplate x:DataType="diag:ProposedActionStep">
-                                                <Border Margin="0,6,0,6" Padding="12" Background="{ThemeResource LayerFillColorDefaultBrush}" CornerRadius="8" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
+                                                <Border Margin="0,6,0,6" Padding="12" Background="{ThemeResource SurfaceSecondaryBrush}" CornerRadius="{StaticResource RadiusControl}" BorderBrush="{ThemeResource BorderSubtleBrush}" BorderThickness="1">
                                                     <Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="6">
                                                         <Grid Grid.Row="0" ColumnDefinitions="*,Auto" ColumnSpacing="12">
                                                             <StackPanel Grid.Column="0" Spacing="2">
-                                                                <TextBlock Text="{x:Bind Title}" FontWeight="SemiBold" FontSize="14"/>
-                                                                <TextBlock Text="{x:Bind Description}" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"/>
+                                                                <TextBlock Text="{x:Bind Title}" FontWeight="SemiBold" FontSize="14" Foreground="{ThemeResource TextPrimaryBrush}"/>
+                                                                <TextBlock Text="{x:Bind Description}" Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap"/>
                                                             </StackPanel>
                                                             <Button Grid.Column="1" Content="{x:Bind ActionButtonText}" Style="{StaticResource AccentButtonStyle}" VerticalAlignment="Center" Click="ExecuteStepButton_Click" Tag="{x:Bind}" AutomationProperties.Name="{x:Bind Title}"/>
                                                         </Grid>
                                                         
                                                         <!-- Metadata Badges & Target Context -->
                                                         <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="8" Margin="0,2,0,0">
-                                                            <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" Padding="6,2" CornerRadius="4" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
-                                                                <TextBlock Text="{x:Bind RiskBadgeText}" FontSize="11" FontWeight="SemiBold" Foreground="{ThemeResource AccentTealBrush}"/>
+                                                            <Border Background="{ThemeResource CardSurfaceBrush}" Padding="6,2" CornerRadius="{StaticResource RadiusPill}" BorderBrush="{ThemeResource BorderSubtleBrush}" BorderThickness="1">
+                                                                <TextBlock Text="{x:Bind RiskBadgeText}" FontFamily="{StaticResource TelemetryFontFamily}" FontSize="11" FontWeight="SemiBold" Foreground="{ThemeResource AccentTealBrush}"/>
                                                             </Border>
-                                                            <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" Padding="6,2" CornerRadius="4" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
-                                                                <TextBlock Text="{x:Bind ElevationBadgeText}" FontSize="11" FontWeight="Normal" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                                            <Border Background="{ThemeResource CardSurfaceBrush}" Padding="6,2" CornerRadius="{StaticResource RadiusPill}" BorderBrush="{ThemeResource BorderSubtleBrush}" BorderThickness="1">
+                                                                <TextBlock Text="{x:Bind ElevationBadgeText}" FontFamily="{StaticResource TelemetryFontFamily}" FontSize="11" FontWeight="Normal" Foreground="{ThemeResource TextSecondaryBrush}"/>
                                                             </Border>
-                                                            <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" Padding="6,2" CornerRadius="4" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
-                                                                <TextBlock Text="{x:Bind AffectedResource}" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                                            <Border Background="{ThemeResource CardSurfaceBrush}" Padding="6,2" CornerRadius="{StaticResource RadiusPill}" BorderBrush="{ThemeResource BorderSubtleBrush}" BorderThickness="1">
+                                                                <TextBlock Text="{x:Bind AffectedResource}" FontFamily="{StaticResource TelemetryFontFamily}" FontSize="11" Foreground="{ThemeResource TextSecondaryBrush}"/>
                                                             </Border>
                                                         </StackPanel>
                                                         
-                                                        <TextBlock Grid.Row="2" Text="{x:Bind CommandId}" FontSize="10" Foreground="{ThemeResource TextFillColorTertiaryBrush}" FontFamily="Consolas"/>
+                                                        <TextBlock Grid.Row="2" Text="{x:Bind CommandId}" FontSize="11" Foreground="{ThemeResource TextSecondaryBrush}" FontFamily="{StaticResource TelemetryFontFamily}"/>
                                                     </Grid>
                                                 </Border>
                                             </DataTemplate>

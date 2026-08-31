@@ -5,18 +5,192 @@
     NavigationCacheMode="Required"
     SizeChanged="Page_SizeChanged">
     <ScrollViewer VerticalScrollBarVisibility="Auto">
-        <Grid Padding="40,30,40,40" RowSpacing="22">
-            <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
-            <StackPanel Spacing="6"><TextBlock Style="{StaticResource PageTitleTextStyle}" Text="Home" /><TextBlock Style="{StaticResource PageDescriptionTextStyle}" Text="Your system at a glance. Nothing changes without your review." /></StackPanel>
-            <Grid Grid.Row="1" ColumnSpacing="18"><Grid.ColumnDefinitions><ColumnDefinition Width="360" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
-                <Border Style="{StaticResource DashboardCardStyle}" Background="{ThemeResource HeroBackgroundBrush}"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="142" /></Grid.ColumnDefinitions><StackPanel Spacing="10" VerticalAlignment="Center"><TextBlock FontSize="16" FontWeight="SemiBold" Foreground="{ThemeResource TextPrimaryBrush}" Text="System health" /><TextBlock FontFamily="Segoe UI Variable Display" FontSize="54" FontWeight="SemiBold" Foreground="{ThemeResource AccentTealBrush}" Text="—" /><TextBlock Style="{StaticResource RowTitleTextStyle}" Text="Awaiting your first check" /><TextBlock Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap" Text="Run a read-only check to collect evidence before WinCare recommends anything." /></StackPanel><Border Grid.Column="1" Width="128" Height="128" CornerRadius="64" BorderThickness="9" BorderBrush="{ThemeResource AccentTealBrush}" HorizontalAlignment="Right" VerticalAlignment="Center"><FontIcon Glyph="&#xE9D9;" FontSize="42" Foreground="{ThemeResource AccentTealBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" /></Border></Grid></Border>
-                <Border Grid.Column="1" Style="{StaticResource DashboardCardStyle}"><Grid RowSpacing="14"><Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="*" /></Grid.RowDefinitions><Grid><TextBlock FontSize="16" FontWeight="SemiBold" Foreground="{ThemeResource TextPrimaryBrush}" Text="System status" /><Border HorizontalAlignment="Right" Padding="10,5" Background="{ThemeResource AccentTealSubtleBrush}" CornerRadius="8"><StackPanel Orientation="Horizontal" Spacing="6"><FontIcon Glyph="&#xE73E;" Foreground="{ThemeResource AccentTealBrush}" /><TextBlock Foreground="{ThemeResource AccentTealBrush}" Text="Read-only by default" /></StackPanel></Border></Grid><Grid Grid.Row="1" ColumnSpacing="12" RowSpacing="12"><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="*" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions><Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions><Border Style="{StaticResource SurfaceBorderStyle}" Padding="14"><StackPanel Orientation="Horizontal" Spacing="10"><FontIcon Glyph="&#xE7F4;" FontSize="24" Foreground="{ThemeResource AccentTealBrush}" /><StackPanel><TextBlock Style="{StaticResource RowTitleTextStyle}" Text="System" /><TextBlock Style="{StaticResource RowSecondaryTextStyle}" Text="Not checked" /></StackPanel></StackPanel></Border><Border Grid.Column="1" Style="{StaticResource SurfaceBorderStyle}" Padding="14"><StackPanel Orientation="Horizontal" Spacing="10"><FontIcon Glyph="&#xEA18;" FontSize="24" Foreground="{ThemeResource AccentTealBrush}" /><StackPanel><TextBlock Style="{StaticResource RowTitleTextStyle}" Text="Security" /><TextBlock Style="{StaticResource RowSecondaryTextStyle}" Text="Ready to check" /></StackPanel></StackPanel></Border><Border Grid.Column="2" Style="{StaticResource SurfaceBorderStyle}" Padding="14"><StackPanel Orientation="Horizontal" Spacing="10"><FontIcon Glyph="&#xE9D9;" FontSize="24" Foreground="{ThemeResource AccentTealBrush}" /><StackPanel><TextBlock Style="{StaticResource RowTitleTextStyle}" Text="Performance" /><TextBlock Style="{StaticResource RowSecondaryTextStyle}" Text="Not checked" /></StackPanel></StackPanel></Border><Border Grid.Row="1" Style="{StaticResource SurfaceBorderStyle}" Padding="14"><StackPanel Orientation="Horizontal" Spacing="10"><FontIcon Glyph="&#xE7F1;" FontSize="24" Foreground="{ThemeResource AccentTealBrush}" /><StackPanel><TextBlock Style="{StaticResource RowTitleTextStyle}" Text="Storage" /><TextBlock Style="{StaticResource RowSecondaryTextStyle}" Text="Ready to check" /></StackPanel></StackPanel></Border><Border Grid.Row="1" Grid.Column="1" Style="{StaticResource SurfaceBorderStyle}" Padding="14"><StackPanel Orientation="Horizontal" Spacing="10"><FontIcon Glyph="&#xE950;" FontSize="24" Foreground="{ThemeResource AccentTealBrush}" /><StackPanel><TextBlock Style="{StaticResource RowTitleTextStyle}" Text="Updates" /><TextBlock Style="{StaticResource RowSecondaryTextStyle}" Text="Ready to check" /></StackPanel></StackPanel></Border><Border Grid.Row="1" Grid.Column="2" Style="{StaticResource SurfaceBorderStyle}" Padding="14"><StackPanel Orientation="Horizontal" Spacing="10"><FontIcon Glyph="&#xE701;" FontSize="24" Foreground="{ThemeResource AccentTealBrush}" /><StackPanel><TextBlock Style="{StaticResource RowTitleTextStyle}" Text="Activity" /><TextBlock Style="{StaticResource RowSecondaryTextStyle}" Text="No changes yet" /></StackPanel></StackPanel></Border></Grid></Grid></Border>
+        <Grid Padding="40,30,40,40" RowSpacing="24">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <!-- Page Header -->
+            <StackPanel Spacing="6">
+                <TextBlock Style="{StaticResource PageTitleTextStyle}" Text="Home" />
+                <TextBlock Style="{StaticResource PageDescriptionTextStyle}" Text="Your system at a glance. Nothing changes without your review." />
+            </StackPanel>
+
+            <!-- Hero Section: System Health & Status Grid -->
+            <Grid Grid.Row="1" ColumnSpacing="20">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="380" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+
+                <!-- System Health Summary Card -->
+                <Border Style="{StaticResource DashboardCardStyle}" Background="{ThemeResource HeroBackgroundBrush}">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="140" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Spacing="10" VerticalAlignment="Center">
+                            <TextBlock FontSize="16" FontWeight="SemiBold" Foreground="{ThemeResource TextPrimaryBrush}" Text="System health" />
+                            <TextBlock FontFamily="{StaticResource DisplayFontFamily}" FontSize="54" FontWeight="SemiBold" Foreground="{ThemeResource AccentTealBrush}" Text="—" />
+                            <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="Awaiting your first check" />
+                            <TextBlock Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap" Text="Run a read-only check to collect evidence before WinCare recommends anything." />
+                        </StackPanel>
+                        <Border Grid.Column="1" Width="120" Height="120" CornerRadius="60" BorderThickness="8" BorderBrush="{ThemeResource AccentTealBrush}" Background="{ThemeResource AccentTealSubtleBrush}" HorizontalAlignment="Right" VerticalAlignment="Center">
+                            <FontIcon Glyph="&#xE9D9;" FontSize="40" Foreground="{ThemeResource AccentTealBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                    </Grid>
+                </Border>
+
+                <!-- System Status Category Matrix -->
+                <Border Grid.Column="1" Style="{StaticResource DashboardCardStyle}">
+                    <Grid RowSpacing="14">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                        </Grid.RowDefinitions>
+                        <Grid>
+                            <TextBlock FontSize="16" FontWeight="SemiBold" Foreground="{ThemeResource TextPrimaryBrush}" Text="System status" />
+                            <Border HorizontalAlignment="Right" Padding="10,4" Background="{ThemeResource AccentTealSubtleBrush}" BorderBrush="{ThemeResource AccentTealBrush}" BorderThickness="1" CornerRadius="{StaticResource RadiusPill}">
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <FontIcon Glyph="&#xE73E;" FontSize="12" Foreground="{ThemeResource AccentTealBrush}" />
+                                    <TextBlock FontFamily="{StaticResource TelemetryFontFamily}" FontSize="11" FontWeight="SemiBold" Foreground="{ThemeResource AccentTealBrush}" Text="[ READ-ONLY ]" />
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+
+                        <Grid Grid.Row="1" ColumnSpacing="12" RowSpacing="12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+
+                            <Button Click="NavCategory_System_Click" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Padding="0" Background="Transparent" BorderThickness="0" CornerRadius="{StaticResource RadiusControl}" AutomationProperties.Name="Open System Care">
+                                <Border Style="{StaticResource SurfaceBorderStyle}" Padding="14">
+                                    <StackPanel Orientation="Horizontal" Spacing="12">
+                                        <FontIcon Glyph="&#xE7F4;" FontSize="22" Foreground="{ThemeResource AccentTealBrush}" />
+                                        <StackPanel Spacing="2">
+                                            <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="System" />
+                                            <TextBlock Style="{StaticResource RowSecondaryTextStyle}" Text="Not checked" />
+                                        </StackPanel>
+                                    </StackPanel>
+                                </Border>
+                            </Button>
+
+                            <Button Grid.Column="1" Click="NavCategory_Security_Click" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Padding="0" Background="Transparent" BorderThickness="0" CornerRadius="{StaticResource RadiusControl}" AutomationProperties.Name="Open Security">
+                                <Border Style="{StaticResource SurfaceBorderStyle}" Padding="14">
+                                    <StackPanel Orientation="Horizontal" Spacing="12">
+                                        <FontIcon Glyph="&#xEA18;" FontSize="22" Foreground="{ThemeResource AccentTealBrush}" />
+                                        <StackPanel Spacing="2">
+                                            <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="Security" />
+                                            <TextBlock Style="{StaticResource RowSecondaryTextStyle}" Text="Ready to check" />
+                                        </StackPanel>
+                                    </StackPanel>
+                                </Border>
+                            </Button>
+
+                            <Button Grid.Column="2" Click="NavCategory_Performance_Click" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Padding="0" Background="Transparent" BorderThickness="0" CornerRadius="{StaticResource RadiusControl}" AutomationProperties.Name="Open Performance Checkup">
+                                <Border Style="{StaticResource SurfaceBorderStyle}" Padding="14">
+                                    <StackPanel Orientation="Horizontal" Spacing="12">
+                                        <FontIcon Glyph="&#xE9D9;" FontSize="22" Foreground="{ThemeResource AccentTealBrush}" />
+                                        <StackPanel Spacing="2">
+                                            <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="Performance" />
+                                            <TextBlock Style="{StaticResource RowSecondaryTextStyle}" Text="Not checked" />
+                                        </StackPanel>
+                                    </StackPanel>
+                                </Border>
+                            </Button>
+
+                            <Button Grid.Row="1" Click="NavCategory_Storage_Click" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Padding="0" Background="Transparent" BorderThickness="0" CornerRadius="{StaticResource RadiusControl}" AutomationProperties.Name="Open Storage Care">
+                                <Border Style="{StaticResource SurfaceBorderStyle}" Padding="14">
+                                    <StackPanel Orientation="Horizontal" Spacing="12">
+                                        <FontIcon Glyph="&#xE7F1;" FontSize="22" Foreground="{ThemeResource AccentTealBrush}" />
+                                        <StackPanel Spacing="2">
+                                            <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="Storage" />
+                                            <TextBlock Style="{StaticResource RowSecondaryTextStyle}" Text="Ready to check" />
+                                        </StackPanel>
+                                    </StackPanel>
+                                </Border>
+                            </Button>
+
+                            <Button Grid.Row="1" Grid.Column="1" Click="NavCategory_Updates_Click" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Padding="0" Background="Transparent" BorderThickness="0" CornerRadius="{StaticResource RadiusControl}" AutomationProperties.Name="Open Repair and Updates">
+                                <Border Style="{StaticResource SurfaceBorderStyle}" Padding="14">
+                                    <StackPanel Orientation="Horizontal" Spacing="12">
+                                        <FontIcon Glyph="&#xE950;" FontSize="22" Foreground="{ThemeResource AccentTealBrush}" />
+                                        <StackPanel Spacing="2">
+                                            <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="Updates" />
+                                            <TextBlock Style="{StaticResource RowSecondaryTextStyle}" Text="Ready to check" />
+                                        </StackPanel>
+                                    </StackPanel>
+                                </Border>
+                            </Button>
+
+                            <Button Grid.Row="1" Grid.Column="2" Click="NavCategory_Activity_Click" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Padding="0" Background="Transparent" BorderThickness="0" CornerRadius="{StaticResource RadiusControl}" AutomationProperties.Name="Open Activity Log">
+                                <Border Style="{StaticResource SurfaceBorderStyle}" Padding="14">
+                                    <StackPanel Orientation="Horizontal" Spacing="12">
+                                        <FontIcon Glyph="&#xE701;" FontSize="22" Foreground="{ThemeResource AccentTealBrush}" />
+                                        <StackPanel Spacing="2">
+                                            <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="Activity" />
+                                            <TextBlock Style="{StaticResource RowSecondaryTextStyle}" Text="No changes yet" />
+                                        </StackPanel>
+                                    </StackPanel>
+                                </Border>
+                            </Button>
+                        </Grid>
+                    </Grid>
+                </Border>
             </Grid>
-            <Grid Grid.Row="2" ColumnSpacing="18"><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions><Border Style="{StaticResource DashboardCardStyle}"><StackPanel Spacing="14"><TextBlock FontSize="16" FontWeight="SemiBold" Foreground="{ThemeResource TextPrimaryBrush}" Text="Recent activity" /><Border Padding="16" Background="{ThemeResource SurfaceSecondaryBrush}" CornerRadius="10"><StackPanel Spacing="6"><TextBlock Style="{StaticResource RowTitleTextStyle}" Text="No activity recorded" /><TextBlock Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap" Text="Checks, reviewed changes, and recovery receipts will appear here." /></StackPanel></Border></StackPanel></Border><Border Grid.Column="1" Style="{StaticResource DashboardCardStyle}" Background="{ThemeResource HeroBackgroundBrush}"><Grid ColumnSpacing="18"><Grid.ColumnDefinitions><ColumnDefinition Width="92" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions><Border Width="84" Height="84" CornerRadius="42" Background="{ThemeResource AccentTealSubtleBrush}" VerticalAlignment="Center"><FontIcon Glyph="&#xE72E;" FontSize="38" Foreground="{ThemeResource AccentTealBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" /></Border><StackPanel Grid.Column="1" Spacing="7"><TextBlock FontSize="16" FontWeight="SemiBold" Foreground="{ThemeResource TextPrimaryBrush}" Text="Safety status" /><TextBlock Style="{StaticResource RowTitleTextStyle}" Foreground="{ThemeResource AccentTealBrush}" Text="Review before applying" /><TextBlock Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap" Text="WinCare collects evidence first. Any change requires a visible preview and your approval." /></StackPanel></Grid></Border></Grid>
-            <StackPanel Grid.Row="3" Orientation="Horizontal" Spacing="10">
+
+            <!-- Secondary Row: Activity & Safety Contract -->
+            <Grid Grid.Row="2" ColumnSpacing="20">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+
+                <Border Style="{StaticResource DashboardCardStyle}">
+                    <StackPanel Spacing="14">
+                        <TextBlock FontSize="16" FontWeight="SemiBold" Foreground="{ThemeResource TextPrimaryBrush}" Text="Recent activity" />
+                        <Border Padding="16" Background="{ThemeResource SurfaceSecondaryBrush}" BorderBrush="{ThemeResource BorderSubtleBrush}" BorderThickness="1" CornerRadius="{StaticResource RadiusControl}">
+                            <StackPanel Spacing="6">
+                                <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="No activity recorded" />
+                                <TextBlock Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap" Text="Checks, reviewed changes, and recovery receipts will appear here." />
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </Border>
+
+                <Border Grid.Column="1" Style="{StaticResource DashboardCardStyle}" Background="{ThemeResource HeroBackgroundBrush}">
+                    <Grid ColumnSpacing="18">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="84" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Border Width="76" Height="76" CornerRadius="38" Background="{ThemeResource AccentTealSubtleBrush}" BorderBrush="{ThemeResource AccentTealBrush}" BorderThickness="1" VerticalAlignment="Center">
+                            <FontIcon Glyph="&#xE72E;" FontSize="32" Foreground="{ThemeResource AccentTealBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <StackPanel Grid.Column="1" Spacing="6" VerticalAlignment="Center">
+                            <TextBlock FontSize="16" FontWeight="SemiBold" Foreground="{ThemeResource TextPrimaryBrush}" Text="Safety status" />
+                            <TextBlock Style="{StaticResource RowTitleTextStyle}" Foreground="{ThemeResource AccentTealBrush}" Text="Review before applying" />
+                            <TextBlock Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap" Text="WinCare collects evidence first. Any change requires a visible preview and your approval." />
+                        </StackPanel>
+                    </Grid>
+                </Border>
+            </Grid>
+
+            <!-- Action Command Row -->
+            <StackPanel Grid.Row="3" Orientation="Horizontal" Spacing="12">
                 <Button Content="Run Checkup" Click="RunCheckupButton_Click" Style="{StaticResource AccentButtonStyle}" AutomationProperties.AutomationId="HomeRunCheckup" AutomationProperties.Name="Run Checkup" />
-                <Button Content="View Activity" Click="ViewActivityButton_Click" AutomationProperties.AutomationId="HomeViewActivity" AutomationProperties.Name="View Activity" />
-                <Button Content="Browse All Tools" Click="BrowseToolsButton_Click" AutomationProperties.AutomationId="HomeBrowseTools" AutomationProperties.Name="Browse All Tools" />
+                <Button Content="View Activity" Click="ViewActivityButton_Click" CornerRadius="{StaticResource RadiusControl}" AutomationProperties.AutomationId="HomeViewActivity" AutomationProperties.Name="View Activity" />
+                <Button Content="Browse All Tools" Click="BrowseToolsButton_Click" CornerRadius="{StaticResource RadiusControl}" AutomationProperties.AutomationId="HomeBrowseTools" AutomationProperties.Name="Browse All Tools" />
             </StackPanel>
         </Grid>
     </ScrollViewer>

@@ -23,6 +23,18 @@ public sealed partial class HomePage : Page
 
     private void BrowseToolsButton_Click(object sender, RoutedEventArgs e) => NavigateTo("all-tools");
 
+    private void NavCategory_System_Click(object sender, RoutedEventArgs e) => NavigateTo("system-care");
+
+    private void NavCategory_Security_Click(object sender, RoutedEventArgs e) => NavigateTo("security");
+
+    private void NavCategory_Performance_Click(object sender, RoutedEventArgs e) => NavigateTo("checkup");
+
+    private void NavCategory_Storage_Click(object sender, RoutedEventArgs e) => NavigateTo("system-care");
+
+    private void NavCategory_Updates_Click(object sender, RoutedEventArgs e) => NavigateTo("repair-recovery");
+
+    private void NavCategory_Activity_Click(object sender, RoutedEventArgs e) => NavigateTo("activity");
+
     private void NavigateTo(string key) => PageNavigation.NavigateTo(this, key);
 
     private void Page_SizeChanged(object sender, SizeChangedEventArgs e)

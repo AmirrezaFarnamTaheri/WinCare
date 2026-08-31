@@ -25,7 +25,7 @@
                     <StackPanel Spacing="5" VerticalAlignment="Center">
                         <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="Local data" />
                         <TextBlock Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap" Text="Open WinCare's settings, reports, and operation records for this account." />
-                        <TextBlock Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind ViewModel.DataDirectory}" TextWrapping="Wrap" />
+                        <TextBlock Style="{StaticResource RowSecondaryTextStyle}" FontFamily="{StaticResource TelemetryFontFamily}" Text="{x:Bind ViewModel.DataDirectory}" TextWrapping="Wrap" />
                     </StackPanel>
                     <Button Grid.Column="1" Content="Open folder" Click="OpenDataFolderButton_Click" AutomationProperties.AutomationId="OpenDataFolder" AutomationProperties.Name="Open WinCare data folder" />
                 </Grid>

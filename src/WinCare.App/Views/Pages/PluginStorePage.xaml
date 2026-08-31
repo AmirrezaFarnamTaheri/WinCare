@@ -60,9 +60,9 @@
             </ListView.ItemContainerStyle>
             <ListView.ItemTemplate>
                 <DataTemplate x:DataType="vm:PluginCardViewModel">
-                    <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                            BorderThickness="1" CornerRadius="8" Padding="16">
+                    <Border Background="{ThemeResource CardSurfaceBrush}"
+                            BorderBrush="{ThemeResource BorderSubtleBrush}"
+                            BorderThickness="1" CornerRadius="{StaticResource RadiusControl}" Padding="16">
                         <Grid RowSpacing="8" ColumnSpacing="16">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
@@ -71,22 +71,22 @@
                             
                             <StackPanel Grid.Column="0" Spacing="6">
                                 <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
-                                    <TextBlock Grid.Column="0" Text="{x:Bind Name}" FontWeight="SemiBold" FontSize="16" TextWrapping="Wrap" />
-                                    <Border Grid.Column="1" VerticalAlignment="Top" Background="{ThemeResource AccentTealSubtleBrush}" BorderBrush="{ThemeResource AccentTealBrush}" BorderThickness="1" CornerRadius="4" Padding="6,2">
-                                        <TextBlock Text="{x:Bind StatusBadgeText}" FontFamily="Cascadia Code" FontSize="10" FontWeight="SemiBold" Foreground="{ThemeResource AccentTealBrush}" />
+                                    <TextBlock Grid.Column="0" Text="{x:Bind Name}" FontWeight="SemiBold" FontSize="16" Foreground="{ThemeResource TextPrimaryBrush}" TextWrapping="Wrap" />
+                                    <Border Grid.Column="1" VerticalAlignment="Top" Background="{ThemeResource AccentTealSubtleBrush}" BorderBrush="{ThemeResource AccentTealBrush}" BorderThickness="1" CornerRadius="{StaticResource RadiusPill}" Padding="6,2">
+                                        <TextBlock Text="{x:Bind StatusBadgeText}" FontFamily="{StaticResource TelemetryFontFamily}" FontSize="10" FontWeight="SemiBold" Foreground="{ThemeResource AccentTealBrush}" />
                                     </Border>
-                                    <Border Grid.Column="2" VerticalAlignment="Top" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="4" Padding="6,2">
-                                        <TextBlock Text="{x:Bind PublisherTrustBadgeText}" FontSize="10" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                    <Border Grid.Column="2" VerticalAlignment="Top" Background="{ThemeResource SurfaceSecondaryBrush}" BorderBrush="{ThemeResource BorderSubtleBrush}" BorderThickness="1" CornerRadius="{StaticResource RadiusPill}" Padding="6,2">
+                                        <TextBlock Text="{x:Bind PublisherTrustBadgeText}" FontFamily="{StaticResource TelemetryFontFamily}" FontSize="10" Foreground="{ThemeResource TextSecondaryBrush}" />
                                     </Border>
                                 </Grid>
-                                <TextBlock Text="{x:Bind Description}" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                                <TextBlock Text="{x:Bind Description}" Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap" />
                                 
                                 <StackPanel Orientation="Horizontal" Spacing="12" Margin="0,4,0,0">
-                                    <TextBlock Text="{x:Bind Category}" FontSize="12" Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
-                                    <TextBlock Text="•" FontSize="12" Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
-                                    <TextBlock Text="{x:Bind Author}" FontSize="12" Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
-                                    <TextBlock Text="•" FontSize="12" Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
-                                    <TextBlock Text="{x:Bind Version}" FontSize="12" Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
+                                    <TextBlock Text="{x:Bind Category}" FontSize="12" Foreground="{ThemeResource TextSecondaryBrush}" />
+                                    <TextBlock Text="•" FontSize="12" Foreground="{ThemeResource TextSecondaryBrush}" />
+                                    <TextBlock Text="{x:Bind Author}" FontSize="12" Foreground="{ThemeResource TextSecondaryBrush}" />
+                                    <TextBlock Text="•" FontSize="12" Foreground="{ThemeResource TextSecondaryBrush}" />
+                                    <TextBlock Text="{x:Bind Version}" FontSize="12" FontFamily="{StaticResource TelemetryFontFamily}" Foreground="{ThemeResource TextSecondaryBrush}" />
                                 </StackPanel>
                             </StackPanel>
 

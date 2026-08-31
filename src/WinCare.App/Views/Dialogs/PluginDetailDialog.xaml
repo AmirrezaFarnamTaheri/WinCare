@@ -16,57 +16,57 @@
         <StackPanel MaxWidth="460" Spacing="16">
         <!-- Header & Metadata -->
         <Grid ColumnDefinitions="Auto,*">
-            <Border Width="64" Height="64" CornerRadius="8" Background="{ThemeResource SystemControlBackgroundComponentMeshBrush}" Margin="0,0,16,0">
+            <Border Width="64" Height="64" CornerRadius="{StaticResource RadiusControl}" Background="{ThemeResource AccentTealSubtleBrush}" BorderBrush="{ThemeResource AccentTealBrush}" BorderThickness="1" Margin="0,0,16,0">
                 <FontIcon Glyph="&#xE74C;" FontSize="32" Foreground="{ThemeResource AccentTealBrush}"/>
             </Border>
 
             <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="4">
-                <TextBlock x:Name="PluginNameText" FontSize="18" FontWeight="SemiBold" Text="Plugin Name"/>
+                <TextBlock x:Name="PluginNameText" FontSize="18" FontWeight="SemiBold" Foreground="{ThemeResource TextPrimaryBrush}" Text="Plugin Name"/>
                 <StackPanel Orientation="Horizontal" Spacing="8">
-                    <TextBlock x:Name="PluginAuthorText" FontSize="12" Foreground="{ThemeResource SystemControlForegroundBaseMediumBrush}" Text="by Author"/>
-                    <TextBlock FontSize="12" Foreground="{ThemeResource SystemControlForegroundBaseMediumBrush}" Text="•"/>
-                    <TextBlock x:Name="PluginVersionText" FontSize="12" Foreground="{ThemeResource SystemControlForegroundBaseMediumBrush}" Text="v1.0.0"/>
+                    <TextBlock x:Name="PluginAuthorText" FontSize="12" Foreground="{ThemeResource TextSecondaryBrush}" Text="by Author"/>
+                    <TextBlock FontSize="12" Foreground="{ThemeResource TextSecondaryBrush}" Text="•"/>
+                    <TextBlock x:Name="PluginVersionText" FontSize="12" Foreground="{ThemeResource TextSecondaryBrush}" Text="v1.0.0"/>
                 </StackPanel>
             </StackPanel>
         </Grid>
 
         <!-- Description -->
-        <TextBlock x:Name="PluginDescriptionText" TextWrapping="Wrap" FontSize="13" Foreground="{ThemeResource SystemControlForegroundBaseHighBrush}" Text="Plugin description text goes here."/>
+        <TextBlock x:Name="PluginDescriptionText" TextWrapping="Wrap" FontSize="13" Foreground="{ThemeResource TextPrimaryBrush}" Text="Plugin description text goes here."/>
 
         <!-- Trust Boundary Warning Banner -->
-        <Border BorderThickness="1" BorderBrush="{ThemeResource SystemFillColorCautionBrush}" CornerRadius="6" Padding="10" Background="{ThemeResource SystemFillColorCautionBackgroundBrush}">
+        <Border BorderThickness="1" BorderBrush="{ThemeResource WarningBrush}" CornerRadius="{StaticResource RadiusControl}" Padding="10" Background="{ThemeResource SurfaceSecondaryBrush}">
             <StackPanel Orientation="Horizontal" Spacing="10">
-                <FontIcon Glyph="&#xE7BA;" FontSize="16" Foreground="{ThemeResource SystemFillColorCautionBrush}" VerticalAlignment="Top" Margin="0,2,0,0"/>
+                <FontIcon Glyph="&#xE7BA;" FontSize="16" Foreground="{ThemeResource WarningBrush}" VerticalAlignment="Top" Margin="0,2,0,0"/>
                 <TextBlock Text="Full-Trust In-Process Execution: Installed plugins execute locally with your user privileges and system access. Only install packages from authors you trust."
-                           TextWrapping="Wrap" FontSize="12" Foreground="{ThemeResource SystemControlForegroundBaseHighBrush}"/>
+                           TextWrapping="Wrap" FontSize="12" Foreground="{ThemeResource TextPrimaryBrush}"/>
             </StackPanel>
         </Border>
 
         <!-- Category & Published Date -->
         <Grid ColumnDefinitions="*,*">
             <StackPanel Grid.Column="0">
-                <TextBlock Text="Category" FontSize="11" Foreground="{ThemeResource SystemControlForegroundBaseMediumBrush}"/>
-                <TextBlock x:Name="PluginCategoryText" FontSize="13" FontWeight="Medium" Text="General"/>
+                <TextBlock Text="Category" FontSize="11" Foreground="{ThemeResource TextSecondaryBrush}"/>
+                <TextBlock x:Name="PluginCategoryText" FontSize="13" FontWeight="Medium" Foreground="{ThemeResource TextPrimaryBrush}" Text="General"/>
             </StackPanel>
             <StackPanel Grid.Column="1">
-                <TextBlock Text="Published" FontSize="11" Foreground="{ThemeResource SystemControlForegroundBaseMediumBrush}"/>
-                <TextBlock x:Name="PluginPublishedText" FontSize="13" FontWeight="Medium" Text="2026-08-14"/>
+                <TextBlock Text="Published" FontSize="11" Foreground="{ThemeResource TextSecondaryBrush}"/>
+                <TextBlock x:Name="PluginPublishedText" FontSize="13" FontWeight="Medium" Foreground="{ThemeResource TextPrimaryBrush}" Text="2026-08-14"/>
             </StackPanel>
         </Grid>
 
         <!-- Declared Capabilities Section -->
-        <Border BorderThickness="1" BorderBrush="{ThemeResource SystemControlBackgroundListLowBrush}" CornerRadius="6" Padding="12" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
+        <Border BorderThickness="1" BorderBrush="{ThemeResource BorderSubtleBrush}" CornerRadius="{StaticResource RadiusControl}" Padding="12" Background="{ThemeResource CardSurfaceBrush}">
             <StackPanel Spacing="8">
                 <StackPanel Orientation="Horizontal" Spacing="8">
                     <FontIcon Glyph="&#xE72E;" FontSize="14" Foreground="{ThemeResource AccentTealBrush}"/>
-                    <TextBlock Text="Declared capabilities" FontSize="12" FontWeight="SemiBold"/>
+                    <TextBlock Text="Declared capabilities" FontSize="12" FontWeight="SemiBold" Foreground="{ThemeResource TextPrimaryBrush}"/>
                 </StackPanel>
                 <ItemsControl x:Name="PermissionsItemsControl">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate x:DataType="x:String">
                             <Grid ColumnDefinitions="Auto,*" Margin="0,2">
                                 <FontIcon Glyph="&#xE73E;" FontSize="12" Foreground="{ThemeResource AccentTealBrush}" Margin="0,0,8,0"/>
-                                <TextBlock Grid.Column="1" Text="{x:Bind}" FontSize="12" FontFamily="Consolas"/>
+                                <TextBlock Grid.Column="1" Text="{x:Bind}" FontSize="12" FontFamily="{StaticResource TelemetryFontFamily}" Foreground="{ThemeResource TextPrimaryBrush}"/>
                             </Grid>
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
@@ -75,31 +75,31 @@
         </Border>
 
         <!-- Publisher Trust & Authenticity Section -->
-        <Border BorderThickness="1" BorderBrush="{ThemeResource SystemControlBackgroundListLowBrush}" CornerRadius="6" Padding="10" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
+        <Border BorderThickness="1" BorderBrush="{ThemeResource BorderSubtleBrush}" CornerRadius="{StaticResource RadiusControl}" Padding="10" Background="{ThemeResource CardSurfaceBrush}">
             <Grid ColumnDefinitions="Auto,*">
                 <FontIcon Glyph="&#xE8D7;" FontSize="14" Foreground="{ThemeResource AccentTealBrush}" Margin="0,0,10,0" VerticalAlignment="Center"/>
                 <StackPanel Grid.Column="1" Spacing="2">
-                    <TextBlock Text="Publisher verification" FontSize="11" Foreground="{ThemeResource SystemControlForegroundBaseMediumBrush}"/>
-                    <TextBlock x:Name="PublisherTrustText" FontSize="12" FontWeight="SemiBold" Text="Community / Unverified"/>
+                    <TextBlock Text="Publisher verification" FontSize="11" Foreground="{ThemeResource TextSecondaryBrush}"/>
+                    <TextBlock x:Name="PublisherTrustText" FontSize="12" FontWeight="SemiBold" Foreground="{ThemeResource TextPrimaryBrush}" Text="Community / Unverified"/>
                 </StackPanel>
             </Grid>
         </Border>
 
         <!-- Revocation Advisory Banner (Visible only when revoked) -->
-        <Border x:Name="RevocationBanner" Visibility="Collapsed" BorderThickness="1" BorderBrush="{ThemeResource SystemFillColorCriticalBrush}" CornerRadius="6" Padding="10" Background="{ThemeResource SystemFillColorCriticalBackgroundBrush}">
+        <Border x:Name="RevocationBanner" Visibility="Collapsed" BorderThickness="1" BorderBrush="{ThemeResource DangerBrush}" CornerRadius="{StaticResource RadiusControl}" Padding="10" Background="{ThemeResource SurfaceSecondaryBrush}">
             <StackPanel Orientation="Horizontal" Spacing="10">
-                <FontIcon Glyph="&#xEB90;" FontSize="16" Foreground="{ThemeResource SystemFillColorCriticalBrush}" VerticalAlignment="Top" Margin="0,2,0,0"/>
+                <FontIcon Glyph="&#xEB90;" FontSize="16" Foreground="{ThemeResource DangerBrush}" VerticalAlignment="Top" Margin="0,2,0,0"/>
                 <TextBlock x:Name="RevocationReasonText" Text="This package was revoked by security policy."
-                           TextWrapping="Wrap" FontSize="12" Foreground="{ThemeResource SystemControlForegroundBaseHighBrush}"/>
+                           TextWrapping="Wrap" FontSize="12" Foreground="{ThemeResource DangerBrush}"/>
             </StackPanel>
         </Border>
         <TextBlock Text="Remote installations remain disabled until this app is configured with an independently signed catalog. Catalog metadata alone is never treated as publisher trust."
-                   TextWrapping="Wrap" FontSize="12" Foreground="{ThemeResource SystemControlForegroundBaseMediumBrush}" />
+                   TextWrapping="Wrap" FontSize="12" Foreground="{ThemeResource TextSecondaryBrush}" />
 
         <!-- Commands Provided -->
         <StackPanel Spacing="4">
-            <TextBlock Text="Commands provided" FontSize="12" FontWeight="SemiBold"/>
-            <TextBlock x:Name="CommandsProvidedText" FontSize="12" Foreground="{ThemeResource SystemControlForegroundBaseMediumBrush}" TextWrapping="Wrap" Text="None"/>
+            <TextBlock Text="Commands provided" FontSize="12" FontWeight="SemiBold" Foreground="{ThemeResource TextPrimaryBrush}"/>
+            <TextBlock x:Name="CommandsProvidedText" FontSize="12" Foreground="{ThemeResource TextSecondaryBrush}" TextWrapping="Wrap" Text="None"/>
         </StackPanel>
         </StackPanel>
     </ScrollViewer>

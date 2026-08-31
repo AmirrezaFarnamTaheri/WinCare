@@ -1,0 +1,961 @@
+<!DOCTYPE html>
+<html lang="en" class="dark scroll-smooth">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WinCare | Native Windows Workspace for Diagnostic Telemetry & Safe Recovery</title>
+  <meta name="description" content="A safer, native Windows desktop workspace for system checkups, diagnostics, maintenance, recovery, and evidence-led repair built with WinUI 3, .NET 8, and Rust.">
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700;800&family=Geist+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Geist', 'Segoe UI Variable Text', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+            mono: ['Geist Mono', 'Cascadia Code', 'Consolas', 'monospace'],
+          },
+          colors: {
+            obsidian: {
+              950: '#07090E',
+              900: '#0B1017',
+              850: '#101722',
+              800: '#161F2E',
+              700: '#233044',
+            },
+            teal: {
+              accent: '#00D2B4',
+              hover: '#00F0CE',
+              glow: 'rgba(0, 210, 180, 0.18)',
+              dim: '#008573',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- GSAP & ScrollTrigger -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+  
+  <!-- Three.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+  <style>
+    :root {
+      --bg-base: #07090E;
+      --fg-primary: #F8FAFC;
+      --fg-secondary: #94A3B8;
+      --accent-teal: #00D2B4;
+    }
+    
+    body {
+      background-color: #07090E;
+      color: #F8FAFC;
+      font-family: 'Geist', sans-serif;
+      overflow-x: hidden;
+    }
+
+    /* Tactile grid backdrop */
+    .tactile-grid {
+      background-size: 40px 40px;
+      background-image: 
+        linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+    }
+
+    .radial-vignette {
+      background: radial-gradient(circle at 50% 30%, rgba(0, 210, 180, 0.06) 0%, rgba(7, 9, 14, 0.95) 75%);
+    }
+
+    /* Telemetry Pill Styles */
+    .telemetry-pill {
+      font-family: 'Geist Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      font-weight: 600;
+      padding: 3px 8px;
+      border-radius: 4px;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      line-height: 1;
+    }
+
+    .pill-readonly {
+      background-color: #047857;
+      color: #FFFFFF;
+      border: 1px solid rgba(52, 211, 153, 0.3);
+    }
+
+    .pill-elevated {
+      background-color: #F59E0B;
+      color: #111827;
+      border: 1px solid rgba(245, 158, 11, 0.4);
+    }
+
+    .pill-mutating {
+      background-color: #DC2626;
+      color: #FFFFFF;
+      border: 1px solid rgba(239, 68, 68, 0.4);
+    }
+
+    .pill-verified {
+      background-color: rgba(0, 210, 180, 0.15);
+      color: #00D2B4;
+      border: 1px solid rgba(0, 210, 180, 0.35);
+    }
+
+    /* Industrial Corner Accents */
+    .corner-bracket {
+      position: relative;
+    }
+    .corner-bracket::before {
+      content: '';
+      position: absolute;
+      top: -1px;
+      left: -1px;
+      width: 8px;
+      height: 8px;
+      border-top: 2px solid #00D2B4;
+      border-left: 2px solid #00D2B4;
+      pointer-events: none;
+    }
+    .corner-bracket::after {
+      content: '';
+      position: absolute;
+      bottom: -1px;
+      right: -1px;
+      width: 8px;
+      height: 8px;
+      border-bottom: 2px solid #00D2B4;
+      border-right: 2px solid #00D2B4;
+      pointer-events: none;
+    }
+
+    /* Focus ring standard */
+    a:focus-visible, button:focus-visible {
+      outline: 2px solid #00D2B4;
+      outline-offset: 3px;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, ::before, ::after {
+        animation-delay: -1ms !important;
+        animation-duration: 1ms !important;
+        animation-iteration-count: 1 !important;
+        background-attachment: initial !important;
+        scroll-behavior: auto !important;
+        transition-duration: 0s !important;
+        transition-delay: 0s !important;
+      }
+    }
+  </style>
+</head>
+<body class="bg-obsidian-950 text-slate-100 antialiased selection:bg-teal-accent selection:text-obsidian-950">
+
+  <!-- Background Grids & Ambient Glow -->
+  <div class="fixed inset-0 tactile-grid pointer-events-none z-0"></div>
+  <div class="fixed inset-0 radial-vignette pointer-events-none z-0"></div>
+
+  <!-- Primary Wrapper to prevent horizontal overflow -->
+  <main class="relative z-10 w-full max-w-full overflow-x-hidden">
+
+    <!-- 1. NAVIGATION BAR (Floating Tactical Glass Pill) -->
+    <header class="fixed top-6 inset-x-0 z-50 flex justify-center px-4">
+      <nav aria-label="Main Navigation" class="w-full max-w-5xl bg-obsidian-900/80 backdrop-blur-xl border border-white/10 rounded-full px-5 py-3 flex items-center justify-between shadow-2xl shadow-black/80 transition-all duration-300 hover:border-white/20">
+        
+        <!-- Brand Lockup -->
+        <a href="#hero" class="flex items-center gap-3 group focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-accent rounded-full pr-2" aria-label="WinCare Home">
+          <div class="w-8 h-8 rounded-lg bg-gradient-to-b from-[#123A72] to-[#0B1026] p-1.5 flex items-center justify-center border border-white/15 group-hover:border-teal-accent transition-colors">
+            <svg class="w-full h-full text-teal-accent" viewBox="0 0 512 512" fill="none">
+              <path d="M110 128h292l-13 174c-3 42-34 76-133 143-99-67-130-101-133-143z" fill="url(#nav-shield)" />
+              <path d="M158 230l49 103 49-82 49 82 49-103" stroke="#FFFFFF" stroke-width="44" stroke-linecap="round" stroke-linejoin="round" />
+              <defs>
+                <linearGradient id="nav-shield" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0" stop-color="#34D6E9" />
+                  <stop offset="1" stop-color="#2F80ED" />
+                </linearGradient>
+              </defs>
+            </svg>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="font-bold text-base tracking-tight text-white group-hover:text-teal-accent transition-colors">WinCare</span>
+            <span class="telemetry-pill pill-verified hidden sm:inline-flex">v2.5 RC2</span>
+          </div>
+        </a>
+
+        <!-- Navigation Links -->
+        <div class="hidden md:flex items-center gap-8 font-mono text-xs uppercase tracking-wider text-slate-300">
+          <a href="#bento" class="hover:text-teal-accent transition-colors">Architecture</a>
+          <a href="#telemetry-lab" class="hover:text-teal-accent transition-colors">3D Telemetry</a>
+          <a href="#safety-model" class="hover:text-teal-accent transition-colors">Safety Pipeline</a>
+          <a href="#download" class="hover:text-teal-accent transition-colors">Releases</a>
+        </div>
+
+        <!-- Action CTAs -->
+        <div class="flex items-center gap-3">
+          <a href="https://github.com/microsoft/WinCare" target="_blank" rel="noopener noreferrer" class="hidden sm:inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-white/10 text-xs font-mono text-slate-300 hover:text-white hover:border-white/30 transition-all" aria-label="View WinCare Source on GitHub">
+            <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+            <span>GitHub</span>
+          </a>
+          <a href="#download" class="inline-flex items-center justify-center px-4 py-1.5 rounded-full bg-teal-accent text-obsidian-950 font-mono text-xs font-bold tracking-tight hover:bg-teal-hover transition-all shadow-md shadow-teal-accent/20 active:scale-95">
+            Download v2.5
+          </a>
+        </div>
+
+      </nav>
+    </header>
+
+    <!-- 2. ATTENTION: HERO SECTION (Artistic Asymmetry with Interactive 3D Canvas) -->
+    <section id="hero" class="relative min-h-[100dvh] pt-32 pb-24 px-6 md:px-12 flex flex-col justify-center max-w-7xl mx-auto">
+      
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+        
+        <!-- Left Content (Column 7): Hero Copy & Execution Metrics -->
+        <div class="lg:col-span-7 z-10 flex flex-col items-start space-y-6">
+          
+          <!-- System Status Eyebrow -->
+          <div class="flex items-center gap-3">
+            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded border border-teal-accent/30 bg-teal-accent/10 font-mono text-[11px] uppercase tracking-wider text-teal-accent">
+              <span class="w-2 h-2 rounded-full bg-teal-accent animate-ping"></span>
+              Rust 2024 Kernel Core & WinUI 3
+            </span>
+            <span class="telemetry-pill pill-readonly">ZERO CRASH FFI</span>
+          </div>
+
+          <!-- Hero Headline (Max 2 Lines Guaranteed in Max-W-5xl container) -->
+          <h1 class="text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tighter leading-[1.05] text-white max-w-3xl">
+            Evidence-led Windows repair with mathematical safety.
+          </h1>
+
+          <!-- Value Proposition Subtext (Max 20 Words) -->
+          <p class="text-lg md:text-xl text-slate-400 font-normal leading-relaxed max-w-xl">
+            Inspect hardware telemetry, preflight risk policies, and execute bounded diagnostic workflows with zero unverified mutations.
+          </p>
+
+          <!-- High-Contrast Action CTAs -->
+          <div class="flex flex-wrap items-center gap-4 pt-2">
+            <a href="#download" class="px-6 py-3 rounded-lg bg-teal-accent text-obsidian-950 font-mono text-sm font-bold tracking-tight hover:bg-teal-hover transition-all shadow-lg shadow-teal-accent/25 active:translate-y-[1px]">
+              Install Package (.msix)
+            </a>
+            <a href="#telemetry-lab" class="px-6 py-3 rounded-lg bg-obsidian-850 border border-white/15 text-white font-mono text-sm font-medium hover:border-teal-accent/60 hover:text-teal-accent transition-all active:translate-y-[1px]">
+              Explore 3D Diagnostic Core
+            </a>
+          </div>
+
+          <!-- Live Telemetry KPI Strip -->
+          <div class="grid grid-cols-3 gap-4 pt-6 w-full max-w-lg border-t border-white/10">
+            <div>
+              <div class="font-mono text-xl md:text-2xl font-bold text-white tracking-tight">&lt; 0.4ms</div>
+              <div class="font-mono text-[11px] text-slate-400 uppercase tracking-wider">C-ABI Latency</div>
+            </div>
+            <div>
+              <div class="font-mono text-xl md:text-2xl font-bold text-teal-accent tracking-tight">100%</div>
+              <div class="font-mono text-[11px] text-slate-400 uppercase tracking-wider">Safe Rust Guard</div>
+            </div>
+            <div>
+              <div class="font-mono text-xl md:text-2xl font-bold text-white tracking-tight">WCAG AA</div>
+              <div class="font-mono text-[11px] text-slate-400 uppercase tracking-wider">Verified Contrast</div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Right Visual (Column 5): Interactive WebGL 3D Telemetry Hologram Core -->
+        <div class="lg:col-span-5 relative flex items-center justify-center">
+          <div class="w-full aspect-square max-w-[480px] relative rounded-2xl bg-obsidian-900/60 border border-white/10 backdrop-blur-md overflow-hidden corner-bracket shadow-2xl">
+            
+            <!-- Three.js Canvas Container -->
+            <canvas id="hero-3d-canvas" class="w-full h-full block cursor-grab active:cursor-grabbing" aria-label="Interactive 3D System Diagnostic Core Visualizer"></canvas>
+            
+            <!-- Overlay HUD Diagnostics -->
+            <div class="absolute top-4 left-4 right-4 flex justify-between items-center pointer-events-none">
+              <div class="flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-teal-accent animate-pulse"></span>
+                <span class="font-mono text-[10px] uppercase tracking-wider text-slate-300">CORE TELEMETRY GRAPH</span>
+              </div>
+              <span id="canvas-fps-badge" class="font-mono text-[10px] text-teal-accent bg-teal-accent/10 px-2 py-0.5 rounded border border-teal-accent/20">60 FPS</span>
+            </div>
+
+            <div class="absolute bottom-4 left-4 right-4 flex justify-between items-center pointer-events-none">
+              <span class="font-mono text-[10px] text-slate-400">DRAG TO ORBIT • SCROLL ZOOM</span>
+              <span class="telemetry-pill pill-readonly text-[10px]">HEALTH GUARD ACTIVE</span>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+
+    </section>
+
+    <!-- 3. INTEREST: THE GAPLESS DENSE BENTO GRID -->
+    <section id="bento" class="py-32 px-6 md:px-12 max-w-7xl mx-auto">
+      
+      <div class="mb-16">
+        <span class="font-mono text-xs uppercase tracking-widest text-teal-accent">System Architecture Matrix</span>
+        <h2 class="text-3xl md:text-5xl font-bold tracking-tight text-white mt-2">
+          Engineered for forensic diagnostic accuracy.
+        </h2>
+        <p class="text-slate-400 text-base max-w-2xl mt-4">
+          Every diagnostic and repair action flows through a strict observation, preflight validation, and cryptographic journaling engine.
+        </p>
+      </div>
+
+      <!-- Mathematically Gapless Grid (grid-auto-flow: dense) -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 grid-flow-dense">
+        
+        <!-- Cell 1: Live Interactive Diagnostic Terminal Simulator (2 Cols x 2 Rows) -->
+        <div class="md:col-span-2 md:row-span-2 rounded-2xl bg-obsidian-900 border border-white/10 p-6 md:p-8 flex flex-col justify-between corner-bracket hover:border-teal-accent/40 transition-colors group">
+          <div>
+            <div class="flex items-center justify-between mb-4">
+              <div class="flex items-center gap-3">
+                <div class="w-3 h-3 rounded-full bg-red-500/80"></div>
+                <div class="w-3 h-3 rounded-full bg-yellow-500/80"></div>
+                <div class="w-3 h-3 rounded-full bg-teal-accent/80"></div>
+                <span class="font-mono text-xs text-slate-400 ml-2">wincare_kernel_dispatcher.exe --interactive</span>
+              </div>
+              <span class="telemetry-pill pill-verified">LIVE JOURNAL</span>
+            </div>
+
+            <div class="bg-obsidian-950 rounded-xl p-5 border border-white/5 font-mono text-xs space-y-2.5 text-slate-300 overflow-x-auto">
+              <div class="text-slate-500">// Initialize Rust FFI Core & Windows Diagnostic Guard</div>
+              <div class="flex items-center gap-2">
+                <span class="text-teal-accent">[0.001ms]</span>
+                <span class="text-emerald-400">INIT</span>
+                <span>Native FFI wincare_core_sys_info loaded at 0x7FFE9B20</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="text-teal-accent">[0.014ms]</span>
+                <span class="text-cyan-400">AUDIT</span>
+                <span>WDAC Policy: Enforced. HVCI Core Isolation: Enabled.</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="text-teal-accent">[0.082ms]</span>
+                <span class="text-amber-400">CHECK</span>
+                <span>CBS / DISM Component Store integrity evaluated: Clean.</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="text-teal-accent">[0.198ms]</span>
+                <span class="text-blue-400">JOURNAL</span>
+                <span>SHA-256 state snapshot committed to immutable ledger.</span>
+              </div>
+              <div class="flex items-center gap-2 text-teal-accent animate-pulse">
+                <span>&gt;</span>
+                <span>Awaiting catalog dispatch command (Ctrl+K palette ready)...</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-8 pt-6 border-t border-white/10 flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <h3 class="text-lg font-bold text-white">Kernel-Level Telemetry Dispatcher</h3>
+              <p class="text-sm text-slate-400 mt-1">Zero-panic Rust ABI barriers guarantee that misbehaving drivers never crash the diagnostic host.</p>
+            </div>
+            <span class="telemetry-pill pill-readonly">RUST FFI SAFETY</span>
+          </div>
+        </div>
+
+        <!-- Cell 2: WDAC & Kernel Isolation Audit Card (1 Col x 1 Row) -->
+        <div class="md:col-span-1 md:row-span-1 rounded-2xl bg-obsidian-900 border border-white/10 p-6 flex flex-col justify-between hover:border-teal-accent/40 transition-colors">
+          <div>
+            <div class="flex items-center justify-between mb-4">
+              <span class="telemetry-pill pill-elevated">ELEVATED AUDIT</span>
+              <span class="font-mono text-xs text-slate-500">POLICY-04</span>
+            </div>
+            <h3 class="text-xl font-bold text-white">WDAC & HVCI Security Audit</h3>
+            <p class="text-sm text-slate-400 mt-2 leading-relaxed">
+              Real-time hardware-enforced code integrity scans. Detects driver vulnerabilities and unsigned binaries before system bootstrap.
+            </p>
+          </div>
+          <div class="mt-6 pt-4 border-t border-white/10 flex items-center justify-between font-mono text-xs">
+            <span class="text-slate-400">HVCI Status</span>
+            <span class="text-teal-accent font-semibold">Active & Enforced</span>
+          </div>
+        </div>
+
+        <!-- Cell 3: Zero-Allocation Memory Engine (1 Col x 1 Row) -->
+        <div class="md:col-span-1 md:row-span-1 rounded-2xl bg-obsidian-900 border border-white/10 p-6 flex flex-col justify-between hover:border-teal-accent/40 transition-colors">
+          <div>
+            <div class="flex items-center justify-between mb-4">
+              <span class="telemetry-pill pill-readonly">ZERO-ALLOC</span>
+              <span class="font-mono text-xs text-slate-500">MEM-PERF</span>
+            </div>
+            <h3 class="text-xl font-bold text-white">Caller-Owned C-ABI Buffers</h3>
+            <p class="text-sm text-slate-400 mt-2 leading-relaxed">
+              Byte buffers cross the C ABI with zero heap reallocation. Constant O(1) memory profile under intense system stress.
+            </p>
+          </div>
+          <div class="mt-6 pt-4 border-t border-white/10 flex items-center justify-between font-mono text-xs">
+            <span class="text-slate-400">Allocations / Call</span>
+            <span class="text-teal-accent font-semibold">0 Bytes</span>
+          </div>
+        </div>
+
+        <!-- Cell 4: Immutable Evidence Journal (3 Cols x 1 Row Span Across) -->
+        <div class="md:col-span-3 rounded-2xl bg-obsidian-850 border border-white/10 p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-6 hover:border-teal-accent/40 transition-colors">
+          <div class="max-w-xl">
+            <div class="flex items-center gap-3 mb-2">
+              <span class="telemetry-pill pill-mutating">MUTATION GUARD</span>
+              <span class="font-mono text-xs text-slate-400">CRYPTOGRAPHIC JOURNAL</span>
+            </div>
+            <h3 class="text-2xl font-bold text-white">Explicit Approval & Rollback Engine</h3>
+            <p class="text-sm text-slate-400 mt-2 leading-relaxed">
+              Mutating actions are strictly prohibited from silent execution. Every repair operation generates a pre-flight risk manifest, prompts for operator confirmation, and commits SHA-256 diffs for instant rollback.
+            </p>
+          </div>
+          <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 w-full md:w-auto">
+            <div class="px-5 py-3 rounded-xl bg-obsidian-950 border border-white/10 font-mono text-xs text-center">
+              <div class="text-slate-400">Rollback Integrity</div>
+              <div class="text-teal-accent font-bold text-sm mt-0.5">Deterministic 100%</div>
+            </div>
+            <a href="#safety-model" class="px-5 py-3 rounded-xl bg-teal-accent text-obsidian-950 font-mono text-xs font-bold text-center hover:bg-teal-hover transition-all">
+              Inspect Pipeline
+            </a>
+          </div>
+        </div>
+
+      </div>
+
+    </section>
+
+    <!-- 4. DESIRE: 3D TELEMETRY LAB & GSAP SCROLL STORYTELLING -->
+    <section id="telemetry-lab" class="py-32 px-6 md:px-12 max-w-7xl mx-auto">
+      
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
+        
+        <!-- Pinned Left Section: Storytelling Chapters -->
+        <div class="lg:col-span-5 space-y-12 lg:sticky lg:top-28">
+          <div>
+            <span class="font-mono text-xs uppercase tracking-widest text-teal-accent">Interactive Telemetry Lab</span>
+            <h2 class="text-3xl md:text-4xl font-extrabold tracking-tight text-white mt-2">
+              Explore the 3D System Diagnostic Core.
+            </h2>
+            <p class="text-slate-400 text-sm mt-4 leading-relaxed">
+              Interact with the geometric core representing WinCare's multi-layered defensive boundary. Toggle layer topologies, trigger real-time diagnostic sweeps, and observe kernel state reactions.
+            </p>
+          </div>
+
+          <!-- Interactive Control Console -->
+          <div class="p-6 rounded-2xl bg-obsidian-900 border border-white/10 space-y-4">
+            <div class="font-mono text-xs font-bold text-white uppercase tracking-wider">Telemetry Controls</div>
+            
+            <div class="grid grid-cols-2 gap-3">
+              <button id="btn-toggle-wireframe" class="px-4 py-2.5 rounded-lg bg-obsidian-950 border border-white/15 text-xs font-mono text-slate-200 hover:border-teal-accent hover:text-teal-accent transition-all text-left">
+                [1] Wireframe Mode
+              </button>
+              <button id="btn-trigger-pulse" class="px-4 py-2.5 rounded-lg bg-obsidian-950 border border-white/15 text-xs font-mono text-slate-200 hover:border-teal-accent hover:text-teal-accent transition-all text-left">
+                [2] Diagnostic Sweep
+              </button>
+              <button id="btn-toggle-rotation" class="px-4 py-2.5 rounded-lg bg-obsidian-950 border border-white/15 text-xs font-mono text-slate-200 hover:border-teal-accent hover:text-teal-accent transition-all text-left">
+                [3] Toggle Auto-Spin
+              </button>
+              <button id="btn-reset-view" class="px-4 py-2.5 rounded-lg bg-obsidian-950 border border-white/15 text-xs font-mono text-slate-200 hover:border-teal-accent hover:text-teal-accent transition-all text-left">
+                [4] Reset Alignment
+              </button>
+            </div>
+
+            <div class="pt-3 border-t border-white/10 flex items-center justify-between font-mono text-[11px] text-slate-400">
+              <span>ACTIVE SHADER: PHYSICAL PBR</span>
+              <span id="telemetry-status-text" class="text-teal-accent">STEADY-STATE</span>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Right Side: Large Interactive WebGL 3D Lab Viewport -->
+        <div class="lg:col-span-7">
+          <div class="w-full aspect-[4/3] rounded-2xl bg-obsidian-900 border border-white/15 relative overflow-hidden shadow-2xl corner-bracket">
+            <canvas id="lab-3d-canvas" class="w-full h-full block cursor-grab active:cursor-grabbing" aria-label="Full-scale Interactive 3D Telemetry Simulator"></canvas>
+            
+            <div class="absolute bottom-6 left-6 right-6 flex items-center justify-between pointer-events-none">
+              <div class="font-mono text-xs bg-obsidian-950/80 px-3 py-1.5 rounded border border-white/10 text-slate-300">
+                POLYGONS: 12,480 | PARTICLES: 1,200
+              </div>
+              <span class="telemetry-pill pill-verified">WebGL 2.0 ACCELERATED</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </section>
+
+    <!-- 5. SAFETY MODEL PIPELINE SECTION -->
+    <section id="safety-model" class="py-32 px-6 md:px-12 max-w-7xl mx-auto border-t border-white/10">
+      
+      <div class="text-center max-w-3xl mx-auto mb-20">
+        <span class="font-mono text-xs uppercase tracking-widest text-teal-accent">Verification Pipeline</span>
+        <h2 class="text-3xl md:text-5xl font-bold tracking-tight text-white mt-2">
+          The 6-Stage Execution Protocol
+        </h2>
+        <p class="text-slate-400 text-base mt-4">
+          Every command catalog action follows an inviolable pipeline to protect system integrity.
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        
+        <!-- Step 1 -->
+        <div class="p-6 rounded-xl bg-obsidian-900 border border-white/10 flex flex-col justify-between space-y-4">
+          <div>
+            <div class="font-mono text-xs text-teal-accent">PHASE 01</div>
+            <h3 class="text-lg font-bold text-white mt-1">Non-Destructive Observation</h3>
+            <p class="text-sm text-slate-400 mt-2">
+              Deep read-only query of system state, event traces, registry keys, and component stores without mutating any disk sectors.
+            </p>
+          </div>
+          <span class="telemetry-pill pill-readonly w-fit">READ-ONLY</span>
+        </div>
+
+        <!-- Step 2 -->
+        <div class="p-6 rounded-xl bg-obsidian-900 border border-white/10 flex flex-col justify-between space-y-4">
+          <div>
+            <div class="font-mono text-xs text-teal-accent">PHASE 02</div>
+            <h3 class="text-lg font-bold text-white mt-1">Preflight Risk Evaluation</h3>
+            <p class="text-sm text-slate-400 mt-2">
+              Analyzes dependencies, administrative elevation requirements, and system restore point availability before proceeding.
+            </p>
+          </div>
+          <span class="telemetry-pill pill-elevated w-fit">RISK SCORING</span>
+        </div>
+
+        <!-- Step 3 -->
+        <div class="p-6 rounded-xl bg-obsidian-900 border border-white/10 flex flex-col justify-between space-y-4">
+          <div>
+            <div class="font-mono text-xs text-teal-accent">PHASE 03</div>
+            <h3 class="text-lg font-bold text-white mt-1">Blast Radius Disclosure</h3>
+            <p class="text-sm text-slate-400 mt-2">
+              Explicitly enumerates all affected file paths, registry keys, services, and expected reboot requirements to the operator.
+            </p>
+          </div>
+          <span class="telemetry-pill pill-verified w-fit">TRANSPARENT</span>
+        </div>
+
+        <!-- Step 4 -->
+        <div class="p-6 rounded-xl bg-obsidian-900 border border-white/10 flex flex-col justify-between space-y-4">
+          <div>
+            <div class="font-mono text-xs text-teal-accent">PHASE 04</div>
+            <h3 class="text-lg font-bold text-white mt-1">Explicit Operator Approval</h3>
+            <p class="text-sm text-slate-400 mt-2">
+              Mutating tasks halt and require interactive, non-bypassable confirmation. Automated silent execution is blocked by design.
+            </p>
+          </div>
+          <span class="telemetry-pill pill-mutating w-fit">APPROVAL GATE</span>
+        </div>
+
+        <!-- Step 5 -->
+        <div class="p-6 rounded-xl bg-obsidian-900 border border-white/10 flex flex-col justify-between space-y-4">
+          <div>
+            <div class="font-mono text-xs text-teal-accent">PHASE 05</div>
+            <h3 class="text-lg font-bold text-white mt-1">Bounded Process Execution</h3>
+            <p class="text-sm text-slate-400 mt-2">
+              Dispatches execution via isolated native worker subprocesses with strict timeout budgets and real-time output capture.
+            </p>
+          </div>
+          <span class="telemetry-pill pill-readonly w-fit">ISOLATED PROCESS</span>
+        </div>
+
+        <!-- Step 6 -->
+        <div class="p-6 rounded-xl bg-obsidian-900 border border-white/10 flex flex-col justify-between space-y-4">
+          <div>
+            <div class="font-mono text-xs text-teal-accent">PHASE 06</div>
+            <h3 class="text-lg font-bold text-white mt-1">Evidence Record & Ledger</h3>
+            <p class="text-sm text-slate-400 mt-2">
+              Writes full command telemetry, return codes, before/after hashes, and rollback instructions into an immutable local journal.
+            </p>
+          </div>
+          <span class="telemetry-pill pill-verified w-fit">AUDIT JOURNAL</span>
+        </div>
+
+      </div>
+
+    </section>
+
+    <!-- 6. ACTION: DOWNLOAD & SPECIFICATIONS FOOTER -->
+    <section id="download" class="py-32 px-6 md:px-12 max-w-7xl mx-auto border-t border-white/10">
+      
+      <div class="rounded-3xl bg-gradient-to-b from-obsidian-900 to-obsidian-950 border border-teal-accent/30 p-8 md:p-16 text-center relative overflow-hidden shadow-2xl">
+        
+        <div class="relative z-10 max-w-3xl mx-auto space-y-6">
+          <span class="telemetry-pill pill-verified">RELEASE CANDIDATE 2 READY</span>
+          
+          <h2 class="text-3xl md:text-5xl font-extrabold tracking-tight text-white">
+            Take command of your Windows runtime.
+          </h2>
+          
+          <p class="text-slate-400 text-base md:text-lg max-w-xl mx-auto">
+            Native .NET 8 desktop binary compiled with Rust 2024 FFI kernel diagnostics. Zero telemetry ads, zero bloated electron wrappers.
+          </p>
+
+          <div class="flex flex-wrap justify-center items-center gap-4 pt-4">
+            <a href="https://github.com/microsoft/WinCare/releases" class="px-8 py-4 rounded-xl bg-teal-accent text-obsidian-950 font-mono text-sm font-bold tracking-tight hover:bg-teal-hover transition-all shadow-xl shadow-teal-accent/30 active:scale-95">
+              Download MSIX Installer (x64)
+            </a>
+            <a href="https://github.com/microsoft/WinCare" target="_blank" rel="noopener noreferrer" class="px-8 py-4 rounded-xl bg-obsidian-850 border border-white/20 text-white font-mono text-sm font-semibold hover:border-teal-accent hover:text-teal-accent transition-all">
+              View Source Repository
+            </a>
+          </div>
+
+          <div class="pt-8 flex flex-wrap items-center justify-center gap-6 font-mono text-xs text-slate-400">
+            <span>REQUIREMENTS: Windows 10/11 (x64 / ARM64)</span>
+            <span>•</span>
+            <span>LICENSE: MIT</span>
+            <span>•</span>
+            <span>SIZE: 24.8 MB</span>
+          </div>
+        </div>
+
+      </div>
+
+    </section>
+
+    <!-- Footer -->
+    <footer class="py-12 px-6 md:px-12 max-w-7xl mx-auto border-t border-white/10 flex flex-col md:flex-row items-center justify-between gap-6 font-mono text-xs text-slate-400">
+      <div class="flex items-center gap-3">
+        <div class="w-5 h-5 rounded bg-teal-accent/20 p-1 flex items-center justify-center border border-teal-accent/40 text-teal-accent font-bold">W</div>
+        <span>WinCare Native Project © 2026. All rights reserved.</span>
+      </div>
+      <div class="flex items-center gap-6">
+        <a href="#hero" class="hover:text-teal-accent transition-colors">Back to Top</a>
+        <a href="https://github.com/microsoft/WinCare" class="hover:text-teal-accent transition-colors">GitHub</a>
+        <a href="#safety-model" class="hover:text-teal-accent transition-colors">Safety Spec</a>
+      </div>
+    </footer>
+
+  </main>
+
+  <!-- 3D WEBGL TELEMETRY CORE & GSAP SCRIPT -->
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      
+      const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+      // ==========================================
+      // 1. HERO 3D SCENE (Three.js Shield Hologram)
+      // ==========================================
+      const initHero3D = () => {
+        const canvas = document.getElementById('hero-3d-canvas');
+        if (!canvas) return;
+
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(45, canvas.clientWidth / canvas.clientHeight, 0.1, 100);
+        camera.position.set(0, 0, 5);
+
+        const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+        renderer.setSize(canvas.clientWidth, canvas.clientHeight, false);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+        // Core Shield Group
+        const coreGroup = new THREE.Group();
+        scene.add(coreGroup);
+
+        // 1. Inner Shield Octahedron
+        const geomOcta = new THREE.OctahedronGeometry(1.2, 1);
+        const matOcta = new THREE.MeshStandardMaterial({
+          color: 0x00D2B4,
+          wireframe: true,
+          transparent: true,
+          opacity: 0.6,
+          roughness: 0.2,
+          metalness: 0.8
+        });
+        const meshOcta = new THREE.Mesh(geomOcta, matOcta);
+        coreGroup.add(meshOcta);
+
+        // 2. Central Core Icosahedron
+        const geomCore = new THREE.IcosahedronGeometry(0.7, 0);
+        const matCore = new THREE.MeshPhysicalMaterial({
+          color: 0x2F80ED,
+          emissive: 0x00D2B4,
+          emissiveIntensity: 0.4,
+          roughness: 0.1,
+          metalness: 0.9,
+          clearcoat: 1.0,
+          clearcoatRoughness: 0.1
+        });
+        const meshCore = new THREE.Mesh(geomCore, matCore);
+        coreGroup.add(meshCore);
+
+        // 3. Orbital Particles
+        const particleCount = 200;
+        const particleGeom = new THREE.BufferGeometry();
+        const positions = new Float32Array(particleCount * 3);
+        for(let i = 0; i < particleCount * 3; i += 3) {
+          const r = 1.8 + Math.random() * 0.6;
+          const theta = Math.random() * Math.PI * 2;
+          const phi = Math.acos((Math.random() * 2) - 1);
+          positions[i] = r * Math.sin(phi) * Math.cos(theta);
+          positions[i+1] = r * Math.sin(phi) * Math.sin(theta);
+          positions[i+2] = r * Math.cos(phi);
+        }
+        particleGeom.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        const particleMat = new THREE.PointsMaterial({
+          color: 0x00D2B4,
+          size: 0.04,
+          transparent: true,
+          opacity: 0.8
+        });
+        const particleSystem = new THREE.Points(particleGeom, particleMat);
+        coreGroup.add(particleSystem);
+
+        // Lighting
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+        scene.add(ambientLight);
+
+        const pointLight = new THREE.PointLight(0x00D2B4, 2, 10);
+        pointLight.position.set(3, 3, 3);
+        scene.add(pointLight);
+
+        const blueLight = new THREE.PointLight(0x2F80ED, 2, 10);
+        blueLight.position.set(-3, -3, 2);
+        scene.add(blueLight);
+
+        // Interaction state
+        let isDragging = false;
+        let prevMouseX = 0;
+        let prevMouseY = 0;
+        let targetRotX = 0;
+        let targetRotY = 0;
+
+        canvas.addEventListener('mousedown', (e) => {
+          isDragging = true;
+          prevMouseX = e.clientX;
+          prevMouseY = e.clientY;
+        });
+
+        window.addEventListener('mouseup', () => isDragging = false);
+
+        canvas.addEventListener('mousemove', (e) => {
+          if (!isDragging) return;
+          const deltaX = e.clientX - prevMouseX;
+          const deltaY = e.clientY - prevMouseY;
+          targetRotY += deltaX * 0.005;
+          targetRotX += deltaY * 0.005;
+          prevMouseX = e.clientX;
+          prevMouseY = e.clientY;
+        });
+
+        // Resize handler
+        const handleResize = () => {
+          const w = canvas.clientWidth;
+          const h = canvas.clientHeight;
+          if (w === 0 || h === 0) return;
+          renderer.setSize(w, h, false);
+          renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+          camera.aspect = w / h;
+          camera.updateProjectionMatrix();
+        };
+        window.addEventListener('resize', handleResize);
+        handleResize();
+
+        // Animation Loop
+        let animationFrameId;
+        const animate = (time) => {
+          if (!prefersReducedMotion) {
+            coreGroup.rotation.y += (targetRotY - coreGroup.rotation.y) * 0.05 + 0.003;
+            coreGroup.rotation.x += (targetRotX - coreGroup.rotation.x) * 0.05;
+            particleSystem.rotation.y -= 0.002;
+            meshCore.rotation.x += 0.004;
+          }
+          renderer.render(scene, camera);
+          animationFrameId = requestAnimationFrame(animate);
+        };
+        animate();
+      };
+
+      // ==========================================
+      // 2. LAB 3D SCENE (Full Interactive Telemetry)
+      // ==========================================
+      const initLab3D = () => {
+        const canvas = document.getElementById('lab-3d-canvas');
+        if (!canvas) return;
+
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(45, canvas.clientWidth / canvas.clientHeight, 0.1, 100);
+        camera.position.set(0, 1.5, 6);
+
+        const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+        renderer.setSize(canvas.clientWidth, canvas.clientHeight, false);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+        const labGroup = new THREE.Group();
+        scene.add(labGroup);
+
+        // Torus Wireframe Shield Layer
+        const torusGeom = new THREE.TorusGeometry(1.8, 0.3, 16, 60);
+        const torusMat = new THREE.MeshStandardMaterial({
+          color: 0x00D2B4,
+          wireframe: true,
+          roughness: 0.3,
+          metalness: 0.8
+        });
+        const torusMesh = new THREE.Mesh(torusGeom, torusMat);
+        torusMesh.rotation.x = Math.PI / 2;
+        labGroup.add(torusMesh);
+
+        // Core Dodecahedron (Diagnostic Hub)
+        const dGeom = new THREE.DodecahedronGeometry(1.0, 0);
+        const dMat = new THREE.MeshPhysicalMaterial({
+          color: 0x123A72,
+          emissive: 0x00D2B4,
+          emissiveIntensity: 0.3,
+          roughness: 0.1,
+          metalness: 0.8,
+          clearcoat: 1.0
+        });
+        const dMesh = new THREE.Mesh(dGeom, dMat);
+        labGroup.add(dMesh);
+
+        // Surrounding diagnostic grid plane
+        const gridHelper = new THREE.GridHelper(8, 16, 0x00D2B4, 0x162030);
+        gridHelper.position.y = -1.5;
+        scene.add(gridHelper);
+
+        // Lighting
+        scene.add(new THREE.AmbientLight(0xffffff, 0.8));
+        const dirLight = new THREE.DirectionalLight(0x00D2B4, 1.5);
+        dirLight.position.set(4, 5, 3);
+        scene.add(dirLight);
+
+        let autoSpin = true;
+        let wireframeActive = true;
+
+        // UI Controls
+        const btnWireframe = document.getElementById('btn-toggle-wireframe');
+        const btnPulse = document.getElementById('btn-trigger-pulse');
+        const btnSpin = document.getElementById('btn-toggle-rotation');
+        const btnReset = document.getElementById('btn-reset-view');
+        const statusText = document.getElementById('telemetry-status-text');
+
+        if (btnWireframe) {
+          btnWireframe.addEventListener('click', () => {
+            wireframeActive = !wireframeActive;
+            torusMat.wireframe = wireframeActive;
+            dMat.wireframe = !wireframeActive;
+            if (statusText) statusText.innerText = wireframeActive ? "WIREFRAME ACTIVE" : "SHADED SOLID";
+          });
+        }
+
+        if (btnPulse) {
+          btnPulse.addEventListener('click', () => {
+            if (statusText) statusText.innerText = "SWEEP IN PROGRESS...";
+            gsap.to(dMesh.scale, {
+              x: 1.4, y: 1.4, z: 1.4,
+              duration: 0.3,
+              yoyo: true,
+              repeat: 1,
+              ease: "power2.out",
+              onComplete: () => {
+                if (statusText) statusText.innerText = "SWEEP VERIFIED (0 ERRORS)";
+              }
+            });
+          });
+        }
+
+        if (btnSpin) {
+          btnSpin.addEventListener('click', () => {
+            autoSpin = !autoSpin;
+            if (statusText) statusText.innerText = autoSpin ? "AUTO-SPIN RESUMED" : "MANUAL PAUSE";
+          });
+        }
+
+        if (btnReset) {
+          btnReset.addEventListener('click', () => {
+            gsap.to(labGroup.rotation, { x: 0, y: 0, z: 0, duration: 0.6, ease: "power2.inOut" });
+            if (statusText) statusText.innerText = "ORIENTATION ALIGNED";
+          });
+        }
+
+        // Mouse drag interaction
+        let isDraggingLab = false;
+        let prevX = 0, prevY = 0;
+        canvas.addEventListener('mousedown', (e) => { isDraggingLab = true; prevX = e.clientX; prevY = e.clientY; });
+        window.addEventListener('mouseup', () => isDraggingLab = false);
+        canvas.addEventListener('mousemove', (e) => {
+          if (!isDraggingLab) return;
+          const dx = e.clientX - prevX;
+          const dy = e.clientY - prevY;
+          labGroup.rotation.y += dx * 0.005;
+          labGroup.rotation.x += dy * 0.005;
+          prevX = e.clientX;
+          prevY = e.clientY;
+        });
+
+        // Resize
+        const handleLabResize = () => {
+          const w = canvas.clientWidth;
+          const h = canvas.clientHeight;
+          if (w === 0 || h === 0) return;
+          renderer.setSize(w, h, false);
+          renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+          camera.aspect = w / h;
+          camera.updateProjectionMatrix();
+        };
+        window.addEventListener('resize', handleLabResize);
+        handleLabResize();
+
+        // Loop
+        const animateLab = () => {
+          if (autoSpin && !prefersReducedMotion && !isDraggingLab) {
+            labGroup.rotation.y += 0.004;
+            torusMesh.rotation.z += 0.006;
+          }
+          renderer.render(scene, camera);
+          requestAnimationFrame(animateLab);
+        };
+        animateLab();
+      };
+
+      initHero3D();
+      initLab3D();
+
+      // ==========================================
+      // 3. GSAP SCROLL ANIMATIONS
+      // ==========================================
+      if (!prefersReducedMotion && typeof gsap !== 'undefined' && typeof ScrollTrigger !== 'undefined') {
+        gsap.registerPlugin(ScrollTrigger);
+
+        gsap.from("#hero h1", {
+          opacity: 0,
+          y: 30,
+          duration: 0.8,
+          ease: "power3.out"
+        });
+
+        gsap.from("#hero p", {
+          opacity: 0,
+          y: 20,
+          duration: 0.8,
+          delay: 0.2,
+          ease: "power3.out"
+        });
+
+        gsap.from("#bento > div > div", {
+          scrollTrigger: {
+            trigger: "#bento",
+            start: "top 75%",
+          },
+          opacity: 0,
+          y: 40,
+          stagger: 0.1,
+          duration: 0.7,
+          ease: "power3.out"
+        });
+      }
+
+    });
+  </script>
+
+</body>
+</html>

@@ -5,23 +5,25 @@
     xmlns:plugins="using:WinCare.Application.Plugins">
 
     <StackPanel Spacing="12">
-        <TextBlock Text="Active Plugin Widgets" Style="{StaticResource SubtitleTextBlockStyle}" Foreground="{ThemeResource AccentTealBrush}" />
+        <TextBlock Text="Active Plugin Widgets" Style="{StaticResource AppTitleTextStyle}" Foreground="{ThemeResource AccentTealBrush}" />
         <ItemsControl x:Name="WidgetsList">
             <ItemsControl.ItemTemplate>
                 <DataTemplate x:DataType="plugins:IPluginWidget">
-                    <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                            BorderThickness="1" CornerRadius="6" Padding="12" Margin="0,0,0,8">
+                    <Border Background="{ThemeResource CardSurfaceBrush}"
+                            BorderBrush="{ThemeResource BorderSubtleBrush}"
+                            BorderThickness="1" CornerRadius="{StaticResource RadiusControl}" Padding="14,12" Margin="0,0,0,8">
                         <Grid ColumnSpacing="12">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
-                            <StackPanel Grid.Column="0">
-                                <TextBlock Text="{x:Bind Title}" FontWeight="SemiBold" FontSize="14" />
-                                <TextBlock Text="{x:Bind StatusSummary}" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                            <StackPanel Grid.Column="0" Spacing="2">
+                                <TextBlock Text="{x:Bind Title}" Style="{StaticResource RowTitleTextStyle}" />
+                                <TextBlock Text="{x:Bind StatusSummary}" Style="{StaticResource RowSecondaryTextStyle}" />
                             </StackPanel>
-                            <TextBlock Grid.Column="1" Text="{x:Bind Category}" FontSize="11" Foreground="{ThemeResource AccentTealBrush}" VerticalAlignment="Center" />
+                            <Border Grid.Column="1" Background="{ThemeResource AccentTealSubtleBrush}" BorderBrush="{ThemeResource AccentTealBrush}" BorderThickness="1" CornerRadius="{StaticResource RadiusPill}" Padding="6,2" VerticalAlignment="Center">
+                                <TextBlock Text="{x:Bind Category}" FontFamily="{StaticResource TelemetryFontFamily}" FontSize="10" FontWeight="SemiBold" Foreground="{ThemeResource AccentTealBrush}" />
+                            </Border>
                         </Grid>
                     </Border>
                 </DataTemplate>

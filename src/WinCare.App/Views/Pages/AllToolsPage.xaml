@@ -105,7 +105,7 @@
                     Background="{ThemeResource CardSurfaceBrush}"
                     BorderBrush="{ThemeResource AccentTealBrush}"
                     BorderThickness="1,0,0,0"
-                    CornerRadius="8">
+                    CornerRadius="{StaticResource RadiusControl}">
                     <ScrollViewer VerticalScrollBarVisibility="Auto">
                         <StackPanel Spacing="16">
                             <StackPanel Spacing="6">
@@ -136,7 +136,7 @@
                                 <TextBox
                                     MinHeight="120"
                                     AcceptsReturn="True"
-                                    FontFamily="Cascadia Mono"
+                                    FontFamily="{StaticResource TelemetryFontFamily}"
                                     FontSize="12"
                                     Header="JSON parameters"
                                     PlaceholderText="{}"
@@ -203,7 +203,7 @@
                                     MinHeight="160"
                                     MaxHeight="360"
                                     AcceptsReturn="True"
-                                    FontFamily="Cascadia Mono"
+                                    FontFamily="{StaticResource TelemetryFontFamily}"
                                     FontSize="12"
                                     IsReadOnly="True"
                                     Text="{x:Bind ViewModel.Execution.ExecutionResultText, Mode=OneWay}"
@@ -214,7 +214,7 @@
                             </Expander>
                             <Expander Header="Advanced details" AutomationProperties.Name="Advanced tool details">
                                 <TextBlock
-                                    FontFamily="Cascadia Mono"
+                                    FontFamily="{StaticResource TelemetryFontFamily}"
                                     FontSize="12"
                                     IsTextSelectionEnabled="True"
                                     LineHeight="18"
@@ -298,7 +298,7 @@
                                     </Grid.ColumnDefinitions>
                                     <StackPanel Spacing="2">
                                         <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="{x:Bind Title}" />
-                                        <TextBlock Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind Id}" />
+                                        <TextBlock Style="{StaticResource RowSecondaryTextStyle}" FontFamily="{StaticResource TelemetryFontFamily}" Text="{x:Bind Id}" />
                                     </StackPanel>
                                     <TextBlock Grid.Column="1" Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind Area}" />
                                     <TextBlock Grid.Column="2" Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind Risk}" />
@@ -310,7 +310,7 @@
                                     Spacing="4"
                                     Visibility="{x:Bind local:AllToolsPage.BoolToVisibility(IsCompact), Mode=OneWay}">
                                     <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="{x:Bind Title}" TextWrapping="Wrap" />
-                                    <TextBlock Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind Id}" />
+                                    <TextBlock Style="{StaticResource RowSecondaryTextStyle}" FontFamily="{StaticResource TelemetryFontFamily}" Text="{x:Bind Id}" />
                                     <TextBlock Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind Area}" />
                                     <TextBlock Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind Risk}" />
                                 </StackPanel>

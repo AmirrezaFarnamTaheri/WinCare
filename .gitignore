@@ -25,3 +25,8 @@ build_out.txt
 *.snk
 *.pem
 *.secret
+.cocoindex_code/
+.gortex/
+.serena/
+**/AppPackages/
+packages.lock.json
