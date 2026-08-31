@@ -352,7 +352,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           if gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            gh release upload "$RELEASE_TAG" release_assets/* --clobber --repo "$GITHUB_REPOSITORY"
+            echo "Error: Release '$RELEASE_TAG' already exists. Published releases are immutable and will not be overwritten."
+            exit 1
           else
             gh release create "$RELEASE_TAG" release_assets/* \
               --title "WinCare $RELEASE_TAG" \

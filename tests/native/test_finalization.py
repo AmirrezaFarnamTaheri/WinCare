@@ -241,7 +241,7 @@ class FinalizationTests(unittest.TestCase):
         self.assertIn("Publish GitHub release", native_workflow)
         self.assertIn("GH_TOKEN: ${{ github.token }}", native_workflow)
         self.assertIn("gh release create", native_workflow)
-        self.assertIn("gh release upload", native_workflow)
+        self.assertNotIn("--clobber", native_workflow)
         self.assertIn("Hold artifacts for manual publication", release_workflow)
         self.assertNotIn("gh release create", release_workflow)
         self.assertIn("Require primary branch dispatch", release_workflow)

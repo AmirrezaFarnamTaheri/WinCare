@@ -72,8 +72,9 @@ function validatePlugin(pluginDir) {
     warnings.push(`Category "${manifest.category}" is not in standard list (${ALLOWED_CATEGORIES.join(', ')}). It will appear under "Utilities".`);
   }
 
-  // Validate Tools
-  if (manifest.entryType === 'Assembly' && manifest.targetFramework !== 'net8.0-windows10.0.19041.0') {
+  // Validate Tools & Assembly TargetFramework
+  const isAssembly = manifest.entryType === 'Assembly' || Boolean(manifest.assemblyFileName || manifest.assemblyEntry);
+  if (isAssembly && manifest.targetFramework !== 'net8.0-windows10.0.19041.0') {
     errors.push('Assembly plugins must declare targetFramework "net8.0-windows10.0.19041.0"');
   }
 

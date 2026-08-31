@@ -115,32 +115,41 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
                 }
             }
 
+            var results = new (string CommandId, string RowTitle, CommandResult Result)[QuickCheckCommands.Length];
             var parallelOptions = new ParallelOptions
             {
                 MaxDegreeOfParallelism = Math.Min(Environment.ProcessorCount, QuickCheckCommands.Length),
             };
 
-            await Parallel.ForEachAsync(QuickCheckCommands, parallelOptions, async (item, ct) =>
-            {
-                (string commandId, string rowTitle) = item;
-                CommandResult result;
-                try
+            await Parallel.ForEachAsync(
+                Enumerable.Range(0, QuickCheckCommands.Length),
+                parallelOptions,
+                async (index, ct) =>
                 {
-                    result = await _dispatcher.ExecuteAsync(
-                        CommandRequest.Preview(commandId),
-                        new CommandExecutionOptions(false, DateTimeOffset.UtcNow.AddMinutes(2)),
-                        ct);
-                }
-                catch (Exception)
-                {
-                    result = new CommandResult(commandId, Guid.NewGuid(), CommandResultStatus.Failed,
-                        "checkup.dispatch_exception", "WinCare could not complete this read-only check.", null,
-                        DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, false);
-                }
+                    (string commandId, string rowTitle) = QuickCheckCommands[index];
+                    CommandResult result;
+                    try
+                    {
+                        result = await _dispatcher.ExecuteAsync(
+                            CommandRequest.Preview(commandId),
+                            new CommandExecutionOptions(false, DateTimeOffset.UtcNow.AddMinutes(2)),
+                            ct);
+                    }
+                    catch (Exception)
+                    {
+                        result = new CommandResult(commandId, Guid.NewGuid(), CommandResultStatus.Failed,
+                            "checkup.dispatch_exception", "WinCare could not complete this read-only check.", null,
+                            DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, false);
+                    }
 
+                    results[index] = (commandId, rowTitle, result);
+                });
+
+            foreach ((_, string rowTitle, CommandResult result) in results)
+            {
                 if (result.Status == CommandResultStatus.Succeeded)
                 {
-                    Interlocked.Increment(ref succeeded);
+                    succeeded++;
                 }
 
                 PageRow? row = Sections[0].Rows.FirstOrDefault(candidate => candidate.Title == rowTitle);
@@ -149,7 +158,7 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
                     row.State = result.Status == CommandResultStatus.Succeeded ? "Checked" : "Needs review";
                     row.Detail = result.Message;
                 }
-            });
+            }
 
             _hasResults = true;
             HealthScoreText = "—";

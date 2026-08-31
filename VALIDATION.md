@@ -116,7 +116,7 @@ The GitHub Actions workflow (`.github/workflows/native-winui.yml`) executes the 
    - Signed MSIX packages (`.msix`)
    - Single-file standalone executables (`.exe`)
    - Portable self-contained ZIP distributions (`-portable.zip`)
-4. **Release Gate**: Requires the pushed tag to exactly match `Directory.Build.props`, stages all assets via `tools/stage_release_assets.py`, and creates or refreshes the GitHub prerelease assets for that tag.
+4. **Release Gate**: Requires the pushed tag to exactly match `Directory.Build.props`, stages all assets via `tools/stage_release_assets.py`, and creates the GitHub release (flagged as `--prerelease` for tags containing `-rc`, `-beta`, or `-alpha`, or `--latest` for stable production releases; existing published releases are immutable and will fail closed if re-uploaded).
 
 Release builds do not require repository signing secrets. Each packaging job generates a temporary, runner-local development certificate, signs its architecture-specific MSIX, verifies its publisher and rejection of a tampered package, then removes the private identity. The matching public `.cer` is published with the release. Non-tag CI builds produce workflow artifacts, not GitHub release assets.
 

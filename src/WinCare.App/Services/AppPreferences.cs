@@ -45,9 +45,16 @@ public static class AppPreferences
 
     private static void Save(AppPreferenceData data)
     {
-        Directory.CreateDirectory(DirectoryPath);
-        string temporaryPath = FilePath + ".tmp";
-        File.WriteAllText(temporaryPath, JsonSerializer.Serialize(data, new JsonSerializerOptions { WriteIndented = true }));
-        File.Move(temporaryPath, FilePath, overwrite: true);
+        try
+        {
+            Directory.CreateDirectory(DirectoryPath);
+            string temporaryPath = FilePath + ".tmp";
+            File.WriteAllText(temporaryPath, JsonSerializer.Serialize(data, new JsonSerializerOptions { WriteIndented = true }));
+            File.Move(temporaryPath, FilePath, overwrite: true);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException)
+        {
+            // Retain in-memory preference state even if disk persistence fails temporarily
+        }
     }
 }

@@ -1,12 +1,12 @@
 # Interface screenshots
 
-The runtime images below were captured from the locally installed **v2.5.0.3 x64 MSIX** built from the `v2.5.0-rc2` source candidate. They are the source of truth for this candidate's interface. The companion concept images remain here as design references, and are explicitly marked as concepts.
+The runtime images below were captured from the locally installed **v2.5.0.6 x64 MSIX** built from the `v2.5.0-rc5` source candidate. They are the source of truth for this candidate's interface. The companion concept images remain here as design references, and are explicitly marked as concepts.
 
 ## Home
 
-### Runtime — v2.5.0-rc2 candidate
+### Runtime — v2.5.0-rc5 candidate
 
-![WinCare Home screen captured from the installed v2.5.0.3 candidate package](images/runtime-dashboard.png)
+![WinCare Home screen captured from the installed v2.5.0.6 candidate package](images/runtime-dashboard.png)
 
 ### Original concept
 
@@ -16,9 +16,9 @@ The runtime images below were captured from the locally installed **v2.5.0.3 x64
 
 ## Checkup
 
-### Runtime — v2.5.0-rc2 candidate
+### Runtime — v2.5.0-rc5 candidate
 
-![WinCare Checkup screen captured from the installed v2.5.0.3 candidate package](images/runtime-checkup.png)
+![WinCare Checkup screen captured from the installed v2.5.0.6 candidate package](images/runtime-checkup.png)
 
 ### Original concept
 

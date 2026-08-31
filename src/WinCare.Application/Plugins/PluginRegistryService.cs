@@ -277,19 +277,49 @@ public sealed class PluginRegistryService : IPluginRegistry
         _entries[manifest.Id] = entry;
     }
 
-    private void InstantiateAssemblyPlugin(PluginRegistryEntry entry, PluginManifest manifest)
+    private void CleanupInstantiatedPlugin(string pluginId, IPluginHost? host, PluginRegistryEntry? entry)
+    {
+        if (entry != null && host != null)
+        {
+            foreach (var cmd in entry.Commands)
+            {
+                try { host.UnregisterCommand(cmd.Id); } catch { }
+            }
+        }
+
+        if (_instantiatedPlugins.Remove(pluginId, out var existing))
+        {
+            try
+            {
+                if (existing.Plugin is IDisposable disp)
+                {
+                    disp.Dispose();
+                }
+            }
+            catch { }
+            try
+            {
+                existing.LoadContext?.Unload();
+            }
+            catch { }
+        }
+    }
+
+    private void InstantiateAssemblyPlugin(PluginRegistryEntry entry, PluginManifest manifest, IPluginHost? host = null)
     {
         var canonicalDir = Path.GetFullPath(entry.SourceDirectoryPath);
         var assemblyPath = Path.GetFullPath(Path.Combine(canonicalDir, manifest.AssemblyFileName!));
         var relativePath = Path.GetRelativePath(canonicalDir, assemblyPath);
         if (relativePath.StartsWith("..", StringComparison.Ordinal) || Path.IsPathRooted(relativePath))
         {
+            CleanupInstantiatedPlugin(manifest.Id, host, entry);
             _entries[manifest.Id] = entry with { State = PluginState.Error, ErrorMessage = "Security Violation: Assembly file path traverses outside plugin directory." };
             return;
         }
 
         if (!string.Equals(manifest.TargetFramework, AssemblyPluginLoader.SupportedTargetFramework, StringComparison.OrdinalIgnoreCase))
         {
+            CleanupInstantiatedPlugin(manifest.Id, host, entry);
             _entries[manifest.Id] = entry with { State = PluginState.Error, ErrorMessage = $"Assembly plugins must declare targetFramework '{AssemblyPluginLoader.SupportedTargetFramework}'." };
             return;
         }
@@ -297,10 +327,12 @@ public sealed class PluginRegistryService : IPluginRegistry
         var asmResult = AssemblyPluginLoader.LoadPluginAssembly(assemblyPath, manifest.PluginClassName);
         if (asmResult.Success && asmResult.Plugin != null)
         {
+            CleanupInstantiatedPlugin(manifest.Id, host, null);
             _instantiatedPlugins[manifest.Id] = (asmResult.Plugin, asmResult.LoadContext);
         }
         else if (!asmResult.Success)
         {
+            CleanupInstantiatedPlugin(manifest.Id, host, entry);
             _entries[manifest.Id] = entry with { State = PluginState.Error, ErrorMessage = asmResult.ErrorMessage ?? "Assembly load failed." };
         }
     }
@@ -325,7 +357,7 @@ public sealed class PluginRegistryService : IPluginRegistry
                     if (manifest.EntryType.Equals("Assembly", StringComparison.OrdinalIgnoreCase) &&
                         !string.IsNullOrWhiteSpace(manifest.AssemblyFileName))
                     {
-                        InstantiateAssemblyPlugin(entry, manifest);
+                        InstantiateAssemblyPlugin(entry, manifest, host);
                         if (!_instantiatedPlugins.ContainsKey(pluginId))
                         {
                             return;
