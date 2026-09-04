@@ -17,9 +17,8 @@ The native source distribution contains **zero PowerShell files**. Historical Po
 | **`WinCare.Domain`** | Strongly typed requests, results, command contracts, activity entries, sync models, and evidence records |
 | **`WinCare.Infrastructure`** | Windows API integration, process runner (`BoundedProcessRunner`), registry/WMI/Defender integration, Rust FFI bindings, encrypted cloud sync (AES-256-GCM), and persistent state stores |
 | **`WinCare.CommandCatalog`** | Embedded typed definitions and frozen data for all 259 command IDs + built-in plugin manifests |
-| **`WinCare.SourceGenerators`** | Compile-time Roslyn source generators for zero-overhead static command routing |
 | **`native/wincare-core`** | High-performance bounded native primitives (`sys_info`, `dir_size`, `sha256`) exported via a versioned C ABI |
-| **`native/wincare-guard`** | Standalone background health daemon monitoring RAM pressure, disk quota, and thermal status via Windows Toast XML notifications (Named Pipe IPC interface scaffolded) |
+| **`native/wincare-guard`** | Standalone background health daemon monitoring RAM pressure, disk quota, and thermal state, exposing a named-pipe health endpoint (`WinCareGuardIPC`); on critical thresholds it stages Windows Toast XML to a per-user queue directory (`%LOCALAPPDATA%`) for the app to display (no SCM service registration or native toast popup is wired yet) |
 | **`tools/wincare-plugin-cli`**| Node.js developer CLI for creating, validating, linting, and packaging community plugins |
 
 ```
@@ -91,8 +90,8 @@ The dispatcher fails closed for unknown, unavailable, disabled, or unmigrated co
 ## 4. Plugin Subsystem Trust Model & Package Admission
 
 1. **Publisher Signatures**: Remote catalog entries may provide a publisher public key and signature used to verify manifest bytes. Package-local keys and author names never establish trust. The current catalog is not independently signed or pinned, so this proves catalog/package consistency rather than publisher identity; an independently anchored catalog or publisher-key policy remains required.
-2. **Catalog Policy & Revocation Lists**: The remote catalog supplies `revokedPublishers` and `revokedPackages` lists. Revocation currently disables installation in the catalog UI; enforcement inside the installer and registry remains an explicit security gap.
-3. **Declared Capabilities & In-Process Disclosure**: Plugins execute in-process with user privileges. `PluginDetailDialog` presents explicit full-trust warnings, publisher trust badges, and capability declarations before installation.
+2. **Catalog Policy & Revocation Lists**: The remote catalog supplies `revokedPublishers` and `revokedPackages` lists. Revocation is enforced both in the catalog UI and independently at install time (`EnforceRevocationPolicy`), so a revoked package ID or publisher is rejected even if a caller bypasses UI filtering.
+3. **Declared Capabilities & In-Process Disclosure**: Plugins execute in-process with user privileges. `PluginDetailDialog` presents explicit full-trust warnings, publisher trust badges, and capability declarations before installation, and the installer enforces per-capability consent (`EnforceCapabilityConsent`) so every declared capability must be covered by the user's explicit consent.
 4. **Package ID Equality**: Package archive manifests must strictly match the target plugin ID before extraction and filesystem promotion.
 5. **SHA-256 Digest**: HTTPS catalog downloads require and verify a SHA-256 digest. Local file and direct-stream installation paths accept an optional digest for development and test scenarios.
 6. **Staging & Backup Isolation**: Updates create rollback snapshots in `.staging/backups/`, completely isolated from active discovery routines.
@@ -110,7 +109,7 @@ The AI Doctor subsystem strictly separates machine learning intent interpretatio
 User Symptom Description
          │
          ▼
-Local ONNX DirectML Classification (Intent & Symptom Extraction)
+Rule-Based Intent Classification (Intent & Symptom Extraction)
          │
          ▼
 Read-Only Hardware & OS Diagnostics (Disk capacity, RAM usage, System logs)
@@ -135,7 +134,7 @@ No mutative action may be executed by the AI Doctor without prior read-only evid
 ## 6. Rust Native Engine & Health Guard Daemon
 
 - **`wincare_core`**: Versioned C ABI (`sys_info`, `dir_size`, `sha256`) wrapped in `std::panic::catch_unwind` for bounded native execution.
-- **`wincare-guard`**: Autonomous background daemon monitoring RAM pressure, disk usage, and thermal state with Windows Toast XML notifications, structured JSON telemetry, and planned Named Pipe IPC interface scaffolding (`WinCareGuardIPC`).
+- **`wincare-guard`**: Autonomous background daemon monitoring RAM pressure, disk usage, and thermal state, exposing a named-pipe health endpoint (`WinCareGuardIPC`) that answers `ping`/`health`, and returning structured JSON telemetry. On critical thresholds it stages Windows Toast XML to a per-user queue directory (`%LOCALAPPDATA%`) and echoes it to stderr for the app to display; SCM service registration and a native toast popup are not yet wired.
 
 ---
 

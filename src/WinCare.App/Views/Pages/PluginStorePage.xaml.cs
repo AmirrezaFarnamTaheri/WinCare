@@ -109,7 +109,9 @@ public sealed partial class PluginStorePage : Page
         var result = await dialog.ShowAsync();
         if (result == ContentDialogResult.Primary && card.CanInstall)
         {
-            await ViewModel.InstallPluginAsync(card);
+            // Primary (Trust and install) implies consent to every declared capability the
+            // dialog listed; pass them through so the installer enforces the consent gate.
+            await ViewModel.InstallPluginAsync(card, card.Permissions);
         }
     }
 

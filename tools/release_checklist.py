@@ -19,7 +19,8 @@ def _get_product_version() -> str:
         prefix = tree.findtext(".//VersionPrefix", "2.5.0")
         suffix = tree.findtext(".//VersionSuffix", "")
         return f"{prefix}-{suffix}" if suffix else prefix
-    return "2.5.0-rc1"
+    # Keep the fallback aligned with Directory.Build.props (VersionPrefix/VersionSuffix).
+    return "2.5.0-rc5"
 
 CHECKS = [
     ("Visual tokens check", [PYTHON, "tools/verify_visual_tokens.py"], 120),

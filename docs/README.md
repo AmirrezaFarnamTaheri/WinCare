@@ -7,7 +7,7 @@ This directory is the product-facing and engineering reference for WinCare. Star
 | Document | Purpose |
 |---|---|
 | [User guide](User-Guide.md) | Install safely, navigate the app, understand approvals, and troubleshoot. |
-| [Interface screenshots](Screenshots.md) | Runtime captures from v2.5.0-rc1 alongside the original design concepts. |
+| [Interface screenshots](Screenshots.md) | Runtime captures from v2.5.0-rc5 alongside the original design concepts. |
 | [Release page](https://github.com/AmirrezaFarnamTaheri/WinCare/releases) | Current x64 and ARM64 packages, portable archives, certificates, and release notes. |
 
 ## Build or review it

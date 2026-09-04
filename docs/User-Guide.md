@@ -41,7 +41,7 @@ Use this guide to install WinCare, understand its safety prompts, and choose the
 | **Operating System** | Windows 10 (Version 2004 / Build 19041 or newer) or Windows 11 |
 | **Architecture** | 64-bit (`x64` or `ARM64`) |
 | **Memory (RAM)** | 2 GB minimum (4 GB recommended) |
-| **Disk Space** | ~150 MB for application and local ONNX runtime assets |
+| **Disk Space** | ~150 MB for the application and its bundled assets |
 | **Privileges** | Standard User for read-only diagnostics; Administrator privileges for mutating repairs |
 
 ---
@@ -197,10 +197,10 @@ Access the comprehensive catalog of **all 259 native commands**:
 ---
 
 ### 🧠 AI System Doctor
-WinCare features an on-device, privacy-first **AI System Doctor** powered by local ONNX DirectML inference:
+WinCare features an on-device, privacy-first **AI System Doctor** powered by a rule-based intent classifier that runs entirely locally:
 1. **Natural Language Chat**: Describe your computer's issue in plain English (e.g., *"My audio is crackling when watching videos"* or *"Drive C is almost out of space"*).
-2. **Intent & Symptom Extraction**: The local AI categorizes the symptom into specific diagnostic domains without sending any data over the internet.
-3. **Evidence Collection**: The AI executes safe, read-only system queries to gather hardware metrics and logs.
+2. **Intent & Symptom Extraction**: The local classifier categorizes the symptom into specific diagnostic domains without sending any data over the internet.
+3. **Evidence Collection**: The Doctor executes safe, read-only system queries to gather hardware metrics and logs.
 4. **Action Plan Execution**: The Doctor generates a structured `DoctorActionPlan` showing root causes and recommended steps. You review and approve each repair step before execution.
 
 ---
@@ -274,7 +274,7 @@ The second positional argument to `pack` is optional. If omitted, the CLI writes
 **A**: WinCare operates on a strict **fail-closed** policy. If a required dependency (e.g. a specific Windows feature or elevated privilege) is missing, or if an operation has not yet passed full live behavioral verification, WinCare blocks execution rather than pretending to succeed or corrupting system state.
 
 ### Q: Does WinCare send my data or diagnostic logs to the cloud?
-**A**: **No.** WinCare does not collect covert telemetry or transmit diagnostics to external servers. The AI System Doctor runs 100% locally on your machine via DirectML ONNX. Cloud Profile Sync is entirely optional and uses client-side AES-256-GCM encryption before upload.
+**A**: **No.** WinCare does not collect covert telemetry or transmit diagnostics to external servers. The AI System Doctor runs 100% locally on your machine using an on-device rule-based classifier. Cloud Profile Sync is entirely optional and uses client-side AES-256-GCM encryption before upload.
 
 ### Q: Can I run WinCare on Windows 10?
 **A**: Yes. WinCare supports Windows 10 (version 2004 / build 19041 and higher) as well as all editions of Windows 11.

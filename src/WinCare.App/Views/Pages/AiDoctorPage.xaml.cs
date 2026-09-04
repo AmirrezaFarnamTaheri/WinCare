@@ -63,7 +63,18 @@ public sealed partial class AiDoctorPage : Page
             try
             {
                 var result = await ViewModel.ExecuteStepAsync(step, userApproved: userApproved);
-                btn.Content = result.Status == WinCare.Domain.Commands.CommandResultStatus.Succeeded ? "✓ Done" : "⚠ Failed";
+                btn.Content = result.Status switch
+                {
+                    WinCare.Domain.Commands.CommandResultStatus.Succeeded => "✓ Done",
+                    WinCare.Domain.Commands.CommandResultStatus.Blocked => "⚠ Blocked",
+                    _ => "⚠ Failed",
+                };
+                // Surface parameter-missing / validation blocks as a reviewable hint instead of
+                // a silent "Failed" state.
+                if (result.Status == WinCare.Domain.Commands.CommandResultStatus.Blocked)
+                {
+                    ToolTipService.SetToolTip(btn, result.Message);
+                }
             }
             catch (Exception ex)
             {

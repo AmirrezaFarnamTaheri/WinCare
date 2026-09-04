@@ -17,6 +17,7 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
     ];
 
     private readonly CommandDispatcher _dispatcher;
+    private readonly List<PageRow> _resultRows = [];
     private bool _isRunning;
     private string _runSummary = "No check has been run yet.";
     private string _healthScoreText = "—";
@@ -81,10 +82,12 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
             return;
         }
 
+        // The Results section shows distinct per-check outcomes, not a repeat of the
+        // Quick check readiness rows.
         CurrentRows.Clear();
         if (_hasResults)
         {
-            foreach (PageRow row in Sections[0].Rows)
+            foreach (PageRow row in _resultRows)
             {
                 row.IsCompact = IsCompactLayout;
                 CurrentRows.Add(row);
@@ -145,7 +148,9 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
                     results[index] = (commandId, rowTitle, result);
                 });
 
-            foreach ((_, string rowTitle, CommandResult result) in results)
+            // Populate distinct, per-check result rows for the Results section.
+            _resultRows.Clear();
+            foreach ((string commandId, string rowTitle, CommandResult result) in results)
             {
                 if (result.Status == CommandResultStatus.Succeeded)
                 {
@@ -158,11 +163,25 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
                     row.State = result.Status == CommandResultStatus.Succeeded ? "Checked" : "Needs review";
                     row.Detail = result.Message;
                 }
+
+                _resultRows.Add(new PageRow(
+                    rowTitle,
+                    commandId,
+                    result.Status == CommandResultStatus.Succeeded ? "Passed" : "Needs review",
+                    result.Message));
             }
 
             _hasResults = true;
-            HealthScoreText = "—";
-            HealthScoreDetail = succeeded == QuickCheckCommands.Length ? "evidence collected" : "review results";
+
+            // Compute a readiness score from the fraction of read-only checks that passed.
+            // It is a check-completion indicator, not a machine diagnosis.
+            int score = QuickCheckCommands.Length == 0
+                ? 0
+                : (int)Math.Round(100.0 * succeeded / QuickCheckCommands.Length);
+            HealthScoreText = $"{score}%";
+            HealthScoreDetail = succeeded == QuickCheckCommands.Length
+                ? $"all {succeeded} checks passed"
+                : $"{succeeded} of {QuickCheckCommands.Length} checks passed";
             RunSummary = $"{succeeded} of {QuickCheckCommands.Length} read-only checks completed. Review category details before taking any action.";
 
             if (SelectedIndex == ResultsSectionIndex)

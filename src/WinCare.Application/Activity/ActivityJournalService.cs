@@ -1,14 +1,45 @@
+using System.Text.Json;
 using WinCare.Domain.Activity;
+using WinCare.Domain.Serialization;
 
 namespace WinCare.Application.Activity;
 
 /// <summary>
-/// Thread-safe, append-only in-process journal for command activity records.
+/// Thread-safe, append-only journal for command activity records, persisted to disk so the
+/// audit trail survives application restarts.
 /// </summary>
 public sealed class ActivityJournalService : IActivityJournalService
 {
-    private readonly List<ActivityRecord> _records = [];
+    private const int MaxPersistedRecords = 200;
+    private const long MaxJournalFileBytes = 4 * 1024 * 1024;
+
+    private static readonly JsonSerializerOptions PersistenceOptions = new()
+    {
+        TypeInfoResolver = WinCareDomainJsonContext.Default,
+        WriteIndented = true,
+    };
+
+    private readonly string _journalFilePath;
+    private readonly List<ActivityRecord> _records;
     private readonly object _lock = new();
+
+    /// <summary>
+    /// Initializes the journal, restoring any previously persisted records.
+    /// </summary>
+    public ActivityJournalService(string? journalFilePath = null)
+    {
+        if (string.IsNullOrWhiteSpace(journalFilePath))
+        {
+            var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+            _journalFilePath = Path.Combine(localAppData, "WinCare", "activity.json");
+        }
+        else
+        {
+            _journalFilePath = journalFilePath;
+        }
+
+        _records = LoadCore();
+    }
 
     /// <summary>Returns a snapshot of all records. Safe to call from any thread.</summary>
     public IReadOnlyList<ActivityRecord> GetAll()
@@ -36,6 +67,7 @@ public sealed class ActivityJournalService : IActivityJournalService
         lock (_lock)
         {
             _records.Add(record);
+            SaveCore();
         }
         return record;
     }
@@ -72,6 +104,58 @@ public sealed class ActivityJournalService : IActivityJournalService
                 Result = result,
                 UndoAvailable = undoAvailable,
             };
+            SaveCore();
+        }
+    }
+
+    private List<ActivityRecord> LoadCore()
+    {
+        try
+        {
+            if (!File.Exists(_journalFilePath))
+            {
+                return new List<ActivityRecord>();
+            }
+
+            var info = new FileInfo(_journalFilePath);
+            if (info.Length > MaxJournalFileBytes)
+            {
+                return new List<ActivityRecord>();
+            }
+
+            var records = JsonSerializer.Deserialize<List<ActivityRecord>>(File.ReadAllText(_journalFilePath), PersistenceOptions);
+            if (records is null)
+            {
+                return new List<ActivityRecord>();
+            }
+
+            return records.OrderBy(r => r.StartedAt).TakeLast(MaxPersistedRecords).ToList();
+        }
+        catch (Exception ex) when (ex is IOException or JsonException or UnauthorizedAccessException)
+        {
+            return new List<ActivityRecord>();
+        }
+    }
+
+    private void SaveCore()
+    {
+        try
+        {
+            var directory = Path.GetDirectoryName(_journalFilePath);
+            if (!string.IsNullOrEmpty(directory))
+            {
+                Directory.CreateDirectory(directory);
+            }
+
+            var tail = _records.OrderBy(r => r.StartedAt).TakeLast(MaxPersistedRecords).ToList();
+            var json = JsonSerializer.Serialize(tail, PersistenceOptions);
+            var temporaryPath = _journalFilePath + ".tmp";
+            File.WriteAllText(temporaryPath, json);
+            File.Move(temporaryPath, _journalFilePath, overwrite: true);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            // The in-memory journal remains authoritative even if disk persistence fails.
         }
     }
 }

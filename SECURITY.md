@@ -53,10 +53,24 @@ We will acknowledge receipt within 48 hours and provide status updates as we inv
 - `ex.Message` is never written to user-visible activity journals or telemetry, eliminating accidental path or PII exposure.
 
 ### 5. Plugin Trust & Cryptographic Package Admission
-- Plugins execute in-process with user privileges.
+- Plugins execute in-process with user privileges; script-backed plugins run only after the
+  dispatcher's two-phase preview → approve gate, and installed plugins are disabled until the
+  user enables them.
 - Manifest IDs must strictly equal the target package ID (`manifest.Id == targetPluginId`).
-- Every remote and local package is validated with full-stream SHA-256 integrity verification.
-- Packages support digital signatures (`wincare-plugin.sig` or manifest `signature`) verified against RSA SHA-256 and ECDSA public keys (`publisher.pem`).
+- **HTTPS** package downloads require a full-stream SHA-256 digest and a publisher key +
+  signature supplied by the independently trusted catalog boundary. `file://` and
+  direct-stream installs verify the SHA-256 digest when one is supplied (an omitted digest is
+  accepted only for these non-remote paths).
+- Package authenticity is established from an external sidecar signature (`wincare-plugin.sig`)
+  verified against an RSA SHA-256 or ECDSA public key provided by the trusted catalog boundary.
+  Inline manifest `signature` fields are not accepted (the signed bytes would otherwise include
+  the signature itself).
+- Every capability the manifest declares must be covered by the user's explicit per-capability
+  consent at install; an empty consent set rejects any capability-bearing package.
+- Revoked package IDs and publishers are enforced at install time, independent of catalog UI
+  filtering.
+- The installer records an admission digest (`.wincare-manifest.sha256`) that is re-verified on
+  every load/discovery, so post-install manifest modification is detected.
 - Core namespaces (`wincare.core.*`, `system.*`) are strictly reserved and cannot be overwritten.
 - Plugin updates create isolated backups in `.staging/backups/` outside active discovery paths.
 

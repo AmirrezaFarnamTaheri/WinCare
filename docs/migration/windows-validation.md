@@ -88,7 +88,7 @@ dotnet publish src/WinCare.App/WinCare.App.csproj -c Release -p:Platform=x64 -r 
   -o artifacts/portable/win-x64
 
 # Package into deterministic ZIP archive
-python tools/package_portable.py artifacts/portable/win-x64 artifacts/WinCare-v2.5.0-rc1-x64-portable.zip
+python tools/package_portable.py artifacts/portable/win-x64 artifacts/WinCare-v2.5.0-rc5-x64-portable.zip
 ```
 
 ---
@@ -98,7 +98,7 @@ python tools/package_portable.py artifacts/portable/win-x64 artifacts/WinCare-v2
 After completing all verification matrices, generate the deterministic release candidate archives:
 
 ```bash
-python tools/finalize_native_release.py --output artifacts/finalization --version 2.5.0-rc1 --mode rc
+python tools/finalize_native_release.py --output artifacts/finalization --version 2.5.0-rc5 --mode rc
 ```
 
 The version must match `VersionPrefix` plus the optional `VersionSuffix` in `Directory.Build.props`. Production mode fails closed while any catalog command lacks `BehaviorVerified` status.

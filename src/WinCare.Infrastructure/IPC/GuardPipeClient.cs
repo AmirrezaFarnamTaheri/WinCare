@@ -11,6 +11,7 @@ namespace WinCare.Infrastructure.IPC
     public sealed class GuardPipeClient : IAsyncDisposable
     {
         private const string PipeName = "WinCareGuardIPC";
+        private const int MaxResponseBytes = 64 * 1024;
         private NamedPipeClientStream? _pipeStream;
         private readonly SemaphoreSlim _lock = new(1, 1);
 
@@ -59,8 +60,7 @@ namespace WinCare.Infrastructure.IPC
                 await _pipeStream!.WriteAsync(payloadBytes, cancellationToken);
                 await _pipeStream.FlushAsync(cancellationToken);
 
-                using var reader = new StreamReader(_pipeStream, Encoding.UTF8, leaveOpen: true);
-                var response = await reader.ReadLineAsync(cancellationToken);
+                var response = await ReadResponseLineAsync(cancellationToken);
                 if (response == null)
                 {
                     ResetConnection();
@@ -83,6 +83,42 @@ namespace WinCare.Infrastructure.IPC
             {
                 _lock.Release();
             }
+        }
+
+        /// <summary>
+        /// Reads a single newline-terminated response line directly off the pipe with a hard
+        /// byte cap. Reading the raw stream (instead of wrapping a fresh <see cref="StreamReader"/>
+        /// per request) avoids a reader buffering past the first line and silently discarding
+        /// the remainder, and bounds memory against an oversized or non-terminating peer.
+        /// </summary>
+        private async Task<string?> ReadResponseLineAsync(CancellationToken cancellationToken)
+        {
+            using var buffer = new MemoryStream();
+            var chunk = new byte[256];
+            while (true)
+            {
+                int read = await _pipeStream!.ReadAsync(chunk, cancellationToken);
+                if (read == 0)
+                {
+                    break;
+                }
+
+                for (int i = 0; i < read; i++)
+                {
+                    byte b = chunk[i];
+                    if (b == (byte)'\n')
+                    {
+                        return Encoding.UTF8.GetString(buffer.ToArray()).TrimEnd('\r');
+                    }
+                    buffer.WriteByte(b);
+                    if (buffer.Length > MaxResponseBytes)
+                    {
+                        throw new IOException($"Guard response exceeded the {MaxResponseBytes}-byte limit.");
+                    }
+                }
+            }
+
+            return buffer.Length > 0 ? Encoding.UTF8.GetString(buffer.ToArray()).TrimEnd('\r') : null;
         }
 
         private void ResetConnection()

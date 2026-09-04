@@ -1,7 +1,8 @@
 # T6.3 — Dependabot configuration for WinCare
-# All four workflow files pin GitHub Actions to SHA digests (correct security
-# practice). This config makes Dependabot propose updates automatically so
-# pinned digests don't silently rot behind new releases.
+# Both workflow files (native-winui.yml and native-release-candidate.yml) pin
+# GitHub Actions to SHA digests (correct security practice). This config makes
+# Dependabot propose updates automatically so pinned digests don't silently rot
+# behind new releases.
 #
 # Scope: github-actions only. Python build tools are pinned in tools/ scripts
 # via requirements files; add a pip ecosystem entry here if requirements.txt

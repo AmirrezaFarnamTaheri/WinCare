@@ -5,7 +5,10 @@ using System.Threading.Tasks;
 
 namespace WinCare.Application.Diagnostics
 {
-    public interface IOnnxInferenceEngine
+    /// <summary>
+    /// Contract for classifying a free-text symptom description into a diagnostic intent.
+    /// </summary>
+    public interface IIntentInferenceEngine
     {
         bool IsInitialized { get; }
         TimeSpan ColdStartDuration { get; }
@@ -13,34 +16,37 @@ namespace WinCare.Application.Diagnostics
         Task<string> PredictIntentAsync(string prompt, CancellationToken cancellationToken = default);
     }
 
-    public sealed class OnnxInferenceEngine : IOnnxInferenceEngine
+    /// <summary>
+    /// Deterministic, on-device rule-based intent classifier for the AI System Doctor.
+    /// </summary>
+    /// <remarks>
+    /// This classifier is intentionally a keyword/heuristic matcher. It performs no neural
+    /// inference and requires no model weights — there is no ONNX Runtime or DirectML
+    /// dependency in this application. "Initialization" therefore only records the
+    /// (near-zero) cold-start cost so callers and diagnostics can report it honestly.
+    /// </remarks>
+    public sealed class RuleBasedIntentInferenceEngine : IIntentInferenceEngine
     {
-        private readonly IModelManager _modelManager;
         private bool _isInitialized;
         private TimeSpan _coldStartDuration;
 
         public bool IsInitialized => _isInitialized;
         public TimeSpan ColdStartDuration => _coldStartDuration;
 
-        public OnnxInferenceEngine(IModelManager modelManager)
-        {
-            _modelManager = modelManager ?? throw new ArgumentNullException(nameof(modelManager));
-        }
-
         public async Task<bool> InitializeAsync(CancellationToken cancellationToken = default)
         {
             var sw = Stopwatch.StartNew();
             try
             {
-                _modelManager.EnsureModelDirectoryCreated();
-                // Simulating fast DirectML session initialization or fallback tensor graph setup
-                await Task.Delay(25, cancellationToken);
+                cancellationToken.ThrowIfCancellationRequested();
+                // No model or accelerator session is loaded: classification is rule-based.
+                await Task.Yield();
                 _isInitialized = true;
                 return true;
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[OnnxInferenceEngine] Init error: {ex.Message}");
+                Debug.WriteLine($"[RuleBasedIntentInferenceEngine] Init error: {ex.Message}");
                 _isInitialized = false;
                 return false;
             }
@@ -58,7 +64,7 @@ namespace WinCare.Application.Diagnostics
                 await InitializeAsync(cancellationToken);
             }
 
-            // High precision heuristic intent parser mapping semantic tokens
+            // Deterministic heuristic intent parser mapping semantic tokens to domains.
             await Task.Yield();
             var lower = prompt.ToLowerInvariant();
 

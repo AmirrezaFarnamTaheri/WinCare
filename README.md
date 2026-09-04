@@ -19,10 +19,10 @@
 ## See it at a glance
 
 <p align="center">
-  <img src="docs/images/runtime-dashboard.png" alt="WinCare Home screen captured from the installed v2.5.0.3 release candidate package" width="900" />
+  <img src="docs/images/runtime-dashboard.png" alt="WinCare Home screen captured from the installed v2.5.0-rc5 release candidate package" width="900" />
 </p>
 
-<p align="center"><em>Real x64 runtime capture from the v2.5.0-rc2 candidate. The score remains unavailable until a check has collected evidence.</em></p>
+<p align="center"><em>Real x64 runtime capture from the v2.5.0-rc5 candidate. The score remains unavailable until a check has collected evidence.</em></p>
 
 WinCare brings everyday Windows care into one focused desktop app. It starts with evidence, keeps read-only work separate from changes, and records what happened so technicians and power users can make informed decisions.
 
@@ -65,7 +65,7 @@ Observe → preflight → explain risk and elevation → explicit approval → e
 - Unknown, unavailable, unauthorized, and unsafe operations fail closed.
 - Read-only diagnostic work is separated from mutating repair work.
 - The native file-system and process boundaries reject unsafe traversal and unbounded execution paths.
-- Plugin installation validates package identity and integrity; remote installation remains disabled until a trusted, independently anchored catalog is configured.
+- Plugin installation validates package identity and integrity: remote packages require a SHA-256 digest and a publisher key + signature from the independently trusted catalog boundary, per-capability consent, and revocation checks enforced at install time.
 
 ## What’s inside
 
@@ -106,7 +106,7 @@ Follow [CONTRIBUTING.md](CONTRIBUTING.md) for environment setup, review expectat
 | Start here | What you’ll find |
 |---|---|
 | [User guide](docs/User-Guide.md) | Installation, navigation, safe-operation guidance, and troubleshooting. |
-| [Interface screenshots](docs/Screenshots.md) | Runtime captures from the v2.5.0-rc2 candidate alongside the original design concepts. |
+| [Interface screenshots](docs/Screenshots.md) | Runtime captures from the v2.5.0-rc5 candidate alongside the original design concepts. |
 | [Architecture](docs/Architecture.md) | Layer boundaries, trust model, lifecycle, native integration, and packaging. |
 | [Validation](VALIDATION.md) | Evidence model, checks, and promotion gates. |
 | [Security](SECURITY.md) | Security invariants and private vulnerability reporting. |

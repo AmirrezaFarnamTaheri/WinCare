@@ -28,6 +28,15 @@ public class PluginInstallerService : IPluginInstallerService
     /// <summary>Maximum allowed uncompressed extraction size (200 MB).</summary>
     public const long MaxUncompressedSizeBytes = 200 * 1024 * 1024;
 
+    /// <summary>Maximum allowed manifest / signature file size (1 MB).</summary>
+    public const int MaxManifestBytes = 1024 * 1024;
+
+    /// <summary>Name of the admission-digest sidecar persisted beside an installed manifest.</summary>
+    public const string ManifestDigestFileName = ".wincare-manifest.sha256";
+
+    /// <summary>Maximum time to wait for a cross-process plugin operation lock before failing.</summary>
+    private static readonly TimeSpan OperationLockTimeout = TimeSpan.FromSeconds(30);
+
     private readonly HttpClient _httpClient;
     private readonly string _pluginsBaseDirectory;
     private readonly string _operationLocksDirectory;
@@ -58,12 +67,37 @@ public class PluginInstallerService : IPluginInstallerService
         => InstallPluginFromPackageAsync(packageUrl, expectedPluginId, expectedSha256, null, null, cancellationToken);
 
     /// <inheritdoc />
+    public Task<string> InstallPluginFromPackageAsync(
+        string packageUrl,
+        string? expectedPluginId,
+        string? expectedSha256,
+        string? expectedPublisherPublicKeyPem,
+        string? expectedPublisherSignature,
+        CancellationToken cancellationToken = default)
+        => InstallPluginFromPackageAsync(packageUrl, expectedPluginId, expectedSha256, expectedPublisherPublicKeyPem, expectedPublisherSignature, null, null, cancellationToken);
+
+    /// <inheritdoc />
+    public Task<string> InstallPluginFromPackageAsync(
+        string packageUrl,
+        string? expectedPluginId,
+        string? expectedSha256,
+        string? expectedPublisherPublicKeyPem,
+        string? expectedPublisherSignature,
+        IReadOnlyCollection<string>? revokedPackageIds,
+        IReadOnlyCollection<string>? revokedPublishers,
+        CancellationToken cancellationToken = default)
+        => InstallPluginFromPackageAsync(packageUrl, expectedPluginId, expectedSha256, expectedPublisherPublicKeyPem, expectedPublisherSignature, revokedPackageIds, revokedPublishers, consentedCapabilities: null, cancellationToken);
+
+    /// <inheritdoc />
     public async Task<string> InstallPluginFromPackageAsync(
         string packageUrl,
         string? expectedPluginId,
         string? expectedSha256,
         string? expectedPublisherPublicKeyPem,
         string? expectedPublisherSignature,
+        IReadOnlyCollection<string>? revokedPackageIds,
+        IReadOnlyCollection<string>? revokedPublishers,
+        IReadOnlyCollection<string>? consentedCapabilities,
         CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(packageUrl))
@@ -155,7 +189,7 @@ public class PluginInstallerService : IPluginInstallerService
             }
 
             memoryStream.Position = 0;
-            return await InstallPluginFromStreamAsync(memoryStream, pluginId, expectedSha256, expectedPublisherPublicKeyPem, expectedPublisherSignature, cancellationToken).ConfigureAwait(false);
+            return await InstallPluginFromStreamAsync(memoryStream, pluginId, expectedSha256, expectedPublisherPublicKeyPem, expectedPublisherSignature, revokedPackageIds, revokedPublishers, consentedCapabilities, cancellationToken).ConfigureAwait(false);
         }
         finally
         {
@@ -236,12 +270,37 @@ public class PluginInstallerService : IPluginInstallerService
         => InstallPluginFromStreamAsync(archiveStream, targetPluginId, expectedSha256, null, null, cancellationToken);
 
     /// <inheritdoc />
+    public Task<string> InstallPluginFromStreamAsync(
+        Stream archiveStream,
+        string targetPluginId,
+        string? expectedSha256,
+        string? expectedPublisherPublicKeyPem,
+        string? expectedPublisherSignature,
+        CancellationToken cancellationToken = default)
+        => InstallPluginFromStreamAsync(archiveStream, targetPluginId, expectedSha256, expectedPublisherPublicKeyPem, expectedPublisherSignature, null, null, cancellationToken);
+
+    /// <inheritdoc />
+    public Task<string> InstallPluginFromStreamAsync(
+        Stream archiveStream,
+        string targetPluginId,
+        string? expectedSha256,
+        string? expectedPublisherPublicKeyPem,
+        string? expectedPublisherSignature,
+        IReadOnlyCollection<string>? revokedPackageIds,
+        IReadOnlyCollection<string>? revokedPublishers,
+        CancellationToken cancellationToken = default)
+        => InstallPluginFromStreamAsync(archiveStream, targetPluginId, expectedSha256, expectedPublisherPublicKeyPem, expectedPublisherSignature, revokedPackageIds, revokedPublishers, consentedCapabilities: null, cancellationToken);
+
+    /// <inheritdoc />
     public async Task<string> InstallPluginFromStreamAsync(
         Stream archiveStream,
         string targetPluginId,
         string? expectedSha256,
         string? expectedPublisherPublicKeyPem,
         string? expectedPublisherSignature,
+        IReadOnlyCollection<string>? revokedPackageIds,
+        IReadOnlyCollection<string>? revokedPublishers,
+        IReadOnlyCollection<string>? consentedCapabilities,
         CancellationToken cancellationToken = default)
     {
         if (archiveStream == null)
@@ -355,7 +414,15 @@ public class PluginInstallerService : IPluginInstallerService
                 throw new InvalidOperationException("Package admission rejected: Missing plugin manifest ('wincare-plugin.json' or 'plugin.json').");
             }
 
-            var manifestJson = await File.ReadAllTextAsync(manifestPath, cancellationToken).ConfigureAwait(false);
+            // Bounded manifest read: reject oversized manifests before parsing (defense-in-depth).
+            var manifestInfo = new FileInfo(manifestPath);
+            if (manifestInfo.Length > MaxManifestBytes)
+            {
+                throw new InvalidOperationException($"Package admission rejected: Manifest exceeds the {MaxManifestBytes}-byte size limit.");
+            }
+
+            byte[] manifestRawBytes = await File.ReadAllBytesAsync(manifestPath, cancellationToken).ConfigureAwait(false);
+            var manifestJson = System.Text.Encoding.UTF8.GetString(manifestRawBytes);
             using var doc = JsonDocument.Parse(manifestJson);
             if (!doc.RootElement.TryGetProperty("id", out var idProp) || string.IsNullOrWhiteSpace(idProp.GetString()))
             {
@@ -369,23 +436,32 @@ public class PluginInstallerService : IPluginInstallerService
                 throw new InvalidOperationException($"Package admission rejected: Manifest ID '{manifestId}' does not match expected target plugin ID '{targetPluginId}'.");
             }
 
-            // Cryptographic Publisher Authenticity & Signature Verification
+            var author = doc.RootElement.TryGetProperty("author", out var authorProp) ? authorProp.GetString() ?? string.Empty : string.Empty;
+
+            // Installer-side revocation enforcement: block revoked package IDs and publishers
+            // even if a caller bypasses the catalog UI's revocation filtering.
+            EnforceRevocationPolicy(manifestId, author, revokedPackageIds, revokedPublishers);
+
+            // Per-capability consent enforcement: when a caller supplies an explicit consent
+            // set (the store UI always does), every capability the manifest declares must be
+            // covered by it. An empty consent set therefore rejects any capability-bearing plugin.
+            EnforceCapabilityConsent(doc.RootElement, consentedCapabilities);
+
+            // Signature verification uses the external sidecar signature only. An inline
+            // manifest 'signature' property would be self-referential (the signed bytes would
+            // include the signature itself) and is therefore not supported.
             string? manifestSignature = null;
-            if (doc.RootElement.TryGetProperty("signature", out var sigProp) && !string.IsNullOrWhiteSpace(sigProp.GetString()))
+            var sigFilePath = Path.Combine(tempExtractDir, "wincare-plugin.sig");
+            if (File.Exists(sigFilePath))
             {
-                manifestSignature = sigProp.GetString();
-            }
-            else
-            {
-                var sigFilePath = Path.Combine(tempExtractDir, "wincare-plugin.sig");
-                if (File.Exists(sigFilePath))
+                var sigInfo = new FileInfo(sigFilePath);
+                if (sigInfo.Length > MaxManifestBytes)
                 {
-                    manifestSignature = (await File.ReadAllTextAsync(sigFilePath, cancellationToken).ConfigureAwait(false)).Trim();
+                    throw new InvalidOperationException("Package admission rejected: Signature file exceeds the size limit.");
                 }
+                manifestSignature = (await File.ReadAllTextAsync(sigFilePath, cancellationToken).ConfigureAwait(false)).Trim();
             }
 
-            var author = doc.RootElement.TryGetProperty("author", out var authorProp) ? authorProp.GetString() ?? string.Empty : string.Empty;
-            byte[] manifestRawBytes = await File.ReadAllBytesAsync(manifestPath, cancellationToken).ConfigureAwait(false);
             if (manifestSignature != null && string.IsNullOrWhiteSpace(expectedPublisherSignature))
             {
                 throw new InvalidOperationException("Package admission rejected: Package-supplied signature is not an independent trust assertion.");
@@ -401,6 +477,14 @@ public class PluginInstallerService : IPluginInstallerService
             {
                 throw new InvalidOperationException($"Package admission rejected: Digital signature verification failed ({trustLevel}).");
             }
+
+            // Persist the admission digest so discovery can re-verify the manifest has not
+            // been modified after install (tamper-evidence at load time).
+            var manifestDigest = Convert.ToHexString(SHA256.HashData(manifestRawBytes)).ToLowerInvariant();
+            await File.WriteAllTextAsync(
+                Path.Combine(tempExtractDir, ManifestDigestFileName),
+                manifestDigest,
+                cancellationToken).ConfigureAwait(false);
 
             var finalPluginId = manifestId;
             var finalTargetDir = ValidateAndGetPluginDirectory(finalPluginId);
@@ -507,12 +591,14 @@ public class PluginInstallerService : IPluginInstallerService
     /// Acquires an exclusive, cross-process lock for mutations to a single plugin.
     /// The lock file is intentionally retained after release; the handle's sharing
     /// mode, not file deletion, defines ownership and avoids delete/create races.
+    /// Acquisition fails closed after a bounded wait rather than busy-waiting forever.
     /// </summary>
     private async Task<FileStream> AcquirePluginOperationLockAsync(string pluginId, CancellationToken cancellationToken)
     {
         Directory.CreateDirectory(_operationLocksDirectory);
         var lockPath = Path.Combine(_operationLocksDirectory, $"{pluginId}.lock");
 
+        var deadline = DateTime.UtcNow + OperationLockTimeout;
         while (true)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -526,10 +612,81 @@ public class PluginInstallerService : IPluginInstallerService
                     bufferSize: 1,
                     FileOptions.Asynchronous);
             }
-            catch (IOException)
+            catch (IOException) when (DateTime.UtcNow < deadline)
             {
                 await Task.Delay(TimeSpan.FromMilliseconds(50), cancellationToken).ConfigureAwait(false);
             }
+            catch (IOException)
+            {
+                throw new TimeoutException(
+                    $"Timed out after {OperationLockTimeout.TotalSeconds:0} seconds waiting for the plugin operation lock '{pluginId}'. Another installer may be active.");
+            }
+        }
+    }
+
+    /// <summary>
+    /// Enforces the catalog's revocation advisory at admission time: packages whose ID or
+    /// author is revoked are rejected before extraction promotion.
+    /// </summary>
+    private static void EnforceRevocationPolicy(
+        string manifestId,
+        string author,
+        IReadOnlyCollection<string>? revokedPackageIds,
+        IReadOnlyCollection<string>? revokedPublishers)
+    {
+        var revokedPkgs = new HashSet<string>(revokedPackageIds ?? Array.Empty<string>(), StringComparer.OrdinalIgnoreCase);
+        var revokedPubs = new HashSet<string>(revokedPublishers ?? Array.Empty<string>(), StringComparer.OrdinalIgnoreCase);
+
+        if (revokedPkgs.Contains(manifestId))
+        {
+            throw new InvalidOperationException($"Package admission rejected: Plugin '{manifestId}' is listed on the security revocation advisory.");
+        }
+
+        if (!string.IsNullOrWhiteSpace(author) && revokedPubs.Contains(author))
+        {
+            throw new InvalidOperationException($"Package admission rejected: Publisher '{author}' is listed on the security revocation advisory.");
+        }
+    }
+
+    /// <summary>
+    /// Enforces per-capability user consent at admission time. When
+    /// <paramref name="consentedCapabilities"/> is non-null, any manifest capability outside
+    /// the consented set rejects the package. When it is null, the gate is skipped (used by
+    /// internal/test callers that do not route through the store consent flow).
+    /// </summary>
+    private static void EnforceCapabilityConsent(JsonElement manifestRoot, IReadOnlyCollection<string>? consentedCapabilities)
+    {
+        if (consentedCapabilities == null)
+        {
+            return;
+        }
+
+        var consented = new HashSet<string>(consentedCapabilities, StringComparer.OrdinalIgnoreCase);
+
+        if (!manifestRoot.TryGetProperty("declaredCapabilities", out var declaredElement) ||
+            declaredElement.ValueKind != JsonValueKind.Array)
+        {
+            return; // No declared capabilities means nothing to consent to.
+        }
+
+        var undeclared = new List<string>();
+        foreach (JsonElement capability in declaredElement.EnumerateArray())
+        {
+            if (capability.ValueKind == JsonValueKind.String)
+            {
+                var value = capability.GetString();
+                if (!string.IsNullOrWhiteSpace(value) && !consented.Contains(value))
+                {
+                    undeclared.Add(value);
+                }
+            }
+        }
+
+        if (undeclared.Count > 0)
+        {
+            throw new InvalidOperationException(
+                "Package admission rejected: Plugin declares capabilities that were not consented to: " +
+                string.Join(", ", undeclared) + ".");
         }
     }
 

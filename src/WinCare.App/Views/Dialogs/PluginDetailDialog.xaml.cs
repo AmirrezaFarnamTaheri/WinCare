@@ -26,15 +26,25 @@ public sealed partial class PluginDetailDialog : ContentDialog
             ? item.Permissions 
             : new[] { "Standard Execution (No special permissions)" };
 
-        PublisherTrustText.Text = item.IsRevoked ? "Revoked" : "Remote installation disabled for this release";
-        IsPrimaryButtonEnabled = false;
-        PrimaryButtonText = "Installation unavailable";
+        // Installation is gated on an independent publisher trust anchor (a catalog-supplied
+        // public key + manifest signature). Without it, the primary button stays disabled and
+        // the dialog explains why, so catalog metadata alone can never drive an install.
+        bool verified = !string.IsNullOrWhiteSpace(item.PublicKeyPem) &&
+                        !string.IsNullOrWhiteSpace(item.Signature) &&
+                        !string.IsNullOrWhiteSpace(item.PackageUrl);
+
+        PublisherTrustText.Text = item.IsRevoked
+            ? "Revoked"
+            : verified ? "Catalog-signed (verified)" : "Unsigned / trust not configured";
+        IsPrimaryButtonEnabled = verified && !item.IsRevoked;
+        PrimaryButtonText = verified && !item.IsRevoked ? "Trust and install" : "Installation unavailable";
 
         if (item.IsRevoked)
         {
             RevocationBanner.Visibility = Microsoft.UI.Xaml.Visibility.Visible;
             RevocationReasonText.Text = item.RevocationReason ?? "This package has been revoked by security policy.";
             IsPrimaryButtonEnabled = false;
+            PrimaryButtonText = "Installation unavailable";
         }
 
         CommandsProvidedText.Text = item.CommandsProvided.Count > 0

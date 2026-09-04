@@ -1,5 +1,4 @@
 using System;
-using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using WinCare.Application.Diagnostics;
@@ -11,27 +10,16 @@ namespace WinCare.Application.Tests
     public sealed class IntentTranslatorTests
     {
         private readonly ToolCatalogService _catalogService = new();
-        private readonly ModelManager _modelManager = new(Path.Combine(Path.GetTempPath(), "WinCare_ModelManager_Test"));
-        private readonly OnnxInferenceEngine _inferenceEngine;
+        private readonly RuleBasedIntentInferenceEngine _inferenceEngine = new();
         private readonly IntentTranslator _translator;
 
         public IntentTranslatorTests()
         {
-            _inferenceEngine = new OnnxInferenceEngine(_modelManager);
             _translator = new IntentTranslator(_inferenceEngine, _catalogService);
         }
 
         [Fact]
-        public void ModelManager_initializes_and_creates_directory()
-        {
-            Assert.NotNull(_modelManager.ModelDirectory);
-            Assert.EndsWith("doctor.onnx", _modelManager.DefaultModelPath);
-            Assert.True(_modelManager.EnsureModelDirectoryCreated());
-            Assert.True(Directory.Exists(_modelManager.ModelDirectory));
-        }
-
-        [Fact]
-        public async Task OnnxInferenceEngine_initializes_within_latency_budget()
+        public async Task RuleBasedIntentInferenceEngine_initializes_within_latency_budget()
         {
             var success = await _inferenceEngine.InitializeAsync();
             Assert.True(success);
@@ -68,6 +56,17 @@ namespace WinCare.Application.Tests
                 Assert.Equal(match.Id, step.CommandId);
                 Assert.Equal(match.Risk, step.RiskLevel);
             }
+        }
+
+        [Fact]
+        public async Task TranslateAsync_attaches_parameters_to_parameterized_recommendations()
+        {
+            var plan = await _translator.TranslateAsync("Clean up junk and temporary files from my computer");
+
+            var mutatingStep = Assert.Single(plan.ProposedSteps, s => s.CommandId == "cleaner-disk-pressure");
+            Assert.NotNull(mutatingStep.Parameters);
+            Assert.True(mutatingStep.Parameters!.ContainsKey("OlderThanDays"));
+            Assert.Equal("7", mutatingStep.Parameters["OlderThanDays"]);
         }
 
         [Fact]

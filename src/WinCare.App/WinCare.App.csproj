@@ -44,4 +44,20 @@
       Condition="!Exists('Native\$(Platform)\wincare_core.dll')"
       Text="Release build requires Native\$(Platform)\wincare_core.dll. Build Rust first: cargo build --manifest-path native/Cargo.toml --target $(_WinCareRustTarget) --release and stage to src/WinCare.App/Native/$(Platform)/wincare_core.dll. See docs/migration/windows-validation.md." />
   </Target>
+
+  <!-- The MSIX Identity Version must be a four-part number (prerelease suffixes are not
+       representable). Derive it at package time from VersionPrefix instead of trusting the
+       checked-in literal: pass -p:AppxPackageVersion=x.y.z.w to override, otherwise the
+       prefix (2.5.0) becomes 2.5.0.0. -->
+  <PropertyGroup>
+    <AppxPackageVersion Condition="'$(AppxPackageVersion)' == ''">$(VersionPrefix).0</AppxPackageVersion>
+  </PropertyGroup>
+
+  <Target Name="StampAppxManifestVersion" BeforeTargets="Build" Condition="'$(GenerateAppxPackageOnBuild)' == 'true'">
+    <XmlPoke
+      XmlInputPath="Package.appxmanifest"
+      Query="/p:Package/p:Identity/@Version"
+      Value="$(AppxPackageVersion)"
+      Namespaces="&lt;Namespace Prefix='p' Uri='http://schemas.microsoft.com/appx/manifest/foundation/windows10' /&gt;" />
+  </Target>
 </Project>

@@ -76,8 +76,7 @@ public sealed class AiDoctorPageViewModel : INotifyPropertyChanged
         ICommandDispatcher? commandDispatcher = null)
     {
         var catalog = new ToolCatalogService(AppRuntime.Current.PluginRegistry);
-        var modelManager = new ModelManager();
-        var inferenceEngine = new OnnxInferenceEngine(modelManager);
+        var inferenceEngine = new RuleBasedIntentInferenceEngine();
 
         _intentTranslator = intentTranslator ?? new IntentTranslator(inferenceEngine, catalog);
         _commandDispatcher = commandDispatcher ?? AppRuntime.Current.Dispatcher;
@@ -139,15 +138,19 @@ public sealed class AiDoctorPageViewModel : INotifyPropertyChanged
             throw new InvalidOperationException("Mutating maintenance operations require explicit user review and approval confirmation.");
         }
 
-        var emptyParams = System.Text.Json.JsonSerializer.SerializeToElement(new { });
+        // Pass through any concrete parameters the translator attached to the step; fall back
+        // to an empty object only when the step is genuinely parameterless.
+        var parameters = step.Parameters is { Count: > 0 }
+            ? System.Text.Json.JsonSerializer.SerializeToElement(step.Parameters)
+            : System.Text.Json.JsonSerializer.SerializeToElement(new { });
         var correlationId = Guid.NewGuid();
         var approval = !isReadOnly
-            ? ApprovedMutationPlan.Create(step.CommandId, emptyParams, correlationId)
+            ? ApprovedMutationPlan.Create(step.CommandId, parameters, correlationId)
             : null;
 
         var request = new CommandRequest(
             CommandId: step.CommandId,
-            Parameters: emptyParams,
+            Parameters: parameters,
             Apply: !isReadOnly,
             CorrelationId: correlationId,
             Approval: approval

@@ -1,6 +1,6 @@
 # Project Finalization Status
 
-**Version:** 2.5.0-rc1  
+**Version:** 2.5.0-rc5  
 **Classification:** Native Source Release Candidate  
 **Production Promotable:** No (Gated by Windows behavioral verification)
 
@@ -24,9 +24,9 @@
 ## 🛠️ Key Milestones in this Release Candidate
 
 1. **WinUI 3 Desktop Shell & Cyber-Teal Visual System**: Complete rewrite of the presentation tier with Fluent Mica surfaces, Cascadia Code telemetry pills, WCAG 2.1 AA accessibility (up to 14.68:1 contrast), and compact layout breakpoints (<920 DIP).
-2. **Rust 2024 Native Engine & Health Guard**: Memory-safe C-ABI FFI core (`wincare-core`) with `std::panic::catch_unwind` and background monitoring daemon (`wincare-guard`) with local resource threshold evaluations, Windows Toast XML notifications, and structured IPC client scaffolding.
-3. **Modular Plugin Store & Community SDK**: Dynamic command dispatching, cryptographic package admission with digital signatures and SHA-256 validation, full-trust capability consent reviews, and a complete Node.js developer CLI (`tools/wincare-plugin-cli`).
-4. **AI System Doctor**: DirectML-accelerated local ONNX inference, natural-language symptom parsing, two-phase diagnostic evidence collection, and fail-closed action plans.
+2. **Rust 2024 Native Engine & Health Guard**: Memory-safe C-ABI FFI core (`wincare-core`) with `std::panic::catch_unwind`, and a background monitoring daemon (`wincare-guard`) with local resource threshold evaluations, a real named-pipe health endpoint (`WinCareGuardIPC`), and Windows Toast XML staged to a per-user queue directory (`%LOCALAPPDATA%`) on critical thresholds (SCM service registration and a native toast popup are not yet wired).
+3. **Modular Plugin Store & Community SDK**: Dynamic command dispatching, cryptographic package admission with sidecar digital signatures and SHA-256 validation, per-capability consent enforcement, installer-side revocation checks, and a complete Node.js developer CLI (`tools/wincare-plugin-cli`).
+4. **AI System Doctor**: Rule-based on-device intent classification, natural-language symptom parsing, two-phase diagnostic evidence collection, and fail-closed action plans.
 5. **Fail-Closed Security & Governance**: Reparse-point safety, bounded iterative filesystem traversal, and PII-sanitized activity logs.
 
 ---

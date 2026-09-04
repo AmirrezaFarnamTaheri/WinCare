@@ -91,7 +91,7 @@ To generate auditable release archives and separation reports:
 ```bash
 python tools/finalize_native_release.py \
   --output artifacts/finalization \
-  --version 2.5.0-rc1 \
+  --version 2.5.0-rc5 \
   --mode rc
 ```
 

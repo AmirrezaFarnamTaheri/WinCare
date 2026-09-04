@@ -2,7 +2,18 @@ using System.Text.Json;
 
 namespace WinCare.App.Services;
 
-public sealed record AppPreferenceData(string Theme = "System");
+/// <summary>
+/// Persisted per-user preference state, including the theme and the favorite/recent tool
+/// lists that back the All Tools page across restarts.
+/// </summary>
+public sealed record AppPreferenceData(string Theme = "System")
+{
+    /// <summary>Stable command IDs the user has favorited.</summary>
+    public List<string> FavoriteCommandIds { get; init; } = new();
+
+    /// <summary>Most-recently-run command IDs, newest first.</summary>
+    public List<string> RecentCommandIds { get; init; } = new();
+}
 
 public static class AppPreferences
 {
@@ -24,6 +35,38 @@ public static class AppPreferences
                 _current = _current with { Theme = normalized };
                 Save(_current);
             }
+        }
+    }
+
+    /// <summary>Returns a snapshot of the favorited command IDs, newest last.</summary>
+    public static IReadOnlyList<string> FavoriteCommandIds
+    {
+        get { lock (Sync) { return _current.FavoriteCommandIds.ToArray(); } }
+    }
+
+    /// <summary>Returns a snapshot of the recent command IDs, newest first.</summary>
+    public static IReadOnlyList<string> RecentCommandIds
+    {
+        get { lock (Sync) { return _current.RecentCommandIds.ToArray(); } }
+    }
+
+    /// <summary>Persists the favorite command IDs.</summary>
+    public static void SaveFavoriteCommandIds(IEnumerable<string> ids)
+    {
+        lock (Sync)
+        {
+            _current = _current with { FavoriteCommandIds = ids.Distinct().ToList() };
+            Save(_current);
+        }
+    }
+
+    /// <summary>Persists the recent command IDs.</summary>
+    public static void SaveRecentCommandIds(IEnumerable<string> ids)
+    {
+        lock (Sync)
+        {
+            _current = _current with { RecentCommandIds = ids.ToList() };
+            Save(_current);
         }
     }
 

@@ -92,6 +92,7 @@ public sealed class ActivityPageViewModel : TabbedPageViewModel
             RunningIndex => _runningRows,
             NeedsAttentionIndex => _attentionRows,
             CompletedIndex => _completedRows,
+            ReportsIndex => _completedRows,
             _ => [],
         };
 

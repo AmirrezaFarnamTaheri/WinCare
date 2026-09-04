@@ -14,9 +14,10 @@ The native WinCare application and toolchains rely upon separately licensed plat
 | **WinUI 3 (Windows App SDK)** | Microsoft Corporation | MIT License |
 | **.NET 8 Runtime & SDK** | .NET Foundation / Microsoft | MIT License |
 | **CommunityToolkit.Mvvm** | .NET Community Toolkit | MIT License |
-| **Microsoft.ML.OnnxRuntime.DirectML** | Microsoft Corporation | MIT License |
 | **Rust Toolchain & Standard Library** | Rust Project Developers | Apache 2.0 / MIT License |
-| **Windows-rs (`windows` crate)** | Microsoft Corporation | MIT / Apache 2.0 License |
+| **serde / serde_json** | David Tolnay | MIT / Apache 2.0 License |
+| **sha2** | RustCrypto Project | MIT / Apache 2.0 License |
+| **tempfile (dev)** | Steven Allen | MIT / Apache 2.0 License |
 | **Python 3 Standard Library** | Python Software Foundation | PSF License |
 
 ---

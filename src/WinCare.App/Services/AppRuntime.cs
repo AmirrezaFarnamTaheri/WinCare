@@ -26,7 +26,8 @@ public sealed class AppRuntime
         PluginHost = new DefaultPluginHost(Dispatcher);
         PluginRegistry = new PluginRegistryService(
             PluginState,
-            scriptHandlerFactory: (cmdId, scriptPath, pluginDir) => new PluginScriptCommandHandler(cmdId, scriptPath, pluginDir, new BoundedProcessRunner())
+            scriptHandlerFactory: (cmdId, scriptPath, pluginDir, readOnly, capabilities) =>
+                new PluginScriptCommandHandler(cmdId, scriptPath, pluginDir, new BoundedProcessRunner(), readOnly, capabilities)
         );
         CatalogService = new RemoteCatalogService();
         InstallerService = new PluginInstallerService();
@@ -91,6 +92,8 @@ public sealed class AppRuntime
         {
             // Startup discovery is process-wide work. Sharing the task prevents parallel
             // registry initialization when a page opens while app startup is still running.
+            // A faulted or cancelled attempt is never cached (see InitializePluginsCoreAsync),
+            // so a later caller with a live token can always retry.
             return _pluginInitializationTask ??= InitializePluginsCoreAsync(ct);
         }
     }
@@ -103,6 +106,9 @@ public sealed class AppRuntime
         }
         catch
         {
+            // Clear the cached task on any non-successful outcome (fault or cancellation).
+            // Without this, the first caller's cancelled token would poison every later
+            // caller with a permanently cancelled shared task.
             lock (_pluginInitializationLock)
             {
                 _pluginInitializationTask = null;

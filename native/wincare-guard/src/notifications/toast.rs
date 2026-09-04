@@ -1,5 +1,10 @@
-//! Native Windows Toast Notification builder.
+//! Native Windows Toast notification XML builder.
 
+/// Builds a Windows toast notification XML document for a guard alert.
+///
+/// The title, message, and action tag are escaped for XML and URI contexts so untrusted
+/// monitor-derived values cannot break out of the document. The resulting XML is a
+/// `ToastGeneric` template with a protocol-activation action and a system dismiss action.
 pub fn generate_toast_xml(title: &str, message: &str, action_tag: &str) -> String {
     let title = escape_xml(title);
     let message = escape_xml(message);
@@ -23,13 +28,26 @@ pub fn generate_toast_xml(title: &str, message: &str, action_tag: &str) -> Strin
 fn escape_xml(value: &str) -> String {
     value
         .chars()
-        .filter(|character| matches!(character, '\u{9}' | '\u{A}' | '\u{D}' | '\u{20}'..='\u{D7FF}' | '\u{E000}'..='\u{FFFD}' | '\u{10000}'..='\u{10FFFF}'))
+        .filter(|&character| is_valid_xml_char(character))
         .collect::<String>()
         .replace('&', "&amp;")
         .replace('<', "&lt;")
         .replace('>', "&gt;")
         .replace('"', "&quot;")
         .replace('\'', "&apos;")
+}
+
+/// Returns true for XML 1.0 valid characters (tab, LF, CR, and the allowed Unicode ranges).
+fn is_valid_xml_char(character: char) -> bool {
+    matches!(
+        character,
+        '\u{9}'
+            | '\u{A}'
+            | '\u{D}'
+            | '\u{20}'..='\u{D7FF}'
+            | '\u{E000}'..='\u{FFFD}'
+            | '\u{10000}'..='\u{10FFFF}'
+    )
 }
 
 fn encode_uri_segment(value: &str) -> String {

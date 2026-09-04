@@ -84,4 +84,30 @@ public sealed class PluginManifestTests
 
         Assert.Throws<FormatException>(() => invalidAdminTool.ToCommandDefinition("test.plugin"));
     }
+
+    [Fact]
+    public void JsonPluginLoader_RejectsConflictingAliasSpellings()
+    {
+        // L6 regression: conflicting alias spellings (e.g. `title` vs `name`) must fail
+        // closed instead of silently serializing whichever value was applied last.
+        const string json = """
+        {
+          "id": "com.wincare.alias",
+          "name": "Alias Plugin",
+          "version": "1.0.0",
+          "tools": [
+            {
+              "id": "alias.tool1",
+              "title": "Canonical Title",
+              "name": "Conflicting Title",
+              "risk": "Low"
+            }
+          ]
+        }
+        """;
+
+        var result = JsonPluginLoader.LoadFromString(json);
+        Assert.False(result.Success);
+        Assert.Contains("Conflicting plugin metadata", result.ErrorMessage);
+    }
 }

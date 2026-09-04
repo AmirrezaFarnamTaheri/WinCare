@@ -42,18 +42,34 @@ public sealed class CommandDispatcher : ICommandDispatcher
 
         if (nativeCore is not null)
         {
-            uint actual = nativeCore.GetAbiVersion();
-            const uint expected = SupportedAbiVersion;
-            if (actual != expected)
+            try
             {
+                uint actual = nativeCore.GetAbiVersion();
+                const uint expected = SupportedAbiVersion;
+                if (actual != expected)
+                {
+                    throw new InvalidOperationException(
+                        $"wincare_core ABI version mismatch: expected {expected}, got {actual}. " +
+                        $"The installed wincare_core.dll is incompatible with this build. " +
+                        $"Replace wincare_core.dll with a build matching ABI version {expected}.");
+                }
+            }
+            catch (Exception ex) when (ex is DllNotFoundException or EntryPointNotFoundException or BadImageFormatException)
+            {
+                // The Release pipeline stages wincare_core.dll via an MSBuild target, but a
+                // Debug/F5 run without it would otherwise surface a bare DllNotFoundException.
+                // Fail with an actionable message instead (see App.OnUnhandledException).
                 throw new InvalidOperationException(
-                    $"wincare_core ABI version mismatch: expected {expected}, got {actual}. " +
-                    $"The installed wincare_core.dll is incompatible with this build. " +
-                    $"Replace wincare_core.dll with a build matching ABI version {expected}.");
+                    "wincare_core.dll could not be loaded. " +
+                    "Build the native wincare-core project or run the native staging step before launching, " +
+                    "then ensure wincare_core.dll is next to the app executable. " +
+                    $"Underlying error: {ex.Message}", ex);
             }
         }
 
-        Dictionary<string, CommandDefinition> definitionsById = new(StringComparer.Ordinal);
+        // Case-insensitive keying keeps static lookup consistent with the dynamic plugin
+        // registry and with ApprovedMutationPlan.IsValid, which compare IDs ordinal-insensitively.
+        Dictionary<string, CommandDefinition> definitionsById = new(StringComparer.OrdinalIgnoreCase);
         foreach (CommandDefinition definition in definitions)
         {
             if (!definitionsById.TryAdd(definition.Id, definition))
@@ -62,7 +78,7 @@ public sealed class CommandDispatcher : ICommandDispatcher
             }
         }
 
-        Dictionary<string, ICommandHandler> handlersById = new(StringComparer.Ordinal);
+        Dictionary<string, ICommandHandler> handlersById = new(StringComparer.OrdinalIgnoreCase);
         foreach (ICommandHandler handler in handlers)
         {
             ArgumentNullException.ThrowIfNull(handler);
@@ -92,6 +108,17 @@ public sealed class CommandDispatcher : ICommandDispatcher
     {
         if (definition == null || handler == null || string.IsNullOrWhiteSpace(definition.Id))
         {
+            return false;
+        }
+
+        // The static registration path requires the handler ID to match the definition ID;
+        // enforce the same invariant for dynamic (plugin) commands so a mismatched handler
+        // can never be resolved against a definition it was not built for.
+        if (string.IsNullOrWhiteSpace(handler.CommandId) ||
+            !string.Equals(handler.CommandId, definition.Id, StringComparison.OrdinalIgnoreCase))
+        {
+            System.Diagnostics.Debug.WriteLine(
+                $"[CommandDispatcher] Dynamic registration rejected: handler id '{handler.CommandId}' does not match definition id '{definition.Id}'.");
             return false;
         }
 

@@ -287,20 +287,45 @@ public sealed class PluginStorePageViewModel : INotifyPropertyChanged, IDisposab
     }
 
     /// <summary>
-    /// Installs a remote plugin package, runs discovery, and refreshes the store.
+    /// Installs a remote plugin package, runs discovery, and refreshes the store. The caller
+    /// supplies the capabilities the user consented to; installation flows through the
+    /// hardened installer (SHA-256, publisher signature, revocation, and capability consent).
     /// </summary>
-    public Task<bool> InstallPluginAsync(PluginCardViewModel card, CancellationToken cancellationToken = default)
+    public async Task<bool> InstallPluginAsync(PluginCardViewModel card, IReadOnlyCollection<string>? consentedCapabilities = null, CancellationToken cancellationToken = default)
     {
-        if (card == null || card.IsInstalled || string.IsNullOrWhiteSpace(card.PackageUrl))
+        if (card == null || card.IsInstalled || string.IsNullOrWhiteSpace(card.PackageUrl) || !card.CanInstall)
         {
-            return Task.FromResult(false);
+            return false;
         }
 
         ErrorMessage = null;
-        // The remote catalog is transport metadata, not an independent publisher trust
-        // root. Never let it choose the key used to establish package authenticity.
-        ErrorMessage = "Remote plugin installation is disabled for this release.";
-        return Task.FromResult(false);
+        try
+        {
+            // The catalog is the independently trusted boundary for revocation and publisher
+            // trust; fetch the latest to enforce its current advisories at install time.
+            var catalog = await _catalogService.GetCatalogAsync(forceRemoteRefresh: false, cancellationToken).ConfigureAwait(true);
+
+            await _installerService.InstallPluginFromPackageAsync(
+                card.PackageUrl,
+                card.Id,
+                card.Sha256,
+                card.RemoteItem?.PublicKeyPem,
+                card.RemoteItem?.Signature,
+                catalog.RevokedPackages,
+                catalog.RevokedPublishers,
+                consentedCapabilities ?? Array.Empty<string>(),
+                cancellationToken).ConfigureAwait(true);
+
+            await _registry.DiscoverAndInitializeAsync(_host, cancellationToken).ConfigureAwait(true);
+            await RefreshPluginsAsync(forceRemoteRefresh: false, cancellationToken).ConfigureAwait(true);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Install failed: {ex.Message}";
+            System.Diagnostics.Debug.WriteLine($"[PluginStorePageViewModel] Install error: {ex.GetType().Name} - {ex.Message}");
+            return false;
+        }
     }
 
     /// <summary>

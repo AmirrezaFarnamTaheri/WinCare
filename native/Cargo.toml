@@ -5,6 +5,10 @@ resolver = "2"
 [workspace.package]
 edition = "2024"
 license = "Apache-2.0"
+# Minimum supported Rust version (MSRV) for the workspace. It is intentionally the
+# minimum toolchain that can compile edition-2024 code; the pinned build toolchain in
+# `rust-toolchain.toml` (1.97.1) is the exact compiler CI and releases use, and may be
+# newer than the MSRV.
 rust-version = "1.85"
 
 [workspace.dependencies]

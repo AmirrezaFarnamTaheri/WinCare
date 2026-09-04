@@ -7,8 +7,15 @@ using WinCare.Domain.Commands;
 
 /// <summary>
 /// Delegate factory for constructing script-backed command handlers for declarative plugin tools.
+/// The read-only flag and declared capabilities are passed through so the handler can enforce the
+/// two-phase preview/approve gate and surface plugin-declared (advisory) capability metadata.
 /// </summary>
-public delegate ICommandHandler ScriptCommandHandlerFactory(string commandId, string scriptRelativePath, string pluginDirectory);
+public delegate ICommandHandler ScriptCommandHandlerFactory(
+    string commandId,
+    string scriptRelativePath,
+    string pluginDirectory,
+    bool readOnly,
+    IReadOnlyList<string> declaredCapabilities);
 
 /// <summary>
 /// Core implementation of IPluginRegistry discovering, isolating, and managing plugin state.
@@ -406,7 +413,12 @@ public sealed class PluginRegistryService : IPluginRegistry
                     !string.IsNullOrWhiteSpace(entry.SourceDirectoryPath) &&
                     _scriptHandlerFactory != null)
                 {
-                    handler = _scriptHandlerFactory(cmd.Id, toolDef.ScriptPath, entry.SourceDirectoryPath);
+                    handler = _scriptHandlerFactory(
+                        cmd.Id,
+                        toolDef.ScriptPath,
+                        entry.SourceDirectoryPath,
+                        cmd.ReadOnly,
+                        manifest?.DeclaredCapabilities ?? Array.Empty<string>());
                 }
                 else if (entry.IsBuiltIn)
                 {
@@ -559,12 +571,19 @@ internal sealed class BuiltInDelegatingHandler : ICommandHandler
 
     public async Task<CommandHandlerOutcome> ExecuteAsync(CommandRequest request, CancellationToken cancellationToken)
     {
+        // The caller's approval plan was minted against this alias command id. The inner
+        // dispatcher validates the plan against the target core command id, so a naive
+        // passthrough would always fail with command.approval_plan_invalid. Mint a fresh
+        // plan for the mapped target id over the same canonical parameters and correlation
+        // id — the alias-level plan has already been validated by the outer dispatcher.
         var mappedRequest = new CommandRequest(
             _targetCoreCommandId,
             request.Parameters,
             request.Apply,
             request.CorrelationId,
-            request.Approval
+            request.Apply
+                ? ApprovedMutationPlan.Create(_targetCoreCommandId, request.Parameters, request.CorrelationId)
+                : null
         );
 
         var options = request.Apply ? new CommandExecutionOptions(ReviewApproved: true) : CommandExecutionOptions.Default;

@@ -85,8 +85,8 @@ public sealed class ToolRowViewModel : ObservableObject
             return Risk switch
             {
                 "Read-only" => "PillReadOnlyBgBrush",
-                "Elevated" or "Moderate" or "Low" => "PillElevatedBgBrush",
-                "Mutating" or "High Risk" or "High" or "Critical" => "PillMutatingBgBrush",
+                "Low" or "Moderate" => "PillElevatedBgBrush",
+                "High" or "Critical" => "PillMutatingBgBrush",
                 _ => "PillMutatingBgBrush",
             };
         }
@@ -103,7 +103,7 @@ public sealed class ToolRowViewModel : ObservableObject
 
             return Risk switch
             {
-                "Elevated" or "Moderate" or "Low" => "PillAltTextBrush",
+                "Low" or "Moderate" => "PillAltTextBrush",
                 _ => "PillTextBrush",
             };
         }

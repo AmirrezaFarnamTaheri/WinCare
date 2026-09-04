@@ -66,15 +66,15 @@ All notable changes to WinCare are documented in this file in accordance with [K
 - **In-Process Security Model & Capabilities**: Upgraded `PluginDetailDialog.xaml` with full-trust execution disclosures and permission reviews ("Declared Capabilities"), gating installations behind explicit user consent.
 - **Developer CLI SDK (`tools/wincare-plugin-cli`)**: Created Node.js developer CLI (`wincare-plugin.js`) with `create`, `validate`, `lint`, and `pack` commands for JSON packs and C# binary plugins.
 
-#### 2. AI System Doctor (DirectML & Local ONNX)
-- **Local ONNX Inference Engine**: Integrated quantized ONNX model inference via `OnnxInferenceEngine` and `ModelManager` with DirectML GPU acceleration and sub-1.5s cold-start latency.
-- **Natural-Language Intent Translation**: Implemented `IntentTranslator` mapping user symptom prompts into structured, validated `DoctorActionPlan` execution sequences.
+#### 2. AI System Doctor (Rule-Based On-Device Classification)
+- **Rule-Based Intent Classification Engine**: `RuleBasedIntentInferenceEngine` classifies symptom prompts with deterministic keyword rules on-device; initialization is a near-zero-cost no-op (no model weights, no ONNX/DirectML runtime).
+- **Natural-Language Intent Translation**: Implemented `IntentTranslator` mapping user symptom prompts into structured, validated `DoctorActionPlan` execution sequences drawn strictly from the native catalog.
 - **Evidence-Grounded Two-Phase Diagnostics**: `AiDoctorPage.xaml` presents real-time diagnostic chat feeds and two-phase action cards where read-only evidence collection precedes mutative repairs with step-by-step confirmation.
 
 #### 3. Rust 2024 Background Health Guard Service (`wincare-guard`)
-- **High-Performance Guard Daemon**: Developed background monitoring crate (`native/wincare-guard`) with sub-millisecond RAM pressure, disk quota, and thermal monitors.
-- **Autonomous Monitoring & Scaffolding**: Local threshold evaluations and Windows Toast XML notifications with C# IPC client scaffolding (`GuardPipeClient.cs`).
-- **Windows Toast Notifications**: Implemented XML template-based Toast notification builder for immediate threshold breach alerts.
+- **High-Performance Guard Daemon**: Developed background monitoring crate (`native/wincare-guard`) with RAM pressure, disk quota, and thermal (cooling-mode) monitors.
+- **Named-Pipe Health Endpoint**: Real named-pipe IPC server on `\\.\pipe\WinCareGuardIPC` answering `ping`/`health` for the C# `GuardPipeClient`.
+- **Windows Toast Notifications**: Implemented an XML template-based Toast notification builder, raised on critical threshold breaches via the daemon alert path.
 
 #### 4. Cloud Profile Sync & Source Generation
 - **Encrypted Sync Provider**: Implemented AES-256-GCM profile payload encryption (`CryptoService.cs`) with PBKDF2/SHA-256 key derivation and `GitHubGistSyncProvider.cs` for multi-machine synchronization.

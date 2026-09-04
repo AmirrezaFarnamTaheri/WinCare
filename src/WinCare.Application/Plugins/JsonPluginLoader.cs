@@ -1,5 +1,7 @@
 namespace WinCare.Application.Plugins;
 
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using WinCare.CommandCatalog.Models;
 
@@ -19,9 +21,13 @@ public sealed record PluginLoadResult(
 public static class JsonPluginLoader
 {
     private const string ManifestFileName = "wincare-plugin.json";
+    private const string ManifestDigestFileName = ".wincare-manifest.sha256";
+    private const int MaxManifestBytes = 1024 * 1024;
 
     /// <summary>
     /// Loads and validates a declarative JSON plugin from the specified plugin directory.
+    /// When an admission digest sidecar is present (written by the installer), the manifest
+    /// bytes are re-hashed and compared so that post-install modification is detected.
     /// </summary>
     public static PluginLoadResult LoadFromDirectory(string pluginDirectoryPath)
     {
@@ -42,7 +48,40 @@ public static class JsonPluginLoader
 
         try
         {
-            var json = File.ReadAllText(manifestPath);
+            // Bounded read: reject manifests larger than the admission limit.
+            var fileInfo = new FileInfo(manifestPath);
+            if (fileInfo.Length > MaxManifestBytes)
+            {
+                return new PluginLoadResult(false, null, Array.Empty<CommandDefinition>(),
+                    $"Manifest file exceeds the {MaxManifestBytes}-byte size limit: {Path.GetFileName(manifestPath)}");
+            }
+
+            byte[] manifestBytes = File.ReadAllBytes(manifestPath);
+
+            // Tamper-evidence at load time: if the installer recorded an admission digest,
+            // verify the manifest has not been modified since admission.
+            var digestPath = Path.Combine(pluginDirectoryPath, ManifestDigestFileName);
+            if (File.Exists(digestPath))
+            {
+                string expectedDigest;
+                try
+                {
+                    expectedDigest = File.ReadAllText(digestPath).Trim();
+                }
+                catch (Exception ex)
+                {
+                    return new PluginLoadResult(false, null, Array.Empty<CommandDefinition>(), $"Failed to read manifest integrity record: {ex.Message}");
+                }
+
+                string actualDigest = Convert.ToHexString(SHA256.HashData(manifestBytes)).ToLowerInvariant();
+                if (!string.Equals(expectedDigest, actualDigest, StringComparison.OrdinalIgnoreCase))
+                {
+                    return new PluginLoadResult(false, null, Array.Empty<CommandDefinition>(),
+                        "Manifest integrity check failed: the plugin manifest was modified after installation.");
+                }
+            }
+
+            var json = Encoding.UTF8.GetString(manifestBytes);
             return LoadFromString(json, pluginDirectoryPath);
         }
         catch (Exception ex)
@@ -69,6 +108,10 @@ public static class JsonPluginLoader
             {
                 return new PluginLoadResult(false, null, Array.Empty<CommandDefinition>(), "Invalid plugin manifest: missing 'id'");
             }
+
+            // Reject conflicting alias spellings (e.g. `title` vs `name`) instead of
+            // silently serializing whichever value was applied last.
+            manifest.ValidateAliasConsistency();
 
             var canonicalDir = string.IsNullOrWhiteSpace(pluginDirectoryPath) ? string.Empty : Path.GetFullPath(pluginDirectoryPath);
             var commands = new List<CommandDefinition>();

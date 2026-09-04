@@ -1,21 +1,28 @@
 # WinCare AI System Doctor — Product & Technical Requirements Specification
 
 - **Date:** 2026-08-14
-- **Status:** Implementation-Ready Specification (`artifact_readiness: implementation-ready`)
+- **Status:** Implementation-Ready Specification (`artifact_readiness: implementation-ready`) — inference engine implemented as rule-based (see note below)
 - **Contract Version:** `ce-unified-plan/v1`
 - **Implementation Plan:** `docs/plans/2026-08-14-ai-system-doctor-plan.md`
 - **Source:** `/ce-ideate` -> `/ce-brainstorm` -> `/ce-plan`
+
+> [!NOTE]
+> The ONNX/DirectML inference engine described below was not shipped. The product uses a
+> deterministic, on-device rule-based classifier (`RuleBasedIntentInferenceEngine`) with no
+> model weights and no ONNX runtime dependency. Requirements 1 and 5 (ONNX specifics) are
+> superseded; the privacy, evidence-collection, and fail-closed action-plan requirements
+> shipped as specified.
 
 ---
 
 ## 1. Executive Summary & Intent
 
-WinCare will introduce the **AI System Doctor**, an on-device, privacy-first natural language diagnostic assistant powered by ONNX Runtime for Windows.
+WinCare introduces the **AI System Doctor**, an on-device, privacy-first natural language diagnostic assistant powered by a rule-based intent classifier.
 
 ### Key Capabilities
 1. **Offline Natural Language Querying:** Users can ask plain English questions (e.g., *"Why is my C: drive filling up fast?"*, *"Optimize my PC for high FPS gaming"*, *"Is my firewall configured safely?"*).
 2. **Intent & Command Mapping:** AI Doctor analyzes system state and maps user intents directly into safe, executable WinCare maintenance pipelines.
-3. **100% Privacy & Zero Telemetry Leak:** Model weights execute locally via DirectML / GPU acceleration without sending user telemetry or system metrics to external cloud servers.
+3. **100% Privacy & Zero Telemetry Leak:** All classification and diagnostics execute locally without sending user telemetry or system metrics to external cloud servers.
 
 ---
 

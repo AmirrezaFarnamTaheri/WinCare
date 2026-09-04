@@ -36,6 +36,15 @@ public sealed class AllToolsPageViewModel : ObservableObject, IDisposable
     public AllToolsPageViewModel(ToolCatalogService catalog, CommandDispatcher dispatcher)
     {
         _catalog = catalog ?? throw new ArgumentNullException(nameof(catalog));
+
+        // Restore persisted favorite/recent tool lists so they survive restarts.
+        _favoriteIds.Clear();
+        foreach (string id in AppPreferences.FavoriteCommandIds)
+        {
+            _favoriteIds.Add(id);
+        }
+        _recentIds.Clear();
+        _recentIds.AddRange(AppPreferences.RecentCommandIds);
         AreaOptions = [
             new AreaFilterOption("All areas", null),
             .. _catalog.All.Select(command => command.Area)
@@ -229,6 +238,7 @@ public sealed class AllToolsPageViewModel : ObservableObject, IDisposable
         {
             _favoriteIds.Remove(SelectedTool.Id);
         }
+        AppPreferences.SaveFavoriteCommandIds(_favoriteIds);
         OnPropertyChanged(nameof(IsSelectedToolFavorite));
         if (string.Equals(_selectedTab, "Favorites", StringComparison.Ordinal))
         {
@@ -244,6 +254,7 @@ public sealed class AllToolsPageViewModel : ObservableObject, IDisposable
         {
             _recentIds.RemoveRange(20, _recentIds.Count - 20);
         }
+        AppPreferences.SaveRecentCommandIds(_recentIds);
     }
 
     private void NotifySelectedToolChanged()

@@ -74,6 +74,8 @@ internal sealed partial class WindowsCommandExecutor
     {
         int build = Environment.OSVersion.Version.Build;
         if (build < rule.Compatibility.MinBuild) return Block("preset", $"Rule '{rule.Id}' requires Windows build {rule.Compatibility.MinBuild} or newer.");
+        if (rule.Compatibility.MaxBuild.HasValue && build > rule.Compatibility.MaxBuild.Value)
+            return Block("preset", $"Rule '{rule.Id}' is only supported through Windows build {rule.Compatibility.MaxBuild.Value}.");
         if (rule.RequiresAdmin && !IsAdministrator()) return Block("preset", $"Rule '{rule.Id}' requires administrator access.");
 
         string executionId = Guid.NewGuid().ToString("N");
