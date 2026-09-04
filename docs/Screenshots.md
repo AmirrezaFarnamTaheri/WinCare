@@ -26,6 +26,19 @@ The runtime images below were captured from the locally installed **v2.5.0.6 x64
 
 **Comparison.** The runtime follows the concept's score-and-review layout while preserving the product's safety contract: categories are marked ready for read-only inspection, and recommendations remain proposals until reviewed. The score remains unavailable before a check, rather than displaying placeholder health data.
 
+## Spectre.Console TUI
+
+### Headless Terminal & Diagnostic REPL
+
+![WinCare Spectre.Console headless terminal REPL with live telemetry and process isolation](images/tui-preview.png)
+
+## Platform Architecture
+
+### C4 Interactive Architecture Model
+
+![WinCare platform C4 interactive architecture diagram and governance pipeline](images/architecture-preview.png)
+
 ## Capture policy
 
 Capture runtime images from a known package, label them with package and candidate version plus architecture, and keep them free of machine names, account names, paths, license keys, or other personal data. Concept imagery must never be presented as a runtime capture.
+
