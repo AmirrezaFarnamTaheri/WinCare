@@ -158,9 +158,10 @@ public sealed class PluginStorePageViewModel : INotifyPropertyChanged, IDisposab
                 await _registry.DiscoverAndInitializeAsync(_host, cancellationToken).ConfigureAwait(true);
             }
         }
-        catch
+        catch (Exception ex)
         {
-            // Tolerate initial discovery faults to show offline state
+            ErrorMessage = "Plugin discovery did not complete. Installed plugin state may be incomplete until discovery succeeds.";
+            System.Diagnostics.Debug.WriteLine($"[PluginStorePageViewModel] Initial discovery error: {ex}");
         }
 
         await RefreshPluginsAsync(forceRemoteRefresh: false, cancellationToken).ConfigureAwait(true);
@@ -182,7 +183,7 @@ public sealed class PluginStorePageViewModel : INotifyPropertyChanged, IDisposab
         }
         catch (Exception ex)
         {
-            ErrorMessage = $"Search refresh failed: {ex.Message}";
+            ErrorMessage = "Plugin search could not be refreshed. Installed plugins remain available.";
             System.Diagnostics.Debug.WriteLine($"[PluginStorePageViewModel] Search refresh error: {ex}");
         }
     }
@@ -195,7 +196,7 @@ public sealed class PluginStorePageViewModel : INotifyPropertyChanged, IDisposab
         }
         catch (Exception ex)
         {
-            ErrorMessage = $"Catalog refresh failed: {ex.Message}";
+            ErrorMessage = "The online plugin catalog could not be refreshed. Installed plugins remain available.";
             System.Diagnostics.Debug.WriteLine($"[PluginStorePageViewModel] Filter refresh error: {ex}");
         }
     }
@@ -231,9 +232,18 @@ public sealed class PluginStorePageViewModel : INotifyPropertyChanged, IDisposab
                 {
                     catalog = await _catalogService.GetCatalogAsync(forceRemoteRefresh, cancellationToken).ConfigureAwait(true);
                 }
-                catch
+                catch (OperationCanceledException)
                 {
-                    catalog = new RemotePluginCatalog();
+                    throw;
+                }
+                catch (Exception ex)
+                {
+                    catalog = new RemotePluginCatalog
+                    {
+                        TrustStatusMessage = "The online plugin catalog is currently unavailable. Installed plugins are still shown."
+                    };
+                    ErrorMessage = catalog.TrustStatusMessage;
+                    System.Diagnostics.Debug.WriteLine($"[PluginStorePageViewModel] Catalog refresh error: {ex}");
                 }
 
                 var seenIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -287,7 +297,7 @@ public sealed class PluginStorePageViewModel : INotifyPropertyChanged, IDisposab
     /// identity/key/signature, or permissions invalidates the review and requires the user to
     /// refresh and review the entry again.
     /// </summary>
-    public async Task<bool> InstallPluginAsync(PluginCardViewModel card, IReadOnlyCollection<string>? consentedCapabilities = null, CancellationToken cancellationToken = default)
+    public async Task<bool> InstallPluginAsync(PluginCardViewModel card, IReadOnlyCollection<string?> consentedCapabilities = null, CancellationToken cancellationToken = default)
     {
         if (card == null || card.IsInstalled || !card.CanInstall || card.RemoteItem is null)
         {
@@ -399,18 +409,58 @@ public sealed class PluginStorePageViewModel : INotifyPropertyChanged, IDisposab
         }
 
         ErrorMessage = null;
+        bool wasEnabled = card.InstalledState == PluginState.Enabled;
+        bool disabledForUninstall = false;
         try
         {
-            await _registry.DisablePluginAsync(card.Id, _host, cancellationToken).ConfigureAwait(true);
-            await _installerService.UninstallPluginAsync(card.Id, cancellationToken).ConfigureAwait(true);
+            if (wasEnabled)
+            {
+                await _registry.DisablePluginAsync(card.Id, _host, cancellationToken).ConfigureAwait(true);
+                disabledForUninstall = true;
+            }
+
+            bool removed = await _installerService.UninstallPluginAsync(card.Id, cancellationToken).ConfigureAwait(true);
+            if (!removed)
+            {
+                throw new InvalidOperationException("The plugin package could not be removed.");
+            }
+
             await _registry.DiscoverAndInitializeAsync(_host, cancellationToken).ConfigureAwait(true);
             await RefreshPluginsAsync(forceRemoteRefresh: false, cancellationToken).ConfigureAwait(true);
             return true;
         }
+        catch (OperationCanceledException)
+        {
+            if (disabledForUninstall)
+            {
+                await TryRestoreEnabledStateAsync(card.Id).ConfigureAwait(true);
+            }
+            throw;
+        }
         catch (Exception ex)
         {
-            ErrorMessage = $"Uninstall failed: {ex.Message}";
-            System.Diagnostics.Debug.WriteLine($"[PluginStorePageViewModel] Uninstall error: {ex.GetType().Name} - {ex.Message}");
+            bool restored = !disabledForUninstall || await TryRestoreEnabledStateAsync(card.Id).ConfigureAwait(true);
+            ErrorMessage = restored
+                ? "Plugin uninstall failed. The plugin was restored to its previous enabled state."
+                : "Plugin uninstall failed after the plugin was disabled, and its previous enabled state could not be restored. Review the plugin state before continuing.";
+            System.Diagnostics.Debug.WriteLine($"[PluginStorePageViewModel] Uninstall error: {ex}");
+            await RefreshPluginsAsync(forceRemoteRefresh: false, CancellationToken.None).ConfigureAwait(true);
+            return false;
+        }
+    }
+
+    private async Task<bool> TryRestoreEnabledStateAsync(string pluginId)
+    {
+        try
+        {
+            await _registry.EnablePluginAsync(pluginId, _host, CancellationToken.None).ConfigureAwait(true);
+            return _registry.GetAllPlugins().Any(entry =>
+                string.Equals(entry.Id, pluginId, StringComparison.OrdinalIgnoreCase) &&
+                entry.State == PluginState.Enabled);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[PluginStorePageViewModel] Failed to restore plugin '{pluginId}' after uninstall failure: {ex}");
             return false;
         }
     }
