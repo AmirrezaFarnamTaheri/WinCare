@@ -16,7 +16,6 @@ class NativeFoundationTests(unittest.TestCase):
         findings = verify()
         self.assertEqual([], findings, "\n" + "\n".join(f"[{item.code}] {item.message}" for item in findings))
 
-
     def test_native_pages_use_supported_backdrop_and_responsive_tables(self) -> None:
         root = __import__("pathlib").Path(__file__).resolve().parents[2]
         window = (root / "src/WinCare.App/MainWindow.xaml.cs").read_text(encoding="utf-8")
@@ -36,10 +35,15 @@ class NativeFoundationTests(unittest.TestCase):
                     self.assertIn("SelectorBar", text, name)
                 self.assertIn("SizeChanged", text, name)
                 continue
+
+            expected_headers = (
+                ("Summary", "State", "Time")
+                if name == "ActivityPage.xaml"
+                else ("What it does", "State", "Notes")
+            )
             self.assertIn("ListView", text, name)
-            self.assertIn("What it does", text, name)
-            self.assertIn("State", text, name)
-            self.assertIn("Notes", text, name)
+            for header in expected_headers:
+                self.assertIn(header, text, name)
             self.assertIn("IsCompact", text, name)
             self.assertIn("SizeChanged", text, name)
 
