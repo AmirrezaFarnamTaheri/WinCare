@@ -7,11 +7,14 @@ from pathlib import Path
 from tools.finalize_native_release import stage_native_source
 
 
+ROOT = Path(__file__).resolve().parents[2]
+
+
 class ReleaseSourceCompletenessTests(unittest.TestCase):
     def test_native_source_archive_contains_security_and_reproducibility_evidence(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             staged = Path(td) / "native-source"
-            stage_native_source(staged)
+            stage_native_source(ROOT, staged)
 
             required = (
                 "NuGet.Config",
