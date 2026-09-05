@@ -10,7 +10,7 @@ public sealed partial class PluginDetailDialog : ContentDialog
 {
     public RemotePluginItem PluginItem { get; }
 
-    public PluginDetailDialog(RemotePluginItem item)
+    public PluginDetailDialog(RemotePluginItem item, bool allowInstall = false)
     {
         InitializeComponent();
         PluginItem = item ?? throw new ArgumentNullException(nameof(item));
@@ -39,15 +39,22 @@ public sealed partial class PluginDetailDialog : ContentDialog
             : verified ? "Trusted catalog / signed package"
             : hasPublisherSignature ? "Package signed; catalog trust root not verified"
             : "Publisher signature unavailable";
-        IsPrimaryButtonEnabled = verified && !item.IsRevoked;
-        PrimaryButtonText = verified && !item.IsRevoked ? "Trust and install" : "Installation unavailable";
+        bool canInstall = allowInstall && verified && !item.IsRevoked;
+        IsPrimaryButtonEnabled = canInstall;
+        PrimaryButtonText = allowInstall
+            ? (canInstall ? "Trust and install" : "Installation unavailable")
+            : string.Empty;
+        CloseButtonText = allowInstall ? "Cancel" : "Close";
 
         if (item.IsRevoked)
         {
             RevocationBanner.Visibility = Microsoft.UI.Xaml.Visibility.Visible;
             RevocationReasonText.Text = item.RevocationReason ?? "This package has been revoked by security policy.";
             IsPrimaryButtonEnabled = false;
-            PrimaryButtonText = "Installation unavailable";
+            if (allowInstall)
+            {
+                PrimaryButtonText = "Installation unavailable";
+            }
         }
 
         CommandsProvidedText.Text = item.CommandsProvided.Count > 0
