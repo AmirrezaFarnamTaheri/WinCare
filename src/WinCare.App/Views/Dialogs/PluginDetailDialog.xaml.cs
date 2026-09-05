@@ -26,16 +26,19 @@ public sealed partial class PluginDetailDialog : ContentDialog
             ? item.Permissions 
             : new[] { "Standard Execution (No special permissions)" };
 
-        // Installation is gated on an independent publisher trust anchor (a catalog-supplied
-        // public key + manifest signature). Without it, the primary button stays disabled and
-        // the dialog explains why, so catalog metadata alone can never drive an install.
-        bool verified = !string.IsNullOrWhiteSpace(item.PublicKeyPem) &&
-                        !string.IsNullOrWhiteSpace(item.Signature) &&
+        // Package signatures become publisher trust only when the catalog itself was verified
+        // against a WinCare-pinned trust root. An unanchored catalog can still be browsed but
+        // can never enable remote installation.
+        bool hasPublisherSignature = !string.IsNullOrWhiteSpace(item.PublicKeyPem) &&
+                                     !string.IsNullOrWhiteSpace(item.Signature);
+        bool verified = item.IsCatalogTrustVerified && hasPublisherSignature &&
                         !string.IsNullOrWhiteSpace(item.PackageUrl);
 
         PublisherTrustText.Text = item.IsRevoked
             ? "Revoked"
-            : verified ? "Catalog-signed (verified)" : "Unsigned / trust not configured";
+            : verified ? "Trusted catalog / signed package"
+            : hasPublisherSignature ? "Package signed; catalog trust root not verified"
+            : "Publisher signature unavailable";
         IsPrimaryButtonEnabled = verified && !item.IsRevoked;
         PrimaryButtonText = verified && !item.IsRevoked ? "Trust and install" : "Installation unavailable";
 

@@ -72,15 +72,19 @@ public sealed class PluginCardViewModel
 
     public string PublisherTrustBadgeText => IsRevoked
         ? $"REVOKED: {RemoteItem?.RevocationReason ?? "Security Advisory"}"
-        : IsVerifiedPublisher ? "CATALOG-SIGNED (VERIFIED)" : "UNSIGNED / TRUST NOT CONFIGURED";
+        : IsVerifiedPublisher ? "TRUSTED CATALOG / SIGNED PACKAGE"
+        : HasPublisherSignature ? "SIGNED PACKAGE / CATALOG UNVERIFIED"
+        : "UNVERIFIED";
 
-    /// <summary>
-    /// True when the catalog (the independently trusted boundary) supplies both a publisher
-    /// public key and a manifest signature. Catalog metadata alone is never treated as trust.
-    /// </summary>
-    public bool IsVerifiedPublisher =>
+    public bool HasPublisherSignature =>
         !string.IsNullOrWhiteSpace(RemoteItem?.PublicKeyPem) &&
         !string.IsNullOrWhiteSpace(RemoteItem?.Signature);
+
+    /// <summary>
+    /// True only when publisher signing metadata arrived through an independently verified,
+    /// pinned catalog boundary. Package-local or unanchored catalog keys never qualify.
+    /// </summary>
+    public bool IsVerifiedPublisher => RemoteItem?.IsCatalogTrustVerified == true && HasPublisherSignature;
 
     public bool IsRevoked => RemoteItem?.IsRevoked == true;
 
@@ -97,7 +101,8 @@ public sealed class PluginCardViewModel
         : IsInstalled ? "This plugin is already installed."
         : string.IsNullOrWhiteSpace(PackageUrl) ? "This package has no download location."
         : string.IsNullOrWhiteSpace(Sha256) ? "This package has no integrity digest."
-        : !IsVerifiedPublisher ? "This package has no independently verified publisher trust anchor."
+        : RemoteItem?.IsCatalogTrustVerified != true ? "Remote installation is disabled because the catalog signature is not anchored to a WinCare-pinned trust root."
+        : !HasPublisherSignature ? "The trusted catalog entry has no publisher manifest signature."
         : "Ready to install.";
     public bool CanEnable => IsInstalled && !IsBuiltIn && InstalledState == PluginState.Disabled && !IsRevoked;
     public bool CanDisable => IsInstalled && !IsBuiltIn && InstalledState == PluginState.Enabled;

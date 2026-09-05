@@ -29,17 +29,69 @@ public sealed class PluginSecurityRegressionTests
     {
         var reviewed = CreateRemoteItem();
 
-        var delisted = new RemotePluginCatalog();
+        var delisted = new RemotePluginCatalog { IsTrustVerified = true };
         var delistedError = Assert.Throws<InvalidOperationException>(() =>
             RemotePluginInstallPolicy.ResolveFreshReviewedEntry(delisted, reviewed, reviewed.Permissions));
         Assert.Contains("no longer present", delistedError.Message, StringComparison.OrdinalIgnoreCase);
 
         var changed = CreateRemoteItem();
         changed.Sha256 = new string('b', 64);
-        var changedCatalog = new RemotePluginCatalog { Plugins = new List<RemotePluginItem> { changed } };
+        var changedCatalog = new RemotePluginCatalog { IsTrustVerified = true, Plugins = new List<RemotePluginItem> { changed } };
         var changedError = Assert.Throws<InvalidOperationException>(() =>
             RemotePluginInstallPolicy.ResolveFreshReviewedEntry(changedCatalog, reviewed, reviewed.Permissions));
         Assert.Contains("changed", changedError.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void RemotePluginInstallPolicy_RejectsCatalogWithoutPinnedTrust()
+    {
+        var reviewed = CreateRemoteItem();
+        var untrustedCatalog = new RemotePluginCatalog
+        {
+            Plugins = new List<RemotePluginItem> { CreateRemoteItem() }
+        };
+
+        var error = Assert.Throws<InvalidOperationException>(() =>
+            RemotePluginInstallPolicy.ResolveFreshReviewedEntry(untrustedCatalog, reviewed, reviewed.Permissions));
+
+        Assert.Contains("pinned trust root", error.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task RemoteCatalogService_VerifiesDetachedCatalogSignatureAgainstPinnedKey()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "WinCareCatalogSignature_" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        try
+        {
+            var payloadCatalog = new RemotePluginCatalog
+            {
+                CatalogVersion = "1.0",
+                Plugins = new List<RemotePluginItem> { CreateRemoteItem() }
+            };
+            string json = JsonSerializer.Serialize(payloadCatalog);
+            byte[] payload = Encoding.UTF8.GetBytes(json);
+            using var rsa = RSA.Create(2048);
+            string publicKeyPem = rsa.ExportRSAPublicKeyPem();
+            string signature = Convert.ToBase64String(rsa.SignData(payload, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1));
+
+            using var httpClient = new HttpClient(new CatalogSignatureHttpHandler(json, signature));
+            var service = new RemoteCatalogService(
+                httpClient,
+                cacheFilePath: Path.Combine(root, "catalog.json"),
+                catalogUrl: "https://catalog.invalid/catalog.json",
+                trustedCatalogPublicKeyPem: publicKeyPem,
+                catalogSignatureUrl: "https://catalog.invalid/catalog.json.sig");
+
+            RemotePluginCatalog catalog = await service.GetCatalogAsync(forceRefresh: true);
+
+            Assert.True(catalog.IsTrustVerified);
+            Assert.All(catalog.Plugins, item => Assert.True(item.IsCatalogTrustVerified));
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
     }
 
     [Fact]
@@ -339,6 +391,27 @@ public sealed class PluginSecurityRegressionTests
 
         var emitResult = compilation.Emit(assemblyFilePath);
         Assert.True(emitResult.Success, string.Join("\n", emitResult.Diagnostics.Select(diagnostic => diagnostic.GetMessage())));
+    }
+
+    private sealed class CatalogSignatureHttpHandler : HttpMessageHandler
+    {
+        private readonly string _catalogJson;
+        private readonly string _signature;
+
+        public CatalogSignatureHttpHandler(string catalogJson, string signature)
+        {
+            _catalogJson = catalogJson;
+            _signature = signature;
+        }
+
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            bool isSignature = request.RequestUri?.AbsolutePath.EndsWith(".sig", StringComparison.OrdinalIgnoreCase) == true;
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(isSignature ? _signature : _catalogJson, Encoding.UTF8, isSignature ? "text/plain" : "application/json")
+            });
+        }
     }
 
     private sealed class StaticHttpHandler : HttpMessageHandler

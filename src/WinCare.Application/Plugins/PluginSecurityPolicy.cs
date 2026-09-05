@@ -148,6 +148,12 @@ public static class RemotePluginInstallPolicy
         ArgumentNullException.ThrowIfNull(catalog);
         ArgumentNullException.ThrowIfNull(reviewedItem);
 
+        if (!catalog.IsTrustVerified)
+        {
+            throw new InvalidOperationException(
+                "Remote plugin installation is disabled because the current catalog is not independently signed by a WinCare-pinned trust root.");
+        }
+
         RemotePluginItem? freshItem = (catalog.Plugins ?? new List<RemotePluginItem>()).FirstOrDefault(item =>
             string.Equals(item.Id, reviewedItem.Id, StringComparison.OrdinalIgnoreCase));
 
