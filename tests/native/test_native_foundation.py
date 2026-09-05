@@ -59,8 +59,11 @@ class NativeFoundationTests(unittest.TestCase):
             self.assertNotIn("CompactThreshold", code, name)
 
         checkup_vm = (root / "src/WinCare.App/ViewModels/Pages/CheckupPageViewModel.cs").read_text(encoding="utf-8")
+        probe_runner = (root / "src/WinCare.Application/Commands/SequentialCommandProbeRunner.cs").read_text(encoding="utf-8")
         self.assertNotIn("Parallel.ForEachAsync", checkup_vm)
-        self.assertIn("foreach ((string commandId, string rowTitle) in QuickCheckCommands)", checkup_vm)
+        self.assertIn("SequentialCommandProbeRunner.RunPreviewsAsync", checkup_vm)
+        self.assertIn("foreach (string commandId in commandIds)", probe_runner)
+        self.assertNotIn("Task.WhenAll", probe_runner)
 
         plugin_store = (root / "src/WinCare.App/Views/Pages/PluginStorePage.xaml").read_text(encoding="utf-8")
         self.assertIn('MinWindowWidth="920"', plugin_store)
