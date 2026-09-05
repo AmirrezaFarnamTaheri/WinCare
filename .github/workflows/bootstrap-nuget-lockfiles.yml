@@ -1,0 +1,36 @@
+name: Bootstrap NuGet Lockfiles
+
+on:
+  push:
+    branches: [arena/01a06cc8-wincare]
+
+permissions:
+  contents: read
+
+jobs:
+  lockfiles:
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-dotnet@4713b0c4d9a8f216d2513cf805d020337de2da40 # pinned upstream commit
+        with:
+          dotnet-version: "8.0.416"
+          global-json-file: global.json
+      - name: Generate NuGet lockfiles
+        shell: pwsh
+        run: dotnet restore WinCare.Native.sln -p:Platform=x64
+      - name: Emit generated lockfiles
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $root = (Resolve-Path '.').Path
+          $files = @(Get-ChildItem -Recurse -Filter packages.lock.json -File | Sort-Object FullName)
+          if ($files.Count -eq 0) { throw 'Restore produced no packages.lock.json files.' }
+          foreach ($file in $files) {
+            $relative = [IO.Path]::GetRelativePath($root, $file.FullName).Replace('\\', '/')
+            $base64 = [Convert]::ToBase64String([IO.File]::ReadAllBytes($file.FullName))
+            Write-Output "LOCKFILE_BEGIN $relative"
+            Write-Output $base64
+            Write-Output "LOCKFILE_END $relative"
+          }
