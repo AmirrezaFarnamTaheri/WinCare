@@ -29,6 +29,11 @@ const MAX_RESPONSE_BYTES: usize = 64 * 1024;
 #[cfg(target_os = "windows")]
 const RECREATE_DELAY: Duration = Duration::from_millis(500);
 
+/// Protected DACL for the local Guard IPC pipe. SYSTEM, local administrators, and the
+/// object owner (the account running Guard) receive full access; no Everyone/Anonymous
+/// ACE is present. Remote clients are separately rejected by PIPE_REJECT_REMOTE_CLIENTS.
+const PIPE_SECURITY_SDDL: &str = "D:P(A;;GA;;;SY)(A;;GA;;;BA)(A;;GA;;;OW)";
+
 #[cfg(target_os = "windows")]
 mod win32 {
     //! Minimal Win32 named-pipe bindings. Private module, so its items are not
@@ -41,6 +46,13 @@ mod win32 {
 
     /// Win32 sentinel for an invalid handle.
     pub const INVALID_HANDLE_VALUE: Handle = -1isize as Handle;
+
+    #[repr(C)]
+    pub struct SecurityAttributes {
+        pub length: u32,
+        pub security_descriptor: *mut c_void,
+        pub inherit_handle: i32,
+    }
 
     pub const PIPE_ACCESS_DUPLEX: u32 = 0x0000_0003;
     pub const PIPE_TYPE_BYTE: u32 = 0x0000_0000;
@@ -57,6 +69,17 @@ mod win32 {
     pub const ERROR_PIPE_CONNECTED: u32 = 535;
     pub const ERROR_PIPE_LISTENING: u32 = 536;
     pub const ERROR_NO_DATA: u32 = 232;
+    pub const SDDL_REVISION_1: u32 = 1;
+
+    #[link(name = "advapi32")]
+    unsafe extern "system" {
+        pub fn ConvertStringSecurityDescriptorToSecurityDescriptorW(
+            string_security_descriptor: *const u16,
+            string_sd_revision: u32,
+            security_descriptor: *mut *mut c_void,
+            security_descriptor_size: *mut u32,
+        ) -> i32;
+    }
 
     #[link(name = "kernel32")]
     // SAFETY: These declarations match the official Windows SDK signatures exactly; the
@@ -99,6 +122,7 @@ mod win32 {
             h_template_file: Handle,
         ) -> Handle;
         pub fn GetLastError() -> u32;
+        pub fn LocalFree(memory: *mut c_void) -> *mut c_void;
     }
 }
 
@@ -206,7 +230,7 @@ fn accept_loop(running: Arc<AtomicBool>) {
 
         serve_connection(handle, &running);
 
-        // SAFETY: `handle` is a live, valid pipe handle owned by this iteration.
+        // SAFETY: `Handle` is a live, valid pipe handle owned by this iteration.
         unsafe {
             let _ = win32::DisconnectNamedPipe(handle);
             let _ = win32::CloseHandle(handle);
@@ -229,10 +253,35 @@ fn create_and_connect_pipe(running: &AtomicBool) -> Option<win32::Handle> {
 
     let wide: Vec<u16> = PIPE_NAME.encode_utf16().chain(std::iter::once(0)).collect();
 
-    // SAFETY: `wide` is a NUL-terminated UTF-16 pipe name; all other arguments are
-    // constants and null security attributes per the CreateNamedPipeW contract.
+    let security_sddl: Vec<u16> = PIPE_SECURITY_SDDL
+        .encode_utf16()
+        .chain(std::iter::once(0))
+        .collect();
+    let mut security_descriptor: *mut std::ffi::c_void = std::ptr::null_mut();
+    // SAFETY: `security_sddl` is valid NUL-terminated SDDL; advapi32 allocates the
+    // returned self-relative descriptor with LocalAlloc and we release it with LocalFree.
+    let descriptor_ok = unsafe {
+        w::ConvertStringSecurityDescriptorToSecurityDescriptorW(
+            security_sddl.as_ptr(),
+            w::SDDL_REVISION_1,
+            &mut security_descriptor,
+            std::ptr::null_mut(),
+        )
+    };
+    if descriptor_ok == 0 || security_descriptor.is_null() {
+        return None;
+    }
+
+    let mut security_attributes = w::SecurityAttributes {
+        length: std::mem::size_of::<w::SecurityAttributes>() as u32,
+        security_descriptor,
+        inherit_handle: 0,
+    };
+
+    // SAFETY: `wide` is a NUL-terminated UTF-16 pipe name and the security descriptor
+    // remains valid for the entire CreateNamedPipeW call.
     let handle = unsafe {
-        w::CreateNamedPipeW(
+        let created = w::CreateNamedPipeW(
             wide.as_ptr(),
             w::PIPE_ACCESS_DUPLEX,
             w::PIPE_TYPE_BYTE
@@ -243,8 +292,10 @@ fn create_and_connect_pipe(running: &AtomicBool) -> Option<win32::Handle> {
             MAX_RESPONSE_BYTES as u32,
             MAX_COMMAND_BYTES as u32,
             0,
-            std::ptr::null_mut(),
-        )
+            (&mut security_attributes as *mut w::SecurityAttributes).cast(),
+        );
+        let _ = w::LocalFree(security_descriptor);
+        created
     };
 
     if handle == w::INVALID_HANDLE_VALUE {
@@ -388,5 +439,20 @@ fn dispatch(command: &[u8]) -> String {
         }
     } else {
         "unknown command\n".to_string()
+    }
+}
+
+#[cfg(test)]
+mod security_tests {
+    use super::PIPE_SECURITY_SDDL;
+
+    #[test]
+    fn pipe_acl_is_explicit_and_does_not_grant_everyone_or_anonymous() {
+        assert!(PIPE_SECURITY_SDDL.starts_with("D:P"));
+        assert!(PIPE_SECURITY_SDDL.contains(";;;SY)"));
+        assert!(PIPE_SECURITY_SDDL.contains(";;;BA)"));
+        assert!(PIPE_SECURITY_SDDL.contains(";;;OW)"));
+        assert!(!PIPE_SECURITY_SDDL.contains(";;;WD)"));
+        assert!(!PIPE_SECURITY_SDDL.contains(";;;AN)"));
     }
 }
