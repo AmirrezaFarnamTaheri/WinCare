@@ -15,6 +15,7 @@ class ParameterSchemaContractTests(unittest.TestCase):
         cls.security = (cls.root / "src/WinCare.Infrastructure/Commands/WindowsCommandExecutor.Security.cs").read_text(encoding="utf-8")
         cls.schema = (cls.root / "src/WinCare.CommandCatalog/Models/CommandParameterCatalog.cs").read_text(encoding="utf-8")
         cls.execution_vm = (cls.root / "src/WinCare.App/ViewModels/Pages/ToolExecutionViewModel.cs").read_text(encoding="utf-8")
+        cls.catalog_vm = (cls.root / "src/WinCare.App/ViewModels/Pages/AllToolsPageViewModel.cs").read_text(encoding="utf-8")
         cls.all_tools_code = (cls.root / "src/WinCare.App/Views/Pages/AllToolsPage.xaml.cs").read_text(encoding="utf-8")
 
     def test_schema_only_references_real_catalog_commands(self) -> None:
@@ -41,6 +42,20 @@ class ParameterSchemaContractTests(unittest.TestCase):
         self.assertIn('AutomationProperties.SetAutomationId(editor, "CommandParameter_" + field.Name)', self.all_tools_code)
         self.assertIn('Header = "Advanced parameter editing"', self.all_tools_code)
         self.assertIn('OnContent = "Raw JSON"', self.all_tools_code)
+
+    def test_selected_tool_configures_parameter_schema_before_notifying_view(self) -> None:
+        setter = re.search(
+            r"public ToolRowViewModel\? SelectedTool\s*\{(?P<body>.*?)\n    \}\n\n    public bool IsDetailsOpen",
+            self.catalog_vm,
+            re.DOTALL,
+        )
+        self.assertIsNotNone(setter)
+        body = setter.group("body")
+        self.assertLess(
+            body.index("Execution.SelectTool(value);"),
+            body.index("SetProperty(ref _selectedTool, value)"),
+            "typed parameter schema must be configured before SelectedTool raises PropertyChanged",
+        )
 
 
 if __name__ == "__main__":
