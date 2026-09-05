@@ -1,4 +1,8 @@
+using System.Collections.ObjectModel;
+using System.ComponentModel;
+using System.Globalization;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -29,6 +33,7 @@ public sealed class ToolExecutionViewModel : ObservableObject
     private string _executionResultText = string.Empty;
     private bool _isReviewApproved;
     private string _parameterJson = "{}";
+    private bool _useAdvancedParameterJson;
     private ApprovedMutationPlan? _lastApprovedPlan;
     private long _reviewVersion;
 
@@ -46,11 +51,9 @@ public sealed class ToolExecutionViewModel : ObservableObject
 
     public IAsyncRelayCommand ExecuteSelectedToolCommand { get; }
     public IRelayCommand CancelSelectedToolCommand { get; }
+    public ObservableCollection<ToolParameterFieldViewModel> ParameterFields { get; } = new();
 
-    private void CancelSelectedTool()
-    {
-        _activeCts?.Cancel();
-    }
+    private void CancelSelectedTool() => _activeCts?.Cancel();
 
     public bool IsExecuting
     {
@@ -58,9 +61,7 @@ public sealed class ToolExecutionViewModel : ObservableObject
         private set
         {
             if (SetProperty(ref _isExecuting, value))
-            {
                 NotifyAvailabilityChanged();
-            }
         }
     }
 
@@ -71,9 +72,7 @@ public sealed class ToolExecutionViewModel : ObservableObject
     }
 
     public bool CanRunSelectedTool => !IsExecuting &&
-        (_selectedTool?.Definition.MigrationStatus is
-            MigrationStatus.Implemented or
-            MigrationStatus.BehaviorVerified);
+        (_selectedTool?.Definition.MigrationStatus is MigrationStatus.Implemented or MigrationStatus.BehaviorVerified);
 
     public string PrimaryActionLabel => IsExecuting
         ? "Running"
@@ -84,14 +83,8 @@ public sealed class ToolExecutionViewModel : ObservableObject
                 : "Run tool";
 
     public bool HasExecutionResult => _executionStatus is not null;
-
     public bool IsExecutionSuccess => _executionStatus == CommandResultStatus.Succeeded;
-
-    public bool IsExecutionError => _executionStatus is
-        CommandResultStatus.Blocked or
-        CommandResultStatus.Failed or
-        CommandResultStatus.NotMigrated;
-
+    public bool IsExecutionError => _executionStatus is CommandResultStatus.Blocked or CommandResultStatus.Failed or CommandResultStatus.NotMigrated;
     public bool IsExecutionCancelled => _executionStatus == CommandResultStatus.Cancelled;
 
     public string ExecutionTitle => _executionStatus switch
@@ -105,24 +98,57 @@ public sealed class ToolExecutionViewModel : ObservableObject
     };
 
     public string ExecutionMessage => _executionMessage;
-
     public string ExecutionResultText => _executionResultText;
 
-    /// <summary>JSON object passed to the selected command. Kept as text so every catalog command can expose its native contract without bespoke UI code.</summary>
+    /// <summary>Raw JSON editor used only when Advanced parameter mode is enabled.</summary>
     public string ParameterJson
     {
         get => _parameterJson;
         set
         {
             if (SetProperty(ref _parameterJson, value ?? "{}"))
+                ResetReviewState();
+        }
+    }
+
+    /// <summary>
+    /// Switches from generated typed controls to an explicit raw JSON escape hatch. Entering
+    /// Advanced mode starts from the current structured values; returning imports known fields.
+    /// </summary>
+    public bool UseAdvancedParameterJson
+    {
+        get => _useAdvancedParameterJson;
+        set
+        {
+            if (_useAdvancedParameterJson == value) return;
+
+            if (value)
             {
+                if (TryBuildStructuredParameters(out JsonElement structured, out _))
+                    _parameterJson = JsonSerializer.Serialize(structured, new JsonSerializerOptions { WriteIndented = true });
+            }
+            else
+            {
+                TryImportAdvancedValues();
+            }
+
+            if (SetProperty(ref _useAdvancedParameterJson, value))
+            {
+                OnPropertyChanged(nameof(StructuredParameterEditorVisible));
+                OnPropertyChanged(nameof(AdvancedParameterEditorVisible));
                 ResetReviewState();
             }
         }
     }
 
-    public bool IsMutatingTool => _selectedTool?.Definition.ReadOnly == false;
+    public bool StructuredParameterEditorVisible => !UseAdvancedParameterJson;
+    public bool AdvancedParameterEditorVisible => UseAdvancedParameterJson;
+    public bool HasStructuredParameters => ParameterFields.Count > 0;
+    public string ParameterEditorSummary => HasStructuredParameters
+        ? $"{ParameterFields.Count} declared input{(ParameterFields.Count == 1 ? string.Empty : "s")}. Required fields are marked with *."
+        : "This command takes no declared inputs. Use Advanced JSON only for an explicitly documented extension field.";
 
+    public bool IsMutatingTool => _selectedTool?.Definition.ReadOnly == false;
     public bool CanApproveReview => IsMutatingTool && _hasSuccessfulPreview && !IsExecuting;
 
     public bool IsReviewApproved
@@ -132,23 +158,60 @@ public sealed class ToolExecutionViewModel : ObservableObject
         {
             bool next = value && CanApproveReview;
             if (SetProperty(ref _isReviewApproved, next))
-            {
                 OnPropertyChanged(nameof(PrimaryActionLabel));
-            }
         }
     }
 
     public void SelectTool(ToolRowViewModel? tool)
     {
-        if (ReferenceEquals(_selectedTool, tool))
-        {
-            return;
-        }
+        if (ReferenceEquals(_selectedTool, tool)) return;
 
         _selectedTool = tool;
+        ConfigureParameterFields(tool);
         ResetReviewState();
         ClearExecutionResult();
         NotifyAvailabilityChanged();
+    }
+
+    private void ConfigureParameterFields(ToolRowViewModel? tool)
+    {
+        foreach (ToolParameterFieldViewModel field in ParameterFields)
+            field.PropertyChanged -= OnParameterFieldChanged;
+
+        ParameterFields.Clear();
+        if (tool is not null)
+        {
+            foreach (CommandParameterDefinition definition in CommandParameterCatalog.For(tool.Id))
+            {
+                var field = new ToolParameterFieldViewModel(definition);
+                field.PropertyChanged += OnParameterFieldChanged;
+                ParameterFields.Add(field);
+            }
+        }
+
+        _useAdvancedParameterJson = false;
+        _parameterJson = "{}";
+        if (TryBuildStructuredParameters(out JsonElement structured, out _))
+            _parameterJson = JsonSerializer.Serialize(structured);
+
+        OnPropertyChanged(nameof(ParameterFields));
+        OnPropertyChanged(nameof(HasStructuredParameters));
+        OnPropertyChanged(nameof(ParameterEditorSummary));
+        OnPropertyChanged(nameof(UseAdvancedParameterJson));
+        OnPropertyChanged(nameof(StructuredParameterEditorVisible));
+        OnPropertyChanged(nameof(AdvancedParameterEditorVisible));
+        OnPropertyChanged(nameof(ParameterJson));
+    }
+
+    private void OnParameterFieldChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName != nameof(ToolParameterFieldViewModel.Value)) return;
+        if (!UseAdvancedParameterJson && TryBuildStructuredParameters(out JsonElement structured, out _))
+        {
+            _parameterJson = JsonSerializer.Serialize(structured);
+            OnPropertyChanged(nameof(ParameterJson));
+        }
+        ResetReviewState();
     }
 
     private bool CanExecuteSelectedTool() => CanRunSelectedTool;
@@ -156,15 +219,15 @@ public sealed class ToolExecutionViewModel : ObservableObject
     private async Task ExecuteSelectedToolAsync(CancellationToken cancellationToken)
     {
         ToolRowViewModel? selected = _selectedTool;
-        if (selected is null || !CanRunSelectedTool)
-        {
-            return;
-        }
+        if (selected is null || !CanRunSelectedTool) return;
 
         bool apply = IsMutatingTool && IsReviewApproved;
         long reviewVersion = _reviewVersion;
-        if (apply && !CanApproveReview)
+        if (apply && !CanApproveReview) return;
+
+        if (!TryBuildExecutionParameters(out JsonElement parameters, out string parameterError))
         {
+            SetParameterError(parameterError);
             return;
         }
 
@@ -172,30 +235,6 @@ public sealed class ToolExecutionViewModel : ObservableObject
         ClearExecutionResult();
         try
         {
-            string parameterText = string.IsNullOrWhiteSpace(ParameterJson) ? "{}" : ParameterJson;
-            if (parameterText.Length > MaxParameterJsonCharacters)
-            {
-                SetParameterError("Command parameter JSON exceeds the 1 MiB safety limit.");
-                return;
-            }
-
-            JsonElement parameters;
-            try
-            {
-                using JsonDocument document = JsonDocument.Parse(parameterText);
-                if (document.RootElement.ValueKind != JsonValueKind.Object)
-                {
-                    SetParameterError("Command parameters must be a JSON object.");
-                    return;
-                }
-                parameters = document.RootElement.Clone();
-            }
-            catch (JsonException ex)
-            {
-                SetParameterError($"Invalid parameter JSON: {ex.Message}");
-                return;
-            }
-
             ApprovedMutationPlan? approval = apply ? _lastApprovedPlan : null;
             CommandRequest request = apply
                 ? CommandRequest.Execute(selected.Id, parameters, approval)
@@ -243,23 +282,173 @@ public sealed class ToolExecutionViewModel : ObservableObject
         }
     }
 
+    private bool TryBuildExecutionParameters(out JsonElement parameters, out string error)
+    {
+        if (!UseAdvancedParameterJson)
+            return TryBuildStructuredParameters(out parameters, out error);
+
+        string parameterText = string.IsNullOrWhiteSpace(ParameterJson) ? "{}" : ParameterJson;
+        if (parameterText.Length > MaxParameterJsonCharacters)
+        {
+            parameters = default;
+            error = "Command parameter JSON exceeds the 1 MiB safety limit.";
+            return false;
+        }
+
+        try
+        {
+            using JsonDocument document = JsonDocument.Parse(parameterText);
+            if (document.RootElement.ValueKind != JsonValueKind.Object)
+            {
+                parameters = default;
+                error = "Command parameters must be a JSON object.";
+                return false;
+            }
+            parameters = document.RootElement.Clone();
+            error = string.Empty;
+            return true;
+        }
+        catch (JsonException)
+        {
+            parameters = default;
+            error = "Advanced command parameters are not valid JSON.";
+            return false;
+        }
+    }
+
+    private bool TryBuildStructuredParameters(out JsonElement parameters, out string error)
+    {
+        var root = new JsonObject();
+        foreach (ToolParameterFieldViewModel field in ParameterFields)
+        {
+            string raw = field.Value.Trim();
+            if (raw.Length == 0)
+            {
+                if (field.Required)
+                {
+                    parameters = default;
+                    error = $"{field.Label.TrimEnd(' ', '*')} is required.";
+                    return false;
+                }
+                continue;
+            }
+
+            if (field.HasOptions && !field.Options.Contains(raw, StringComparer.OrdinalIgnoreCase))
+            {
+                parameters = default;
+                error = $"{field.Name} must be one of: {string.Join(", ", field.Options)}.";
+                return false;
+            }
+
+            try
+            {
+                switch (field.Kind)
+                {
+                    case CommandParameterKind.Text:
+                        root[field.Name] = raw;
+                        break;
+                    case CommandParameterKind.DateTime:
+                        if (!DateTimeOffset.TryParse(raw, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out DateTimeOffset dateTime))
+                            throw new FormatException("must be an ISO-8601 date/time");
+                        root[field.Name] = dateTime.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture);
+                        break;
+                    case CommandParameterKind.Boolean:
+                        if (!bool.TryParse(raw, out bool boolean)) throw new FormatException("must be true or false");
+                        root[field.Name] = boolean;
+                        break;
+                    case CommandParameterKind.Integer:
+                        if (!int.TryParse(raw, NumberStyles.Integer, CultureInfo.InvariantCulture, out int integer))
+                            throw new FormatException("must be an integer");
+                        ValidateRange(field, integer);
+                        root[field.Name] = integer;
+                        break;
+                    case CommandParameterKind.Long:
+                        if (!long.TryParse(raw, NumberStyles.Integer, CultureInfo.InvariantCulture, out long longInteger))
+                            throw new FormatException("must be an integer");
+                        ValidateRange(field, longInteger);
+                        root[field.Name] = longInteger;
+                        break;
+                    case CommandParameterKind.Number:
+                        if (!double.TryParse(raw, NumberStyles.Float, CultureInfo.InvariantCulture, out double number) || !double.IsFinite(number))
+                            throw new FormatException("must be a finite number");
+                        ValidateRange(field, number);
+                        root[field.Name] = number;
+                        break;
+                    case CommandParameterKind.StringList:
+                    {
+                        string[] values = raw.Split([',', '\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                            .Where(value => value.Length > 0)
+                            .Distinct(StringComparer.Ordinal)
+                            .ToArray();
+                        if (field.Required && values.Length == 0) throw new FormatException("requires at least one value");
+                        root[field.Name] = new JsonArray(values.Select(JsonValue.Create).ToArray());
+                        break;
+                    }
+                    case CommandParameterKind.Json:
+                        root[field.Name] = JsonNode.Parse(raw) ?? throw new FormatException("must contain a JSON value");
+                        break;
+                    default:
+                        throw new FormatException("uses an unsupported parameter type");
+                }
+            }
+            catch (Exception ex) when (ex is FormatException or JsonException or OverflowException)
+            {
+                parameters = default;
+                error = $"{field.Name} {ex.Message}.";
+                return false;
+            }
+        }
+
+        using JsonDocument document = JsonDocument.Parse(root.ToJsonString());
+        parameters = document.RootElement.Clone();
+        error = string.Empty;
+        return true;
+    }
+
+    private static void ValidateRange(ToolParameterFieldViewModel field, double value)
+    {
+        if (field.Definition.Minimum is string minimum &&
+            double.TryParse(minimum, NumberStyles.Float, CultureInfo.InvariantCulture, out double min) && value < min)
+            throw new FormatException($"must be at least {minimum}");
+        if (field.Definition.Maximum is string maximum &&
+            double.TryParse(maximum, NumberStyles.Float, CultureInfo.InvariantCulture, out double max) && value > max)
+            throw new FormatException($"must be at most {maximum}");
+    }
+
+    private void TryImportAdvancedValues()
+    {
+        try
+        {
+            using JsonDocument document = JsonDocument.Parse(string.IsNullOrWhiteSpace(_parameterJson) ? "{}" : _parameterJson);
+            if (document.RootElement.ValueKind != JsonValueKind.Object) return;
+            foreach (ToolParameterFieldViewModel field in ParameterFields)
+            {
+                if (!document.RootElement.TryGetProperty(field.Name, out JsonElement value)) continue;
+                field.Value = value.ValueKind switch
+                {
+                    JsonValueKind.String => value.GetString() ?? string.Empty,
+                    JsonValueKind.True => "true",
+                    JsonValueKind.False => "false",
+                    JsonValueKind.Array when field.Kind == CommandParameterKind.StringList =>
+                        string.Join(Environment.NewLine, value.EnumerateArray().Where(item => item.ValueKind == JsonValueKind.String).Select(item => item.GetString())),
+                    _ => value.GetRawText(),
+                };
+            }
+        }
+        catch (JsonException)
+        {
+            // Invalid advanced JSON remains available in the raw editor and will be blocked on run.
+        }
+    }
+
     private static TimeSpan ExecutionBudget(CommandDefinition definition) => definition.Id switch
     {
-        // Network transfers can legitimately run for a long time while remaining cancellation-aware.
-        "download-start" or "download-batch" or "download-start-due" or "steam-backup" or "steam-restore"
-            => TimeSpan.FromHours(2),
-
-        // Windows servicing and update APIs regularly exceed interactive command timeouts.
+        "download-start" or "download-batch" or "download-start-due" or "steam-backup" or "steam-restore" => TimeSpan.FromHours(2),
         "wua-download" or "wua-install" or "wua-uninstall" or
         "offline-appx-selection" or "offline-driver-add" or "offline-driver-remove" or
         "offline-package-add" or "offline-feature-set" or "offline-reduction-apply" or
-        "provisioning-plan" or "appx-selection" or "hardening-apply"
-            => TimeSpan.FromHours(1),
-
-        // Mutations stay bounded but get enough time for native tools and filesystem work.
+        "provisioning-plan" or "appx-selection" or "hardening-apply" => TimeSpan.FromHours(1),
         _ when !definition.ReadOnly => TimeSpan.FromMinutes(15),
-
-        // Read-only diagnostics should be responsive while allowing large inventories/event queries.
         _ => TimeSpan.FromMinutes(2),
     };
 
@@ -270,7 +459,7 @@ public sealed class ToolExecutionViewModel : ObservableObject
         _executionResultText = JsonSerializer.Serialize(new
         {
             status = CommandResultStatus.Blocked,
-            code = "command.parameters_json_invalid",
+            code = "command.parameters_invalid",
             message,
         }, ResultJsonOptions);
         IsExecutionResultOpen = true;
@@ -311,11 +500,7 @@ public sealed class ToolExecutionViewModel : ObservableObject
 
     private void SetSuccessfulPreview(bool value)
     {
-        if (_hasSuccessfulPreview == value)
-        {
-            return;
-        }
-
+        if (_hasSuccessfulPreview == value) return;
         _hasSuccessfulPreview = value;
         if (!value && _isReviewApproved)
         {
