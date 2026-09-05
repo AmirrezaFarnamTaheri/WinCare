@@ -33,6 +33,12 @@ class ToolchainDeterminismTests(unittest.TestCase):
         self.assertIn("global-json-file: global.json", workflow)
         self.assertRegex(workflow, r"dotnet-version:\s*[\"']?8\.0\.416[\"']?")
 
+    def test_contributor_setup_matches_the_sdk_pin(self) -> None:
+        contributing = (ROOT / "CONTRIBUTING.md").read_text(encoding="utf-8")
+        self.assertIn("Exactly .NET SDK **8.0.416**", contributing)
+        self.assertNotIn("8.0.416 or newer", contributing)
+        self.assertIn("--locked-mode", contributing)
+
     def test_nuget_dependency_graph_is_committed_and_locked_in_ci(self) -> None:
         found = {
             path.relative_to(ROOT).as_posix()
@@ -61,6 +67,32 @@ class ToolchainDeterminismTests(unittest.TestCase):
         config = (ROOT / ".github/dependabot.yml").read_text(encoding="utf-8")
         for ecosystem in ("github-actions", "nuget", "cargo", "npm"):
             self.assertRegex(config, rf'package-ecosystem:\s*[\"\']{re.escape(ecosystem)}[\"\']')
+
+    def test_sensitive_repository_changes_have_review_guardrails(self) -> None:
+        owners = (ROOT / ".github/CODEOWNERS").read_text(encoding="utf-8")
+        for path in (
+            "/.github/",
+            "/SECURITY.md",
+            "/Directory.Build.props",
+            "/Directory.Packages.props",
+            "/global.json",
+            "/native/",
+            "/src/WinCare.Application/Commands/",
+            "/src/WinCare.Infrastructure/IPC/",
+            "/src/WinCare.Infrastructure/Plugins/",
+            "/src/WinCare.Infrastructure/Security/",
+        ):
+            self.assertIn(path, owners)
+
+        template = (ROOT / ".github/pull_request_template.md").read_text(encoding="utf-8")
+        for heading in (
+            "## Safety and trust review",
+            "## UX and accessibility review",
+            "## Dependency and supply-chain review",
+            "## Verification evidence",
+            "## Residual risk / unverified scenarios",
+        ):
+            self.assertIn(heading, template)
 
     def test_no_lockfile_bootstrap_workflow_remains(self) -> None:
         self.assertFalse((ROOT / ".github/workflows/bootstrap-nuget-lockfiles.yml").exists())
