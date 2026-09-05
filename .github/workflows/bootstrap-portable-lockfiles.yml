@@ -1,4 +1,4 @@
-name: Apply Final Repository Hardening
+name: Generate Portable NuGet Lockfiles
 
 on:
   push:
@@ -8,7 +8,7 @@ permissions:
   contents: write
 
 jobs:
-  harden:
+  lockfiles:
     runs-on: windows-latest
     timeout-minutes: 20
     steps:
@@ -19,357 +19,36 @@ jobs:
         with:
           dotnet-version: "8.0.416"
           global-json-file: global.json
-      - name: Patch fail-safe and release-integrity contracts
-        shell: pwsh
-        run: |
-          @'
-          from pathlib import Path
-
-          def replace_once(path: str, old: str, new: str, label: str) -> None:
-              p = Path(path)
-              text = p.read_text(encoding="utf-8")
-              count = text.count(old)
-              if count != 1:
-                  raise SystemExit(f"{label}: expected exactly one match, found {count}")
-              p.write_text(text.replace(old, new, 1), encoding="utf-8", newline="\n")
-
-          # Normal build/test lockfiles stay conventional. Portable publish variants are
-          # staged over them only inside the CI runner before the locked publish restore.
-          replace_once(
-              "Directory.Build.props",
-              "    <PortablePublish Condition=\"'$(WindowsPackageType)' == 'None' and '$(RuntimeIdentifier)' != ''\">true</PortablePublish>\n    <NuGetLockFilePath Condition=\"'$(PortablePublish)' == 'true'\">$(MSBuildProjectDirectory)/packages.portable.$(RuntimeIdentifier).lock.json</NuGetLockFilePath>\n",
-              "",
-              "remove experimental custom lock path",
-          )
-
-          replace_once(
-              "src/WinCare.Infrastructure/Plugins/PluginInstallerService.cs",
-              "        bool oldPluginBackedUp = false;\n        bool newPluginPromoted = false;\n",
-              "        bool oldPluginBackedUp = false;\n        bool newPluginPromoted = false;\n        bool preserveAdmissionBackup = false;\n",
-              "plugin rollback state",
-          )
-
-          old_rollback = '''        catch
-          {
-              if (newPluginPromoted && Directory.Exists(finalTargetDir))
-              {
-                  TryDeleteDirectory(finalTargetDir);
-              }
-
-              if (oldPluginBackedUp && pluginBackupDir != null && Directory.Exists(pluginBackupDir))
-              {
-                  try
-                  {
-                      Directory.Move(pluginBackupDir, finalTargetDir);
-                  }
-                  catch (IOException)
-                  {
-                      CopyDirectoryRecursive(pluginBackupDir, finalTargetDir);
-                      TryDeleteDirectory(pluginBackupDir);
-                  }
-              }
-
-              // The existing admission record is not overwritten until the final commit move.
-              // Restore from the backup defensively if a platform-specific overwrite partially
-              // changed it before throwing.
-              if (admissionBackupPath != null && File.Exists(admissionBackupPath))
-              {
-                  try { File.Copy(admissionBackupPath, admissionPath, overwrite: true); } catch { }
-              }
-              else if (!oldPluginBackedUp && File.Exists(admissionPath) && newPluginPromoted)
-              {
-                  TryDeleteFile(admissionPath);
-              }
-
-              throw;
-          }
-          finally
-          {
-              if (File.Exists(pendingAdmissionPath))
-              {
-                  TryDeleteFile(pendingAdmissionPath);
-              }
-              if (admissionBackupPath != null && File.Exists(admissionBackupPath))
-              {
-                  TryDeleteFile(admissionBackupPath);
-              }
-          }
-          '''
-          new_rollback = '''        catch (Exception installException)
-          {
-              Exception? admissionRestoreException = null;
-
-              if (newPluginPromoted && Directory.Exists(finalTargetDir))
-              {
-                  TryDeleteDirectory(finalTargetDir);
-              }
-
-              if (oldPluginBackedUp && pluginBackupDir != null && Directory.Exists(pluginBackupDir))
-              {
-                  try
-                  {
-                      Directory.Move(pluginBackupDir, finalTargetDir);
-                  }
-                  catch (IOException)
-                  {
-                      CopyDirectoryRecursive(pluginBackupDir, finalTargetDir);
-                      TryDeleteDirectory(pluginBackupDir);
-                  }
-              }
-
-              // The existing admission record is not overwritten until the final commit move.
-              // Restore from the backup defensively if a platform-specific overwrite partially
-              // changed it before throwing. A failed trust-record rollback is itself security
-              // significant: retain the backup for recovery and surface both failures instead of
-              // silently deleting the only known-good admission state.
-              if (admissionBackupPath != null && File.Exists(admissionBackupPath))
-              {
-                  try
-                  {
-                      File.Copy(admissionBackupPath, admissionPath, overwrite: true);
-                  }
-                  catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-                  {
-                      preserveAdmissionBackup = true;
-                      admissionRestoreException = ex;
-                  }
-              }
-              else if (!oldPluginBackedUp && File.Exists(admissionPath) && newPluginPromoted)
-              {
-                  TryDeleteFile(admissionPath);
-              }
-
-              if (admissionRestoreException != null)
-              {
-                  throw new InvalidOperationException(
-                      "Plugin install failed and the previous trust record could not be restored automatically. " +
-                      "A recovery backup was preserved in the plugin staging backup directory.",
-                      new AggregateException(installException, admissionRestoreException));
-              }
-
-              throw;
-          }
-          finally
-          {
-              if (File.Exists(pendingAdmissionPath))
-              {
-                  TryDeleteFile(pendingAdmissionPath);
-              }
-
-              // A failed admission restore deliberately leaves its backup in place. The backup is
-              // removed only after a successful restore/commit; otherwise cleanup would destroy
-              // the last known-good trust record and make recovery harder.
-              if (!preserveAdmissionBackup && admissionBackupPath != null && File.Exists(admissionBackupPath))
-              {
-                  TryDeleteFile(admissionBackupPath);
-              }
-          }
-          '''
-          replace_once(
-              "src/WinCare.Infrastructure/Plugins/PluginInstallerService.cs",
-              old_rollback,
-              new_rollback,
-              "plugin admission rollback",
-          )
-
-          replace_once(
-              "tools/finalize_native_release.py",
-              '    "LICENSE",\n    "README.md",\n',
-              '    "LICENSE",\n    "NuGet.Config",\n    "README.md",\n',
-              "stage NuGet config",
-          )
-          replace_once(
-              "tools/finalize_native_release.py",
-              '    "tests/WinCare.CommandCatalog.Tests",\n    "tests/native",\n',
-              '    "tests/WinCare.CommandCatalog.Tests",\n    "tests/WinCare.Infrastructure.Tests",\n    "tests/native",\n',
-              "stage infrastructure tests",
-          )
-          replace_once(
-              "tools/finalize_native_release.py",
-              'NATIVE_WORKFLOW_FILES = (\n    ".github/dependabot.yml",\n',
-              'NATIVE_WORKFLOW_FILES = (\n    ".github/CODEOWNERS",\n    ".github/dependabot.yml",\n    ".github/pull_request_template.md",\n',
-              "stage repository guardrails",
-          )
-
-          publish_marker = '''      - name: Publish single binary executable
-              shell: bash
-              run: dotnet publish src/WinCare.App/WinCare.App.csproj -c Release -p:Platform=${{ matrix.platform }} -r ${{ matrix.runtime }} -p:WindowsPackageType=None -p:WindowsAppSDKSelfContained=true -p:SelfContained=true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:DebugType=none -p:DebugSymbols=false -o artifacts/portable/${{ matrix.runtime }}
-          '''
-          publish_replacement = '''      - name: Stage locked portable dependency graph
-              shell: pwsh
-              run: |
-                $ErrorActionPreference = 'Stop'
-                $runtime = '${{ matrix.runtime }}'
-                $projects = @('WinCare.App', 'WinCare.Application', 'WinCare.CommandCatalog', 'WinCare.Domain', 'WinCare.Infrastructure')
-                foreach ($project in $projects) {
-                  $directory = Join-Path 'src' $project
-                  $variant = Join-Path $directory "packages.portable.$runtime.lock.json"
-                  $active = Join-Path $directory 'packages.lock.json'
-                  if (-not (Test-Path -LiteralPath $variant)) {
-                    throw "Portable lockfile '$variant' is missing."
-                  }
-                  Copy-Item -LiteralPath $variant -Destination $active -Force
-                }
-                Write-Output "Staged $($projects.Count) locked dependency graphs for $runtime."
-            - name: Publish single binary executable
-              shell: bash
-              run: dotnet publish src/WinCare.App/WinCare.App.csproj -c Release -p:Platform=${{ matrix.platform }} -r ${{ matrix.runtime }} -p:WindowsPackageType=None -p:WindowsAppSDKSelfContained=true -p:SelfContained=true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:DebugType=none -p:DebugSymbols=false -o artifacts/portable/${{ matrix.runtime }}
-          '''
-          replace_once(
-              ".github/workflows/native-winui.yml",
-              publish_marker,
-              publish_replacement,
-              "portable locked publish staging",
-          )
-
-          Path("tests/native/test_plugin_admission_rollback.py").write_text(r'''from __future__ import annotations
-
-          import unittest
-          from pathlib import Path
-
-          ROOT = Path(__file__).resolve().parents[2]
-
-
-          class PluginAdmissionRollbackTests(unittest.TestCase):
-              def test_failed_admission_restore_preserves_known_good_recovery_backup(self) -> None:
-                  source = (ROOT / "src/WinCare.Infrastructure/Plugins/PluginInstallerService.cs").read_text(encoding="utf-8")
-
-                  for token in (
-                      "bool preserveAdmissionBackup = false;",
-                      "preserveAdmissionBackup = true;",
-                      "new AggregateException(installException, admissionRestoreException)",
-                      "A recovery backup was preserved in the plugin staging backup directory.",
-                      "if (!preserveAdmissionBackup && admissionBackupPath != null",
-                  ):
-                      self.assertIn(token, source)
-
-                  self.assertNotIn(
-                      "try { File.Copy(admissionBackupPath, admissionPath, overwrite: true); } catch { }",
-                      source,
-                  )
-
-
-          if __name__ == "__main__":
-              unittest.main()
-          '''.replace("          ", ""), encoding="utf-8", newline="\n")
-
-          Path("tests/native/test_release_source_completeness.py").write_text(r'''from __future__ import annotations
-
-          import tempfile
-          import unittest
-          from pathlib import Path
-
-          from tools.finalize_native_release import stage_native_source
-
-          ROOT = Path(__file__).resolve().parents[2]
-
-
-          class ReleaseSourceCompletenessTests(unittest.TestCase):
-              def test_native_source_archive_contains_security_and_reproducibility_evidence(self) -> None:
-                  with tempfile.TemporaryDirectory() as td:
-                      staged = Path(td) / "native-source"
-                      stage_native_source(staged)
-
-                      required = (
-                          "NuGet.Config",
-                          ".github/CODEOWNERS",
-                          ".github/dependabot.yml",
-                          ".github/pull_request_template.md",
-                          "tests/WinCare.Infrastructure.Tests/WinCare.Infrastructure.Tests.csproj",
-                          "tests/WinCare.Infrastructure.Tests/PluginInstallerServiceTests.cs",
-                          "tests/WinCare.Infrastructure.Tests/packages.lock.json",
-                      )
-                      for relative in required:
-                          self.assertTrue((staged / relative).is_file(), relative)
-
-                      variants = list(staged.glob("src/*/packages.portable.*.lock.json"))
-                      self.assertEqual(10, len(variants))
-
-
-          if __name__ == "__main__":
-              unittest.main()
-          '''.replace("          ", ""), encoding="utf-8", newline="\n")
-
-          Path("tests/native/test_portable_lock_contract.py").write_text(r'''from __future__ import annotations
-
-          import json
-          import unittest
-          from pathlib import Path
-
-          ROOT = Path(__file__).resolve().parents[2]
-          PROJECTS = ("WinCare.App", "WinCare.Application", "WinCare.CommandCatalog", "WinCare.Domain", "WinCare.Infrastructure")
-          RUNTIMES = ("win-x64", "win-arm64")
-
-
-          class PortableLockContractTests(unittest.TestCase):
-              def test_every_runtime_has_a_committed_portable_lock_graph(self) -> None:
-                  expected = {
-                      f"src/{project}/packages.portable.{runtime}.lock.json"
-                      for project in PROJECTS
-                      for runtime in RUNTIMES
-                  }
-                  found = {
-                      path.relative_to(ROOT).as_posix()
-                      for path in ROOT.glob("src/*/packages.portable.*.lock.json")
-                  }
-                  self.assertEqual(expected, found)
-                  for relative in sorted(expected):
-                      lock = json.loads((ROOT / relative).read_text(encoding="utf-8-sig"))
-                      self.assertEqual(2, lock["version"], relative)
-
-              def test_ci_stages_runtime_variant_before_locked_portable_publish(self) -> None:
-                  workflow = (ROOT / ".github/workflows/native-winui.yml").read_text(encoding="utf-8")
-                  self.assertIn("Stage locked portable dependency graph", workflow)
-                  self.assertIn('packages.portable.$runtime.lock.json', workflow)
-                  self.assertIn("Staged $($projects.Count) locked dependency graphs for $runtime.", workflow)
-                  self.assertIn("dotnet publish src/WinCare.App/WinCare.App.csproj", workflow)
-
-                  props = (ROOT / "Directory.Build.props").read_text(encoding="utf-8")
-                  self.assertNotIn("NuGetLockFilePath", props)
-
-              def test_no_portable_lock_bootstrap_workflow_remains(self) -> None:
-                  self.assertFalse((ROOT / ".github/workflows/bootstrap-portable-lockfiles.yml").exists())
-
-
-          if __name__ == "__main__":
-              unittest.main()
-          '''.replace("          ", ""), encoding="utf-8", newline="\n")
-          '@ | Set-Content -LiteralPath "$env:RUNNER_TEMP\apply_hardening.py" -Encoding utf8
-          python "$env:RUNNER_TEMP\apply_hardening.py"
-      - name: Generate x64 portable dependency variants
+      - name: Generate x64 portable lock graph
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
-          dotnet restore src/WinCare.App/WinCare.App.csproj -p:Configuration=Release -p:Platform=x64 -r win-x64 -p:WindowsPackageType=None -p:WindowsAppSDKSelfContained=true -p:SelfContained=true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:RestoreLockedMode=false
           $projects = @('WinCare.App', 'WinCare.Application', 'WinCare.CommandCatalog', 'WinCare.Domain', 'WinCare.Infrastructure')
+          dotnet restore src/WinCare.App/WinCare.App.csproj -p:Configuration=Release -p:Platform=x64 -r win-x64 -p:WindowsPackageType=None -p:WindowsAppSDKSelfContained=true -p:SelfContained=true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:RestoreLockedMode=false
           foreach ($project in $projects) {
             $directory = Join-Path 'src' $project
             Copy-Item -LiteralPath (Join-Path $directory 'packages.lock.json') -Destination (Join-Path $directory 'packages.portable.win-x64.lock.json') -Force
           }
           git checkout -- src/WinCare.App/packages.lock.json src/WinCare.Application/packages.lock.json src/WinCare.CommandCatalog/packages.lock.json src/WinCare.Domain/packages.lock.json src/WinCare.Infrastructure/packages.lock.json
-      - name: Generate ARM64 portable dependency variants
+      - name: Generate ARM64 portable lock graph
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
-          dotnet restore src/WinCare.App/WinCare.App.csproj -p:Configuration=Release -p:Platform=ARM64 -r win-arm64 -p:WindowsPackageType=None -p:WindowsAppSDKSelfContained=true -p:SelfContained=true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:RestoreLockedMode=false
           $projects = @('WinCare.App', 'WinCare.Application', 'WinCare.CommandCatalog', 'WinCare.Domain', 'WinCare.Infrastructure')
+          dotnet restore src/WinCare.App/WinCare.App.csproj -p:Configuration=Release -p:Platform=ARM64 -r win-arm64 -p:WindowsPackageType=None -p:WindowsAppSDKSelfContained=true -p:SelfContained=true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:RestoreLockedMode=false
           foreach ($project in $projects) {
             $directory = Join-Path 'src' $project
             Copy-Item -LiteralPath (Join-Path $directory 'packages.lock.json') -Destination (Join-Path $directory 'packages.portable.win-arm64.lock.json') -Force
           }
           git checkout -- src/WinCare.App/packages.lock.json src/WinCare.Application/packages.lock.json src/WinCare.CommandCatalog/packages.lock.json src/WinCare.Domain/packages.lock.json src/WinCare.Infrastructure/packages.lock.json
-      - name: Verify generated contracts before commit
+      - name: Verify and commit portable lock variants
         shell: pwsh
         run: |
           $variants = @(Get-ChildItem src -Recurse -Filter 'packages.portable.*.lock.json' -File)
-          if ($variants.Count -ne 10) { throw "Expected 10 portable lock variants, found $($variants.Count)." }
-          python -m unittest tests.native.test_plugin_admission_rollback tests.native.test_release_source_completeness -v
+          if ($variants.Count -ne 10) { throw "Expected exactly 10 portable lock variants, found $($variants.Count)." }
           git diff --check
-      - name: Commit hardened repository state
-        shell: pwsh
-        run: |
           git config user.name "Farnam"
           git config user.email "taheri.farnam@gmail.com"
-          git add Directory.Build.props .github/workflows/native-winui.yml tools/finalize_native_release.py src/WinCare.Infrastructure/Plugins/PluginInstallerService.cs tests/native/test_plugin_admission_rollback.py tests/native/test_release_source_completeness.py tests/native/test_portable_lock_contract.py src/*/packages.portable.*.lock.json
-          git commit -m "fix: close final rollback and release-integrity gaps"
+          git add src/*/packages.portable.*.lock.json
+          git commit -m "build: lock portable publish dependency graphs"
           git push origin HEAD:arena/01a06cc8-wincare
