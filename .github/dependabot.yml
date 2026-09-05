@@ -1,12 +1,7 @@
-# T6.3 — Dependabot configuration for WinCare
-# Both workflow files (native-winui.yml and native-release-candidate.yml) pin
-# GitHub Actions to SHA digests (correct security practice). This config makes
-# Dependabot propose updates automatically so pinned digests don't silently rot
-# behind new releases.
-#
-# Scope: github-actions only. Python build tools are pinned in tools/ scripts
-# via requirements files; add a pip ecosystem entry here if requirements.txt
-# or pyproject.toml are introduced.
+# Automated dependency maintenance for every package ecosystem used by WinCare.
+# GitHub Actions are SHA-pinned; Dependabot updates both the digest and its
+# upstream tag annotation. NuGet versions are centrally managed at repo root,
+# Rust uses native/Cargo.lock, and the plugin CLI keeps an npm lockfile.
 
 version: 2
 
@@ -25,10 +20,61 @@ updates:
     commit-message:
       prefix: "ci"
       include: "scope"
-    # Only propose updates to actions that are already pinned to a SHA in our
-    # workflows. Dependabot will propose the new digest + a comment with the
-    # upstream tag so reviewers know what they're merging.
     groups:
       github-actions:
+        patterns:
+          - "*"
+
+  - package-ecosystem: "nuget"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:15"
+      timezone: "UTC"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+    commit-message:
+      prefix: "build"
+      include: "scope"
+    groups:
+      dotnet-dependencies:
+        patterns:
+          - "*"
+
+  - package-ecosystem: "cargo"
+    directory: "/native"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:30"
+      timezone: "UTC"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+    commit-message:
+      prefix: "build"
+      include: "scope"
+    groups:
+      rust-dependencies:
+        patterns:
+          - "*"
+
+  - package-ecosystem: "npm"
+    directory: "/tools/wincare-plugin-cli"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:45"
+      timezone: "UTC"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+    commit-message:
+      prefix: "build"
+      include: "scope"
+    groups:
+      plugin-cli-dependencies:
         patterns:
           - "*"
