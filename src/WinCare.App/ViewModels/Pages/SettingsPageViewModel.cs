@@ -9,6 +9,12 @@ public sealed class SettingsPageViewModel : ObservableObject
 
     public IReadOnlyList<string> Themes { get; } = ["System", "Light", "Dark"];
 
+    public event EventHandler? PersistenceStatusChanged
+    {
+        add => AppPreferences.PersistenceStatusChanged += value;
+        remove => AppPreferences.PersistenceStatusChanged -= value;
+    }
+
     public string SelectedTheme
     {
         get => _selectedTheme;
@@ -20,4 +26,13 @@ public sealed class SettingsPageViewModel : ObservableObject
     }
 
     public string DataDirectory => AppPreferences.DataDirectory;
+    public bool HasPersistenceWarning => !AppPreferences.IsPersistenceHealthy;
+    public string PersistenceWarningMessage => AppPreferences.PersistenceStatusMessage ??
+        "Preferences cannot currently be saved to disk.";
+
+    public void RefreshPersistenceState()
+    {
+        OnPropertyChanged(nameof(HasPersistenceWarning));
+        OnPropertyChanged(nameof(PersistenceWarningMessage));
+    }
 }
