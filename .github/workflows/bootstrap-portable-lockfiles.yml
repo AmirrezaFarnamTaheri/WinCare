@@ -1,4 +1,4 @@
-name: Apply Integrity Fixes
+name: Wire Portable Locked Publish
 
 on:
   push:
@@ -9,59 +9,49 @@ permissions:
 
 jobs:
   patch:
-    runs-on: windows-latest
-    timeout-minutes: 10
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: arena/01a06cc8-wincare
-      - name: Apply exact integrity patches
-        shell: pwsh
+      - name: Insert portable lock staging before publish
+        shell: bash
         run: |
-          @'
+          python - <<'PY'
           from pathlib import Path
 
-          def replace_once(path, old, new, label):
-              p = Path(path)
-              text = p.read_text(encoding="utf-8")
-              if text.count(old) != 1:
-                  raise SystemExit(f"{label}: exact source contract changed")
-              p.write_text(text.replace(old, new, 1), encoding="utf-8", newline="\n")
+          path = Path('.github/workflows/native-winui.yml')
+          text = path.read_text(encoding='utf-8')
+          marker = "      - name: Publish single binary executable\n"
+          if text.count(marker) != 1:
+              raise SystemExit(f'expected exactly one publish marker, found {text.count(marker)}')
 
-          plugin = "src/WinCare.Infrastructure/Plugins/PluginInstallerService.cs"
-          replace_once(plugin,
-              "        bool oldPluginBackedUp = false;\n        bool newPluginPromoted = false;\n",
-              "        bool oldPluginBackedUp = false;\n        bool newPluginPromoted = false;\n        bool preserveAdmissionBackup = false;\n",
-              "rollback-state")
-          replace_once(plugin,
-              "        catch\n        {\n            if (newPluginPromoted && Directory.Exists(finalTargetDir))\n",
-              "        catch (Exception installException)\n        {\n            Exception? admissionRestoreException = null;\n\n            if (newPluginPromoted && Directory.Exists(finalTargetDir))\n",
-              "rollback-catch")
-          replace_once(plugin,
-              "            // The existing admission record is not overwritten until the final commit move.\n            // Restore from the backup defensively if a platform-specific overwrite partially\n            // changed it before throwing.\n            if (admissionBackupPath != null && File.Exists(admissionBackupPath))\n            {\n                try { File.Copy(admissionBackupPath, admissionPath, overwrite: true); } catch { }\n            }\n",
-              "            // The existing admission record is not overwritten until the final commit move.\n            // Restore from the backup defensively if a platform-specific overwrite partially\n            // changed it before throwing. A failed trust-record rollback is security-significant:\n            // retain the backup and surface both failures instead of deleting known-good state.\n            if (admissionBackupPath != null && File.Exists(admissionBackupPath))\n            {\n                try\n                {\n                    File.Copy(admissionBackupPath, admissionPath, overwrite: true);\n                }\n                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)\n                {\n                    preserveAdmissionBackup = true;\n                    admissionRestoreException = ex;\n                }\n            }\n",
-              "admission-restore")
-          replace_once(plugin,
-              "            else if (!oldPluginBackedUp && File.Exists(admissionPath) && newPluginPromoted)\n            {\n                TryDeleteFile(admissionPath);\n            }\n\n            throw;\n",
-              "            else if (!oldPluginBackedUp && File.Exists(admissionPath) && newPluginPromoted)\n            {\n                TryDeleteFile(admissionPath);\n            }\n\n            if (admissionRestoreException != null)\n            {\n                throw new InvalidOperationException(\n                    \"Plugin install failed and the previous trust record could not be restored automatically. \" +\n                    \"A recovery backup was preserved in the plugin staging backup directory.\",\n                    new AggregateException(installException, admissionRestoreException));\n            }\n\n            throw;\n",
-              "admission-escalation")
-          replace_once(plugin,
-              "            if (admissionBackupPath != null && File.Exists(admissionBackupPath))\n            {\n                TryDeleteFile(admissionBackupPath);\n            }\n        }\n    }\n\n    /// <summary>\n    /// Acquires an exclusive, cross-process lock for mutations to a single plugin.\n",
-              "            // Preserve the last known-good trust record if rollback itself failed.\n            if (!preserveAdmissionBackup && admissionBackupPath != null && File.Exists(admissionBackupPath))\n            {\n                TryDeleteFile(admissionBackupPath);\n            }\n        }\n    }\n\n    /// <summary>\n    /// Acquires an exclusive, cross-process lock for mutations to a single plugin.\n",
-              "admission-cleanup")
-
-          finalizer = "tools/finalize_native_release.py"
-          replace_once(finalizer, '    "LICENSE",\n    "README.md",\n', '    "LICENSE",\n    "NuGet.Config",\n    "README.md",\n', "nuget-config")
-          replace_once(finalizer, '    "tests/WinCare.CommandCatalog.Tests",\n    "tests/native",\n', '    "tests/WinCare.CommandCatalog.Tests",\n    "tests/WinCare.Infrastructure.Tests",\n    "tests/native",\n', "infrastructure-tests")
-          replace_once(finalizer, 'NATIVE_WORKFLOW_FILES = (\n    ".github/dependabot.yml",\n', 'NATIVE_WORKFLOW_FILES = (\n    ".github/CODEOWNERS",\n    ".github/dependabot.yml",\n    ".github/pull_request_template.md",\n', "workflow-evidence")
-          '@ | Set-Content -LiteralPath "$env:RUNNER_TEMP\patch.py" -Encoding utf8
-          python "$env:RUNNER_TEMP\patch.py"
-          git diff --check
-      - name: Commit integrity fixes
+          stage = '''      - name: Stage locked portable dependency graph
         shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $runtime = '${{ matrix.runtime }}'
+          $projects = @('WinCare.App', 'WinCare.Application', 'WinCare.CommandCatalog', 'WinCare.Domain', 'WinCare.Infrastructure')
+          foreach ($project in $projects) {
+            $directory = Join-Path 'src' $project
+            $variant = Join-Path $directory "packages.portable.$runtime.lock.json"
+            $active = Join-Path $directory 'packages.lock.json'
+            if (-not (Test-Path -LiteralPath $variant)) {
+              throw "Portable lockfile '$variant' is missing."
+            }
+            Copy-Item -LiteralPath $variant -Destination $active -Force
+          }
+          Write-Output "Staged $($projects.Count) locked dependency graphs for $runtime."
+'''
+          path.write_text(text.replace(marker, stage + marker, 1), encoding='utf-8', newline='\n')
+          PY
+          git diff --check
+      - name: Commit workflow hardening
+        shell: bash
         run: |
           git config user.name "Farnam"
           git config user.email "taheri.farnam@gmail.com"
-          git add src/WinCare.Infrastructure/Plugins/PluginInstallerService.cs tools/finalize_native_release.py
-          git commit -m "fix: preserve trust rollback and release evidence"
+          git add .github/workflows/native-winui.yml
+          git commit -m "ci: lock portable publish dependency graph"
           git push origin HEAD:arena/01a06cc8-wincare
