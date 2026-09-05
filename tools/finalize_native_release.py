@@ -53,6 +53,7 @@ NATIVE_TOP_LEVEL_FILES = (
 )
 
 NATIVE_DIRECTORIES = (
+    "docs",
     "migration/oracle",
     "native",
     "policy",
@@ -65,6 +66,8 @@ NATIVE_DIRECTORIES = (
     "tests/WinCare.CommandCatalog.Tests",
     "tests/WinCare.Infrastructure.Tests",
     "tests/native",
+    "tests/tools",
+    "tools/wincare-plugin-cli",
 )
 
 NATIVE_DESIGN_FILES = (

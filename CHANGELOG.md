@@ -30,7 +30,7 @@ All notable changes to WinCare are documented in this file in accordance with [K
 - Enabled CI locked restore plus NuGet auditing of all transitive packages at moderate-or-higher severity; audit warnings are not suppressed.
 - Expanded Dependabot coverage to GitHub Actions, NuGet, Cargo, and npm.
 - Added CODEOWNERS and a pull-request template covering safety/trust, accessibility, supply chain, exact verification evidence, documentation truth, and residual risk.
-- Expanded finalized native-source evidence to include NuGet configuration, infrastructure security tests, repository review guardrails, and all committed dependency lock graphs.
+- Expanded finalized native-source evidence to include NuGet configuration, infrastructure security tests, repository review guardrails, all committed dependency lock graphs, complete linked documentation/assets, and the plugin developer CLI with its tests.
 - Added structural regressions for deterministic toolchains, dependency graph drift, plugin admission rollback, portable publish locking, finalized-source completeness, responsive behavior, typed inputs, and approval provenance.
 
 ## [2.5.0-rc5] - 2026-08-31
