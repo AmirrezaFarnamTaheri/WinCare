@@ -57,9 +57,6 @@ public sealed class CommandDispatcher : ICommandDispatcher
             }
             catch (Exception ex) when (ex is DllNotFoundException or EntryPointNotFoundException or BadImageFormatException)
             {
-                // The Release pipeline stages wincare_core.dll via an MSBuild target, but a
-                // Debug/F5 run without it would otherwise surface a bare DllNotFoundException.
-                // Fail with an actionable message instead (see App.OnUnhandledException).
                 throw new InvalidOperationException(
                     "wincare_core.dll could not be loaded. " +
                     "Build the native wincare-core project or run the native staging step before launching, " +
@@ -68,8 +65,6 @@ public sealed class CommandDispatcher : ICommandDispatcher
             }
         }
 
-        // Case-insensitive keying keeps static lookup consistent with the dynamic plugin
-        // registry and with ApprovedMutationPlan.IsValid, which compare IDs ordinal-insensitively.
         Dictionary<string, CommandDefinition> definitionsById = new(StringComparer.OrdinalIgnoreCase);
         foreach (CommandDefinition definition in definitions)
         {
@@ -112,9 +107,6 @@ public sealed class CommandDispatcher : ICommandDispatcher
             return false;
         }
 
-        // The static registration path requires the handler ID to match the definition ID;
-        // enforce the same invariant for dynamic (plugin) commands so a mismatched handler
-        // can never be resolved against a definition it was not built for.
         if (string.IsNullOrWhiteSpace(handler.CommandId) ||
             !string.Equals(handler.CommandId, definition.Id, StringComparison.OrdinalIgnoreCase))
         {
@@ -123,7 +115,6 @@ public sealed class CommandDispatcher : ICommandDispatcher
             return false;
         }
 
-        // Security / Invariant Protection: Core commands and namespaces cannot be overridden by dynamic plugins
         if (_definitions.ContainsKey(definition.Id) ||
             definition.Id.StartsWith("wincare.core.", StringComparison.OrdinalIgnoreCase) ||
             definition.Id.StartsWith("system.", StringComparison.OrdinalIgnoreCase))
@@ -132,7 +123,6 @@ public sealed class CommandDispatcher : ICommandDispatcher
             return false;
         }
 
-        // Publish policy and implementation together; never replace another plugin's command.
         return _dynamicCommands.TryAdd(definition.Id, (definition, handler));
     }
 
@@ -140,7 +130,6 @@ public sealed class CommandDispatcher : ICommandDispatcher
     public bool UnregisterDynamicCommand(string commandId)
     {
         if (string.IsNullOrWhiteSpace(commandId)) return false;
-
         return _dynamicCommands.TryRemove(commandId, out _);
     }
 
@@ -153,31 +142,18 @@ public sealed class CommandDispatcher : ICommandDispatcher
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
-
         DateTimeOffset startedAt = _timeProvider.GetUtcNow();
 
         if (request.Parameters.ValueKind != JsonValueKind.Object)
         {
-            return CreateResult(
-                request,
-                CommandResultStatus.Blocked,
-                "command.parameters_invalid",
-                "Command parameters must be a JSON object.",
-                data: null,
-                undoAvailable: false,
-                startedAt);
+            return CreateResult(request, CommandResultStatus.Blocked, "command.parameters_invalid",
+                "Command parameters must be a JSON object.", null, false, startedAt);
         }
 
         if (cancellationToken.IsCancellationRequested)
         {
-            return CreateResult(
-                request,
-                CommandResultStatus.Cancelled,
-                "command.cancelled",
-                "The operation was cancelled.",
-                data: null,
-                undoAvailable: false,
-                startedAt);
+            return CreateResult(request, CommandResultStatus.Cancelled, "command.cancelled",
+                "The operation was cancelled.", null, false, startedAt);
         }
 
         CommandDefinition? definition;
@@ -195,76 +171,40 @@ public sealed class CommandDispatcher : ICommandDispatcher
 
         if (definition is null)
         {
-            return CreateResult(
-                request,
-                CommandResultStatus.Blocked,
-                "command.not_found",
-                $"Command '{request.CommandId}' is not declared in the native catalog.",
-                data: null,
-                undoAvailable: false,
-                startedAt);
+            return CreateResult(request, CommandResultStatus.Blocked, "command.not_found",
+                $"Command '{request.CommandId}' is not declared in the native catalog.", null, false, startedAt);
         }
 
         if (definition.MigrationStatus is not (MigrationStatus.Implemented or MigrationStatus.BehaviorVerified))
         {
-            return CreateResult(
-                request,
-                CommandResultStatus.NotMigrated,
-                "command.migration_blocked",
-                $"Command '{request.CommandId}' is cataloged as '{definition.MigrationStatus}' and cannot be executed.",
-                data: null,
-                undoAvailable: false,
-                startedAt);
+            return CreateResult(request, CommandResultStatus.NotMigrated, "command.migration_blocked",
+                $"Command '{request.CommandId}' is cataloged as '{definition.MigrationStatus}' and cannot be executed.", null, false, startedAt);
         }
 
         if (handler is null)
         {
-            return CreateResult(
-                request,
-                CommandResultStatus.NotMigrated,
-                "command.not_migrated",
-                $"Command '{request.CommandId}' has no native handler implementation registered.",
-                data: null,
-                undoAvailable: false,
-                startedAt);
+            return CreateResult(request, CommandResultStatus.NotMigrated, "command.not_migrated",
+                $"Command '{request.CommandId}' has no native handler implementation registered.", null, false, startedAt);
         }
 
         if (definition.ReadOnly && request.Apply)
         {
-            return CreateResult(
-                request,
-                CommandResultStatus.Blocked,
-                "command.readonly_mutation_denied",
-                $"Command '{request.CommandId}' is declared ReadOnly and cannot be invoked with Apply=true.",
-                data: null,
-                undoAvailable: false,
-                startedAt);
+            return CreateResult(request, CommandResultStatus.Blocked, "command.readonly_mutation_denied",
+                $"Command '{request.CommandId}' is declared ReadOnly and cannot be invoked with Apply=true.", null, false, startedAt);
         }
 
         if (!definition.ReadOnly && request.Apply)
         {
             if (!options.ReviewApproved)
             {
-                return CreateResult(
-                    request,
-                    CommandResultStatus.Blocked,
-                    "command.review_required",
-                    $"Mutating command '{request.CommandId}' requires explicit ReviewApproved confirmation.",
-                    data: null,
-                    undoAvailable: false,
-                    startedAt);
+                return CreateResult(request, CommandResultStatus.Blocked, "command.review_required",
+                    $"Mutating command '{request.CommandId}' requires explicit ReviewApproved confirmation.", null, false, startedAt);
             }
 
             if (!TryConsumeIssuedReviewPlan(request, definition))
             {
-                return CreateResult(
-                    request,
-                    CommandResultStatus.Blocked,
-                    "command.approval_plan_invalid",
-                    $"Mutating command '{request.CommandId}' requires a current, single-use review plan issued by this dispatcher after a successful preview.",
-                    data: null,
-                    undoAvailable: false,
-                    startedAt);
+                return CreateResult(request, CommandResultStatus.Blocked, "command.approval_plan_invalid",
+                    $"Mutating command '{request.CommandId}' requires a current, single-use review plan issued by this dispatcher after a successful preview.", null, false, startedAt);
             }
         }
 
@@ -274,14 +214,8 @@ public sealed class CommandDispatcher : ICommandDispatcher
             TimeSpan delay = deadline - startedAt;
             if (delay <= TimeSpan.Zero)
             {
-                return CreateResult(
-                    request,
-                    CommandResultStatus.Cancelled,
-                    "command.deadline_exceeded",
-                    "The command deadline has already expired.",
-                    data: null,
-                    undoAvailable: false,
-                    startedAt);
+                return CreateResult(request, CommandResultStatus.Cancelled, "command.deadline_exceeded",
+                    "The command deadline has already expired.", null, false, startedAt);
             }
             linkedCancellation.CancelAfter(delay);
         }
@@ -290,15 +224,15 @@ public sealed class CommandDispatcher : ICommandDispatcher
 
         try
         {
-            CommandHandlerOutcome outcome = await handler.ExecuteAsync(
-                request,
-                linkedCancellation.Token).ConfigureAwait(false);
+            CommandHandlerOutcome outcome = await handler.ExecuteAsync(request, linkedCancellation.Token).ConfigureAwait(false);
 
             if (activity is not null)
             {
                 if (outcome.Status == CommandResultStatus.Succeeded)
                 {
-                    _journal?.Complete(activity.Id, outcome.Message, outcome.UndoAvailable);
+                    // Undo is exposed only when the dispatcher has a concrete executable compensator.
+                    // Handler metadata alone is not sufficient to promise a recoverable action.
+                    _journal?.Complete(activity.Id, outcome.Message, undoAvailable: false);
                 }
                 else if (outcome.Status == CommandResultStatus.Cancelled)
                 {
@@ -322,7 +256,7 @@ public sealed class CommandDispatcher : ICommandDispatcher
                 outcome.Code,
                 outcome.Message,
                 outcome.Data,
-                outcome.UndoAvailable,
+                undoAvailable: false,
                 startedAt,
                 reviewPlan);
         }
@@ -339,11 +273,9 @@ public sealed class CommandDispatcher : ICommandDispatcher
                 request,
                 CommandResultStatus.Cancelled,
                 deadlineExceeded ? "command.deadline_exceeded" : "command.cancelled",
-                deadlineExceeded
-                    ? "The command did not complete before its deadline."
-                    : "The command was cancelled.",
-                data: null,
-                undoAvailable: false,
+                deadlineExceeded ? "The command did not complete before its deadline." : "The command was cancelled.",
+                null,
+                false,
                 startedAt);
         }
         catch (Exception ex)
@@ -355,21 +287,15 @@ public sealed class CommandDispatcher : ICommandDispatcher
 
             if (activity is not null)
             {
-                // Log only the exception type — ex.Message can contain file paths or PII.
                 _journal?.Fail(activity.Id, finalStateUnknown
                     ? $"Command faulted ({ex.GetType().Name}); final system state is unknown. Verify the affected resource before retrying."
                     : $"Command faulted ({ex.GetType().Name}) before any admitted mutation. Review the request before retrying.");
             }
             System.Diagnostics.Debug.WriteLine($"[CommandDispatcher] {request.CommandId} fault: {ex}");
 
-            return CreateResult(
-                request,
-                CommandResultStatus.Failed,
+            return CreateResult(request, CommandResultStatus.Failed,
                 finalStateUnknown ? "command.failed_state_unknown" : "command.failed",
-                safeFailureMessage,
-                data: null,
-                undoAvailable: false,
-                startedAt);
+                safeFailureMessage, null, false, startedAt);
         }
     }
 
@@ -402,8 +328,7 @@ public sealed class CommandDispatcher : ICommandDispatcher
             return false;
         }
 
-        if (!_issuedReviewPlans.TryGetValue(submitted.PlanId, out ApprovedMutationPlan? issued) ||
-            !Equals(issued, submitted))
+        if (!_issuedReviewPlans.TryGetValue(submitted.PlanId, out ApprovedMutationPlan? issued) || !Equals(issued, submitted))
         {
             return false;
         }
@@ -420,8 +345,6 @@ public sealed class CommandDispatcher : ICommandDispatcher
             return false;
         }
 
-        // Atomic removal makes a review plan single-use. If another execution consumed it
-        // first, this request fails closed and must preview again.
         return _issuedReviewPlans.TryRemove(submitted.PlanId, out _);
     }
 
