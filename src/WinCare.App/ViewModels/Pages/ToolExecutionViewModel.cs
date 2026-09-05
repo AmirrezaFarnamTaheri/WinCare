@@ -381,7 +381,7 @@ public sealed class ToolExecutionViewModel : ObservableObject
                             .Distinct(StringComparer.Ordinal)
                             .ToArray();
                         if (field.Required && values.Length == 0) throw new FormatException("requires at least one value");
-                        root[field.Name] = new JsonArray(values.Select(JsonValue.Create).ToArray());
+                        root[field.Name] = new JsonArray(values.Select(value => (JsonNode?)JsonValue.Create(value)).ToArray());
                         break;
                     }
                     case CommandParameterKind.Json:
