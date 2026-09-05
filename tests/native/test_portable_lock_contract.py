@@ -42,13 +42,20 @@ class PortableLockContractTests(unittest.TestCase):
         self.assertIn("Staged locked portable dependency graphs for $(RuntimeIdentifier).", props)
         self.assertNotIn("NuGetLockFilePath", props)
 
-    def test_explicit_publish_rid_does_not_retain_the_multi_rid_restore_set(self) -> None:
+    def test_app_portable_lock_variants_cover_the_declared_runtime_set(self) -> None:
         project = (ROOT / "src/WinCare.App/WinCare.App.csproj").read_text(encoding="utf-8")
-        self.assertIn(
-            '<RuntimeIdentifiers Condition="\'$(RuntimeIdentifier)\' == \'\'">win-x64;win-arm64</RuntimeIdentifiers>',
-            project,
-        )
-        self.assertNotIn("<RuntimeIdentifiers>win-x64;win-arm64</RuntimeIdentifiers>", project)
+        self.assertIn("<RuntimeIdentifiers>win-x64;win-arm64</RuntimeIdentifiers>", project)
+
+        expected_runtimes = set(RUNTIMES)
+        for runtime in RUNTIMES:
+            relative = f"src/WinCare.App/packages.portable.{runtime}.lock.json"
+            lock = json.loads((ROOT / relative).read_text(encoding="utf-8-sig"))
+            runtime_keys = {
+                dependency_key.rsplit("/", 1)[-1]
+                for dependency_key in lock["dependencies"]
+                if "/" in dependency_key
+            }
+            self.assertEqual(expected_runtimes, runtime_keys, relative)
 
     def test_no_portable_lock_bootstrap_workflow_remains(self) -> None:
         self.assertFalse((ROOT / ".github/workflows/bootstrap-portable-lockfiles.yml").exists())
