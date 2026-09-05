@@ -608,6 +608,7 @@ public class PluginInstallerService : IPluginInstallerService
         string? admissionBackupPath = null;
         bool oldPluginBackedUp = false;
         bool newPluginPromoted = false;
+        bool preserveAdmissionBackup = false;
 
         var admissionJson = JsonSerializer.Serialize(admissionRecord, new JsonSerializerOptions { WriteIndented = true });
         await File.WriteAllTextAsync(pendingAdmissionPath, admissionJson, cancellationToken).ConfigureAwait(false);
@@ -660,8 +661,10 @@ public class PluginInstallerService : IPluginInstallerService
                 TryDeleteFile(admissionBackupPath);
             }
         }
-        catch
+        catch (Exception installException)
         {
+            Exception? admissionRestoreException = null;
+
             if (newPluginPromoted && Directory.Exists(finalTargetDir))
             {
                 TryDeleteDirectory(finalTargetDir);
@@ -682,14 +685,31 @@ public class PluginInstallerService : IPluginInstallerService
 
             // The existing admission record is not overwritten until the final commit move.
             // Restore from the backup defensively if a platform-specific overwrite partially
-            // changed it before throwing.
+            // changed it before throwing. A failed trust-record rollback is security-significant:
+            // retain the backup and surface both failures instead of deleting known-good state.
             if (admissionBackupPath != null && File.Exists(admissionBackupPath))
             {
-                try { File.Copy(admissionBackupPath, admissionPath, overwrite: true); } catch { }
+                try
+                {
+                    File.Copy(admissionBackupPath, admissionPath, overwrite: true);
+                }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                {
+                    preserveAdmissionBackup = true;
+                    admissionRestoreException = ex;
+                }
             }
             else if (!oldPluginBackedUp && File.Exists(admissionPath) && newPluginPromoted)
             {
                 TryDeleteFile(admissionPath);
+            }
+
+            if (admissionRestoreException != null)
+            {
+                throw new InvalidOperationException(
+                    "Plugin install failed and the previous trust record could not be restored automatically. " +
+                    "A recovery backup was preserved in the plugin staging backup directory.",
+                    new AggregateException(installException, admissionRestoreException));
             }
 
             throw;
@@ -700,7 +720,8 @@ public class PluginInstallerService : IPluginInstallerService
             {
                 TryDeleteFile(pendingAdmissionPath);
             }
-            if (admissionBackupPath != null && File.Exists(admissionBackupPath))
+            // Preserve the last known-good trust record if rollback itself failed.
+            if (!preserveAdmissionBackup && admissionBackupPath != null && File.Exists(admissionBackupPath))
             {
                 TryDeleteFile(admissionBackupPath);
             }

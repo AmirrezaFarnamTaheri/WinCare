@@ -42,6 +42,7 @@ NATIVE_TOP_LEVEL_FILES = (
     "Directory.Build.props",
     "Directory.Packages.props",
     "LICENSE",
+    "NuGet.Config",
     "README.md",
     "SECURITY.md",
     "THIRD-PARTY-NOTICES.md",
@@ -62,6 +63,7 @@ NATIVE_DIRECTORIES = (
     "src/WinCare.Infrastructure",
     "tests/WinCare.Application.Tests",
     "tests/WinCare.CommandCatalog.Tests",
+    "tests/WinCare.Infrastructure.Tests",
     "tests/native",
 )
 
@@ -107,7 +109,9 @@ NATIVE_TOOL_FILES = (
 )
 
 NATIVE_WORKFLOW_FILES = (
+    ".github/CODEOWNERS",
     ".github/dependabot.yml",
+    ".github/pull_request_template.md",
     ".github/workflows/native-winui.yml",
     ".github/workflows/native-release-candidate.yml",
 )
