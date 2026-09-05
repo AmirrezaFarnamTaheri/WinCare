@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>WinCare Spectre.Console TUI</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #080c14;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      font-family: 'Cascadia Code', 'Consolas', 'Geist Mono', monospace;
+      padding: 24px;
+    }
+    .terminal-window {
+      width: 1140px;
+      background: #0b111e;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 10px;
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.65), 0 0 40px rgba(0, 210, 180, 0.08);
+      overflow: hidden;
+    }
+    .terminal-titlebar {
+      background: #101726;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      padding: 10px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .tabs {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .tab {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: #0b111e;
+      padding: 6px 14px;
+      border-radius: 6px 6px 0 0;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-bottom: none;
+      font-size: 12px;
+      color: #00d2b4;
+      font-weight: 600;
+    }
+    .window-controls {
+      display: flex;
+      gap: 12px;
+      font-size: 12px;
+      color: #64748b;
+    }
+    .terminal-body {
+      padding: 24px 28px;
+      color: #e2e8f0;
+      font-size: 13.5px;
+      line-height: 1.55;
+    }
+    .ascii-banner {
+      color: #00d2b4;
+      font-weight: 700;
+      margin-bottom: 14px;
+      font-size: 11px;
+      text-shadow: 0 0 12px rgba(0, 210, 180, 0.3);
+    }
+    .dim { color: #64748b; }
+    .teal { color: #00d2b4; }
+    .cyan { color: #38bdf8; }
+    .green { color: #34d399; }
+    .yellow { color: #fbbf24; }
+    .bold { font-weight: 700; }
+    
+    .table-box {
+      border: 1px solid rgba(0, 210, 180, 0.35);
+      border-radius: 6px;
+      margin: 16px 0;
+      background: rgba(0, 0, 0, 0.3);
+      overflow: hidden;
+    }
+    .table-header {
+      display: grid;
+      grid-template-columns: 210px 110px 240px 1fr;
+      padding: 8px 14px;
+      background: rgba(0, 210, 180, 0.12);
+      border-bottom: 1px solid rgba(0, 210, 180, 0.25);
+      font-weight: 700;
+      color: #00d2b4;
+      font-size: 12px;
+      letter-spacing: 0.05em;
+    }
+    .table-row {
+      display: grid;
+      grid-template-columns: 210px 110px 240px 1fr;
+      padding: 7px 14px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      font-size: 12px;
+    }
+    .table-row:last-child { border-bottom: none; }
+    .tag-ok {
+      background: rgba(52, 211, 153, 0.15);
+      color: #34d399;
+      border: 1px solid rgba(52, 211, 153, 0.4);
+      padding: 1px 6px;
+      border-radius: 3px;
+      font-size: 11px;
+      font-weight: 700;
+      display: inline-block;
+    }
+    .tag-sec {
+      background: rgba(56, 189, 248, 0.15);
+      color: #38bdf8;
+      border: 1px solid rgba(56, 189, 248, 0.4);
+      padding: 1px 6px;
+      border-radius: 3px;
+      font-size: 11px;
+      font-weight: 700;
+      display: inline-block;
+    }
+    .tag-safe {
+      background: rgba(0, 210, 180, 0.15);
+      color: #00d2b4;
+      border: 1px solid rgba(0, 210, 180, 0.4);
+      padding: 1px 6px;
+      border-radius: 3px;
+      font-size: 11px;
+      font-weight: 700;
+      display: inline-block;
+    }
+    .prompt-line {
+      margin-top: 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .prompt-symbol { color: #00d2b4; font-weight: 700; }
+    .cursor {
+      display: inline-block;
+      width: 8px;
+      height: 16px;
+      background: #00d2b4;
+      vertical-align: middle;
+      animation: blink 1s step-end infinite;
+    }
+    @keyframes blink { 50% { opacity: 0; } }
+  </style>
+</head>
+<body>
+
+  <div class="terminal-window">
+    <div class="terminal-titlebar">
+      <div class="tabs">
+        <div class="tab">
+          <span>🛡</span> WinCare · Spectre.Console TUI [v2.5.0-rc5]
+        </div>
+      </div>
+      <div class="window-controls">
+        <span>─</span>
+        <span>□</span>
+        <span>✕</span>
+      </div>
+    </div>
+
+    <div class="terminal-body">
+      <pre class="ascii-banner">
+ ██╗    ██╗██╗███╗   ██╗ ██████╗ █████╗ ██████╗ ███████╗
+ ██║    ██║██║████╗  ██║██╔════╝██╔══██╗██╔══██╗██╔════╝
+ ██║ █╗ ██║██║██╔██╗ ██║██║     ███████║██████╔╝█████╗  
+ ██║███╗██║██║██║╚██╗██║██║     ██╔══██║██╔══██╗██╔══╝  
+ ╚███╔███╔╝██║██║ ╚████║╚██████╗██║  ██║██║  ██║███████╗
+  ╚══╝╚══╝ ╚═╝╚═╝  ╚═══╝ ╚═════╝╚═╝  ╚═╝╚═╝  ╚═╝╚══════╝</pre>
+      <div><span class="dim">[09:42:01.104]</span> <span class="teal bold">WINCARE KERNEL ENGINE</span> · <span class="cyan">Rust 2024 C ABI</span> + <span class="green">.NET 8 Spectre.Console REPL</span></div>
+      <div><span class="dim">[09:42:01.108]</span> <span class="green">Policy Guard:</span> <span class="bold">READ-ONLY BY DEFAULT</span> · Safe Windows Subsystem Invariants Active</div>
+
+      <div class="table-box">
+        <div class="table-header">
+          <div>SUBSYSTEM COMPONENT</div>
+          <div>STATUS</div>
+          <div>LATENCY / METRIC</div>
+          <div>SAFETY POLICY &amp; BOUNDS</div>
+        </div>
+        <div class="table-row">
+          <div class="bold">WinCare.Core (Rust DLL)</div>
+          <div><span class="tag-ok">LINKED</span></div>
+          <div class="cyan">C ABI latency: 0.38 ms</div>
+          <div class="dim">sys_info, dir_size, sha256 checksums</div>
+        </div>
+        <div class="table-row">
+          <div class="bold">WinUI 3 Desktop Host</div>
+          <div><span class="tag-ok">ONLINE</span></div>
+          <div class="cyan">Mica Backdrop / DirectComp</div>
+          <div class="dim">Event Dispatcher (Fail-Closed)</div>
+        </div>
+        <div class="table-row">
+          <div class="bold">ONNX Runtime Anomaly</div>
+          <div><span class="tag-sec">ACTIVE</span></div>
+          <div class="cyan">DirectML HW Accel: &lt; 14 ms</div>
+          <div class="dim">Local evaluation only · No telemetry exfil</div>
+        </div>
+        <div class="table-row">
+          <div class="bold">Process Isolation Pool</div>
+          <div><span class="tag-safe">ENFORCED</span></div>
+          <div class="cyan">Win32 Job Objects</div>
+          <div class="dim">Quota limit: 512 MB · UI restriction flags</div>
+        </div>
+        <div class="table-row">
+          <div class="bold">Audit Journal Store</div>
+          <div><span class="tag-ok">SECURED</span></div>
+          <div class="cyan">AES-256-GCM Receipts</div>
+          <div class="dim">Deterministic rollback trail preserved</div>
+        </div>
+      </div>
+
+      <div style="margin-top: 8px;">
+        <span class="teal">├──</span> <span class="bold">Hardware Telemetry:</span> AMD Ryzen 7 · 32.0 GB RAM (42% utilized) · 0 Paged Pool Leaks<br>
+        <span class="teal">├──</span> <span class="bold">Frozen Command Catalog:</span> 259 frozen typed command definitions verified by SHA-256<br>
+        <span class="teal">└──</span> <span class="bold">Preflight Result:</span> <span class="green">PASS</span> · 0 mutations requested · System state verified clean
+      </div>
+
+      <div class="prompt-line">
+        <span class="prompt-symbol">wincare&gt;</span>
+        <span style="color: #f8fafc;">checkup --category hardware,storage,security --mode read-only</span>
+        <span class="cursor"></span>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>

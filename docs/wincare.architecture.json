@@ -1,0 +1,347 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "WinCare Platform Architecture",
+    "subtitle": "WinUI 3 Presentation, Fail-Closed Command Governance, ONNX Anomaly Inference, and Rust 2024 Core",
+    "output": "docs/architecture.html",
+    "visual_preset": "classic",
+    "animation": "none",
+    "quality_profile": "standard",
+    "views": [
+      {
+        "id": "command-lifecycle",
+        "label": "Command execution lifecycle",
+        "focus": [
+          "winui_shell",
+          "dispatcher",
+          "infra_runner",
+          "wincare_core",
+          "windows_os"
+        ],
+        "note": "Follow user requests through preflight validation, two-phase review, and native C ABI execution."
+      },
+      {
+        "id": "diagnostics-ml",
+        "label": "Diagnostics and ML anomaly pipeline",
+        "focus": [
+          "winui_shell",
+          "dispatcher",
+          "onnx_engine",
+          "wincare_guard",
+          "journal_store"
+        ],
+        "note": "Local DirectML-accelerated ONNX inference evaluates system health and logs receipts to the activity journal."
+      },
+      {
+        "id": "plugin-governance",
+        "label": "Plugin admission & isolation",
+        "focus": [
+          "plugin_cli",
+          "plugin_host",
+          "domain_catalog",
+          "dispatcher"
+        ],
+        "note": "External plugins are verified by SHA-256 digests and isolated under strict process bounds."
+      }
+    ]
+  },
+  "components": [
+    {
+      "id": "winui_shell",
+      "type": "frontend",
+      "label": "WinUI 3 Desktop Shell",
+      "sublabel": "Mica backdrop, XAML views, AI Doctor",
+      "pos": [
+        40,
+        205
+      ],
+      "size": [
+        165,
+        68
+      ]
+    },
+    {
+      "id": "dispatcher",
+      "type": "backend",
+      "label": "Command Dispatcher",
+      "sublabel": "Fail-closed routing, two-phase apply",
+      "pos": [
+        250,
+        205
+      ],
+      "size": [
+        165,
+        68
+      ]
+    },
+    {
+      "id": "infra_runner",
+      "type": "backend",
+      "label": "Bounded Process Runner",
+      "sublabel": "Timeout limits, PII sanitization",
+      "pos": [
+        460,
+        205
+      ],
+      "size": [
+        165,
+        68
+      ]
+    },
+    {
+      "id": "wincare_core",
+      "type": "security",
+      "label": "Rust Core Engine",
+      "sublabel": "C ABI DLL: sys_info, dir_size, sha256",
+      "pos": [
+        670,
+        205
+      ],
+      "size": [
+        165,
+        68
+      ]
+    },
+    {
+      "id": "windows_os",
+      "type": "external",
+      "label": "Windows OS & Kernel",
+      "sublabel": "Job Objects, Win32 APIs, Toast XML",
+      "pos": [
+        880,
+        205
+      ],
+      "size": [
+        165,
+        68
+      ]
+    },
+    {
+      "id": "spectre_tui",
+      "type": "frontend",
+      "label": "Spectre.Console TUI",
+      "sublabel": "Terminal control & diagnostic REPL",
+      "pos": [
+        40,
+        415
+      ],
+      "size": [
+        165,
+        68
+      ]
+    },
+    {
+      "id": "domain_catalog",
+      "type": "database",
+      "label": "Command Catalog",
+      "sublabel": "259 frozen typed definitions",
+      "pos": [
+        250,
+        415
+      ],
+      "size": [
+        165,
+        68
+      ]
+    },
+    {
+      "id": "journal_store",
+      "type": "database",
+      "label": "Activity Journal",
+      "sublabel": "AES-256-GCM encrypted audit store",
+      "pos": [
+        460,
+        615
+      ],
+      "size": [
+        165,
+        68
+      ]
+    },
+    {
+      "id": "wincare_guard",
+      "type": "security",
+      "label": "Rust Guard Daemon",
+      "sublabel": "RAM, thermal, disk quota monitor",
+      "pos": [
+        670,
+        415
+      ],
+      "size": [
+        165,
+        68
+      ]
+    },
+    {
+      "id": "plugin_cli",
+      "type": "external",
+      "label": "Plugin Developer CLI",
+      "sublabel": "Node.js manifest validator & packager",
+      "pos": [
+        40,
+        615
+      ],
+      "size": [
+        165,
+        68
+      ]
+    },
+    {
+      "id": "plugin_host",
+      "type": "backend",
+      "label": "Dynamic Plugin Host",
+      "sublabel": "Process sandbox, capability bounds",
+      "pos": [
+        250,
+        615
+      ],
+      "size": [
+        165,
+        68
+      ]
+    },
+    {
+      "id": "onnx_engine",
+      "type": "backend",
+      "label": "ONNX Runtime Engine",
+      "sublabel": "DirectML acceleration, anomaly eval",
+      "pos": [
+        460,
+        415
+      ],
+      "size": [
+        165,
+        68
+      ]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "security-group",
+      "label": "WinCare .NET 8 Host Application",
+      "wraps": [
+        "winui_shell",
+        "dispatcher",
+        "infra_runner",
+        "spectre_tui",
+        "domain_catalog",
+        "journal_store",
+        "plugin_host",
+        "onnx_engine"
+      ],
+      "pad": 18
+    },
+    {
+      "kind": "region",
+      "label": "Native Rust 2024 Runtime",
+      "wraps": [
+        "wincare_core",
+        "wincare_guard"
+      ],
+      "pad": 18
+    },
+    {
+      "kind": "region",
+      "label": "Windows Platform Subsystem",
+      "wraps": [
+        "windows_os"
+      ],
+      "pad": 18
+    }
+  ],
+  "connections": [
+    {
+      "from": "winui_shell",
+      "to": "dispatcher",
+      "variant": "emphasis"
+    },
+    {
+      "from": "spectre_tui",
+      "to": "dispatcher"
+    },
+    {
+      "from": "dispatcher",
+      "to": "infra_runner",
+      "variant": "emphasis"
+    },
+    {
+      "from": "dispatcher",
+      "to": "domain_catalog",
+      "route": "orthogonal-v"
+    },
+    {
+      "from": "infra_runner",
+      "to": "wincare_core",
+      "variant": "security"
+    },
+    {
+      "from": "wincare_core",
+      "to": "windows_os",
+      "variant": "security"
+    },
+    {
+      "from": "wincare_guard",
+      "to": "windows_os",
+      "route": "orthogonal-v",
+      "variant": "security"
+    },
+    {
+      "from": "plugin_cli",
+      "to": "plugin_host",
+      "variant": "dashed"
+    },
+    {
+      "from": "plugin_host",
+      "to": "domain_catalog",
+      "route": "orthogonal-v"
+    },
+    {
+      "from": "infra_runner",
+      "to": "onnx_engine",
+      "route": "orthogonal-v",
+      "variant": "emphasis"
+    },
+    {
+      "from": "onnx_engine",
+      "to": "journal_store",
+      "route": "orthogonal-v",
+      "variant": "emphasis"
+    },
+    {
+      "from": "wincare_guard",
+      "to": "journal_store",
+      "route": "orthogonal-v",
+      "variant": "dashed"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Presentation",
+      "items": [
+        "WinUI 3 desktop shell with Mica backdrop and XAML controls",
+        "Spectre.Console terminal interface for headless operation",
+        "Zero PowerShell dependencies in native runtime distribution"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Governance",
+      "items": [
+        "Fail-closed CommandDispatcher requiring preflight validation",
+        "Two-phase review and apply lifecycle for sensitive mutations",
+        "Dynamic plugin isolation bounded by BoundedProcessRunner"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Native Engine",
+      "items": [
+        "Rust 2024 C ABI dynamic library for high-speed bounded operations",
+        "Local ONNX Runtime with DirectML GPU acceleration",
+        "Windows Job Objects for strict memory and CPU throttling"
+      ]
+    }
+  ]
+}

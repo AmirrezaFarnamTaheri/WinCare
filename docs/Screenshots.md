@@ -30,6 +30,18 @@ Concept images remain design references and are explicitly marked as concepts.
 
 ![Conceptual WinCare system checkup showing a health score and review-before-apply results](images/checkup-preview.png)
 
+## Spectre.Console TUI
+
+### Headless Terminal & Diagnostic REPL
+
+![WinCare Spectre.Console headless terminal REPL with live telemetry and process isolation](images/tui-preview.png)
+
+## Platform Architecture
+
+### C4 Interactive Architecture Model
+
+![WinCare platform C4 interactive architecture diagram and governance pipeline](images/architecture-preview.png)
+
 ## Capture policy
 
 Every runtime image must record:
