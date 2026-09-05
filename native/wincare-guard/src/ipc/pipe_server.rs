@@ -45,7 +45,8 @@ mod win32 {
     pub const PIPE_ACCESS_DUPLEX: u32 = 0x0000_0003;
     pub const PIPE_TYPE_BYTE: u32 = 0x0000_0000;
     pub const PIPE_READMODE_BYTE: u32 = 0x0000_0000;
-    pub const PIPE_WAIT: u32 = 0x0000_0000;
+    pub const PIPE_NOWAIT: u32 = 0x0000_0001;
+    pub const PIPE_REJECT_REMOTE_CLIENTS: u32 = 0x0000_0008;
     pub const PIPE_UNLIMITED_INSTANCES: u32 = 255;
 
     pub const GENERIC_READ: u32 = 0x8000_0000;
@@ -54,6 +55,8 @@ mod win32 {
 
     /// `ERROR_PIPE_CONNECTED`: a client connected between create and connect.
     pub const ERROR_PIPE_CONNECTED: u32 = 535;
+    pub const ERROR_PIPE_LISTENING: u32 = 536;
+    pub const ERROR_NO_DATA: u32 = 232;
 
     #[link(name = "kernel32")]
     // SAFETY: These declarations match the official Windows SDK signatures exactly; the
@@ -102,8 +105,8 @@ mod win32 {
 /// A listening named-pipe server with a clean, flag-driven lifecycle.
 ///
 /// The accept loop runs on a background thread. [`PipeServer::start`] and
-/// [`PipeServer::stop`] are idempotent; `stop` also opens a transient client connection
-/// ("kick") to unblock a worker parked in a blocking `ConnectNamedPipe`.
+/// [`PipeServer::stop`] are idempotent and serialized. Pipe operations poll the
+/// stop flag, so an idle client cannot leave a worker alive across restarts.
 pub struct PipeServer {
     is_running: Arc<AtomicBool>,
     worker: Mutex<Option<JoinHandle<()>>>,
@@ -120,61 +123,29 @@ impl PipeServer {
 
     /// Starts the accept loop in a background thread. No-op if already running.
     pub fn start(&self) {
+        let mut worker = self
+            .worker
+            .lock()
+            .unwrap_or_else(|error| error.into_inner());
         if self.is_running.swap(true, Ordering::SeqCst) {
             return;
         }
 
         let running = Arc::clone(&self.is_running);
-        let handle = std::thread::spawn(move || accept_loop(running));
-
-        match self.worker.lock() {
-            Ok(mut guard) => *guard = Some(handle),
-            Err(_) => {
-                // A poisoned mutex means a prior panic; keep the flag consistent so
-                // `stop` can still be called safely. The detached thread only holds
-                // an Arc to the flag and its own pipe handle.
-                self.is_running.store(false, Ordering::SeqCst);
-            }
-        }
+        *worker = Some(std::thread::spawn(move || accept_loop(running)));
     }
 
     /// Stops the accept loop, unblocking a pending connect if necessary, and joins the
     /// worker thread. No-op if not running.
     pub fn stop(&self) {
-        if !self.is_running.swap(false, Ordering::SeqCst) {
-            // Already stopped; defensively join any lingering worker.
-            if let Ok(mut guard) = self.worker.lock() {
-                if let Some(handle) = guard.take() {
-                    let _ = handle.join();
-                }
-            }
-            return;
-        }
-
-        // A worker may be parked in a blocking `ConnectNamedPipe`; open a transient
-        // client connection to unblock it. Retry briefly so a worker that has not yet
-        // created its pipe instance is not missed (the kick then fails harmlessly).
-        for _ in 0..100 {
-            kick_pipe();
-            let finished = match self.worker.lock() {
-                Ok(guard) => guard.as_ref().map(|h| h.is_finished()).unwrap_or(true),
-                Err(_) => true,
-            };
-            if finished {
-                break;
-            }
-            std::thread::sleep(Duration::from_millis(20));
-        }
-
-        if let Ok(mut guard) = self.worker.lock() {
-            if let Some(handle) = guard.take() {
-                if !handle.is_finished() {
-                    // Do not block shutdown on a worker that could not be unblocked.
-                    // The thread owns its resources and exits at process teardown.
-                    return;
-                }
-                let _ = handle.join();
-            }
+        let mut worker = self
+            .worker
+            .lock()
+            .unwrap_or_else(|error| error.into_inner());
+        self.is_running.store(false, Ordering::SeqCst);
+        kick_pipe();
+        if let Some(handle) = worker.take() {
+            let _ = handle.join();
         }
     }
 
@@ -214,7 +185,9 @@ fn kick_pipe() {
 
     if handle != w::INVALID_HANDLE_VALUE {
         // SAFETY: `handle` is a valid, open client handle owned by this function.
-        unsafe { let _ = w::CloseHandle(handle); }
+        unsafe {
+            let _ = w::CloseHandle(handle);
+        }
     }
 }
 
@@ -226,12 +199,12 @@ fn kick_pipe() {}
 #[cfg(target_os = "windows")]
 fn accept_loop(running: Arc<AtomicBool>) {
     while running.load(Ordering::SeqCst) {
-        let Some(handle) = create_and_connect_pipe() else {
+        let Some(handle) = create_and_connect_pipe(&running) else {
             std::thread::sleep(RECREATE_DELAY);
             continue;
         };
 
-        serve_connection(handle);
+        serve_connection(handle, &running);
 
         // SAFETY: `handle` is a live, valid pipe handle owned by this iteration.
         unsafe {
@@ -251,7 +224,7 @@ fn accept_loop(_running: Arc<AtomicBool>) {
 /// Returns `None` when the pipe could not be created or connected (including when the
 /// stop flag cleared while waiting).
 #[cfg(target_os = "windows")]
-fn create_and_connect_pipe() -> Option<win32::Handle> {
+fn create_and_connect_pipe(running: &AtomicBool) -> Option<win32::Handle> {
     use win32 as w;
 
     let wide: Vec<u16> = PIPE_NAME.encode_utf16().chain(std::iter::once(0)).collect();
@@ -262,10 +235,13 @@ fn create_and_connect_pipe() -> Option<win32::Handle> {
         w::CreateNamedPipeW(
             wide.as_ptr(),
             w::PIPE_ACCESS_DUPLEX,
-            w::PIPE_TYPE_BYTE | w::PIPE_READMODE_BYTE | w::PIPE_WAIT,
+            w::PIPE_TYPE_BYTE
+                | w::PIPE_READMODE_BYTE
+                | w::PIPE_NOWAIT
+                | w::PIPE_REJECT_REMOTE_CLIENTS,
             w::PIPE_UNLIMITED_INSTANCES,
-            (MAX_RESPONSE_BYTES as u32).min(u32::MAX),
-            (MAX_COMMAND_BYTES as u32).min(u32::MAX),
+            MAX_RESPONSE_BYTES as u32,
+            MAX_COMMAND_BYTES as u32,
             0,
             std::ptr::null_mut(),
         )
@@ -275,32 +251,43 @@ fn create_and_connect_pipe() -> Option<win32::Handle> {
         return None;
     }
 
-    // SAFETY: `handle` is valid and the overlapped pointer is null (blocking connect).
-    let connected = unsafe { w::ConnectNamedPipe(handle, std::ptr::null_mut()) };
-    if connected == 0 {
-        // A client may connect between creation and ConnectNamedPipe; that is a success.
-        // SAFETY: GetLastError is safe to call and reflects the last failed Win32 call.
-        let error = unsafe { w::GetLastError() };
-        if error != w::ERROR_PIPE_CONNECTED {
-            // SAFETY: `handle` is a valid, open handle.
-            unsafe { let _ = w::CloseHandle(handle); }
-            return None;
+    while running.load(Ordering::SeqCst) {
+        // SAFETY: `handle` is valid; PIPE_NOWAIT makes this a nonblocking connect.
+        let connected = unsafe { w::ConnectNamedPipe(handle, std::ptr::null_mut()) };
+        if connected != 0 {
+            return Some(handle);
         }
+        // SAFETY: GetLastError reports the immediately preceding failed call.
+        let error = unsafe { w::GetLastError() };
+        if error == w::ERROR_PIPE_CONNECTED {
+            return Some(handle);
+        }
+        if error != w::ERROR_PIPE_LISTENING {
+            break;
+        }
+        std::thread::sleep(Duration::from_millis(10));
     }
-
-    Some(handle)
+    // SAFETY: This function still owns the unconnected pipe handle.
+    unsafe {
+        let _ = w::CloseHandle(handle);
+    }
+    None
 }
 
 /// Reads one command line from a connected client, dispatches it, and writes a bounded
 /// newline-terminated response.
 #[cfg(target_os = "windows")]
-fn serve_connection(handle: win32::Handle) {
+fn serve_connection(handle: win32::Handle, running: &AtomicBool) {
     use win32 as w;
 
     let mut request = Vec::<u8>::with_capacity(MAX_COMMAND_BYTES);
     let mut chunk = [0_u8; 512];
+    let deadline = std::time::Instant::now() + Duration::from_secs(2);
 
     loop {
+        if !running.load(Ordering::SeqCst) || std::time::Instant::now() >= deadline {
+            return;
+        }
         let mut read = 0_u32;
         // SAFETY: `chunk` is a valid buffer, `handle` is a live pipe handle, and the
         // overlapped pointer is null (blocking read).
@@ -313,21 +300,32 @@ fn serve_connection(handle: win32::Handle) {
                 std::ptr::null_mut(),
             )
         };
-        if ok == 0 || read == 0 {
-            break;
+        if ok == 0 {
+            // SAFETY: Reports the immediately preceding failed read.
+            if unsafe { w::GetLastError() } == w::ERROR_NO_DATA {
+                std::thread::sleep(Duration::from_millis(10));
+                continue;
+            }
+            return;
+        }
+        if read == 0 {
+            std::thread::sleep(Duration::from_millis(10));
+            continue;
         }
 
         let bytes = &chunk[..read as usize];
         if let Some(position) = bytes.iter().position(|byte| *byte == b'\n') {
+            if request.len() + position > MAX_COMMAND_BYTES {
+                return;
+            }
             request.extend_from_slice(&bytes[..position]);
             break;
         }
 
-        request.extend_from_slice(bytes);
-        if request.len() >= MAX_COMMAND_BYTES {
-            request.truncate(MAX_COMMAND_BYTES);
-            break;
+        if request.len() + bytes.len() > MAX_COMMAND_BYTES {
+            return;
         }
+        request.extend_from_slice(bytes);
     }
 
     let response = dispatch(&request);
@@ -344,6 +342,29 @@ fn serve_connection(handle: win32::Handle) {
             &mut written,
             std::ptr::null_mut(),
         );
+    }
+    // DisconnectNamedPipe discards unread output. Give the one-shot client time to
+    // read and close, without letting a client that never reads stall the daemon.
+    let deadline = std::time::Instant::now() + Duration::from_secs(2);
+    while running.load(Ordering::SeqCst) && std::time::Instant::now() < deadline {
+        let mut read = 0;
+        // SAFETY: The live pipe and writable buffer remain owned by this function.
+        let ok = unsafe {
+            w::ReadFile(
+                handle,
+                chunk.as_mut_ptr(),
+                chunk.len() as u32,
+                &mut read,
+                std::ptr::null_mut(),
+            )
+        };
+        if ok == 0 {
+            // SAFETY: Reports the immediately preceding failed read.
+            if unsafe { w::GetLastError() } != w::ERROR_NO_DATA {
+                break;
+            }
+        }
+        std::thread::sleep(Duration::from_millis(10));
     }
 }
 

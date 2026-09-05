@@ -11,6 +11,47 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 
 class PluginCliTests(unittest.TestCase):
+    def pack_direct(self, folder, output):
+        builder = str(ROOT / "tools/wincare-plugin-cli/src/packager/zipBuilder.js")
+        return subprocess.run(
+            ["node", "-e", "require(process.argv[1]).packPlugin(process.argv[2], process.argv[3])",
+             builder, str(folder), str(output)], capture_output=True, text=True, timeout=15)
+
+    def test_unicode_archive_paths_round_trip(self):
+        folder = Path(self.test_dir) / "plugin"
+        folder.mkdir()
+        (folder / "راهنما.txt").write_text("unicode content", encoding="utf-8")
+        output = Path(self.test_dir) / "plugin.zip"
+        result = self.pack_direct(folder, output)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        with zipfile.ZipFile(output) as archive:
+            self.assertEqual(archive.read("راهنما.txt"), b"unicode content")
+
+    def test_pack_rejects_links_to_external_files(self):
+        folder = Path(self.test_dir) / "plugin"
+        folder.mkdir()
+        outside = Path(self.test_dir) / "private.txt"
+        outside.write_text("must not be packaged", encoding="utf-8")
+        try:
+            (folder / "linked.txt").symlink_to(outside)
+        except OSError as error:
+            self.skipTest(f"Symlink creation unavailable: {error}")
+        output = Path(self.test_dir) / "plugin.zip"
+        result = self.pack_direct(folder, output)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertFalse(output.exists())
+
+    def test_pack_rejects_more_entries_than_installer_accepts(self):
+        folder = Path(self.test_dir) / "plugin"
+        folder.mkdir()
+        for i in range(501):
+            (folder / f"{i}.txt").touch()
+        output = Path(self.test_dir) / "plugin.zip"
+        result = self.pack_direct(folder, output)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("installer entry", result.stderr)
+        self.assertFalse(output.exists())
+
     @classmethod
     def setUpClass(cls):
         cls.cli_path = str(ROOT / "tools/wincare-plugin-cli/bin/wincare-plugin.js")

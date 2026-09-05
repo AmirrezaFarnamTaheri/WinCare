@@ -167,7 +167,7 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
                 _resultRows.Add(new PageRow(
                     rowTitle,
                     commandId,
-                    result.Status == CommandResultStatus.Succeeded ? "Passed" : "Needs review",
+                    result.Status == CommandResultStatus.Succeeded ? "Collected" : "Needs review",
                     result.Message));
             }
 
@@ -180,8 +180,8 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
                 : (int)Math.Round(100.0 * succeeded / QuickCheckCommands.Length);
             HealthScoreText = $"{score}%";
             HealthScoreDetail = succeeded == QuickCheckCommands.Length
-                ? $"all {succeeded} checks passed"
-                : $"{succeeded} of {QuickCheckCommands.Length} checks passed";
+                ? $"all {succeeded} collected"
+                : $"{succeeded} of {QuickCheckCommands.Length} collected";
             RunSummary = $"{succeeded} of {QuickCheckCommands.Length} read-only checks completed. Review category details before taking any action.";
 
             if (SelectedIndex == ResultsSectionIndex)

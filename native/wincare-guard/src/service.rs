@@ -1,8 +1,8 @@
 //! Background daemon loop for WinCare Guard.
 
 use crate::monitors;
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 
 /// The guard daemon: a polling loop that samples system health on a fixed interval.

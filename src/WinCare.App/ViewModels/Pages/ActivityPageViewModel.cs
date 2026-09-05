@@ -9,6 +9,7 @@ namespace WinCare.App.ViewModels.Pages;
 public sealed class ActivityPageViewModel : TabbedPageViewModel
 {
     private readonly ActivityJournalService _journal;
+    private IReadOnlyList<ActivityRecord>? _lastRecords;
 
     // Backing mutable row lists — one per section, in section order.
     private readonly List<PageRow> _runningRows = [];
@@ -46,6 +47,8 @@ public sealed class ActivityPageViewModel : TabbedPageViewModel
     public void RefreshFromJournal()
     {
         IReadOnlyList<ActivityRecord> records = _journal.GetAll();
+        if (_lastRecords is not null && _lastRecords.SequenceEqual(records)) return;
+        _lastRecords = records;
 
         _runningRows.Clear();
         _attentionRows.Clear();
@@ -120,8 +123,8 @@ public sealed class ActivityPageViewModel : TabbedPageViewModel
         };
 
         string detail = rec.CompletedAt.HasValue
-            ? $"{rec.CompletedAt.Value:HH:mm:ss}{(rec.UndoAvailable ? " · Undo available" : string.Empty)}"
-            : $"Started {rec.StartedAt:HH:mm:ss}";
+            ? $"{rec.CompletedAt.Value.ToLocalTime():HH:mm:ss}{(rec.UndoAvailable ? " · Undo available" : string.Empty)}"
+            : $"Started {rec.StartedAt.ToLocalTime():HH:mm:ss}";
 
         return new PageRow(rec.Title, rec.Result, state, detail);
     }

@@ -2,11 +2,13 @@
     x:Class="WinCare.App.Views.Pages.HomePage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:WinCare.App.Controls"
     NavigationCacheMode="Required"
     SizeChanged="Page_SizeChanged">
     <ScrollViewer VerticalScrollBarVisibility="Auto">
-        <Grid Padding="40,30,40,40" RowSpacing="24">
+        <Grid x:Name="PageLayout" Padding="40,30,40,40" RowSpacing="24">
             <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
@@ -20,7 +22,8 @@
             </StackPanel>
 
             <!-- Hero Section: System Health & Status Grid -->
-            <Grid Grid.Row="1" ColumnSpacing="20">
+            <Grid x:Name="HeroLayout" Grid.Row="1" ColumnSpacing="20" RowSpacing="20">
+                <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="380" />
                     <ColumnDefinition Width="*" />
@@ -46,7 +49,7 @@
                 </Border>
 
                 <!-- System Status Category Matrix -->
-                <Border Grid.Column="1" Style="{StaticResource DashboardCardStyle}">
+                <Border x:Name="StatusCard" Grid.Column="1" Style="{StaticResource DashboardCardStyle}">
                     <Grid RowSpacing="14">
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto" />
@@ -62,7 +65,7 @@
                             </Border>
                         </Grid>
 
-                        <Grid Grid.Row="1" ColumnSpacing="12" RowSpacing="12">
+                        <Grid x:Name="CategoryLayout" Grid.Row="1" ColumnSpacing="12" RowSpacing="12">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="*" />
@@ -150,7 +153,8 @@
             </Grid>
 
             <!-- Secondary Row: Activity & Safety Contract -->
-            <Grid Grid.Row="2" ColumnSpacing="20">
+            <Grid x:Name="SecondaryLayout" Grid.Row="2" ColumnSpacing="20" RowSpacing="20">
+                <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="*" />
@@ -161,14 +165,14 @@
                         <TextBlock FontSize="16" FontWeight="SemiBold" Foreground="{ThemeResource TextPrimaryBrush}" Text="Recent activity" />
                         <Border Padding="16" Background="{ThemeResource SurfaceSecondaryBrush}" BorderBrush="{ThemeResource BorderSubtleBrush}" BorderThickness="1" CornerRadius="{StaticResource RadiusControl}">
                             <StackPanel Spacing="6">
-                                <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="No activity recorded" />
-                                <TextBlock Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap" Text="Checks, reviewed changes, and recovery receipts will appear here." />
+                                <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="{x:Bind ViewModel.RecentActivityTitle, Mode=OneWay}" />
+                                <TextBlock Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap" Text="{x:Bind ViewModel.RecentActivitySummary, Mode=OneWay}" />
                             </StackPanel>
                         </Border>
                     </StackPanel>
                 </Border>
 
-                <Border Grid.Column="1" Style="{StaticResource DashboardCardStyle}" Background="{ThemeResource HeroBackgroundBrush}">
+                <Border x:Name="SafetyCard" Grid.Column="1" Style="{StaticResource DashboardCardStyle}" Background="{ThemeResource HeroBackgroundBrush}">
                     <Grid ColumnSpacing="18">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="84" />
@@ -187,11 +191,12 @@
             </Grid>
 
             <!-- Action Command Row -->
-            <StackPanel Grid.Row="3" Orientation="Horizontal" Spacing="12">
+            <StackPanel x:Name="ActionLayout" Grid.Row="3" Orientation="Horizontal" Spacing="12">
                 <Button Content="Run Checkup" Click="RunCheckupButton_Click" Style="{StaticResource AccentButtonStyle}" AutomationProperties.AutomationId="HomeRunCheckup" AutomationProperties.Name="Run Checkup" />
                 <Button Content="View Activity" Click="ViewActivityButton_Click" CornerRadius="{StaticResource RadiusControl}" AutomationProperties.AutomationId="HomeViewActivity" AutomationProperties.Name="View Activity" />
                 <Button Content="Browse All Tools" Click="BrowseToolsButton_Click" CornerRadius="{StaticResource RadiusControl}" AutomationProperties.AutomationId="HomeBrowseTools" AutomationProperties.Name="Browse All Tools" />
             </StackPanel>
+            <controls:WidgetContainer x:Name="PluginWidgets" Grid.Row="4" Visibility="Collapsed" />
         </Grid>
     </ScrollViewer>
 </Page>

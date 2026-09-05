@@ -67,6 +67,7 @@ public sealed class ActivityJournalService : IActivityJournalService
         lock (_lock)
         {
             _records.Add(record);
+            TrimCompletedRecords();
             SaveCore();
         }
         return record;
@@ -104,6 +105,7 @@ public sealed class ActivityJournalService : IActivityJournalService
                 Result = result,
                 UndoAvailable = undoAvailable,
             };
+            TrimCompletedRecords();
             SaveCore();
         }
     }
@@ -129,7 +131,15 @@ public sealed class ActivityJournalService : IActivityJournalService
                 return new List<ActivityRecord>();
             }
 
-            return records.OrderBy(r => r.StartedAt).TakeLast(MaxPersistedRecords).ToList();
+            return records.Where(r => r is not null).OrderBy(r => r.StartedAt)
+                .TakeLast(MaxPersistedRecords)
+                .Select(r => r.State == ActivityState.Running ? r with
+                {
+                    State = ActivityState.NeedsAttention,
+                    CompletedAt = DateTimeOffset.UtcNow,
+                    Result = "The previous session ended before this operation reported an outcome. Review the system state before retrying.",
+                    UndoAvailable = false,
+                } : r).ToList();
         }
         catch (Exception ex) when (ex is IOException or JsonException or UnauthorizedAccessException)
         {
@@ -147,7 +157,7 @@ public sealed class ActivityJournalService : IActivityJournalService
                 Directory.CreateDirectory(directory);
             }
 
-            var tail = _records.OrderBy(r => r.StartedAt).TakeLast(MaxPersistedRecords).ToList();
+            var tail = _records.TakeLast(MaxPersistedRecords).ToList();
             var json = JsonSerializer.Serialize(tail, PersistenceOptions);
             var temporaryPath = _journalFilePath + ".tmp";
             File.WriteAllText(temporaryPath, json);
@@ -157,5 +167,13 @@ public sealed class ActivityJournalService : IActivityJournalService
         {
             // The in-memory journal remains authoritative even if disk persistence fails.
         }
+    }
+
+    private void TrimCompletedRecords()
+    {
+        // Preserve active operations so their eventual completion can still be recorded.
+        int excess = _records.Count - MaxPersistedRecords;
+        if (excess <= 0) return;
+        _records.RemoveAll(record => record.State != ActivityState.Running && excess-- > 0);
     }
 }

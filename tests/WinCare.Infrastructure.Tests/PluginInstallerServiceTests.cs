@@ -13,6 +13,27 @@ namespace WinCare.Infrastructure.Tests;
 public class PluginInstallerServiceTests
 {
     [Fact]
+    public async Task InstallPluginFromStreamAsync_RejectsOversizedArchivePositionedAtEnd()
+    {
+        var root = Path.Combine(Path.GetTempPath(), $"wincare_test_plugins_{Guid.NewGuid():N}");
+        try
+        {
+            using var archive = new MemoryStream();
+            archive.SetLength(PluginInstallerService.MaxDownloadSizeBytes + 1);
+            archive.Position = archive.Length;
+            var installer = new PluginInstallerService(pluginsBaseDirectory: root);
+            var error = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+                installer.InstallPluginFromStreamAsync(archive, "test.large.package"));
+            Assert.Contains("maximum allowed size", error.Message);
+            Assert.False(Directory.Exists(Path.Combine(root, "test.large.package")));
+        }
+        finally
+        {
+            if (Directory.Exists(root)) Directory.Delete(root, recursive: true);
+        }
+    }
+
+    [Fact]
     public async Task InstallPluginFromStreamAsync_ExtractsArchiveAndReadsManifest()
     {
         var tempPluginsDir = Path.Combine(Path.GetTempPath(), $"wincare_test_plugins_{Guid.NewGuid():N}");

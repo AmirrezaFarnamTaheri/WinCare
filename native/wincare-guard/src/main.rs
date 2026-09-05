@@ -45,7 +45,12 @@ fn main() {
 /// Turns a critical snapshot into a toast XML notification and queues it on disk so the
 /// WinCare app can display it, then echoes it to stderr for operator visibility.
 fn raise_critical_alert(snapshot: &monitors::SystemHealthSnapshot) {
-    let message = if snapshot.disk.as_ref().map(|d| d.is_low_space).unwrap_or(false) {
+    let message = if snapshot
+        .disk
+        .as_ref()
+        .map(|d| d.is_low_space)
+        .unwrap_or(false)
+    {
         "Drive C is running low on free space"
     } else if snapshot
         .ram
@@ -64,7 +69,7 @@ fn raise_critical_alert(snapshot: &monitors::SystemHealthSnapshot) {
     if let Some(directory) = notifications_directory() {
         if let Ok(_created) = std::fs::create_dir_all(&directory) {
             let path = directory.join(format!("guard-alert-{}.xml", unix_millis()));
-            let _ = std::fs::write(&path, xml);
+            let _ = std::fs::write(&path, &xml);
         }
     }
 

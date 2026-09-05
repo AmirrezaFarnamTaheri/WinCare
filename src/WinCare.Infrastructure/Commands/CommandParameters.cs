@@ -212,6 +212,10 @@ internal sealed class CommandParameters
 
     private static double Bound(string name, double value, double? min, double? max)
     {
+        if (!double.IsFinite(value))
+        {
+            throw new CommandParameterException(name, $"Parameter '{name}' must be a finite number.");
+        }
         if (min.HasValue && value < min.Value || max.HasValue && value > max.Value)
         {
             throw new CommandParameterException(name, $"Parameter '{name}' is outside the allowed range.");

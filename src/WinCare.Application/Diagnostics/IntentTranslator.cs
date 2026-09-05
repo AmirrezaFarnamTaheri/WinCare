@@ -142,23 +142,25 @@ namespace WinCare.Application.Diagnostics
                     break;
 
                 default:
-                    severity = DiagnosticSeverity.Healthy;
+                    severity = DiagnosticSeverity.Information;
                     summary = "Inferred area of interest: General system inquiry. Recommended diagnostic inspection checks are available.";
                     findings.Add(new DiagnosticFinding(
-                        "finding.general.healthy",
-                        "System Inquiry Interpreted (No Immediate Issue Detected)",
-                        "Query interpreted without requiring immediate system remediation. You may run routine diagnostic checks.",
-                        DiagnosticSeverity.Healthy,
+                        "finding.general.inquiry",
+                        "General system check requested",
+                        "The description alone cannot establish system health. Collect diagnostic evidence before deciding on repairs.",
+                        DiagnosticSeverity.Information,
                         "System",
                         IsVerifiedByTelemetry: false
                     ));
+                    AddRecommendedSteps(proposedSteps, "system", "storage", "security");
                     break;
             }
 
             // Fallback: If no steps were mapped, provide the safest general read-only command.
             if (proposedSteps.Count == 0 && severity != DiagnosticSeverity.Healthy)
             {
-                var fallback = _catalogService.All.FirstOrDefault(c => c.ReadOnly) ?? _catalogService.All.FirstOrDefault();
+                var fallback = _catalogService.All.FirstOrDefault(c => c.ReadOnly &&
+                    c.MigrationStatus is MigrationStatus.Implemented or MigrationStatus.BehaviorVerified);
                 if (fallback != null)
                 {
                     proposedSteps.Add(CreateStep(fallback));
@@ -186,7 +188,7 @@ namespace WinCare.Application.Diagnostics
             foreach (var id in commandIds)
             {
                 var match = _catalogService.All.FirstOrDefault(c => c.Id.Equals(id, StringComparison.OrdinalIgnoreCase));
-                if (match == null)
+                if (match == null || match.MigrationStatus is not (MigrationStatus.Implemented or MigrationStatus.BehaviorVerified))
                 {
                     continue;
                 }

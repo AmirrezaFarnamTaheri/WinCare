@@ -117,7 +117,19 @@ namespace WinCare.Infrastructure.Plugins
                 }
                 else if (ext is ".cmd" or ".bat")
                 {
+                    // cmd.exe parses shell operators even when ArgumentList is used.
+                    // Reject expansion and control syntax before passing data to it.
+                    const string shellSyntax = "&|<>^%!\"\r\n()";
+                    if (_scriptFullPath.IndexOfAny(shellSyntax.ToCharArray()) >= 0 ||
+                        (request.Parameters.ValueKind == JsonValueKind.Object &&
+                         request.Parameters.EnumerateObject().Any(prop =>
+                             prop.Value.ToString().IndexOfAny(shellSyntax.ToCharArray()) >= 0)))
+                    {
+                        return CommandHandlerOutcome.Blocked("plugin.shell_syntax_rejected",
+                            "Batch script paths and arguments cannot contain shell control or expansion characters.");
+                    }
                     executable = "cmd.exe";
+                    arguments.Add("/d");
                     arguments.Add("/c");
                     arguments.Add(_scriptFullPath);
 
@@ -164,11 +176,11 @@ namespace WinCare.Infrastructure.Plugins
             }
             catch (OperationCanceledException)
             {
-                return CommandHandlerOutcome.Blocked("command.cancelled", "Operation was cancelled.");
+                throw;
             }
             catch (Exception ex)
             {
-                return CommandHandlerOutcome.Failed("plugin.fault", $"Plugin script execution failed: {ex.Message}");
+                return CommandHandlerOutcome.Failed("plugin.fault", $"Plugin script execution failed ({ex.GetType().Name}).");
             }
         }
 

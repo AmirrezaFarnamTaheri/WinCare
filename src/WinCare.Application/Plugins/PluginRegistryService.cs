@@ -418,7 +418,7 @@ public sealed class PluginRegistryService : IPluginRegistry
                         toolDef.ScriptPath,
                         entry.SourceDirectoryPath,
                         cmd.ReadOnly,
-                        manifest?.DeclaredCapabilities ?? Array.Empty<string>());
+                        (IReadOnlyList<string>?)manifest?.DeclaredCapabilities ?? Array.Empty<string>());
                 }
                 else if (entry.IsBuiltIn)
                 {

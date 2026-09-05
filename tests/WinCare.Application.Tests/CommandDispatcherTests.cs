@@ -8,6 +8,20 @@ namespace WinCare.Application.Tests;
 public sealed class CommandDispatcherTests
 {
     [Fact]
+    public async Task Duplicate_dynamic_registration_cannot_replace_policy_or_handler()
+    {
+        var dispatcher = CreateDispatcher([], []);
+        var original = new RecordingHandler("plugin.unique");
+        var replacement = new RecordingHandler("plugin.unique");
+        Assert.True(dispatcher.RegisterDynamicCommand(Definition("plugin.unique", MigrationStatus.Implemented, true), original));
+        Assert.False(dispatcher.RegisterDynamicCommand(Definition("plugin.unique", MigrationStatus.Implemented, false), replacement));
+        var result = await dispatcher.ExecuteAsync(Request("plugin.unique"), CommandExecutionOptions.Default, default);
+        Assert.Equal(CommandResultStatus.Succeeded, result.Status);
+        Assert.Equal(1, original.InvocationCount);
+        Assert.Equal(0, replacement.InvocationCount);
+    }
+
+    [Fact]
     public async Task Unknown_command_is_blocked_without_invoking_a_handler()
     {
         CommandDispatcher dispatcher = CreateDispatcher([], []);

@@ -75,10 +75,9 @@ public sealed class AiDoctorPageViewModel : INotifyPropertyChanged
         IIntentTranslator? intentTranslator = null,
         ICommandDispatcher? commandDispatcher = null)
     {
-        var catalog = new ToolCatalogService(AppRuntime.Current.PluginRegistry);
         var inferenceEngine = new RuleBasedIntentInferenceEngine();
 
-        _intentTranslator = intentTranslator ?? new IntentTranslator(inferenceEngine, catalog);
+        _intentTranslator = intentTranslator ?? new IntentTranslator(inferenceEngine, AppRuntime.Current.ToolCatalog);
         _commandDispatcher = commandDispatcher ?? AppRuntime.Current.Dispatcher;
 
         // Greeting message
@@ -99,6 +98,7 @@ public sealed class AiDoctorPageViewModel : INotifyPropertyChanged
         Messages.Add(new DoctorChatMessage("User", prompt, IsUser: true, DateTime.UtcNow));
 
         IsAnalyzing = true;
+        CurrentPlan = null;
         try
         {
             var plan = await _intentTranslator.TranslateAsync(prompt, cancellationToken);
@@ -109,6 +109,10 @@ public sealed class AiDoctorPageViewModel : INotifyPropertyChanged
                 $"• **Investigation Scope:** {plan.Findings.Count} diagnostic findings identified.\n" +
                 $"• **Recommended Steps:** {plan.ProposedSteps.Count} steps available. Review measured evidence and run read-only diagnostic checks before executing mutations.";
             Messages.Add(new DoctorChatMessage("AI Doctor", responseText, IsUser: false, DateTime.UtcNow, plan));
+        }
+        catch (OperationCanceledException)
+        {
+            Messages.Add(new DoctorChatMessage("AI Doctor", "Analysis cancelled.", IsUser: false, DateTime.UtcNow));
         }
         catch (Exception ex)
         {

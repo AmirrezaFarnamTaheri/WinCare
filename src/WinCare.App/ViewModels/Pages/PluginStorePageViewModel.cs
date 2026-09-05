@@ -303,7 +303,7 @@ public sealed class PluginStorePageViewModel : INotifyPropertyChanged, IDisposab
         {
             // The catalog is the independently trusted boundary for revocation and publisher
             // trust; fetch the latest to enforce its current advisories at install time.
-            var catalog = await _catalogService.GetCatalogAsync(forceRemoteRefresh: false, cancellationToken).ConfigureAwait(true);
+            var catalog = await _catalogService.GetCatalogAsync(forceRefresh: true, cancellationToken).ConfigureAwait(true);
 
             await _installerService.InstallPluginFromPackageAsync(
                 card.PackageUrl,

@@ -34,7 +34,7 @@
                         </StackPanel>
                     </Border>
                     <StackPanel Grid.Column="1" Spacing="10" VerticalAlignment="Center">
-                        <TextBlock FontSize="20" FontWeight="SemiBold" Foreground="{ThemeResource TextPrimaryBrush}" Text="Health score" />
+                        <TextBlock FontSize="20" FontWeight="SemiBold" Foreground="{ThemeResource TextPrimaryBrush}" Text="Check completion" />
                         <TextBlock Style="{StaticResource PageDescriptionTextStyle}" TextWrapping="Wrap" Text="{x:Bind ViewModel.RunSummary, Mode=OneWay}" />
                         <Button
                             HorizontalAlignment="Left"

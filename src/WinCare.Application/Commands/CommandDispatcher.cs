@@ -16,8 +16,7 @@ public sealed class CommandDispatcher : ICommandDispatcher
 {
     private readonly IReadOnlyDictionary<string, CommandDefinition> _definitions;
     private readonly IReadOnlyDictionary<string, ICommandHandler> _handlers;
-    private readonly ConcurrentDictionary<string, CommandDefinition> _dynamicDefinitions = new(StringComparer.OrdinalIgnoreCase);
-    private readonly ConcurrentDictionary<string, ICommandHandler> _dynamicHandlers = new(StringComparer.OrdinalIgnoreCase);
+    private readonly ConcurrentDictionary<string, (CommandDefinition Definition, ICommandHandler Handler)> _dynamicCommands = new(StringComparer.OrdinalIgnoreCase);
     private readonly TimeProvider _timeProvider;
     private readonly IActivityJournalService? _journal;
 
@@ -131,9 +130,8 @@ public sealed class CommandDispatcher : ICommandDispatcher
             return false;
         }
 
-        _dynamicDefinitions[definition.Id] = definition;
-        _dynamicHandlers[definition.Id] = handler;
-        return true;
+        // Publish policy and implementation together; never replace another plugin's command.
+        return _dynamicCommands.TryAdd(definition.Id, (definition, handler));
     }
 
     /// <inheritdoc />
@@ -141,9 +139,7 @@ public sealed class CommandDispatcher : ICommandDispatcher
     {
         if (string.IsNullOrWhiteSpace(commandId)) return false;
 
-        var defRemoved = _dynamicDefinitions.TryRemove(commandId, out _);
-        var handlerRemoved = _dynamicHandlers.TryRemove(commandId, out _);
-        return defRemoved || handlerRemoved;
+        return _dynamicCommands.TryRemove(commandId, out _);
     }
 
     /// <summary>
@@ -182,8 +178,20 @@ public sealed class CommandDispatcher : ICommandDispatcher
                 startedAt);
         }
 
-        if (!_dynamicDefinitions.TryGetValue(request.CommandId, out CommandDefinition? definition) &&
-            !_definitions.TryGetValue(request.CommandId, out definition))
+        CommandDefinition? definition;
+        ICommandHandler? handler;
+        if (!string.IsNullOrWhiteSpace(request.CommandId) &&
+            _dynamicCommands.TryGetValue(request.CommandId, out var registration))
+        {
+            (definition, handler) = registration;
+        }
+        else
+        {
+            _definitions.TryGetValue(request.CommandId ?? string.Empty, out definition);
+            _handlers.TryGetValue(request.CommandId ?? string.Empty, out handler);
+        }
+
+        if (definition is null)
         {
             return CreateResult(
                 request,
@@ -207,8 +215,7 @@ public sealed class CommandDispatcher : ICommandDispatcher
                 startedAt);
         }
 
-        if (!_dynamicHandlers.TryGetValue(request.CommandId, out ICommandHandler? handler) &&
-            !_handlers.TryGetValue(request.CommandId, out handler))
+        if (handler is null)
         {
             return CreateResult(
                 request,
@@ -246,7 +253,7 @@ public sealed class CommandDispatcher : ICommandDispatcher
                     startedAt);
             }
 
-            if (request.Approval is null || !request.Approval.IsValid(request.CommandId, request.Parameters, request.CorrelationId))
+            if (request.Approval is null || !request.Approval.IsValid(definition.Id, request.Parameters, request.CorrelationId))
             {
                 return CreateResult(
                     request,
@@ -291,6 +298,10 @@ public sealed class CommandDispatcher : ICommandDispatcher
                 {
                     _journal?.Complete(activity.Id, outcome.Message, outcome.UndoAvailable);
                 }
+                else if (outcome.Status == CommandResultStatus.Cancelled)
+                {
+                    _journal?.Cancel(activity.Id);
+                }
                 else
                 {
                     _journal?.Fail(activity.Id, outcome.Message);
@@ -331,7 +342,7 @@ public sealed class CommandDispatcher : ICommandDispatcher
             if (activity is not null)
             {
                 // Log only the exception type — ex.Message can contain file paths or PII.
-                _journal?.Fail(activity.Id, $"Command faulted ({ex.GetType().Name}). No changes were applied.");
+                _journal?.Fail(activity.Id, $"Command faulted ({ex.GetType().Name}). Review the system state before retrying.");
                 System.Diagnostics.Debug.WriteLine($"[CommandDispatcher] {request.CommandId} fault: {ex}");
             }
             return CreateResult(

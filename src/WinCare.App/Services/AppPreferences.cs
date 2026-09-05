@@ -13,6 +13,16 @@ public sealed record AppPreferenceData(string Theme = "System")
 
     /// <summary>Most-recently-run command IDs, newest first.</summary>
     public List<string> RecentCommandIds { get; init; } = new();
+
+    /// <summary>Normalizes persisted data before exposing it to page bindings.</summary>
+    public AppPreferenceData Normalize() => this with
+    {
+        Theme = Theme is "Light" or "Dark" ? Theme : "System",
+        FavoriteCommandIds = (FavoriteCommandIds ?? []).Where(id => !string.IsNullOrWhiteSpace(id))
+            .Distinct(StringComparer.OrdinalIgnoreCase).Take(512).ToList(),
+        RecentCommandIds = (RecentCommandIds ?? []).Where(id => !string.IsNullOrWhiteSpace(id))
+            .Distinct(StringComparer.OrdinalIgnoreCase).Take(20).ToList(),
+    };
 }
 
 public static class AppPreferences
@@ -55,7 +65,7 @@ public static class AppPreferences
     {
         lock (Sync)
         {
-            _current = _current with { FavoriteCommandIds = ids.Distinct().ToList() };
+            _current = (_current with { FavoriteCommandIds = ids.ToList() }).Normalize();
             Save(_current);
         }
     }
@@ -65,7 +75,7 @@ public static class AppPreferences
     {
         lock (Sync)
         {
-            _current = _current with { RecentCommandIds = ids.ToList() };
+            _current = (_current with { RecentCommandIds = ids.ToList() }).Normalize();
             Save(_current);
         }
     }
@@ -76,8 +86,8 @@ public static class AppPreferences
     {
         try
         {
-            return File.Exists(FilePath)
-                ? JsonSerializer.Deserialize<AppPreferenceData>(File.ReadAllText(FilePath)) ?? new()
+            return File.Exists(FilePath) && new FileInfo(FilePath).Length <= 1024 * 1024
+                ? (JsonSerializer.Deserialize<AppPreferenceData>(File.ReadAllText(FilePath)) ?? new()).Normalize()
                 : new();
         }
         catch (Exception ex) when (ex is IOException or JsonException or UnauthorizedAccessException)

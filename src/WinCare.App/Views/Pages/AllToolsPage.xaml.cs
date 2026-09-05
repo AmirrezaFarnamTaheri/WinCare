@@ -32,7 +32,7 @@ public sealed partial class AllToolsPage : Page
 
     protected override void OnNavigatedFrom(NavigationEventArgs e)
     {
-        ViewModel.Dispose();
+        // This page is cached: its view model must remain subscribed when navigating back.
         base.OnNavigatedFrom(e);
     }
 

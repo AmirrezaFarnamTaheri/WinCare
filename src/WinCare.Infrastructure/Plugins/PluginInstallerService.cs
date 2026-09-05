@@ -332,7 +332,7 @@ public class PluginInstallerService : IPluginInstallerService
             ownedMemoryStream.Position = 0;
             workingStream = ownedMemoryStream;
         }
-        else if (archiveStream.Length - archiveStream.Position > MaxDownloadSizeBytes)
+        else if (archiveStream.Length > MaxDownloadSizeBytes)
         {
             throw new InvalidOperationException($"Package stream exceeds maximum allowed size of {MaxDownloadSizeBytes} bytes.");
         }
@@ -462,7 +462,10 @@ public class PluginInstallerService : IPluginInstallerService
                 manifestSignature = (await File.ReadAllTextAsync(sigFilePath, cancellationToken).ConfigureAwait(false)).Trim();
             }
 
-            if (manifestSignature != null && string.IsNullOrWhiteSpace(expectedPublisherSignature))
+            bool hasInlineSignature = doc.RootElement.TryGetProperty("signature", out var inlineSignature) &&
+                inlineSignature.ValueKind != JsonValueKind.Null &&
+                (inlineSignature.ValueKind != JsonValueKind.String || !string.IsNullOrWhiteSpace(inlineSignature.GetString()));
+            if ((manifestSignature != null || hasInlineSignature) && string.IsNullOrWhiteSpace(expectedPublisherSignature))
             {
                 throw new InvalidOperationException("Package admission rejected: Package-supplied signature is not an independent trust assertion.");
             }

@@ -10,6 +10,7 @@
     <Using Include="Xunit" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
     <PackageReference Include="xunit" />
+    <PackageReference Include="CommunityToolkit.Mvvm" />
     <PackageReference Include="xunit.runner.visualstudio">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
@@ -21,5 +22,9 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\WinCare.Application\WinCare.Application.csproj" />
+    <Compile Include="..\..\src\WinCare.App\ViewModels\Pages\ToolExecutionViewModel.cs" Link="ViewModels\ToolExecutionViewModel.cs" />
+    <Compile Include="..\..\src\WinCare.App\ViewModels\Pages\ToolRowViewModel.cs" Link="ViewModels\ToolRowViewModel.cs" />
+    <Compile Include="..\..\src\WinCare.App\ViewModels\Pages\HomePageViewModel.cs" Link="ViewModels\HomePageViewModel.cs" />
+    <Compile Include="..\..\src\WinCare.App\Services\AppPreferences.cs" Link="Services\AppPreferences.cs" />
   </ItemGroup>
 </Project>

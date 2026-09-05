@@ -75,8 +75,20 @@ namespace WinCare.Application.Tests
             var plan = await _translator.TranslateAsync("Check overall system health");
 
             Assert.NotNull(plan);
-            Assert.Equal(DiagnosticSeverity.Healthy, plan.OverallSeverity);
-            Assert.Contains(plan.Findings, f => f.Severity == DiagnosticSeverity.Healthy);
+            Assert.Equal(DiagnosticSeverity.Information, plan.OverallSeverity);
+            Assert.DoesNotContain(plan.Findings, f => f.Severity == DiagnosticSeverity.Healthy);
+            Assert.NotEmpty(plan.ProposedSteps);
+            Assert.All(plan.ProposedSteps, step => Assert.True(step.IsReadOnly));
+        }
+
+        [Fact]
+        public async Task Cancelled_classification_does_not_produce_an_intent()
+        {
+            using var cancellation = new System.Threading.CancellationTokenSource();
+            cancellation.Cancel();
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+                _inferenceEngine.PredictIntentAsync("system health", cancellation.Token));
+            Assert.False(_inferenceEngine.IsInitialized);
         }
 
         [Fact]

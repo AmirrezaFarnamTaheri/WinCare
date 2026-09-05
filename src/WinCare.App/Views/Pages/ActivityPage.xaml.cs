@@ -7,11 +7,13 @@ namespace WinCare.App.Views.Pages;
 
 public sealed partial class ActivityPage : Page
 {
+    private readonly DispatcherTimer _refreshTimer = new() { Interval = TimeSpan.FromSeconds(2) };
     public ActivityPage()
     {
         ViewModel = new ActivityPageViewModel();
         InitializeComponent();
         SectionSelector.SelectedItem = SectionSelector.Items[0] as SelectorBarItem;
+        _refreshTimer.Tick += (_, _) => ViewModel.RefreshFromJournal();
     }
 
     public ActivityPageViewModel ViewModel { get; }
@@ -22,6 +24,13 @@ public sealed partial class ActivityPage : Page
     {
         base.OnNavigatedTo(e);
         ViewModel.RefreshFromJournal();
+        _refreshTimer.Start();
+    }
+
+    protected override void OnNavigatedFrom(NavigationEventArgs e)
+    {
+        _refreshTimer.Stop();
+        base.OnNavigatedFrom(e);
     }
 
     private void SectionSelector_SelectionChanged(SelectorBar sender, SelectorBarSelectionChangedEventArgs args)

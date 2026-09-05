@@ -41,8 +41,13 @@ namespace WinCare.Application.Diagnostics
                 cancellationToken.ThrowIfCancellationRequested();
                 // No model or accelerator session is loaded: classification is rule-based.
                 await Task.Yield();
+                cancellationToken.ThrowIfCancellationRequested();
                 _isInitialized = true;
                 return true;
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
             }
             catch (Exception ex)
             {
@@ -59,6 +64,8 @@ namespace WinCare.Application.Diagnostics
 
         public async Task<string> PredictIntentAsync(string prompt, CancellationToken cancellationToken = default)
         {
+            ArgumentException.ThrowIfNullOrWhiteSpace(prompt);
+            cancellationToken.ThrowIfCancellationRequested();
             if (!_isInitialized)
             {
                 await InitializeAsync(cancellationToken);
@@ -66,6 +73,7 @@ namespace WinCare.Application.Diagnostics
 
             // Deterministic heuristic intent parser mapping semantic tokens to domains.
             await Task.Yield();
+            cancellationToken.ThrowIfCancellationRequested();
             var lower = prompt.ToLowerInvariant();
 
             if (lower.Contains("dns") || lower.Contains("network") || lower.Contains("internet") || lower.Contains("ping") || lower.Contains("wifi") || lower.Contains("winsock"))

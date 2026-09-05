@@ -12,6 +12,8 @@ namespace WinCare.App.ViewModels.Pages;
 public sealed class AllToolsPageViewModel : ObservableObject, IDisposable
 {
     private readonly ToolCatalogService _catalog;
+    private readonly Microsoft.UI.Dispatching.DispatcherQueue? _uiQueue = Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread();
+    private bool _isDisposed;
     private readonly HashSet<string> _favoriteIds = new(StringComparer.Ordinal);
     private readonly List<string> _recentIds = [];
     private string _searchText = string.Empty;
@@ -24,7 +26,7 @@ public sealed class AllToolsPageViewModel : ObservableObject, IDisposable
     private bool _isCompactLayout;
 
     public AllToolsPageViewModel()
-        : this(new ToolCatalogService(AppRuntime.Current.PluginRegistry), AppRuntime.Current.Dispatcher)
+        : this(AppRuntime.Current.ToolCatalog, AppRuntime.Current.Dispatcher)
     {
     }
 
@@ -326,11 +328,12 @@ public sealed class AllToolsPageViewModel : ObservableObject, IDisposable
 
     private void OnCatalogChanged(object? sender, EventArgs e)
     {
-        var dq = Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread();
-        if (dq != null && !dq.HasThreadAccess)
+        if (_isDisposed) return;
+        if (_uiQueue != null && !_uiQueue.HasThreadAccess)
         {
-            dq.TryEnqueue(() =>
+            _uiQueue.TryEnqueue(() =>
             {
+                if (_isDisposed) return;
                 RebuildAreaOptions();
                 Refresh();
             });
@@ -344,10 +347,11 @@ public sealed class AllToolsPageViewModel : ObservableObject, IDisposable
 
     public void Dispose()
     {
+        if (_isDisposed) return;
+        _isDisposed = true;
         _catalog.CatalogChanged -= OnCatalogChanged;
         _searchCts?.Cancel();
         _searchCts?.Dispose();
         _searchCts = null;
     }
 }
-

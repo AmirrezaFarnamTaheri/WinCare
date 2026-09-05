@@ -1,3 +1,5 @@
+//! Integration coverage for daemon sampling, notifications, and IPC lifecycle.
+
 use std::time::Duration;
 use wincare_guard::notifications::toast;
 use wincare_guard::service::GuardDaemon;
@@ -75,6 +77,44 @@ fn test_ipc_pipe_lifecycle_and_transition() {
     // Start server
     server.start();
     assert!(server.is_active());
+
+    #[cfg(target_os = "windows")]
+    {
+        use std::io::{Read, Write};
+        let connect = || {
+            let deadline = std::time::Instant::now() + Duration::from_secs(3);
+            loop {
+                match std::fs::OpenOptions::new()
+                    .read(true)
+                    .write(true)
+                    .open(PIPE_NAME)
+                {
+                    Ok(client) => break client,
+                    Err(error) => {
+                        assert!(std::time::Instant::now() < deadline, "{error}");
+                        std::thread::sleep(Duration::from_millis(10));
+                    }
+                }
+            }
+        };
+        // An idle client must not keep a stopped worker alive across a restart.
+        let idle_client = connect();
+        std::thread::sleep(Duration::from_millis(30));
+        let started = std::time::Instant::now();
+        server.stop();
+        assert!(started.elapsed() < Duration::from_secs(1));
+        drop(idle_client);
+        server.start();
+        for _ in 0..2 {
+            let mut client = connect();
+            client.write_all(b"ping\n").expect("write ping");
+            let mut response = [0u8; 5];
+            client
+                .read_exact(&mut response)
+                .expect("read pong before disconnect");
+            assert_eq!(&response, b"pong\n");
+        }
+    }
 
     // Stop server during upgrade/uninstall
     server.stop();

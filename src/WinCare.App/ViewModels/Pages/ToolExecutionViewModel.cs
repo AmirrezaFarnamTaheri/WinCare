@@ -30,6 +30,7 @@ public sealed class ToolExecutionViewModel : ObservableObject
     private bool _isReviewApproved;
     private string _parameterJson = "{}";
     private ApprovedMutationPlan? _lastApprovedPlan;
+    private long _reviewVersion;
 
     private CancellationTokenSource? _activeCts;
 
@@ -161,6 +162,7 @@ public sealed class ToolExecutionViewModel : ObservableObject
         }
 
         bool apply = IsMutatingTool && IsReviewApproved;
+        long reviewVersion = _reviewVersion;
         if (apply && !CanApproveReview)
         {
             return;
@@ -216,7 +218,7 @@ public sealed class ToolExecutionViewModel : ObservableObject
             }
 
             _recordRecent(result.CommandId);
-            if (string.Equals(_selectedTool?.Id, result.CommandId, StringComparison.Ordinal))
+            if (reviewVersion == _reviewVersion && ReferenceEquals(_selectedTool, selected))
             {
                 ApplyExecutionResult(result);
                 if (IsMutatingTool)
@@ -325,6 +327,8 @@ public sealed class ToolExecutionViewModel : ObservableObject
 
     private void ResetReviewState()
     {
+        _reviewVersion++;
+        _lastApprovedPlan = null;
         _hasSuccessfulPreview = false;
         if (_isReviewApproved)
         {

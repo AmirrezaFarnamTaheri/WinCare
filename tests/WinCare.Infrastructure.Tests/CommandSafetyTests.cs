@@ -9,6 +9,17 @@ namespace WinCare.Infrastructure.Tests;
 
 public sealed class CommandSafetyTests
 {
+    [Theory]
+    [InlineData("NaN")]
+    [InlineData("Infinity")]
+    [InlineData("-Infinity")]
+    [InlineData("1e999")]
+    public void Numeric_parameters_reject_nonfinite_values(string input)
+    {
+        var parameters = new CommandParameters(JsonSerializer.SerializeToElement(new { value = input }));
+        Assert.Throws<CommandParameterException>(() => parameters.Double("value", min: 0, max: 100));
+    }
+
     [Fact]
     public void CommandPlanAdmission_InvalidLateStep_FailsValidationUpfront()
     {

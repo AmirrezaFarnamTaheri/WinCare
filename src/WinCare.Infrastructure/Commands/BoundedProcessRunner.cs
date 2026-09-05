@@ -44,6 +44,12 @@ public sealed class BoundedProcessRunner
             throw new ArgumentOutOfRangeException(nameof(maxCharacters));
         }
 
+        cancellationToken.ThrowIfCancellationRequested();
+        // Validate and establish the deadline before starting a potentially mutating child.
+        using CancellationTokenSource timeoutCts = new(timeout ?? DefaultTimeout);
+        using CancellationTokenSource linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
+        linked.Token.ThrowIfCancellationRequested();
+
         var startInfo = new ProcessStartInfo
         {
             FileName = ResolveExecutable(fileName),
@@ -72,8 +78,6 @@ public sealed class BoundedProcessRunner
             throw new CommandDependencyException(fileName, $"Required executable '{fileName}' could not be started.", ex);
         }
 
-        using CancellationTokenSource timeoutCts = new(timeout ?? DefaultTimeout);
-        using CancellationTokenSource linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
         Task<(string Text, bool Truncated)> stdout = ReadBoundedAsync(process.StandardOutput, maxCharacters, linked.Token);
         Task<(string Text, bool Truncated)> stderr = ReadBoundedAsync(process.StandardError, maxCharacters, linked.Token);
 
