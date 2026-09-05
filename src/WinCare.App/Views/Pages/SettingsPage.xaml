@@ -5,9 +5,25 @@
     NavigationCacheMode="Required">
     <ScrollViewer VerticalScrollBarVisibility="Auto">
         <StackPanel Padding="32,24,32,32" Spacing="20">
-            <StackPanel Spacing="6">
+            <StackPanel Spacing="8">
                 <TextBlock Style="{StaticResource PageTitleTextStyle}" Text="Settings" />
                 <TextBlock MaxWidth="760" HorizontalAlignment="Left" Style="{StaticResource PageDescriptionTextStyle}" Text="Preferences saved for this Windows account." />
+                <InfoBar
+                    IsOpen="{x:Bind ViewModel.HasPersistenceWarning, Mode=OneWay}"
+                    IsClosable="False"
+                    Severity="Warning"
+                    Title="Preferences are not durable"
+                    Message="{x:Bind ViewModel.PersistenceWarningMessage, Mode=OneWay}"
+                    AutomationProperties.AutomationId="PreferencesPersistenceWarning"
+                    AutomationProperties.Name="Preferences persistence warning" />
+                <InfoBar
+                    x:Name="FolderErrorInfoBar"
+                    IsOpen="False"
+                    IsClosable="True"
+                    Severity="Error"
+                    Title="Could not open local data"
+                    AutomationProperties.AutomationId="SettingsFolderError"
+                    AutomationProperties.Name="Local data folder error" />
             </StackPanel>
             <Border Style="{StaticResource DashboardCardStyle}">
                 <Grid ColumnSpacing="24">
@@ -30,10 +46,10 @@
                     <Button Grid.Column="1" Content="Open folder" Click="OpenDataFolderButton_Click" AutomationProperties.AutomationId="OpenDataFolder" AutomationProperties.Name="Open WinCare data folder" />
                 </Grid>
             </Border>
-            <Border Style="{StaticResource DashboardCardStyle}" Background="{ThemeResource HeroBackgroundBrush}">
+            <Border Style="{StaticResource DashboardCardStyle}">
                 <StackPanel Spacing="8">
                     <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="Safety policy" />
-                    <TextBlock Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap" Text="Read-only checks run directly. Changes remain locked behind preview, explicit approval, receipts, and available recovery actions. These protections are product guarantees rather than decorative switches." />
+                    <TextBlock Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap" Text="Read-only checks run directly. Changes remain locked behind a dispatcher-issued preview receipt and explicit approval. Activity records preserve outcomes and provide recovery guidance when a command can supply it; WinCare does not claim a generic undo when no executable compensator exists." />
                 </StackPanel>
             </Border>
         </StackPanel>
