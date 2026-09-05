@@ -13,15 +13,14 @@
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
-            <!-- Page Header -->
             <StackPanel Spacing="6">
                 <TextBlock Style="{StaticResource PageTitleTextStyle}" Text="Home" />
-                <TextBlock Style="{StaticResource PageDescriptionTextStyle}" Text="Your system at a glance. Nothing changes without your review." />
+                <TextBlock Style="{StaticResource PageDescriptionTextStyle}" Text="Current evidence at a glance. Nothing changes without your review." />
             </StackPanel>
 
-            <!-- Hero Section: System Health & Status Grid -->
             <Grid x:Name="HeroLayout" Grid.Row="1" ColumnSpacing="20" RowSpacing="20">
                 <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
                 <Grid.ColumnDefinitions>
@@ -29,7 +28,6 @@
                     <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
 
-                <!-- System Health Summary Card -->
                 <Border Style="{StaticResource DashboardCardStyle}" Background="{ThemeResource HeroBackgroundBrush}">
                     <Grid>
                         <Grid.ColumnDefinitions>
@@ -37,10 +35,10 @@
                             <ColumnDefinition Width="140" />
                         </Grid.ColumnDefinitions>
                         <StackPanel Spacing="10" VerticalAlignment="Center">
-                            <TextBlock FontSize="16" FontWeight="SemiBold" Foreground="{ThemeResource TextPrimaryBrush}" Text="System health" />
-                            <TextBlock FontFamily="{StaticResource DisplayFontFamily}" FontSize="54" FontWeight="SemiBold" Foreground="{ThemeResource AccentTealBrush}" Text="—" />
-                            <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="Awaiting your first check" />
-                            <TextBlock Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap" Text="Run a read-only check to collect evidence before WinCare recommends anything." />
+                            <TextBlock FontSize="16" FontWeight="SemiBold" Foreground="{ThemeResource TextPrimaryBrush}" Text="Check evidence" />
+                            <TextBlock FontFamily="{StaticResource DisplayFontFamily}" FontSize="54" FontWeight="SemiBold" Foreground="{ThemeResource AccentTealBrush}" Text="{x:Bind ViewModel.EvidenceScoreText, Mode=OneWay}" />
+                            <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="{x:Bind ViewModel.EvidenceTitle, Mode=OneWay}" TextWrapping="Wrap" />
+                            <TextBlock Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap" Text="{x:Bind ViewModel.EvidenceSummary, Mode=OneWay}" />
                         </StackPanel>
                         <Border Grid.Column="1" Width="120" Height="120" CornerRadius="60" BorderThickness="8" BorderBrush="{ThemeResource AccentTealBrush}" Background="{ThemeResource AccentTealSubtleBrush}" HorizontalAlignment="Right" VerticalAlignment="Center">
                             <FontIcon Glyph="&#xE9D9;" FontSize="40" Foreground="{ThemeResource AccentTealBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
@@ -48,7 +46,6 @@
                     </Grid>
                 </Border>
 
-                <!-- System Status Category Matrix -->
                 <Border x:Name="StatusCard" Grid.Column="1" Style="{StaticResource DashboardCardStyle}">
                     <Grid RowSpacing="14">
                         <Grid.RowDefinitions>
@@ -56,7 +53,7 @@
                             <RowDefinition Height="*" />
                         </Grid.RowDefinitions>
                         <Grid>
-                            <TextBlock FontSize="16" FontWeight="SemiBold" Foreground="{ThemeResource TextPrimaryBrush}" Text="System status" />
+                            <TextBlock FontSize="16" FontWeight="SemiBold" Foreground="{ThemeResource TextPrimaryBrush}" Text="Evidence by area" />
                             <Border HorizontalAlignment="Right" Padding="10,4" Background="{ThemeResource AccentTealSubtleBrush}" BorderBrush="{ThemeResource AccentTealBrush}" BorderThickness="1" CornerRadius="{StaticResource RadiusPill}">
                                 <StackPanel Orientation="Horizontal" Spacing="6">
                                     <FontIcon Glyph="&#xE73E;" FontSize="12" Foreground="{ThemeResource AccentTealBrush}" />
@@ -82,7 +79,7 @@
                                         <FontIcon Glyph="&#xE7F4;" FontSize="22" Foreground="{ThemeResource AccentTealBrush}" />
                                         <StackPanel Spacing="2">
                                             <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="System" />
-                                            <TextBlock Style="{StaticResource RowSecondaryTextStyle}" Text="Not checked" />
+                                            <TextBlock Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind ViewModel.SystemStatus, Mode=OneWay}" TextWrapping="Wrap" />
                                         </StackPanel>
                                     </StackPanel>
                                 </Border>
@@ -94,7 +91,7 @@
                                         <FontIcon Glyph="&#xEA18;" FontSize="22" Foreground="{ThemeResource AccentTealBrush}" />
                                         <StackPanel Spacing="2">
                                             <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="Security" />
-                                            <TextBlock Style="{StaticResource RowSecondaryTextStyle}" Text="Ready to check" />
+                                            <TextBlock Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind ViewModel.SecurityStatus, Mode=OneWay}" TextWrapping="Wrap" />
                                         </StackPanel>
                                     </StackPanel>
                                 </Border>
@@ -105,8 +102,8 @@
                                     <StackPanel Orientation="Horizontal" Spacing="12">
                                         <FontIcon Glyph="&#xE9D9;" FontSize="22" Foreground="{ThemeResource AccentTealBrush}" />
                                         <StackPanel Spacing="2">
-                                            <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="Performance" />
-                                            <TextBlock Style="{StaticResource RowSecondaryTextStyle}" Text="Not checked" />
+                                            <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="Performance evidence" />
+                                            <TextBlock Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind ViewModel.PerformanceStatus, Mode=OneWay}" TextWrapping="Wrap" />
                                         </StackPanel>
                                     </StackPanel>
                                 </Border>
@@ -118,7 +115,7 @@
                                         <FontIcon Glyph="&#xE7F1;" FontSize="22" Foreground="{ThemeResource AccentTealBrush}" />
                                         <StackPanel Spacing="2">
                                             <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="Storage" />
-                                            <TextBlock Style="{StaticResource RowSecondaryTextStyle}" Text="Ready to check" />
+                                            <TextBlock Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind ViewModel.StorageStatus, Mode=OneWay}" TextWrapping="Wrap" />
                                         </StackPanel>
                                     </StackPanel>
                                 </Border>
@@ -130,7 +127,7 @@
                                         <FontIcon Glyph="&#xE950;" FontSize="22" Foreground="{ThemeResource AccentTealBrush}" />
                                         <StackPanel Spacing="2">
                                             <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="Updates" />
-                                            <TextBlock Style="{StaticResource RowSecondaryTextStyle}" Text="Ready to check" />
+                                            <TextBlock Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind ViewModel.UpdatesStatus, Mode=OneWay}" TextWrapping="Wrap" />
                                         </StackPanel>
                                     </StackPanel>
                                 </Border>
@@ -142,7 +139,7 @@
                                         <FontIcon Glyph="&#xE701;" FontSize="22" Foreground="{ThemeResource AccentTealBrush}" />
                                         <StackPanel Spacing="2">
                                             <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="Activity" />
-                                            <TextBlock Style="{StaticResource RowSecondaryTextStyle}" Text="No changes yet" />
+                                            <TextBlock Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind ViewModel.ActivityStatus, Mode=OneWay}" TextWrapping="Wrap" />
                                         </StackPanel>
                                     </StackPanel>
                                 </Border>
@@ -152,7 +149,6 @@
                 </Border>
             </Grid>
 
-            <!-- Secondary Row: Activity & Safety Contract -->
             <Grid x:Name="SecondaryLayout" Grid.Row="2" ColumnSpacing="20" RowSpacing="20">
                 <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
                 <Grid.ColumnDefinitions>
@@ -165,7 +161,7 @@
                         <TextBlock FontSize="16" FontWeight="SemiBold" Foreground="{ThemeResource TextPrimaryBrush}" Text="Recent activity" />
                         <Border Padding="16" Background="{ThemeResource SurfaceSecondaryBrush}" BorderBrush="{ThemeResource BorderSubtleBrush}" BorderThickness="1" CornerRadius="{StaticResource RadiusControl}">
                             <StackPanel Spacing="6">
-                                <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="{x:Bind ViewModel.RecentActivityTitle, Mode=OneWay}" />
+                                <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="{x:Bind ViewModel.RecentActivityTitle, Mode=OneWay}" TextWrapping="Wrap" />
                                 <TextBlock Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap" Text="{x:Bind ViewModel.RecentActivitySummary, Mode=OneWay}" />
                             </StackPanel>
                         </Border>
@@ -184,19 +180,29 @@
                         <StackPanel Grid.Column="1" Spacing="6" VerticalAlignment="Center">
                             <TextBlock FontSize="16" FontWeight="SemiBold" Foreground="{ThemeResource TextPrimaryBrush}" Text="Safety status" />
                             <TextBlock Style="{StaticResource RowTitleTextStyle}" Foreground="{ThemeResource AccentTealBrush}" Text="Review before applying" />
-                            <TextBlock Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap" Text="WinCare collects evidence first. Any change requires a visible preview and your approval." />
+                            <TextBlock Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap" Text="WinCare collects evidence first. Any change requires a dispatcher-issued preview receipt and your explicit approval." />
                         </StackPanel>
                     </Grid>
                 </Border>
             </Grid>
 
-            <!-- Action Command Row -->
             <StackPanel x:Name="ActionLayout" Grid.Row="3" Orientation="Horizontal" Spacing="12">
                 <Button Content="Run Checkup" Click="RunCheckupButton_Click" Style="{StaticResource AccentButtonStyle}" AutomationProperties.AutomationId="HomeRunCheckup" AutomationProperties.Name="Run Checkup" />
                 <Button Content="View Activity" Click="ViewActivityButton_Click" CornerRadius="{StaticResource RadiusControl}" AutomationProperties.AutomationId="HomeViewActivity" AutomationProperties.Name="View Activity" />
                 <Button Content="Browse All Tools" Click="BrowseToolsButton_Click" CornerRadius="{StaticResource RadiusControl}" AutomationProperties.AutomationId="HomeBrowseTools" AutomationProperties.Name="Browse All Tools" />
             </StackPanel>
-            <controls:WidgetContainer x:Name="PluginWidgets" Grid.Row="4" Visibility="Collapsed" />
+
+            <InfoBar
+                x:Name="PluginWidgetError"
+                Grid.Row="4"
+                IsOpen="False"
+                IsClosable="True"
+                Severity="Warning"
+                Title="Plugin widgets unavailable"
+                AutomationProperties.AutomationId="PluginWidgetError"
+                AutomationProperties.Name="Plugin widget loading warning" />
+
+            <controls:WidgetContainer x:Name="PluginWidgets" Grid.Row="5" Visibility="Collapsed" />
         </Grid>
     </ScrollViewer>
 </Page>
