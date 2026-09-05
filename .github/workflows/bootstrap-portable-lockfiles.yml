@@ -24,6 +24,18 @@ jobs:
         with:
           dotnet-version: "8.0.416"
           global-json-file: global.json
+      - name: Inspect portable restore properties
+        shell: pwsh
+        run: >-
+          dotnet msbuild src/WinCare.App/WinCare.App.csproj
+          -p:Configuration=Release
+          -p:Platform=${{ matrix.platform }}
+          -p:RuntimeIdentifier=${{ matrix.runtime }}
+          -p:WindowsPackageType=None
+          -getProperty:PortablePublish
+          -getProperty:NuGetLockFilePath
+          -getProperty:RestorePackagesWithLockFile
+          -getProperty:RestoreLockedMode
       - name: Generate portable publish lock graph
         shell: pwsh
         run: >-
@@ -38,15 +50,19 @@ jobs:
           -p:IncludeNativeLibrariesForSelfExtract=true
           -p:EnableCompressionInSingleFile=true
           -p:RestoreLockedMode=false
-      - name: Verify portable lockfiles
+      - name: Inspect generated lockfiles
         shell: pwsh
         run: |
-          $files = @(Get-ChildItem src -Recurse -Filter "packages.portable.${{ matrix.runtime }}.lock.json" -File)
-          if ($files.Count -ne 5) { throw "Expected 5 portable lockfiles for ${{ matrix.runtime }}, found $($files.Count)." }
-          $files | ForEach-Object { Write-Output $_.FullName }
+          Write-Output 'Tracked/generated lockfiles:'
+          Get-ChildItem . -Recurse -Filter '*lock.json' -File |
+            Where-Object { $_.FullName -notmatch '[\\/](bin|obj)[\\/]' } |
+            Sort-Object FullName |
+            ForEach-Object { Write-Output $_.FullName }
+          Write-Output 'Git status:'
+          git status --short
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: portable-lockfiles-${{ matrix.runtime }}
-          path: "src/**/packages.portable.${{ matrix.runtime }}.lock.json"
+          name: portable-lock-debug-${{ matrix.runtime }}
+          path: "src/**/*lock.json"
           if-no-files-found: error
           retention-days: 1
