@@ -7,8 +7,17 @@ namespace WinCare.Application.Activity;
 /// </summary>
 public interface IActivityJournalService
 {
+    /// <summary>Raised when in-memory records or durable-persistence health changes.</summary>
+    event EventHandler? Changed;
+
     /// <summary>Returns a snapshot of all records.</summary>
     IReadOnlyList<ActivityRecord> GetAll();
+
+    /// <summary>Whether the latest queued activity snapshot was durably persisted.</summary>
+    bool IsPersistenceHealthy { get; }
+
+    /// <summary>User-safe persistence status when durability is degraded.</summary>
+    string? PersistenceStatusMessage { get; }
 
     /// <summary>Begins a new activity record in the Running state.</summary>
     ActivityRecord Begin(string commandId, string title);
@@ -24,4 +33,7 @@ public interface IActivityJournalService
 
     /// <summary>Transitions the record to NeedsAttention with a diagnostic message.</summary>
     void RequireAttention(Guid id, string message);
+
+    /// <summary>Waits for all persistence work queued before the call to finish.</summary>
+    Task FlushAsync(CancellationToken cancellationToken = default);
 }
