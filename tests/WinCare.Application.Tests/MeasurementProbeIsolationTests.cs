@@ -1,4 +1,3 @@
-using System.Text.Json;
 using WinCare.Application.Commands;
 using WinCare.CommandCatalog.Models;
 using WinCare.Domain.Commands;
@@ -19,22 +18,39 @@ public sealed class MeasurementProbeIsolationTests
             new DelayedHandler("storage", tracker),
         });
 
-        Task<CommandResult> first = dispatcher.ExecuteAsync(Request("system"), CommandExecutionOptions.Default, CancellationToken.None);
-        Task<CommandResult> second = dispatcher.ExecuteAsync(Request("storage"), CommandExecutionOptions.Default, CancellationToken.None);
-        await Task.WhenAll(first, second);
+        IReadOnlyList<CommandResult> results = await SequentialCommandProbeRunner.RunPreviewsAsync(
+            dispatcher,
+            ["system", "storage"],
+            TimeSpan.FromSeconds(5),
+            CancellationToken.None);
 
         Assert.Equal(1, tracker.MaxConcurrent);
-        Assert.Equal(CommandResultStatus.Succeeded, first.Result.Status);
-        Assert.Equal(CommandResultStatus.Succeeded, second.Result.Status);
+        Assert.Equal(["system", "storage"], results.Select(result => result.CommandId));
+        Assert.All(results, result => Assert.Equal(CommandResultStatus.Succeeded, result.Status));
+    }
+
+    [Fact]
+    public async Task Sequential_probe_runner_is_not_a_global_dispatcher_lock()
+    {
+        var tracker = new ConcurrencyTracker();
+        var definitions = new[] { Definition("system"), Definition("storage") };
+        var dispatcher = new CommandDispatcher(definitions, new ICommandHandler[]
+        {
+            new DelayedHandler("system", tracker),
+            new DelayedHandler("storage", tracker),
+        });
+
+        Task<CommandResult> first = dispatcher.ExecuteAsync(CommandRequest.Preview("system"), CommandExecutionOptions.Default, CancellationToken.None);
+        Task<CommandResult> second = dispatcher.ExecuteAsync(CommandRequest.Preview("storage"), CommandExecutionOptions.Default, CancellationToken.None);
+        await Task.WhenAll(first, second);
+
+        Assert.True(tracker.MaxConcurrent > 1, "Independent dispatcher calls should remain concurrent; only the measurement runner serializes probes.");
     }
 
     private static CommandDefinition Definition(string id) => new(
         id, id, "Measurement probe", "Checkup", "Evidence", CommandRisk.ReadOnly,
         ReadOnly: true, AdministratorAccess.No, RestartExpectation.No, "test",
         MigrationStatus.Implemented, [id]);
-
-    private static CommandRequest Request(string id) =>
-        CommandRequest.Preview(id, JsonSerializer.SerializeToElement(new { }));
 
     private sealed class ConcurrencyTracker
     {
