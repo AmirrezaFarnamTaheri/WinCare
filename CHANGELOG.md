@@ -4,6 +4,35 @@ All notable changes to WinCare are documented in this file in accordance with [K
 
 ---
 
+## [Unreleased]
+
+### Security & Safety
+
+- Made mutating approval a dispatcher-issued, parameter-bound, expiring, single-use capability; callers such as the System Doctor can no longer synthesize their own approval without a successful preview.
+- Hardened plugin catalog trust, fresh-install re-resolution, publisher revocation, signed admission records, assembly-plugin rollback, uninstall recovery, and discovery-time signature verification.
+- Made plugin upgrade rollback preserve the last known-good external admission record when trust-record restoration itself encounters an I/O or access failure, surfacing both failures instead of deleting recovery evidence.
+- Hardened Guard named-pipe access control and retained fail-closed semantics for future mutating IPC.
+- Versioned encrypted profile envelopes, retained legacy decryption compatibility, and raised PBKDF2-HMAC-SHA256 work factor to 600,000 iterations.
+- Changed mutation-handler fault reporting to state when final machine state is unknown rather than implying that no change occurred.
+
+### UX, Accessibility & Reliability
+
+- Reworked Home, Activity/Reports, Help, Plugin Store, Checkup, Doctor, settings, and window-continuity behavior around truthful state, visible degraded/error modes, safer destructive actions, and evidence-driven recovery.
+- Added typed All Tools parameter editors generated from command contracts while keeping raw JSON as an explicit Advanced escape hatch.
+- Standardized compact behavior around the shared breakpoint, added real Checkup compact states, and made measurement-sensitive Checkup probes explicitly sequential without globally serializing the dispatcher.
+- Tightened accessible theme tokens, automation metadata, and validation guidance for High Contrast, Narrator, keyboard use, and 100–225% Windows text scaling.
+- Replaced polling/synchronous persistence patterns with event-driven refresh and queued/coalesced persistence where appropriate, while surfacing durability failures.
+
+### Build, Supply Chain & Repository Quality
+
+- Pinned .NET SDK 8.0.416 exactly with feature-band roll-forward and prerelease SDKs disabled; Rust and GitHub Actions remain pinned as well.
+- Committed normal NuGet dependency lockfiles for all eight solution projects and RID-specific portable publish lock variants for all five source projects on `win-x64` and `win-arm64`.
+- Enabled CI locked restore plus NuGet auditing of all transitive packages at moderate-or-higher severity; audit warnings are not suppressed.
+- Expanded Dependabot coverage to GitHub Actions, NuGet, Cargo, and npm.
+- Added CODEOWNERS and a pull-request template covering safety/trust, accessibility, supply chain, exact verification evidence, documentation truth, and residual risk.
+- Expanded finalized native-source evidence to include NuGet configuration, infrastructure security tests, repository review guardrails, and all committed dependency lock graphs.
+- Added structural regressions for deterministic toolchains, dependency graph drift, plugin admission rollback, portable publish locking, finalized-source completeness, responsive behavior, typed inputs, and approval provenance.
+
 ## [2.5.0-rc5] - 2026-08-31
 
 ### Fixed
