@@ -2,19 +2,21 @@ using System.Text.Json;
 
 namespace WinCare.App.Services;
 
+public sealed record WindowPlacementData(int Left, int Top, int Width, int Height, bool Maximized)
+{
+    public bool IsUsable => Width >= 800 && Height >= 600 && Width <= 16_384 && Height <= 16_384;
+}
+
 /// <summary>
-/// Persisted per-user preference state, including the theme and the favorite/recent tool
-/// lists that back the All Tools page across restarts.
+/// Persisted per-user preference state, including theme, command shortcuts, and the last
+/// usable desktop window placement.
 /// </summary>
 public sealed record AppPreferenceData(string Theme = "System")
 {
-    /// <summary>Stable command IDs the user has favorited.</summary>
     public List<string> FavoriteCommandIds { get; init; } = new();
-
-    /// <summary>Most-recently-run command IDs, newest first.</summary>
     public List<string> RecentCommandIds { get; init; } = new();
+    public WindowPlacementData? WindowPlacement { get; init; }
 
-    /// <summary>Normalizes persisted data before exposing it to page bindings.</summary>
     public AppPreferenceData Normalize() => this with
     {
         Theme = Theme is "Light" or "Dark" ? Theme : "System",
@@ -22,6 +24,7 @@ public sealed record AppPreferenceData(string Theme = "System")
             .Distinct(StringComparer.OrdinalIgnoreCase).Take(512).ToList(),
         RecentCommandIds = (RecentCommandIds ?? []).Where(id => !string.IsNullOrWhiteSpace(id))
             .Distinct(StringComparer.OrdinalIgnoreCase).Take(20).ToList(),
+        WindowPlacement = WindowPlacement is { IsUsable: true } placement ? placement : null,
     };
 }
 
@@ -44,7 +47,7 @@ public static class AppPreferences
         set
         {
             string normalized = value is "Light" or "Dark" ? value : "System";
-            AppPreferenceData? snapshot = null;
+            AppPreferenceData snapshot;
             lock (StateSync)
             {
                 if (string.Equals(_current.Theme, normalized, StringComparison.Ordinal)) return;
@@ -55,41 +58,31 @@ public static class AppPreferences
         }
     }
 
-    /// <summary>Returns a snapshot of the favorited command IDs, newest last.</summary>
     public static IReadOnlyList<string> FavoriteCommandIds
     {
         get { lock (StateSync) { return _current.FavoriteCommandIds.ToArray(); } }
     }
 
-    /// <summary>Returns a snapshot of the recent command IDs, newest first.</summary>
     public static IReadOnlyList<string> RecentCommandIds
     {
         get { lock (StateSync) { return _current.RecentCommandIds.ToArray(); } }
     }
 
+    public static WindowPlacementData? WindowPlacement
+    {
+        get { lock (StateSync) { return _current.WindowPlacement; } }
+    }
+
     public static bool IsPersistenceHealthy
     {
-        get
-        {
-            lock (PersistenceSync)
-            {
-                return string.IsNullOrWhiteSpace(_persistenceStatusMessage);
-            }
-        }
+        get { lock (PersistenceSync) { return string.IsNullOrWhiteSpace(_persistenceStatusMessage); } }
     }
 
     public static string? PersistenceStatusMessage
     {
-        get
-        {
-            lock (PersistenceSync)
-            {
-                return _persistenceStatusMessage;
-            }
-        }
+        get { lock (PersistenceSync) { return _persistenceStatusMessage; } }
     }
 
-    /// <summary>Persists the favorite command IDs without blocking the calling UI thread on disk I/O.</summary>
     public static void SaveFavoriteCommandIds(IEnumerable<string> ids)
     {
         ArgumentNullException.ThrowIfNull(ids);
@@ -102,7 +95,6 @@ public static class AppPreferences
         QueueSave(snapshot);
     }
 
-    /// <summary>Persists the recent command IDs without blocking the calling UI thread on disk I/O.</summary>
     public static void SaveRecentCommandIds(IEnumerable<string> ids)
     {
         ArgumentNullException.ThrowIfNull(ids);
@@ -110,6 +102,20 @@ public static class AppPreferences
         lock (StateSync)
         {
             _current = (_current with { RecentCommandIds = ids.ToList() }).Normalize();
+            snapshot = Snapshot();
+        }
+        QueueSave(snapshot);
+    }
+
+    public static void SaveWindowPlacement(WindowPlacementData placement)
+    {
+        ArgumentNullException.ThrowIfNull(placement);
+        if (!placement.IsUsable) return;
+
+        AppPreferenceData snapshot;
+        lock (StateSync)
+        {
+            _current = (_current with { WindowPlacement = placement }).Normalize();
             snapshot = Snapshot();
         }
         QueueSave(snapshot);
@@ -138,10 +144,7 @@ public static class AppPreferences
         persistenceStatusMessage = null;
         try
         {
-            if (!File.Exists(FilePath))
-            {
-                return new();
-            }
+            if (!File.Exists(FilePath)) return new();
             if (new FileInfo(FilePath).Length > 1024 * 1024)
             {
                 persistenceStatusMessage = "Saved preferences exceeded the safety limit and were not loaded. New preferences may still be used for this session.";
