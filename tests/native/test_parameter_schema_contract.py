@@ -18,7 +18,7 @@ class ParameterSchemaContractTests(unittest.TestCase):
         cls.all_tools = (cls.root / "src/WinCare.App/Views/Pages/AllToolsPage.xaml").read_text(encoding="utf-8")
 
     def test_schema_only_references_real_catalog_commands(self) -> None:
-        schema_ids = set(re.findall(r"^([a-z0-9-]+)\\|", self.schema, re.MULTILINE))
+        schema_ids = set(re.findall(r"^([a-z0-9-]+)\|", self.schema, re.MULTILINE))
         catalog_ids = set(load_oracle_commands())
         self.assertTrue(schema_ids, "typed parameter schema must not be empty")
         self.assertEqual(set(), schema_ids - catalog_ids)
