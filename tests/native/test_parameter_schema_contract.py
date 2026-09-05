@@ -15,7 +15,7 @@ class ParameterSchemaContractTests(unittest.TestCase):
         cls.security = (cls.root / "src/WinCare.Infrastructure/Commands/WindowsCommandExecutor.Security.cs").read_text(encoding="utf-8")
         cls.schema = (cls.root / "src/WinCare.CommandCatalog/Models/CommandParameterCatalog.cs").read_text(encoding="utf-8")
         cls.execution_vm = (cls.root / "src/WinCare.App/ViewModels/Pages/ToolExecutionViewModel.cs").read_text(encoding="utf-8")
-        cls.all_tools = (cls.root / "src/WinCare.App/Views/Pages/AllToolsPage.xaml").read_text(encoding="utf-8")
+        cls.all_tools_code = (cls.root / "src/WinCare.App/Views/Pages/AllToolsPage.xaml.cs").read_text(encoding="utf-8")
 
     def test_schema_only_references_real_catalog_commands(self) -> None:
         schema_ids = set(re.findall(r"^([a-z0-9-]+)\|", self.schema, re.MULTILINE))
@@ -37,8 +37,10 @@ class ParameterSchemaContractTests(unittest.TestCase):
         self.assertIn("CommandParameterCatalog.For", self.execution_vm)
         self.assertIn("ParameterFields", self.execution_vm)
         self.assertIn("ToolParameterFieldViewModel", self.execution_vm)
-        self.assertIn('AutomationProperties.AutomationId="CommandParameterFields"', self.all_tools)
-        self.assertIn('Header="Advanced JSON parameters"', self.all_tools)
+        self.assertIn("CreateParameterField", self.all_tools_code)
+        self.assertIn('AutomationProperties.SetAutomationId(editor, "CommandParameter_" + field.Name)', self.all_tools_code)
+        self.assertIn('Header = "Advanced parameter editing"', self.all_tools_code)
+        self.assertIn('OnContent = "Raw JSON"', self.all_tools_code)
 
 
 if __name__ == "__main__":
