@@ -88,7 +88,7 @@ jobs:
             target: aarch64-pc-windows-msvc
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: actions/setup-dotnet@4713b0c4d9a8f216d2513cf805d020337de2da40 # pinned upstream commit
+      - uses: actions/setup-dotnet@bbbb8c9ab609f9ab643834ffe948a0f577bc4c0c # pinned upstream commit
         with:
           dotnet-version: "8.0.416"
           global-json-file: global.json
