@@ -226,7 +226,6 @@ public sealed class PluginStorePageViewModel : INotifyPropertyChanged, IDisposab
             }
             else
             {
-                // Fetch online catalog
                 RemotePluginCatalog catalog;
                 try
                 {
@@ -237,7 +236,6 @@ public sealed class PluginStorePageViewModel : INotifyPropertyChanged, IDisposab
                     catalog = new RemotePluginCatalog();
                 }
 
-                // Combine installed and remote catalog items
                 var seenIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
                 foreach (var item in catalog.Plugins)
@@ -251,7 +249,6 @@ public sealed class PluginStorePageViewModel : INotifyPropertyChanged, IDisposab
                     }
                 }
 
-                // Add installed plugins not present in online catalog
                 foreach (var installed in installedPlugins.Values)
                 {
                     if (!seenIds.Contains(installed.Id) &&
@@ -263,8 +260,6 @@ public sealed class PluginStorePageViewModel : INotifyPropertyChanged, IDisposab
                 }
             }
 
-            // A more recent search/category request owns the collection. Older async
-            // requests may finish later, but must never overwrite its visible results.
             if (refreshVersion != Volatile.Read(ref _refreshVersion))
             {
                 return;
@@ -287,13 +282,14 @@ public sealed class PluginStorePageViewModel : INotifyPropertyChanged, IDisposab
     }
 
     /// <summary>
-    /// Installs a remote plugin package, runs discovery, and refreshes the store. The caller
-    /// supplies the capabilities the user consented to; installation flows through the
-    /// hardened installer (SHA-256, publisher signature, revocation, and capability consent).
+    /// Installs a remote plugin package only after re-resolving the reviewed card against a
+    /// freshly downloaded catalog. Any delisting or change to version, URL, hash, publisher
+    /// identity/key/signature, or permissions invalidates the review and requires the user to
+    /// refresh and review the entry again.
     /// </summary>
     public async Task<bool> InstallPluginAsync(PluginCardViewModel card, IReadOnlyCollection<string>? consentedCapabilities = null, CancellationToken cancellationToken = default)
     {
-        if (card == null || card.IsInstalled || string.IsNullOrWhiteSpace(card.PackageUrl) || !card.CanInstall)
+        if (card == null || card.IsInstalled || !card.CanInstall || card.RemoteItem is null)
         {
             return false;
         }
@@ -301,19 +297,33 @@ public sealed class PluginStorePageViewModel : INotifyPropertyChanged, IDisposab
         ErrorMessage = null;
         try
         {
-            // The catalog is the independently trusted boundary for revocation and publisher
-            // trust; fetch the latest to enforce its current advisories at install time.
+            // forceRefresh=true is fail-closed in RemoteCatalogService: an install never falls
+            // back to stale cached revocation or publisher metadata.
             var catalog = await _catalogService.GetCatalogAsync(forceRefresh: true, cancellationToken).ConfigureAwait(true);
+            var consented = consentedCapabilities ?? Array.Empty<string>();
+            RemotePluginItem freshItem = RemotePluginInstallPolicy.ResolveFreshReviewedEntry(
+                catalog,
+                card.RemoteItem,
+                consented);
 
-            await _installerService.InstallPluginFromPackageAsync(
-                card.PackageUrl,
-                card.Id,
-                card.Sha256,
-                card.RemoteItem?.PublicKeyPem,
-                card.RemoteItem?.Signature,
+            string trustedPublisherId = !string.IsNullOrWhiteSpace(freshItem.PublisherId)
+                ? freshItem.PublisherId
+                : freshItem.Author;
+            if (string.IsNullOrWhiteSpace(trustedPublisherId))
+            {
+                throw new InvalidOperationException("The current catalog entry has no stable publisher identity.");
+            }
+
+            await _installerService.InstallTrustedPluginFromPackageAsync(
+                freshItem.PackageUrl,
+                freshItem.Id,
+                freshItem.Sha256,
+                trustedPublisherId,
+                freshItem.PublicKeyPem!,
+                freshItem.Signature!,
                 catalog.RevokedPackages,
                 catalog.RevokedPublishers,
-                consentedCapabilities ?? Array.Empty<string>(),
+                consented,
                 cancellationToken).ConfigureAwait(true);
 
             await _registry.DiscoverAndInitializeAsync(_host, cancellationToken).ConfigureAwait(true);

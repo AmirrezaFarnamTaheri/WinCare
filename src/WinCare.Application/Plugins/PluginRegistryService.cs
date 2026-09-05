@@ -24,6 +24,7 @@ public sealed class PluginRegistryService : IPluginRegistry
 {
     private readonly ConcurrentDictionary<string, PluginRegistryEntry> _entries = new(StringComparer.OrdinalIgnoreCase);
     private readonly ConcurrentDictionary<string, (IWinCarePlugin Plugin, PluginLoadContext? LoadContext)> _instantiatedPlugins = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, HashSet<string>> _registeredCommandIdsByPlugin = new(StringComparer.OrdinalIgnoreCase);
     private readonly IPluginStateRepository? _stateRepository;
     private readonly HashSet<string> _enabledIds;
     private readonly ScriptCommandHandlerFactory? _scriptHandlerFactory;
@@ -51,26 +52,19 @@ public sealed class PluginRegistryService : IPluginRegistry
         await _gate.WaitAsync(ct).ConfigureAwait(false);
         try
         {
-            _entries.Clear();
-            foreach (var kvp in _instantiatedPlugins)
+            foreach (string pluginId in _instantiatedPlugins.Keys.ToList())
             {
-                try
-                {
-                    await kvp.Value.Plugin.ShutdownAsync(ct).ConfigureAwait(false);
-                    await kvp.Value.Plugin.DisposeAsync().ConfigureAwait(false);
-                }
-                catch (Exception ex)
-                {
-                    System.Diagnostics.Debug.WriteLine($"[PluginRegistry] Failed shutting down plugin '{kvp.Key}': {ex.GetType().Name} - {ex.Message}");
-                }
-                kvp.Value.LoadContext?.Unload();
+                await ShutdownInstantiatedPluginAsync(pluginId, CancellationToken.None).ConfigureAwait(false);
             }
-            _instantiatedPlugins.Clear();
+            foreach (string pluginId in _registeredCommandIdsByPlugin.Keys.ToList())
+            {
+                UnregisterOwnedCommands(pluginId, host);
+            }
+            _registeredCommandIdsByPlugin.Clear();
+            _entries.Clear();
 
-            // Discover built-in plugins from embedded resources
             DiscoverEmbeddedBuiltInPlugins();
 
-            // Scan built-in plugins in ApplicationRootPath/Plugins
             var builtInDir = Path.Combine(host.ApplicationRootPath, "Plugins");
             if (Directory.Exists(builtInDir))
             {
@@ -86,11 +80,9 @@ public sealed class PluginRegistryService : IPluginRegistry
                 }
             }
 
-            // Scan user-installed plugins in PluginsUserDirectory (ignoring staging & backups)
             if (Directory.Exists(host.PluginsUserDirectory))
             {
-                var pluginDirectories = Directory.GetDirectories(host.PluginsUserDirectory);
-                foreach (var dir in pluginDirectories)
+                foreach (var dir in Directory.GetDirectories(host.PluginsUserDirectory))
                 {
                     if (IsIgnoredDirectory(dir)) continue;
                     LoadPluginDirectory(dir, isBuiltIn: false);
@@ -101,7 +93,7 @@ public sealed class PluginRegistryService : IPluginRegistry
             {
                 if (_enabledIds.Contains(entry.Id) || entry.IsBuiltIn)
                 {
-                    await EnablePluginInternalAsync(entry.Id, host, ct);
+                    await EnablePluginInternalAsync(entry.Id, host, ct).ConfigureAwait(false);
                 }
             }
         }
@@ -164,7 +156,7 @@ public sealed class PluginRegistryService : IPluginRegistry
         await _gate.WaitAsync(ct).ConfigureAwait(false);
         try
         {
-            await EnablePluginInternalAsync(pluginId, host, ct);
+            await EnablePluginInternalAsync(pluginId, host, ct).ConfigureAwait(false);
 
             if (_entries.TryGetValue(pluginId, out var entry) && entry.State == PluginState.Enabled)
             {
@@ -193,28 +185,12 @@ public sealed class PluginRegistryService : IPluginRegistry
             _enabledIds.Remove(pluginId);
             _stateRepository?.SaveEnabledPluginIds(_enabledIds);
 
+            UnregisterOwnedCommands(pluginId, host);
+            await ShutdownInstantiatedPluginAsync(pluginId, CancellationToken.None).ConfigureAwait(false);
+
             if (_entries.TryGetValue(pluginId, out var entry))
             {
-                foreach (var cmd in entry.Commands)
-                {
-                    host.UnregisterCommand(cmd.Id);
-                }
-
-                _entries[pluginId] = entry with { State = PluginState.Disabled };
-            }
-
-            if (_instantiatedPlugins.TryRemove(pluginId, out var inst))
-            {
-                try
-                {
-                    await inst.Plugin.ShutdownAsync(ct).ConfigureAwait(false);
-                    await inst.Plugin.DisposeAsync().ConfigureAwait(false);
-                }
-                catch (Exception ex)
-                {
-                    System.Diagnostics.Debug.WriteLine($"[PluginRegistry] Failed shutting down plugin '{pluginId}': {ex.GetType().Name} - {ex.Message}");
-                }
-                inst.LoadContext?.Unload();
+                _entries[pluginId] = entry with { State = PluginState.Disabled, ErrorMessage = null };
             }
         }
         finally
@@ -244,7 +220,6 @@ public sealed class PluginRegistryService : IPluginRegistry
 
         var manifest = loadResult.Manifest;
 
-        // Finding 5: Fail-closed duplicate & reserved namespace protection
         if (_entries.TryGetValue(manifest.Id, out var existing))
         {
             if (existing.IsBuiltIn && !isBuiltIn)
@@ -266,8 +241,7 @@ public sealed class PluginRegistryService : IPluginRegistry
         }
 
         var initialState = _enabledIds.Contains(manifest.Id) || isBuiltIn ? PluginState.Enabled : PluginState.Disabled;
-
-        var entry = new PluginRegistryEntry(
+        _entries[manifest.Id] = new PluginRegistryEntry(
             Id: manifest.Id,
             Name: manifest.Name,
             Version: manifest.Version,
@@ -278,70 +252,88 @@ public sealed class PluginRegistryService : IPluginRegistry
             IsBuiltIn: isBuiltIn,
             State: initialState,
             Commands: loadResult.Commands,
-            ErrorMessage: loadResult.ErrorMessage
-        );
-
-        _entries[manifest.Id] = entry;
+            ErrorMessage: loadResult.ErrorMessage);
     }
 
-    private void CleanupInstantiatedPlugin(string pluginId, IPluginHost? host, PluginRegistryEntry? entry)
+    private void UnregisterOwnedCommands(string pluginId, IPluginHost host)
     {
-        if (entry != null && host != null)
+        if (!_registeredCommandIdsByPlugin.Remove(pluginId, out var ownedIds))
         {
-            foreach (var cmd in entry.Commands)
-            {
-                try { host.UnregisterCommand(cmd.Id); } catch { }
-            }
+            return;
         }
 
-        if (_instantiatedPlugins.Remove(pluginId, out var existing))
+        foreach (string commandId in ownedIds)
         {
-            try
-            {
-                if (existing.Plugin is IDisposable disp)
-                {
-                    disp.Dispose();
-                }
-            }
-            catch { }
-            try
-            {
-                existing.LoadContext?.Unload();
-            }
-            catch { }
+            try { host.UnregisterCommand(commandId); } catch { }
         }
     }
 
-    private void InstantiateAssemblyPlugin(PluginRegistryEntry entry, PluginManifest manifest, IPluginHost? host = null)
+    private async Task ShutdownInstantiatedPluginAsync(string pluginId, CancellationToken cancellationToken)
+    {
+        if (!_instantiatedPlugins.TryRemove(pluginId, out var existing))
+        {
+            return;
+        }
+
+        try
+        {
+            await existing.Plugin.ShutdownAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[PluginRegistry] Failed shutting down plugin '{pluginId}': {ex.GetType().Name} - {ex.Message}");
+        }
+
+        try
+        {
+            await existing.Plugin.DisposeAsync().ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[PluginRegistry] Failed disposing plugin '{pluginId}': {ex.GetType().Name} - {ex.Message}");
+        }
+
+        try
+        {
+            existing.LoadContext?.Unload();
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[PluginRegistry] Failed unloading plugin '{pluginId}': {ex.GetType().Name} - {ex.Message}");
+        }
+    }
+
+    private async Task<bool> InstantiateAssemblyPluginAsync(PluginRegistryEntry entry, PluginManifest manifest, CancellationToken cancellationToken)
     {
         var canonicalDir = Path.GetFullPath(entry.SourceDirectoryPath);
         var assemblyPath = Path.GetFullPath(Path.Combine(canonicalDir, manifest.AssemblyFileName!));
         var relativePath = Path.GetRelativePath(canonicalDir, assemblyPath);
         if (relativePath.StartsWith("..", StringComparison.Ordinal) || Path.IsPathRooted(relativePath))
         {
-            CleanupInstantiatedPlugin(manifest.Id, host, entry);
+            await ShutdownInstantiatedPluginAsync(manifest.Id, CancellationToken.None).ConfigureAwait(false);
             _entries[manifest.Id] = entry with { State = PluginState.Error, ErrorMessage = "Security Violation: Assembly file path traverses outside plugin directory." };
-            return;
+            return false;
         }
 
         if (!string.Equals(manifest.TargetFramework, AssemblyPluginLoader.SupportedTargetFramework, StringComparison.OrdinalIgnoreCase))
         {
-            CleanupInstantiatedPlugin(manifest.Id, host, entry);
+            await ShutdownInstantiatedPluginAsync(manifest.Id, CancellationToken.None).ConfigureAwait(false);
             _entries[manifest.Id] = entry with { State = PluginState.Error, ErrorMessage = $"Assembly plugins must declare targetFramework '{AssemblyPluginLoader.SupportedTargetFramework}'." };
-            return;
+            return false;
         }
 
+        cancellationToken.ThrowIfCancellationRequested();
         var asmResult = AssemblyPluginLoader.LoadPluginAssembly(assemblyPath, manifest.PluginClassName);
         if (asmResult.Success && asmResult.Plugin != null)
         {
-            CleanupInstantiatedPlugin(manifest.Id, host, null);
+            await ShutdownInstantiatedPluginAsync(manifest.Id, CancellationToken.None).ConfigureAwait(false);
             _instantiatedPlugins[manifest.Id] = (asmResult.Plugin, asmResult.LoadContext);
+            return true;
         }
-        else if (!asmResult.Success)
-        {
-            CleanupInstantiatedPlugin(manifest.Id, host, entry);
-            _entries[manifest.Id] = entry with { State = PluginState.Error, ErrorMessage = asmResult.ErrorMessage ?? "Assembly load failed." };
-        }
+
+        await ShutdownInstantiatedPluginAsync(manifest.Id, CancellationToken.None).ConfigureAwait(false);
+        _entries[manifest.Id] = entry with { State = PluginState.Error, ErrorMessage = asmResult.ErrorMessage ?? "Assembly load failed." };
+        return false;
     }
 
     private async Task EnablePluginInternalAsync(string pluginId, IPluginHost host, CancellationToken ct)
@@ -351,29 +343,34 @@ public sealed class PluginRegistryService : IPluginRegistry
             return;
         }
 
-        var registeredCommandIds = new List<string>();
+        UnregisterOwnedCommands(pluginId, host);
+        await ShutdownInstantiatedPluginAsync(pluginId, CancellationToken.None).ConfigureAwait(false);
+        var commandsBeforeAttempt = host.RegisteredCommands
+            .Select(command => command.Id)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
         try
         {
             PluginManifest? manifest = null;
             if (!string.IsNullOrEmpty(entry.SourceDirectoryPath))
             {
                 var loadResult = JsonPluginLoader.LoadFromDirectory(entry.SourceDirectoryPath);
-                if (loadResult.Success && loadResult.Manifest != null)
+                if (!loadResult.Success || loadResult.Manifest == null)
                 {
-                    manifest = loadResult.Manifest;
-                    if (manifest.EntryType.Equals("Assembly", StringComparison.OrdinalIgnoreCase) &&
-                        !string.IsNullOrWhiteSpace(manifest.AssemblyFileName))
+                    throw new InvalidOperationException($"Manifest validation failed: {loadResult.ErrorMessage ?? "unknown error"}");
+                }
+
+                manifest = loadResult.Manifest;
+                if (manifest.EntryType.Equals("Assembly", StringComparison.OrdinalIgnoreCase) &&
+                    !string.IsNullOrWhiteSpace(manifest.AssemblyFileName))
+                {
+                    if (!await InstantiateAssemblyPluginAsync(entry, manifest, ct).ConfigureAwait(false))
                     {
-                        InstantiateAssemblyPlugin(entry, manifest, host);
-                        if (!_instantiatedPlugins.ContainsKey(pluginId))
-                        {
-                            return;
-                        }
+                        return;
                     }
                 }
             }
 
-            // Global command collision check & reserved namespace protection
             var existingRegistered = host.RegisteredCommands.Select(c => c.Id).ToHashSet(StringComparer.OrdinalIgnoreCase);
             foreach (var cmd in entry.Commands)
             {
@@ -390,17 +387,14 @@ public sealed class PluginRegistryService : IPluginRegistry
 
             if (_instantiatedPlugins.TryGetValue(pluginId, out var inst))
             {
-                await inst.Plugin.InitializeAsync(host, ct);
+                await inst.Plugin.InitializeAsync(host, ct).ConfigureAwait(false);
             }
 
-            // Register plugin commands with host and dispatcher
             var toolMap = manifest?.Tools?.ToDictionary(t => t.Id, StringComparer.OrdinalIgnoreCase);
             foreach (var cmd in entry.Commands)
             {
                 if (host.RegisteredCommands.Any(c => string.Equals(c.Id, cmd.Id, StringComparison.OrdinalIgnoreCase)))
                 {
-                    // Command was already registered by the plugin's own InitializeAsync
-                    registeredCommandIds.Add(cmd.Id);
                     continue;
                 }
 
@@ -431,7 +425,7 @@ public sealed class PluginRegistryService : IPluginRegistry
                         }
                         catch
                         {
-                            // If host has no dispatcher configured (e.g. mock host in unit tests), handler remains null
+                            // If host has no dispatcher configured (e.g. mock host in unit tests), handler remains null.
                         }
                     }
                 }
@@ -440,22 +434,43 @@ public sealed class PluginRegistryService : IPluginRegistry
                 {
                     throw new InvalidOperationException($"Command registration for '{cmd.Id}' was rejected by the host.");
                 }
-
-                registeredCommandIds.Add(cmd.Id);
             }
 
+            var addedCommandIds = host.RegisteredCommands
+                .Select(command => command.Id)
+                .Where(commandId => !commandsBeforeAttempt.Contains(commandId))
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+            _registeredCommandIdsByPlugin[pluginId] = addedCommandIds;
             _entries[pluginId] = entry with { State = PluginState.Enabled, ErrorMessage = null };
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            await RollbackEnableAttemptAsync(pluginId, host, commandsBeforeAttempt).ConfigureAwait(false);
+            _entries[pluginId] = entry with { State = PluginState.Disabled, ErrorMessage = "Initialization was cancelled." };
+            throw;
         }
         catch (Exception ex)
         {
-            // Transactional rollback of any commands registered during this failed attempt
-            foreach (var cmdId in registeredCommandIds)
-            {
-                try { host.UnregisterCommand(cmdId); } catch { }
-            }
-
+            await RollbackEnableAttemptAsync(pluginId, host, commandsBeforeAttempt).ConfigureAwait(false);
             _entries[pluginId] = entry with { State = PluginState.Error, ErrorMessage = $"Initialization failed: {ex.Message}" };
         }
+    }
+
+    private async Task RollbackEnableAttemptAsync(string pluginId, IPluginHost host, HashSet<string> commandsBeforeAttempt)
+    {
+        var addedCommandIds = host.RegisteredCommands
+            .Select(command => command.Id)
+            .Where(commandId => !commandsBeforeAttempt.Contains(commandId))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        foreach (string commandId in addedCommandIds)
+        {
+            try { host.UnregisterCommand(commandId); } catch { }
+        }
+
+        _registeredCommandIdsByPlugin.Remove(pluginId);
+        await ShutdownInstantiatedPluginAsync(pluginId, CancellationToken.None).ConfigureAwait(false);
     }
 
     private static string? ResolveBuiltInCoreCommandId(string commandId, PluginToolDefinition? toolDef = null)
@@ -493,7 +508,7 @@ public sealed class PluginRegistryService : IPluginRegistry
                     if (loadResult.Success && loadResult.Manifest != null)
                     {
                         var manifest = loadResult.Manifest;
-                        var entry = new PluginRegistryEntry(
+                        _entries[manifest.Id] = new PluginRegistryEntry(
                             Id: manifest.Id,
                             Name: manifest.Name,
                             Version: manifest.Version,
@@ -504,9 +519,7 @@ public sealed class PluginRegistryService : IPluginRegistry
                             IsBuiltIn: true,
                             State: PluginState.Disabled,
                             Commands: loadResult.Commands,
-                            ErrorMessage: loadResult.ErrorMessage
-                        );
-                        _entries[manifest.Id] = entry;
+                            ErrorMessage: loadResult.ErrorMessage);
                     }
                 }
             }
@@ -531,7 +544,7 @@ public sealed class PluginRegistryService : IPluginRegistry
                 if (_entries.ContainsKey(manifest.Id) && !isBuiltIn) return;
 
                 var initialState = isBuiltIn ? PluginState.Disabled : (_enabledIds.Contains(manifest.Id) ? PluginState.Enabled : PluginState.Disabled);
-                var entry = new PluginRegistryEntry(
+                _entries[manifest.Id] = new PluginRegistryEntry(
                     Id: manifest.Id,
                     Name: manifest.Name,
                     Version: manifest.Version,
@@ -542,9 +555,7 @@ public sealed class PluginRegistryService : IPluginRegistry
                     IsBuiltIn: isBuiltIn,
                     State: initialState,
                     Commands: loadResult.Commands,
-                    ErrorMessage: loadResult.ErrorMessage
-                );
-                _entries[manifest.Id] = entry;
+                    ErrorMessage: loadResult.ErrorMessage);
             }
         }
         catch
@@ -571,11 +582,6 @@ internal sealed class BuiltInDelegatingHandler : ICommandHandler
 
     public async Task<CommandHandlerOutcome> ExecuteAsync(CommandRequest request, CancellationToken cancellationToken)
     {
-        // The caller's approval plan was minted against this alias command id. The inner
-        // dispatcher validates the plan against the target core command id, so a naive
-        // passthrough would always fail with command.approval_plan_invalid. Mint a fresh
-        // plan for the mapped target id over the same canonical parameters and correlation
-        // id — the alias-level plan has already been validated by the outer dispatcher.
         var mappedRequest = new CommandRequest(
             _targetCoreCommandId,
             request.Parameters,
@@ -583,8 +589,7 @@ internal sealed class BuiltInDelegatingHandler : ICommandHandler
             request.CorrelationId,
             request.Apply
                 ? ApprovedMutationPlan.Create(_targetCoreCommandId, request.Parameters, request.CorrelationId)
-                : null
-        );
+                : null);
 
         var options = request.Apply ? new CommandExecutionOptions(ReviewApproved: true) : CommandExecutionOptions.Default;
         var result = await _dispatcher.ExecuteAsync(mappedRequest, options, cancellationToken).ConfigureAwait(false);

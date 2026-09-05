@@ -25,6 +25,48 @@ public interface IPluginInstallerService
     Task<string> InstallPluginFromPackageAsync(string packageUrl, string? expectedPluginId, string? expectedSha256, string? expectedPublisherPublicKeyPem, string? expectedPublisherSignature, IReadOnlyCollection<string>? revokedPackageIds, IReadOnlyCollection<string>? revokedPublishers, IReadOnlyCollection<string>? consentedCapabilities, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Security-sensitive catalog installation path. The publisher identifier is supplied by the
+    /// freshly fetched trusted catalog and is enforced independently of the package manifest's
+    /// author string. Implementations that do not override this default still fail closed for an
+    /// explicitly revoked publisher identifier before delegating to the standard hardened path.
+    /// </summary>
+    Task<string> InstallTrustedPluginFromPackageAsync(
+        string packageUrl,
+        string expectedPluginId,
+        string expectedSha256,
+        string expectedPublisherId,
+        string expectedPublisherPublicKeyPem,
+        string expectedPublisherSignature,
+        IReadOnlyCollection<string>? revokedPackageIds,
+        IReadOnlyCollection<string>? revokedPublishers,
+        IReadOnlyCollection<string>? consentedCapabilities,
+        CancellationToken cancellationToken = default)
+    {
+        if (revokedPublishers is not null)
+        {
+            foreach (string revokedPublisher in revokedPublishers)
+            {
+                if (string.Equals(revokedPublisher, expectedPublisherId, StringComparison.OrdinalIgnoreCase))
+                {
+                    return Task.FromException<string>(new InvalidOperationException(
+                        $"Package admission rejected: Publisher '{expectedPublisherId}' is listed on the security revocation advisory."));
+                }
+            }
+        }
+
+        return InstallPluginFromPackageAsync(
+            packageUrl,
+            expectedPluginId,
+            expectedSha256,
+            expectedPublisherPublicKeyPem,
+            expectedPublisherSignature,
+            revokedPackageIds,
+            revokedPublishers,
+            consentedCapabilities,
+            cancellationToken);
+    }
+
+    /// <summary>
     /// Extracts and installs a plugin package from a zip archive stream with optional SHA-256 verification.
     /// </summary>
     Task<string> InstallPluginFromStreamAsync(Stream archiveStream, string targetPluginId, string? expectedSha256 = null, CancellationToken cancellationToken = default);

@@ -21,13 +21,14 @@ public sealed record PluginLoadResult(
 public static class JsonPluginLoader
 {
     private const string ManifestFileName = "wincare-plugin.json";
-    private const string ManifestDigestFileName = ".wincare-manifest.sha256";
+    private const string LegacyManifestDigestFileName = ".wincare-manifest.sha256";
     private const int MaxManifestBytes = 1024 * 1024;
 
     /// <summary>
     /// Loads and validates a declarative JSON plugin from the specified plugin directory.
-    /// When an admission digest sidecar is present (written by the installer), the manifest
-    /// bytes are re-hashed and compared so that post-install modification is detected.
+    /// Installer-managed plugins are rebound to an admission record stored outside the plugin
+    /// directory, so modifying both the manifest and a colocated checksum cannot bypass the
+    /// discovery integrity check.
     /// </summary>
     public static PluginLoadResult LoadFromDirectory(string pluginDirectoryPath)
     {
@@ -48,7 +49,6 @@ public static class JsonPluginLoader
 
         try
         {
-            // Bounded read: reject manifests larger than the admission limit.
             var fileInfo = new FileInfo(manifestPath);
             if (fileInfo.Length > MaxManifestBytes)
             {
@@ -57,32 +57,85 @@ public static class JsonPluginLoader
             }
 
             byte[] manifestBytes = File.ReadAllBytes(manifestPath);
+            PluginAdmissionRecord? admissionRecord = null;
+            string admissionPath = PluginAdmissionTrustStore.GetRecordPath(pluginDirectoryPath);
 
-            // Tamper-evidence at load time: if the installer recorded an admission digest,
-            // verify the manifest has not been modified since admission.
-            var digestPath = Path.Combine(pluginDirectoryPath, ManifestDigestFileName);
-            if (File.Exists(digestPath))
+            if (File.Exists(admissionPath))
             {
-                string expectedDigest;
+                var admissionInfo = new FileInfo(admissionPath);
+                if (admissionInfo.Length > PluginAdmissionTrustStore.MaxRecordBytes)
+                {
+                    return new PluginLoadResult(false, null, Array.Empty<CommandDefinition>(),
+                        "Plugin admission record exceeds the safety limit.");
+                }
+
                 try
                 {
-                    expectedDigest = File.ReadAllText(digestPath).Trim();
+                    admissionRecord = JsonSerializer.Deserialize<PluginAdmissionRecord>(
+                        File.ReadAllText(admissionPath),
+                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
                 }
-                catch (Exception ex)
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException)
                 {
-                    return new PluginLoadResult(false, null, Array.Empty<CommandDefinition>(), $"Failed to read manifest integrity record: {ex.Message}");
+                    return new PluginLoadResult(false, null, Array.Empty<CommandDefinition>(),
+                        $"Failed to read plugin admission record: {ex.Message}");
+                }
+
+                if (admissionRecord is null || admissionRecord.SchemaVersion != 1 ||
+                    string.IsNullOrWhiteSpace(admissionRecord.PluginId) ||
+                    string.IsNullOrWhiteSpace(admissionRecord.ManifestSha256))
+                {
+                    return new PluginLoadResult(false, null, Array.Empty<CommandDefinition>(),
+                        "Plugin admission record is missing required trust metadata.");
                 }
 
                 string actualDigest = Convert.ToHexString(SHA256.HashData(manifestBytes)).ToLowerInvariant();
-                if (!string.Equals(expectedDigest, actualDigest, StringComparison.OrdinalIgnoreCase))
+                if (!string.Equals(admissionRecord.ManifestSha256, actualDigest, StringComparison.OrdinalIgnoreCase))
                 {
                     return new PluginLoadResult(false, null, Array.Empty<CommandDefinition>(),
-                        "Manifest integrity check failed: the plugin manifest was modified after installation.");
+                        "Manifest integrity check failed: the plugin manifest no longer matches the externally stored admission record.");
                 }
+
+                bool hasKey = !string.IsNullOrWhiteSpace(admissionRecord.PublisherPublicKeyPem);
+                bool hasSignature = !string.IsNullOrWhiteSpace(admissionRecord.PublisherSignature);
+                if (hasKey != hasSignature)
+                {
+                    return new PluginLoadResult(false, null, Array.Empty<CommandDefinition>(),
+                        "Plugin admission record contains an incomplete publisher trust assertion.");
+                }
+
+                if (hasSignature && !PluginAdmissionTrustStore.VerifyManifestSignature(
+                    manifestBytes,
+                    admissionRecord.PublisherSignature!,
+                    admissionRecord.PublisherPublicKeyPem!))
+                {
+                    return new PluginLoadResult(false, null, Array.Empty<CommandDefinition>(),
+                        "Manifest publisher signature verification failed during plugin discovery.");
+                }
+            }
+            else if (File.Exists(Path.Combine(pluginDirectoryPath, LegacyManifestDigestFileName)))
+            {
+                // A checksum stored beside the manifest can be rewritten by the same actor that
+                // rewrites the manifest. Do not silently downgrade an installer-managed package
+                // to that legacy trust model; require a reinstall to create the external record.
+                return new PluginLoadResult(false, null, Array.Empty<CommandDefinition>(),
+                    "Legacy colocated manifest integrity metadata is no longer trusted. Reinstall the plugin to create an external admission record.");
             }
 
             var json = Encoding.UTF8.GetString(manifestBytes);
-            return LoadFromString(json, pluginDirectoryPath);
+            PluginLoadResult result = LoadFromString(json, pluginDirectoryPath);
+            if (!result.Success || result.Manifest is null || admissionRecord is null)
+            {
+                return result;
+            }
+
+            if (!string.Equals(result.Manifest.Id, admissionRecord.PluginId, StringComparison.OrdinalIgnoreCase))
+            {
+                return new PluginLoadResult(false, null, Array.Empty<CommandDefinition>(),
+                    "Manifest identity does not match the externally stored plugin admission record.");
+            }
+
+            return result;
         }
         catch (Exception ex)
         {

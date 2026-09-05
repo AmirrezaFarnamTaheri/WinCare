@@ -79,6 +79,7 @@ public class RemoteCatalogService : IRemoteCatalogService
                 var cachedCatalog = await TryLoadFromCacheAsync(cancellationToken).ConfigureAwait(false);
                 if (cachedCatalog != null)
                 {
+                    ApplyRevocationPolicy(cachedCatalog);
                     return cachedCatalog;
                 }
             }
@@ -107,6 +108,16 @@ public class RemoteCatalogService : IRemoteCatalogService
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"[RemoteCatalogService] Fetch failed from '{_catalogUrl}': {ex.Message}");
+
+            // A forced refresh is used by the install path as a security boundary. Falling
+            // back to an arbitrarily old cache here would silently weaken revocation and
+            // publisher-key freshness, so security-sensitive callers fail closed instead.
+            if (forceRefresh)
+            {
+                throw new InvalidOperationException(
+                    "A fresh plugin security catalog could not be obtained. Installation is blocked until the current catalog and revocation advisory can be verified.",
+                    ex);
+            }
 
             var fallbackCatalog = await TryLoadFromCacheAsync(cancellationToken).ConfigureAwait(false);
             if (fallbackCatalog != null)
