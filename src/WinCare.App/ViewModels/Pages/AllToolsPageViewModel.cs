@@ -158,10 +158,17 @@ public sealed class AllToolsPageViewModel : ObservableObject, IDisposable
         get => _selectedTool;
         set
         {
+            if (ReferenceEquals(_selectedTool, value))
+            {
+                return;
+            }
+
+            // Configure execution inputs before SelectedTool notifies the page. The page rebuilds
+            // its generated parameter editor from this notification and must see the new schema.
+            Execution.SelectTool(value);
             if (SetProperty(ref _selectedTool, value))
             {
                 IsDetailsOpen = value is not null;
-                Execution.SelectTool(value);
                 NotifySelectedToolChanged();
             }
         }
