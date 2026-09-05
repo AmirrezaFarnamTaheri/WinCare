@@ -8,8 +8,8 @@
     <Grid RowDefinitions="Auto,*,Auto" Padding="32,24,32,32">
         <!-- Header -->
         <StackPanel Grid.Row="0" Spacing="4" Margin="0,0,0,16">
-            <TextBlock Text="AI Doctor" Style="{StaticResource PageTitleTextStyle}" />
-            <TextBlock MaxWidth="760" HorizontalAlignment="Left" Text="Describe a Windows problem to get an on-device diagnosis and a reviewable action plan." Style="{StaticResource PageDescriptionTextStyle}" />
+            <TextBlock Text="Diagnostic Doctor" Style="{StaticResource PageTitleTextStyle}" />
+            <TextBlock MaxWidth="760" HorizontalAlignment="Left" Text="Describe a Windows problem to get an on-device, rule-based diagnosis and a reviewable evidence-backed action plan." Style="{StaticResource PageDescriptionTextStyle}" />
         </StackPanel>
 
         <!-- Chat Conversation Area -->

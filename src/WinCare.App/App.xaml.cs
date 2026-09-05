@@ -1,6 +1,5 @@
 using System.IO;
 using Microsoft.UI.Xaml;
-using Microsoft.UI.Xaml.Controls;
 using Microsoft.Windows.AppLifecycle;
 using ProtocolActivatedEventArgs = Windows.ApplicationModel.Activation.ProtocolActivatedEventArgs;
 using WinCare.Infrastructure.Observability;
@@ -53,46 +52,24 @@ public partial class App : Microsoft.UI.Xaml.Application
 
     private static void OnUnhandledException(object sender, Microsoft.UI.Xaml.UnhandledExceptionEventArgs e)
     {
-        // Persist a diagnostic dump for every unhandled exception; Debug-only output is not
-        // a user-facing error path and is invisible in release builds.
-        string crashLog = string.Empty;
+        // Unknown unhandled exceptions may invalidate UI, plugin, approval, or operation state.
+        // Persist diagnostics and let the process terminate rather than continuing in an
+        // indeterminate state. Recoverable failures must be caught at their owning boundary.
         try
         {
             string logsDir = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
                 "WinCare", "logs");
             Directory.CreateDirectory(logsDir);
-            crashLog = Path.Combine(logsDir, $"crash-{DateTime.UtcNow:yyyyMMdd-HHmmss}.log");
+            string crashLog = Path.Combine(logsDir, $"crash-{DateTime.UtcNow:yyyyMMdd-HHmmss-fff}.log");
             File.WriteAllText(crashLog, e.Exception.ToString());
+            System.Diagnostics.Debug.WriteLine($"[App] Fatal unhandled exception written to {crashLog}: {e.Exception}");
         }
-        catch
+        catch (Exception logException)
         {
-            crashLog = string.Empty; // Last-resort logging must never throw.
+            System.Diagnostics.Debug.WriteLine($"[App] Fatal exception logging also failed: {logException}");
         }
 
-        // Give the user a diagnosable message rather than a raw crash whenever a window is
-        // available; otherwise the persisted crash log is the only recovery surface.
-        if (Current is App app && app.MainWindow?.Content is FrameworkElement root && root.XamlRoot is { } xamlRoot)
-        {
-            try
-            {
-                var dialog = new ContentDialog
-                {
-                    XamlRoot = xamlRoot,
-                    Title = "WinCare ran into a problem",
-                    Content = e.Exception is DllNotFoundException or InvalidOperationException
-                        ? e.Exception.Message
-                        : "An unexpected error occurred. Details were written to:\n" + (crashLog.Length > 0 ? crashLog : "the WinCare logs folder."),
-                    CloseButtonText = "Close",
-                };
-                _ = dialog.ShowAsync();
-            }
-            catch
-            {
-                // Dialog presentation is best-effort during exception unwinding.
-            }
-        }
-
-        e.Handled = true;
+        e.Handled = false;
     }
 }

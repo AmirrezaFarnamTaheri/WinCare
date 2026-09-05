@@ -348,17 +348,25 @@ public sealed class CommandDispatcher : ICommandDispatcher
         }
         catch (Exception ex)
         {
+            bool finalStateUnknown = request.Apply && !definition.ReadOnly;
+            string safeFailureMessage = finalStateUnknown
+                ? "The command faulted after mutation execution began. The final system state is unknown; inspect Activity and verify the affected system state before retrying."
+                : "The command could not be completed. No mutating execution was admitted for this request.";
+
             if (activity is not null)
             {
                 // Log only the exception type — ex.Message can contain file paths or PII.
-                _journal?.Fail(activity.Id, $"Command faulted ({ex.GetType().Name}). Review the system state before retrying.");
-                System.Diagnostics.Debug.WriteLine($"[CommandDispatcher] {request.CommandId} fault: {ex}");
+                _journal?.Fail(activity.Id, finalStateUnknown
+                    ? $"Command faulted ({ex.GetType().Name}); final system state is unknown. Verify the affected resource before retrying."
+                    : $"Command faulted ({ex.GetType().Name}) before any admitted mutation. Review the request before retrying.");
             }
+            System.Diagnostics.Debug.WriteLine($"[CommandDispatcher] {request.CommandId} fault: {ex}");
+
             return CreateResult(
                 request,
                 CommandResultStatus.Failed,
-                "command.failed",
-                "The command could not be completed. No changes were reported as applied.",
+                finalStateUnknown ? "command.failed_state_unknown" : "command.failed",
+                safeFailureMessage,
                 data: null,
                 undoAvailable: false,
                 startedAt);
