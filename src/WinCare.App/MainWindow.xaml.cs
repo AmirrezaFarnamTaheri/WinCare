@@ -58,7 +58,7 @@ public sealed partial class MainWindow : Window
         ExtendsContentIntoTitleBar = true;
         SetTitleBar(AppTitleBar);
         ConfigureBackdrop();
-        if (!RestoreWindowPlacement())
+        if (!AppPreferences.RememberWindowPlacement || !RestoreWindowPlacement())
         {
             ResizeWindow(1280, 800);
         }
@@ -92,11 +92,12 @@ public sealed partial class MainWindow : Window
     private void OnWindowClosed(object sender, WindowEventArgs args)
     {
         Closed -= OnWindowClosed;
-        PersistWindowPlacement();
+        if (AppPreferences.RememberWindowPlacement)
+        {
+            PersistWindowPlacement();
+        }
         try
         {
-            // Closing is the one durability boundary where waiting is intentional: avoid
-            // losing the last placement/theme/favorites update as the process exits.
             AppPreferences.FlushAsync().GetAwaiter().GetResult();
         }
         catch (Exception ex)
@@ -115,10 +116,7 @@ public sealed partial class MainWindow : Window
     private bool RestoreWindowPlacement()
     {
         WindowPlacementData? saved = AppPreferences.WindowPlacement;
-        if (saved is null || !saved.IsUsable)
-        {
-            return false;
-        }
+        if (saved is null || !saved.IsUsable) return false;
 
         var rect = new Rect
         {
@@ -127,11 +125,7 @@ public sealed partial class MainWindow : Window
             Right = saved.Left + saved.Width,
             Bottom = saved.Top + saved.Height,
         };
-        // Do not resurrect a window entirely on a disconnected monitor.
-        if (MonitorFromRect(ref rect, MonitorDefaultToNull) == nint.Zero)
-        {
-            return false;
-        }
+        if (MonitorFromRect(ref rect, MonitorDefaultToNull) == nint.Zero) return false;
 
         nint handle = Win32Interop.GetWindowFromWindowId(AppWindow.Id);
         var placement = new WindowPlacement
@@ -150,24 +144,16 @@ public sealed partial class MainWindow : Window
         {
             nint handle = Win32Interop.GetWindowFromWindowId(AppWindow.Id);
             var placement = new WindowPlacement { Length = Marshal.SizeOf<WindowPlacement>() };
-            if (!GetWindowPlacement(handle, ref placement))
-            {
-                return;
-            }
+            if (!GetWindowPlacement(handle, ref placement)) return;
 
             Rect bounds = placement.NormalPosition;
-            int width = bounds.Right - bounds.Left;
-            int height = bounds.Bottom - bounds.Top;
             var saved = new WindowPlacementData(
                 bounds.Left,
                 bounds.Top,
-                width,
-                height,
+                bounds.Right - bounds.Left,
+                bounds.Bottom - bounds.Top,
                 placement.ShowCmd == SwShowmaximized || (placement.Flags & WpfRestoreToMaximized) != 0);
-            if (saved.IsUsable)
-            {
-                AppPreferences.SaveWindowPlacement(saved);
-            }
+            if (saved.IsUsable) AppPreferences.SaveWindowPlacement(saved);
         }
         catch (Exception ex)
         {
@@ -195,16 +181,12 @@ public sealed partial class MainWindow : Window
 
     public void HandleProtocolActivation(string arguments)
     {
-        if (Uri.TryCreate(arguments, UriKind.Absolute, out var uri))
-        {
-            HandleProtocolActivation(uri);
-        }
+        if (Uri.TryCreate(arguments, UriKind.Absolute, out var uri)) HandleProtocolActivation(uri);
     }
 
     public void HandleProtocolActivation(Uri uri)
     {
         ArgumentNullException.ThrowIfNull(uri);
-
         if (!string.Equals(uri.Scheme, "wincare", StringComparison.OrdinalIgnoreCase) ||
             (uri.Host is not ("action" or "open")))
         {
