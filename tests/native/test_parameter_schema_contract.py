@@ -36,7 +36,7 @@ class ParameterSchemaContractTests(unittest.TestCase):
     def test_all_tools_defaults_to_typed_fields_and_keeps_json_advanced(self) -> None:
         self.assertIn("CommandParameterCatalog.For", self.execution_vm)
         self.assertIn("ParameterFields", self.execution_vm)
-        self.assertIn("CommandParameterFieldViewModel", self.execution_vm)
+        self.assertIn("ToolParameterFieldViewModel", self.execution_vm)
         self.assertIn('AutomationProperties.AutomationId="CommandParameterFields"', self.all_tools)
         self.assertIn('Header="Advanced JSON parameters"', self.all_tools)
 
