@@ -8,7 +8,10 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>Assets\WinCare.ico</ApplicationIcon>
     <Platforms>x64;ARM64</Platforms>
-    <RuntimeIdentifiers>win-x64;win-arm64</RuntimeIdentifiers>
+    <!-- Keep the multi-RID set for ordinary restore/builds, but let an explicit -r
+         publish evaluate as exactly that RID so its committed portable lock graph
+         matches NuGet's locked-mode runtime contract. -->
+    <RuntimeIdentifiers Condition="'$(RuntimeIdentifier)' == ''">win-x64;win-arm64</RuntimeIdentifiers>
     <UseWinUI>true</UseWinUI>
     <EnableMsixTooling>true</EnableMsixTooling>
     <PublishProfile Condition="'$(WindowsPackageType)' != 'None'">Properties\PublishProfiles\win-$(Platform).pubxml</PublishProfile>
