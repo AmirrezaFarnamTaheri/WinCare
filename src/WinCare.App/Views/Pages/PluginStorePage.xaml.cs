@@ -34,7 +34,7 @@ public sealed partial class PluginStorePage : Page
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[PluginStorePage] Initialize failed: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"[PluginStorePage] Initialize failed: {ex}");
             }
         };
     }
@@ -51,7 +51,7 @@ public sealed partial class PluginStorePage : Page
     {
         if (sender is Button button && button.Tag is PluginCardViewModel card)
         {
-            await ShowPluginDetailsDialogAsync(card);
+            await ShowPluginDetailsDialogAsync(card, allowInstall: false);
         }
     }
 
@@ -59,8 +59,8 @@ public sealed partial class PluginStorePage : Page
     {
         if (sender is Button button && button.Tag is PluginCardViewModel card)
         {
-            // Gate installation behind the capability and trust consent dialog
-            await ShowPluginDetailsDialogAsync(card);
+            // Gate installation behind the capability and trust consent dialog.
+            await ShowPluginDetailsDialogAsync(card, allowInstall: true);
         }
     }
 
@@ -84,11 +84,23 @@ public sealed partial class PluginStorePage : Page
     {
         if (sender is Button button && button.Tag is PluginCardViewModel card)
         {
-            await ViewModel.UninstallPluginAsync(card);
+            var dialog = new ContentDialog
+            {
+                Title = $"Uninstall {card.Name}?",
+                Content = "This removes the plugin package and its registered commands. WinCare will disable an enabled plugin first and restore it if removal fails.",
+                PrimaryButtonText = "Uninstall",
+                CloseButtonText = "Cancel",
+                DefaultButton = ContentDialogButton.Close,
+                XamlRoot = XamlRoot
+            };
+            if (await dialog.ShowAsync() == ContentDialogResult.Primary)
+            {
+                await ViewModel.UninstallPluginAsync(card);
+            }
         }
     }
 
-    private async Task ShowPluginDetailsDialogAsync(PluginCardViewModel card)
+    private async Task ShowPluginDetailsDialogAsync(PluginCardViewModel card, bool allowInstall)
     {
         var item = card.RemoteItem ?? new WinCare.Application.Plugins.RemotePluginItem
         {
@@ -101,13 +113,13 @@ public sealed partial class PluginStorePage : Page
             Permissions = card.Permissions
         };
 
-        var dialog = new PluginDetailDialog(item)
+        var dialog = new PluginDetailDialog(item, allowInstall)
         {
             XamlRoot = XamlRoot
         };
 
         var result = await dialog.ShowAsync();
-        if (result == ContentDialogResult.Primary && card.CanInstall)
+        if (allowInstall && result == ContentDialogResult.Primary && card.CanInstall)
         {
             // Primary (Trust and install) implies consent to every declared capability the
             // dialog listed; pass them through so the installer enforces the consent gate.
