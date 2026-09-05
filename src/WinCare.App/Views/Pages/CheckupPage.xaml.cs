@@ -6,8 +6,6 @@ namespace WinCare.App.Views.Pages;
 
 public sealed partial class CheckupPage : Page
 {
-    private const double CompactThreshold = 820;
-
     public CheckupPage()
     {
         ViewModel = new CheckupPageViewModel();
@@ -24,6 +22,6 @@ public sealed partial class CheckupPage : Page
 
     private void Page_SizeChanged(object sender, SizeChangedEventArgs e)
     {
-        ViewModel.SetCompactLayout(e.NewSize.Width < CompactThreshold);
+        ViewModel.SetCompactLayout(LayoutVisibility.IsCompact(e.NewSize.Width));
     }
 }
