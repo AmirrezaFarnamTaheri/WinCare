@@ -2,11 +2,71 @@
     x:Class="WinCare.App.Views.Pages.HelpPage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-    <Grid Padding="32,24,32,32">
-        <StackPanel MaxWidth="760" HorizontalAlignment="Left" Spacing="16">
-            <TextBlock Style="{StaticResource PageTitleTextStyle}" Text="Help and documentation" />
-            <TextBlock Style="{StaticResource PageDescriptionTextStyle}" Text="WinCare explains each task in plain language, shows what it may change, and keeps technical evidence under Advanced details." />
-            <InfoBar IsOpen="True" IsClosable="False" Severity="Informational" Title="Keyboard" Message="Press Ctrl+K to search all tasks and tools. Use Tab and arrow keys to move through navigation, tabs, tables, and details." />
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Padding="32,24,32,32" MaxWidth="900" HorizontalAlignment="Left" Spacing="18">
+            <StackPanel Spacing="6">
+                <TextBlock Style="{StaticResource PageTitleTextStyle}" Text="Help and documentation" />
+                <TextBlock Style="{StaticResource PageDescriptionTextStyle}" TextWrapping="Wrap" Text="Start with read-only evidence, review every proposed change, and use Activity when an operation needs verification or follow-up." />
+            </StackPanel>
+
+            <InfoBar IsOpen="True" IsClosable="False" Severity="Informational" Title="Keyboard" Message="Press Ctrl+K to search all tasks and tools. Use Tab and arrow keys to move through navigation, tabs, tables, dialogs, and details." />
+
+            <Border Style="{StaticResource DashboardCardStyle}">
+                <StackPanel Spacing="10">
+                    <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="1. Start with evidence" />
+                    <TextBlock Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap" Text="Run Checkup first. Its four probes are read-only and report evidence coverage, not a blanket machine-health score. Open Results to inspect each command outcome before acting." />
+                    <Button Content="Open Checkup" Click="OpenCheckup_Click" HorizontalAlignment="Left" AutomationProperties.AutomationId="HelpOpenCheckup" AutomationProperties.Name="Open Checkup" />
+                </StackPanel>
+            </Border>
+
+            <Border Style="{StaticResource DashboardCardStyle}">
+                <StackPanel Spacing="10">
+                    <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="2. Review before applying" />
+                    <TextBlock Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap" Text="A mutating command must complete a preview before WinCare issues a short-lived, single-use review receipt. The receipt is bound to the exact command, parameters, and request. Editing the parameters or replaying the receipt requires a new preview." />
+                    <TextBlock Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap" Text="If an applied command faults after mutation begins, WinCare reports that the final system state is unknown. Verify the affected resource before retrying." />
+                </StackPanel>
+            </Border>
+
+            <Border Style="{StaticResource DashboardCardStyle}">
+                <StackPanel Spacing="10">
+                    <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="3. Use Activity for outcomes and reports" />
+                    <TextBlock Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap" Text="Running work, items that need attention, completed operations, and daily reports are recorded in Activity. WinCare only promises Undo when a concrete executable compensator exists; it does not manufacture a generic rollback for commands that cannot safely provide one." />
+                    <Button Content="Open Activity" Click="OpenActivity_Click" HorizontalAlignment="Left" AutomationProperties.AutomationId="HelpOpenActivity" AutomationProperties.Name="Open Activity" />
+                </StackPanel>
+            </Border>
+
+            <Border Style="{StaticResource DashboardCardStyle}">
+                <StackPanel Spacing="10">
+                    <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="Plugin trust" />
+                    <TextBlock Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap" Text="Remote plugin installation is disabled unless the exact catalog bytes verify against a WinCare-pinned catalog signing key and the selected package includes publisher-signed manifest metadata. Capability declarations are consent metadata only: full-trust in-process plugins are not sandboxed by those declarations." />
+                    <Button Content="Open Plugin Store" Click="OpenPluginStore_Click" HorizontalAlignment="Left" AutomationProperties.AutomationId="HelpOpenPluginStore" AutomationProperties.Name="Open Plugin Store" />
+                </StackPanel>
+            </Border>
+
+            <Border Style="{StaticResource DashboardCardStyle}">
+                <StackPanel Spacing="10">
+                    <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="Guard status" />
+                    <TextBlock Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap" Text="WinCare Guard is currently an experimental local daemon boundary, not a production SCM-installed Windows service. Its IPC pipe is local-only and explicitly access-controlled, but production service installation, per-user service authorization, and native notification integration are not claimed as complete." />
+                </StackPanel>
+            </Border>
+
+            <Border Style="{StaticResource DashboardCardStyle}">
+                <StackPanel Spacing="10">
+                    <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="Troubleshooting and logs" />
+                    <TextBlock Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap" Text="Open Settings to find the local WinCare data directory. Activity persistence and preference-save problems are surfaced in the app. Fatal UI faults are written under the WinCare logs directory and the process exits rather than continuing in an unknown state." />
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                        <Button Content="Open Settings" Click="OpenSettings_Click" AutomationProperties.AutomationId="HelpOpenSettings" AutomationProperties.Name="Open Settings" />
+                        <HyperlinkButton Content="Open full user guide" NavigateUri="https://github.com/AmirrezaFarnamTaheri/WinCare/blob/master/docs/User-Guide.md" AutomationProperties.Name="Open WinCare user guide on GitHub" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <Border Style="{StaticResource DashboardCardStyle}">
+                <StackPanel Spacing="8">
+                    <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="Accessibility" />
+                    <TextBlock Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap" Text="WinCare uses native WinUI controls and explicit automation names for interactive controls. Windows text scaling, High Contrast, keyboard navigation, and Narrator remain first-class release checks. If a screen clips at your text or display scale, report the exact screen and scale so it can be reproduced." />
+                </StackPanel>
+            </Border>
         </StackPanel>
-    </Grid>
+    </ScrollViewer>
 </Page>
