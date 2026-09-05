@@ -1,0 +1,19 @@
+# Default ownership keeps review responsibility explicit even before repository-level
+# branch protection is configured. More sensitive boundaries are listed separately
+# so GitHub surfaces the same owner on those changes.
+
+* @AmirrezaFarnamTaheri
+
+/.github/ @AmirrezaFarnamTaheri
+/SECURITY.md @AmirrezaFarnamTaheri
+/CONTRIBUTING.md @AmirrezaFarnamTaheri
+/Directory.Build.props @AmirrezaFarnamTaheri
+/Directory.Packages.props @AmirrezaFarnamTaheri
+/global.json @AmirrezaFarnamTaheri
+/NuGet.Config @AmirrezaFarnamTaheri
+/native/ @AmirrezaFarnamTaheri
+/src/WinCare.Application/Commands/ @AmirrezaFarnamTaheri
+/src/WinCare.Infrastructure/IPC/ @AmirrezaFarnamTaheri
+/src/WinCare.Infrastructure/Plugins/ @AmirrezaFarnamTaheri
+/src/WinCare.Infrastructure/Security/ @AmirrezaFarnamTaheri
+/src/WinCare.App/Package.appxmanifest @AmirrezaFarnamTaheri

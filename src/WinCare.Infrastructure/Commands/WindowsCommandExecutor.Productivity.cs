@@ -78,7 +78,8 @@ internal sealed partial class WindowsCommandExecutor
                 foreach (string name in root.GetSubKeyNames())
                 {
                     using RegistryKey? item = root.OpenSubKey(name);
-                    rows.Add(new { hive = hiveName, root = rootPath, id = name, label = Convert.ToString(item?.GetValue(null)), command = Convert.ToString(item?.OpenSubKey("command")?.GetValue(null)) });
+                    using RegistryKey? commandKey = item?.OpenSubKey("command");
+                    rows.Add(new { hive = hiveName, root = rootPath, id = name, label = Convert.ToString(item?.GetValue(null)), command = Convert.ToString(commandKey?.GetValue(null)) });
                 }
             }
         }

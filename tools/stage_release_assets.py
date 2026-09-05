@@ -27,7 +27,8 @@ def _get_default_version() -> str:
         prefix = tree.findtext(".//VersionPrefix", "2.5.0")
         suffix = tree.findtext(".//VersionSuffix", "")
         return f"v{prefix}-{suffix}" if suffix else f"v{prefix}"
-    return "v2.5.0-rc1"
+    # Keep the fallback aligned with Directory.Build.props (VersionPrefix/VersionSuffix).
+    return "v2.5.0-rc5"
 
 
 def stage_assets(src_dir: Path, dest_dir: Path, version: str) -> list[Path]:
@@ -120,7 +121,7 @@ def stage_assets(src_dir: Path, dest_dir: Path, version: str) -> list[Path]:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Stage release assets for GitHub releases.")
-    parser.add_argument("--version", default=os.getenv("WINCARE_VERSION", _get_default_version()), help="Release version string (e.g. v2.5.0-rc1)")
+    parser.add_argument("--version", default=os.getenv("WINCARE_VERSION", _get_default_version()), help="Release version string (e.g. v2.5.0-rc5)")
     parser.add_argument("--downloads", default="artifacts/downloads", help="Directory containing downloaded workflow artifacts")
     parser.add_argument("--output", default="release_assets", help="Target release assets staging directory")
     args = parser.parse_args()

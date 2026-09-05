@@ -13,6 +13,27 @@ namespace WinCare.Infrastructure.Tests;
 public class PluginInstallerServiceTests
 {
     [Fact]
+    public async Task InstallPluginFromStreamAsync_RejectsOversizedArchivePositionedAtEnd()
+    {
+        var root = Path.Combine(Path.GetTempPath(), $"wincare_test_plugins_{Guid.NewGuid():N}");
+        try
+        {
+            using var archive = new MemoryStream();
+            archive.SetLength(PluginInstallerService.MaxDownloadSizeBytes + 1);
+            archive.Position = archive.Length;
+            var installer = new PluginInstallerService(pluginsBaseDirectory: root);
+            var error = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+                installer.InstallPluginFromStreamAsync(archive, "test.large.package"));
+            Assert.Contains("maximum allowed size", error.Message);
+            Assert.False(Directory.Exists(Path.Combine(root, "test.large.package")));
+        }
+        finally
+        {
+            if (Directory.Exists(root)) Directory.Delete(root, recursive: true);
+        }
+    }
+
+    [Fact]
     public async Task InstallPluginFromStreamAsync_ExtractsArchiveAndReadsManifest()
     {
         var tempPluginsDir = Path.Combine(Path.GetTempPath(), $"wincare_test_plugins_{Guid.NewGuid():N}");
@@ -650,5 +671,97 @@ public class PluginInstallerServiceTests
         Assert.Equal("wincare.systemcare.ramoptimizer", evidence.CommandId);
         Assert.Contains("MemoryDiagnosticsCollector", evidence.ProvenanceSummary);
         Assert.Contains("wincare.systemcare.ramoptimizer@1.1.0", evidence.ProvenanceSummary);
+    }
+
+    [Fact]
+    public async Task InstallPluginFromStreamAsync_RejectsUnconsentedCapability()
+    {
+        var tempPluginsDir = Path.Combine(Path.GetTempPath(), $"wincare_test_plugins_{Guid.NewGuid():N}");
+        try
+        {
+            using var memoryStream = new MemoryStream();
+            using (var zip = new ZipArchive(memoryStream, ZipArchiveMode.Create, leaveOpen: true))
+            {
+                var manifestEntry = zip.CreateEntry("plugin.json");
+                using (var writer = new StreamWriter(manifestEntry.Open()))
+                {
+                    writer.Write(JsonSerializer.Serialize(new
+                    {
+                        id = "com.wincare.capabilities",
+                        name = "Capability Plugin",
+                        version = "1.0.0",
+                        declaredCapabilities = new[] { "filesystem.write" }
+                    }));
+                }
+            }
+
+            memoryStream.Position = 0;
+
+            var installer = new PluginInstallerService(pluginsBaseDirectory: tempPluginsDir);
+            // Empty consent set => any declared capability is rejected (fail-closed).
+            await Assert.ThrowsAsync<InvalidOperationException>(() =>
+                installer.InstallPluginFromStreamAsync(
+                    memoryStream,
+                    "com.wincare.capabilities",
+                    expectedSha256: null,
+                    expectedPublisherPublicKeyPem: null,
+                    expectedPublisherSignature: null,
+                    revokedPackageIds: null,
+                    revokedPublishers: null,
+                    consentedCapabilities: Array.Empty<string>()));
+        }
+        finally
+        {
+            if (Directory.Exists(tempPluginsDir))
+            {
+                Directory.Delete(tempPluginsDir, recursive: true);
+            }
+        }
+    }
+
+    [Fact]
+    public async Task InstallPluginFromStreamAsync_AcceptsConsentedCapability()
+    {
+        var tempPluginsDir = Path.Combine(Path.GetTempPath(), $"wincare_test_plugins_{Guid.NewGuid():N}");
+        try
+        {
+            using var memoryStream = new MemoryStream();
+            using (var zip = new ZipArchive(memoryStream, ZipArchiveMode.Create, leaveOpen: true))
+            {
+                var manifestEntry = zip.CreateEntry("plugin.json");
+                using (var writer = new StreamWriter(manifestEntry.Open()))
+                {
+                    writer.Write(JsonSerializer.Serialize(new
+                    {
+                        id = "com.wincare.capabilities",
+                        name = "Capability Plugin",
+                        version = "1.0.0",
+                        declaredCapabilities = new[] { "filesystem.read" }
+                    }));
+                }
+            }
+
+            memoryStream.Position = 0;
+
+            var installer = new PluginInstallerService(pluginsBaseDirectory: tempPluginsDir);
+            var installedPath = await installer.InstallPluginFromStreamAsync(
+                memoryStream,
+                "com.wincare.capabilities",
+                expectedSha256: null,
+                expectedPublisherPublicKeyPem: null,
+                expectedPublisherSignature: null,
+                revokedPackageIds: null,
+                revokedPublishers: null,
+                consentedCapabilities: new[] { "filesystem.read" });
+
+            Assert.True(Directory.Exists(installedPath));
+        }
+        finally
+        {
+            if (Directory.Exists(tempPluginsDir))
+            {
+                Directory.Delete(tempPluginsDir, recursive: true);
+            }
+        }
     }
 }

@@ -1,117 +1,139 @@
 # WinCare Native Design System & Visual Specification
 
-**Status:** Approved Native Design System (Tactile Telemetry & Cyber-Operate Engine)  
-**DFII Score:** 18/15 (Aesthetic Impact: 4, Fit: 5, Feasibility: 5, Performance: 5, Consistency Risk: 1 -> **Excellent: Execute Fully**)
+**Status:** Approved native Operate-mode design system  
+**Visual direction:** Tactile Telemetry / Cyber-Operate
 
----
+WinCare is a native Windows diagnostics, maintenance, and recovery workspace. Its visual language combines WinUI 3 Fluent materials, restrained tonal surfaces, monospaced telemetry, and a teal diagnostic accent. Product truth outranks decoration: words such as **verified**, **reviewed**, **safe**, **undo**, and **healthy** may appear only when the underlying runtime can prove them.
 
-## 🎨 Visual Signature & Character Identity
-
-WinCare is an **Operate-Mode Industrial Diagnostic & Recovery Engine**. It avoids generic SaaS layouts and cliché AI gradient clutter. Instead, it adopts a distinct **Tactile Telemetry & Cyber-Operate** visual character—combining native Windows Fluent Mica surfaces with crisp monospaced telemetry readouts, high-contrast status pill badges, and electric cyan/teal accent highlights.
+## Visual signature
 
 ```text
-Visual System Architecture (Tactile Telemetry & Cyber-Operate)
-├── Shell Surface    : Windows Mica backdrop with Obsidian Slate depth (#202020 Dark / #F3F3F3 Light)
-├── Accent Identity  : Electric Cyber-Teal (#00D2B4 Dark / #007A99 Light) for active states & primary focus
-├── Typography       : Segoe UI Variable (Display H1) + Cascadia Code (Monospaced telemetry readouts)
-├── Status Badges    : Monospaced status pills ([ READ-ONLY ], [ MUTATING ], [ ELEVATED ], [ NOT READY ])
-└── Corner Ergonomics: Subtle 1px corner frame accents on diagnostic KPI surfaces (4px / 8px / 12px radius)
+Shell surface     Windows Mica / Acrylic fallback
+Dark background   #09131D
+Light background  #F3F3F3
+Dark card          #172531
+Light card         #FFFFFF
+Dark accent        #27D6CE
+Light accent       #006F87
+Typography         Segoe UI Variable + Cascadia Code telemetry
+Corner scale       4 / 8 / 12 DIP
 ```
 
----
+The theme resources in `src/WinCare.App/Styles/ThemeResources.xaml` are the authoritative palette. This document describes those resources; it must not duplicate stale color values.
 
-## 📐 Color Tokens & Palette Matrix
+## Color and semantic roles
 
-| Role | Dark Token | Light Token | Purpose | Contrast Ratio (WCAG) |
-|---|---|---|---|:---:|
-| `bg-shell` | `#202020` (Mica Slate) | `#F3F3F3` (Mica Light) | App backdrop surface | — |
-| `bg-card` | `#161C26` (Tonal Card) | `#FFFFFF` (Tonal Card) | Command & checkup container surfaces | — |
-| `fg-primary` | `#F8FAFC` (Pure Slate) | `#0F172A` (Deep Slate) | Primary titles & headers | > 12:1 |
-| `fg-secondary` | `#94A3B8` (Muted Slate) | `#475569` (Subtle Slate) | Descriptive summaries & subtext | > 4.5:1 |
-| `AccentTealBrush` | `#00D2B4` (Electric Cyber Teal) | `#007A99` (Deep Cyber Teal) | Active selections, progress rings, focus rings | 5.1:1 |
-| `PillReadOnlyBgBrush` | `#047857` (Safe Emerald) | `#047857` (Safe Emerald) | Safe diagnostic findings & read-only badges | **5.48:1** (White text) |
-| `PillElevatedBgBrush` | `#F59E0B` (Alert Amber) | `#D97706` (Alert Amber) | Moderate risk & elevation warning badges | **8.10:1** (#1A1A1A text) |
-| `PillMutatingBgBrush` | `#C41A1A` (Hazard Crimson) | `#DC2626` (Hazard Crimson) | High risk, mutating operations, critical alerts | **5.98:1** (White text) |
-| `PillNotReadyBgBrush` | `#1F2937` (Muted Slate) | `#E2E8F0` (Muted Light) | Unimplemented / blocked candidate status | **14.68:1** |
+| Resource | Light | Dark | Purpose |
+|---|---:|---:|---|
+| `PageBackgroundBrush` | `#F3F3F3` | `#09131D` | Main app surface |
+| `CardSurfaceBrush` | `#FFFFFF` | `#172531` | Cards and table records |
+| `TextPrimaryBrush` | `#1A1A1A` | `#F5F8FB` | Primary text |
+| `TextSecondaryBrush` | `#5D5D5D` | `#B7C2CC` | Supporting text |
+| `TextOnAccentBrush` | `#FFFFFF` | `#06151C` | Text on the primary accent |
+| `AccentTealBrush` | `#006F87` | `#27D6CE` | Focus, active state, progress, diagnostic emphasis |
+| `SuccessBrush` | `#0F7B0F` | `#75D36B` | Confirmed success only |
+| `WarningBrush` | `#8A5700` | `#FFCB45` | Caution / degraded state |
+| `DangerBrush` | `#C42B1C` | `#FF99A4` | Failure / destructive risk |
 
-> All 8 pill color pairs pass **WCAG 2.1 AA** (≥ 4.5:1), verified continuously by `tools/verify_pill_contrast.py`.
+High Contrast uses Windows system colors rather than brand colors. `tools/verify_pill_contrast.py` remains the automated contrast gate for status-pill pairs. Accent text must also retain at least 4.5:1 contrast when used as small text.
 
----
+## Typography
 
-## 🔤 Typography Hierarchy & Centralized Tokens
+- `DisplayFontFamily`: Segoe UI Variable Display / Segoe UI
+  - page titles: 32 DIP, SemiBold
+  - hero telemetry: approximately 28–54 DIP depending on compact state
+- `BodyFontFamily`: Segoe UI Variable Text / Segoe UI
+  - descriptions: 14 DIP
+  - row titles: 14 DIP SemiBold
+  - secondary text: 12 DIP
+- `TelemetryFontFamily`: Cascadia Code / Cascadia Mono / Consolas
+  - command IDs, hashes, evidence, status, advanced JSON, and other machine-readable values
 
-- **Display Font Token (`DisplayFontFamily`)**: `Segoe UI Variable Display, Segoe UI, sans-serif`
-  - **Page Titles (H1)**: `32px`, SemiBold (`PageTitleTextStyle`)
-  - **Hero Readouts**: `42px - 54px`, SemiBold
-  - **App Title**: `18px`, SemiBold (`AppTitleTextStyle`)
-- **Body Font Token (`BodyFontFamily`)**: `Segoe UI Variable Text, Segoe UI, sans-serif`
-  - **Section Descriptions**: `14px`, Regular (`PageDescriptionTextStyle`)
-  - **Row Titles**: `14px`, SemiBold (`RowTitleTextStyle`)
-  - **Secondary Subtext**: `12px`, Regular (`RowSecondaryTextStyle`)
-  - **Column Headers**: `12px`, SemiBold (`ColumnHeaderTextStyle`)
-- **Telemetry Font Token (`TelemetryFontFamily`)**: `Cascadia Code, Cascadia Mono, Consolas, Courier New`
-  - Monospaced telemetry readouts, command IDs, parameter JSON, capability tags, file hashes, byte counts, and status pills (`TelemetryTextStyle`, `StatusPillTemplate`).
+Text containers should wrap and grow. Avoid fixed text-control heights; Windows text scaling up to 225% is a release-gate scenario.
 
----
+## Corner radius scale
 
-## 🔘 Standardized Corner Radius Scale
+- `RadiusPill` = 4 DIP — badges and micro-status
+- `RadiusControl` = 8 DIP — buttons, inputs, inner panels, dialogs
+- `RadiusCard` = 12 DIP — cards and major surface containers
 
-All interactive controls and structural surfaces adhere strictly to a locked 3-tier corner radius scale:
-- **`RadiusPill` (`4px`)**: Status pill tags, badge containers, micro-indicators.
-- **`RadiusControl` (`8px`)**: Buttons, text inputs, combo boxes, dialog panels, card inner tiles.
-- **`RadiusCard` (`12px`)**: Main dashboard cards, surface containers, split-view panels (`SurfaceBorderStyle`, `DashboardCardStyle`).
+## Interaction and task hierarchy
 
----
+WinCare is an **Operate** interface. Each screen should make one primary task obvious, keep evidence close to decisions, and progressively disclose lower-level detail.
 
-## 📦 Tabular Surface Architecture
-
-Tabular views across `AllToolsPage`, `CheckupPage`, `PluginStorePage`, and `ActivityPage` implement a **Compound Grid-List Pattern**:
+### Command execution
 
 ```text
-+-------------------------------------------------------------------------------------------------------+
-| Search Palette (Ctrl+K): [ Search catalog tools... ]  [ Area: All v ]  [ Risk: All v ]  [x] ReadOnly |
-+-------------------------------------------------------------------------------------------------------+
-| Command (2*)              | Category (1*)   | Risk Badge (1*)  | Admin Access (1*) | Status Pill (80) |
-+-------------------------------------------------------------------------------------------------------+
-| sysinfo                   | System Care     | [ READ-ONLY ]    | No                | [ VERIFIED ]     |
-| disk_cleanup              | Maintenance     | [ MODERATE  ]    | Required          | [ MUTATING ]     |
-| wdac_audit                | Security        | [ HIGH RISK ]    | Required          | [ MUTATING ]     |
-+-------------------------------------------------------------------------------------------------------+
-| Detail Drawer (Right/Overlay): Diagnostic Review -> Affected Paths -> Apply (ReviewApproved) -> Undo  |
-+-------------------------------------------------------------------------------------------------------+
+Choose tool
+  → complete typed parameters
+  → preview
+  → inspect evidence / affected resources
+  → dispatcher issues a short-lived single-use review receipt
+  → explicit approval
+  → apply
+  → record outcome / certainty in Activity
+  → offer compensation only when a concrete executable compensator exists
 ```
 
-### Micro-Ergonomic Details
-1. **Status Micro-Pills**: Monospaced status pill badges (`[ READ-ONLY ]` in Emerald, `[ MUTATING ]` in Crimson) for instant visual scanning.
-2. **Telemetry Corner Accents**: High-priority KPI cards feature subtle 1px corner accents (`border-subtle`) to establish an industrial diagnostic tone.
-3. **Responsive Cards (< 920 DIP)**: On narrow windows under 920 DIP, tabular rows collapse into compact stacked records with monospaced telemetry headers (`LayoutVisibility.CompactBreakpointDip = 920.0`).
+All Tools renders declared parameter schemas as native controls. Raw JSON exists only as an explicit **Advanced parameter editing** escape hatch for power users; it is not the default authoring experience.
 
----
+### Plugin trust
 
-## 🚫 Strict Exclusions (Anti-AI Slop Rules)
+- An unsigned or unverified remote catalog is browse-only.
+- Remote installation is enabled only when the exact catalog bytes verify against the WinCare-pinned catalog key and the selected package has publisher-signed manifest metadata.
+- Capability declarations are informed-consent metadata, not an in-process sandbox.
+- Destructive plugin removal requires confirmation and restores prior enabled state if package removal fails.
 
-- **No Hero Gradients**: Surfaces remain clean, tonal, and readable without cliché purple/indigo gradients.
-- **No Decorative Glass Orbs**: Backdrop materials rely strictly on Windows native Mica and Acrylic.
-- **No Unverifiable State**: Every mutating action requires explicit review approval (`ReviewApproved = true`).
-- **No Inconsistent Icons**: All visual indicators use official Windows Fluent icons (`Segoe Fluent Icons` / SVG).
-- **No Deceptive Color Signals**: Mutating operations never dress in green Read-Only badges.
+## Responsive architecture
 
----
+`LayoutVisibility.CompactBreakpointDip = 920.0` is the app-level compact-mode boundary.
 
-## 🦀 Native Core & FFI Safety Invariants
+At widths below 920 DIP:
+- desktop tables collapse into stacked records;
+- Checkup collapses both hero and evidence layouts;
+- All Tools stacks its search/filter controls and uses an overlay detail pane;
+- Home stacks its hero/status/safety surfaces and primary actions;
+- System Care, Security, Repair & Recovery, and Activity use compact row presentations.
 
-All underlying Rust native engine components (`native/wincare-core`) strictly enforce Rust 2024 edition guidelines:
-- **`#[unsafe(no_mangle)]`**: Required attribute syntax for exported C-ABI symbols such as `wincare_core_dir_size` and `wincare_core_sys_info`.
-- **Unwind Safety (`catch_unwind`)**: Every FFI entry point wraps internal Rust logic in `std::panic::catch_unwind` to prevent unwinding across C ABI boundaries (`err-result-over-panic`).
-- **Caller-Owned Pointer/Length ABI**: Status codes use `repr(i32)`. Byte buffers cross the C ABI as caller-owned pointer-plus-length pairs (`uint8_t*` / `byte*` with `size_t` / `nuint`). The caller keeps each buffer valid for the duration of the call; Rust neither takes ownership nor retains the pointer after returning.
-- **Explicit Safety Comments (`unsafe-safety-comment`)**: Every `unsafe` block includes an explicit `// SAFETY:` invariant comment and `# Safety` doc comment section.
+A component may have a narrower local breakpoint only for its own internal header/content fit (for example a search/header arrangement). Such a breakpoint must not redefine app-level `IsCompactLayout` and must be documented in the component source.
 
----
+## Accessibility floor
 
-## 🔷 .NET 8 & WinUI 3 Architecture Standards
+- Native WinUI controls are preferred over custom interaction primitives.
+- Interactive controls require meaningful `AutomationProperties.Name` and stable automation IDs where they are part of an important flow.
+- Keyboard navigation, visible focus, High Contrast, Narrator, 100/150/200/225% text scaling, and narrow-window behavior are release checks.
+- Minimum primary-action target height is 44 DIP; layouts should allow larger controls when text grows.
+- Never rely on color alone to communicate read-only, mutating, elevated, failed, or verified state.
 
-All C# ViewModel and XAML View components strictly adhere to .NET 8 and WinUI 3 desktop engineering guidelines:
-- **Compiled XAML Bindings (`{x:Bind}`)**: All UI controls use compiled `{x:Bind}` with explicit `Mode=OneWay` or `Mode=TwoWay` to eliminate runtime reflection overhead and achieve zero-allocation data binding.
-- **Clean MVVM Separation (CommunityToolkit.Mvvm)**: ViewModels inherit `ObservableObject` and encapsulate dynamic presentation logic using C# 12 pattern-matching switch expressions (`ToolRowViewModel.cs`).
-- **Dynamic Theme Resource System (`{ThemeResource}`)**: Zero hardcoded colors in XAML. All brushes bind dynamically to `{ThemeResource}` keys defined in `ThemeResources.xaml`.
-- **Keyboard Ergonomics & Accessibility**: `Ctrl+F` global shortcut for catalog search focus, 3px high-contrast `FocusVisualPrimaryBrush` focus rings, and explicit `AutomationProperties.AutomationId` / `AutomationProperties.Name` on every interactive control.
+## Strict exclusions
+
+- **No hero gradients.** Hero and accent resources are tonal solid brushes.
+- **No decorative glass orbs.** Use native Mica/Acrylic and restrained tonal surfaces.
+- **No caller-minted approval.** Mutation requires a dispatcher-issued preview receipt bound to command, parameters, correlation ID, lifetime, and single use.
+- **No generic Undo claim.** Show Undo only when an executable compensator exists.
+- **No unverifiable health score.** Checkup reports evidence-collection coverage unless an actual health model exists.
+- **No false publisher verification.** Catalog/package consistency is not publisher identity unless the catalog trust root verified.
+- **No decorative settings.** A setting exists only when it changes real persisted behavior.
+- **No inconsistent icon family.** Use Windows Fluent iconography.
+- **No raw exception disclosure in user-facing copy.** Detailed failures belong in protected diagnostics.
+
+## WinUI implementation standards
+
+- Prefer compiled `{x:Bind}` for stable view bindings; use runtime bindings only where the interaction requires them.
+- Keep presentation state in ViewModels; platform-only layout mechanics may remain in code-behind when WinUI visual states are not practical.
+- XAML colors come from `ThemeResources.xaml`; controls use semantic theme resources instead of literal colors.
+- Long collections use virtualizing WinUI list controls.
+- Async operations expose loading, success, failure, cancellation, and degraded states instead of failing silently.
+- Unknown fatal UI faults are logged and allowed to terminate rather than being swallowed and continued in an unknown process state.
+
+## Native / safety invariants that affect UX
+
+- Rust C ABI entry points remain panic-contained with caller-owned buffers and explicit safety comments.
+- Mutating handler failures after execution begins are presented as **final system state unknown** unless the handler can prove a terminal state.
+- Activity and preference persistence must not block UI state locks; durability failures are visible to the user.
+- Checkup runs measurement-sensitive probes sequentially so one probe's load does not contaminate another probe's evidence.
+- WinCare Guard is an experimental daemon boundary until SCM installation/lifecycle and app notification consumption are production-wired; the UI and docs must not imply otherwise.
+
+## Visual evidence policy
+
+Checked-in runtime screenshots are historical evidence for the exact build they name. They are never a perpetual source of truth after UI code changes. `docs/Screenshots.md` records capture provenance and whether images are current or need recapture. Current XAML/theme resources are the source of truth between verified capture runs.

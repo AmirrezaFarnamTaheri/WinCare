@@ -72,19 +72,38 @@ public sealed class PluginCardViewModel
 
     public string PublisherTrustBadgeText => IsRevoked
         ? $"REVOKED: {RemoteItem?.RevocationReason ?? "Security Advisory"}"
-        : "CATALOG TRUST NOT CONFIGURED";
+        : IsVerifiedPublisher ? "TRUSTED CATALOG / SIGNED PACKAGE"
+        : HasPublisherSignature ? "SIGNED PACKAGE / CATALOG UNVERIFIED"
+        : "UNVERIFIED";
 
-    public bool IsVerifiedPublisher => false;
+    public bool HasPublisherSignature =>
+        !string.IsNullOrWhiteSpace(RemoteItem?.PublicKeyPem) &&
+        !string.IsNullOrWhiteSpace(RemoteItem?.Signature);
+
+    /// <summary>
+    /// True only when publisher signing metadata arrived through an independently verified,
+    /// pinned catalog boundary. Package-local or unanchored catalog keys never qualify.
+    /// </summary>
+    public bool IsVerifiedPublisher => RemoteItem?.IsCatalogTrustVerified == true && HasPublisherSignature;
+
     public bool IsRevoked => RemoteItem?.IsRevoked == true;
 
     public string InstallButtonText => IsRevoked ? "Revoked" : (IsInstalled ? "Installed" : "Install");
-    // The current remote catalog is not independently signed or pinned. Do not turn
-    // catalog-provided publisher data into a package-install trust root.
-    public bool CanInstall => !IsInstalled && !string.IsNullOrEmpty(PackageUrl) && !IsRevoked && IsVerifiedPublisher;
+    public bool CanInstall =>
+        !IsInstalled &&
+        !string.IsNullOrWhiteSpace(PackageUrl) &&
+        !string.IsNullOrWhiteSpace(Sha256) &&
+        !IsRevoked &&
+        IsVerifiedPublisher;
+
     public string InstallAvailabilityReason => IsRevoked
         ? RemoteItem?.RevocationReason ?? "This package has been revoked."
         : IsInstalled ? "This plugin is already installed."
-        : "Remote plugin installation is disabled for this release.";
+        : string.IsNullOrWhiteSpace(PackageUrl) ? "This package has no download location."
+        : string.IsNullOrWhiteSpace(Sha256) ? "This package has no integrity digest."
+        : RemoteItem?.IsCatalogTrustVerified != true ? "Remote installation is disabled because the catalog signature is not anchored to a WinCare-pinned trust root."
+        : !HasPublisherSignature ? "The trusted catalog entry has no publisher manifest signature."
+        : "Ready to install.";
     public bool CanEnable => IsInstalled && !IsBuiltIn && InstalledState == PluginState.Disabled && !IsRevoked;
     public bool CanDisable => IsInstalled && !IsBuiltIn && InstalledState == PluginState.Enabled;
     public bool CanUninstall => IsInstalled && !IsBuiltIn;

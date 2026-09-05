@@ -10,7 +10,7 @@ public sealed partial class PluginDetailDialog : ContentDialog
 {
     public RemotePluginItem PluginItem { get; }
 
-    public PluginDetailDialog(RemotePluginItem item)
+    public PluginDetailDialog(RemotePluginItem item, bool allowInstall = false)
     {
         InitializeComponent();
         PluginItem = item ?? throw new ArgumentNullException(nameof(item));
@@ -26,15 +26,35 @@ public sealed partial class PluginDetailDialog : ContentDialog
             ? item.Permissions 
             : new[] { "Standard Execution (No special permissions)" };
 
-        PublisherTrustText.Text = item.IsRevoked ? "Revoked" : "Remote installation disabled for this release";
-        IsPrimaryButtonEnabled = false;
-        PrimaryButtonText = "Installation unavailable";
+        // Package signatures become publisher trust only when the catalog itself was verified
+        // against a WinCare-pinned trust root. An unanchored catalog can still be browsed but
+        // can never enable remote installation.
+        bool hasPublisherSignature = !string.IsNullOrWhiteSpace(item.PublicKeyPem) &&
+                                     !string.IsNullOrWhiteSpace(item.Signature);
+        bool verified = item.IsCatalogTrustVerified && hasPublisherSignature &&
+                        !string.IsNullOrWhiteSpace(item.PackageUrl);
+
+        PublisherTrustText.Text = item.IsRevoked
+            ? "Revoked"
+            : verified ? "Trusted catalog / signed package"
+            : hasPublisherSignature ? "Package signed; catalog trust root not verified"
+            : "Publisher signature unavailable";
+        bool canInstall = allowInstall && verified && !item.IsRevoked;
+        IsPrimaryButtonEnabled = canInstall;
+        PrimaryButtonText = allowInstall
+            ? (canInstall ? "Trust and install" : "Installation unavailable")
+            : string.Empty;
+        CloseButtonText = allowInstall ? "Cancel" : "Close";
 
         if (item.IsRevoked)
         {
             RevocationBanner.Visibility = Microsoft.UI.Xaml.Visibility.Visible;
             RevocationReasonText.Text = item.RevocationReason ?? "This package has been revoked by security policy.";
             IsPrimaryButtonEnabled = false;
+            if (allowInstall)
+            {
+                PrimaryButtonText = "Installation unavailable";
+            }
         }
 
         CommandsProvidedText.Text = item.CommandsProvided.Count > 0

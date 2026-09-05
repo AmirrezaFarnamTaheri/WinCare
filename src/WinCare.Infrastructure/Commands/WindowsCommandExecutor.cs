@@ -546,7 +546,10 @@ internal sealed partial class WindowsCommandExecutor : ICommandOperationExecutor
             case "offline-driver-add": RequireStrings(p, "ImagePath", "Path"); break;
             case "offline-driver-remove": RequireStrings(p, "ImagePath", "Driver"); break;
             case "offline-package-add": RequireStrings(p, "ImagePath", "Path"); break;
-            case "offline-feature-set": RequireStrings(p, "ImagePath", "FeatureName", "State"); break;
+            case "offline-feature-set":
+                RequireStrings(p, "ImagePath", "FeatureName");
+                _ = p.Boolean("Enabled", true);
+                break;
             case "power-stop": RequireStrings(p, "Id"); break;
             case "window-zone-set":
             case "window-topmost":

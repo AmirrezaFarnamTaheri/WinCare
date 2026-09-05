@@ -7,8 +7,6 @@ namespace WinCare.App.Views.Pages;
 
 public sealed partial class RepairRecoveryPage : Page
 {
-    private const double CompactThreshold = 820;
-
     public RepairRecoveryPage()
     {
         ViewModel = new RepairRecoveryPageViewModel();
@@ -28,7 +26,7 @@ public sealed partial class RepairRecoveryPage : Page
 
     private void Page_SizeChanged(object sender, SizeChangedEventArgs e)
     {
-        bool compact = e.NewSize.Width < CompactThreshold;
+        bool compact = LayoutVisibility.IsCompact(e.NewSize.Width);
         ViewModel.SetCompactLayout(compact);
         DescriptionHeader.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
         StateHeader.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;

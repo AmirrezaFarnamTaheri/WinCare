@@ -12,6 +12,8 @@ namespace WinCare.App.ViewModels.Pages;
 public sealed class AllToolsPageViewModel : ObservableObject, IDisposable
 {
     private readonly ToolCatalogService _catalog;
+    private readonly Microsoft.UI.Dispatching.DispatcherQueue? _uiQueue = Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread();
+    private bool _isDisposed;
     private readonly HashSet<string> _favoriteIds = new(StringComparer.Ordinal);
     private readonly List<string> _recentIds = [];
     private string _searchText = string.Empty;
@@ -24,7 +26,7 @@ public sealed class AllToolsPageViewModel : ObservableObject, IDisposable
     private bool _isCompactLayout;
 
     public AllToolsPageViewModel()
-        : this(new ToolCatalogService(AppRuntime.Current.PluginRegistry), AppRuntime.Current.Dispatcher)
+        : this(AppRuntime.Current.ToolCatalog, AppRuntime.Current.Dispatcher)
     {
     }
 
@@ -36,6 +38,15 @@ public sealed class AllToolsPageViewModel : ObservableObject, IDisposable
     public AllToolsPageViewModel(ToolCatalogService catalog, CommandDispatcher dispatcher)
     {
         _catalog = catalog ?? throw new ArgumentNullException(nameof(catalog));
+
+        // Restore persisted favorite/recent tool lists so they survive restarts.
+        _favoriteIds.Clear();
+        foreach (string id in AppPreferences.FavoriteCommandIds)
+        {
+            _favoriteIds.Add(id);
+        }
+        _recentIds.Clear();
+        _recentIds.AddRange(AppPreferences.RecentCommandIds);
         AreaOptions = [
             new AreaFilterOption("All areas", null),
             .. _catalog.All.Select(command => command.Area)
@@ -147,10 +158,17 @@ public sealed class AllToolsPageViewModel : ObservableObject, IDisposable
         get => _selectedTool;
         set
         {
+            if (ReferenceEquals(_selectedTool, value))
+            {
+                return;
+            }
+
+            // Configure execution inputs before SelectedTool notifies the page. The page rebuilds
+            // its generated parameter editor from this notification and must see the new schema.
+            Execution.SelectTool(value);
             if (SetProperty(ref _selectedTool, value))
             {
                 IsDetailsOpen = value is not null;
-                Execution.SelectTool(value);
                 NotifySelectedToolChanged();
             }
         }
@@ -229,6 +247,7 @@ public sealed class AllToolsPageViewModel : ObservableObject, IDisposable
         {
             _favoriteIds.Remove(SelectedTool.Id);
         }
+        AppPreferences.SaveFavoriteCommandIds(_favoriteIds);
         OnPropertyChanged(nameof(IsSelectedToolFavorite));
         if (string.Equals(_selectedTab, "Favorites", StringComparison.Ordinal))
         {
@@ -244,6 +263,7 @@ public sealed class AllToolsPageViewModel : ObservableObject, IDisposable
         {
             _recentIds.RemoveRange(20, _recentIds.Count - 20);
         }
+        AppPreferences.SaveRecentCommandIds(_recentIds);
     }
 
     private void NotifySelectedToolChanged()
@@ -315,11 +335,12 @@ public sealed class AllToolsPageViewModel : ObservableObject, IDisposable
 
     private void OnCatalogChanged(object? sender, EventArgs e)
     {
-        var dq = Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread();
-        if (dq != null && !dq.HasThreadAccess)
+        if (_isDisposed) return;
+        if (_uiQueue != null && !_uiQueue.HasThreadAccess)
         {
-            dq.TryEnqueue(() =>
+            _uiQueue.TryEnqueue(() =>
             {
+                if (_isDisposed) return;
                 RebuildAreaOptions();
                 Refresh();
             });
@@ -333,10 +354,11 @@ public sealed class AllToolsPageViewModel : ObservableObject, IDisposable
 
     public void Dispose()
     {
+        if (_isDisposed) return;
+        _isDisposed = true;
         _catalog.CatalogChanged -= OnCatalogChanged;
         _searchCts?.Cancel();
         _searchCts?.Dispose();
         _searchCts = null;
     }
 }
-

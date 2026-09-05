@@ -1,13 +1,19 @@
-//! RAM pressure monitor.
+//! Physical memory pressure monitor.
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+/// Telemetry for physical memory load.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize)]
 pub struct RamTelemetry {
+    /// Total physical memory in bytes.
     pub total_phys_bytes: u64,
+    /// Available physical memory in bytes.
     pub avail_phys_bytes: u64,
+    /// Memory load as reported by Windows (0-100).
     pub memory_load_percent: u32,
+    /// True when memory load meets or exceeds the critical threshold.
     pub is_critical_pressure: bool,
 }
 
+/// Critical memory-load threshold in percent.
 pub const RAM_PRESSURE_THRESHOLD_PERCENT: u32 = 90;
 
 #[cfg(target_os = "windows")]
@@ -30,10 +36,11 @@ mod win32 {
     #[link(name = "kernel32")]
     // SAFETY: GlobalMemoryStatusEx signature matches Windows SDK.
     unsafe extern "system" {
-        pub fn GlobalMemoryStatusEx(lpBuffer: *mut MEMORYSTATUSEX) -> i32;
+        pub fn GlobalMemoryStatusEx(lp_buffer: *mut MEMORYSTATUSEX) -> i32;
     }
 }
 
+/// Queries physical memory load. Returns `None` when the query fails.
 pub fn check_ram_pressure() -> Option<RamTelemetry> {
     #[cfg(target_os = "windows")]
     {
@@ -49,7 +56,7 @@ pub fn check_ram_pressure() -> Option<RamTelemetry> {
             ullAvailExtendedVirtual: 0,
         };
 
-        // SAFETY: Pointer is valid stack memory initialized with size.
+        // SAFETY: Pointer is valid stack memory initialized with its size.
         let success = unsafe { win32::GlobalMemoryStatusEx(&mut status) };
         if success == 0 {
             return None;

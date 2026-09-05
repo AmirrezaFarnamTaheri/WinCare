@@ -25,6 +25,5 @@
     <ProjectReference Include="..\..\src\WinCare.CommandCatalog\WinCare.CommandCatalog.csproj" />
     <ProjectReference Include="..\..\src\WinCare.Application\WinCare.Application.csproj" />
     <ProjectReference Include="..\..\src\WinCare.Infrastructure\WinCare.Infrastructure.csproj" />
-    <ProjectReference Include="..\..\src\WinCare.SourceGenerators\WinCare.SourceGenerators.csproj" />
   </ItemGroup>
 </Project>

@@ -11,18 +11,18 @@
             <SolidColorBrush x:Key="BorderSubtleBrush" Color="#1F000000" />
             <SolidColorBrush x:Key="TextPrimaryBrush" Color="#1A1A1A" />
             <SolidColorBrush x:Key="TextSecondaryBrush" Color="#5D5D5D" />
+            <SolidColorBrush x:Key="TextOnAccentBrush" Color="#FFFFFF" />
             <SolidColorBrush x:Key="SuccessBrush" Color="#0F7B0F" />
             <SolidColorBrush x:Key="WarningBrush" Color="#8A5700" />
             <SolidColorBrush x:Key="DangerBrush" Color="#C42B1C" />
-            <!-- Cyber-Operate Accent & Pill System -->
-            <SolidColorBrush x:Key="AccentTealBrush" Color="#007A99" />
-            <SolidColorBrush x:Key="AccentTealSubtleBrush" Color="#1A007A99" />
+            <SolidColorBrush x:Key="AccentTealBrush" Color="#006F87" />
+            <SolidColorBrush x:Key="AccentTealSubtleBrush" Color="#1A006F87" />
             <SolidColorBrush x:Key="CardSurfaceBrush" Color="#FFFFFF" />
             <SolidColorBrush x:Key="TelemetryFrameBrush" Color="#E2E8F0" />
             <SolidColorBrush x:Key="NavigationRailBrush" Color="#F8F8F8" />
             <SolidColorBrush x:Key="CardBorderBrush" Color="#1F000000" />
             <SolidColorBrush x:Key="HeroBackgroundBrush" Color="#F8F8F8" />
-            <SolidColorBrush x:Key="AccentGradientBrush" Color="#007A99" />
+            <SolidColorBrush x:Key="AccentGradientBrush" Color="#006F87" />
             <SolidColorBrush x:Key="PillReadOnlyBgBrush" Color="#047857" />
             <SolidColorBrush x:Key="PillMutatingBgBrush" Color="#DC2626" />
             <SolidColorBrush x:Key="PillElevatedBgBrush" Color="#D97706" />
@@ -40,6 +40,7 @@
             <SolidColorBrush x:Key="BorderSubtleBrush" Color="#3AFFFFFF" />
             <SolidColorBrush x:Key="TextPrimaryBrush" Color="#F5F8FB" />
             <SolidColorBrush x:Key="TextSecondaryBrush" Color="#B7C2CC" />
+            <SolidColorBrush x:Key="TextOnAccentBrush" Color="#06151C" />
             <SolidColorBrush x:Key="SuccessBrush" Color="#75D36B" />
             <SolidColorBrush x:Key="WarningBrush" Color="#FFCB45" />
             <SolidColorBrush x:Key="DangerBrush" Color="#FF99A4" />
@@ -49,15 +50,8 @@
             <SolidColorBrush x:Key="TelemetryFrameBrush" Color="#2C4656" />
             <SolidColorBrush x:Key="NavigationRailBrush" Color="#0F1B25" />
             <SolidColorBrush x:Key="CardBorderBrush" Color="#45FFFFFF" />
-            <LinearGradientBrush x:Key="HeroBackgroundBrush" StartPoint="0,0" EndPoint="1,1">
-                <GradientStop Color="#192A38" Offset="0" />
-                <GradientStop Color="#10202D" Offset="0.52" />
-                <GradientStop Color="#0C1722" Offset="1" />
-            </LinearGradientBrush>
-            <LinearGradientBrush x:Key="AccentGradientBrush" StartPoint="0,0" EndPoint="1,1">
-                <GradientStop Color="#3DE0D3" Offset="0" />
-                <GradientStop Color="#10AFC2" Offset="1" />
-            </LinearGradientBrush>
+            <SolidColorBrush x:Key="HeroBackgroundBrush" Color="#192A38" />
+            <SolidColorBrush x:Key="AccentGradientBrush" Color="#27D6CE" />
             <SolidColorBrush x:Key="PillReadOnlyBgBrush" Color="#047857" />
             <SolidColorBrush x:Key="PillMutatingBgBrush" Color="#C41A1A" />
             <SolidColorBrush x:Key="PillElevatedBgBrush" Color="#F59E0B" />
@@ -75,10 +69,10 @@
             <SolidColorBrush x:Key="BorderSubtleBrush" Color="{ThemeResource SystemColorWindowTextColor}" />
             <SolidColorBrush x:Key="TextPrimaryBrush" Color="{ThemeResource SystemColorWindowTextColor}" />
             <SolidColorBrush x:Key="TextSecondaryBrush" Color="{ThemeResource SystemColorWindowTextColor}" />
+            <SolidColorBrush x:Key="TextOnAccentBrush" Color="{ThemeResource SystemColorHighlightTextColor}" />
             <SolidColorBrush x:Key="SuccessBrush" Color="{ThemeResource SystemColorWindowTextColor}" />
             <SolidColorBrush x:Key="WarningBrush" Color="{ThemeResource SystemColorWindowTextColor}" />
             <SolidColorBrush x:Key="DangerBrush" Color="{ThemeResource SystemColorWindowTextColor}" />
-            <!-- Cyber-Operate Accent & Pill System -->
             <SolidColorBrush x:Key="AccentTealBrush" Color="{ThemeResource SystemColorHighlightColor}" />
             <SolidColorBrush x:Key="AccentTealSubtleBrush" Color="{ThemeResource SystemColorHighlightColor}" />
             <SolidColorBrush x:Key="CardSurfaceBrush" Color="{ThemeResource SystemColorWindowColor}" />

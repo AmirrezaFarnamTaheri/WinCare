@@ -16,7 +16,7 @@ public static class CommandCatalog
     private static readonly Lazy<IReadOnlyList<CommandDefinition>> Commands = new(LoadCore);
     private static readonly Lazy<IReadOnlyDictionary<string, CommandDefinition>> CommandsById = new(
         () => new ReadOnlyDictionary<string, CommandDefinition>(
-            Commands.Value.ToDictionary(command => command.Id, StringComparer.Ordinal)));
+            Commands.Value.ToDictionary(command => command.Id, StringComparer.OrdinalIgnoreCase)));
 
     /// <summary>
     /// Returns all cataloged command definitions.

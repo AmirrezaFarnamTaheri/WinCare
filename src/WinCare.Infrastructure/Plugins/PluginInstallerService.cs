@@ -28,6 +28,18 @@ public class PluginInstallerService : IPluginInstallerService
     /// <summary>Maximum allowed uncompressed extraction size (200 MB).</summary>
     public const long MaxUncompressedSizeBytes = 200 * 1024 * 1024;
 
+    /// <summary>Maximum allowed manifest / signature file size (1 MB).</summary>
+    public const int MaxManifestBytes = 1024 * 1024;
+
+    /// <summary>
+    /// Legacy colocated digest filename. New installations do not create or trust this file;
+    /// admission state is stored in the external <see cref="PluginAdmissionTrustStore"/>.
+    /// </summary>
+    public const string ManifestDigestFileName = ".wincare-manifest.sha256";
+
+    /// <summary>Maximum time to wait for a cross-process plugin operation lock before failing.</summary>
+    private static readonly TimeSpan OperationLockTimeout = TimeSpan.FromSeconds(30);
+
     private readonly HttpClient _httpClient;
     private readonly string _pluginsBaseDirectory;
     private readonly string _operationLocksDirectory;
@@ -55,16 +67,78 @@ public class PluginInstallerService : IPluginInstallerService
 
     /// <inheritdoc />
     public Task<string> InstallPluginFromPackageAsync(string packageUrl, string? expectedPluginId = null, string? expectedSha256 = null, CancellationToken cancellationToken = default)
-        => InstallPluginFromPackageAsync(packageUrl, expectedPluginId, expectedSha256, null, null, cancellationToken);
+        => InstallPluginFromPackageCoreAsync(packageUrl, expectedPluginId, expectedSha256, null, null, null, null, null, null, cancellationToken);
 
     /// <inheritdoc />
-    public async Task<string> InstallPluginFromPackageAsync(
+    public Task<string> InstallPluginFromPackageAsync(
         string packageUrl,
         string? expectedPluginId,
         string? expectedSha256,
         string? expectedPublisherPublicKeyPem,
         string? expectedPublisherSignature,
         CancellationToken cancellationToken = default)
+        => InstallPluginFromPackageCoreAsync(packageUrl, expectedPluginId, expectedSha256, expectedPublisherPublicKeyPem, expectedPublisherSignature, null, null, null, null, cancellationToken);
+
+    /// <inheritdoc />
+    public Task<string> InstallPluginFromPackageAsync(
+        string packageUrl,
+        string? expectedPluginId,
+        string? expectedSha256,
+        string? expectedPublisherPublicKeyPem,
+        string? expectedPublisherSignature,
+        IReadOnlyCollection<string>? revokedPackageIds,
+        IReadOnlyCollection<string>? revokedPublishers,
+        CancellationToken cancellationToken = default)
+        => InstallPluginFromPackageCoreAsync(packageUrl, expectedPluginId, expectedSha256, expectedPublisherPublicKeyPem, expectedPublisherSignature, null, revokedPackageIds, revokedPublishers, null, cancellationToken);
+
+    /// <inheritdoc />
+    public Task<string> InstallPluginFromPackageAsync(
+        string packageUrl,
+        string? expectedPluginId,
+        string? expectedSha256,
+        string? expectedPublisherPublicKeyPem,
+        string? expectedPublisherSignature,
+        IReadOnlyCollection<string>? revokedPackageIds,
+        IReadOnlyCollection<string>? revokedPublishers,
+        IReadOnlyCollection<string>? consentedCapabilities,
+        CancellationToken cancellationToken = default)
+        => InstallPluginFromPackageCoreAsync(packageUrl, expectedPluginId, expectedSha256, expectedPublisherPublicKeyPem, expectedPublisherSignature, null, revokedPackageIds, revokedPublishers, consentedCapabilities, cancellationToken);
+
+    /// <inheritdoc />
+    public Task<string> InstallTrustedPluginFromPackageAsync(
+        string packageUrl,
+        string expectedPluginId,
+        string expectedSha256,
+        string expectedPublisherId,
+        string expectedPublisherPublicKeyPem,
+        string expectedPublisherSignature,
+        IReadOnlyCollection<string>? revokedPackageIds,
+        IReadOnlyCollection<string>? revokedPublishers,
+        IReadOnlyCollection<string>? consentedCapabilities,
+        CancellationToken cancellationToken = default)
+        => InstallPluginFromPackageCoreAsync(
+            packageUrl,
+            expectedPluginId,
+            expectedSha256,
+            expectedPublisherPublicKeyPem,
+            expectedPublisherSignature,
+            expectedPublisherId,
+            revokedPackageIds,
+            revokedPublishers,
+            consentedCapabilities,
+            cancellationToken);
+
+    private async Task<string> InstallPluginFromPackageCoreAsync(
+        string packageUrl,
+        string? expectedPluginId,
+        string? expectedSha256,
+        string? expectedPublisherPublicKeyPem,
+        string? expectedPublisherSignature,
+        string? expectedPublisherId,
+        IReadOnlyCollection<string>? revokedPackageIds,
+        IReadOnlyCollection<string>? revokedPublishers,
+        IReadOnlyCollection<string>? consentedCapabilities,
+        CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(packageUrl))
         {
@@ -75,11 +149,11 @@ public class PluginInstallerService : IPluginInstallerService
             (!uri.Scheme.Equals(Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase) &&
              !uri.Scheme.Equals(Uri.UriSchemeFile, StringComparison.OrdinalIgnoreCase)))
         {
-            throw new ArgumentException("Package URL must use the HTTPS scheme.", nameof(packageUrl));
+            throw new ArgumentException("Package URL must use the HTTPS scheme or an explicit local file URI.", nameof(packageUrl));
         }
 
-        // Enforce mandatory well-formed SHA-256 for remote downloads
-        if (uri.Scheme.Equals(Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase) || uri.Scheme.Equals(Uri.UriSchemeHttp, StringComparison.OrdinalIgnoreCase))
+        bool isRemote = uri.Scheme.Equals(Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase);
+        if (isRemote)
         {
             if (string.IsNullOrWhiteSpace(expectedSha256))
             {
@@ -155,7 +229,17 @@ public class PluginInstallerService : IPluginInstallerService
             }
 
             memoryStream.Position = 0;
-            return await InstallPluginFromStreamAsync(memoryStream, pluginId, expectedSha256, expectedPublisherPublicKeyPem, expectedPublisherSignature, cancellationToken).ConfigureAwait(false);
+            return await InstallPluginFromStreamCoreAsync(
+                memoryStream,
+                pluginId,
+                expectedSha256,
+                expectedPublisherPublicKeyPem,
+                expectedPublisherSignature,
+                expectedPublisherId,
+                revokedPackageIds,
+                revokedPublishers,
+                consentedCapabilities,
+                cancellationToken).ConfigureAwait(false);
         }
         finally
         {
@@ -168,7 +252,7 @@ public class PluginInstallerService : IPluginInstallerService
     }
 
     /// <summary>
-    /// Validates package publisher authenticity against known trusted publishers and package certificates.
+    /// Validates package publisher authenticity against a trusted publisher key and signature.
     /// </summary>
     public static bool VerifyPublisherAuthenticity(string author, string? signature, out string trustLevel, string? publicKeyPem = null, byte[]? manifestBytes = null)
     {
@@ -195,59 +279,90 @@ public class PluginInstallerService : IPluginInstallerService
     }
 
     /// <summary>
-    /// Cryptographically verifies a digital signature over manifest content bytes using an RSA or ECDsa public key.
+    /// Cryptographically verifies a digital signature over exact manifest content bytes.
     /// </summary>
     public static bool VerifyManifestSignature(byte[] manifestBytes, string signatureBase64, string publicKeyPem)
-    {
-        if (manifestBytes == null || manifestBytes.Length == 0 || string.IsNullOrWhiteSpace(signatureBase64) || string.IsNullOrWhiteSpace(publicKeyPem))
-        {
-            return false;
-        }
-
-        try
-        {
-            byte[] signatureBytes = Convert.FromBase64String(signatureBase64);
-
-            // Attempt RSA PKCS#1 verification
-            using var rsa = RSA.Create();
-            rsa.ImportFromPem(publicKeyPem.AsSpan());
-            return rsa.VerifyData(manifestBytes, signatureBytes, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
-        }
-        catch
-        {
-            try
-            {
-                byte[] signatureBytes = Convert.FromBase64String(signatureBase64);
-
-                // Attempt ECDSA verification
-                using var ecdsa = ECDsa.Create();
-                ecdsa.ImportFromPem(publicKeyPem.AsSpan());
-                return ecdsa.VerifyData(manifestBytes, signatureBytes, HashAlgorithmName.SHA256);
-            }
-            catch
-            {
-                return false;
-            }
-        }
-    }
+        => PluginAdmissionTrustStore.VerifyManifestSignature(manifestBytes, signatureBase64, publicKeyPem);
 
     /// <inheritdoc />
     public Task<string> InstallPluginFromStreamAsync(Stream archiveStream, string targetPluginId, string? expectedSha256 = null, CancellationToken cancellationToken = default)
-        => InstallPluginFromStreamAsync(archiveStream, targetPluginId, expectedSha256, null, null, cancellationToken);
+        => InstallPluginFromStreamCoreAsync(archiveStream, targetPluginId, expectedSha256, null, null, null, null, null, null, cancellationToken);
 
     /// <inheritdoc />
-    public async Task<string> InstallPluginFromStreamAsync(
+    public Task<string> InstallPluginFromStreamAsync(
         Stream archiveStream,
         string targetPluginId,
         string? expectedSha256,
         string? expectedPublisherPublicKeyPem,
         string? expectedPublisherSignature,
         CancellationToken cancellationToken = default)
+        => InstallPluginFromStreamCoreAsync(archiveStream, targetPluginId, expectedSha256, expectedPublisherPublicKeyPem, expectedPublisherSignature, null, null, null, null, cancellationToken);
+
+    /// <inheritdoc />
+    public Task<string> InstallPluginFromStreamAsync(
+        Stream archiveStream,
+        string targetPluginId,
+        string? expectedSha256,
+        string? expectedPublisherPublicKeyPem,
+        string? expectedPublisherSignature,
+        IReadOnlyCollection<string>? revokedPackageIds,
+        IReadOnlyCollection<string>? revokedPublishers,
+        CancellationToken cancellationToken = default)
+        => InstallPluginFromStreamCoreAsync(archiveStream, targetPluginId, expectedSha256, expectedPublisherPublicKeyPem, expectedPublisherSignature, null, revokedPackageIds, revokedPublishers, null, cancellationToken);
+
+    /// <inheritdoc />
+    public Task<string> InstallPluginFromStreamAsync(
+        Stream archiveStream,
+        string targetPluginId,
+        string? expectedSha256,
+        string? expectedPublisherPublicKeyPem,
+        string? expectedPublisherSignature,
+        IReadOnlyCollection<string>? revokedPackageIds,
+        IReadOnlyCollection<string>? revokedPublishers,
+        IReadOnlyCollection<string>? consentedCapabilities,
+        CancellationToken cancellationToken = default)
+        => InstallPluginFromStreamCoreAsync(archiveStream, targetPluginId, expectedSha256, expectedPublisherPublicKeyPem, expectedPublisherSignature, null, revokedPackageIds, revokedPublishers, consentedCapabilities, cancellationToken);
+
+    /// <summary>
+    /// Trusted stream install variant used by security regression tests and non-HTTP trusted
+    /// catalog boundaries. Publisher identity is enforced independently from manifest author.
+    /// </summary>
+    public Task<string> InstallTrustedPluginFromStreamAsync(
+        Stream archiveStream,
+        string targetPluginId,
+        string? expectedSha256,
+        string expectedPublisherId,
+        string? expectedPublisherPublicKeyPem,
+        string? expectedPublisherSignature,
+        IReadOnlyCollection<string>? revokedPackageIds,
+        IReadOnlyCollection<string>? revokedPublishers,
+        IReadOnlyCollection<string>? consentedCapabilities,
+        CancellationToken cancellationToken = default)
+        => InstallPluginFromStreamCoreAsync(
+            archiveStream,
+            targetPluginId,
+            expectedSha256,
+            expectedPublisherPublicKeyPem,
+            expectedPublisherSignature,
+            expectedPublisherId,
+            revokedPackageIds,
+            revokedPublishers,
+            consentedCapabilities,
+            cancellationToken);
+
+    private async Task<string> InstallPluginFromStreamCoreAsync(
+        Stream archiveStream,
+        string targetPluginId,
+        string? expectedSha256,
+        string? expectedPublisherPublicKeyPem,
+        string? expectedPublisherSignature,
+        string? expectedPublisherId,
+        IReadOnlyCollection<string>? revokedPackageIds,
+        IReadOnlyCollection<string>? revokedPublishers,
+        IReadOnlyCollection<string>? consentedCapabilities,
+        CancellationToken cancellationToken)
     {
-        if (archiveStream == null)
-        {
-            throw new ArgumentNullException(nameof(archiveStream));
-        }
+        ArgumentNullException.ThrowIfNull(archiveStream);
 
         if (string.IsNullOrWhiteSpace(targetPluginId) || !PluginIdRegex.IsMatch(targetPluginId))
         {
@@ -258,6 +373,7 @@ public class PluginInstallerService : IPluginInstallerService
         MemoryStream? ownedMemoryStream = null;
         string? tempExtractDir = null;
         Stream workingStream = archiveStream;
+
         if (!archiveStream.CanSeek)
         {
             ownedMemoryStream = new MemoryStream();
@@ -273,14 +389,13 @@ public class PluginInstallerService : IPluginInstallerService
             ownedMemoryStream.Position = 0;
             workingStream = ownedMemoryStream;
         }
-        else if (archiveStream.Length - archiveStream.Position > MaxDownloadSizeBytes)
+        else if (archiveStream.Length > MaxDownloadSizeBytes)
         {
             throw new InvalidOperationException($"Package stream exceeds maximum allowed size of {MaxDownloadSizeBytes} bytes.");
         }
 
         try
         {
-            // Mandatory SHA-256 validation if provided
             if (!string.IsNullOrWhiteSpace(expectedSha256))
             {
                 long originalPos = workingStream.Position;
@@ -292,7 +407,6 @@ public class PluginInstallerService : IPluginInstallerService
                 {
                     throw new InvalidOperationException($"Package integrity check failed. Expected SHA-256: {expectedSha256}, Actual: {computedHash}");
                 }
-
                 workingStream.Position = originalPos;
             }
 
@@ -311,7 +425,8 @@ public class PluginInstallerService : IPluginInstallerService
                     throw new InvalidOperationException($"Package contains {zipArchive.Entries.Count} entries, exceeding maximum limit of {MaxZipEntries}.");
                 }
 
-                var canonicalTempPath = Path.GetFullPath(tempExtractDir).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar;
+                var canonicalTempPath = Path.GetFullPath(tempExtractDir)
+                    .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar;
                 long totalUncompressedBytes = 0;
 
                 foreach (var entry in zipArchive.Entries)
@@ -349,13 +464,21 @@ public class PluginInstallerService : IPluginInstallerService
             {
                 manifestPath = Path.Combine(tempExtractDir, "plugin.json");
             }
-
             if (!File.Exists(manifestPath))
             {
                 throw new InvalidOperationException("Package admission rejected: Missing plugin manifest ('wincare-plugin.json' or 'plugin.json').");
             }
 
-            var manifestJson = await File.ReadAllTextAsync(manifestPath, cancellationToken).ConfigureAwait(false);
+            var manifestInfo = new FileInfo(manifestPath);
+            if (manifestInfo.Length > MaxManifestBytes)
+            {
+                throw new InvalidOperationException($"Package admission rejected: Manifest exceeds the {MaxManifestBytes}-byte size limit.");
+            }
+
+            byte[] manifestRawBytes = await File.ReadAllBytesAsync(manifestPath, cancellationToken).ConfigureAwait(false);
+            // Decode only for JSON parsing; all integrity and signature checks below remain
+            // bound to the original raw bytes, including an optional UTF-8 BOM.
+            var manifestJson = PluginAdmissionTrustStore.DecodeManifestJson(manifestRawBytes);
             using var doc = JsonDocument.Parse(manifestJson);
             if (!doc.RootElement.TryGetProperty("id", out var idProp) || string.IsNullOrWhiteSpace(idProp.GetString()))
             {
@@ -363,111 +486,67 @@ public class PluginInstallerService : IPluginInstallerService
             }
 
             var manifestId = idProp.GetString()!;
-
             if (!string.Equals(manifestId, targetPluginId, StringComparison.OrdinalIgnoreCase))
             {
                 throw new InvalidOperationException($"Package admission rejected: Manifest ID '{manifestId}' does not match expected target plugin ID '{targetPluginId}'.");
             }
 
-            // Cryptographic Publisher Authenticity & Signature Verification
+            var author = doc.RootElement.TryGetProperty("author", out var authorProp) ? authorProp.GetString() ?? string.Empty : string.Empty;
+            EnforceRevocationPolicy(manifestId, author, expectedPublisherId, revokedPackageIds, revokedPublishers);
+            EnforceCapabilityConsent(doc.RootElement, consentedCapabilities);
+
             string? manifestSignature = null;
-            if (doc.RootElement.TryGetProperty("signature", out var sigProp) && !string.IsNullOrWhiteSpace(sigProp.GetString()))
+            var sigFilePath = Path.Combine(tempExtractDir, "wincare-plugin.sig");
+            if (File.Exists(sigFilePath))
             {
-                manifestSignature = sigProp.GetString();
-            }
-            else
-            {
-                var sigFilePath = Path.Combine(tempExtractDir, "wincare-plugin.sig");
-                if (File.Exists(sigFilePath))
+                var sigInfo = new FileInfo(sigFilePath);
+                if (sigInfo.Length > MaxManifestBytes)
                 {
-                    manifestSignature = (await File.ReadAllTextAsync(sigFilePath, cancellationToken).ConfigureAwait(false)).Trim();
+                    throw new InvalidOperationException("Package admission rejected: Signature file exceeds the size limit.");
                 }
+                manifestSignature = (await File.ReadAllTextAsync(sigFilePath, cancellationToken).ConfigureAwait(false)).Trim();
             }
 
-            var author = doc.RootElement.TryGetProperty("author", out var authorProp) ? authorProp.GetString() ?? string.Empty : string.Empty;
-            byte[] manifestRawBytes = await File.ReadAllBytesAsync(manifestPath, cancellationToken).ConfigureAwait(false);
-            if (manifestSignature != null && string.IsNullOrWhiteSpace(expectedPublisherSignature))
+            bool hasInlineSignature = doc.RootElement.TryGetProperty("signature", out var inlineSignature) &&
+                inlineSignature.ValueKind != JsonValueKind.Null &&
+                (inlineSignature.ValueKind != JsonValueKind.String || !string.IsNullOrWhiteSpace(inlineSignature.GetString()));
+            if ((manifestSignature != null || hasInlineSignature) && string.IsNullOrWhiteSpace(expectedPublisherSignature))
             {
                 throw new InvalidOperationException("Package admission rejected: Package-supplied signature is not an independent trust assertion.");
             }
+
             bool hasExpectedKey = !string.IsNullOrWhiteSpace(expectedPublisherPublicKeyPem);
             bool hasExpectedSignature = !string.IsNullOrWhiteSpace(expectedPublisherSignature);
             if (hasExpectedKey != hasExpectedSignature)
             {
                 throw new InvalidOperationException("Package admission rejected: Publisher key and signature must both be supplied by the trusted catalog boundary.");
             }
+
             if (hasExpectedSignature &&
                 !VerifyPublisherAuthenticity(author, expectedPublisherSignature, out var trustLevel, expectedPublisherPublicKeyPem, manifestRawBytes))
             {
                 throw new InvalidOperationException($"Package admission rejected: Digital signature verification failed ({trustLevel}).");
             }
 
-            var finalPluginId = manifestId;
-            var finalTargetDir = ValidateAndGetPluginDirectory(finalPluginId);
-
-            // Atomic promotion with isolated staging backup support
-            string? backupDir = null;
-            if (Directory.Exists(finalTargetDir))
+            var manifestDigest = Convert.ToHexString(SHA256.HashData(manifestRawBytes)).ToLowerInvariant();
+            var admissionRecord = new PluginAdmissionRecord
             {
-                backupDir = Path.Combine(stagingBackupsDir, $"{finalPluginId}_{Guid.NewGuid():N}");
-                try
-                {
-                    Directory.Move(finalTargetDir, backupDir);
-                }
-                catch (IOException)
-                {
-                    CopyDirectoryRecursive(finalTargetDir, backupDir);
-                    Directory.Delete(finalTargetDir, recursive: true);
-                }
-            }
+                PluginId = manifestId,
+                ManifestSha256 = manifestDigest,
+                PublisherId = string.IsNullOrWhiteSpace(expectedPublisherId) ? null : expectedPublisherId,
+                PublisherPublicKeyPem = hasExpectedKey ? expectedPublisherPublicKeyPem : null,
+                PublisherSignature = hasExpectedSignature ? expectedPublisherSignature : null,
+            };
 
-            Directory.CreateDirectory(Path.GetDirectoryName(finalTargetDir)!);
-            try
-            {
-                Directory.Move(tempExtractDir, finalTargetDir);
-            }
-            catch (IOException)
-            {
-                try
-                {
-                    CopyDirectoryRecursive(tempExtractDir, finalTargetDir);
-                    Directory.Delete(tempExtractDir, recursive: true);
-                }
-                catch
-                {
-                    // If promotion failed, restore backup from isolated staging
-                    if (backupDir != null && Directory.Exists(backupDir))
-                    {
-                        try
-                        {
-                            if (Directory.Exists(finalTargetDir))
-                            {
-                                Directory.Delete(finalTargetDir, recursive: true);
-                            }
-                            Directory.Move(backupDir, finalTargetDir);
-                        }
-                        catch (Exception ex)
-                        {
-                            System.Diagnostics.Debug.WriteLine($"[PluginInstaller] Failed restoring backup from '{backupDir}' to '{finalTargetDir}': {ex.GetType().Name} - {ex.Message}");
-                        }
-                    }
-                    throw;
-                }
-            }
+            var finalTargetDir = ValidateAndGetPluginDirectory(manifestId);
+            await PromoteWithAdmissionRecordAsync(
+                tempExtractDir,
+                finalTargetDir,
+                admissionRecord,
+                stagingBackupsDir,
+                cancellationToken).ConfigureAwait(false);
 
-            // Cleanup backup directory on successful installation
-            if (backupDir != null && Directory.Exists(backupDir))
-            {
-                try
-                {
-                    Directory.Delete(backupDir, recursive: true);
-                }
-                catch (Exception ex)
-                {
-                    System.Diagnostics.Debug.WriteLine($"[PluginInstaller] Failed cleaning up backup directory '{backupDir}': {ex.GetType().Name} - {ex.Message}");
-                }
-            }
-
+            tempExtractDir = null;
             return finalTargetDir;
         }
         catch
@@ -494,25 +573,173 @@ public class PluginInstallerService : IPluginInstallerService
         var pluginDir = ValidateAndGetPluginDirectory(pluginId);
         using var operationLock = await AcquirePluginOperationLockAsync(pluginId, cancellationToken).ConfigureAwait(false);
         cancellationToken.ThrowIfCancellationRequested();
+
+        bool removed = false;
         if (Directory.Exists(pluginDir))
         {
             Directory.Delete(pluginDir, recursive: true);
-            return true;
+            removed = true;
         }
 
-        return false;
+        string admissionPath = PluginAdmissionTrustStore.GetRecordPath(pluginDir);
+        if (File.Exists(admissionPath))
+        {
+            File.Delete(admissionPath);
+            removed = true;
+        }
+
+        return removed;
+    }
+
+    private static async Task PromoteWithAdmissionRecordAsync(
+        string stagedPluginDir,
+        string finalTargetDir,
+        PluginAdmissionRecord admissionRecord,
+        string stagingBackupsDir,
+        CancellationToken cancellationToken)
+    {
+        string admissionPath = PluginAdmissionTrustStore.GetRecordPath(finalTargetDir);
+        string admissionDirectory = Path.GetDirectoryName(admissionPath)!;
+        Directory.CreateDirectory(admissionDirectory);
+
+        string transactionId = Guid.NewGuid().ToString("N");
+        string pendingAdmissionPath = admissionPath + "." + transactionId + ".tmp";
+        string? pluginBackupDir = null;
+        string? admissionBackupPath = null;
+        bool oldPluginBackedUp = false;
+        bool newPluginPromoted = false;
+        bool preserveAdmissionBackup = false;
+
+        var admissionJson = JsonSerializer.Serialize(admissionRecord, new JsonSerializerOptions { WriteIndented = true });
+        await File.WriteAllTextAsync(pendingAdmissionPath, admissionJson, cancellationToken).ConfigureAwait(false);
+
+        try
+        {
+            if (File.Exists(admissionPath))
+            {
+                admissionBackupPath = Path.Combine(stagingBackupsDir, $"{Path.GetFileName(finalTargetDir)}_{transactionId}.admission.json");
+                File.Copy(admissionPath, admissionBackupPath, overwrite: true);
+            }
+
+            if (Directory.Exists(finalTargetDir))
+            {
+                pluginBackupDir = Path.Combine(stagingBackupsDir, $"{Path.GetFileName(finalTargetDir)}_{transactionId}");
+                try
+                {
+                    Directory.Move(finalTargetDir, pluginBackupDir);
+                }
+                catch (IOException)
+                {
+                    CopyDirectoryRecursive(finalTargetDir, pluginBackupDir);
+                    Directory.Delete(finalTargetDir, recursive: true);
+                }
+                oldPluginBackedUp = true;
+            }
+
+            Directory.CreateDirectory(Path.GetDirectoryName(finalTargetDir)!);
+            try
+            {
+                Directory.Move(stagedPluginDir, finalTargetDir);
+            }
+            catch (IOException)
+            {
+                CopyDirectoryRecursive(stagedPluginDir, finalTargetDir);
+                Directory.Delete(stagedPluginDir, recursive: true);
+            }
+            newPluginPromoted = true;
+
+            // Commit the external trust record last. If this fails, the plugin directory is
+            // rolled back before the install can be observed as successfully admitted.
+            File.Move(pendingAdmissionPath, admissionPath, overwrite: true);
+
+            if (pluginBackupDir != null && Directory.Exists(pluginBackupDir))
+            {
+                TryDeleteDirectory(pluginBackupDir);
+            }
+            if (admissionBackupPath != null && File.Exists(admissionBackupPath))
+            {
+                TryDeleteFile(admissionBackupPath);
+            }
+        }
+        catch (Exception installException)
+        {
+            Exception? admissionRestoreException = null;
+
+            if (newPluginPromoted && Directory.Exists(finalTargetDir))
+            {
+                TryDeleteDirectory(finalTargetDir);
+            }
+
+            if (oldPluginBackedUp && pluginBackupDir != null && Directory.Exists(pluginBackupDir))
+            {
+                try
+                {
+                    Directory.Move(pluginBackupDir, finalTargetDir);
+                }
+                catch (IOException)
+                {
+                    CopyDirectoryRecursive(pluginBackupDir, finalTargetDir);
+                    TryDeleteDirectory(pluginBackupDir);
+                }
+            }
+
+            // The existing admission record is not overwritten until the final commit move.
+            // Restore from the backup defensively if a platform-specific overwrite partially
+            // changed it before throwing. A failed trust-record rollback is security-significant:
+            // retain the backup and surface both failures instead of deleting known-good state.
+            if (admissionBackupPath != null && File.Exists(admissionBackupPath))
+            {
+                try
+                {
+                    File.Copy(admissionBackupPath, admissionPath, overwrite: true);
+                }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                {
+                    preserveAdmissionBackup = true;
+                    admissionRestoreException = ex;
+                }
+            }
+            else if (!oldPluginBackedUp && File.Exists(admissionPath) && newPluginPromoted)
+            {
+                TryDeleteFile(admissionPath);
+            }
+
+            if (admissionRestoreException != null)
+            {
+                throw new InvalidOperationException(
+                    "Plugin install failed and the previous trust record could not be restored automatically. " +
+                    "A recovery backup was preserved in the plugin staging backup directory.",
+                    new AggregateException(installException, admissionRestoreException));
+            }
+
+            throw;
+        }
+        finally
+        {
+            if (File.Exists(pendingAdmissionPath))
+            {
+                TryDeleteFile(pendingAdmissionPath);
+            }
+            // Preserve the last known-good trust record if rollback itself failed.
+            if (!preserveAdmissionBackup && admissionBackupPath != null && File.Exists(admissionBackupPath))
+            {
+                TryDeleteFile(admissionBackupPath);
+            }
+        }
     }
 
     /// <summary>
     /// Acquires an exclusive, cross-process lock for mutations to a single plugin.
     /// The lock file is intentionally retained after release; the handle's sharing
     /// mode, not file deletion, defines ownership and avoids delete/create races.
+    /// Acquisition fails closed after a bounded wait rather than busy-waiting forever.
     /// </summary>
     private async Task<FileStream> AcquirePluginOperationLockAsync(string pluginId, CancellationToken cancellationToken)
     {
         Directory.CreateDirectory(_operationLocksDirectory);
         var lockPath = Path.Combine(_operationLocksDirectory, $"{pluginId}.lock");
 
+        var deadline = DateTime.UtcNow + OperationLockTimeout;
         while (true)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -526,10 +753,86 @@ public class PluginInstallerService : IPluginInstallerService
                     bufferSize: 1,
                     FileOptions.Asynchronous);
             }
-            catch (IOException)
+            catch (IOException) when (DateTime.UtcNow < deadline)
             {
                 await Task.Delay(TimeSpan.FromMilliseconds(50), cancellationToken).ConfigureAwait(false);
             }
+            catch (IOException)
+            {
+                throw new TimeoutException(
+                    $"Timed out after {OperationLockTimeout.TotalSeconds:0} seconds waiting for the plugin operation lock '{pluginId}'. Another installer may be active.");
+            }
+        }
+    }
+
+    /// <summary>
+    /// Enforces current catalog revocation against package ID, trusted publisher ID, and the
+    /// manifest's author label. The publisher ID is never inferred from package-controlled data.
+    /// </summary>
+    private static void EnforceRevocationPolicy(
+        string manifestId,
+        string author,
+        string? expectedPublisherId,
+        IReadOnlyCollection<string>? revokedPackageIds,
+        IReadOnlyCollection<string>? revokedPublishers)
+    {
+        var revokedPkgs = new HashSet<string>(revokedPackageIds ?? Array.Empty<string>(), StringComparer.OrdinalIgnoreCase);
+        var revokedPubs = new HashSet<string>(revokedPublishers ?? Array.Empty<string>(), StringComparer.OrdinalIgnoreCase);
+
+        if (revokedPkgs.Contains(manifestId))
+        {
+            throw new InvalidOperationException($"Package admission rejected: Plugin '{manifestId}' is listed on the security revocation advisory.");
+        }
+
+        if (!string.IsNullOrWhiteSpace(expectedPublisherId) && revokedPubs.Contains(expectedPublisherId))
+        {
+            throw new InvalidOperationException($"Package admission rejected: Publisher '{expectedPublisherId}' is listed on the security revocation advisory.");
+        }
+
+        if (!string.IsNullOrWhiteSpace(author) && revokedPubs.Contains(author))
+        {
+            throw new InvalidOperationException($"Package admission rejected: Publisher '{author}' is listed on the security revocation advisory.");
+        }
+    }
+
+    /// <summary>
+    /// Enforces per-capability user consent at admission time. When
+    /// <paramref name="consentedCapabilities"/> is non-null, any manifest capability outside
+    /// the consented set rejects the package. When it is null, the gate is skipped (used by
+    /// internal/test callers that do not route through the store consent flow).
+    /// </summary>
+    private static void EnforceCapabilityConsent(JsonElement manifestRoot, IReadOnlyCollection<string>? consentedCapabilities)
+    {
+        if (consentedCapabilities == null)
+        {
+            return;
+        }
+
+        var consented = new HashSet<string>(consentedCapabilities, StringComparer.OrdinalIgnoreCase);
+        if (!manifestRoot.TryGetProperty("declaredCapabilities", out var declaredElement) ||
+            declaredElement.ValueKind != JsonValueKind.Array)
+        {
+            return;
+        }
+
+        var unconsented = new List<string>();
+        foreach (JsonElement capability in declaredElement.EnumerateArray())
+        {
+            if (capability.ValueKind == JsonValueKind.String)
+            {
+                var value = capability.GetString();
+                if (!string.IsNullOrWhiteSpace(value) && !consented.Contains(value))
+                {
+                    unconsented.Add(value);
+                }
+            }
+        }
+
+        if (unconsented.Count > 0)
+        {
+            throw new InvalidOperationException(
+                "Package admission rejected: Plugin declares capabilities that were not consented to: " +
+                string.Join(", ", unconsented) + ".");
         }
     }
 
@@ -580,6 +883,30 @@ public class PluginInstallerService : IPluginInstallerService
         {
             var destSubDir = Path.Combine(destinationDir, Path.GetFileName(subDir));
             CopyDirectoryRecursive(subDir, destSubDir);
+        }
+    }
+
+    private static void TryDeleteDirectory(string path)
+    {
+        try
+        {
+            if (Directory.Exists(path)) Directory.Delete(path, recursive: true);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[PluginInstaller] Failed cleaning directory '{path}': {ex.GetType().Name} - {ex.Message}");
+        }
+    }
+
+    private static void TryDeleteFile(string path)
+    {
+        try
+        {
+            if (File.Exists(path)) File.Delete(path);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[PluginInstaller] Failed cleaning file '{path}': {ex.GetType().Name} - {ex.Message}");
         }
     }
 }

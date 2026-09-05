@@ -71,6 +71,8 @@
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
+                <TextBlock Text="Capability declarations are consent metadata only. Full-trust in-process plugins are not sandboxed or technically constrained by these declarations."
+                           TextWrapping="Wrap" FontSize="11" Foreground="{ThemeResource TextSecondaryBrush}" />
             </StackPanel>
         </Border>
 
@@ -93,7 +95,7 @@
                            TextWrapping="Wrap" FontSize="12" Foreground="{ThemeResource DangerBrush}"/>
             </StackPanel>
         </Border>
-        <TextBlock Text="Remote installations remain disabled until this app is configured with an independently signed catalog. Catalog metadata alone is never treated as publisher trust."
+        <TextBlock Text="Remote installation is enabled only when the exact catalog bytes verify against a WinCare-pinned signing key and the selected package also has publisher-signed manifest metadata. Otherwise this catalog is browse-only."
                    TextWrapping="Wrap" FontSize="12" Foreground="{ThemeResource TextSecondaryBrush}" />
 
         <!-- Commands Provided -->

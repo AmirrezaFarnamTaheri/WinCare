@@ -52,8 +52,22 @@ namespace WinCare.Application.Diagnostics
         string CommandVersion = "1.0.0"
     )
     {
-        public DateTime TimestampUtc { get; init; } = CapturedAtUtc ?? DateTime.UtcNow;
-        public bool IsStale(TimeSpan maxAge) => (DateTime.UtcNow - TimestampUtc) > maxAge;
+        public DateTime TimestampUtc { get; init; } =
+            CapturedAtUtc.HasValue ? NormalizeToUtc(CapturedAtUtc.Value) : DateTime.UtcNow;
+
+        /// <summary>
+        /// True when the evidence is older than <paramref name="maxAge"/>. Both operands are
+        /// normalized to UTC so an unspecified- or local-kind <see cref="CapturedAtUtc"/> can
+        /// never skew the age calculation.
+        /// </summary>
+        public bool IsStale(TimeSpan maxAge) => (DateTime.UtcNow - TimestampUtc.ToUniversalTime()) > maxAge;
+
+        private static DateTime NormalizeToUtc(DateTime value) => value.Kind switch
+        {
+            DateTimeKind.Utc => value,
+            DateTimeKind.Local => value.ToUniversalTime(),
+            _ => DateTime.SpecifyKind(value, DateTimeKind.Utc),
+        };
         public string ProvenanceSummary => $"Source: {Source} | Collector: {Collector} | Command: {CommandId ?? "system.core"}@{CommandVersion} | Captured: {TimestampUtc:yyyy-MM-dd HH:mm:ss} UTC";
     };
 

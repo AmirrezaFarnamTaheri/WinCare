@@ -42,6 +42,7 @@ NATIVE_TOP_LEVEL_FILES = (
     "Directory.Build.props",
     "Directory.Packages.props",
     "LICENSE",
+    "NuGet.Config",
     "README.md",
     "SECURITY.md",
     "THIRD-PARTY-NOTICES.md",
@@ -52,6 +53,7 @@ NATIVE_TOP_LEVEL_FILES = (
 )
 
 NATIVE_DIRECTORIES = (
+    "docs",
     "migration/oracle",
     "native",
     "policy",
@@ -62,7 +64,10 @@ NATIVE_DIRECTORIES = (
     "src/WinCare.Infrastructure",
     "tests/WinCare.Application.Tests",
     "tests/WinCare.CommandCatalog.Tests",
+    "tests/WinCare.Infrastructure.Tests",
     "tests/native",
+    "tests/tools",
+    "tools/wincare-plugin-cli",
 )
 
 NATIVE_DESIGN_FILES = (
@@ -96,6 +101,7 @@ NATIVE_DOCUMENT_FILES = (
 
 NATIVE_TOOL_FILES = (
     "tools/__init__.py",
+    "tools/wincare-plugin-cli/bin/wincare-plugin.js",
     "tools/finalize_native_release.py",
     "tools/install_msix.py",
     "tools/package_portable.py",
@@ -107,7 +113,9 @@ NATIVE_TOOL_FILES = (
 )
 
 NATIVE_WORKFLOW_FILES = (
+    ".github/CODEOWNERS",
     ".github/dependabot.yml",
+    ".github/pull_request_template.md",
     ".github/workflows/native-winui.yml",
     ".github/workflows/native-release-candidate.yml",
 )

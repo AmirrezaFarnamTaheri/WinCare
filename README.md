@@ -14,25 +14,25 @@
 </p>
 
 > [!IMPORTANT]
-> WinCare is a release candidate. It offers a complete native command catalog, but production promotion remains gated on live Windows behavioural verification. Treat mutating operations as administrator work: read the preview, understand the impact, then approve deliberately.
+> WinCare is a release candidate. The 259-command native catalog is implemented, but production promotion remains gated on live Windows behavioral, accessibility, installation/upgrade, and administrator-command verification. Treat mutating operations as administrator work: read the preview, understand the impact, then approve deliberately.
 
 ## See it at a glance
 
 <p align="center">
-  <img src="docs/images/runtime-dashboard.png" alt="WinCare Home screen captured from the installed v2.5.0.3 release candidate package" width="900" />
+  <img src="docs/images/runtime-dashboard.png" alt="Historical WinCare Home capture from the installed v2.5.0-rc5 release candidate package" width="900" />
 </p>
 
-<p align="center"><em>Real x64 runtime capture from the v2.5.0-rc2 candidate. The score remains unavailable until a check has collected evidence.</em></p>
+<p align="center"><em>Historical x64 runtime capture from the v2.5.0-rc5 package. Current source has since changed; see <code>docs/Screenshots.md</code> for capture provenance and recapture status.</em></p>
 
 WinCare brings everyday Windows care into one focused desktop app. It starts with evidence, keeps read-only work separate from changes, and records what happened so technicians and power users can make informed decisions.
 
 | When you need to… | WinCare helps you… |
 |---|---|
-| Understand a machine | Run a system checkup and review health signals before acting. |
-| Make a change safely | Inspect a preflighted plan, elevation requirement, and risk before approval. |
-| Recover or troubleshoot | Use a catalog of typed native tools with fail-closed outcomes. |
-| Extend the toolset | Review plugin capabilities before installing validated packages. |
-| Keep an audit trail | Review privacy-conscious activity receipts and outcomes. |
+| Understand a machine | Run a system checkup and review read-only evidence before acting. |
+| Make a change safely | Inspect a preflighted plan, elevation requirement, and affected resources before approval. |
+| Recover or troubleshoot | Use typed native tools with fail-closed outcomes and explicit uncertainty when final state cannot be proven. |
+| Extend the toolset | Review installed plugins and browse catalog metadata; remote installation stays disabled until a production catalog trust root is shipped. |
+| Keep an audit trail | Review privacy-conscious activity receipts, items needing attention, and aggregated daily reports. |
 
 ## Get WinCare
 
@@ -56,28 +56,43 @@ The helper verifies the package signature, requires the certificate to match its
 
 ## A deliberate safety model
 
-WinCare does not treat a listed tool as permission to run it. Every command follows a bounded path:
+WinCare does not treat a listed tool as permission to run it. Mutating commands follow a bounded two-phase path:
 
 ```text
-Observe → preflight → explain risk and elevation → explicit approval → execute → record evidence
+Observe → validate typed inputs → preview → inspect evidence → dispatcher issues one-time receipt → explicit approval → execute → record outcome
 ```
 
 - Unknown, unavailable, unauthorized, and unsafe operations fail closed.
+- A caller cannot manufacture a valid mutation approval. Review receipts are dispatcher-issued, parameter-bound, short-lived, and single-use.
+- Editing parameters or replaying a receipt requires a new preview.
+- If mutation has started and a handler faults before the final state is known, WinCare reports that uncertainty rather than claiming nothing changed.
 - Read-only diagnostic work is separated from mutating repair work.
+- All Tools renders typed native inputs where the executor declares parameters; raw JSON is an explicit Advanced escape hatch.
+- Activity advertises Undo only when a concrete executable compensator exists.
 - The native file-system and process boundaries reject unsafe traversal and unbounded execution paths.
-- Plugin installation validates package identity and integrity; remote installation remains disabled until a trusted, independently anchored catalog is configured.
+
+### Plugin trust
+
+The plugin subsystem fails closed at the catalog boundary. `RemoteCatalogService` supports detached-signature verification of the exact catalog bytes against a WinCare-pinned public key, and remote installation additionally verifies package identity, SHA-256, publisher-signed manifest metadata, consent, revocation state, and installed-manifest admission records.
+
+**This repository does not currently ship an approved production catalog signing key or a live official signed catalog.** The app composition root therefore keeps remote plugin installation intentionally **browse-only/disabled** rather than inventing a trust root. Local/installed plugins remain manageable. A future release may enable remote installation only by shipping an explicitly reviewed pinned catalog key and signed catalog endpoint.
+
+Plugin capability declarations are informed-consent metadata. Full-trust in-process plugins are not sandboxed by those declarations.
 
 ## What’s inside
 
 ```text
-WinCare.App             WinUI 3 desktop shell and accessibility metadata
-WinCare.Application     Use cases, dispatcher, plugin host, activity journal
+WinCare.App             WinUI 3 desktop shell, typed tool UI, accessibility metadata
+WinCare.Application     Dispatcher, review receipts, plugin host, activity journal
 WinCare.Domain          Typed requests, results, policies, and evidence models
-WinCare.Infrastructure  Windows integration, bounded processes, native interop
-WinCare.CommandCatalog  Typed catalog and command metadata
-native/                 Rust core primitives and health guard
+WinCare.Infrastructure  Windows integration, bounded processes, persistence, native interop
+WinCare.CommandCatalog  259 command definitions plus typed parameter schemas
+native/wincare-core     Rust bounded native primitives
+native/wincare-guard    Experimental local health daemon / IPC boundary
 tools/                  Packaging, validation, and plugin developer tooling
 ```
+
+`wincare-guard` is **experimental** in the current candidate. Its local IPC boundary is access-controlled, but production SCM service lifecycle and complete native/app notification delivery are not claimed as finished.
 
 The app is built with WinUI 3, .NET 8, and Rust. Read the [architecture guide](docs/Architecture.md) for boundaries and lifecycle details.
 
@@ -106,7 +121,7 @@ Follow [CONTRIBUTING.md](CONTRIBUTING.md) for environment setup, review expectat
 | Start here | What you’ll find |
 |---|---|
 | [User guide](docs/User-Guide.md) | Installation, navigation, safe-operation guidance, and troubleshooting. |
-| [Interface screenshots](docs/Screenshots.md) | Runtime captures from the v2.5.0-rc2 candidate alongside the original design concepts. |
+| [Interface screenshots](docs/Screenshots.md) | Build-specific runtime captures, provenance, recapture status, and concepts. |
 | [Architecture](docs/Architecture.md) | Layer boundaries, trust model, lifecycle, native integration, and packaging. |
 | [Validation](VALIDATION.md) | Evidence model, checks, and promotion gates. |
 | [Security](SECURITY.md) | Security invariants and private vulnerability reporting. |

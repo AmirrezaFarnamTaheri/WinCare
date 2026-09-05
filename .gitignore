@@ -29,4 +29,7 @@ build_out.txt
 .gortex/
 .serena/
 **/AppPackages/
-packages.lock.json
+# AI/tooling scaffolding artifacts (not project content)
+.context/
+.impeccable/
+idea-stage/

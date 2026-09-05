@@ -40,7 +40,6 @@ public sealed class PluginRegistryServiceTests
     [Fact]
     public async Task PluginRegistryService_Discovers_And_Enables_Plugins_And_Fires_RegistryChanged()
     {
-        // Arrange
         var tempUserPluginsDir = Path.Combine(Path.GetTempPath(), "WinCareUserPluginsTest_" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(tempUserPluginsDir);
 
@@ -73,14 +72,10 @@ public sealed class PluginRegistryServiceTests
 
         try
         {
-            // Act
             await service.DiscoverAndInitializeAsync(host);
-
-            // Assert
             Assert.True(eventCount >= 1);
             var plugins = service.GetAllPlugins();
             Assert.Contains(plugins, p => p.Id == "com.wincare.sample" && p.State == PluginState.Enabled);
-
             var activeCommands = service.GetActivePluginCommands();
             Assert.Contains(activeCommands, c => c.Id == "sample.tool1");
         }
@@ -96,12 +91,10 @@ public sealed class PluginRegistryServiceTests
         var tempUserPluginsDir = Path.Combine(Path.GetTempPath(), "WinCareUserPluginsTest_" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(tempUserPluginsDir);
 
-        // Staging directory
         var stagingDir = Path.Combine(tempUserPluginsDir, ".staging", "backups", "old_plugin");
         Directory.CreateDirectory(stagingDir);
         File.WriteAllText(Path.Combine(stagingDir, "wincare-plugin.json"), """{"id": "staged.backup.plugin", "name": "Backup", "version": "0.1"}""");
 
-        // .bak directory
         var bakDir = Path.Combine(tempUserPluginsDir, "legacy_plugin.bak");
         Directory.CreateDirectory(bakDir);
         File.WriteAllText(Path.Combine(bakDir, "wincare-plugin.json"), """{"id": "legacy.bak.plugin", "name": "Bak", "version": "0.1"}""");
@@ -125,7 +118,6 @@ public sealed class PluginRegistryServiceTests
     [Fact]
     public async Task PluginRegistryService_Discovers_Disabled_Plugins_Inertly()
     {
-        // Arrange
         var tempUserPluginsDir = Path.Combine(Path.GetTempPath(), "WinCareUserPluginsTest_" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(tempUserPluginsDir);
 
@@ -150,24 +142,19 @@ public sealed class PluginRegistryServiceTests
         File.WriteAllText(Path.Combine(pluginDir, "wincare-plugin.json"), manifestJson);
 
         var host = new DummyPluginHost { PluginsUserDirectory = tempUserPluginsDir };
-        var service = new PluginRegistryService(); // Default: nothing enabled
+        var service = new PluginRegistryService();
 
         try
         {
-            // Act
             await service.DiscoverAndInitializeAsync(host);
-
-            // Assert: plugin is discovered inertly as Disabled
             var plugins = service.GetAllPlugins();
             Assert.Contains(plugins, p => p.Id == "com.wincare.disabled" && p.State == PluginState.Disabled);
 
-            // Enable plugin dynamically
             await service.EnablePluginAsync("com.wincare.disabled", host);
             Assert.Contains(service.GetAllPlugins(), p => p.Id == "com.wincare.disabled" && p.State == PluginState.Enabled);
             Assert.Contains(service.GetActivePluginCommands(), c => c.Id == "disabled.tool1");
             Assert.Contains(host.RegisteredCommands, c => c.Id == "disabled.tool1");
 
-            // Disable plugin dynamically
             await service.DisablePluginAsync("com.wincare.disabled", host);
             Assert.Contains(service.GetAllPlugins(), p => p.Id == "com.wincare.disabled" && p.State == PluginState.Disabled);
             Assert.DoesNotContain(service.GetActivePluginCommands(), c => c.Id == "disabled.tool1");
@@ -184,12 +171,9 @@ public sealed class PluginRegistryServiceTests
     {
         var tempUserPluginsDir = Path.Combine(Path.GetTempPath(), "WinCareE2ETest_" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(tempUserPluginsDir);
-
         var pluginDir = Path.Combine(tempUserPluginsDir, "e2e-plugin");
         Directory.CreateDirectory(pluginDir);
-
-        var scriptPath = Path.Combine(pluginDir, "run.cmd");
-        File.WriteAllText(scriptPath, "@echo off\r\necho E2E_PLUGIN_SUCCESS\r\nexit /b 0\r\n");
+        File.WriteAllText(Path.Combine(pluginDir, "run.cmd"), "@echo off\r\necho E2E_PLUGIN_SUCCESS\r\nexit /b 0\r\n");
 
         var manifestJson = """
         {
@@ -214,23 +198,21 @@ public sealed class PluginRegistryServiceTests
         var dispatcher = new CommandDispatcher(Array.Empty<CommandDefinition>(), Array.Empty<ICommandHandler>());
         var host = new DefaultPluginHost(dispatcher, pluginsUserDirectory: tempUserPluginsDir);
         var service = new PluginRegistryService(
-            scriptHandlerFactory: (cmdId, scriptPath, pluginDir) => new WinCare.Infrastructure.Plugins.PluginScriptCommandHandler(cmdId, scriptPath, pluginDir),
+            scriptHandlerFactory: (cmdId, scriptPath, pDir, readOnly, capabilities) => new WinCare.Infrastructure.Plugins.PluginScriptCommandHandler(cmdId, scriptPath, pDir, declaredReadOnly: readOnly, declaredCapabilities: capabilities),
             initialEnabledPluginIds: new HashSet<string> { "com.wincare.e2e" });
 
         try
         {
             await service.DiscoverAndInitializeAsync(host);
-
             Assert.Contains(host.RegisteredCommands, c => c.Id == "e2e.tool1");
             var def = host.RegisteredCommands.First(c => c.Id == "e2e.tool1");
             Assert.Equal("E2E Tool", def.Title);
 
             var request = CommandRequest.Preview("e2e.tool1");
-            var result = await dispatcher.ExecuteAsync(request, WinCare.Application.Commands.CommandExecutionOptions.Default, CancellationToken.None);
+            var result = await dispatcher.ExecuteAsync(request, CommandExecutionOptions.Default, CancellationToken.None);
             Assert.Equal(CommandResultStatus.Succeeded, result.Status);
             Assert.Contains("E2E_PLUGIN_SUCCESS", result.Message);
 
-            // Disable plugin dynamically and verify dispatcher unregistration
             await service.DisablePluginAsync("com.wincare.e2e", host);
             Assert.DoesNotContain(host.RegisteredCommands, c => c.Id == "e2e.tool1");
         }
@@ -245,12 +227,9 @@ public sealed class PluginRegistryServiceTests
     {
         var tempUserPluginsDir = Path.Combine(Path.GetTempPath(), "WinCareCollisionTest_" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(tempUserPluginsDir);
-
         var pluginDir = Path.Combine(tempUserPluginsDir, "collision-plugin");
         Directory.CreateDirectory(pluginDir);
-
-        var scriptPath = Path.Combine(pluginDir, "tool.cmd");
-        File.WriteAllText(scriptPath, "@echo off\r\necho OK\r\nexit /b 0\r\n");
+        File.WriteAllText(Path.Combine(pluginDir, "tool.cmd"), "@echo off\r\necho OK\r\nexit /b 0\r\n");
 
         var manifestJson = """
         {
@@ -280,19 +259,16 @@ public sealed class PluginRegistryServiceTests
         var dispatcher = new CommandDispatcher(Array.Empty<CommandDefinition>(), Array.Empty<ICommandHandler>());
         var host = new DefaultPluginHost(dispatcher, pluginsUserDirectory: tempUserPluginsDir);
         var service = new PluginRegistryService(
-            scriptHandlerFactory: (cmdId, scriptPath, pluginDir) => new WinCare.Infrastructure.Plugins.PluginScriptCommandHandler(cmdId, scriptPath, pluginDir),
+            scriptHandlerFactory: (cmdId, scriptPath, pDir, readOnly, capabilities) => new WinCare.Infrastructure.Plugins.PluginScriptCommandHandler(cmdId, scriptPath, pDir, declaredReadOnly: readOnly, declaredCapabilities: capabilities),
             initialEnabledPluginIds: new HashSet<string> { "com.wincare.collision" });
 
         try
         {
             await service.DiscoverAndInitializeAsync(host);
-
             var plugin = Assert.Single(service.GetAllPlugins(), p => p.Id == "com.wincare.collision");
             Assert.Equal(PluginState.Error, plugin.State);
             Assert.NotNull(plugin.ErrorMessage);
             Assert.Contains("collision", plugin.ErrorMessage, StringComparison.OrdinalIgnoreCase);
-
-            // Verify rollback: no collision commands were left registered in host
             Assert.DoesNotContain(host.RegisteredCommands, c => c.Id == "collision.tool1");
         }
         finally
@@ -306,12 +282,10 @@ public sealed class PluginRegistryServiceTests
     {
         var tempUserPluginsDir = Path.Combine(Path.GetTempPath(), "WinCareCliCompatTest_" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(tempUserPluginsDir);
-
         var pluginDir = Path.Combine(tempUserPluginsDir, "cli-tool");
         Directory.CreateDirectory(pluginDir);
         var scriptsDir = Path.Combine(pluginDir, "scripts");
         Directory.CreateDirectory(scriptsDir);
-
         File.WriteAllText(Path.Combine(scriptsDir, "clean_temp.cmd"), "@echo off\necho CLI test executed\nexit /b 0\n");
 
         var manifestJson = """
@@ -345,17 +319,15 @@ public sealed class PluginRegistryServiceTests
         var dispatcher = new CommandDispatcher(Array.Empty<CommandDefinition>(), Array.Empty<ICommandHandler>());
         var host = new DefaultPluginHost(dispatcher, pluginsUserDirectory: tempUserPluginsDir);
         var service = new PluginRegistryService(
-            scriptHandlerFactory: (cmdId, scriptPath, pDir) => new WinCare.Infrastructure.Plugins.PluginScriptCommandHandler(cmdId, scriptPath, pDir),
+            scriptHandlerFactory: (cmdId, scriptPath, pDir, readOnly, capabilities) => new WinCare.Infrastructure.Plugins.PluginScriptCommandHandler(cmdId, scriptPath, pDir, declaredReadOnly: readOnly, declaredCapabilities: capabilities),
             initialEnabledPluginIds: new HashSet<string> { "com.community.mycustomtool" });
 
         try
         {
             await service.DiscoverAndInitializeAsync(host);
-
             var plugin = Assert.Single(service.GetAllPlugins(), p => p.Id == "com.community.mycustomtool");
             Assert.Equal(PluginState.Enabled, plugin.State);
             Assert.Null(plugin.ErrorMessage);
-
             var registeredCmd = Assert.Single(host.RegisteredCommands, c => c.Id == "com.community.mycustomtool.clean");
             Assert.True(registeredCmd.ReadOnly);
             Assert.Equal(CommandRisk.ReadOnly, registeredCmd.Risk);
@@ -371,7 +343,6 @@ public sealed class PluginRegistryServiceTests
     {
         var tempUserPluginsDir = Path.Combine(Path.GetTempPath(), "WinCareCliCSharpTest_" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(tempUserPluginsDir);
-
         var pluginDir = Path.Combine(tempUserPluginsDir, "csharp-tool");
         Directory.CreateDirectory(pluginDir);
 
@@ -412,17 +383,75 @@ public sealed class PluginRegistryServiceTests
         try
         {
             await service.DiscoverAndInitializeAsync(host);
-
             var plugin = Assert.Single(service.GetAllPlugins(), p => p.Id == "com.community.mycsharptool");
             Assert.Equal(PluginState.Disabled, plugin.State);
             Assert.Equal("My CSharp Tool", plugin.Name);
             Assert.Equal("1.0.0", plugin.Version);
             Assert.Equal("Community Developer", plugin.Author);
             Assert.Equal("Utilities", plugin.Category);
-
             var tool = Assert.Single(plugin.Commands);
             Assert.Equal("com.community.mycsharptool.execute", tool.Id);
             Assert.True(tool.ReadOnly);
+        }
+        finally
+        {
+            Directory.Delete(tempUserPluginsDir, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task PluginScriptCommandHandler_MutatingScript_DoesNotExecute_OnPreview()
+    {
+        var tempUserPluginsDir = Path.Combine(Path.GetTempPath(), "WinCareH1Test_" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(tempUserPluginsDir);
+        var pluginDir = Path.Combine(tempUserPluginsDir, "mutating-plugin");
+        Directory.CreateDirectory(pluginDir);
+        File.WriteAllText(Path.Combine(pluginDir, "run.cmd"), "@echo off\r\necho MUTATION_RAN\r\nexit /b 0\r\n");
+
+        var manifestJson = """
+        {
+          "id": "com.wincare.mutating",
+          "name": "Mutating Plugin",
+          "version": "1.0.0",
+          "declaredCapabilities": ["filesystem.write", "process.spawn"],
+          "tools": [
+            {
+              "id": "mutating.tool1",
+              "title": "Mutating Tool",
+              "area": "System care",
+              "section": "Storage",
+              "risk": "Moderate",
+              "readOnly": false,
+              "script": "run.cmd"
+            }
+          ]
+        }
+        """;
+        File.WriteAllText(Path.Combine(pluginDir, "wincare-plugin.json"), manifestJson);
+
+        var dispatcher = new CommandDispatcher(Array.Empty<CommandDefinition>(), Array.Empty<ICommandHandler>());
+        var host = new DefaultPluginHost(dispatcher, pluginsUserDirectory: tempUserPluginsDir);
+        var service = new PluginRegistryService(
+            scriptHandlerFactory: (cmdId, scriptPath, pDir, readOnly, capabilities) => new WinCare.Infrastructure.Plugins.PluginScriptCommandHandler(cmdId, scriptPath, pDir, declaredReadOnly: readOnly, declaredCapabilities: capabilities),
+            initialEnabledPluginIds: new HashSet<string> { "com.wincare.mutating" });
+
+        try
+        {
+            await service.DiscoverAndInitializeAsync(host);
+            Assert.Contains(host.RegisteredCommands, c => c.Id == "mutating.tool1");
+            CommandRequest previewRequest = CommandRequest.Preview("mutating.tool1");
+            var preview = await dispatcher.ExecuteAsync(previewRequest, CommandExecutionOptions.Default, CancellationToken.None);
+            Assert.Equal(CommandResultStatus.Succeeded, preview.Status);
+            Assert.DoesNotContain("MUTATION_RAN", preview.Message);
+            Assert.EndsWith(".preview", preview.Code);
+
+            ApprovedMutationPlan approval = Assert.IsType<ApprovedMutationPlan>(preview.ReviewPlan);
+            var apply = await dispatcher.ExecuteAsync(
+                CommandRequest.Execute("mutating.tool1", previewRequest.Parameters, approval),
+                new CommandExecutionOptions(ReviewApproved: true),
+                CancellationToken.None);
+            Assert.Equal(CommandResultStatus.Succeeded, apply.Status);
+            Assert.Contains("MUTATION_RAN", apply.Message);
         }
         finally
         {
@@ -435,7 +464,6 @@ public sealed class PluginRegistryServiceTests
     {
         var tempUserPluginsDir = Path.Combine(Path.GetTempPath(), "WinCareTfmTest_" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(tempUserPluginsDir);
-
         var pluginDir = Path.Combine(tempUserPluginsDir, "bad-tfm-plugin");
         Directory.CreateDirectory(pluginDir);
 
@@ -471,7 +499,6 @@ public sealed class PluginRegistryServiceTests
         try
         {
             await service.DiscoverAndInitializeAsync(host);
-
             var plugin = Assert.Single(service.GetAllPlugins(), p => p.Id == "com.community.badtfm");
             Assert.Equal(PluginState.Error, plugin.State);
             Assert.Contains("targetFramework", plugin.ErrorMessage, StringComparison.OrdinalIgnoreCase);
@@ -480,6 +507,120 @@ public sealed class PluginRegistryServiceTests
         finally
         {
             Directory.Delete(tempUserPluginsDir, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task BuiltInMutatingAlias_AppliesThroughFreshApprovalPlan()
+    {
+        CommandDefinition diskPressureDef = new(
+            Id: "cleaner-disk-pressure",
+            Title: "Disk-pressure cleanup",
+            Summary: "Assess free-space pressure and preview a bounded cleanup plan",
+            Area: "System care",
+            Section: "Clean up",
+            Risk: CommandRisk.Moderate,
+            ReadOnly: false,
+            AdministratorAccess: AdministratorAccess.Required,
+            Restart: RestartExpectation.No,
+            LegacySource: "Cleaner.ps1",
+            MigrationStatus: MigrationStatus.Implemented,
+            Keywords: Array.Empty<string>());
+
+        var dispatcher = new CommandDispatcher(new[] { diskPressureDef }, new ICommandHandler[] { new FakeSucceedingHandler("cleaner-disk-pressure") });
+        var tempRoot = Path.Combine(Path.GetTempPath(), "WinCareAliasTest_" + Guid.NewGuid().ToString("N"));
+        var userPluginsDir = Path.Combine(tempRoot, "UserPlugins");
+        Directory.CreateDirectory(userPluginsDir);
+        var host = new DefaultPluginHost(dispatcher, applicationRootPath: tempRoot, pluginsUserDirectory: userPluginsDir);
+        var service = new PluginRegistryService();
+
+        try
+        {
+            await service.DiscoverAndInitializeAsync(host);
+            Assert.Contains(host.RegisteredCommands, c => c.Id == "cleaner.system_temp");
+
+            using var paramsDoc = System.Text.Json.JsonDocument.Parse("""{}""");
+            CommandRequest previewRequest = CommandRequest.Preview("cleaner.system_temp", paramsDoc.RootElement);
+            CommandResult preview = await dispatcher.ExecuteAsync(previewRequest, CommandExecutionOptions.Default, CancellationToken.None);
+            Assert.Equal(CommandResultStatus.Succeeded, preview.Status);
+            ApprovedMutationPlan approval = Assert.IsType<ApprovedMutationPlan>(preview.ReviewPlan);
+
+            var result = await dispatcher.ExecuteAsync(
+                CommandRequest.Execute("cleaner.system_temp", paramsDoc.RootElement, approval),
+                new CommandExecutionOptions(ReviewApproved: true),
+                CancellationToken.None);
+
+            Assert.Equal(CommandResultStatus.Succeeded, result.Status);
+            Assert.Equal("cleaner-disk-pressure.applied", result.Code);
+        }
+        finally
+        {
+            if (Directory.Exists(tempRoot)) Directory.Delete(tempRoot, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void JsonPluginLoader_RejectsManifestModifiedAfterAdmission()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "WinCareIntegrityTest_" + Guid.NewGuid().ToString("N"));
+        var dir = Path.Combine(root, "com.wincare.integrity");
+        Directory.CreateDirectory(dir);
+
+        try
+        {
+            const string manifestJson = """
+            {
+              "id": "com.wincare.integrity",
+              "name": "Integrity Plugin",
+              "version": "1.0.0",
+              "tools": []
+            }
+            """;
+
+            var manifestPath = Path.Combine(dir, "wincare-plugin.json");
+            File.WriteAllText(manifestPath, manifestJson);
+            var digest = Convert.ToHexString(
+                System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(manifestJson)))
+                .ToLowerInvariant();
+
+            var admissionPath = PluginAdmissionTrustStore.GetRecordPath(dir);
+            Directory.CreateDirectory(Path.GetDirectoryName(admissionPath)!);
+            File.WriteAllText(admissionPath, System.Text.Json.JsonSerializer.Serialize(new PluginAdmissionRecord
+            {
+                PluginId = "com.wincare.integrity",
+                ManifestSha256 = digest
+            }));
+
+            var untampered = JsonPluginLoader.LoadFromDirectory(dir);
+            Assert.True(untampered.Success, untampered.ErrorMessage);
+
+            var tamperedJson = manifestJson.Replace("Integrity Plugin", "Tampered Plugin", StringComparison.Ordinal);
+            File.WriteAllText(manifestPath, tamperedJson);
+            var forgedLegacyDigest = Convert.ToHexString(
+                System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(tamperedJson)))
+                .ToLowerInvariant();
+            File.WriteAllText(Path.Combine(dir, ".wincare-manifest.sha256"), forgedLegacyDigest);
+
+            var tampered = JsonPluginLoader.LoadFromDirectory(dir);
+            Assert.False(tampered.Success);
+            Assert.Contains("integrity", tampered.ErrorMessage, StringComparison.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            if (Directory.Exists(root)) Directory.Delete(root, recursive: true);
+        }
+    }
+
+    private sealed class FakeSucceedingHandler : ICommandHandler
+    {
+        public string CommandId { get; }
+        public FakeSucceedingHandler(string commandId) => CommandId = commandId;
+
+        public Task<CommandHandlerOutcome> ExecuteAsync(CommandRequest request, CancellationToken cancellationToken)
+        {
+            return Task.FromResult(request.Apply
+                ? CommandHandlerOutcome.Succeeded(CommandId + ".applied", "Apply succeeded")
+                : CommandHandlerOutcome.Succeeded(CommandId + ".preview", "Preview succeeded"));
         }
     }
 }

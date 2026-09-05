@@ -22,9 +22,11 @@ public enum RemediationRisk
 /// </summary>
 /// <param name="MinBuild">Minimum Windows build.</param>
 /// <param name="Requires">Optional feature requirements.</param>
+/// <param name="MaxBuild">Optional maximum Windows build; <c>null</c> means unbounded.</param>
 public sealed record RemediationCompatibility(
     int MinBuild,
-    IReadOnlyList<string>? Requires);
+    IReadOnlyList<string>? Requires,
+    int? MaxBuild = null);
 
 /// <summary>
 /// A single typed mutation within a remediation rule.

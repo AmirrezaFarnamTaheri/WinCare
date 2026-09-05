@@ -13,14 +13,19 @@ namespace WinCare.Application.Diagnostics
         Task<DoctorActionPlan> TranslateAsync(string prompt, CancellationToken cancellationToken = default);
     }
 
+    /// <summary>
+    /// Translates a classified intent into a fail-closed <see cref="DoctorActionPlan"/> whose
+    /// proposed steps are drawn strictly from the native catalog, prioritizing read-only
+    /// inspection commands before any mutating recommendation.
+    /// </summary>
     public sealed class IntentTranslator : IIntentTranslator
     {
-        private readonly IOnnxInferenceEngine _inferenceEngine;
+        private readonly IIntentInferenceEngine _inferenceEngine;
         private readonly ToolCatalogService _catalogService;
         private readonly IDiagnosticEvidenceCollector _evidenceCollector;
 
         public IntentTranslator(
-            IOnnxInferenceEngine inferenceEngine, 
+            IIntentInferenceEngine inferenceEngine,
             ToolCatalogService catalogService,
             IDiagnosticEvidenceCollector? evidenceCollector = null)
         {
@@ -50,7 +55,7 @@ namespace WinCare.Application.Diagnostics
             {
                 case "intent.storage.cleanup":
                     severity = hasTelemetryEvidence ? DiagnosticSeverity.Warning : DiagnosticSeverity.Information;
-                    summary = hasTelemetryEvidence 
+                    summary = hasTelemetryEvidence
                         ? $"Storage pressure verified by telemetry: {pressureEvidence!.MetricName} ({pressureEvidence.MeasuredValue}). Cleanup is recommended."
                         : "Inferred area of interest: Storage optimization. Diagnostic probe gathered drive metrics. Run inspection to measure cache sizes.";
                     findings.Add(new DiagnosticFinding(
@@ -62,7 +67,12 @@ namespace WinCare.Application.Diagnostics
                         IsVerifiedByTelemetry: hasTelemetryEvidence
                     ));
 
-                    AddMatchingCommands(proposedSteps, new[] { "clean_temp", "clean_updates", "clean_recycle_bin", "clean_dns" });
+                    // Read-only inspection first, mutating recommendation last (with concrete parameters).
+                    AddRecommendedSteps(proposedSteps,
+                        "cleaner-preview-cards",
+                        "cleanup-targets",
+                        "storage",
+                        "cleaner-disk-pressure");
                     break;
 
                 case "intent.memory.optimize":
@@ -79,7 +89,7 @@ namespace WinCare.Application.Diagnostics
                         IsVerifiedByTelemetry: hasTelemetryEvidence
                     ));
 
-                    AddMatchingCommands(proposedSteps, new[] { "clear_standby_list", "flush_working_sets", "restart_explorer" });
+                    AddRecommendedSteps(proposedSteps, "internals-memory", "health", "system");
                     break;
 
                 case "intent.network.flush":
@@ -94,7 +104,7 @@ namespace WinCare.Application.Diagnostics
                         IsVerifiedByTelemetry: false
                     ));
 
-                    AddMatchingCommands(proposedSteps, new[] { "flush_dns", "reset_winsock", "renew_ip" });
+                    AddRecommendedSteps(proposedSteps, "network", "network-measure", "tcp-global");
                     break;
 
                 case "intent.privacy.harden":
@@ -109,7 +119,11 @@ namespace WinCare.Application.Diagnostics
                         IsVerifiedByTelemetry: false
                     ));
 
-                    AddMatchingCommands(proposedSteps, new[] { "disable_telemetry", "disable_cortana", "disable_ad_id" });
+                    AddRecommendedSteps(proposedSteps,
+                        "security-controls",
+                        "telemetry-snapshot",
+                        "experience-privacy-profiles",
+                        "experience-privacy-apply");
                     break;
 
                 case "intent.apps.update":
@@ -124,36 +138,32 @@ namespace WinCare.Application.Diagnostics
                         IsVerifiedByTelemetry: false
                     ));
 
-                    AddMatchingCommands(proposedSteps, new[] { "winget_upgrade_all", "winget_source_update" });
+                    AddRecommendedSteps(proposedSteps, "wua-search", "wua-history");
                     break;
 
                 default:
-                    severity = DiagnosticSeverity.Healthy;
+                    severity = DiagnosticSeverity.Information;
                     summary = "Inferred area of interest: General system inquiry. Recommended diagnostic inspection checks are available.";
                     findings.Add(new DiagnosticFinding(
-                        "finding.general.healthy",
-                        "System Inquiry Interpreted (No Immediate Issue Detected)",
-                        "Query interpreted without requiring immediate system remediation. You may run routine diagnostic checks.",
-                        DiagnosticSeverity.Healthy,
+                        "finding.general.inquiry",
+                        "General system check requested",
+                        "The description alone cannot establish system health. Collect diagnostic evidence before deciding on repairs.",
+                        DiagnosticSeverity.Information,
                         "System",
                         IsVerifiedByTelemetry: false
                     ));
+                    AddRecommendedSteps(proposedSteps, "system", "storage", "security");
                     break;
             }
 
-            // Fallback: If no specific keywords mapped to existing catalog IDs, provide safest general command
+            // Fallback: If no steps were mapped, provide the safest general read-only command.
             if (proposedSteps.Count == 0 && severity != DiagnosticSeverity.Healthy)
             {
-                var fallback = _catalogService.All.FirstOrDefault(c => c.ReadOnly) ?? _catalogService.All.FirstOrDefault();
+                var fallback = _catalogService.All.FirstOrDefault(c => c.ReadOnly &&
+                    c.MigrationStatus is MigrationStatus.Implemented or MigrationStatus.BehaviorVerified);
                 if (fallback != null)
                 {
-                    proposedSteps.Add(new ProposedActionStep(
-                        fallback.Id,
-                        fallback.Title,
-                        fallback.Summary,
-                        fallback.Risk,
-                        fallback.AdministratorAccess == AdministratorAccess.Required
-                    ));
+                    proposedSteps.Add(CreateStep(fallback));
                 }
             }
 
@@ -169,29 +179,62 @@ namespace WinCare.Application.Diagnostics
             };
         }
 
-        private void AddMatchingCommands(List<ProposedActionStep> steps, string[] queryTokens)
+        /// <summary>
+        /// Adds catalog commands (by exact ID) as proposed steps, skipping duplicates and capping
+        /// at five recommendations. Read-only IDs should be listed before any mutating ID.
+        /// </summary>
+        private void AddRecommendedSteps(List<ProposedActionStep> steps, params string[] commandIds)
         {
-            foreach (var token in queryTokens)
+            foreach (var id in commandIds)
             {
-                var matches = _catalogService.Search(token);
-                // Prioritize read-only inspection commands first to provide verification evidence before mutations
-                foreach (var match in matches.OrderByDescending(m => m.ReadOnly))
+                var match = _catalogService.All.FirstOrDefault(c => c.Id.Equals(id, StringComparison.OrdinalIgnoreCase));
+                if (match == null || match.MigrationStatus is not (MigrationStatus.Implemented or MigrationStatus.BehaviorVerified))
                 {
-                    if (!steps.Any(s => s.CommandId.Equals(match.Id, StringComparison.OrdinalIgnoreCase)))
-                    {
-                        steps.Add(new ProposedActionStep(
-                            CommandId: match.Id,
-                            Title: match.Title,
-                            Description: match.Summary,
-                            RiskLevel: match.Risk,
-                            RequiresElevation: match.AdministratorAccess == AdministratorAccess.Required,
-                            AffectedResource: match.Area,
-                            UndoAvailable: match.Risk != CommandRisk.Critical
-                        ));
-                        if (steps.Count >= 5) return; // Cap recommendation steps to top 5
-                    }
+                    continue;
+                }
+                if (steps.Any(s => s.CommandId.Equals(match.Id, StringComparison.OrdinalIgnoreCase)))
+                {
+                    continue;
+                }
+
+                steps.Add(CreateStep(match));
+                if (steps.Count >= 5)
+                {
+                    return;
                 }
             }
         }
+
+        private static ProposedActionStep CreateStep(CommandDefinition match) =>
+            new(
+                CommandId: match.Id,
+                Title: match.Title,
+                Description: match.Summary,
+                RiskLevel: match.Risk,
+                RequiresElevation: match.AdministratorAccess == AdministratorAccess.Required,
+                Parameters: DefaultParameters(match),
+                AffectedResource: match.Area,
+                UndoAvailable: match.Risk != CommandRisk.Critical
+            );
+
+        /// <summary>
+        /// Supplies safe, concrete parameters for the parameterized commands the Doctor may
+        /// recommend, so recommended mutating steps do not silently fail parameter validation.
+        /// </summary>
+        private static IReadOnlyDictionary<string, string>? DefaultParameters(CommandDefinition command) =>
+            command.Id switch
+            {
+                // Purge only files older than 7 days; a conservative, reviewable default.
+                "cleaner-disk-pressure" => new Dictionary<string, string>(StringComparer.Ordinal)
+                {
+                    ["OlderThanDays"] = "7"
+                },
+                // Apply the maximum-privacy profile by disabling telemetry; reviewable before execution.
+                "experience-privacy-apply" => new Dictionary<string, string>(StringComparer.Ordinal)
+                {
+                    ["IncludeTelemetry"] = "false"
+                },
+                _ => null
+            };
     }
 }

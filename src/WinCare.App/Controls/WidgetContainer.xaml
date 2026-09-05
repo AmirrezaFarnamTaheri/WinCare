@@ -18,8 +18,8 @@
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
                             <StackPanel Grid.Column="0" Spacing="2">
-                                <TextBlock Text="{x:Bind Title}" Style="{StaticResource RowTitleTextStyle}" />
-                                <TextBlock Text="{x:Bind StatusSummary}" Style="{StaticResource RowSecondaryTextStyle}" />
+                                <TextBlock Text="{Binding Title, Mode=OneWay}" TextWrapping="Wrap" Style="{StaticResource RowTitleTextStyle}" />
+                                <TextBlock Text="{Binding StatusSummary, Mode=OneWay}" TextWrapping="Wrap" MaxLines="4" TextTrimming="CharacterEllipsis" Style="{StaticResource RowSecondaryTextStyle}" />
                             </StackPanel>
                             <Border Grid.Column="1" Background="{ThemeResource AccentTealSubtleBrush}" BorderBrush="{ThemeResource AccentTealBrush}" BorderThickness="1" CornerRadius="{StaticResource RadiusPill}" Padding="6,2" VerticalAlignment="Center">
                                 <TextBlock Text="{x:Bind Category}" FontFamily="{StaticResource TelemetryFontFamily}" FontSize="10" FontWeight="SemiBold" Foreground="{ThemeResource AccentTealBrush}" />

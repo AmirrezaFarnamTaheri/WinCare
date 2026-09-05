@@ -17,6 +17,7 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
     ];
 
     private readonly CommandDispatcher _dispatcher;
+    private readonly List<PageRow> _resultRows = [];
     private bool _isRunning;
     private string _runSummary = "No check has been run yet.";
     private string _healthScoreText = "—";
@@ -84,7 +85,7 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
         CurrentRows.Clear();
         if (_hasResults)
         {
-            foreach (PageRow row in Sections[0].Rows)
+            foreach (PageRow row in _resultRows)
             {
                 row.IsCompact = IsCompactLayout;
                 CurrentRows.Add(row);
@@ -115,38 +116,17 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
                 }
             }
 
-            var results = new (string CommandId, string RowTitle, CommandResult Result)[QuickCheckCommands.Length];
-            var parallelOptions = new ParallelOptions
+            IReadOnlyList<CommandResult> probeResults = await SequentialCommandProbeRunner.RunPreviewsAsync(
+                _dispatcher,
+                QuickCheckCommands.Select(item => item.CommandId).ToArray(),
+                TimeSpan.FromMinutes(2),
+                CancellationToken.None);
+
+            _resultRows.Clear();
+            for (int index = 0; index < QuickCheckCommands.Length; index++)
             {
-                MaxDegreeOfParallelism = Math.Min(Environment.ProcessorCount, QuickCheckCommands.Length),
-            };
-
-            await Parallel.ForEachAsync(
-                Enumerable.Range(0, QuickCheckCommands.Length),
-                parallelOptions,
-                async (index, ct) =>
-                {
-                    (string commandId, string rowTitle) = QuickCheckCommands[index];
-                    CommandResult result;
-                    try
-                    {
-                        result = await _dispatcher.ExecuteAsync(
-                            CommandRequest.Preview(commandId),
-                            new CommandExecutionOptions(false, DateTimeOffset.UtcNow.AddMinutes(2)),
-                            ct);
-                    }
-                    catch (Exception)
-                    {
-                        result = new CommandResult(commandId, Guid.NewGuid(), CommandResultStatus.Failed,
-                            "checkup.dispatch_exception", "WinCare could not complete this read-only check.", null,
-                            DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, false);
-                    }
-
-                    results[index] = (commandId, rowTitle, result);
-                });
-
-            foreach ((_, string rowTitle, CommandResult result) in results)
-            {
+                (string commandId, string rowTitle) = QuickCheckCommands[index];
+                CommandResult result = probeResults[index];
                 if (result.Status == CommandResultStatus.Succeeded)
                 {
                     succeeded++;
@@ -158,11 +138,24 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
                     row.State = result.Status == CommandResultStatus.Succeeded ? "Checked" : "Needs review";
                     row.Detail = result.Message;
                 }
+
+                _resultRows.Add(new PageRow(
+                    rowTitle,
+                    commandId,
+                    result.Status == CommandResultStatus.Succeeded ? "Collected" : "Needs review",
+                    result.Message));
             }
 
             _hasResults = true;
-            HealthScoreText = "—";
-            HealthScoreDetail = succeeded == QuickCheckCommands.Length ? "evidence collected" : "review results";
+
+            // This percentage is evidence-collection completion, not a machine-health score.
+            int score = QuickCheckCommands.Length == 0
+                ? 0
+                : (int)Math.Round(100.0 * succeeded / QuickCheckCommands.Length);
+            HealthScoreText = $"{score}%";
+            HealthScoreDetail = succeeded == QuickCheckCommands.Length
+                ? $"all {succeeded} collected"
+                : $"{succeeded} of {QuickCheckCommands.Length} collected";
             RunSummary = $"{succeeded} of {QuickCheckCommands.Length} read-only checks completed. Review category details before taking any action.";
 
             if (SelectedIndex == ResultsSectionIndex)

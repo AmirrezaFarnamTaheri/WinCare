@@ -1,283 +1,242 @@
 # WinCare User Guide
 
-Use this guide to install WinCare, understand its safety prompts, and choose the right workflow for a diagnostic or repair. WinCare is a release candidate: review every planned change before approving it.
+WinCare is a native Windows diagnostics, maintenance, security, and recovery workspace. It is currently a **release candidate**. Start with read-only evidence, review every proposed change, and treat any outcome marked **final state unknown** as a reason to verify the affected Windows resource before retrying.
 
-> [!TIP]
-> See the [interface screenshots](Screenshots.md) before you begin. They include real v2.5.0-rc5 runtime captures and the original concepts for comparison.
+> [!NOTE]
+> The images in [Screenshots.md](Screenshots.md) are build-specific historical captures. Current source has changed since the v2.5.0-rc5 images, so use their provenance notes rather than assuming every label/layout is current.
 
----
+## 1. System requirements
 
-## 📑 Table of Contents
-
-1. [Introduction & System Requirements](#1-introduction--system-requirements)
-2. [Installation & Getting Started](#2-installation--getting-started)
-3. [Core Concepts & Safety Philosophy](#3-core-concepts--safety-philosophy)
-4. [Navigation & Workspace Overview](#4-navigation--workspace-overview)
-5. [Feature Walkthroughs](#5-feature-walkthroughs)
-   - [🏠 Home](#-home)
-   - [🩺 System Checkup](#-system-checkup)
-   - [⚡ System Care](#-system-care)
-   - [🛡️ Security & Privacy](#-security--privacy)
-   - [🔧 Repair & Recovery](#-repair--recovery)
-   - [🧰 All Tools Catalog](#-all-tools-catalog)
-   - [🧠 AI System Doctor](#-ai-system-doctor)
-   - [🧩 Plugin Store & Extensions](#-plugin-store--extensions)
-   - [📋 Activity & Audit Journal](#-activity--audit-journal)
-   - [⚙️ Settings & Encrypted Cloud Sync](#-settings--encrypted-cloud-sync)
-6. [Creating Community Plugins](#6-creating-community-plugins)
-7. [Keyboard Shortcuts & Accessibility](#7-keyboard-shortcuts--accessibility)
-8. [Troubleshooting & Frequently Asked Questions](#8-troubleshooting--frequently-asked-questions)
-
----
-
-## 1. Introduction & System Requirements
-
-**WinCare** is a native, modern Windows diagnostic, optimization, security, and recovery system engineered with **WinUI 3**, **.NET 8**, and **Rust 2024**. It replaces legacy scripting wrappers with a memory-safe, fail-closed desktop application designed for power users, system administrators, and technicians.
-
-### System Requirements
-
-| Requirement | Specification |
+| Requirement | Supported configuration |
 |---|---|
-| **Operating System** | Windows 10 (Version 2004 / Build 19041 or newer) or Windows 11 |
-| **Architecture** | 64-bit (`x64` or `ARM64`) |
-| **Memory (RAM)** | 2 GB minimum (4 GB recommended) |
-| **Disk Space** | ~150 MB for application and local ONNX runtime assets |
-| **Privileges** | Standard User for read-only diagnostics; Administrator privileges for mutating repairs |
+| Windows | Windows 10 2004 / build 19041 or newer, or Windows 11 |
+| Architecture | x64 or ARM64 |
+| Privilege | Standard user for many read-only checks; Administrator for commands whose catalog policy requires elevation |
+| Distribution | MSIX, self-contained executable, or portable ZIP as published by the release workflow |
 
----
+## 2. Installation and first launch
 
-## 2. Installation & Getting Started
+### MSIX
 
-WinCare offers multiple distribution formats to match your deployment workflow:
+Download the package matching your architecture from GitHub Releases. Development-certificate releases also publish a matching `.cer` and `install_msix.py` helper. The helper verifies the package signature, verifies that the supplied certificate matches the package signer, imports that certificate only to `LocalMachine\TrustedPeople`, verifies again, and then installs.
 
-### Option A: MSIX Modern App Package (App SDK Integration)
-1. Download `WinCare-v<version>-<arch>.msix` from the [GitHub Releases Page](https://github.com/AmirrezaFarnamTaheri/WinCare/releases). Choose `x64` for most Intel and AMD PCs; choose `ARM64` for Windows on ARM.
-2. If the release uses a development certificate, download the matching `WinCare-v<version>-<arch>.cer` and run the helper:
-   ```bash
-   python install_msix.py \
-     --package WinCare-v<version>-x64.msix \
-     --certificate WinCare-v<version>-x64.cer
-   ```
-   Run this command from an elevated terminal when the certificate is not already trusted. The helper verifies that the package signer is exactly `CN=WinCare Development`, requires the certificate thumbprint to match the package signer, imports only that certificate into `LocalMachine\TrustedPeople`, and verifies the signature again before installation. Do not import an unverified certificate manually.
-3. WinCare is now installed in your Windows Start Menu with full Windows App SDK integration.
-
-### Option B: Standalone Single-File Binary (`.exe`)
-1. Download `WinCare-v<version>-<arch>.exe`.
-2. Place the executable anywhere on your disk (e.g. `C:\Tools\WinCare.exe` or a USB drive).
-3. Double-click to launch directly—no external runtime installation required.
-
-### Option C: Portable ZIP Distribution (`.zip`)
-1. Download `WinCare-v<version>-<arch>-portable.zip`.
-2. Extract the archive to any folder.
-3. Launch `WinCare.App.exe` directly from the extracted folder.
-
-> [!TIP]
-> **Portable USB Toolkit**: The portable `.zip` and single-file `.exe` distributions are fully self-contained, making them ideal for offline recovery USB drives and field technician toolkits.
-
----
-
-## 3. Core Concepts & Safety Philosophy
-
-WinCare is engineered around strict fail-closed safety invariants to protect your operating system from unexpected state changes or corrupted files.
-
-```
-                   WinCare Two-Phase Safety Flow
-                   
-  Select Tool ───> Read-Only Observation ───> Parameter Preflight (Preview)
-                                                        │
-                                                        ▼
-  Receipt & Journal <─── Execute Mutation <─── User Review Approval
+```powershell
+python install_msix.py `
+  --package .\WinCare-v<version>-x64.msix `
+  --certificate .\WinCare-v<version>-x64.cer
 ```
 
-### 1. Two-Phase Approval (`Preview` → `Apply`)
-- **Read-Only Inspection**: Tools first inspect your system without changing any settings or files.
-- **Preview & Parameter Preflight**: Before any modifying action can be executed, WinCare performs a dry-run preview, validating all parameters and showing you exactly which files, services, or registry keys will be affected.
-- **Explicit Review Approval**: Mutating operations will **never** execute silently. You must explicitly click **Approve** or confirm the action plan.
+Run the helper from an elevated terminal only when the certificate is not already trusted. Do not manually trust an unrelated certificate.
 
-### 2. Monospaced Status Pills & Risk Badges
-Every tool and command displays a standardized, monospaced status pill indicating its operational character:
+### Standalone and portable builds
 
-| Status Badge | Meaning & Impact |
-|---|---|
-| `[ READ-ONLY ]` | **Safe**: Queries telemetry, hardware status, or logs without changing system state. |
-| `[ MUTATING ]` | **Modifying**: Cleans files, modifies settings, disables services, or installs updates. Requires review approval. |
-| `[ ELEVATED ]` | **Privileged**: Requires Windows Administrator (UAC) privileges to perform the operation. |
-| `[ NOT READY ]` | **Candidate**: An experimental or unverified route that fails closed to protect the system. |
+The self-contained `.exe` runs directly. The portable ZIP should be extracted before launching `WinCare.App.exe`. These formats are useful for technician/recovery workflows but do not replace production signed-install testing.
 
-### 3. PII-Safe Activity Journal
-WinCare records every executed command and diagnostic check to a local activity journal. To protect your privacy, error logs record **only exception type names** (e.g., `UnauthorizedAccessException`) rather than raw error messages that might expose private file paths or usernames.
+On launch, WinCare restores the last usable window placement by default. Disable **Settings → Window continuity** if you prefer the default startup size each time.
 
----
+## 3. Safety model: preview is not permission
 
-## 4. Navigation & Workspace Overview
-
-![WinCare Home screen captured from the installed v2.5.0-rc5 release candidate](images/runtime-dashboard.png)
-
-<em>Runtime interface capture from the v2.5.0-rc5 candidate release.</em>
-
-WinCare's interface uses native **Windows Fluent Mica** depth layering and a clean **Cyber-Teal** visual identity:
+A listed tool is not automatically authorized to change Windows.
 
 ```text
-+----------------------------------------------------------------------------------------------------+
-| WinCare  [ 🔍 Search catalog tools... (Ctrl+K) ]                          [—] [口] [X]             |
-+-------------------+--------------------------------------------------------------------------------+
-| 🏠 Home           | 🩺 System Checkup                                                              |
-| 🩺 Checkup        | [ Quick check ]  [ Full check ]  [ Custom check ]  [ Results ]                  |
-| ⚡ System care    |                                                                                |
-| 🛡️ Security       | ┌────────────────────────────────────────────────────────────────────────────┐ |
-| 🔧 Repair         | │ 🔍 Health Score: 98/100                                                    │ |
-| 🧰 All tools      | │ RAM: 6.2 / 16.0 GB (38%)  │  Disk C: 142 GB Free  │  Uptime: 2d 14h        │ |
-| 🧠 AI Doctor      | └────────────────────────────────────────────────────────────────────────────┘ |
-| 🧩 Plugin Store   |                                                                                |
-| 📋 Activity       | Diagnostic Findings                                                           |
-|                   | • [ READ-ONLY ]  System temporary files exceed 4.2 GB                          |
-| ───────────────── | • [ READ-ONLY ]  2 startup services delayed boot by 1.8s                       |
-| ⚙️ Settings       |                                                                                |
-+-------------------+--------------------------------------------------------------------------------+
+Choose tool
+  → validate typed inputs
+  → run read-only preview
+  → inspect evidence and affected resources
+  → dispatcher issues a short-lived, single-use review receipt
+  → explicitly approve
+  → apply
+  → record outcome in Activity
 ```
 
-- **Sidebar Navigation**: Switch between functional areas (Checkup, Care, Security, Repair, Tools, AI Doctor, Plugins, Activity).
-- **Search Palette (`Ctrl+K`)**: Instantly search across all 259 built-in tools, installed plugins, and diagnostic routines.
-- **Adaptive Layout**: On compact windows (< 920 DIP), tabular views collapse automatically into stacked, touch-friendly telemetry cards.
+For mutating commands, the receipt is issued by the command dispatcher only after a successful preview. It is bound to the exact command, canonical parameter values, correlation ID, and issuance time. Editing parameters, waiting past expiry, changing correlation, fabricating a receipt, or replaying an already-used receipt requires a new preview.
 
----
+If a mutating handler faults after execution starts and WinCare cannot prove the final machine state, the result is **not** “nothing changed.” WinCare reports that the final state is unknown and tells you to verify the affected resource before retrying.
 
-## 5. Feature Walkthroughs
+WinCare only advertises Undo when a concrete executable compensator exists. It does not manufacture a generic rollback promise for commands that cannot safely reverse themselves.
 
-### 🏠 Home
-The **Home** page provides a high-level cockpit of your Windows PC:
-- **System Telemetry**: Real-time CPU utilization, active memory pressure, primary drive storage capacity, and OS build info.
-- **Recommended Actions**: Key maintenance tasks identified during background health monitoring.
-- **Quick Favorites**: 1-click access to tools you've pinned with the favorite star icon.
+## 4. Navigation
 
----
+The main navigation is task-oriented:
 
-### 🩺 System Checkup
-Run comprehensive health evaluations across hardware, services, network, and storage:
-- **Quick Check**: Fast 15-second inspection of critical subsystems (RAM pressure, disk thresholds, Defender status, pending reboot flags).
-- **Full Check**: In-depth analysis including component store corruption, driver health, event log anomalies, and background service overhead.
-- **Custom Check**: Select specific subsystems to inspect (e.g. only Network and Storage).
-- **Results Tab**: Detailed finding records with severity tiers and 1-click remediation triggers.
+- **Home** — recent evidence and activity at a glance.
+- **Checkup** — read-only evidence collection.
+- **System Care** — maintenance-oriented command groups.
+- **Security** — security/privacy command groups.
+- **Repair & Recovery** — repair and recovery command groups.
+- **All Tools** — complete 259-command catalog with search, filters, typed parameters, preview/apply, favorites, and recent commands.
+- **System Doctor** — local rule-based symptom triage and evidence-guided recommendations.
+- **Plugin Store** — installed-plugin lifecycle plus browse-only remote catalog metadata unless a production catalog trust root is configured.
+- **Activity** — running work, items needing attention, completed operations, and aggregated daily reports.
+- **Settings** — theme, window continuity, local-data access, persistence warnings, and the safety-policy summary.
+- **Help** — in-app explanations for evidence, approval, plugins, Guard status, troubleshooting, and accessibility.
 
----
+Use **Ctrl+K** for the global search palette. In All Tools, **Ctrl+F** focuses tool search.
 
-### ⚡ System Care
-Maintain optimal system performance, clean accumulated junk, and manage startup items:
-- **Clean Up**: Safely purge temporary files, Windows Update download caches, browser caches, and error crash dumps. All traversals strictly avoid reparse points and symlink loops.
-- **Performance Tuning**: Optimize visual effects, configure power profiles, and tune network throughput settings.
-- **Apps & Startup**: Inspect all applications and services configured to run at logon, analyze their impact on boot duration, and toggle them on or off.
-- **Network & Updates**: Flush DNS caches, reset TCP/IP stacks, inspect active network interfaces, and review pending Windows Update packages.
-- **Routines**: Execute predefined maintenance batches (e.g. *Monthly Deep Clean*).
+## 5. Home
 
----
+Home is an evidence/status dashboard, not a synthetic health-score generator. Before a check it clearly says evidence has not been collected. After operations/checks, it derives recent activity and status summaries from the shared Activity journal.
 
-### 🛡️ Security & Privacy
-Audit and harden your Windows installation against security threats and telemetry tracking:
-- **Protection Status**: Real-time status of Windows Defender Antivirus, Real-Time Protection, and Firewall profiles.
-- **Privacy & Telemetry**: Review and disable non-essential diagnostic telemetry, advertising IDs, and tracking services while preserving core OS functionality.
-- **Hardening Policies**: Audit Windows Defender Application Control (WDAC), Attack Surface Reduction (ASR) rules, and credential guard settings.
+Plugin widgets appear only when active. A widget that fails to load reports a visible error state instead of silently disappearing.
 
----
+## 6. System Checkup
 
-### 🔧 Repair & Recovery
-Recover your system from corruption, boot errors, or failed updates:
-- **System File Integrity**: 1-click DISM (`Deployment Image Servicing and Management`) and SFC (`System File Checker`) repair workflows.
-- **System Restore**: View, create, or restore to Windows System Restore checkpoints before making major system changes.
-- **Windows Update Repair**: Reset Windows Update components, stop hung services, and re-register update DLLs.
-- **Undo History**: Review compensation actions for operations that support reversible rollback.
+Checkup currently has two sections: **Quick check** and **Results**.
 
----
+The quick check runs four read-only evidence probes covering Windows/hardware basics, storage, security, and Windows Update search readiness. Measurement-sensitive probes run sequentially so one probe's CPU/disk activity does not contaminate the next probe's evidence.
 
-### 🧰 All Tools Catalog
-Access the comprehensive catalog of **all 259 native commands**:
-- **Search & Filter (`Ctrl+F`)**: Filter by area (System Care, Security, Maintenance), risk level (`Read-Only`, `Mutating`, `Elevated`), or custom keywords.
-- **Parameter Customization**: For advanced operations, edit JSON parameter payloads directly in the detail drawer with real-time JSON schema validation.
-- **Two-Phase Dry Run**: Click **Preview** to observe affected resources, then click **Approve** to execute the mutation.
+The percentage shown after a run is **evidence-collection completion**, not a blanket machine-health score. Review each category result before deciding whether to open a related repair or maintenance tool.
 
----
+Below the shared 920-DIP compact breakpoint, both the hero summary and evidence table become stacked layouts rather than squeezing desktop columns.
 
-### 🧠 AI System Doctor
-WinCare features an on-device, privacy-first **AI System Doctor** powered by local ONNX DirectML inference:
-1. **Natural Language Chat**: Describe your computer's issue in plain English (e.g., *"My audio is crackling when watching videos"* or *"Drive C is almost out of space"*).
-2. **Intent & Symptom Extraction**: The local AI categorizes the symptom into specific diagnostic domains without sending any data over the internet.
-3. **Evidence Collection**: The AI executes safe, read-only system queries to gather hardware metrics and logs.
-4. **Action Plan Execution**: The Doctor generates a structured `DoctorActionPlan` showing root causes and recommended steps. You review and approve each repair step before execution.
+## 7. System Care, Security, and Repair & Recovery
 
----
+These pages organize the native command catalog into task-focused groups. They do not bypass the catalog/dispatcher safety policy.
 
-### 🧩 Plugin Store & Extensions
-Extend WinCare's capabilities through community and third-party plugins:
-- **Browse Catalog**: Discover tools, cleaning modules, and diagnostic scripts.
-- **Publisher Trust Tiers**:
-  - 🛡️ **Verified Organization**: Official packages maintained by the WinCare project.
-  - 🔑 **Digitally Signed**: Third-party packages with verified cryptographic signatures (`publisher.pem`).
-  - ⚠️ **Community / Unsigned**: Unsigned packages that prompt an explicit full-trust consent dialog.
-- **Capability Reviews**: View declared permissions (e.g., File Access, Registry Access, Network Access) before installing.
-- **Lifecycle Management**: Enable, disable, update, or uninstall plugins on the fly without restarting WinCare.
+- Read-only rows can be opened/run without mutation approval.
+- Mutating work is routed to the same preview → receipt → explicit approval path used by All Tools.
+- Compact windows use stacked records at the shared 920-DIP boundary.
+- Repair & Recovery shows recovery-oriented tools and Activity guidance; it does not imply that every historical operation has a generic Undo command.
 
----
+## 8. All Tools
 
-### 📋 Activity & Audit Journal
-The **Activity** page maintains a tamper-evident record of all system operations:
-- **Real-Time Feed**: Monitor ongoing tasks, long-running diagnostics, and background checks.
-- **Needs Attention**: Easily identify commands that returned blocked, failed, or partial results.
-- **Audit Export**: Export execution receipts as structured JSON or Markdown reports for IT auditing.
+All Tools exposes all 259 native command definitions while keeping common input safer than hand-written JSON.
 
----
+### Search and filters
 
-### ⚙️ Settings & Encrypted Cloud Sync
-Customize your WinCare experience:
-- **Appearance**: Toggle between **Cyber-Teal Dark**, **Mica Light**, or **High Contrast** themes.
-- **Background Health Guard**: Enable the lightweight Rust `wincare-guard` daemon to monitor RAM pressure, disk quota, and thermal status in the background, receiving Windows Toast notifications when thresholds are exceeded.
-- **Encrypted Cloud Sync**: Securely back up and synchronize your custom presets, favorite tools, and settings across multiple PCs using **AES-256-GCM** authenticated encryption with GitHub Gist sync.
+Search by command/title/area, filter by area/risk/read-only characteristics, and use Favorites/Recent for repeated work. At compact widths the filters stack instead of forcing a desktop-width toolbar.
 
----
+### Typed parameters
 
-## 6. Creating Community Plugins
+Commands with declared parameters render native editors derived from `CommandParameterCatalog`:
 
-WinCare includes a comprehensive developer toolkit for creating custom plugins:
+- text fields;
+- number fields with declared bounds;
+- boolean toggles;
+- supported-value choices;
+- string-list inputs;
+- date/time inputs;
+- structured JSON values when a nested object/array is genuinely required.
 
-```bash
-# 1. Navigate to the CLI
-cd tools/wincare-plugin-cli
+Required fields are marked. Type/range/choice problems are blocked before dispatch, and the executor validates again at the Windows boundary.
 
-# 2. Scaffold a new plugin project
-node bin/wincare-plugin.js create my-custom-cleaner --template json-pack
+### Advanced JSON
 
-# 3. Lint and validate the manifest and package boundaries
-node bin/wincare-plugin.js validate my-custom-cleaner
+**Advanced parameter editing** exposes the raw JSON object for power users and automation-compatible edge cases. It remains size-bounded and is not a safety bypass. Switching parameter values invalidates any previously reviewed mutation plan.
 
-# 4. Bundle into a distributable .wincare-plugin archive
-node bin/wincare-plugin.js pack my-custom-cleaner my-custom-cleaner.wincare-plugin
-```
+### Preview and Apply
 
-The second positional argument to `pack` is optional. If omitted, the CLI writes `<plugin-id>-<version>.wincare-plugin` inside the plugin directory. Review generated scripts and declared capabilities before installing or distributing the archive; plugins execute in-process with the permissions of WinCare.
+For a read-only command, **Run tool** executes the admitted read operation. For a mutating command, the first action is **Review changes**. Only a successful dispatcher preview enables explicit approval; the next action becomes **Apply changes** using that issued receipt.
 
----
+## 9. System Doctor
 
-## 7. Keyboard Shortcuts & Accessibility
+The shipped Doctor is a **local rule-based diagnostic assistant**, not a general-purpose AI agent and not a cloud model.
 
-| Shortcut | Action |
-|---|---|
-| <kbd>Ctrl</kbd> + <kbd>K</kbd> | Open the global command search palette |
-| <kbd>Ctrl</kbd> + <kbd>F</kbd> | Focus the search filter box in All Tools or Plugin Store |
-| <kbd>F5</kbd> | Refresh page diagnostics and telemetry |
-| <kbd>Esc</kbd> | Dismiss search, close modal dialog, or collapse detail drawer |
-| <kbd>Tab</kbd> / <kbd>Shift</kbd>+<kbd>Tab</kbd> | Navigate between interactive controls with high-contrast 3px focus rings |
-| <kbd>Space</kbd> / <kbd>Enter</kbd> | Activate focused button, trigger toggle, or expand detail drawer |
+1. Describe a symptom in plain language.
+2. The local rule engine maps it to supported diagnostic domains.
+3. WinCare runs read-only evidence commands.
+4. The Doctor explains the evidence and proposes an applicable next action when supported.
+5. A proposed mutation must run the real dispatcher preview.
+6. You review that preview and explicitly approve before Apply.
 
----
+The Doctor cannot mint its own approval receipt. User-facing errors are sanitized rather than inserting raw exception text into the conversation.
 
-## 8. Troubleshooting & Frequently Asked Questions
+## 10. Plugin Store
 
-### Q: Why is a command showing "Blocked" or "Not Ready"?
-**A**: WinCare operates on a strict **fail-closed** policy. If a required dependency (e.g. a specific Windows feature or elevated privilege) is missing, or if an operation has not yet passed full live behavioral verification, WinCare blocks execution rather than pretending to succeed or corrupting system state.
+Plugins execute full-trust **in process** with the current user's WinCare privileges. Declared capabilities are informed-consent metadata; they are not a sandbox.
 
-### Q: Does WinCare send my data or diagnostic logs to the cloud?
-**A**: **No.** WinCare does not collect covert telemetry or transmit diagnostics to external servers. The AI System Doctor runs 100% locally on your machine via DirectML ONNX. Cloud Profile Sync is entirely optional and uses client-side AES-256-GCM encryption before upload.
+### Current release behavior
 
-### Q: Can I run WinCare on Windows 10?
-**A**: Yes. WinCare supports Windows 10 (version 2004 / build 19041 and higher) as well as all editions of Windows 11.
+This repository does **not** ship an approved production plugin-catalog public key or a live official signed catalog. The current composition root therefore keeps remote installation **browse-only/disabled**. This is intentional fail-closed behavior.
 
-### Q: How do I report an issue or suggest a feature?
-**A**: Open an issue on the [WinCare GitHub Issues Page](https://github.com/AmirrezaFarnamTaheri/WinCare/issues). For security vulnerabilities, please refer to [SECURITY.md](../SECURITY.md) for private reporting instructions.
+The Plugin Store shows the current catalog trust state explicitly. If network/catalog access falls back to the bundled offline examples, those entries are labeled as samples and are not installable.
+
+### Requirements before remote installation can ever be enabled
+
+A future configured catalog must pass all of these boundaries:
+
+- detached signature over the exact catalog bytes verifies against a WinCare-pinned key;
+- installation performs a fresh security catalog fetch instead of stale-cache fallback;
+- the reviewed card is re-resolved from that fresh catalog;
+- package ID, SHA-256, trusted publisher identity/signature, capability consent, and revocation state pass;
+- discovery re-verifies the installed manifest against an external admission record.
+
+### Installed-plugin lifecycle
+
+Details and Install are separate actions. Uninstall requires confirmation. If an enabled plugin must be disabled for removal but removal fails, WinCare attempts to restore its prior enabled state and reports whether restoration succeeded.
+
+## 11. Activity and reports
+
+Activity is the shared operation ledger.
+
+- **Running** — operations currently executing.
+- **Needs attention** — operations whose outcome requires verification/follow-up.
+- **Completed** — terminal completed/failed/cancelled operations.
+- **Reports** — daily aggregate summaries rather than a duplicate of Completed.
+
+Activity refreshes from journal change events rather than a polling timer. Journal persistence occurs outside the in-memory state lock. If durable storage fails, the UI displays a persistence warning so in-memory success is not confused with a durable audit trail.
+
+## 12. Settings
+
+Current settings are intentionally limited to behavior the app actually persists:
+
+- **App theme** — System, Light, or Dark.
+- **Window continuity** — remember/restore the last usable size, position, and maximized state; turning it off clears the stored placement.
+- **Local data** — open the WinCare data directory.
+- **Persistence warning** — visible if preferences cannot be loaded or written durably.
+- **Safety policy** — an explanation of preview receipts, outcomes, and truthful recovery claims.
+
+Settings does not expose decorative toggles for product capabilities that are not actually wired.
+
+## 13. Encrypted profiles
+
+Commands that use encrypted profile storage create versioned AES-256-GCM envelopes. New writes derive keys with PBKDF2-HMAC-SHA256 using 600,000 iterations. Legacy 100,000-iteration envelopes remain decryptable for compatibility and migrate naturally when rewritten. Authentication detects a wrong passphrase or modified ciphertext.
+
+This storage capability is separate from a promise that Settings provides automatic cloud synchronization; the current Settings surface does not make that claim.
+
+## 14. WinCare Guard
+
+`wincare-guard` is currently an **experimental local daemon boundary**.
+
+The Windows named pipe is local and protected by an explicit DACL. The daemon can provide its current local health/IPC primitives, but this release does **not** claim a finished Windows Service Control Manager lifecycle or complete native/app toast-notification integration. Those remain production-promotion requirements.
+
+## 15. Keyboard and accessibility
+
+WinCare favors native WinUI controls and explicit automation names/IDs on important controls. The app provides Light, Dark, and Windows High Contrast resources, visible keyboard focus, wrapped text styles, and compact layouts for core task pages.
+
+Important release checks still require a live Windows environment:
+
+- Narrator reading/focus order;
+- full keyboard traversal;
+- 100%, 150%, 200%, and 225% Windows text scaling;
+- display scaling and narrow-window resizing;
+- High Contrast rendering;
+- dialog focus and error announcements.
+
+If a layout clips at a particular display/text scale, include the screen name and exact scale in the bug report.
+
+## 16. Troubleshooting
+
+### A command is Blocked or Not available
+
+Read the returned code/message. WinCare fails closed for missing prerequisites, invalid input, unverified trust state, insufficient authority, unsupported state, or commands that are not admitted on the current machine.
+
+### A mutation says final state unknown
+
+Do not retry immediately. Open Activity, identify the command and affected resource, verify that Windows resource directly, and only then decide whether a new preview is appropriate.
+
+### Plugin Store shows browse-only/offline status
+
+That is expected in the current repository build because no production catalog trust root is shipped. Installed plugins remain manageable. Do not treat an offline sample entry as an installable package.
+
+### Preferences or Activity are not durable
+
+The app shows an InfoBar when it cannot persist those records. Open **Settings → Local data** and verify that the current account can access/write the WinCare data directory. In-memory state may be lost at exit while the warning remains active.
+
+### The app terminates after an unexpected UI fault
+
+Unknown UI faults are no longer universally swallowed. WinCare writes diagnostic context and exits rather than continuing with potentially invalid process state. Review the local diagnostics and restart.
+
+### Report a security issue
+
+Use GitHub Private Vulnerability Reporting rather than a public issue. See [SECURITY.md](../SECURITY.md).

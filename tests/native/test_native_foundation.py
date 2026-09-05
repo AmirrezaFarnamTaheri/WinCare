@@ -16,7 +16,6 @@ class NativeFoundationTests(unittest.TestCase):
         findings = verify()
         self.assertEqual([], findings, "\n" + "\n".join(f"[{item.code}] {item.message}" for item in findings))
 
-
     def test_native_pages_use_supported_backdrop_and_responsive_tables(self) -> None:
         root = __import__("pathlib").Path(__file__).resolve().parents[2]
         window = (root / "src/WinCare.App/MainWindow.xaml.cs").read_text(encoding="utf-8")
@@ -24,28 +23,78 @@ class NativeFoundationTests(unittest.TestCase):
         self.assertIn("DesktopAcrylicBackdrop", window)
         page_names = (
             "HomePage.xaml", "CheckupPage.xaml", "SystemCarePage.xaml",
-            "SecurityPage.xaml", "RepairRecoveryPage.xaml",
-            "ActivityPage.xaml",
+            "SecurityPage.xaml", "RepairRecoveryPage.xaml", "ActivityPage.xaml",
         )
         for name in page_names:
             text = (root / "src/WinCare.App/Views/Pages" / name).read_text(encoding="utf-8")
             if name in {"HomePage.xaml", "CheckupPage.xaml"}:
                 self.assertIn("DashboardCardStyle", text, name)
                 self.assertIn("Review before applying", text, name)
+                self.assertIn("SizeChanged", text, name)
                 if name == "CheckupPage.xaml":
                     self.assertIn("SelectorBar", text, name)
-                self.assertIn("SizeChanged", text, name)
+                    self.assertIn("LayoutVisibility.BoolToVisibility(ViewModel.IsCompactLayout)", text, name)
+                    self.assertIn("LayoutVisibility.InvertBoolToVisibility(ViewModel.IsCompactLayout)", text, name)
+                    self.assertIn("LayoutVisibility.BoolToVisibility(IsCompact)", text, name)
                 continue
+
+            expected_headers = (
+                ("Summary", "State", "Time")
+                if name == "ActivityPage.xaml"
+                else ("What it does", "State", "Notes")
+            )
             self.assertIn("ListView", text, name)
-            self.assertIn("What it does", text, name)
-            self.assertIn("State", text, name)
-            self.assertIn("Notes", text, name)
+            for header in expected_headers:
+                self.assertIn(header, text, name)
             self.assertIn("IsCompact", text, name)
             self.assertIn("SizeChanged", text, name)
+
+        shared_breakpoint_pages = (
+            "CheckupPage.xaml.cs", "SystemCarePage.xaml.cs", "SecurityPage.xaml.cs", "RepairRecoveryPage.xaml.cs",
+        )
+        for name in shared_breakpoint_pages:
+            code = (root / "src/WinCare.App/Views/Pages" / name).read_text(encoding="utf-8")
+            self.assertIn("LayoutVisibility.IsCompact(e.NewSize.Width)", code, name)
+            self.assertNotIn("< 820", code, name)
+            self.assertNotIn("CompactThreshold", code, name)
+
+        checkup_vm = (root / "src/WinCare.App/ViewModels/Pages/CheckupPageViewModel.cs").read_text(encoding="utf-8")
+        probe_runner = (root / "src/WinCare.Application/Commands/SequentialCommandProbeRunner.cs").read_text(encoding="utf-8")
+        self.assertNotIn("Parallel.ForEachAsync", checkup_vm)
+        self.assertIn("SequentialCommandProbeRunner.RunPreviewsAsync", checkup_vm)
+        self.assertIn("foreach (string commandId in commandIds)", probe_runner)
+        self.assertNotIn("Task.WhenAll", probe_runner)
+
+        plugin_store = (root / "src/WinCare.App/Views/Pages/PluginStorePage.xaml").read_text(encoding="utf-8")
+        self.assertIn('MinWindowWidth="920"', plugin_store)
+        self.assertIn("PluginCatalogTrustStatus", plugin_store)
+        self.assertIn("CatalogStatusMessage", plugin_store)
 
         settings = (root / "src/WinCare.App/Views/Pages/SettingsPage.xaml").read_text(encoding="utf-8")
         self.assertIn("ThemeSelector", settings)
         self.assertIn("OpenDataFolderButton_Click", settings)
+        self.assertIn("RememberWindowPlacement", settings)
+
+    def test_plugin_catalog_is_browse_only_without_an_explicit_pinned_root(self) -> None:
+        root = __import__("pathlib").Path(__file__).resolve().parents[2]
+        runtime = (root / "src/WinCare.App/Services/AppRuntime.cs").read_text(encoding="utf-8")
+        catalog = (root / "src/WinCare.Infrastructure/Plugins/RemoteCatalogService.cs").read_text(encoding="utf-8")
+        view_model = (root / "src/WinCare.App/ViewModels/Pages/PluginStorePageViewModel.cs").read_text(encoding="utf-8")
+        self.assertIn("CatalogService = new RemoteCatalogService();", runtime)
+        self.assertIn("remote installation is disabled because this build has no pinned catalog signing key", catalog)
+        self.assertIn("if (!catalog.IsTrustVerified)", view_model)
+        self.assertIn("CatalogStatusMessage = catalog.TrustStatusMessage", view_model)
+
+    def test_window_continuity_is_a_real_opt_out_preference(self) -> None:
+        root = __import__("pathlib").Path(__file__).resolve().parents[2]
+        preferences = (root / "src/WinCare.App/Services/AppPreferences.cs").read_text(encoding="utf-8")
+        window = (root / "src/WinCare.App/MainWindow.xaml.cs").read_text(encoding="utf-8")
+        settings_vm = (root / "src/WinCare.App/ViewModels/Pages/SettingsPageViewModel.cs").read_text(encoding="utf-8")
+        self.assertIn("RememberWindowPlacement", preferences)
+        self.assertIn("WindowPlacement = value ? _current.WindowPlacement : null", preferences)
+        self.assertIn("!AppPreferences.RememberWindowPlacement || !RestoreWindowPlacement()", window)
+        self.assertIn("if (AppPreferences.RememberWindowPlacement)", window)
+        self.assertIn("AppPreferences.RememberWindowPlacement = value", settings_vm)
 
     def test_interactive_controls_are_wired_and_mutable_rows_use_live_bindings(self) -> None:
         root = __import__("pathlib").Path(__file__).resolve().parents[2]
@@ -63,11 +112,8 @@ class NativeFoundationTests(unittest.TestCase):
         self.assertEqual([], inert_controls)
 
         mutable_row_pages = (
-            "ActivityPage.xaml",
-            "CheckupPage.xaml",
-            "SystemCarePage.xaml",
-            "SecurityPage.xaml",
-            "RepairRecoveryPage.xaml",
+            "ActivityPage.xaml", "CheckupPage.xaml", "SystemCarePage.xaml",
+            "SecurityPage.xaml", "RepairRecoveryPage.xaml",
         )
         for name in mutable_row_pages:
             text = (pages / name).read_text(encoding="utf-8")
@@ -80,6 +126,18 @@ class NativeFoundationTests(unittest.TestCase):
         checkup = (pages / "CheckupPage.xaml").read_text(encoding="utf-8")
         self.assertNotIn('Text="Full check"', checkup)
         self.assertNotIn('Text="Custom check"', checkup)
+
+    def test_design_and_runtime_evidence_docs_do_not_overclaim_current_state(self) -> None:
+        root = __import__("pathlib").Path(__file__).resolve().parents[2]
+        design = (root / "DESIGN.md").read_text(encoding="utf-8")
+        screenshots = (root / "docs/Screenshots.md").read_text(encoding="utf-8")
+        readme = (root / "README.md").read_text(encoding="utf-8")
+        self.assertIn("No generic Undo claim", design)
+        self.assertIn("LayoutVisibility.CompactBreakpointDip = 920.0", design)
+        self.assertIn("historical runtime evidence", screenshots)
+        self.assertIn("needs recapture", screenshots)
+        self.assertIn("remote plugin installation intentionally", readme)
+        self.assertIn("wincare-guard` is **experimental**", readme)
 
     def test_package_profiles_are_clean_and_stage_native_core(self) -> None:
         root = __import__("pathlib").Path(__file__).resolve().parents[2]

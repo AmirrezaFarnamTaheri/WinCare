@@ -21,6 +21,14 @@ public sealed class PluginManifest
     private string? _pluginClassName;
     private string? _targetFramework;
 
+    // Raw, per-spelling inputs so conflicting alias spellings (e.g. both `assemblyEntry` and
+    // `assemblyFileName` with different values) can be rejected instead of silently letting
+    // the last-written value win. See ValidateAliasConsistency.
+    private string? _rawAssemblyFileName;
+    private string? _rawAssemblyEntry;
+    private string? _rawPluginClassName;
+    private string? _rawEntryClass;
+
     /// <summary>Unique plugin package ID.</summary>
     [JsonPropertyName("id")]
     public string Id { get => _id; init => _id = value; }
@@ -60,6 +68,7 @@ public sealed class PluginManifest
         get => _assemblyFileName;
         init
         {
+            _rawAssemblyFileName = value;
             _assemblyFileName = value;
             if (!string.IsNullOrWhiteSpace(value) && _entryType == "Manifest")
             {
@@ -75,6 +84,7 @@ public sealed class PluginManifest
         get => _assemblyFileName;
         init
         {
+            _rawAssemblyEntry = value;
             if (!string.IsNullOrWhiteSpace(value))
             {
                 _assemblyFileName = value;
@@ -88,7 +98,15 @@ public sealed class PluginManifest
 
     /// <summary>Optional plugin class name for binary C# plugins.</summary>
     [JsonPropertyName("pluginClassName")]
-    public string? PluginClassName { get => _pluginClassName; init => _pluginClassName = value; }
+    public string? PluginClassName
+    {
+        get => _pluginClassName;
+        init
+        {
+            _rawPluginClassName = value;
+            _pluginClassName = value;
+        }
+    }
 
     /// <summary>Target framework required by a compiled assembly plugin.</summary>
     [JsonPropertyName("targetFramework")]
@@ -96,7 +114,15 @@ public sealed class PluginManifest
 
     /// <summary>Optional plugin class alias.</summary>
     [JsonPropertyName("entryClass")]
-    public string? EntryClass { get => _pluginClassName; init => _pluginClassName = value; }
+    public string? EntryClass
+    {
+        get => _pluginClassName;
+        init
+        {
+            _rawEntryClass = value;
+            _pluginClassName = value;
+        }
+    }
 
     /// <summary>Declared security capabilities and permissions (e.g. filesystem.read, process.spawn).</summary>
     [JsonPropertyName("declaredCapabilities")]
@@ -105,6 +131,35 @@ public sealed class PluginManifest
     /// <summary>List of tool command definitions provided by the plugin.</summary>
     [JsonPropertyName("tools")]
     public List<PluginToolDefinition> Tools { get; init; } = new();
+
+    /// <summary>
+    /// Rejects manifests whose alias spellings conflict, and recurses into each tool
+    /// definition for the same check. Called by the loader after deserialization.
+    /// </summary>
+    public void ValidateAliasConsistency()
+    {
+        RequireAgreement("assemblyEntry", _rawAssemblyEntry, "assemblyFileName", _rawAssemblyFileName);
+        RequireAgreement("entryClass", _rawEntryClass, "pluginClassName", _rawPluginClassName);
+
+        foreach (PluginToolDefinition tool in Tools)
+        {
+            tool.ValidateAliasConsistency();
+        }
+    }
+
+    private static void RequireAgreement(string aliasName, string? aliasValue, string canonicalName, string? canonicalValue)
+    {
+        if (string.IsNullOrWhiteSpace(aliasValue) || string.IsNullOrWhiteSpace(canonicalValue))
+        {
+            return;
+        }
+
+        if (!string.Equals(aliasValue, canonicalValue, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new FormatException(
+                $"Conflicting plugin metadata: '{aliasName}' ('{aliasValue}') and '{canonicalName}' ('{canonicalValue}') disagree.");
+        }
+    }
 }
 
 /// <summary>
@@ -124,6 +179,18 @@ public sealed class PluginToolDefinition
     private string _scriptPath = string.Empty;
     private bool _readOnly;
 
+    // Raw, per-spelling inputs for alias conflict detection (see ValidateAliasConsistency).
+    private string? _rawTitle;
+    private string? _rawName;
+    private string? _rawSummary;
+    private string? _rawDescription;
+    private string? _rawRisk;
+    private string? _rawRiskLevel;
+    private string? _rawExecutorType;
+    private string? _rawExecutionType;
+    private string? _rawScriptPath;
+    private string? _rawScript;
+
     /// <summary>Command ID.</summary>
     [JsonPropertyName("id")]
     public string Id { get => _id; init => _id = value; }
@@ -135,6 +202,7 @@ public sealed class PluginToolDefinition
         get => _title;
         init
         {
+            _rawTitle = value;
             if (!string.IsNullOrWhiteSpace(value))
             {
                 _title = value;
@@ -149,6 +217,7 @@ public sealed class PluginToolDefinition
         get => _title;
         init
         {
+            _rawName = value;
             if (!string.IsNullOrWhiteSpace(value) && string.IsNullOrWhiteSpace(_title))
             {
                 _title = value;
@@ -163,6 +232,7 @@ public sealed class PluginToolDefinition
         get => _summary;
         init
         {
+            _rawSummary = value;
             if (!string.IsNullOrWhiteSpace(value))
             {
                 _summary = value;
@@ -177,6 +247,7 @@ public sealed class PluginToolDefinition
         get => _summary;
         init
         {
+            _rawDescription = value;
             if (!string.IsNullOrWhiteSpace(value) && string.IsNullOrWhiteSpace(_summary))
             {
                 _summary = value;
@@ -207,6 +278,7 @@ public sealed class PluginToolDefinition
         get => _risk;
         init
         {
+            _rawRisk = value;
             if (!string.IsNullOrWhiteSpace(value))
             {
                 _risk = value;
@@ -221,6 +293,7 @@ public sealed class PluginToolDefinition
         get => _risk;
         init
         {
+            _rawRiskLevel = value;
             if (!string.IsNullOrWhiteSpace(value))
             {
                 if (string.Equals(value, "ReadOnly", StringComparison.OrdinalIgnoreCase))
@@ -286,6 +359,7 @@ public sealed class PluginToolDefinition
         get => _executorType;
         init
         {
+            _rawExecutorType = value;
             if (!string.IsNullOrWhiteSpace(value))
             {
                 _executorType = value;
@@ -300,6 +374,7 @@ public sealed class PluginToolDefinition
         get => _executorType;
         init
         {
+            _rawExecutionType = value;
             if (!string.IsNullOrWhiteSpace(value))
             {
                 _executorType = value;
@@ -314,6 +389,7 @@ public sealed class PluginToolDefinition
         get => _scriptPath;
         init
         {
+            _rawScriptPath = value;
             if (!string.IsNullOrWhiteSpace(value))
             {
                 _scriptPath = value;
@@ -328,6 +404,7 @@ public sealed class PluginToolDefinition
         get => _scriptPath;
         init
         {
+            _rawScript = value;
             if (!string.IsNullOrWhiteSpace(value))
             {
                 _scriptPath = value;
@@ -338,6 +415,49 @@ public sealed class PluginToolDefinition
     /// <summary>Optional target core command ID for built-in or alias plugin commands.</summary>
     [JsonPropertyName("aliasOf")]
     public string? AliasOf { get; init; }
+
+    /// <summary>Rejects conflicting alias spellings for this tool definition.</summary>
+    public void ValidateAliasConsistency()
+    {
+        RequireAgreement("name", _rawName, "title", _rawTitle);
+        RequireAgreement("description", _rawDescription, "summary", _rawSummary);
+        RequireAgreement("executionType", _rawExecutionType, "executorType", _rawExecutorType);
+        RequireAgreement("script", _rawScript, "scriptPath", _rawScriptPath);
+
+        // `riskLevel` uses legacy enum-like spellings that map onto the canonical `risk`
+        // tier; compare effective values rather than raw spellings.
+        if (!string.IsNullOrWhiteSpace(_rawRisk) && !string.IsNullOrWhiteSpace(_rawRiskLevel))
+        {
+            string effectiveRiskLevel = MapRiskLevelAlias(_rawRiskLevel);
+            if (!string.Equals(_rawRisk, effectiveRiskLevel, StringComparison.OrdinalIgnoreCase))
+            {
+                throw new FormatException(
+                    $"Conflicting plugin metadata: 'risk' ('{_rawRisk}') and 'riskLevel' ('{_rawRiskLevel}') disagree.");
+            }
+        }
+    }
+
+    private static string MapRiskLevelAlias(string value) => value.ToLowerInvariant() switch
+    {
+        "readonly" => "ReadOnly",
+        "mutating" => "Moderate",
+        "elevated" => "High",
+        _ => value,
+    };
+
+    private static void RequireAgreement(string aliasName, string? aliasValue, string canonicalName, string? canonicalValue)
+    {
+        if (string.IsNullOrWhiteSpace(aliasValue) || string.IsNullOrWhiteSpace(canonicalValue))
+        {
+            return;
+        }
+
+        if (!string.Equals(aliasValue, canonicalValue, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new FormatException(
+                $"Conflicting plugin metadata: '{aliasName}' ('{aliasValue}') and '{canonicalName}' ('{canonicalValue}') disagree.");
+        }
+    }
 
     /// <summary>
     /// Converts this plugin tool definition into a core <see cref="CommandDefinition"/>, failing closed on invalid metadata.

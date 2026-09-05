@@ -21,7 +21,19 @@ public sealed partial class ActivityPage : Page
     protected override void OnNavigatedTo(NavigationEventArgs e)
     {
         base.OnNavigatedTo(e);
+        ViewModel.JournalChanged += Journal_Changed;
         ViewModel.RefreshFromJournal();
+    }
+
+    protected override void OnNavigatedFrom(NavigationEventArgs e)
+    {
+        ViewModel.JournalChanged -= Journal_Changed;
+        base.OnNavigatedFrom(e);
+    }
+
+    private void Journal_Changed(object? sender, EventArgs e)
+    {
+        DispatcherQueue.TryEnqueue(ViewModel.RefreshFromJournal);
     }
 
     private void SectionSelector_SelectionChanged(SelectorBar sender, SelectorBarSelectionChangedEventArgs args)

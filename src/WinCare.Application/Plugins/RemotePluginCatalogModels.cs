@@ -38,6 +38,17 @@ public class RemotePluginCatalog
     /// </summary>
     [JsonPropertyName("revokedPackages")]
     public List<string> RevokedPackages { get; set; } = new();
+
+    /// <summary>
+    /// Runtime-only trust state. True only when the exact catalog bytes were verified against
+    /// a WinCare-pinned catalog signing key. This value is never accepted from catalog JSON.
+    /// </summary>
+    [JsonIgnore]
+    public bool IsTrustVerified { get; set; }
+
+    /// <summary>Human-readable runtime explanation of the catalog trust state.</summary>
+    [JsonIgnore]
+    public string TrustStatusMessage { get; set; } = "Catalog signature has not been independently verified.";
 }
 
 /// <summary>
@@ -146,4 +157,12 @@ public class RemotePluginItem
     /// </summary>
     [JsonPropertyName("publishedDate")]
     public DateTime PublishedDate { get; set; } = DateTime.UtcNow;
+
+    /// <summary>
+    /// Runtime-only propagation of the independently verified catalog trust state. Catalog JSON
+    /// cannot set this flag; it is assigned only by <c>RemoteCatalogService</c> after detached
+    /// signature verification.
+    /// </summary>
+    [JsonIgnore]
+    public bool IsCatalogTrustVerified { get; set; }
 }

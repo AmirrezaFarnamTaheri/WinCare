@@ -1,30 +1,34 @@
 # Interface screenshots
 
-The runtime images below were captured from the locally installed **v2.5.0.6 x64 MSIX** built from the `v2.5.0-rc5` source candidate. They are the source of truth for this candidate's interface. The companion concept images remain here as design references, and are explicitly marked as concepts.
+The checked-in runtime images below were captured from the locally installed **v2.5.0.0 x64 MSIX** built from the `v2.5.0-rc5` source candidate. They are **historical runtime evidence for that exact package**, not a perpetual source of truth for later source changes.
+
+PR #30 includes subsequent UI and product-hardening changes (including live Home evidence, genuine compact Checkup layouts, Activity report semantics, typed All Tools parameters, Help content, accessibility color adjustments, and plugin trust copy). Until a new installed candidate is captured, the current XAML/theme resources are authoritative for those changed surfaces and these images should be treated as baseline references only.
+
+Concept images remain design references and are explicitly marked as concepts.
 
 ## Home
 
-### Runtime — v2.5.0-rc5 candidate
+### Historical runtime — v2.5.0-rc5 candidate
 
-![WinCare Home screen captured from the installed v2.5.0.6 candidate package](images/runtime-dashboard.png)
+![WinCare Home screen captured from the installed v2.5.0.0 candidate package](images/runtime-dashboard.png)
+
+**Capture status:** needs recapture after the current PR is packaged. The present source now derives dashboard evidence from Activity/check results and surfaces plugin-widget failures.
 
 ### Original concept
 
 ![Conceptual WinCare dashboard showing system status, health cards, and recent activity](images/dashboard-preview.png)
 
-**Comparison.** The runtime now adopts the concept's dark, card-led dashboard, persistent navigation rail, and stronger teal status hierarchy. Unlike the concept, it deliberately leaves the health score blank until a check collects real evidence; it never invents a healthy score or a completed check.
-
 ## Checkup
 
-### Runtime — v2.5.0-rc5 candidate
+### Historical runtime — v2.5.0-rc5 candidate
 
-![WinCare Checkup screen captured from the installed v2.5.0.6 candidate package](images/runtime-checkup.png)
+![WinCare Checkup screen captured from the installed v2.5.0.0 candidate package](images/runtime-checkup.png)
+
+**Capture status:** needs recapture after the current PR is packaged. The present source uses evidence-collection coverage rather than a machine-health claim, runs measurement-sensitive probes sequentially, and has a real stacked compact layout below the shared 920-DIP breakpoint.
 
 ### Original concept
 
 ![Conceptual WinCare system checkup showing a health score and review-before-apply results](images/checkup-preview.png)
-
-**Comparison.** The runtime follows the concept's score-and-review layout while preserving the product's safety contract: categories are marked ready for read-only inspection, and recommendations remain proposals until reviewed. The score remains unavailable before a check, rather than displaying placeholder health data.
 
 ## Spectre.Console TUI
 
@@ -40,5 +44,14 @@ The runtime images below were captured from the locally installed **v2.5.0.6 x64
 
 ## Capture policy
 
-Capture runtime images from a known package, label them with package and candidate version plus architecture, and keep them free of machine names, account names, paths, license keys, or other personal data. Concept imagery must never be presented as a runtime capture.
+Every runtime image must record:
 
+- the exact package/product version;
+- architecture (`x64` or `ARM64`);
+- the source commit SHA or release tag;
+- whether the image came from an installed MSIX or portable build;
+- the Windows appearance used when visually relevant.
+
+Runtime captures must be taken from a known built artifact and kept free of machine names, account names, paths, license keys, tokens, or other personal data. Concept imagery must never be presented as a runtime capture.
+
+A screenshot remains authoritative only for the exact build it names. Any UI-affecting change after that build automatically makes the screenshot **historical** until recaptured and visually checked again.

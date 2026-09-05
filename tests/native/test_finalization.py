@@ -206,12 +206,18 @@ class FinalizationTests(unittest.TestCase):
     def test_release_metadata_is_pinned_to_native_release_candidate(self) -> None:
         props = (ROOT / "Directory.Build.props").read_text(encoding="utf-8")
         manifest = (ROOT / "src/WinCare.App/Package.appxmanifest").read_text(encoding="utf-8")
+        csproj = (ROOT / "src/WinCare.App/WinCare.App.csproj").read_text(encoding="utf-8")
         cargo = (ROOT / "native/wincare-core/Cargo.toml").read_text(encoding="utf-8")
         rust_source = (ROOT / "native/wincare-core/src/lib.rs").read_text(encoding="utf-8")
         self.assertIn("<VersionPrefix>2.5.0</VersionPrefix>", props)
         self.assertIn("<VersionSuffix>rc5</VersionSuffix>", props)
         self.assertIn("<InformationalVersion>2.5.0-rc5</InformationalVersion>", props)
-        self.assertIn('Version="2.5.0.6"', manifest)
+        # The checked-in manifest carries the numeric fallback (VersionPrefix + ".0"); the
+        # build-time StampAppxManifestVersion target derives the packaged version instead of
+        # trusting a literal.
+        self.assertIn('Version="2.5.0.0"', manifest)
+        self.assertIn("StampAppxManifestVersion", csproj)
+        self.assertIn("AppxPackageVersion", csproj)
         self.assertIn('version = "2.5.0"', cargo)
         self.assertIn('const VERSION: &[u8] = b"2.5.0";', rust_source)
 

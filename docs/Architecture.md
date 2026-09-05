@@ -1,159 +1,147 @@
 # WinCare Architecture Specification
 
-## 1. System Overview & Boundaries
+## 1. System overview and boundaries
 
-WinCare is structured as a layered desktop application utilizing **WinUI 3 (Windows App SDK)** for its presentation layer, **.NET 8** for application logic, and **Rust 2024** for high-performance, memory-safe native primitives and background health monitoring.
+WinCare is a layered Windows desktop application using **WinUI 3 / Windows App SDK** for presentation, **.NET 8** for the managed application and Windows integration layers, and **Rust 2024** for bounded native primitives plus the experimental Guard daemon.
 
-The native source distribution contains **zero PowerShell files**. Historical PowerShell scripts are isolated in a separately hashed legacy oracle archive for parity verification and are never loaded, embedded, or invoked by the native runtime.
+The native source distribution contains **zero PowerShell files**. Historical PowerShell scripts are isolated in a separately hashed legacy-oracle archive for parity verification and are never loaded, embedded, or invoked by the native runtime.
 
----
-
-## 2. Subsystem Ownership & Layering
-
-| Subsystem | Responsibilities & Boundaries |
+| Subsystem | Responsibilities and boundaries |
 |---|---|
-| **`WinCare.App`** | WinUI 3 shell, page navigation, XAML views, theme resource dictionaries, accessibility automation metadata, lifecycle handling, AI Doctor UI, and Plugin Store UI |
-| **`WinCare.Application`** | Core use cases, navigation services, fail-closed `CommandDispatcher`, dynamic plugin host, AI Doctor diagnostic orchestrator, and activity journaling |
-| **`WinCare.Domain`** | Strongly typed requests, results, command contracts, activity entries, sync models, and evidence records |
-| **`WinCare.Infrastructure`** | Windows API integration, process runner (`BoundedProcessRunner`), registry/WMI/Defender integration, Rust FFI bindings, encrypted cloud sync (AES-256-GCM), and persistent state stores |
-| **`WinCare.CommandCatalog`** | Embedded typed definitions and frozen data for all 259 command IDs + built-in plugin manifests |
-| **`WinCare.SourceGenerators`** | Compile-time Roslyn source generators for zero-overhead static command routing |
-| **`native/wincare-core`** | High-performance bounded native primitives (`sys_info`, `dir_size`, `sha256`) exported via a versioned C ABI |
-| **`native/wincare-guard`** | Standalone background health daemon monitoring RAM pressure, disk quota, and thermal status via Windows Toast XML notifications (Named Pipe IPC interface scaffolded) |
-| **`tools/wincare-plugin-cli`**| Node.js developer CLI for creating, validating, linting, and packaging community plugins |
+| `WinCare.App` | WinUI shell, navigation, native controls, theme/accessibility resources, tool parameter UI, Doctor UI, Plugin Store UI |
+| `WinCare.Application` | Fail-closed command dispatcher, dispatcher-issued review receipts, plugin host/registry, rule-based Doctor orchestration, activity journal |
+| `WinCare.Domain` | Typed requests/results, policy/evidence models, activity records |
+| `WinCare.Infrastructure` | Windows APIs, bounded process execution, persistent state, encrypted profiles, plugin catalog/package verification, Rust FFI |
+| `WinCare.CommandCatalog` | Frozen 259-command catalog plus typed UI parameter schemas |
+| `native/wincare-core` | Bounded native primitives exposed through a versioned C ABI |
+| `native/wincare-guard` | **Experimental** local health daemon and local named-pipe endpoint; production SCM lifecycle and app notification consumption are not complete |
+| `tools/wincare-plugin-cli` | Plugin development/validation/packaging CLI |
 
-```
-+----------------------------------------------------------------------------------------------------+
-|                                         WinCare.App                                                |
-|                   (WinUI 3 Shell, Mica Backdrop, XAML Views, ThemeResources)                       |
-+------------------------------------+----------------------------------+----------------------------+
-                                     │
-                                     ▼
-+----------------------------------------------------------------------------------------------------+
-|                                    WinCare.Application                                             |
-|        (Fail-Closed CommandDispatcher, Plugin Host, AI Doctor Engine, Activity Journal)           |
-+------------------------------------+----------------------------------+----------------------------+
-                  │                                                     │
-                  ▼                                                     ▼
-+------------------------------------+               +-----------------------------------------------+
-|         WinCare.Domain             |               |           WinCare.Infrastructure              |
-| (Typed Requests, Results, Contracts|               | (Windows APIs, Process Runner, Rust Interop)  |
-+------------------------------------+               +-----------------------------------------------+
-                  ▲                                                     │
-                  │                                                     ▼
-+------------------------------------+               +-----------------------------------------------+
-|      WinCare.CommandCatalog        |               |       native/wincare-core (Rust C ABI)        |
-|  (259 Typed Command Definitions)   |               |     native/wincare-guard (Daemon Monitor)     |
-+------------------------------------+               +-----------------------------------------------+
-```
+## 2. Command lifecycle
 
----
-
-## 3. Command & Plugin Lifecycle
-
-Every tool and command execution follows an explicit, fail-closed lifecycle:
+A command's catalog presence is never execution authority.
 
 ```text
-UI Request (Tool Execution / AI Action Plan / Plugin Command)
-   │
-   ▼
-1. Command Catalog / Dynamic Plugin Lookup
-   │
-   ▼
-2. Current-State Observation (Read-Only)
-   │
-   ▼
-3. Plan Construction & Parameter Preflight (Validation)
-   │
-   ▼
-4. Policy & Elevation Boundary Check (Fail-closed if unauthorized)
-   │
-   ▼
-5. Preview & Two-Phase Approval (Gated by request.Apply + options.ReviewApproved)
-   │
-   ▼
-6. Admitted Provider Execution (Native executor / PluginScriptCommandHandler)
-   │
-   ▼
-7. Evidence & Postcondition Collection
-   │
-   ▼
-8. Journal Entry & Receipt Generation (PII-sanitized)
-   │
-   ▼
-9. Compensation / Rollback (When explicitly supported)
+UI / automation request
+  → command and handler lookup
+  → typed parameter preflight
+  → read-only preview
+  → evidence / affected-resource presentation
+  → dispatcher issues short-lived, parameter-bound, single-use review receipt
+  → explicit user approval
+  → admitted execution
+  → postcondition / outcome collection
+  → Activity receipt with outcome certainty
+  → compensation only when an executable compensator exists
 ```
 
-The dispatcher fails closed for unknown, unavailable, disabled, or unmigrated commands. All tools may display the full catalog, but catalog presence never grants execution authority. Dynamic plugin commands are isolated, bounded by `BoundedProcessRunner`, and cannot overwrite reserved core namespaces (`wincare.core.*`, `system.*`).
+For mutating commands, callers cannot mint a valid approval. `CommandDispatcher` issues the receipt only after a successful preview and consumes it atomically during Apply. Parameter edits, correlation changes, expiry, or replay all fail closed.
 
----
+If a mutating handler faults after execution starts and the final state cannot be proven, WinCare reports **final system state unknown** and directs the user to verify the affected resource before retrying.
 
-## 4. Plugin Subsystem Trust Model & Package Admission
+All Tools renders typed parameters from `CommandParameterCatalog`. Raw JSON remains an explicit Advanced escape hatch. The executor remains the final validation authority.
 
-1. **Publisher Signatures**: Remote catalog entries may provide a publisher public key and signature used to verify manifest bytes. Package-local keys and author names never establish trust. The current catalog is not independently signed or pinned, so this proves catalog/package consistency rather than publisher identity; an independently anchored catalog or publisher-key policy remains required.
-2. **Catalog Policy & Revocation Lists**: The remote catalog supplies `revokedPublishers` and `revokedPackages` lists. Revocation currently disables installation in the catalog UI; enforcement inside the installer and registry remains an explicit security gap.
-3. **Declared Capabilities & In-Process Disclosure**: Plugins execute in-process with user privileges. `PluginDetailDialog` presents explicit full-trust warnings, publisher trust badges, and capability declarations before installation.
-4. **Package ID Equality**: Package archive manifests must strictly match the target plugin ID before extraction and filesystem promotion.
-5. **SHA-256 Digest**: HTTPS catalog downloads require and verify a SHA-256 digest. Local file and direct-stream installation paths accept an optional digest for development and test scenarios.
-6. **Staging & Backup Isolation**: Updates create rollback snapshots in `.staging/backups/`, completely isolated from active discovery routines.
-7. **Dynamic Lifecycle Management**: Discovered plugins are managed via `IPluginRegistry.RegistryChanged`, updating `ToolCatalogService` dynamically.
+## 3. Plugin trust and lifecycle
 
-The validated current-state trust flow, including unresolved boundaries, is available in the standalone [plugin admission architecture diagram](diagrams/plugin-admission.html). Its renderer input is checked in beside it as `plugin-admission.architecture.json`.
+Plugin trust has two separate cases: local/development packages and remote catalog packages.
 
----
+### Remote catalog boundary
 
-## 5. AI Doctor & Diagnostic Telemetry Flow
+`RemoteCatalogService` can verify the **exact catalog bytes** against a configured WinCare-pinned catalog public key and detached signature. Only a catalog with that runtime verification state may authorize remote installation; otherwise it is browse-only.
 
-The AI Doctor subsystem strictly separates machine learning intent interpretation from evidence-grounded system diagnosis:
+The current production composition root constructs `RemoteCatalogService` without an approved catalog public key because no production catalog root is shipped in this repository. Therefore the current build intentionally keeps remote installation **disabled** instead of inventing a trust root. A future release may enable remote installation only by shipping an explicitly reviewed pinned catalog key and a live catalog/signature endpoint.
+
+The configured default catalog URL is not itself a trust anchor. Network location, TLS, author strings, package-local keys, and a signature/key pair supplied by an unverified catalog are insufficient to establish publisher identity.
+
+### Package admission
+
+When a trusted remote catalog is configured, installation requires:
+
+1. a freshly fetched catalog for the security-sensitive install step; no stale-cache fallback;
+2. re-resolution of the selected plugin from that fresh catalog;
+3. exact package ID equality;
+4. package SHA-256 verification;
+5. publisher manifest signature verification using metadata from the trusted catalog;
+6. trusted PublisherId/package revocation checks;
+7. explicit consent covering all declared capabilities;
+8. external admission metadata outside the plugin directory and signature re-verification during discovery.
+
+A delisted plugin, publisher/key/hash/URL/permission change, stale advisory, revoked publisher/package, changed installed manifest, or replayed stale UI card fails closed.
+
+### Runtime capabilities
+
+Plugins execute full-trust **in-process** with the user's privileges. Declared capabilities are informed-consent metadata; they are not an AppContainer or process sandbox. The UI states this explicitly. Dynamic commands cannot replace reserved core namespaces.
+
+Plugin initialization is transactional. Commands registered during a failed assembly-plugin initialization are rolled back by ownership, and shutdown/disposal/load-context cleanup runs before the plugin is left in an error state. Uninstall is confirmation-gated and restores the prior enabled state when package removal fails.
+
+## 4. Rule-based System Doctor
+
+The shipped Doctor is a **rule-based diagnostic assistant**, not a general AI agent.
 
 ```text
-User Symptom Description
-         │
-         ▼
-Local ONNX DirectML Classification (Intent & Symptom Extraction)
-         │
-         ▼
-Read-Only Hardware & OS Diagnostics (Disk capacity, RAM usage, System logs)
-         │
-         ▼
-DiagnosticEvidence Records (Source, Metric, Value, Timestamp)
-         │
-         ▼
-Evidence-Grounded Recommendation (DoctorActionPlan with RootCause & Telemetry)
-         │
-         ▼
-Explicit User Step-by-Step Approval
-         │
-         ▼
-Safe Preview & Mutation Execution (Gated by CommandExecutionOptions)
+User symptom text
+  → rule-based intent / symptom classification
+  → read-only diagnostic commands
+  → evidence-backed recommendation
+  → actual dispatcher preview of proposed mutation
+  → user reviews the preview
+  → dispatcher-issued approval receipt
+  → optional Apply
 ```
 
-No mutative action may be executed by the AI Doctor without prior read-only evidence collection and explicit user confirmation.
+The Doctor cannot synthesize its own mutation approval. It also does not expose raw exception text in the conversation surface.
 
----
+## 5. Activity, reports, persistence, and recovery
 
-## 6. Rust Native Engine & Health Guard Daemon
+Activity is the durable operation ledger. It exposes Running, Needs attention, Completed, and aggregated daily Reports views.
 
-- **`wincare_core`**: Versioned C ABI (`sys_info`, `dir_size`, `sha256`) wrapped in `std::panic::catch_unwind` for bounded native execution.
-- **`wincare-guard`**: Autonomous background daemon monitoring RAM pressure, disk usage, and thermal state with Windows Toast XML notifications, structured JSON telemetry, and planned Named Pipe IPC interface scaffolding (`WinCareGuardIPC`).
+Journal updates are event-driven rather than UI-polled. In-memory state is updated under synchronization, but serialization/disk work is queued outside state locks. Preference writes follow the same non-blocking pattern. Persistence degradation is visible in the UI rather than silently masquerading as durable success.
 
----
+`UndoAvailable` is false unless a concrete executable compensator is implemented. WinCare does not advertise a generic Undo action for operations that cannot safely reverse themselves.
 
-## 7. Startup Telemetry & Performance Markers
+## 6. Native core and Guard
+
+### `wincare_core`
+
+The Rust core exposes versioned bounded primitives such as system information, directory sizing, and SHA-256. FFI entry points contain panics, use caller-owned pointer/length buffers, and do not retain caller memory after return.
+
+### `wincare-guard`
+
+Guard currently provides an **experimental daemon boundary**:
+
+- RAM/disk/thermal monitoring;
+- local `WinCareGuardIPC` named-pipe `ping` / `health` responses;
+- an explicit Windows DACL rather than the default named-pipe ACL;
+- staged per-user notification payloads.
+
+The current release does **not** claim a production SCM-installed service lifecycle or complete native/app toast delivery. Those remain promotion requirements. Until they are wired and exercised, Guard must be described as experimental in user-facing surfaces and release documentation.
+
+## 7. Startup and performance boundaries
 
 The first WinUI frame performs no network access, external process launch, WMI/CIM query, Defender query, optional-runtime probe, or command execution.
 
-Startup markers:
-1. `AppConstructed`: Application instance initialized.
-2. `WindowCreated`: MainWindow constructed with Mica backdrop.
-3. `FirstContentRendered`: Shell navigation view populated.
-4. `ShellInteractive`: Background services and catalog ready for user interaction.
+Startup markers are:
 
----
+1. `AppConstructed`
+2. `WindowCreated`
+3. `FirstContentRendered`
+4. `ShellInteractive`
 
-## 8. Packaging & Distribution Model
+Long lists use WinUI virtualization, search is debounced, and stable XAML data surfaces prefer compiled `x:Bind`.
 
-- **MSIX Package**: Primary modern Windows installer distribution.
-- **Portable Folder & ZIP**: Secondary standalone distributions for offline recovery.
-- **Architecture Matrix**: Architecture-matched `wincare_core.dll` and `wincare_guard.exe` binaries for `x64` and `ARM64`.
-- **Source Finalization**: Deterministic separation of pure native source and historical migration oracle archives.
+Checkup intentionally runs measurement-sensitive read-only probes sequentially; overlapping disk/CPU/update/security probes could contaminate the evidence they are trying to collect.
+
+## 8. UI, adaptivity, and accessibility
+
+`LayoutVisibility.CompactBreakpointDip = 920` is the app-level compact boundary. Home, Checkup, All Tools, System Care, Security, Repair & Recovery, and Activity consume the shared compact state. Local component breakpoints may exist for a specific header/content fit but do not redefine app compact state.
+
+High Contrast uses system colors. The light diagnostic accent was darkened for small-text contrast. Interactive controls carry automation metadata, and important layouts wrap rather than depending on fixed text heights. Narrator, keyboard traversal, 225% text scaling, and live native resizing remain required release validation; source inspection alone does not prove those runtime behaviors.
+
+## 9. Packaging and promotion
+
+- MSIX is the primary installer format.
+- x64 and ARM64 portable artifacts remain secondary technician/recovery distributions.
+- Architecture-matched `wincare_core.dll` and `wincare_guard.exe` are staged per target.
+- CI verifies catalog parity, source contracts, structural/native tests, managed tests, Rust formatting/clippy/tests where executable, package creation, and signature checks.
+
+Production promotion additionally requires live Windows behavioral verification, accessibility/text-scale testing, production certificate installation/upgrade validation, current runtime screenshots, and completion or explicit deferral of experimental Guard service/notification integration.

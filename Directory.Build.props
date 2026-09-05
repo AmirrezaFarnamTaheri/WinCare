@@ -12,6 +12,10 @@
     <Deterministic>true</Deterministic>
     <ContinuousIntegrationBuild Condition="'$(CI)' == 'true'">true</ContinuousIntegrationBuild>
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+    <RestoreLockedMode Condition="'$(CI)' == 'true'">true</RestoreLockedMode>
+    <NuGetAudit>true</NuGetAudit>
+    <NuGetAuditMode>all</NuGetAuditMode>
+    <NuGetAuditLevel>moderate</NuGetAuditLevel>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <TieredPGO>true</TieredPGO>
   </PropertyGroup>
@@ -20,4 +24,25 @@
     <NoWarn>$(NoWarn);1591</NoWarn>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
+
+  <!-- A single-file portable publish has a RID-specific dependency graph (including
+       linker/runtime packages) that differs from the normal build/test graph. Keep the
+       conventional packages.lock.json files canonical for normal tooling, and stage the
+       committed RID-specific variants immediately before the implicit publish restore. -->
+  <Target Name="StagePortablePublishLockFiles"
+          BeforeTargets="Restore"
+          Condition="'$(MSBuildProjectName)' == 'WinCare.App' and '$(WindowsPackageType)' == 'None' and '$(PublishSingleFile)' == 'true' and ('$(RuntimeIdentifier)' == 'win-x64' or '$(RuntimeIdentifier)' == 'win-arm64')">
+    <Error Condition="!Exists('$(MSBuildThisFileDirectory)src/WinCare.App/packages.portable.$(RuntimeIdentifier).lock.json')" Text="Missing portable WinCare.App lockfile for $(RuntimeIdentifier)." />
+    <Error Condition="!Exists('$(MSBuildThisFileDirectory)src/WinCare.Application/packages.portable.$(RuntimeIdentifier).lock.json')" Text="Missing portable WinCare.Application lockfile for $(RuntimeIdentifier)." />
+    <Error Condition="!Exists('$(MSBuildThisFileDirectory)src/WinCare.CommandCatalog/packages.portable.$(RuntimeIdentifier).lock.json')" Text="Missing portable WinCare.CommandCatalog lockfile for $(RuntimeIdentifier)." />
+    <Error Condition="!Exists('$(MSBuildThisFileDirectory)src/WinCare.Domain/packages.portable.$(RuntimeIdentifier).lock.json')" Text="Missing portable WinCare.Domain lockfile for $(RuntimeIdentifier)." />
+    <Error Condition="!Exists('$(MSBuildThisFileDirectory)src/WinCare.Infrastructure/packages.portable.$(RuntimeIdentifier).lock.json')" Text="Missing portable WinCare.Infrastructure lockfile for $(RuntimeIdentifier)." />
+
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)src/WinCare.App/packages.portable.$(RuntimeIdentifier).lock.json" DestinationFiles="$(MSBuildThisFileDirectory)src/WinCare.App/packages.lock.json" />
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)src/WinCare.Application/packages.portable.$(RuntimeIdentifier).lock.json" DestinationFiles="$(MSBuildThisFileDirectory)src/WinCare.Application/packages.lock.json" />
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)src/WinCare.CommandCatalog/packages.portable.$(RuntimeIdentifier).lock.json" DestinationFiles="$(MSBuildThisFileDirectory)src/WinCare.CommandCatalog/packages.lock.json" />
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)src/WinCare.Domain/packages.portable.$(RuntimeIdentifier).lock.json" DestinationFiles="$(MSBuildThisFileDirectory)src/WinCare.Domain/packages.lock.json" />
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)src/WinCare.Infrastructure/packages.portable.$(RuntimeIdentifier).lock.json" DestinationFiles="$(MSBuildThisFileDirectory)src/WinCare.Infrastructure/packages.lock.json" />
+    <Message Importance="high" Text="Staged locked portable dependency graphs for $(RuntimeIdentifier)." />
+  </Target>
 </Project>

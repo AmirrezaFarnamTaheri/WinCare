@@ -75,17 +75,14 @@ public sealed class AiDoctorPageViewModel : INotifyPropertyChanged
         IIntentTranslator? intentTranslator = null,
         ICommandDispatcher? commandDispatcher = null)
     {
-        var catalog = new ToolCatalogService(AppRuntime.Current.PluginRegistry);
-        var modelManager = new ModelManager();
-        var inferenceEngine = new OnnxInferenceEngine(modelManager);
+        var inferenceEngine = new RuleBasedIntentInferenceEngine();
 
-        _intentTranslator = intentTranslator ?? new IntentTranslator(inferenceEngine, catalog);
+        _intentTranslator = intentTranslator ?? new IntentTranslator(inferenceEngine, AppRuntime.Current.ToolCatalog);
         _commandDispatcher = commandDispatcher ?? AppRuntime.Current.Dispatcher;
 
-        // Greeting message
         Messages.Add(new DoctorChatMessage(
-            "AI Doctor",
-            "Hello! I am your on-device WinCare AI System Doctor. Describe any issue with your PC (e.g. storage full, high RAM, lag, network ping) and I will diagnose it and generate a safe, verifiable action plan.",
+            "Diagnostic Doctor",
+            "I am WinCare’s on-device rule-based diagnostic assistant. Describe a Windows problem (for example storage pressure, high memory use, lag, or network latency) and I will collect evidence and propose reviewable diagnostic steps.",
             IsUser: false,
             DateTime.UtcNow
         ));
@@ -100,22 +97,28 @@ public sealed class AiDoctorPageViewModel : INotifyPropertyChanged
         Messages.Add(new DoctorChatMessage("User", prompt, IsUser: true, DateTime.UtcNow));
 
         IsAnalyzing = true;
+        CurrentPlan = null;
         try
         {
             var plan = await _intentTranslator.TranslateAsync(prompt, cancellationToken);
             CurrentPlan = plan;
 
-            var responseText = $"**Telemetry-Assisted Diagnostic Plan:** {plan.DiagnosisSummary}\n\n" +
-                $"• **Measured Probes:** {plan.MeasuredEvidence.Count} live telemetry probes collected.\n" +
-                $"• **Investigation Scope:** {plan.Findings.Count} diagnostic findings identified.\n" +
-                $"• **Recommended Steps:** {plan.ProposedSteps.Count} steps available. Review measured evidence and run read-only diagnostic checks before executing mutations.";
-            Messages.Add(new DoctorChatMessage("AI Doctor", responseText, IsUser: false, DateTime.UtcNow, plan));
+            var responseText = $"Telemetry-assisted diagnostic plan\n{plan.DiagnosisSummary}\n\n" +
+                $"Measured probes: {plan.MeasuredEvidence.Count} live telemetry probes collected.\n" +
+                $"Investigation scope: {plan.Findings.Count} diagnostic findings identified.\n" +
+                $"Recommended steps: {plan.ProposedSteps.Count} steps available. Review measured evidence and run read-only diagnostic checks before any mutation.";
+            Messages.Add(new DoctorChatMessage("Diagnostic Doctor", responseText, IsUser: false, DateTime.UtcNow, plan));
+        }
+        catch (OperationCanceledException)
+        {
+            Messages.Add(new DoctorChatMessage("Diagnostic Doctor", "Analysis cancelled.", IsUser: false, DateTime.UtcNow));
         }
         catch (Exception ex)
         {
+            System.Diagnostics.Debug.WriteLine($"[DiagnosticDoctor] Analysis fault: {ex}");
             Messages.Add(new DoctorChatMessage(
-                "AI Doctor",
-                $"An error occurred while analyzing: {ex.Message}",
+                "Diagnostic Doctor",
+                "Diagnosis could not be completed. No change was applied by this diagnostic request. Review Activity or the WinCare logs if the problem continues.",
                 IsUser: false,
                 DateTime.UtcNow
             ));
@@ -126,39 +129,39 @@ public sealed class AiDoctorPageViewModel : INotifyPropertyChanged
         }
     }
 
-    public async Task<CommandResult> ExecuteStepAsync(ProposedActionStep step, bool userApproved = false, CancellationToken cancellationToken = default)
+    public Task<CommandResult> PreviewStepAsync(ProposedActionStep step, CancellationToken cancellationToken = default)
     {
-        if (step == null)
-        {
-            throw new ArgumentNullException(nameof(step));
-        }
-
-        var isReadOnly = step.RiskLevel == CommandCatalog.Models.CommandRisk.ReadOnly;
-        if (!isReadOnly && !userApproved)
-        {
-            throw new InvalidOperationException("Mutating maintenance operations require explicit user review and approval confirmation.");
-        }
-
-        var emptyParams = System.Text.Json.JsonSerializer.SerializeToElement(new { });
-        var correlationId = Guid.NewGuid();
-        var approval = !isReadOnly
-            ? ApprovedMutationPlan.Create(step.CommandId, emptyParams, correlationId)
-            : null;
-
-        var request = new CommandRequest(
-            CommandId: step.CommandId,
-            Parameters: emptyParams,
-            Apply: !isReadOnly,
-            CorrelationId: correlationId,
-            Approval: approval
-        );
-
-        var options = isReadOnly
-            ? CommandExecutionOptions.Default
-            : new CommandExecutionOptions(ReviewApproved: true);
-
-        return await _commandDispatcher.ExecuteAsync(request, options, cancellationToken);
+        ArgumentNullException.ThrowIfNull(step);
+        var parameters = SerializeStepParameters(step);
+        return _commandDispatcher.ExecuteAsync(
+            CommandRequest.Preview(step.CommandId, parameters),
+            CommandExecutionOptions.Default,
+            cancellationToken);
     }
+
+    public Task<CommandResult> ApplyPreviewedStepAsync(
+        ProposedActionStep step,
+        ApprovedMutationPlan reviewPlan,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(step);
+        ArgumentNullException.ThrowIfNull(reviewPlan);
+        if (step.IsReadOnly)
+        {
+            throw new InvalidOperationException("Read-only diagnostic steps do not require an apply phase.");
+        }
+
+        var parameters = SerializeStepParameters(step);
+        return _commandDispatcher.ExecuteAsync(
+            CommandRequest.Execute(step.CommandId, parameters, reviewPlan),
+            new CommandExecutionOptions(ReviewApproved: true),
+            cancellationToken);
+    }
+
+    private static System.Text.Json.JsonElement SerializeStepParameters(ProposedActionStep step) =>
+        step.Parameters is { Count: > 0 }
+            ? System.Text.Json.JsonSerializer.SerializeToElement(step.Parameters)
+            : System.Text.Json.JsonSerializer.SerializeToElement(new { });
 
     private void OnPropertyChanged([CallerMemberName] string? propertyName = null)
     {

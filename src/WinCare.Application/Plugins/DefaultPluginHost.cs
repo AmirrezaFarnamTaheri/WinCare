@@ -15,6 +15,7 @@ public class DefaultPluginHost : IPluginHost
 {
     private readonly ICommandDispatcher? _commandDispatcher;
     private readonly ConcurrentDictionary<string, CommandDefinition> _registeredCommands = new(StringComparer.OrdinalIgnoreCase);
+    private readonly object _registrationLock = new();
 
     /// <summary>
     /// Initializes a new instance of <see cref="DefaultPluginHost"/>.
@@ -54,41 +55,47 @@ public class DefaultPluginHost : IPluginHost
     /// <inheritdoc />
     public bool RegisterCommand(CommandDefinition command, ICommandHandler? handler = null)
     {
-        if (command == null || string.IsNullOrWhiteSpace(command.Id))
+        lock (_registrationLock)
         {
-            return false;
-        }
-
-        if (_registeredCommands.ContainsKey(command.Id))
-        {
-            return false;
-        }
-
-        if (_commandDispatcher != null)
-        {
-            if (handler == null)
-            {
-                // Dynamic commands require an executable handler to prevent unexecutable ghost tools
-                return false;
-            }
-
-            if (!_commandDispatcher.RegisterDynamicCommand(command, handler))
+            if (command == null || string.IsNullOrWhiteSpace(command.Id))
             {
                 return false;
             }
-        }
 
-        _registeredCommands[command.Id] = command;
-        return true;
+            if (_registeredCommands.ContainsKey(command.Id))
+            {
+                return false;
+            }
+
+            if (_commandDispatcher != null)
+            {
+                if (handler == null)
+                {
+                    // Dynamic commands require an executable handler to prevent unexecutable ghost tools
+                    return false;
+                }
+
+                if (!_commandDispatcher.RegisterDynamicCommand(command, handler))
+                {
+                    return false;
+                }
+            }
+
+            _registeredCommands[command.Id] = command;
+            return true;
+        }
     }
 
     /// <inheritdoc />
     public void UnregisterCommand(string commandId)
     {
-        if (!string.IsNullOrWhiteSpace(commandId))
+        lock (_registrationLock)
         {
-            _registeredCommands.TryRemove(commandId, out _);
-            _commandDispatcher?.UnregisterDynamicCommand(commandId);
+            if (!string.IsNullOrWhiteSpace(commandId))
+            {
+                _registeredCommands.TryRemove(commandId, out _);
+                _commandDispatcher?.UnregisterDynamicCommand(commandId);
+            }
         }
     }
 }

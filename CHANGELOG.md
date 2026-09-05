@@ -4,6 +4,35 @@ All notable changes to WinCare are documented in this file in accordance with [K
 
 ---
 
+## [Unreleased]
+
+### Security & Safety
+
+- Made mutating approval a dispatcher-issued, parameter-bound, expiring, single-use capability; callers such as the System Doctor can no longer synthesize their own approval without a successful preview.
+- Hardened plugin catalog trust, fresh-install re-resolution, publisher revocation, signed admission records, assembly-plugin rollback, uninstall recovery, and discovery-time signature verification.
+- Made plugin upgrade rollback preserve the last known-good external admission record when trust-record restoration itself encounters an I/O or access failure, surfacing both failures instead of deleting recovery evidence.
+- Hardened Guard named-pipe access control and retained fail-closed semantics for future mutating IPC.
+- Versioned encrypted profile envelopes, retained legacy decryption compatibility, and raised PBKDF2-HMAC-SHA256 work factor to 600,000 iterations.
+- Changed mutation-handler fault reporting to state when final machine state is unknown rather than implying that no change occurred.
+
+### UX, Accessibility & Reliability
+
+- Reworked Home, Activity/Reports, Help, Plugin Store, Checkup, Doctor, settings, and window-continuity behavior around truthful state, visible degraded/error modes, safer destructive actions, and evidence-driven recovery.
+- Added typed All Tools parameter editors generated from command contracts while keeping raw JSON as an explicit Advanced escape hatch.
+- Standardized compact behavior around the shared breakpoint, added real Checkup compact states, and made measurement-sensitive Checkup probes explicitly sequential without globally serializing the dispatcher.
+- Tightened accessible theme tokens, automation metadata, and validation guidance for High Contrast, Narrator, keyboard use, and 100–225% Windows text scaling.
+- Replaced polling/synchronous persistence patterns with event-driven refresh and queued/coalesced persistence where appropriate, while surfacing durability failures.
+
+### Build, Supply Chain & Repository Quality
+
+- Pinned .NET SDK 8.0.416 exactly with feature-band roll-forward and prerelease SDKs disabled; Rust and GitHub Actions remain pinned as well.
+- Committed normal NuGet dependency lockfiles for all eight solution projects and RID-specific portable publish lock variants for all five source projects on `win-x64` and `win-arm64`.
+- Enabled CI locked restore plus NuGet auditing of all transitive packages at moderate-or-higher severity; audit warnings are not suppressed.
+- Expanded Dependabot coverage to GitHub Actions, NuGet, Cargo, and npm.
+- Added CODEOWNERS and a pull-request template covering safety/trust, accessibility, supply chain, exact verification evidence, documentation truth, and residual risk.
+- Expanded finalized native-source evidence to include NuGet configuration, infrastructure security tests, repository review guardrails, all committed dependency lock graphs, complete linked documentation/assets, and the plugin developer CLI with its tests.
+- Added structural regressions for deterministic toolchains, dependency graph drift, plugin admission rollback, portable publish locking, finalized-source completeness, responsive behavior, typed inputs, and approval provenance.
+
 ## [2.5.0-rc5] - 2026-08-31
 
 ### Fixed
@@ -66,15 +95,15 @@ All notable changes to WinCare are documented in this file in accordance with [K
 - **In-Process Security Model & Capabilities**: Upgraded `PluginDetailDialog.xaml` with full-trust execution disclosures and permission reviews ("Declared Capabilities"), gating installations behind explicit user consent.
 - **Developer CLI SDK (`tools/wincare-plugin-cli`)**: Created Node.js developer CLI (`wincare-plugin.js`) with `create`, `validate`, `lint`, and `pack` commands for JSON packs and C# binary plugins.
 
-#### 2. AI System Doctor (DirectML & Local ONNX)
-- **Local ONNX Inference Engine**: Integrated quantized ONNX model inference via `OnnxInferenceEngine` and `ModelManager` with DirectML GPU acceleration and sub-1.5s cold-start latency.
-- **Natural-Language Intent Translation**: Implemented `IntentTranslator` mapping user symptom prompts into structured, validated `DoctorActionPlan` execution sequences.
+#### 2. AI System Doctor (Rule-Based On-Device Classification)
+- **Rule-Based Intent Classification Engine**: `RuleBasedIntentInferenceEngine` classifies symptom prompts with deterministic keyword rules on-device; initialization is a near-zero-cost no-op (no model weights, no ONNX/DirectML runtime).
+- **Natural-Language Intent Translation**: Implemented `IntentTranslator` mapping user symptom prompts into structured, validated `DoctorActionPlan` execution sequences drawn strictly from the native catalog.
 - **Evidence-Grounded Two-Phase Diagnostics**: `AiDoctorPage.xaml` presents real-time diagnostic chat feeds and two-phase action cards where read-only evidence collection precedes mutative repairs with step-by-step confirmation.
 
 #### 3. Rust 2024 Background Health Guard Service (`wincare-guard`)
-- **High-Performance Guard Daemon**: Developed background monitoring crate (`native/wincare-guard`) with sub-millisecond RAM pressure, disk quota, and thermal monitors.
-- **Autonomous Monitoring & Scaffolding**: Local threshold evaluations and Windows Toast XML notifications with C# IPC client scaffolding (`GuardPipeClient.cs`).
-- **Windows Toast Notifications**: Implemented XML template-based Toast notification builder for immediate threshold breach alerts.
+- **High-Performance Guard Daemon**: Developed background monitoring crate (`native/wincare-guard`) with RAM pressure, disk quota, and thermal (cooling-mode) monitors.
+- **Named-Pipe Health Endpoint**: Real named-pipe IPC server on `\\.\pipe\WinCareGuardIPC` answering `ping`/`health` for the C# `GuardPipeClient`.
+- **Windows Toast Notifications**: Implemented an XML template-based Toast notification builder, raised on critical threshold breaches via the daemon alert path.
 
 #### 4. Cloud Profile Sync & Source Generation
 - **Encrypted Sync Provider**: Implemented AES-256-GCM profile payload encryption (`CryptoService.cs`) with PBKDF2/SHA-256 key derivation and `GitHubGistSyncProvider.cs` for multi-machine synchronization.

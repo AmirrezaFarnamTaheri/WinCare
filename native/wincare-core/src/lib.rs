@@ -11,7 +11,7 @@ use std::slice;
 use std::str;
 
 #[cfg(target_os = "windows")]
-#[allow(non_snake_case, clippy::upper_case_acronyms)]
+#[allow(non_camel_case_types, non_snake_case, clippy::upper_case_acronyms)]
 mod win32 {
     #[repr(C)]
     #[derive(Copy, Clone)]

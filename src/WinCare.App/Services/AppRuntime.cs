@@ -1,6 +1,7 @@
 using WinCare.Application.Activity;
 using WinCare.Application.Commands;
 using WinCare.Application.Plugins;
+using WinCare.Application.Tools;
 using WinCare.Infrastructure.Commands;
 using WinCare.Infrastructure.Native;
 using WinCare.Infrastructure.Plugins;
@@ -26,9 +27,11 @@ public sealed class AppRuntime
         PluginHost = new DefaultPluginHost(Dispatcher);
         PluginRegistry = new PluginRegistryService(
             PluginState,
-            scriptHandlerFactory: (cmdId, scriptPath, pluginDir) => new PluginScriptCommandHandler(cmdId, scriptPath, pluginDir, new BoundedProcessRunner())
+            scriptHandlerFactory: (cmdId, scriptPath, pluginDir, readOnly, capabilities) =>
+                new PluginScriptCommandHandler(cmdId, scriptPath, pluginDir, new BoundedProcessRunner(), readOnly, capabilities)
         );
         CatalogService = new RemoteCatalogService();
+        ToolCatalog = new ToolCatalogService(PluginRegistry);
         InstallerService = new PluginInstallerService();
     }
 
@@ -72,6 +75,9 @@ public sealed class AppRuntime
     /// </summary>
     public IPluginRegistry PluginRegistry { get; }
 
+    /// <summary>Shared searchable catalog, subscribed once to the plugin registry.</summary>
+    public ToolCatalogService ToolCatalog { get; }
+
     /// <summary>
     /// Gets the remote plugin catalog service instance.
     /// </summary>
@@ -91,24 +97,14 @@ public sealed class AppRuntime
         {
             // Startup discovery is process-wide work. Sharing the task prevents parallel
             // registry initialization when a page opens while app startup is still running.
-            return _pluginInitializationTask ??= InitializePluginsCoreAsync(ct);
-        }
-    }
-
-    private async Task InitializePluginsCoreAsync(CancellationToken ct)
-    {
-        try
-        {
-            await PluginRegistry.DiscoverAndInitializeAsync(PluginHost, ct).ConfigureAwait(false);
-        }
-        catch
-        {
-            lock (_pluginInitializationLock)
+            // Inspect the stored task on entry: a synchronously cancelled operation can
+            // complete before assignment, so clearing it from its own catch is insufficient.
+            if (_pluginInitializationTask is null || _pluginInitializationTask.IsFaulted || _pluginInitializationTask.IsCanceled)
             {
-                _pluginInitializationTask = null;
+                _pluginInitializationTask = PluginRegistry.DiscoverAndInitializeAsync(PluginHost, ct);
             }
-
-            throw;
+            return _pluginInitializationTask;
         }
     }
+
 }

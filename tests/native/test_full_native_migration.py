@@ -71,12 +71,67 @@ class FullNativeMigrationTests(unittest.TestCase):
                 offenders.append(str(path.relative_to(ROOT)))
         self.assertEqual([], offenders)
 
-    def test_tool_execution_exposes_parameter_json_and_validates_it(self) -> None:
+    def test_tool_execution_prefers_typed_parameters_with_advanced_json_escape_hatch(self) -> None:
         vm = (ROOT / "src/WinCare.App/ViewModels/Pages/ToolExecutionViewModel.cs").read_text(encoding="utf-8")
-        xaml = (ROOT / "src/WinCare.App/Views/Pages/AllToolsPage.xaml").read_text(encoding="utf-8")
-        self.assertIn("ParameterJson", vm)
-        self.assertIn("command.parameters_json_invalid", vm)
-        self.assertIn("Execution.ParameterJson", xaml)
+        page = (ROOT / "src/WinCare.App/Views/Pages/AllToolsPage.xaml.cs").read_text(encoding="utf-8")
+        catalog = (ROOT / "src/WinCare.CommandCatalog/Models/CommandParameterCatalog.cs").read_text(encoding="utf-8")
+        self.assertIn("ParameterFields", vm)
+        self.assertIn("CommandParameterCatalog.For", vm)
+        self.assertIn("UseAdvancedParameterJson", vm)
+        self.assertIn('code = "command.parameters_invalid"', vm)
+        self.assertIn("ReplaceRawParameterEditor", page)
+        self.assertIn("CreateParameterField", page)
+        self.assertIn("AdvancedParameterEditing", page)
+        self.assertIn("SchemaData", catalog)
+
+    def test_parameter_catalog_covers_explicit_validation_fields(self) -> None:
+        executor = (ROOT / "src/WinCare.Infrastructure/Commands/WindowsCommandExecutor.cs").read_text(encoding="utf-8")
+        catalog = (ROOT / "src/WinCare.CommandCatalog/Models/CommandParameterCatalog.cs").read_text(encoding="utf-8")
+        schema_match = re.search(r'SchemaData = """\n(.*?)\n""";', catalog, re.S)
+        self.assertIsNotNone(schema_match)
+        schemas: dict[str, set[str]] = {}
+        for line in schema_match.group(1).splitlines():
+            command_id, fields = line.split("|", 1)
+            schemas[command_id] = {field.split(":", 1)[0] for field in fields.split(";") if field}
+
+        validation_start = executor.index("internal static void ValidateCommandParameters")
+        validation_end = executor.index("private static bool IsCommandReversible", validation_start)
+        validation = executor[validation_start:validation_end]
+        labels: list[str] = []
+        missing: list[str] = []
+        parts = re.split(r'(?m)^\s*(case\s+"([^"]+)"|default)\s*:', validation)
+        # re.split returns prefix, then pairs of (label token, command id, body).
+        for index in range(1, len(parts), 3):
+            command_id = parts[index + 1]
+            body = parts[index + 2]
+            if command_id is not None:
+                labels.append(command_id)
+            if not body.strip():
+                continue
+
+            fields = set(re.findall(r'p\.(?:RequiredString|String|Int32|Int64|Double|Boolean|StringArray|Element|OptionalElement|DateTimeOffset)\(\s*"([^"]+)"', body))
+            for call in re.findall(r'RequireStrings\(p,\s*([^;]+?)\)', body):
+                fields.update(re.findall(r'"([^"]+)"', call))
+            fields.update(re.findall(r'RequireIds\(p,\s*"([^"]+)"\)', body))
+
+            compatibility_aliases = {("offline-feature-set", "State")}
+            for label in labels:
+                declared = schemas.get(label, set())
+                for field in fields:
+                    if field not in declared and (label, field) not in compatibility_aliases:
+                        missing.append(f"{label}.{field}")
+            labels.clear()
+
+        self.assertEqual([], missing)
+
+    def test_offline_feature_legacy_state_and_enabled_are_synchronized(self) -> None:
+        compatibility = (ROOT / "src/WinCare.Application/Commands/CommandRequestCompatibility.cs").read_text(encoding="utf-8")
+        handler = (ROOT / "src/WinCare.Application/Commands/DelegatingCommandHandler.cs").read_text(encoding="utf-8")
+        self.assertIn('"offline-feature-set"', compatibility)
+        self.assertIn('parameters["Enabled"] = enabled', compatibility)
+        self.assertIn('parameters["State"] = enabled ? "Enable" : "Disable"', compatibility)
+        self.assertIn("parameters conflict", compatibility)
+        self.assertIn("CommandRequestCompatibility.TryNormalize", handler)
 
     def test_activity_runtime_has_no_last_journal_service_locator(self) -> None:
         runtime = (ROOT / "src/WinCare.Application/Commands/CommandRuntime.cs").read_text(encoding="utf-8")

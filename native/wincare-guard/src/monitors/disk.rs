@@ -1,14 +1,21 @@
-//! Disk space monitor for proactive storage alerting.
+//! Disk free-space monitor for proactive storage alerting.
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+/// Telemetry for a single drive's free space.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize)]
 pub struct DiskTelemetry {
+    /// Drive letter (upper-cased).
     pub drive_letter: char,
+    /// Total capacity in bytes.
     pub total_bytes: u64,
+    /// Free space available to the caller in bytes.
     pub free_bytes: u64,
+    /// True when the drive is below either low-space threshold.
     pub is_low_space: bool,
 }
 
-pub const LOW_SPACE_THRESHOLD_BYTES: u64 = 5 * 1024 * 1024 * 1024; // 5 GB
+/// Absolute low-space threshold (5 GB).
+pub const LOW_SPACE_THRESHOLD_BYTES: u64 = 5 * 1024 * 1024 * 1024;
+/// Percentage low-space threshold (10% of capacity).
 pub const LOW_SPACE_THRESHOLD_PERCENT: u64 = 10;
 
 fn is_low_space(total_bytes: u64, free_bytes: u64) -> bool {
@@ -24,21 +31,22 @@ mod win32 {
     // SAFETY: Win32 GetDiskFreeSpaceExW signature matches Windows SDK.
     unsafe extern "system" {
         pub fn GetDiskFreeSpaceExW(
-            lpDirectoryName: *const u16,
-            lpFreeBytesAvailableToCaller: *mut u64,
-            lpTotalNumberOfBytes: *mut u64,
-            lpTotalNumberOfFreeBytes: *mut u64,
+            lp_directory_name: *const u16,
+            lp_free_bytes_available_to_caller: *mut u64,
+            lp_total_number_of_bytes: *mut u64,
+            lp_total_number_of_free_bytes: *mut u64,
         ) -> i32;
     }
 }
 
+/// Queries free space for the given drive letter. Returns `None` when the query fails.
 pub fn check_disk_space(drive: char) -> Option<DiskTelemetry> {
     let mut total_bytes: u64 = 0;
     let mut free_bytes: u64 = 0;
 
     #[cfg(target_os = "windows")]
     {
-        let drive_str = format!("{}:\\\0", drive);
+        let drive_str = format!("{drive}:\\\0");
         let wide: Vec<u16> = drive_str.encode_utf16().collect();
         // SAFETY: Pointer arguments are valid local stack memory.
         let success = unsafe {
@@ -57,7 +65,7 @@ pub fn check_disk_space(drive: char) -> Option<DiskTelemetry> {
 
     #[cfg(not(target_os = "windows"))]
     {
-        // Mock fallback for cross-platform unit tests
+        // Mock fallback for cross-platform unit tests.
         total_bytes = 512 * 1024 * 1024 * 1024;
         // Keep the non-Windows test fixture above the percentage threshold.
         free_bytes = 100 * 1024 * 1024 * 1024;

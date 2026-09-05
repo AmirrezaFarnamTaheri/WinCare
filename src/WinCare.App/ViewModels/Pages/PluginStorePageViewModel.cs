@@ -12,7 +12,7 @@ using WinCare.App.Services;
 using WinCare.Application.Plugins;
 
 /// <summary>
-/// ViewModel managing the Plugin Store catalog, search filtering, and package installation.
+/// ViewModel managing the Plugin Store catalog, search filtering, trust status, and package installation.
 /// </summary>
 public sealed class PluginStorePageViewModel : INotifyPropertyChanged, IDisposable
 {
@@ -26,17 +26,13 @@ public sealed class PluginStorePageViewModel : INotifyPropertyChanged, IDisposab
     private string _selectedCategory = "All";
     private bool _isLoading;
     private string? _errorMessage;
+    private string _catalogStatusMessage = "Catalog trust has not been evaluated yet.";
+    private bool _isCatalogTrustVerified;
     private CancellationTokenSource? _searchCts;
     private long _refreshVersion;
 
-    /// <summary>
-    /// Event fired when a property value changes.
-    /// </summary>
     public event PropertyChangedEventHandler? PropertyChanged;
 
-    /// <summary>
-    /// Initializes a new instance of <see cref="PluginStorePageViewModel"/> using supplied or shared runtime services.
-    /// </summary>
     public PluginStorePageViewModel(
         IPluginRegistry? registry = null,
         IRemoteCatalogService? catalogService = null,
@@ -53,98 +49,98 @@ public sealed class PluginStorePageViewModel : INotifyPropertyChanged, IDisposab
         Categories = new ObservableCollection<string> { "All", "System Care", "Security", "Utilities", "Installed" };
     }
 
-    /// <summary>
-    /// Collection of visual plugin cards displayed in the store list.
-    /// </summary>
     public ObservableCollection<PluginCardViewModel> Plugins { get; }
-
-    /// <summary>
-    /// Collection of category tab filter names.
-    /// </summary>
     public ObservableCollection<string> Categories { get; }
 
-    /// <summary>
-    /// Search filter query string with debounced auto-filtering.
-    /// </summary>
     public string SearchQuery
     {
         get => _searchQuery;
         set
         {
-            if (_searchQuery != value)
-            {
-                _searchQuery = value;
-                OnPropertyChanged();
-                var previous = _searchCts;
-                _searchCts = new CancellationTokenSource();
-                previous?.Cancel();
-                previous?.Dispose();
-                _ = TriggerDebouncedSearchAsync(_searchCts.Token);
-            }
+            if (_searchQuery == value) return;
+            _searchQuery = value;
+            OnPropertyChanged();
+            var previous = _searchCts;
+            _searchCts = new CancellationTokenSource();
+            previous?.Cancel();
+            previous?.Dispose();
+            _ = TriggerDebouncedSearchAsync(_searchCts.Token);
         }
     }
 
-    /// <summary>
-    /// Currently selected category filter.
-    /// </summary>
     public string SelectedCategory
     {
         get => _selectedCategory;
         set
         {
-            if (_selectedCategory != value)
-            {
-                _selectedCategory = value;
-                OnPropertyChanged();
-                _ = RefreshAfterFilterChangeAsync();
-            }
+            if (_selectedCategory == value) return;
+            _selectedCategory = value;
+            OnPropertyChanged();
+            _ = RefreshAfterFilterChangeAsync();
         }
     }
 
-    /// <summary>
-    /// Last error message from plugin operations, if any.
-    /// </summary>
     public string? ErrorMessage
     {
         get => _errorMessage;
         set
         {
-            if (_errorMessage != value)
-            {
-                _errorMessage = value;
-                OnPropertyChanged();
-                OnPropertyChanged(nameof(HasError));
-            }
+            if (_errorMessage == value) return;
+            _errorMessage = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(HasError));
         }
     }
 
-    /// <summary>
-    /// Whether an error banner should be displayed.
-    /// </summary>
     public bool HasError => !string.IsNullOrWhiteSpace(_errorMessage);
 
-    public bool IsEmpty => !IsLoading && Plugins.Count == 0;
+    /// <summary>Runtime trust/freshness description for the currently displayed catalog.</summary>
+    public string CatalogStatusMessage
+    {
+        get => _catalogStatusMessage;
+        private set
+        {
+            if (_catalogStatusMessage == value) return;
+            _catalogStatusMessage = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(HasCatalogStatus));
+        }
+    }
+
+    public bool HasCatalogStatus => !string.IsNullOrWhiteSpace(CatalogStatusMessage);
 
     /// <summary>
-    /// Whether the store catalog is currently fetching data or refreshing.
+    /// True only when the exact remote catalog bytes verified against a configured WinCare-pinned
+    /// catalog key. The current repository build intentionally remains browse-only when no approved
+    /// production catalog root is shipped.
     /// </summary>
+    public bool IsCatalogTrustVerified
+    {
+        get => _isCatalogTrustVerified;
+        private set
+        {
+            if (_isCatalogTrustVerified == value) return;
+            _isCatalogTrustVerified = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(IsCatalogBrowseOnly));
+        }
+    }
+
+    public bool IsCatalogBrowseOnly => !IsCatalogTrustVerified;
+    public bool IsEmpty => !IsLoading && Plugins.Count == 0;
+
     public bool IsLoading
     {
         get => _isLoading;
         private set
         {
-            if (_isLoading != value)
-            {
-                _isLoading = value;
-                OnPropertyChanged();
-                OnPropertyChanged(nameof(IsEmpty));
-            }
+            if (_isLoading == value) return;
+            _isLoading = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(IsEmpty));
         }
     }
 
-    /// <summary>
-    /// Initializes discovery and loads installed/online plugin catalog.
-    /// </summary>
     public async Task InitializeAsync(CancellationToken cancellationToken = default)
     {
         try
@@ -158,9 +154,10 @@ public sealed class PluginStorePageViewModel : INotifyPropertyChanged, IDisposab
                 await _registry.DiscoverAndInitializeAsync(_host, cancellationToken).ConfigureAwait(true);
             }
         }
-        catch
+        catch (Exception ex)
         {
-            // Tolerate initial discovery faults to show offline state
+            ErrorMessage = "Plugin discovery did not complete. Installed plugin state may be incomplete until discovery succeeds.";
+            System.Diagnostics.Debug.WriteLine($"[PluginStorePageViewModel] Initial discovery error: {ex}");
         }
 
         await RefreshPluginsAsync(forceRemoteRefresh: false, cancellationToken).ConfigureAwait(true);
@@ -172,17 +169,15 @@ public sealed class PluginStorePageViewModel : INotifyPropertyChanged, IDisposab
         {
             await Task.Delay(300, token);
             if (!token.IsCancellationRequested)
-            {
-                await RefreshPluginsAsync(forceRemoteRefresh: false, token);
-            }
+                await RefreshPluginsAsync(forceRemoteRefresh: false, token).ConfigureAwait(true);
         }
         catch (OperationCanceledException)
         {
-            // Keystroke debounced
+            // Keystroke debounce.
         }
         catch (Exception ex)
         {
-            ErrorMessage = $"Search refresh failed: {ex.Message}";
+            ErrorMessage = "Plugin search could not be refreshed. Installed plugins remain available.";
             System.Diagnostics.Debug.WriteLine($"[PluginStorePageViewModel] Search refresh error: {ex}");
         }
     }
@@ -195,19 +190,16 @@ public sealed class PluginStorePageViewModel : INotifyPropertyChanged, IDisposab
         }
         catch (Exception ex)
         {
-            ErrorMessage = $"Catalog refresh failed: {ex.Message}";
+            ErrorMessage = "The online plugin catalog could not be refreshed. Installed plugins remain available.";
             System.Diagnostics.Debug.WriteLine($"[PluginStorePageViewModel] Filter refresh error: {ex}");
         }
     }
 
-    /// <summary>
-    /// Refreshes the active plugin catalog list from registry and remote store.
-    /// </summary>
     public async Task RefreshPluginsAsync(bool forceRemoteRefresh = false, CancellationToken cancellationToken = default)
     {
-        var refreshVersion = Interlocked.Increment(ref _refreshVersion);
-        var selectedCategory = _selectedCategory;
-        var searchQuery = _searchQuery;
+        long refreshVersion = Interlocked.Increment(ref _refreshVersion);
+        string selectedCategory = _selectedCategory;
+        string searchQuery = _searchQuery;
         IsLoading = true;
         try
         {
@@ -216,42 +208,48 @@ public sealed class PluginStorePageViewModel : INotifyPropertyChanged, IDisposab
 
             if (string.Equals(selectedCategory, "Installed", StringComparison.OrdinalIgnoreCase))
             {
+                CatalogStatusMessage = "Showing locally installed plugins. Remote catalog trust does not affect this view.";
+                IsCatalogTrustVerified = false;
                 foreach (var installed in installedPlugins.Values)
                 {
                     if (MatchesSearch(searchQuery, installed.Id, installed.Name, installed.Description, installed.Author, installed.Category, installed.Commands.Select(command => command.Id)))
-                    {
                         cards.Add(new PluginCardViewModel(installed));
-                    }
                 }
             }
             else
             {
-                // Fetch online catalog
                 RemotePluginCatalog catalog;
                 try
                 {
                     catalog = await _catalogService.GetCatalogAsync(forceRemoteRefresh, cancellationToken).ConfigureAwait(true);
+                    CatalogStatusMessage = catalog.TrustStatusMessage;
+                    IsCatalogTrustVerified = catalog.IsTrustVerified;
                 }
-                catch
+                catch (OperationCanceledException)
                 {
-                    catalog = new RemotePluginCatalog();
+                    throw;
+                }
+                catch (Exception ex)
+                {
+                    catalog = new RemotePluginCatalog
+                    {
+                        TrustStatusMessage = "The online plugin catalog is currently unavailable. Installed plugins are still shown. Remote installation is unavailable."
+                    };
+                    CatalogStatusMessage = catalog.TrustStatusMessage;
+                    IsCatalogTrustVerified = false;
+                    ErrorMessage = "The online plugin catalog could not be loaded. Installed plugins remain available.";
+                    System.Diagnostics.Debug.WriteLine($"[PluginStorePageViewModel] Catalog refresh error: {ex}");
                 }
 
-                // Combine installed and remote catalog items
                 var seenIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
                 foreach (var item in catalog.Plugins)
                 {
                     seenIds.Add(item.Id);
-                    var isInstalled = installedPlugins.TryGetValue(item.Id, out var installedEntry);
-
+                    bool isInstalled = installedPlugins.TryGetValue(item.Id, out var installedEntry);
                     if (MatchesCategory(item.Category, selectedCategory) && MatchesSearch(searchQuery, item.Id, item.Name, item.Description, item.Author, item.Category, item.CommandsProvided))
-                    {
                         cards.Add(new PluginCardViewModel(item, isInstalled, installedEntry));
-                    }
                 }
 
-                // Add installed plugins not present in online catalog
                 foreach (var installed in installedPlugins.Values)
                 {
                     if (!seenIds.Contains(installed.Id) &&
@@ -263,55 +261,69 @@ public sealed class PluginStorePageViewModel : INotifyPropertyChanged, IDisposab
                 }
             }
 
-            // A more recent search/category request owns the collection. Older async
-            // requests may finish later, but must never overwrite its visible results.
-            if (refreshVersion != Volatile.Read(ref _refreshVersion))
-            {
-                return;
-            }
+            if (refreshVersion != Volatile.Read(ref _refreshVersion)) return;
 
             Plugins.Clear();
-            foreach (var card in cards)
-            {
-                Plugins.Add(card);
-            }
+            foreach (var card in cards) Plugins.Add(card);
             OnPropertyChanged(nameof(IsEmpty));
         }
         finally
         {
-            if (refreshVersion == Volatile.Read(ref _refreshVersion))
-            {
-                IsLoading = false;
-            }
+            if (refreshVersion == Volatile.Read(ref _refreshVersion)) IsLoading = false;
         }
     }
 
-    /// <summary>
-    /// Installs a remote plugin package, runs discovery, and refreshes the store.
-    /// </summary>
-    public Task<bool> InstallPluginAsync(PluginCardViewModel card, CancellationToken cancellationToken = default)
+    public async Task<bool> InstallPluginAsync(PluginCardViewModel card, IReadOnlyCollection<string>? consentedCapabilities = null, CancellationToken cancellationToken = default)
     {
-        if (card == null || card.IsInstalled || string.IsNullOrWhiteSpace(card.PackageUrl))
-        {
-            return Task.FromResult(false);
-        }
+        if (card == null || card.IsInstalled || !card.CanInstall || card.RemoteItem is null) return false;
 
         ErrorMessage = null;
-        // The remote catalog is transport metadata, not an independent publisher trust
-        // root. Never let it choose the key used to establish package authenticity.
-        ErrorMessage = "Remote plugin installation is disabled for this release.";
-        return Task.FromResult(false);
-    }
-
-    /// <summary>
-    /// Enables an installed plugin.
-    /// </summary>
-    public async Task<bool> EnablePluginAsync(PluginCardViewModel card, CancellationToken cancellationToken = default)
-    {
-        if (card == null || !card.IsInstalled || card.IsBuiltIn)
+        try
         {
+            var catalog = await _catalogService.GetCatalogAsync(forceRefresh: true, cancellationToken).ConfigureAwait(true);
+            CatalogStatusMessage = catalog.TrustStatusMessage;
+            IsCatalogTrustVerified = catalog.IsTrustVerified;
+            if (!catalog.IsTrustVerified)
+                throw new InvalidOperationException("Remote installation requires a catalog verified against a WinCare-pinned trust root.");
+
+            var consented = consentedCapabilities ?? Array.Empty<string>();
+            RemotePluginItem freshItem = RemotePluginInstallPolicy.ResolveFreshReviewedEntry(catalog, card.RemoteItem, consented);
+
+            string trustedPublisherId = !string.IsNullOrWhiteSpace(freshItem.PublisherId)
+                ? freshItem.PublisherId
+                : freshItem.Author;
+            if (string.IsNullOrWhiteSpace(trustedPublisherId))
+                throw new InvalidOperationException("The current catalog entry has no stable publisher identity.");
+
+            await _installerService.InstallTrustedPluginFromPackageAsync(
+                freshItem.PackageUrl,
+                freshItem.Id,
+                freshItem.Sha256,
+                trustedPublisherId,
+                freshItem.PublicKeyPem!,
+                freshItem.Signature!,
+                catalog.RevokedPackages,
+                catalog.RevokedPublishers,
+                consented,
+                cancellationToken).ConfigureAwait(true);
+
+            await _registry.DiscoverAndInitializeAsync(_host, cancellationToken).ConfigureAwait(true);
+            await RefreshPluginsAsync(forceRemoteRefresh: false, cancellationToken).ConfigureAwait(true);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = ex is OperationCanceledException
+                ? "Plugin installation was cancelled."
+                : "Plugin installation was blocked or failed. Review the catalog trust status and package details before retrying.";
+            System.Diagnostics.Debug.WriteLine($"[PluginStorePageViewModel] Install error: {ex}");
             return false;
         }
+    }
+
+    public async Task<bool> EnablePluginAsync(PluginCardViewModel card, CancellationToken cancellationToken = default)
+    {
+        if (card == null || !card.IsInstalled || card.IsBuiltIn) return false;
 
         ErrorMessage = null;
         try
@@ -322,21 +334,15 @@ public sealed class PluginStorePageViewModel : INotifyPropertyChanged, IDisposab
         }
         catch (Exception ex)
         {
-            ErrorMessage = $"Enable failed: {ex.Message}";
-            System.Diagnostics.Debug.WriteLine($"[PluginStorePageViewModel] Enable error: {ex.GetType().Name} - {ex.Message}");
+            ErrorMessage = "The plugin could not be enabled. Review its current state before retrying.";
+            System.Diagnostics.Debug.WriteLine($"[PluginStorePageViewModel] Enable error: {ex}");
             return false;
         }
     }
 
-    /// <summary>
-    /// Disables an installed plugin.
-    /// </summary>
     public async Task<bool> DisablePluginAsync(PluginCardViewModel card, CancellationToken cancellationToken = default)
     {
-        if (card == null || !card.IsInstalled || card.IsBuiltIn)
-        {
-            return false;
-        }
+        if (card == null || !card.IsInstalled || card.IsBuiltIn) return false;
 
         ErrorMessage = null;
         try
@@ -347,56 +353,74 @@ public sealed class PluginStorePageViewModel : INotifyPropertyChanged, IDisposab
         }
         catch (Exception ex)
         {
-            ErrorMessage = $"Disable failed: {ex.Message}";
-            System.Diagnostics.Debug.WriteLine($"[PluginStorePageViewModel] Disable error: {ex.GetType().Name} - {ex.Message}");
+            ErrorMessage = "The plugin could not be disabled. Review its current state before retrying.";
+            System.Diagnostics.Debug.WriteLine($"[PluginStorePageViewModel] Disable error: {ex}");
             return false;
         }
     }
 
-    /// <summary>
-    /// Uninstalls an installed plugin.
-    /// </summary>
     public async Task<bool> UninstallPluginAsync(PluginCardViewModel card, CancellationToken cancellationToken = default)
     {
-        if (card == null || !card.IsInstalled || card.IsBuiltIn)
-        {
-            return false;
-        }
+        if (card == null || !card.IsInstalled || card.IsBuiltIn) return false;
 
         ErrorMessage = null;
+        bool wasEnabled = card.InstalledState == PluginState.Enabled;
+        bool disabledForUninstall = false;
         try
         {
-            await _registry.DisablePluginAsync(card.Id, _host, cancellationToken).ConfigureAwait(true);
-            await _installerService.UninstallPluginAsync(card.Id, cancellationToken).ConfigureAwait(true);
+            if (wasEnabled)
+            {
+                await _registry.DisablePluginAsync(card.Id, _host, cancellationToken).ConfigureAwait(true);
+                disabledForUninstall = true;
+            }
+
+            bool removed = await _installerService.UninstallPluginAsync(card.Id, cancellationToken).ConfigureAwait(true);
+            if (!removed) throw new InvalidOperationException("The plugin package could not be removed.");
+
             await _registry.DiscoverAndInitializeAsync(_host, cancellationToken).ConfigureAwait(true);
             await RefreshPluginsAsync(forceRemoteRefresh: false, cancellationToken).ConfigureAwait(true);
             return true;
         }
+        catch (OperationCanceledException)
+        {
+            if (disabledForUninstall) await TryRestoreEnabledStateAsync(card.Id).ConfigureAwait(true);
+            throw;
+        }
         catch (Exception ex)
         {
-            ErrorMessage = $"Uninstall failed: {ex.Message}";
-            System.Diagnostics.Debug.WriteLine($"[PluginStorePageViewModel] Uninstall error: {ex.GetType().Name} - {ex.Message}");
+            bool restored = !disabledForUninstall || await TryRestoreEnabledStateAsync(card.Id).ConfigureAwait(true);
+            ErrorMessage = restored
+                ? "Plugin uninstall failed. The plugin was restored to its previous enabled state."
+                : "Plugin uninstall failed after the plugin was disabled, and its previous enabled state could not be restored. Review the plugin state before continuing.";
+            System.Diagnostics.Debug.WriteLine($"[PluginStorePageViewModel] Uninstall error: {ex}");
+            await RefreshPluginsAsync(forceRemoteRefresh: false, CancellationToken.None).ConfigureAwait(true);
             return false;
         }
     }
 
-    private static bool MatchesCategory(string category, string selectedCategory)
+    private async Task<bool> TryRestoreEnabledStateAsync(string pluginId)
     {
-        if (string.Equals(selectedCategory, "All", StringComparison.OrdinalIgnoreCase))
+        try
         {
-            return true;
+            await _registry.EnablePluginAsync(pluginId, _host, CancellationToken.None).ConfigureAwait(true);
+            return _registry.GetAllPlugins().Any(entry =>
+                string.Equals(entry.Id, pluginId, StringComparison.OrdinalIgnoreCase) && entry.State == PluginState.Enabled);
         }
-        return string.Equals(category, selectedCategory, StringComparison.OrdinalIgnoreCase);
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[PluginStorePageViewModel] Failed to restore plugin '{pluginId}' after uninstall failure: {ex}");
+            return false;
+        }
     }
+
+    private static bool MatchesCategory(string category, string selectedCategory) =>
+        string.Equals(selectedCategory, "All", StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(category, selectedCategory, StringComparison.OrdinalIgnoreCase);
 
     private static bool MatchesSearch(string searchQuery, string id, string name, string description, string author, string category, IEnumerable<string> commands)
     {
-        if (string.IsNullOrWhiteSpace(searchQuery))
-        {
-            return true;
-        }
-
-        var q = searchQuery.Trim();
+        if (string.IsNullOrWhiteSpace(searchQuery)) return true;
+        string q = searchQuery.Trim();
         return id.Contains(q, StringComparison.OrdinalIgnoreCase) ||
                name.Contains(q, StringComparison.OrdinalIgnoreCase) ||
                description.Contains(q, StringComparison.OrdinalIgnoreCase) ||
@@ -405,12 +429,9 @@ public sealed class PluginStorePageViewModel : INotifyPropertyChanged, IDisposab
                commands.Any(command => command.Contains(q, StringComparison.OrdinalIgnoreCase));
     }
 
-    private void OnPropertyChanged([CallerMemberName] string? propertyName = null)
-    {
+    private void OnPropertyChanged([CallerMemberName] string? propertyName = null) =>
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-    }
 
-    /// <inheritdoc />
     public void Dispose()
     {
         _searchCts?.Cancel();

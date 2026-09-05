@@ -31,7 +31,7 @@ class DeterministicZipWriter {
     let offset = 0;
 
     // Sort entries deterministically by path
-    this.files.sort((a, b) => a.path.localeCompare(b.path));
+    this.files.sort((a, b) => a.path < b.path ? -1 : a.path > b.path ? 1 : 0);
 
     for (const file of this.files) {
       const pathBuf = Buffer.from(file.path, 'utf8');
@@ -46,7 +46,7 @@ class DeterministicZipWriter {
       const localHeader = Buffer.alloc(30 + pathBuf.length);
       localHeader.writeUInt32LE(0x04034b50, 0); // Signature
       localHeader.writeUInt16LE(20, 4);          // Version needed (2.0)
-      localHeader.writeUInt16LE(0, 6);           // General purpose bit flag
+      localHeader.writeUInt16LE(0x0800, 6);      // UTF-8 filenames
       localHeader.writeUInt16LE(8, 8);           // Compression method (8 = Deflate)
       localHeader.writeUInt16LE(0x4000, 10);     // Fixed MS-DOS time (deterministic)
       localHeader.writeUInt16LE(0x5600, 12);     // Fixed MS-DOS date (deterministic)
@@ -64,7 +64,7 @@ class DeterministicZipWriter {
       cdEntry.writeUInt32LE(0x02014b50, 0); // Signature
       cdEntry.writeUInt16LE(20, 4);          // Version made by
       cdEntry.writeUInt16LE(20, 6);          // Version needed
-      cdEntry.writeUInt16LE(0, 8);           // Flags
+      cdEntry.writeUInt16LE(0x0800, 8);      // UTF-8 filenames
       cdEntry.writeUInt16LE(8, 10);          // Compression (Deflate)
       cdEntry.writeUInt16LE(0x4000, 12);     // Fixed Time
       cdEntry.writeUInt16LE(0x5600, 14);     // Fixed Date
@@ -126,18 +126,26 @@ function packPlugin(pluginDir, outputPath) {
   const resolvedDir = path.resolve(pluginDir);
   const targetOutput = path.resolve(outputPath || path.join(resolvedDir, 'plugin.wincare-plugin'));
   const zip = new DeterministicZipWriter();
+  let totalBytes = 0;
 
   function scanDir(currentDir, baseDir) {
     const items = fs.readdirSync(currentDir);
     for (const item of items) {
       if (item === 'node_modules' || item.startsWith('.')) continue;
       const fullPath = path.join(currentDir, item);
-      const stat = fs.statSync(fullPath);
+      const stat = fs.lstatSync(fullPath);
+      if (stat.isSymbolicLink()) {
+        throw new Error(`Plugin packages cannot contain symbolic links: ${item}`);
+      }
       if (stat.isDirectory()) {
         scanDir(fullPath, baseDir);
       } else if (stat.isFile()) {
         const relativePath = path.relative(baseDir, fullPath);
         if (path.resolve(fullPath) === targetOutput) continue;
+        totalBytes += stat.size;
+        if (zip.files.length >= 500 || totalBytes > 200 * 1024 * 1024) {
+          throw new Error('Plugin package exceeds the installer entry or uncompressed size limit.');
+        }
         const data = fs.readFileSync(fullPath);
         zip.addFile(relativePath, data);
       }
@@ -147,6 +155,9 @@ function packPlugin(pluginDir, outputPath) {
   scanDir(resolvedDir, resolvedDir);
 
   const archiveBuffer = zip.build();
+  if (archiveBuffer.length > 50 * 1024 * 1024) {
+    throw new Error('Plugin package exceeds the 50 MiB installer archive limit.');
+  }
   fs.writeFileSync(targetOutput, archiveBuffer);
 
   return {

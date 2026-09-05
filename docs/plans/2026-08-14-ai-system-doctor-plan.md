@@ -1,15 +1,24 @@
 # WinCare AI System Doctor — Implementation Plan
 
 - **Date:** 2026-08-14
-- **Status:** Completed (`artifact_readiness: completed`)
+- **Status:** Completed — with the inference engine pivoted to a rule-based classifier (see note below)
 - **Contract Version:** `ce-unified-plan/v1`
 - **Origin Specification:** `docs/plans/2026-08-14-ai-system-doctor-requirements.md`
+
+> [!NOTE]
+> The shipped implementation replaced the originally planned ONNX Runtime / DirectML
+> inference engine with a deterministic, on-device rule-based classifier
+> (`RuleBasedIntentInferenceEngine`, formerly `OnnxInferenceEngine.cs`). There is no
+> `Microsoft.ML.OnnxRuntime` / `Microsoft.ML.OnnxRuntime.DirectML` package, no model
+> weights, and no `ModelManager` in the product. The ONNX acceptance criteria below are
+> therefore superseded; all other Doctor units (intent translation, evidence collection,
+> fail-closed action plans) shipped as described.
 
 ---
 
 ## 1. Overview & Architecture Summary
 
-This plan details the technical implementation of the **WinCare AI System Doctor**, an on-device natural language system diagnostic assistant powered by ONNX Runtime with DirectML GPU acceleration.
+This plan details the technical implementation of the **WinCare AI System Doctor**, an on-device natural language system diagnostic assistant. The inference stage ships as a rule-based classifier rather than the ONNX/DirectML engine described in the original units.
 
 ---
 
@@ -25,9 +34,9 @@ This plan details the technical implementation of the **WinCare AI System Doctor
   - `tests/WinCare.Application.Tests/IntentTranslatorTests.cs`
 
 - **Acceptance Criteria:**
-  - [x] `Microsoft.ML.OnnxRuntime.DirectML` reference configured for on-device inference.
-  - [x] `ModelManager` checks for quantized ONNX weights in `%ProgramData%/WinCare/Models/doctor.onnx` and provides default weight loading.
-  - [x] `OnnxInferenceEngine` initializes DirectML session with cold-start latency <1.5s.
+  - [~] `Microsoft.ML.OnnxRuntime.DirectML` reference configured for on-device inference. *(Superseded — no ONNX runtime is used.)*
+  - [~] `ModelManager` checks for quantized ONNX weights in `%ProgramData%/WinCare/Models/doctor.onnx` and provides default weight loading. *(Superseded — `ModelManager` was removed.)*
+  - [x] Inference engine initializes with cold-start latency <1.5s. *(Satisfied by `RuleBasedIntentInferenceEngine`, whose initialization is a near-zero-cost no-op.)*
 
 - **Verification Commands:**
   - `dotnet test tests/WinCare.Application.Tests --filter "IntentTranslatorTests"`

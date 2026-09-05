@@ -29,6 +29,9 @@ public class RemoteCatalogService : IRemoteCatalogService
     private readonly HttpClient _httpClient;
     private readonly string _cacheFilePath;
     private readonly string _catalogUrl;
+    private readonly string _catalogSignatureUrl;
+    private readonly string? _trustedCatalogPublicKeyPem;
+    private readonly string _cacheSignatureFilePath;
     private readonly TimeSpan _cacheDuration;
 
     /// <summary>
@@ -38,7 +41,9 @@ public class RemoteCatalogService : IRemoteCatalogService
         HttpClient? httpClient = null,
         string? cacheFilePath = null,
         string? catalogUrl = null,
-        TimeSpan? cacheDuration = null)
+        TimeSpan? cacheDuration = null,
+        string? trustedCatalogPublicKeyPem = null,
+        string? catalogSignatureUrl = null)
     {
         _httpClient = httpClient ?? new HttpClient();
         if (!_httpClient.DefaultRequestHeaders.UserAgent.Any())
@@ -46,6 +51,8 @@ public class RemoteCatalogService : IRemoteCatalogService
             _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("WinCare/1.0 (Windows NT 10.0)");
         }
         _catalogUrl = catalogUrl ?? DefaultCatalogUrl;
+        _catalogSignatureUrl = catalogSignatureUrl ?? (_catalogUrl + ".sig");
+        _trustedCatalogPublicKeyPem = string.IsNullOrWhiteSpace(trustedCatalogPublicKeyPem) ? null : trustedCatalogPublicKeyPem;
         _cacheDuration = cacheDuration ?? TimeSpan.FromHours(24);
 
         if (string.IsNullOrWhiteSpace(cacheFilePath))
@@ -64,6 +71,8 @@ public class RemoteCatalogService : IRemoteCatalogService
                 Directory.CreateDirectory(parentDir);
             }
         }
+
+        _cacheSignatureFilePath = _cacheFilePath + ".sig";
     }
 
     /// <inheritdoc />
@@ -79,6 +88,7 @@ public class RemoteCatalogService : IRemoteCatalogService
                 var cachedCatalog = await TryLoadFromCacheAsync(cancellationToken).ConfigureAwait(false);
                 if (cachedCatalog != null)
                 {
+                    ApplyRevocationPolicy(cachedCatalog);
                     return cachedCatalog;
                 }
             }
@@ -88,15 +98,38 @@ public class RemoteCatalogService : IRemoteCatalogService
         {
             using var response = await _httpClient.GetAsync(_catalogUrl, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
+            byte[] catalogBytes = await response.Content.ReadAsByteArrayAsync(cancellationToken).ConfigureAwait(false);
 
-            await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
-            var catalog = await JsonSerializer.DeserializeAsync<RemotePluginCatalog>(stream, JsonOptions, cancellationToken).ConfigureAwait(false)
+            string? detachedSignature = null;
+            bool trustVerified = false;
+            string trustMessage;
+            if (_trustedCatalogPublicKeyPem is not null)
+            {
+                using var signatureResponse = await _httpClient.GetAsync(_catalogSignatureUrl, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
+                signatureResponse.EnsureSuccessStatusCode();
+                detachedSignature = (await signatureResponse.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false)).Trim();
+                trustVerified = PluginAdmissionTrustStore.VerifyManifestSignature(
+                    catalogBytes,
+                    detachedSignature,
+                    _trustedCatalogPublicKeyPem);
+                if (!trustVerified)
+                {
+                    throw new InvalidOperationException(
+                        "The plugin catalog detached signature did not verify against the WinCare-pinned catalog trust root.");
+                }
+                trustMessage = "Catalog signature verified against the WinCare-pinned trust root.";
+            }
+            else
+            {
+                trustMessage = "Catalog browsing is available, but remote installation is disabled because this build has no pinned catalog signing key.";
+            }
+
+            var catalog = JsonSerializer.Deserialize<RemotePluginCatalog>(catalogBytes, JsonOptions)
                 ?? new RemotePluginCatalog();
-
-            catalog.LastUpdated = DateTime.UtcNow;
             NormalizeCatalog(catalog);
+            SetTrustState(catalog, trustVerified, trustMessage);
             ApplyRevocationPolicy(catalog);
-            await SaveToCacheAsync(catalog, cancellationToken).ConfigureAwait(false);
+            await SaveToCacheAsync(catalogBytes, detachedSignature, cancellationToken).ConfigureAwait(false);
 
             return catalog;
         }
@@ -108,6 +141,16 @@ public class RemoteCatalogService : IRemoteCatalogService
         {
             System.Diagnostics.Debug.WriteLine($"[RemoteCatalogService] Fetch failed from '{_catalogUrl}': {ex.Message}");
 
+            // A forced refresh is used by the install path as a security boundary. Falling
+            // back to an arbitrarily old cache here would silently weaken revocation and
+            // publisher-key freshness, so security-sensitive callers fail closed instead.
+            if (forceRefresh)
+            {
+                throw new InvalidOperationException(
+                    "A fresh plugin security catalog could not be obtained. Installation is blocked until the current catalog and revocation advisory can be verified.",
+                    ex);
+            }
+
             var fallbackCatalog = await TryLoadFromCacheAsync(cancellationToken).ConfigureAwait(false);
             if (fallbackCatalog != null)
             {
@@ -115,7 +158,7 @@ public class RemoteCatalogService : IRemoteCatalogService
                 return fallbackCatalog;
             }
 
-            // Return bundled offline default catalog with verified sample metadata
+            // Return bundled offline default catalog with illustrative (non-installable) sample metadata
             var defaultCatalog = GetOfflineDefaultCatalog();
             ApplyRevocationPolicy(defaultCatalog);
             return defaultCatalog;
@@ -193,7 +236,11 @@ public class RemoteCatalogService : IRemoteCatalogService
 
     private static RemotePluginCatalog GetOfflineDefaultCatalog()
     {
-        return new RemotePluginCatalog
+        // Offline fallback entries are illustrative sample metadata only. They are not
+        // installable: PackageUrl and Sha256 are intentionally empty so the offline catalog
+        // never fabricates a download endpoint or an integrity digest for packages that are
+        // not actually distributable through it.
+        var catalog = new RemotePluginCatalog
         {
             CatalogVersion = "1.0",
             LastUpdated = DateTime.UtcNow,
@@ -205,10 +252,10 @@ public class RemoteCatalogService : IRemoteCatalogService
                     Name = "Enhanced Disk Cleaner",
                     Author = "WinCare Community",
                     Version = "1.0.0",
-                    Description = "Deep cleaner for Windows temp files, browser caches, and delivery optimization files.",
+                    Description = "Deep cleaner for Windows temp files, browser caches, and delivery optimization files. (Offline sample — not installable.)",
                     Category = "System Care",
-                    Sha256 = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-                    PackageUrl = "https://github.com/WinCare/plugins/releases/download/v1.0.0/diskcleaner.wincare-plugin",
+                    Sha256 = string.Empty,
+                    PackageUrl = string.Empty,
                     Permissions = new List<string> { "filesystem.read", "filesystem.write" },
                     CommandsProvided = new List<string> { "org.wincare.diskcleaner.run" }
                 },
@@ -218,15 +265,17 @@ public class RemoteCatalogService : IRemoteCatalogService
                     Name = "Network DNS Diagnostic Kit",
                     Author = "WinCare Network Group",
                     Version = "1.1.0",
-                    Description = "Flush DNS cache, test DNS latency across multiple providers, and reset Winsock.",
+                    Description = "Flush DNS cache, test DNS latency across multiple providers, and reset Winsock. (Offline sample — not installable.)",
                     Category = "Utilities",
-                    Sha256 = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-                    PackageUrl = "https://github.com/WinCare/plugins/releases/download/v1.1.0/dnstools.wincare-plugin",
+                    Sha256 = string.Empty,
+                    PackageUrl = string.Empty,
                     Permissions = new List<string> { "network.query", "process.spawn" },
                     CommandsProvided = new List<string> { "org.wincare.dnstools.flush", "org.wincare.dnstools.bench" }
                 }
             }
         };
+        SetTrustState(catalog, false, "Offline sample catalog. Remote installation is unavailable.");
+        return catalog;
     }
 
     private async Task<RemotePluginCatalog?> TryLoadFromCacheAsync(CancellationToken cancellationToken)
@@ -238,11 +287,36 @@ public class RemoteCatalogService : IRemoteCatalogService
                 return null;
             }
 
-            var json = await File.ReadAllTextAsync(_cacheFilePath, cancellationToken).ConfigureAwait(false);
-            RemotePluginCatalog? catalog = JsonSerializer.Deserialize<RemotePluginCatalog>(json, JsonOptions);
+            byte[] catalogBytes = await File.ReadAllBytesAsync(_cacheFilePath, cancellationToken).ConfigureAwait(false);
+            bool trustVerified = false;
+            string trustMessage;
+            if (_trustedCatalogPublicKeyPem is not null)
+            {
+                if (!File.Exists(_cacheSignatureFilePath))
+                {
+                    return null;
+                }
+                string detachedSignature = (await File.ReadAllTextAsync(_cacheSignatureFilePath, cancellationToken).ConfigureAwait(false)).Trim();
+                trustVerified = PluginAdmissionTrustStore.VerifyManifestSignature(
+                    catalogBytes,
+                    detachedSignature,
+                    _trustedCatalogPublicKeyPem);
+                if (!trustVerified)
+                {
+                    return null;
+                }
+                trustMessage = "Cached catalog signature verified against the WinCare-pinned trust root.";
+            }
+            else
+            {
+                trustMessage = "Cached catalog is available for browsing, but remote installation is disabled because this build has no pinned catalog signing key.";
+            }
+
+            RemotePluginCatalog? catalog = JsonSerializer.Deserialize<RemotePluginCatalog>(catalogBytes, JsonOptions);
             if (catalog != null)
             {
                 NormalizeCatalog(catalog);
+                SetTrustState(catalog, trustVerified, trustMessage);
             }
             return catalog;
         }
@@ -256,14 +330,24 @@ public class RemoteCatalogService : IRemoteCatalogService
         }
     }
 
-    private async Task SaveToCacheAsync(RemotePluginCatalog catalog, CancellationToken cancellationToken)
+    private async Task SaveToCacheAsync(byte[] catalogBytes, string? detachedSignature, CancellationToken cancellationToken)
     {
         try
         {
             var tempFilePath = _cacheFilePath + ".tmp." + Guid.NewGuid().ToString("N");
-            var json = JsonSerializer.Serialize(catalog, JsonOptions);
-            await File.WriteAllTextAsync(tempFilePath, json, cancellationToken).ConfigureAwait(false);
+            await File.WriteAllBytesAsync(tempFilePath, catalogBytes, cancellationToken).ConfigureAwait(false);
             File.Move(tempFilePath, _cacheFilePath, overwrite: true);
+
+            if (!string.IsNullOrWhiteSpace(detachedSignature))
+            {
+                var signatureTemp = _cacheSignatureFilePath + ".tmp." + Guid.NewGuid().ToString("N");
+                await File.WriteAllTextAsync(signatureTemp, detachedSignature, cancellationToken).ConfigureAwait(false);
+                File.Move(signatureTemp, _cacheSignatureFilePath, overwrite: true);
+            }
+            else if (File.Exists(_cacheSignatureFilePath))
+            {
+                File.Delete(_cacheSignatureFilePath);
+            }
         }
         catch (OperationCanceledException)
         {
@@ -272,6 +356,16 @@ public class RemoteCatalogService : IRemoteCatalogService
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"[RemoteCatalogService] Cache save error: {ex.Message}");
+        }
+    }
+
+    private static void SetTrustState(RemotePluginCatalog catalog, bool verified, string message)
+    {
+        catalog.IsTrustVerified = verified;
+        catalog.TrustStatusMessage = message;
+        foreach (RemotePluginItem item in catalog.Plugins ?? new List<RemotePluginItem>())
+        {
+            item.IsCatalogTrustVerified = verified;
         }
     }
 }

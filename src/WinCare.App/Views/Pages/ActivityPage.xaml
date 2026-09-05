@@ -16,20 +16,31 @@
 
         <StackPanel Spacing="6">
             <TextBlock Style="{StaticResource PageTitleTextStyle}" Text="Activity" />
-            <TextBlock MaxWidth="760" HorizontalAlignment="Left" Style="{StaticResource PageDescriptionTextStyle}" Text="Track running work, decisions that need attention, completed changes, and reports." />
+            <TextBlock MaxWidth="760" HorizontalAlignment="Left" Style="{StaticResource PageDescriptionTextStyle}" Text="Track running work, decisions that need attention, completed changes, and daily operation reports." />
         </StackPanel>
 
-        <InfoBar
-            x:Name="AttentionInfoBar"
-            Grid.Row="1"
-            Margin="0"
-            IsOpen="{x:Bind ViewModel.HasAttentionItems, Mode=OneWay}"
-            IsClosable="False"
-            Severity="Warning"
-            Title="Attention required"
-            Message="One or more operations require user review or elevated confirmation."
-            AutomationProperties.AutomationId="AttentionInfoBar"
-            AutomationProperties.Name="Attention required" />
+        <StackPanel Grid.Row="1" Spacing="8">
+            <InfoBar
+                x:Name="AttentionInfoBar"
+                Margin="0"
+                IsOpen="{x:Bind ViewModel.HasAttentionItems, Mode=OneWay}"
+                IsClosable="False"
+                Severity="Warning"
+                Title="Attention required"
+                Message="One or more operations require user review or elevated confirmation."
+                AutomationProperties.AutomationId="AttentionInfoBar"
+                AutomationProperties.Name="Attention required" />
+            <InfoBar
+                x:Name="PersistenceInfoBar"
+                Margin="0"
+                IsOpen="{x:Bind ViewModel.HasPersistenceWarning, Mode=OneWay}"
+                IsClosable="False"
+                Severity="Warning"
+                Title="Activity history is not durable"
+                Message="{x:Bind ViewModel.PersistenceWarningMessage, Mode=OneWay}"
+                AutomationProperties.AutomationId="ActivityPersistenceWarning"
+                AutomationProperties.Name="Activity history persistence warning" />
+        </StackPanel>
 
         <SelectorBar
             x:Name="SectionSelector"
@@ -72,9 +83,9 @@
                             <ColumnDefinition Width="180" />
                         </Grid.ColumnDefinitions>
                         <TextBlock Style="{StaticResource ColumnHeaderTextStyle}" Text="Item" />
-                        <TextBlock x:Name="DescriptionHeader" Grid.Column="1" Style="{StaticResource ColumnHeaderTextStyle}" Text="What it does" />
+                        <TextBlock x:Name="DescriptionHeader" Grid.Column="1" Style="{StaticResource ColumnHeaderTextStyle}" Text="Summary" />
                         <TextBlock x:Name="StateHeader" Grid.Column="2" Style="{StaticResource ColumnHeaderTextStyle}" Text="State" />
-                        <TextBlock x:Name="NotesHeader" Grid.Column="3" Style="{StaticResource ColumnHeaderTextStyle}" Text="Notes" />
+                        <TextBlock x:Name="NotesHeader" Grid.Column="3" Style="{StaticResource ColumnHeaderTextStyle}" Text="Time" />
                     </Grid>
                     <ListView
                         Grid.Row="1"
@@ -123,7 +134,7 @@
                                                 <ColumnDefinition Width="Auto" />
                                                 <ColumnDefinition Width="*" />
                                             </Grid.ColumnDefinitions>
-                                            <TextBlock FontWeight="SemiBold" Style="{StaticResource RowSecondaryTextStyle}" Text="Notes" />
+                                            <TextBlock FontWeight="SemiBold" Style="{StaticResource RowSecondaryTextStyle}" Text="Time" />
                                             <TextBlock Grid.Column="1" Style="{StaticResource RowSecondaryTextStyle}" FontFamily="{StaticResource TelemetryFontFamily}" Text="{x:Bind Detail, Mode=OneWay}" TextWrapping="Wrap" />
                                         </Grid>
                                     </StackPanel>
