@@ -71,6 +71,8 @@
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
+                <TextBlock Text="Capability declarations are consent metadata only. Full-trust in-process plugins are not sandboxed or technically constrained by these declarations."
+                           TextWrapping="Wrap" FontSize="11" Foreground="{ThemeResource TextSecondaryBrush}" />
             </StackPanel>
         </Border>
 
