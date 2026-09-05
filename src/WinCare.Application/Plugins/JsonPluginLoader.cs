@@ -1,7 +1,6 @@
 namespace WinCare.Application.Plugins;
 
 using System.Security.Cryptography;
-using System.Text;
 using System.Text.Json;
 using WinCare.CommandCatalog.Models;
 
@@ -122,7 +121,9 @@ public static class JsonPluginLoader
                     "Legacy colocated manifest integrity metadata is no longer trusted. Reinstall the plugin to create an external admission record.");
             }
 
-            var json = Encoding.UTF8.GetString(manifestBytes);
+            // Parse from a strict UTF-8 decode that tolerates only an optional BOM. The digest
+            // and publisher signature above always remain bound to the original raw bytes.
+            var json = PluginAdmissionTrustStore.DecodeManifestJson(manifestBytes);
             PluginLoadResult result = LoadFromString(json, pluginDirectoryPath);
             if (!result.Success || result.Manifest is null || admissionRecord is null)
             {

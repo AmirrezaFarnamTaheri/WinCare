@@ -126,6 +126,11 @@ public sealed class PluginSecurityRegressionTests
                 StringComparison.OrdinalIgnoreCase));
             Assert.False(File.Exists(Path.Combine(installedDir, PluginInstallerService.ManifestDigestFileName)));
 
+            // The package helper intentionally emits an UTF-8 BOM. Installer and discovery
+            // must accept it without changing the exact raw bytes covered by admission trust.
+            var admitted = JsonPluginLoader.LoadFromDirectory(installedDir);
+            Assert.True(admitted.Success, admitted.ErrorMessage);
+
             var manifestPath = Path.Combine(installedDir, "wincare-plugin.json");
             var tampered = File.ReadAllText(manifestPath).Replace("External Trust Plugin", "Tampered Plugin", StringComparison.Ordinal);
             File.WriteAllText(manifestPath, tampered);

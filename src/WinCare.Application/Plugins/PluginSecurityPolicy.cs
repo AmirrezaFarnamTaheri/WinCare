@@ -1,6 +1,7 @@
 namespace WinCare.Application.Plugins;
 
 using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json.Serialization;
 
 /// <summary>
@@ -39,6 +40,10 @@ public static class PluginAdmissionTrustStore
     public const string RecordSuffix = ".admission.json";
     public const int MaxRecordBytes = 2 * 1024 * 1024;
 
+    private static readonly UTF8Encoding StrictUtf8 = new(
+        encoderShouldEmitUTF8Identifier: false,
+        throwOnInvalidBytes: true);
+
     /// <summary>
     /// Returns the admission-record path for a concrete plugin directory. Records live in a
     /// sibling <c>.trust</c> directory rather than inside the plugin directory itself.
@@ -58,6 +63,27 @@ public static class PluginAdmissionTrustStore
         }
 
         return Path.Combine(pluginsRoot, DirectoryName, pluginDirectoryName + RecordSuffix);
+    }
+
+    /// <summary>
+    /// Decodes manifest JSON as strict UTF-8 while accepting an optional UTF-8 BOM. The raw
+    /// bytes passed to this method remain unchanged and must continue to be used for digests
+    /// and publisher signature verification.
+    /// </summary>
+    public static string DecodeManifestJson(byte[] manifestBytes)
+    {
+        ArgumentNullException.ThrowIfNull(manifestBytes);
+
+        ReadOnlySpan<byte> jsonBytes = manifestBytes;
+        if (jsonBytes.Length >= 3 &&
+            jsonBytes[0] == 0xEF &&
+            jsonBytes[1] == 0xBB &&
+            jsonBytes[2] == 0xBF)
+        {
+            jsonBytes = jsonBytes[3..];
+        }
+
+        return StrictUtf8.GetString(jsonBytes);
     }
 
     /// <summary>

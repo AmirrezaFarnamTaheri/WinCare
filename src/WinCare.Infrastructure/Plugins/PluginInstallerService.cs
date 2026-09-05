@@ -476,7 +476,9 @@ public class PluginInstallerService : IPluginInstallerService
             }
 
             byte[] manifestRawBytes = await File.ReadAllBytesAsync(manifestPath, cancellationToken).ConfigureAwait(false);
-            var manifestJson = System.Text.Encoding.UTF8.GetString(manifestRawBytes);
+            // Decode only for JSON parsing; all integrity and signature checks below remain
+            // bound to the original raw bytes, including an optional UTF-8 BOM.
+            var manifestJson = PluginAdmissionTrustStore.DecodeManifestJson(manifestRawBytes);
             using var doc = JsonDocument.Parse(manifestJson);
             if (!doc.RootElement.TryGetProperty("id", out var idProp) || string.IsNullOrWhiteSpace(idProp.GetString()))
             {
