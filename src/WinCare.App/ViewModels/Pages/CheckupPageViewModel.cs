@@ -82,8 +82,6 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
             return;
         }
 
-        // The Results section shows distinct per-check outcomes, not a repeat of the
-        // Quick check readiness rows.
         CurrentRows.Clear();
         if (_hasResults)
         {
@@ -118,37 +116,30 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
                 }
             }
 
-            var results = new (string CommandId, string RowTitle, CommandResult Result)[QuickCheckCommands.Length];
-            var parallelOptions = new ParallelOptions
+            // Run probes sequentially. Several checks inspect CPU, disk, update, and security
+            // state; overlapping them can perturb the measurements and make one probe's load
+            // affect another probe's evidence.
+            var results = new List<(string CommandId, string RowTitle, CommandResult Result)>(QuickCheckCommands.Length);
+            foreach ((string commandId, string rowTitle) in QuickCheckCommands)
             {
-                MaxDegreeOfParallelism = Math.Min(Environment.ProcessorCount, QuickCheckCommands.Length),
-            };
-
-            await Parallel.ForEachAsync(
-                Enumerable.Range(0, QuickCheckCommands.Length),
-                parallelOptions,
-                async (index, ct) =>
+                CommandResult result;
+                try
                 {
-                    (string commandId, string rowTitle) = QuickCheckCommands[index];
-                    CommandResult result;
-                    try
-                    {
-                        result = await _dispatcher.ExecuteAsync(
-                            CommandRequest.Preview(commandId),
-                            new CommandExecutionOptions(false, DateTimeOffset.UtcNow.AddMinutes(2)),
-                            ct);
-                    }
-                    catch (Exception)
-                    {
-                        result = new CommandResult(commandId, Guid.NewGuid(), CommandResultStatus.Failed,
-                            "checkup.dispatch_exception", "WinCare could not complete this read-only check.", null,
-                            DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, false);
-                    }
+                    result = await _dispatcher.ExecuteAsync(
+                        CommandRequest.Preview(commandId),
+                        new CommandExecutionOptions(false, DateTimeOffset.UtcNow.AddMinutes(2)),
+                        CancellationToken.None);
+                }
+                catch (Exception)
+                {
+                    result = new CommandResult(commandId, Guid.NewGuid(), CommandResultStatus.Failed,
+                        "checkup.dispatch_exception", "WinCare could not complete this read-only check.", null,
+                        DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, false);
+                }
 
-                    results[index] = (commandId, rowTitle, result);
-                });
+                results.Add((commandId, rowTitle, result));
+            }
 
-            // Populate distinct, per-check result rows for the Results section.
             _resultRows.Clear();
             foreach ((string commandId, string rowTitle, CommandResult result) in results)
             {
@@ -173,8 +164,7 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
 
             _hasResults = true;
 
-            // Compute a readiness score from the fraction of read-only checks that passed.
-            // It is a check-completion indicator, not a machine diagnosis.
+            // This percentage is evidence-collection completion, not a machine-health score.
             int score = QuickCheckCommands.Length == 0
                 ? 0
                 : (int)Math.Round(100.0 * succeeded / QuickCheckCommands.Length);
