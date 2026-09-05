@@ -42,6 +42,14 @@ class PortableLockContractTests(unittest.TestCase):
         self.assertIn("Staged locked portable dependency graphs for $(RuntimeIdentifier).", props)
         self.assertNotIn("NuGetLockFilePath", props)
 
+    def test_explicit_publish_rid_does_not_retain_the_multi_rid_restore_set(self) -> None:
+        project = (ROOT / "src/WinCare.App/WinCare.App.csproj").read_text(encoding="utf-8")
+        self.assertIn(
+            '<RuntimeIdentifiers Condition="\'$(RuntimeIdentifier)\' == \'\'">win-x64;win-arm64</RuntimeIdentifiers>',
+            project,
+        )
+        self.assertNotIn("<RuntimeIdentifiers>win-x64;win-arm64</RuntimeIdentifiers>", project)
+
     def test_no_portable_lock_bootstrap_workflow_remains(self) -> None:
         self.assertFalse((ROOT / ".github/workflows/bootstrap-portable-lockfiles.yml").exists())
 
