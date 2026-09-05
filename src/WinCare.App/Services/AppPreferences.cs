@@ -8,13 +8,14 @@ public sealed record WindowPlacementData(int Left, int Top, int Width, int Heigh
 }
 
 /// <summary>
-/// Persisted per-user preference state, including theme, command shortcuts, and the last
-/// usable desktop window placement.
+/// Persisted per-user preference state, including theme, command shortcuts, and optional
+/// desktop window continuity.
 /// </summary>
 public sealed record AppPreferenceData(string Theme = "System")
 {
     public List<string> FavoriteCommandIds { get; init; } = new();
     public List<string> RecentCommandIds { get; init; } = new();
+    public bool RememberWindowPlacement { get; init; } = true;
     public WindowPlacementData? WindowPlacement { get; init; }
 
     public AppPreferenceData Normalize() => this with
@@ -24,7 +25,7 @@ public sealed record AppPreferenceData(string Theme = "System")
             .Distinct(StringComparer.OrdinalIgnoreCase).Take(512).ToList(),
         RecentCommandIds = (RecentCommandIds ?? []).Where(id => !string.IsNullOrWhiteSpace(id))
             .Distinct(StringComparer.OrdinalIgnoreCase).Take(20).ToList(),
-        WindowPlacement = WindowPlacement is { IsUsable: true } placement ? placement : null,
+        WindowPlacement = RememberWindowPlacement && WindowPlacement is { IsUsable: true } placement ? placement : null,
     };
 }
 
@@ -52,6 +53,26 @@ public static class AppPreferences
             {
                 if (string.Equals(_current.Theme, normalized, StringComparison.Ordinal)) return;
                 _current = _current with { Theme = normalized };
+                snapshot = Snapshot();
+            }
+            QueueSave(snapshot);
+        }
+    }
+
+    public static bool RememberWindowPlacement
+    {
+        get { lock (StateSync) { return _current.RememberWindowPlacement; } }
+        set
+        {
+            AppPreferenceData snapshot;
+            lock (StateSync)
+            {
+                if (_current.RememberWindowPlacement == value) return;
+                _current = (_current with
+                {
+                    RememberWindowPlacement = value,
+                    WindowPlacement = value ? _current.WindowPlacement : null,
+                }).Normalize();
                 snapshot = Snapshot();
             }
             QueueSave(snapshot);
@@ -115,6 +136,7 @@ public static class AppPreferences
         AppPreferenceData snapshot;
         lock (StateSync)
         {
+            if (!_current.RememberWindowPlacement) return;
             _current = (_current with { WindowPlacement = placement }).Normalize();
             snapshot = Snapshot();
         }
