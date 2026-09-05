@@ -216,7 +216,7 @@ public sealed partial class AllToolsPage : Page
             TextWrapping = TextWrapping.NoWrap,
             Text = ViewModel.Execution.ParameterJson,
             PlaceholderText = "{}",
-            FontFamily = (Microsoft.UI.Xaml.Media.FontFamily)Resources["TelemetryFontFamily"],
+            FontFamily = (Microsoft.UI.Xaml.Media.FontFamily)Application.Current.Resources["TelemetryFontFamily"],
             FontSize = 12,
             Visibility = advancedToggle.IsOn ? Visibility.Visible : Visibility.Collapsed,
         };
