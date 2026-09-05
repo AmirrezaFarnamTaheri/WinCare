@@ -6,6 +6,7 @@ namespace WinCare.App.ViewModels.Pages;
 public sealed class SettingsPageViewModel : ObservableObject
 {
     private string _selectedTheme = AppPreferences.Theme;
+    private bool _rememberWindowPlacement = AppPreferences.RememberWindowPlacement;
 
     public IReadOnlyList<string> Themes { get; } = ["System", "Light", "Dark"];
 
@@ -22,6 +23,16 @@ public sealed class SettingsPageViewModel : ObservableObject
         {
             string normalized = value is "Light" or "Dark" ? value : "System";
             if (SetProperty(ref _selectedTheme, normalized)) AppPreferences.Theme = normalized;
+        }
+    }
+
+    public bool RememberWindowPlacement
+    {
+        get => _rememberWindowPlacement;
+        set
+        {
+            if (SetProperty(ref _rememberWindowPlacement, value))
+                AppPreferences.RememberWindowPlacement = value;
         }
     }
 
