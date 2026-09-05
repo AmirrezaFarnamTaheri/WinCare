@@ -7,7 +7,7 @@
         <StackPanel Padding="32,24,32,32" Spacing="20">
             <StackPanel Spacing="8">
                 <TextBlock Style="{StaticResource PageTitleTextStyle}" Text="Settings" />
-                <TextBlock MaxWidth="760" HorizontalAlignment="Left" Style="{StaticResource PageDescriptionTextStyle}" Text="Preferences saved for this Windows account." />
+                <TextBlock MaxWidth="760" HorizontalAlignment="Left" Style="{StaticResource PageDescriptionTextStyle}" Text="Choose the persistent preferences WinCare currently supports for this Windows account." />
                 <InfoBar
                     IsOpen="{x:Bind ViewModel.HasPersistenceWarning, Mode=OneWay}"
                     IsClosable="False"
@@ -25,6 +25,7 @@
                     AutomationProperties.AutomationId="SettingsFolderError"
                     AutomationProperties.Name="Local data folder error" />
             </StackPanel>
+
             <Border Style="{StaticResource DashboardCardStyle}">
                 <Grid ColumnSpacing="24">
                     <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="240" /></Grid.ColumnDefinitions>
@@ -35,17 +36,35 @@
                     <ComboBox x:Name="ThemeSelector" Grid.Column="1" ItemsSource="{x:Bind ViewModel.Themes}" SelectedItem="{x:Bind ViewModel.SelectedTheme, Mode=TwoWay}" SelectionChanged="ThemeSelector_SelectionChanged" AutomationProperties.AutomationId="ThemeSelector" AutomationProperties.Name="App theme" />
                 </Grid>
             </Border>
+
+            <Border Style="{StaticResource DashboardCardStyle}">
+                <Grid ColumnSpacing="24">
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                    <StackPanel Spacing="5" VerticalAlignment="Center">
+                        <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="Window continuity" />
+                        <TextBlock Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap" Text="Restore the last usable window size, position, and maximized state on the next launch. Turn this off to always start from the default window size." />
+                    </StackPanel>
+                    <ToggleSwitch Grid.Column="1"
+                                  IsOn="{x:Bind ViewModel.RememberWindowPlacement, Mode=TwoWay}"
+                                  OnContent="Remember"
+                                  OffContent="Use default"
+                                  AutomationProperties.AutomationId="RememberWindowPlacement"
+                                  AutomationProperties.Name="Remember window placement" />
+                </Grid>
+            </Border>
+
             <Border Style="{StaticResource DashboardCardStyle}">
                 <Grid ColumnSpacing="24">
                     <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
                     <StackPanel Spacing="5" VerticalAlignment="Center">
                         <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="Local data" />
-                        <TextBlock Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap" Text="Open WinCare's settings, reports, and operation records for this account." />
+                        <TextBlock Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap" Text="Open WinCare's settings, reports, operation records, and local diagnostics for this account." />
                         <TextBlock Style="{StaticResource RowSecondaryTextStyle}" FontFamily="{StaticResource TelemetryFontFamily}" Text="{x:Bind ViewModel.DataDirectory}" TextWrapping="Wrap" />
                     </StackPanel>
                     <Button Grid.Column="1" Content="Open folder" Click="OpenDataFolderButton_Click" AutomationProperties.AutomationId="OpenDataFolder" AutomationProperties.Name="Open WinCare data folder" />
                 </Grid>
             </Border>
+
             <Border Style="{StaticResource DashboardCardStyle}">
                 <StackPanel Spacing="8">
                     <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="Safety policy" />
