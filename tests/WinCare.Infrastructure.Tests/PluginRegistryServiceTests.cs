@@ -439,16 +439,15 @@ public sealed class PluginRegistryServiceTests
         {
             await service.DiscoverAndInitializeAsync(host);
             Assert.Contains(host.RegisteredCommands, c => c.Id == "mutating.tool1");
-            var preview = await dispatcher.ExecuteAsync(CommandRequest.Preview("mutating.tool1"), CommandExecutionOptions.Default, CancellationToken.None);
+            CommandRequest previewRequest = CommandRequest.Preview("mutating.tool1");
+            var preview = await dispatcher.ExecuteAsync(previewRequest, CommandExecutionOptions.Default, CancellationToken.None);
             Assert.Equal(CommandResultStatus.Succeeded, preview.Status);
             Assert.DoesNotContain("MUTATION_RAN", preview.Message);
             Assert.EndsWith(".preview", preview.Code);
 
-            var emptyParams = System.Text.Json.JsonSerializer.SerializeToElement(new { });
-            var correlationId = Guid.NewGuid();
-            var approval = ApprovedMutationPlan.Create("mutating.tool1", emptyParams, correlationId);
+            ApprovedMutationPlan approval = Assert.IsType<ApprovedMutationPlan>(preview.ReviewPlan);
             var apply = await dispatcher.ExecuteAsync(
-                new CommandRequest("mutating.tool1", emptyParams, Apply: true, correlationId, approval),
+                CommandRequest.Execute("mutating.tool1", previewRequest.Parameters, approval),
                 new CommandExecutionOptions(ReviewApproved: true),
                 CancellationToken.None);
             Assert.Equal(CommandResultStatus.Succeeded, apply.Status);
@@ -541,10 +540,13 @@ public sealed class PluginRegistryServiceTests
             Assert.Contains(host.RegisteredCommands, c => c.Id == "cleaner.system_temp");
 
             using var paramsDoc = System.Text.Json.JsonDocument.Parse("""{}""");
-            var correlationId = Guid.NewGuid();
-            var approval = ApprovedMutationPlan.Create("cleaner.system_temp", paramsDoc.RootElement, correlationId);
+            CommandRequest previewRequest = CommandRequest.Preview("cleaner.system_temp", paramsDoc.RootElement);
+            CommandResult preview = await dispatcher.ExecuteAsync(previewRequest, CommandExecutionOptions.Default, CancellationToken.None);
+            Assert.Equal(CommandResultStatus.Succeeded, preview.Status);
+            ApprovedMutationPlan approval = Assert.IsType<ApprovedMutationPlan>(preview.ReviewPlan);
+
             var result = await dispatcher.ExecuteAsync(
-                new CommandRequest("cleaner.system_temp", paramsDoc.RootElement, Apply: true, correlationId, approval),
+                CommandRequest.Execute("cleaner.system_temp", paramsDoc.RootElement, approval),
                 new CommandExecutionOptions(ReviewApproved: true),
                 CancellationToken.None);
 
