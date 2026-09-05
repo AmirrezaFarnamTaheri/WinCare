@@ -1,0 +1,52 @@
+name: Bootstrap Portable NuGet Lockfiles
+
+on:
+  push:
+    branches: [arena/01a06cc8-wincare]
+
+permissions:
+  contents: read
+
+jobs:
+  lockfiles:
+    runs-on: windows-latest
+    timeout-minutes: 15
+    strategy:
+      matrix:
+        include:
+          - platform: x64
+            runtime: win-x64
+          - platform: ARM64
+            runtime: win-arm64
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-dotnet@4713b0c4d9a8f216d2513cf805d020337de2da40 # pinned upstream commit
+        with:
+          dotnet-version: "8.0.416"
+          global-json-file: global.json
+      - name: Generate portable publish lock graph
+        shell: pwsh
+        run: >-
+          dotnet restore src/WinCare.App/WinCare.App.csproj
+          -p:Configuration=Release
+          -p:Platform=${{ matrix.platform }}
+          -r ${{ matrix.runtime }}
+          -p:WindowsPackageType=None
+          -p:WindowsAppSDKSelfContained=true
+          -p:SelfContained=true
+          -p:PublishSingleFile=true
+          -p:IncludeNativeLibrariesForSelfExtract=true
+          -p:EnableCompressionInSingleFile=true
+          -p:RestoreLockedMode=false
+      - name: Verify portable lockfiles
+        shell: pwsh
+        run: |
+          $files = @(Get-ChildItem src -Recurse -Filter "packages.portable.${{ matrix.runtime }}.lock.json" -File)
+          if ($files.Count -ne 5) { throw "Expected 5 portable lockfiles for ${{ matrix.runtime }}, found $($files.Count)." }
+          $files | ForEach-Object { Write-Output $_.FullName }
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: portable-lockfiles-${{ matrix.runtime }}
+          path: "src/**/packages.portable.${{ matrix.runtime }}.lock.json"
+          if-no-files-found: error
+          retention-days: 1
