@@ -1,5 +1,3 @@
-using System.Collections.ObjectModel;
-
 namespace WinCare.CommandCatalog.Models;
 
 /// <summary>Input kind rendered by native command surfaces.</summary>
@@ -7,312 +5,253 @@ public enum CommandParameterKind { Text, Integer, Long, Number, Boolean, StringL
 
 /// <summary>Declarative input contract derived from the native executor parameter boundary.</summary>
 public sealed record CommandParameterDefinition(
-    string Name, CommandParameterKind Kind, bool Required = false, string? DefaultValue = null,
-    string? Minimum = null, string? Maximum = null, IReadOnlyList<string>? Options = null);
+    string Name,
+    CommandParameterKind Kind,
+    bool Required = false,
+    string? DefaultValue = null,
+    string? Minimum = null,
+    string? Maximum = null,
+    IReadOnlyList<string>? Options = null);
 
+/// <summary>
+/// Typed parameter metadata for native commands. The compact data block is generated from the
+/// <c>CommandParameters</c> calls used by <c>WindowsCommandExecutor</c>; conditional relationships
+/// such as "one of these two fields" remain enforced by the executor itself.
+/// </summary>
 public static class CommandParameterCatalog
 {
-    private static readonly IReadOnlyDictionary<string, IReadOnlyList<CommandParameterDefinition>> Schemas =
-        new ReadOnlyDictionary<string, IReadOnlyList<CommandParameterDefinition>>(
-            new Dictionary<string, IReadOnlyList<CommandParameterDefinition>>(StringComparer.OrdinalIgnoreCase)
-            {
-                ["appcontainer"] = [
-                    new("PackageName", CommandParameterKind.Text, false, null, null, null, null),
-                    new("ProcessId", CommandParameterKind.Integer, false, "0", "1", null, null),
-                ],
-                ["appx-launch"] = [
-                    new("AppUserModelId", CommandParameterKind.Text, true, null, null, null, null),
-                ],
-                ["appx-launch-targets"] = [
-                    new("Query", CommandParameterKind.Text, false, null, null, null, null),
-                ],
-                ["appx-selection"] = [
-                    new("PackageNames", CommandParameterKind.StringList, true, null, null, null, null),
-                ],
-                ["appx-selection-assess"] = [
-                    new("PackageNames", CommandParameterKind.StringList, false, null, null, null, null),
-                ],
-                ["archive-inspect"] = [
-                    new("Limit", CommandParameterKind.Integer, false, "5000", "1", "100000", null),
-                    new("Path", CommandParameterKind.Text, true, null, null, null, null),
-                ],
-                ["bcd-export"] = [
-                    new("Destination", CommandParameterKind.Text, true, null, null, null, null),
-                ],
-                ["binary-intelligence"] = [
-                    new("Path", CommandParameterKind.Text, true, null, null, null, null),
-                ],
-                ["bluetooth"] = [
-                    new("Limit", CommandParameterKind.Integer, false, "100", "1", "1000", null),
-                ],
-                ["bluetooth-events"] = [
-                    new("MaxEvents", CommandParameterKind.Integer, false, "100", "1", "1000", null),
-                ],
-                ["calculator"] = [
-                    new("Expression", CommandParameterKind.Text, true, null, null, null, null),
-                ],
-                ["cancel-operation"] = [
-                    new("OperationId", CommandParameterKind.Text, true, null, null, null, null),
-                ],
-                ["cleaner-disk-pressure"] = [
-                    new("OlderThanDays", CommandParameterKind.Integer, false, "7", "0", "3650", null),
-                ],
-                ["cleaner-relocation"] = [
-                    new("Source", CommandParameterKind.Text, true, null, null, null, null),
-                    new("Destination", CommandParameterKind.Text, true, null, null, null, null),
-                    new("Move", CommandParameterKind.Boolean, false, "false", null, null, null),
-                ],
-                ["cleaner-relocation-assess"] = [
-                    new("Source", CommandParameterKind.Text, true, null, null, null, null),
-                    new("Destination", CommandParameterKind.Text, true, null, null, null, null),
-                ],
-                ["cleaner-winapp2"] = [
-                    new("Path", CommandParameterKind.Text, true, null, null, null, null),
-                ],
-                ["cleaner-winapp2-run"] = [
-                    new("Path", CommandParameterKind.Text, true, null, null, null, null),
-                ],
-                ["color-add"] = [
-                    new("Color", CommandParameterKind.Text, true, null, null, null, null),
-                    new("Name", CommandParameterKind.Text, false, null, null, null, null),
-                ],
-                ["color-capture"] = [
-                    new("X", CommandParameterKind.Integer, false, "0", null, null, null),
-                    new("Y", CommandParameterKind.Integer, false, "0", null, null, null),
-                ],
-                ["color-remove"] = [
-                    new("Id", CommandParameterKind.Text, true, null, null, null, null),
-                ],
-                ["context-menu-set"] = [
-                    new("Id", CommandParameterKind.Text, true, null, null, null, null),
-                    new("Command", CommandParameterKind.Text, true, null, null, null, null),
-                    new("Label", CommandParameterKind.Text, false, null, null, null, null),
-                    new("IconPath", CommandParameterKind.Text, false, null, null, null, null),
-                ],
-                ["deep-clean"] = [
-                    new("ProfileId", CommandParameterKind.Text, false, "temp", null, null, ["temp", "wincare-cache"]),
-                    new("OlderThanDays", CommandParameterKind.Integer, false, "7", "0", "3650", null),
-                ],
-                ["display-calibrate"] = [
-                    new("Brightness", CommandParameterKind.Integer, false, "0", "0", "100", null),
-                    new("Contrast", CommandParameterKind.Integer, false, "0", "0", "100", null),
-                    new("PhysicalIndex", CommandParameterKind.Integer, false, "0", "0", "64", null),
-                ],
-                ["download-batch"] = [
-                    new("Ids", CommandParameterKind.StringList, true, null, null, null, null),
-                ],
-                ["download-cancel"] = [new("Id", CommandParameterKind.Text, true, null, null, null, null)],
-                ["download-create"] = [
-                    new("Id", CommandParameterKind.Text, false, null, null, null, null),
-                    new("FileName", CommandParameterKind.Text, false, null, null, null, null),
-                    new("Destination", CommandParameterKind.Text, false, null, null, null, null),
-                    new("DueAt", CommandParameterKind.DateTime, false, null, null, null, null),
-                    new("Sha256", CommandParameterKind.Text, false, null, null, null, null),
-                    new("Url", CommandParameterKind.Text, true, null, null, null, null),
-                ],
-                ["download-reconcile"] = [new("Id", CommandParameterKind.Text, true, null, null, null, null)],
-                ["download-remove"] = [new("Id", CommandParameterKind.Text, true, null, null, null, null)],
-                ["download-resume"] = [new("Id", CommandParameterKind.Text, true, null, null, null, null)],
-                ["download-start"] = [new("Id", CommandParameterKind.Text, true, null, null, null, null)],
-                ["download-suspend"] = [new("Id", CommandParameterKind.Text, true, null, null, null, null)],
-                ["ebpf-admit"] = [new("Path", CommandParameterKind.Text, true, null, null, null, null)],
-                ["etw-capture"] = [new("DurationSeconds", CommandParameterKind.Integer, false, "15", "1", "300", null)],
-                ["experience-location-set"] = [new("GeoId", CommandParameterKind.Integer, true, null, "0", null, null)],
-                ["experience-power-apply"] = [
-                    new("ProfileId", CommandParameterKind.Text, false, "balanced", null, null, ["balanced", "high-performance", "power-saver"]),
-                    new("Scheme", CommandParameterKind.Text, false, null, null, null, null),
-                ],
-                ["experience-privacy-apply"] = [new("IncludeTelemetry", CommandParameterKind.Boolean, false, "true", null, null, null)],
-                ["experience-sprite-layout"] = [
-                    new("FrameWidth", CommandParameterKind.Integer, false, "0", "1", "16384", null),
-                    new("FrameHeight", CommandParameterKind.Integer, false, "0", "1", "16384", null),
-                    new("SheetWidth", CommandParameterKind.Integer, false, "0", "1", "65536", null),
-                    new("SheetHeight", CommandParameterKind.Integer, false, "0", "1", "65536", null),
-                ],
-                ["experience-visual-asset"] = [new("Path", CommandParameterKind.Text, true, null, null, null, null)],
-                ["experience-visual-manifest"] = [
-                    new("Path", CommandParameterKind.Text, true, null, null, null, null),
-                    new("Entries", CommandParameterKind.Json, true, null, null, null, null),
-                ],
-                ["explorer-quick"] = [new("Path", CommandParameterKind.Text, true, null, null, null, null)],
-                ["explorer-session-restore"] = [new("Id", CommandParameterKind.Text, true, null, null, null, null)],
-                ["file-preview"] = [
-                    new("Path", CommandParameterKind.Text, true, null, null, null, null),
-                    new("MaximumBytes", CommandParameterKind.Integer, false, "262144", "1024", "1048576", null),
-                ],
-                ["file-preview-export"] = [new("Path", CommandParameterKind.Text, true, null, null, null, null)],
-                ["game-integrity"] = [
-                    new("Path", CommandParameterKind.Text, true, null, null, null, null),
-                    new("Sha256", CommandParameterKind.Text, false, null, null, null, null),
-                ],
-                ["group-policy-import"] = [new("Path", CommandParameterKind.Text, true, null, null, null, null)],
-                ["image-metadata"] = [new("Path", CommandParameterKind.Text, true, null, null, null, null)],
-                ["injection-surface-quarantine"] = [
-                    new("ProcessId", CommandParameterKind.Integer, false, null, "1", null, null),
-                    new("SurfaceId", CommandParameterKind.Text, false, null, null, null, null),
-                ],
-                ["internals-processes"] = [new("Limit", CommandParameterKind.Integer, false, "200", "1", "5000", null)],
-                ["knowledge"] = [
-                    new("Topic", CommandParameterKind.Text, false, null, null, null, null),
-                    new("Query", CommandParameterKind.Text, false, null, null, null, null),
-                ],
-                ["launcher-open"] = [new("Target", CommandParameterKind.Text, true, null, null, null, null)],
-                ["launcher-search"] = [
-                    new("Query", CommandParameterKind.Text, false, null, null, null, null),
-                    new("Limit", CommandParameterKind.Integer, false, "50", "1", "500", null),
-                ],
-                ["legacy-unsafe"] = [new("Action", CommandParameterKind.Text, true, null, null, null, null)],
-                ["maintenance-create"] = [
-                    new("Name", CommandParameterKind.Text, true, null, null, null, null),
-                    new("StartAt", CommandParameterKind.DateTime, false, null, null, null, null),
-                    new("EndAt", CommandParameterKind.DateTime, false, null, null, null, null),
-                ],
-                ["maintenance-transition"] = [
-                    new("Id", CommandParameterKind.Text, true, null, null, null, null),
-                    new("State", CommandParameterKind.Text, true, null, null, null, null),
-                ],
-                ["monitor-control-set"] = [
-                    new("Brightness", CommandParameterKind.Integer, false, null, "0", "100", null),
-                    new("Contrast", CommandParameterKind.Integer, false, null, "0", "100", null),
-                    new("PhysicalIndex", CommandParameterKind.Integer, false, "0", "0", "64", null),
-                ],
-                ["network-experiment"] = [
-                    new("Setting", CommandParameterKind.Text, true, null, null, null, null),
-                    new("Value", CommandParameterKind.Text, true, null, null, null, null),
-                ],
-                ["network-measure"] = [
-                    new("TargetHosts", CommandParameterKind.StringList, false, null, null, null, null),
-                    new("SampleCount", CommandParameterKind.Integer, false, "3", "1", "20", null),
-                    new("TimeoutMilliseconds", CommandParameterKind.Integer, false, "1500", "100", "10000", null),
-                    new("Port", CommandParameterKind.Integer, false, "443", "1", "65535", null),
-                ],
-                ["note-remove"] = [new("Id", CommandParameterKind.Text, true, null, null, null, null)],
-                ["note-save"] = [
-                    new("Text", CommandParameterKind.Text, true, null, null, null, null),
-                    new("Title", CommandParameterKind.Text, false, null, null, null, null),
-                    new("Tags", CommandParameterKind.StringList, false, null, null, null, null),
-                    new("Id", CommandParameterKind.Text, false, null, null, null, null),
-                ],
-                ["offline-appx-selection"] = [
-                    new("ImagePath", CommandParameterKind.Text, true, null, null, null, null),
-                    new("PackageNames", CommandParameterKind.StringList, true, null, null, null, null),
-                ],
-                ["offline-driver-add"] = [
-                    new("ImagePath", CommandParameterKind.Text, true, null, null, null, null),
-                    new("Path", CommandParameterKind.Text, true, null, null, null, null),
-                ],
-                ["offline-driver-remove"] = [
-                    new("ImagePath", CommandParameterKind.Text, true, null, null, null, null),
-                    new("Driver", CommandParameterKind.Text, true, null, null, null, null),
-                ],
-                ["offline-feature-set"] = [
-                    new("ImagePath", CommandParameterKind.Text, true, null, null, null, null),
-                    new("FeatureName", CommandParameterKind.Text, true, null, null, null, null),
-                    new("State", CommandParameterKind.Text, true, null, null, null, ["Enable", "Disable"]),
-                ],
-                ["offline-package-add"] = [
-                    new("ImagePath", CommandParameterKind.Text, true, null, null, null, null),
-                    new("Path", CommandParameterKind.Text, true, null, null, null, null),
-                ],
-                ["offline-reduction-apply"] = [
-                    new("ImagePath", CommandParameterKind.Text, true, null, null, null, null),
-                    new("DisableFeatures", CommandParameterKind.StringList, false, null, null, null, null),
-                    new("RemovePackages", CommandParameterKind.StringList, false, null, null, null, null),
-                ],
-                ["pagefile-set"] = [
-                    new("Mode", CommandParameterKind.Text, true, null, null, null, ["Automatic", "SystemManaged", "Custom"]),
-                    new("Settings", CommandParameterKind.Json, false, null, null, null, null),
-                ],
-                ["peer-log-tail"] = [
-                    new("Path", CommandParameterKind.Text, true, null, null, null, null),
-                    new("Lines", CommandParameterKind.Integer, false, "200", "1", "5000", null),
-                ],
-                ["peer-pe"] = [new("Path", CommandParameterKind.Text, true, null, null, null, null)],
-                ["playbook"] = [new("Id", CommandParameterKind.Text, true, null, null, null, null)],
-                ["power-stop"] = [new("Id", CommandParameterKind.Text, true, null, null, null, null)],
-                ["preset"] = [new("PresetId", CommandParameterKind.Text, true, null, null, null, null)],
-                ["process-modules"] = [
-                    new("ProcessId", CommandParameterKind.Integer, false, null, "1", null, null),
-                    new("Limit", CommandParameterKind.Integer, false, "1000", "1", "5000", null),
-                ],
-                ["provisioning-plan"] = [new("Path", CommandParameterKind.Text, true, null, null, null, null)],
-                ["remote-consent-create"] = [
-                    new("Subject", CommandParameterKind.Text, true, null, null, null, null),
-                    new("Until", CommandParameterKind.DateTime, false, null, null, null, null),
-                ],
-                ["remote-consent-expire"] = [new("Id", CommandParameterKind.Text, true, null, null, null, null)],
-                ["remote-consent-state"] = [
-                    new("Id", CommandParameterKind.Text, true, null, null, null, null),
-                    new("State", CommandParameterKind.Text, true, null, null, null, null),
-                ],
-                ["remote-thread-events"] = [new("MaxEvents", CommandParameterKind.Integer, false, "100", "1", "1000", null)],
-                ["run-automation"] = [new("Steps", CommandParameterKind.Json, true, null, null, null, null)],
-                ["sandbox-config"] = [new("Path", CommandParameterKind.Text, true, null, null, null, null)],
-                ["security-control-reduce"] = [
-                    new("Control", CommandParameterKind.Text, true, null, null, null, ["DefenderRealtime", "SmartScreenShell", "Uac", "WindowsUpdateStack"]),
-                    new("Reason", CommandParameterKind.Text, true, null, null, null, null),
-                    new("DurationMinutes", CommandParameterKind.Integer, false, "15", "5", "1440", null),
-                    new("EnvironmentClass", CommandParameterKind.Text, false, "Workstation", null, null, ["Workstation", "Test", "DisposableLab"]),
-                ],
-                ["security-control-restore"] = [new("RecordId", CommandParameterKind.Text, true, null, null, null, null)],
-                ["steam-backup"] = [
-                    new("Source", CommandParameterKind.Text, true, null, null, null, null),
-                    new("Destination", CommandParameterKind.Text, true, null, null, null, null),
-                ],
-                ["steam-cloud-files"] = [new("UserId", CommandParameterKind.Text, false, null, null, null, null)],
-                ["steam-restore"] = [
-                    new("Source", CommandParameterKind.Text, true, null, null, null, null),
-                    new("Destination", CommandParameterKind.Text, true, null, null, null, null),
-                ],
-                ["studio-adb-inventory"] = [
-                    new("AdbPath", CommandParameterKind.Text, true, null, null, null, null),
-                    new("Sha256", CommandParameterKind.Text, true, null, null, null, null),
-                ],
-                ["studio-brightness-apply"] = [
-                    new("Brightness", CommandParameterKind.Integer, false, null, "0", "100", null),
-                    new("Contrast", CommandParameterKind.Integer, false, null, "0", "100", null),
-                    new("PhysicalIndex", CommandParameterKind.Integer, false, "0", "0", "64", null),
-                ],
-                ["studio-folder-appearance"] = [new("Path", CommandParameterKind.Text, true, null, null, null, null)],
-                ["studio-xbox-fse"] = [
-                    new("ViVeToolPath", CommandParameterKind.Text, true, null, null, null, null),
-                    new("Sha256", CommandParameterKind.Text, true, null, null, null, null),
-                ],
-                ["sysmon-configure"] = [new("Path", CommandParameterKind.Text, true, null, null, null, null)],
-                ["telemetry-ingest"] = [
-                    new("Name", CommandParameterKind.Text, true, null, null, null, null),
-                    new("Record", CommandParameterKind.Json, true, null, null, null, null),
-                ],
-                ["telemetry-retention"] = [new("RetentionDays", CommandParameterKind.Integer, false, "30", "1", "3650", null)],
-                ["toolkit-win32-error"] = [new("Code", CommandParameterKind.Integer, false, "0", null, null, null)],
-                ["unattend-analyze"] = [new("Path", CommandParameterKind.Text, false, null, null, null, null)],
-                ["wdac-deploy"] = [new("Path", CommandParameterKind.Text, true, null, null, null, null)],
-                ["wdac-events"] = [new("MaxEvents", CommandParameterKind.Integer, false, "100", "1", "1000", null)],
-                ["window-activate"] = [new("Handle", CommandParameterKind.Long, true, null, "1", null, null)],
-                ["window-search"] = [new("Query", CommandParameterKind.Text, false, null, null, null, null)],
-                ["window-topmost"] = [
-                    new("Handle", CommandParameterKind.Long, true, null, "1", null, null),
-                    new("Enabled", CommandParameterKind.Boolean, false, "true", null, null, null),
-                ],
-                ["window-zone-set"] = [
-                    new("Handle", CommandParameterKind.Long, true, null, "1", null, null),
-                    new("X", CommandParameterKind.Integer, false, "0", null, null, null),
-                    new("Y", CommandParameterKind.Integer, false, "0", null, null, null),
-                    new("Width", CommandParameterKind.Integer, false, "0", "1", null, null),
-                    new("Height", CommandParameterKind.Integer, false, "0", "1", null, null),
-                ],
-                ["wua-download"] = [new("UpdateIds", CommandParameterKind.StringList, true, null, null, null, null)],
-                ["wua-hide"] = [new("UpdateIds", CommandParameterKind.StringList, true, null, null, null, null)],
-                ["wua-history"] = [new("Count", CommandParameterKind.Integer, false, "100", "1", "1000", null)],
-                ["wua-install"] = [new("UpdateIds", CommandParameterKind.StringList, true, null, null, null, null)],
-                ["wua-search"] = [new("Criteria", CommandParameterKind.Text, false, null, null, null, null)],
-                ["wua-unhide"] = [new("UpdateIds", CommandParameterKind.StringList, true, null, null, null, null)],
-                ["wua-uninstall"] = [new("UpdateIds", CommandParameterKind.StringList, true, null, null, null, null)],
-                ["workspace-layout-apply"] = [new("Id", CommandParameterKind.Text, true, null, null, null, null)],
-                ["workspace-layout-remove"] = [new("Id", CommandParameterKind.Text, true, null, null, null, null)],
-            });
+    private const string SchemaData = """
+appcontainer|PackageName:s;ProcessId:i=0[1,]
+appx-launch|AppUserModelId:!s
+appx-launch-targets|Query:s
+appx-selection|PackageNames:!a
+appx-selection-assess|PackageNames:a
+archive-inspect|Path:!s;Limit:i=5000[1,100000]
+bcd-export|Destination:!s
+binary-intelligence|Path:!s
+bluetooth|Limit:i=500[1,5000]
+bluetooth-events|MaxEvents:i=100[1,1000]
+calculator|Expression:!s
+cancel-operation|OperationId:!s
+cleaner-disk-pressure|OlderThanDays:i=7[0,3650]
+cleaner-disk-pressure-schedule|Id:s;Record:j;Name:j;Path:j;Value:j;Data:j
+cleaner-relocation|Source:!s;Destination:!s;Move:b=true;Overwrite:b
+cleaner-relocation-assess|Source:!s;Destination:!s
+cleaner-winapp2|Path:!s
+cleaner-winapp2-run|Path:!s
+color-add|Color:!s;Id:s;Name:s
+color-capture|X:i;Y:i
+color-remove|Id:!s
+context-menu-set|Scope:s=File;Id:!s;Enabled:b=true;Label:s;Command:!s
+deep-clean|ProfileId:s=temp{temp,wincare-cache};OlderThanDays:i=7[0,3650]
+display-calibrate|PhysicalIndex:i=0[0,64];Brightness:i=0[0,100];Contrast:i=0[0,100]
+download-batch|Ids:!a
+download-cancel|Id:!s
+download-create|Id:s;FileName:s;Destination:s;DueAt:d;Sha256:s;Url:!s
+download-reconcile|Id:!s
+download-remove|Id:!s
+download-resume|Id:!s
+download-start|Id:!s
+download-suspend|Id:!s
+ebpf-admit|Path:!s
+etw-capture|Profile:s=GeneralProfile;DurationSeconds:i=15[1,300];Destination:s
+experience-location-set|GeoId:!i[0,]
+experience-power-apply|ProfileId:s=balanced{balanced,high-performance,power-saver};Scheme:s
+experience-privacy-apply|ProfileId:s=privacy;IncludeTelemetry:b=true
+experience-remote-set|Id:s;Record:j;Name:j;Path:j;Value:j;Data:j
+experience-sprite-layout|FrameWidth:i=0[1,16384];FrameHeight:i=0[1,16384];SheetWidth:i=0[1,65536];SheetHeight:i=0[1,65536]
+experience-visual-asset|Path:!s
+experience-visual-manifest|Path:!s;Entries:!j
+explorer-quick|Path:!s
+explorer-session-restore|Id:!s
+explorer-session-save|Id:s;Name:s
+file-preview|Path:!s;MaximumBytes:i=262144[1024,1048576]
+file-preview-export|OutputPath:s;Path:!s
+fleet-inventory|Hosts:a
+fleet-policy-drift|Desired:!j
+forensics-timeline|MaximumEvents:i=500[1,5000];Since:d
+game-integrity|Path:!s;Limit:i=20000[1,100000]
+group-policy-import|Path:!s
+hardening-apply|ProfileId:s=balanced
+hardware-report|Path:s
+image-metadata|Path:!s
+injection-surface-quarantine|ProcessId:i=0[1,];SurfaceId:s
+injection-surfaces|Limit:i=100[1,1000]
+internals-processes|Top:i=50[1,500]
+knowledge|Topic:s
+launcher-open|Target:!s
+launcher-search|Query:!s;Limit:i=50[1,500]
+legacy-unsafe|Action:!s
+maintenance-create|Id:s;Name:!s;StartAt:d;EndAt:d;Description:s;PlaybookId:s;Tags:a;RequiresRestart:b
+maintenance-export|Path:s
+maintenance-template-create|Id:s;Record:j;Name:j;Path:j;Value:j;Data:j
+maintenance-transition|Id:!s;State:!s
+memory-anomalies|WorkingSetThresholdBytes:l[1,];Limit:i=100[1,1000]
+monitor-control-set|PhysicalIndex:i=0[0,64];Brightness:i=0[0,100];Contrast:i=0[0,100]
+network-experiment|Setting:!s;Value:!s
+network-measure|TargetHosts:a;SampleCount:i=3[1,20];TimeoutMilliseconds:i=1500[100,10000];Port:i=443[1,65535]
+note-remove|Id:!s
+note-save|Id:s;Text:!s;Title:s
+offline-appx-selection|PackageNames:!a;ImagePath:!s
+offline-driver-add|ImagePath:!s;Path:!s
+offline-driver-remove|ImagePath:!s;Driver:!s
+offline-drivers|ImagePath:s
+offline-feature-set|FeatureName:!s;Enabled:b=true;ImagePath:!s
+offline-features|ImagePath:s
+offline-package-add|ImagePath:!s;Path:!s
+offline-packages|ImagePath:s
+offline-reduction-apply|ImagePath:!s;DisableFeatures:a;RemovePackages:a
+offline-reduction-assess|ImagePath:!s
+pagefile-set|Mode:!s=SystemManaged{Automatic,SystemManaged,Custom};Settings:j
+peer-container-log-config|Id:s;Record:j;Name:j;Path:j;Value:j;Data:j
+peer-log-tail|Path:!s;Lines:i=200[1,5000]
+peer-pe|Path:!s
+peer-task-save|Id:s;Record:j;Name:j;Path:j;Value:j;Data:j
+playbook|Steps:j;Id:s
+power-start|Name:s=Power session
+power-stop|Id:!s
+preset|PresetId:!s
+process-modules|ProcessId:i=0[1,];Limit:i=1000[1,5000]
+provisioning-plan|Path:!s
+remote-consent-create|DurationMinutes:i=30[1,1440];Subject:!s;Scope:s=diagnostics
+remote-consent-expire|Id:!s
+remote-consent-state|Id:!s;State:!s
+remote-thread-events|MaxEvents:i=100[1,1000]
+run-automation|Steps:!j
+sandbox-config|Path:!s;Networking:b=true;ClipboardRedirection:b=false;MappedFolders:j
+security-control-reduce|Control:!s=DefenderRealtime{DefenderRealtime,SmartScreenShell,Uac,WindowsUpdateStack};DurationMinutes:i=15[5,1440];Reason:!s;EnvironmentClass:s=Workstation{Workstation,Test,DisposableLab}
+security-control-restore|RecordId:!s
+steam-backup|Source:!s;Destination:!s;Overwrite:b
+steam-cloud-files|UserId:s;AppId:s
+steam-restore|Source:!s;Destination:!s;Overwrite:b=true
+studio-adb-inventory|AdbPath:!s;Sha256:!s
+studio-brightness-apply|PhysicalIndex:i=0[0,64];Brightness:i=0[0,100];Contrast:i=0[0,100]
+studio-brightness-save|Id:s;Record:j;Name:j;Path:j;Value:j;Data:j
+studio-file-workspace-save|Id:s;Record:j;Name:j;Path:j;Value:j;Data:j
+studio-folder-appearance|Path:!s;IconPath:s
+studio-layout-save|Id:s;Record:j;Name:j;Path:j;Value:j;Data:j
+studio-monitoring-export|Path:s
+studio-wezterm|Name:s=wincare-status.lua
+studio-xbox-fse|ViVeToolPath:!s;Sha256:!s;Enabled:b=true;BasicFeatureSet:b=false
+sysmon-configure|Path:!s
+system-shortcuts-export|Path:s
+telemetry-export|Path:s
+telemetry-ingest|Record:!j;Name:!s;Timestamp:d
+telemetry-lake-records|Since:d;Until:d;MaximumRecords:i=10000[1,100000];Name:s
+telemetry-retention|RetentionDays:i=30[1,3650]
+terminal-export|Path:s
+toolkit-msi|Path:!s
+toolkit-win32-error|Code:i
+torrent-metadata|Path:!s
+ui-automation-snapshot|Query:s;Limit:i=200[1,1000]
+unattend-analyze|Path:!s
+vbs-harden|IncludeCredentialGuard:b=true;IncludeHvci:b=true
+wdac-deploy|Path:!s
+wdac-events|MaxEvents:i=100[1,1000]
+widget-catalog|Limit:i=200[1,1000]
+widget-export|Path:s
+widgets|Limit:i=100[1,500]
+window-activate|Handle:l=0[1,]
+window-search|Query:s;Limit:i=100[1,1000]
+window-topmost|Enabled:b=true;Handle:l=0[1,]
+window-zone-set|X:i=0[-32768,32768];Y:i=0[-32768,32768];Width:i=800[100,16384];Height:i=600[100,16384];Handle:l=0[1,]
+windows|Limit:i=500[1,5000]
+workspace-layout-apply|Id:!s
+workspace-layout-remove|Id:!s
+workspace-layout-save|Id:s;Name:s
+wua-download|UpdateIds:!a
+wua-hide|UpdateIds:!a
+wua-history|Count:i=100[1,1000]
+wua-install|UpdateIds:!a
+wua-search|Criteria:s=IsInstalled=0 and IsHidden=0;Limit:i=250[1,1000]
+wua-unhide|UpdateIds:!a
+wua-uninstall|UpdateIds:!a
+""";
+
+    private static readonly IReadOnlyDictionary<string, IReadOnlyList<CommandParameterDefinition>> Schemas = BuildSchemas();
 
     public static IReadOnlyList<CommandParameterDefinition> For(string commandId) =>
-        !string.IsNullOrWhiteSpace(commandId) && Schemas.TryGetValue(commandId, out var schema)
-            ? schema : Array.Empty<CommandParameterDefinition>();
+        !string.IsNullOrWhiteSpace(commandId) && Schemas.TryGetValue(commandId, out IReadOnlyList<CommandParameterDefinition>? schema)
+            ? schema
+            : Array.Empty<CommandParameterDefinition>();
+
+    public static bool HasSchema(string commandId) =>
+        !string.IsNullOrWhiteSpace(commandId) && Schemas.ContainsKey(commandId);
+
+    public static IReadOnlyCollection<string> ParameterizedCommandIds => Schemas.Keys.ToArray();
+
+    private static IReadOnlyDictionary<string, IReadOnlyList<CommandParameterDefinition>> BuildSchemas()
+    {
+        var result = new Dictionary<string, IReadOnlyList<CommandParameterDefinition>>(StringComparer.OrdinalIgnoreCase);
+        foreach (string rawLine in SchemaData.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            int separator = rawLine.IndexOf('|');
+            if (separator <= 0 || separator == rawLine.Length - 1)
+                throw new InvalidOperationException($"Invalid command parameter schema line: '{rawLine}'.");
+
+            string commandId = rawLine[..separator];
+            string fieldsText = rawLine[(separator + 1)..];
+            var fields = new List<CommandParameterDefinition>();
+            foreach (string fieldText in fieldsText.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                fields.Add(ParseField(commandId, fieldText));
+            result.Add(commandId, fields);
+        }
+        return result;
+    }
+
+    private static CommandParameterDefinition ParseField(string commandId, string fieldText)
+    {
+        int separator = fieldText.IndexOf(':');
+        if (separator <= 0 || separator == fieldText.Length - 1)
+            throw new InvalidOperationException($"Invalid parameter schema field '{fieldText}' for '{commandId}'.");
+
+        string name = fieldText[..separator];
+        string spec = fieldText[(separator + 1)..];
+        bool required = spec.StartsWith('!');
+        if (required) spec = spec[1..];
+        if (spec.Length == 0) throw new InvalidOperationException($"Missing parameter kind for '{commandId}.{name}'.");
+
+        CommandParameterKind kind = spec[0] switch
+        {
+            's' => CommandParameterKind.Text,
+            'i' => CommandParameterKind.Integer,
+            'l' => CommandParameterKind.Long,
+            'n' => CommandParameterKind.Number,
+            'b' => CommandParameterKind.Boolean,
+            'a' => CommandParameterKind.StringList,
+            'j' => CommandParameterKind.Json,
+            'd' => CommandParameterKind.DateTime,
+            _ => throw new InvalidOperationException($"Unknown parameter kind '{spec[0]}' for '{commandId}.{name}'."),
+        };
+        spec = spec[1..];
+
+        IReadOnlyList<string>? options = null;
+        int optionStart = spec.IndexOf('{');
+        if (optionStart >= 0)
+        {
+            int optionEnd = spec.LastIndexOf('}');
+            if (optionEnd <= optionStart) throw new InvalidOperationException($"Invalid options for '{commandId}.{name}'.");
+            options = spec[(optionStart + 1)..optionEnd].Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            spec = spec.Remove(optionStart, optionEnd - optionStart + 1);
+        }
+
+        string? minimum = null;
+        string? maximum = null;
+        int rangeStart = spec.IndexOf('[');
+        if (rangeStart >= 0)
+        {
+            int rangeEnd = spec.IndexOf(']', rangeStart + 1);
+            if (rangeEnd <= rangeStart) throw new InvalidOperationException($"Invalid range for '{commandId}.{name}'.");
+            string[] range = spec[(rangeStart + 1)..rangeEnd].Split(',', 2, StringSplitOptions.TrimEntries);
+            minimum = range.Length > 0 && range[0].Length > 0 ? range[0] : null;
+            maximum = range.Length > 1 && range[1].Length > 0 ? range[1] : null;
+            spec = spec.Remove(rangeStart, rangeEnd - rangeStart + 1);
+        }
+
+        string? defaultValue = spec.StartsWith('=') ? spec[1..] : null;
+        if (spec.Length > 0 && !spec.StartsWith('='))
+            throw new InvalidOperationException($"Invalid trailing schema text '{spec}' for '{commandId}.{name}'.");
+
+        return new CommandParameterDefinition(name, kind, required, defaultValue, minimum, maximum, options);
+    }
 }
