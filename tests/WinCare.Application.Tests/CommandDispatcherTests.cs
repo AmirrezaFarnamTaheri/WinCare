@@ -100,6 +100,92 @@ public sealed class CommandDispatcherTests
     }
 
     [Fact]
+    public async Task Caller_created_approval_without_dispatcher_preview_is_blocked()
+    {
+        CommandDefinition definition = Definition("change", MigrationStatus.Implemented, readOnly: false);
+        RecordingHandler handler = new("change");
+        CommandDispatcher dispatcher = CreateDispatcher([definition], [handler]);
+        JsonElement parameters = JsonSerializer.SerializeToElement(new { value = 1 });
+        Guid correlationId = Guid.NewGuid();
+        ApprovedMutationPlan forged = ApprovedMutationPlan.Create("change", parameters, correlationId);
+
+        CommandResult result = await dispatcher.ExecuteAsync(
+            new CommandRequest("change", parameters, Apply: true, correlationId, forged),
+            new CommandExecutionOptions(ReviewApproved: true),
+            CancellationToken.None);
+
+        Assert.Equal(CommandResultStatus.Blocked, result.Status);
+        Assert.Equal("command.approval_plan_invalid", result.Code);
+        Assert.Equal(0, handler.InvocationCount);
+    }
+
+    [Fact]
+    public async Task Successful_mutation_preview_issues_single_use_review_plan()
+    {
+        CommandDefinition definition = Definition("change", MigrationStatus.Implemented, readOnly: false);
+        RecordingHandler handler = new("change");
+        CommandDispatcher dispatcher = CreateDispatcher([definition], [handler]);
+        JsonElement parameters = JsonSerializer.SerializeToElement(new { value = 1 });
+
+        CommandResult preview = await dispatcher.ExecuteAsync(
+            CommandRequest.Preview("change", parameters),
+            CommandExecutionOptions.Default,
+            CancellationToken.None);
+
+        Assert.Equal(CommandResultStatus.Succeeded, preview.Status);
+        Assert.NotNull(preview.ReviewPlan);
+
+        CommandResult applied = await dispatcher.ExecuteAsync(
+            CommandRequest.Execute("change", parameters, preview.ReviewPlan),
+            new CommandExecutionOptions(ReviewApproved: true),
+            CancellationToken.None);
+
+        Assert.Equal(CommandResultStatus.Succeeded, applied.Status);
+        Assert.Equal(2, handler.InvocationCount);
+
+        CommandResult replay = await dispatcher.ExecuteAsync(
+            CommandRequest.Execute("change", parameters, preview.ReviewPlan),
+            new CommandExecutionOptions(ReviewApproved: true),
+            CancellationToken.None);
+
+        Assert.Equal(CommandResultStatus.Blocked, replay.Status);
+        Assert.Equal("command.approval_plan_invalid", replay.Code);
+        Assert.Equal(2, handler.InvocationCount);
+    }
+
+    [Fact]
+    public async Task Review_plan_is_bound_to_exact_preview_parameters()
+    {
+        CommandDefinition definition = Definition("change", MigrationStatus.Implemented, readOnly: false);
+        RecordingHandler handler = new("change");
+        CommandDispatcher dispatcher = CreateDispatcher([definition], [handler]);
+        JsonElement previewParameters = JsonSerializer.SerializeToElement(new { value = 1 });
+        JsonElement changedParameters = JsonSerializer.SerializeToElement(new { value = 2 });
+
+        CommandResult preview = await dispatcher.ExecuteAsync(
+            CommandRequest.Preview("change", previewParameters),
+            CommandExecutionOptions.Default,
+            CancellationToken.None);
+
+        Assert.NotNull(preview.ReviewPlan);
+        CommandRequest tampered = new(
+            "change",
+            changedParameters,
+            Apply: true,
+            preview.CorrelationId,
+            preview.ReviewPlan);
+
+        CommandResult result = await dispatcher.ExecuteAsync(
+            tampered,
+            new CommandExecutionOptions(ReviewApproved: true),
+            CancellationToken.None);
+
+        Assert.Equal(CommandResultStatus.Blocked, result.Status);
+        Assert.Equal("command.approval_plan_invalid", result.Code);
+        Assert.Equal(1, handler.InvocationCount);
+    }
+
+    [Fact]
     public async Task Expired_deadline_cancels_before_handler_invocation()
     {
         CommandDefinition definition = Definition("read", MigrationStatus.Implemented, readOnly: true);

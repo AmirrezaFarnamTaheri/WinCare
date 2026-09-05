@@ -227,7 +227,7 @@ public sealed class ToolExecutionViewModel : ObservableObject
                     {
                         bool previewSuccess = result.Status == CommandResultStatus.Succeeded;
                         SetSuccessfulPreview(previewSuccess);
-                        _lastApprovedPlan = previewSuccess ? ApprovedMutationPlan.Create(selected.Id, parameters, request.CorrelationId) : null;
+                        _lastApprovedPlan = previewSuccess ? result.ReviewPlan : null;
                     }
                     else
                     {

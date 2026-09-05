@@ -129,43 +129,39 @@ public sealed class AiDoctorPageViewModel : INotifyPropertyChanged
         }
     }
 
-    public async Task<CommandResult> ExecuteStepAsync(ProposedActionStep step, bool userApproved = false, CancellationToken cancellationToken = default)
+    public Task<CommandResult> PreviewStepAsync(ProposedActionStep step, CancellationToken cancellationToken = default)
     {
-        if (step == null)
+        ArgumentNullException.ThrowIfNull(step);
+        var parameters = SerializeStepParameters(step);
+        return _commandDispatcher.ExecuteAsync(
+            CommandRequest.Preview(step.CommandId, parameters),
+            CommandExecutionOptions.Default,
+            cancellationToken);
+    }
+
+    public Task<CommandResult> ApplyPreviewedStepAsync(
+        ProposedActionStep step,
+        ApprovedMutationPlan reviewPlan,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(step);
+        ArgumentNullException.ThrowIfNull(reviewPlan);
+        if (step.IsReadOnly)
         {
-            throw new ArgumentNullException(nameof(step));
+            throw new InvalidOperationException("Read-only diagnostic steps do not require an apply phase.");
         }
 
-        var isReadOnly = step.RiskLevel == CommandCatalog.Models.CommandRisk.ReadOnly;
-        if (!isReadOnly && !userApproved)
-        {
-            throw new InvalidOperationException("Mutating maintenance operations require explicit user review and approval confirmation.");
-        }
+        var parameters = SerializeStepParameters(step);
+        return _commandDispatcher.ExecuteAsync(
+            CommandRequest.Execute(step.CommandId, parameters, reviewPlan),
+            new CommandExecutionOptions(ReviewApproved: true),
+            cancellationToken);
+    }
 
-        // Pass through any concrete parameters the translator attached to the step; fall back
-        // to an empty object only when the step is genuinely parameterless.
-        var parameters = step.Parameters is { Count: > 0 }
+    private static System.Text.Json.JsonElement SerializeStepParameters(ProposedActionStep step) =>
+        step.Parameters is { Count: > 0 }
             ? System.Text.Json.JsonSerializer.SerializeToElement(step.Parameters)
             : System.Text.Json.JsonSerializer.SerializeToElement(new { });
-        var correlationId = Guid.NewGuid();
-        var approval = !isReadOnly
-            ? ApprovedMutationPlan.Create(step.CommandId, parameters, correlationId)
-            : null;
-
-        var request = new CommandRequest(
-            CommandId: step.CommandId,
-            Parameters: parameters,
-            Apply: !isReadOnly,
-            CorrelationId: correlationId,
-            Approval: approval
-        );
-
-        var options = isReadOnly
-            ? CommandExecutionOptions.Default
-            : new CommandExecutionOptions(ReviewApproved: true);
-
-        return await _commandDispatcher.ExecuteAsync(request, options, cancellationToken);
-    }
 
     private void OnPropertyChanged([CallerMemberName] string? propertyName = null)
     {

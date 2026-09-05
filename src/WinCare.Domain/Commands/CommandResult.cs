@@ -31,6 +31,7 @@ public enum CommandResultStatus
 /// <param name="StartedAt">Dispatch start time.</param>
 /// <param name="CompletedAt">Dispatch completion time.</param>
 /// <param name="UndoAvailable">Whether an undo / compensator is available.</param>
+/// <param name="ReviewPlan">Dispatcher-issued single-use mutation review plan returned only by successful mutation previews.</param>
 public sealed record CommandResult(
     string CommandId,
     Guid CorrelationId,
@@ -40,7 +41,8 @@ public sealed record CommandResult(
     JsonElement? Data,
     DateTimeOffset StartedAt,
     DateTimeOffset CompletedAt,
-    bool UndoAvailable)
+    bool UndoAvailable,
+    ApprovedMutationPlan? ReviewPlan = null)
 {
     /// <summary>
     /// Gets the wall-clock duration of the dispatch.

@@ -570,6 +570,7 @@ internal sealed class BuiltInDelegatingHandler : ICommandHandler
     private readonly string _commandId;
     private readonly string _targetCoreCommandId;
     private readonly ICommandDispatcher _dispatcher;
+    private readonly ConcurrentDictionary<Guid, ApprovedMutationPlan> _delegatedReviewPlans = new();
 
     public BuiltInDelegatingHandler(string commandId, string targetCoreCommandId, ICommandDispatcher dispatcher)
     {
@@ -582,17 +583,29 @@ internal sealed class BuiltInDelegatingHandler : ICommandHandler
 
     public async Task<CommandHandlerOutcome> ExecuteAsync(CommandRequest request, CancellationToken cancellationToken)
     {
+        ApprovedMutationPlan? delegatedApproval = null;
+        if (request.Apply && !_delegatedReviewPlans.TryRemove(request.CorrelationId, out delegatedApproval))
+        {
+            return CommandHandlerOutcome.Blocked(
+                "plugin.delegated_review_missing",
+                "The delegated core command no longer has the preview receipt created during this plugin command review. Preview the plugin command again before applying.");
+        }
+
         var mappedRequest = new CommandRequest(
             _targetCoreCommandId,
             request.Parameters,
             request.Apply,
             request.CorrelationId,
-            request.Apply
-                ? ApprovedMutationPlan.Create(_targetCoreCommandId, request.Parameters, request.CorrelationId)
-                : null);
+            delegatedApproval);
 
         var options = request.Apply ? new CommandExecutionOptions(ReviewApproved: true) : CommandExecutionOptions.Default;
         var result = await _dispatcher.ExecuteAsync(mappedRequest, options, cancellationToken).ConfigureAwait(false);
+
+        if (!request.Apply && result.Status == CommandResultStatus.Succeeded && result.ReviewPlan is not null)
+        {
+            _delegatedReviewPlans[request.CorrelationId] = result.ReviewPlan;
+        }
+
         if (result.Status == CommandResultStatus.Succeeded)
         {
             return CommandHandlerOutcome.Succeeded(result.Code, result.Message, result.Data, result.UndoAvailable);

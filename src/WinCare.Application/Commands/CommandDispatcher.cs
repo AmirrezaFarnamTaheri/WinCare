@@ -19,6 +19,8 @@ public sealed class CommandDispatcher : ICommandDispatcher
     private readonly ConcurrentDictionary<string, (CommandDefinition Definition, ICommandHandler Handler)> _dynamicCommands = new(StringComparer.OrdinalIgnoreCase);
     private readonly TimeProvider _timeProvider;
     private readonly IActivityJournalService? _journal;
+    private readonly ConcurrentDictionary<string, ApprovedMutationPlan> _issuedReviewPlans = new(StringComparer.Ordinal);
+    private static readonly TimeSpan ReviewPlanLifetime = TimeSpan.FromMinutes(15);
 
     /// <summary>
     /// Expected C ABI version exported by <c>wincare_core</c>.
@@ -253,13 +255,13 @@ public sealed class CommandDispatcher : ICommandDispatcher
                     startedAt);
             }
 
-            if (request.Approval is null || !request.Approval.IsValid(definition.Id, request.Parameters, request.CorrelationId))
+            if (!TryConsumeIssuedReviewPlan(request, definition))
             {
                 return CreateResult(
                     request,
                     CommandResultStatus.Blocked,
                     "command.approval_plan_invalid",
-                    $"Mutating command '{request.CommandId}' requires a valid ApprovedMutationPlan matching the canonical parameters digest.",
+                    $"Mutating command '{request.CommandId}' requires a current, single-use review plan issued by this dispatcher after a successful preview.",
                     data: null,
                     undoAvailable: false,
                     startedAt);
@@ -308,6 +310,12 @@ public sealed class CommandDispatcher : ICommandDispatcher
                 }
             }
 
+            ApprovedMutationPlan? reviewPlan = null;
+            if (!definition.ReadOnly && !request.Apply && outcome.Status == CommandResultStatus.Succeeded)
+            {
+                reviewPlan = IssueReviewPlan(definition.Id, request.Parameters, request.CorrelationId);
+            }
+
             return CreateResult(
                 request,
                 outcome.Status,
@@ -315,7 +323,8 @@ public sealed class CommandDispatcher : ICommandDispatcher
                 outcome.Message,
                 outcome.Data,
                 outcome.UndoAvailable,
-                startedAt);
+                startedAt,
+                reviewPlan);
         }
         catch (OperationCanceledException) when (linkedCancellation.IsCancellationRequested)
         {
@@ -356,6 +365,58 @@ public sealed class CommandDispatcher : ICommandDispatcher
         }
     }
 
+    private ApprovedMutationPlan IssueReviewPlan(string commandId, JsonElement parameters, Guid correlationId)
+    {
+        DateTimeOffset now = _timeProvider.GetUtcNow();
+        foreach ((string planId, ApprovedMutationPlan plan) in _issuedReviewPlans)
+        {
+            if (now - plan.ApprovedAtUtc > ReviewPlanLifetime)
+            {
+                _issuedReviewPlans.TryRemove(planId, out _);
+            }
+        }
+
+        ApprovedMutationPlan issued = new(
+            "AMP-" + Guid.NewGuid().ToString("N")[..12].ToUpperInvariant(),
+            commandId,
+            ApprovedMutationPlan.ComputeCanonicalDigest(parameters),
+            now,
+            correlationId);
+        _issuedReviewPlans[issued.PlanId] = issued;
+        return issued;
+    }
+
+    private bool TryConsumeIssuedReviewPlan(CommandRequest request, CommandDefinition definition)
+    {
+        ApprovedMutationPlan? submitted = request.Approval;
+        if (submitted is null || string.IsNullOrWhiteSpace(submitted.PlanId))
+        {
+            return false;
+        }
+
+        if (!_issuedReviewPlans.TryGetValue(submitted.PlanId, out ApprovedMutationPlan? issued) ||
+            !Equals(issued, submitted))
+        {
+            return false;
+        }
+
+        DateTimeOffset now = _timeProvider.GetUtcNow();
+        TimeSpan age = now - issued.ApprovedAtUtc;
+        if (age < TimeSpan.Zero || age > ReviewPlanLifetime ||
+            issued.CorrelationId == Guid.Empty ||
+            issued.CorrelationId != request.CorrelationId ||
+            !string.Equals(issued.CommandId, definition.Id, StringComparison.OrdinalIgnoreCase) ||
+            !string.Equals(issued.ParametersDigest, ApprovedMutationPlan.ComputeCanonicalDigest(request.Parameters), StringComparison.OrdinalIgnoreCase))
+        {
+            _issuedReviewPlans.TryRemove(submitted.PlanId, out _);
+            return false;
+        }
+
+        // Atomic removal makes a review plan single-use. If another execution consumed it
+        // first, this request fails closed and must preview again.
+        return _issuedReviewPlans.TryRemove(submitted.PlanId, out _);
+    }
+
     private CommandResult CreateResult(
         CommandRequest request,
         CommandResultStatus status,
@@ -363,7 +424,8 @@ public sealed class CommandDispatcher : ICommandDispatcher
         string message,
         JsonElement? data,
         bool undoAvailable,
-        DateTimeOffset startedAt) =>
+        DateTimeOffset startedAt,
+        ApprovedMutationPlan? reviewPlan = null) =>
         new(
             request.CommandId,
             request.CorrelationId,
@@ -373,5 +435,6 @@ public sealed class CommandDispatcher : ICommandDispatcher
             data,
             startedAt,
             _timeProvider.GetUtcNow(),
-            undoAvailable);
+            undoAvailable,
+            reviewPlan);
 }
