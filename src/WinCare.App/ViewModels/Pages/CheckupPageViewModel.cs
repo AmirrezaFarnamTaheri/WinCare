@@ -116,33 +116,17 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
                 }
             }
 
-            // Run probes sequentially. Several checks inspect CPU, disk, update, and security
-            // state; overlapping them can perturb the measurements and make one probe's load
-            // affect another probe's evidence.
-            var results = new List<(string CommandId, string RowTitle, CommandResult Result)>(QuickCheckCommands.Length);
-            foreach ((string commandId, string rowTitle) in QuickCheckCommands)
-            {
-                CommandResult result;
-                try
-                {
-                    result = await _dispatcher.ExecuteAsync(
-                        CommandRequest.Preview(commandId),
-                        new CommandExecutionOptions(false, DateTimeOffset.UtcNow.AddMinutes(2)),
-                        CancellationToken.None);
-                }
-                catch (Exception)
-                {
-                    result = new CommandResult(commandId, Guid.NewGuid(), CommandResultStatus.Failed,
-                        "checkup.dispatch_exception", "WinCare could not complete this read-only check.", null,
-                        DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, false);
-                }
-
-                results.Add((commandId, rowTitle, result));
-            }
+            IReadOnlyList<CommandResult> probeResults = await SequentialCommandProbeRunner.RunPreviewsAsync(
+                _dispatcher,
+                QuickCheckCommands.Select(item => item.CommandId).ToArray(),
+                TimeSpan.FromMinutes(2),
+                CancellationToken.None);
 
             _resultRows.Clear();
-            foreach ((string commandId, string rowTitle, CommandResult result) in results)
+            for (int index = 0; index < QuickCheckCommands.Length; index++)
             {
+                (string commandId, string rowTitle) = QuickCheckCommands[index];
+                CommandResult result = probeResults[index];
                 if (result.Status == CommandResultStatus.Succeeded)
                 {
                     succeeded++;
