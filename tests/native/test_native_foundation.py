@@ -31,9 +31,12 @@ class NativeFoundationTests(unittest.TestCase):
             if name in {"HomePage.xaml", "CheckupPage.xaml"}:
                 self.assertIn("DashboardCardStyle", text, name)
                 self.assertIn("Review before applying", text, name)
+                self.assertIn("SizeChanged", text, name)
                 if name == "CheckupPage.xaml":
                     self.assertIn("SelectorBar", text, name)
-                self.assertIn("SizeChanged", text, name)
+                    self.assertIn("LayoutVisibility.BoolToVisibility(ViewModel.IsCompactLayout)", text, name)
+                    self.assertIn("LayoutVisibility.InvertBoolToVisibility(ViewModel.IsCompactLayout)", text, name)
+                    self.assertIn("LayoutVisibility.BoolToVisibility(IsCompact)", text, name)
                 continue
 
             expected_headers = (
@@ -46,6 +49,14 @@ class NativeFoundationTests(unittest.TestCase):
                 self.assertIn(header, text, name)
             self.assertIn("IsCompact", text, name)
             self.assertIn("SizeChanged", text, name)
+
+        checkup_code = (root / "src/WinCare.App/Views/Pages/CheckupPage.xaml.cs").read_text(encoding="utf-8")
+        self.assertIn("LayoutVisibility.IsCompact(e.NewSize.Width)", checkup_code)
+        self.assertNotIn("CompactThreshold", checkup_code)
+
+        checkup_vm = (root / "src/WinCare.App/ViewModels/Pages/CheckupPageViewModel.cs").read_text(encoding="utf-8")
+        self.assertNotIn("Parallel.ForEachAsync", checkup_vm)
+        self.assertIn("foreach ((string commandId, string rowTitle) in QuickCheckCommands)", checkup_vm)
 
         settings = (root / "src/WinCare.App/Views/Pages/SettingsPage.xaml").read_text(encoding="utf-8")
         self.assertIn("ThemeSelector", settings)
