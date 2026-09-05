@@ -1,15 +1,14 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
-using WinCare.App.Views;
-using WinCare.App.ViewModels.Pages;
 using Microsoft.UI.Xaml.Navigation;
 using WinCare.App.Services;
+using WinCare.App.ViewModels.Pages;
+using WinCare.App.Views;
 
 namespace WinCare.App.Views.Pages;
 
 public sealed partial class HomePage : Page
 {
-    private const double CompactThreshold = 1100;
     private bool _isVisible;
     private int _widgetRefreshVersion;
 
@@ -26,6 +25,7 @@ public sealed partial class HomePage : Page
         base.OnNavigatedTo(e);
         _isVisible = true;
         ViewModel.RefreshActivity(AppRuntime.Current.Journal.GetAll());
+        AppRuntime.Current.Journal.Changed += JournalChanged;
         AppRuntime.Current.PluginRegistry.RegistryChanged += RegistryChanged;
         _ = RefreshWidgetsAsync();
     }
@@ -34,12 +34,22 @@ public sealed partial class HomePage : Page
     {
         _isVisible = false;
         _widgetRefreshVersion++;
+        AppRuntime.Current.Journal.Changed -= JournalChanged;
         AppRuntime.Current.PluginRegistry.RegistryChanged -= RegistryChanged;
         base.OnNavigatedFrom(e);
     }
 
-    private void RegistryChanged(object? sender, EventArgs e)
-        => DispatcherQueue.TryEnqueue(() => { if (_isVisible) _ = RefreshWidgetsAsync(); });
+    private void JournalChanged(object? sender, EventArgs e) =>
+        DispatcherQueue.TryEnqueue(() =>
+        {
+            if (_isVisible)
+            {
+                ViewModel.RefreshActivity(AppRuntime.Current.Journal.GetAll());
+            }
+        });
+
+    private void RegistryChanged(object? sender, EventArgs e) =>
+        DispatcherQueue.TryEnqueue(() => { if (_isVisible) _ = RefreshWidgetsAsync(); });
 
     private async Task RefreshWidgetsAsync()
     {
@@ -50,36 +60,32 @@ public sealed partial class HomePage : Page
             if (!_isVisible || version != _widgetRefreshVersion) return;
             PluginWidgets.PopulateWidgets(widgets);
             PluginWidgets.Visibility = widgets.Count == 0 ? Visibility.Collapsed : Visibility.Visible;
+            PluginWidgetError.IsOpen = false;
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Widget refresh failed ({ex.GetType().Name}).");
+            if (!_isVisible || version != _widgetRefreshVersion) return;
+            PluginWidgets.Visibility = Visibility.Collapsed;
+            PluginWidgetError.Message = "One or more plugin widgets could not be loaded. The plugin is not being shown here; review the Plugin Store for its current state.";
+            PluginWidgetError.IsOpen = true;
+            System.Diagnostics.Debug.WriteLine($"[HomePage] Widget refresh failed: {ex}");
         }
     }
 
     private void RunCheckupButton_Click(object sender, RoutedEventArgs e) => NavigateTo("checkup");
-
     private void ViewActivityButton_Click(object sender, RoutedEventArgs e) => NavigateTo("activity");
-
     private void BrowseToolsButton_Click(object sender, RoutedEventArgs e) => NavigateTo("all-tools");
-
     private void NavCategory_System_Click(object sender, RoutedEventArgs e) => NavigateTo("system-care");
-
     private void NavCategory_Security_Click(object sender, RoutedEventArgs e) => NavigateTo("security");
-
     private void NavCategory_Performance_Click(object sender, RoutedEventArgs e) => NavigateTo("checkup");
-
     private void NavCategory_Storage_Click(object sender, RoutedEventArgs e) => NavigateTo("system-care");
-
     private void NavCategory_Updates_Click(object sender, RoutedEventArgs e) => NavigateTo("repair-recovery");
-
     private void NavCategory_Activity_Click(object sender, RoutedEventArgs e) => NavigateTo("activity");
-
     private void NavigateTo(string key) => PageNavigation.NavigateTo(this, key);
 
     private void Page_SizeChanged(object sender, SizeChangedEventArgs e)
     {
-        bool compact = e.NewSize.Width < CompactThreshold;
+        bool compact = LayoutVisibility.IsCompact(e.NewSize.Width);
         ViewModel.SetCompactLayout(compact);
         PageLayout.Padding = compact ? new Thickness(20) : new Thickness(40, 30, 40, 40);
         HeroLayout.ColumnDefinitions[0].Width = compact ? new GridLength(1, GridUnitType.Star) : new GridLength(380);
