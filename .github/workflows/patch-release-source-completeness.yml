@@ -1,0 +1,62 @@
+name: Patch release source completeness
+
+on:
+  push:
+    branches: [arena/01a06cc8-wincare]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: arena/01a06cc8-wincare
+      - name: Make finalized source self-contained
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          finalizer = Path('tools/finalize_native_release.py')
+          text = finalizer.read_text(encoding='utf-8')
+          old = '''NATIVE_DIRECTORIES = (\n    "migration/oracle",\n    "native",\n    "policy",\n'''
+          new = '''NATIVE_DIRECTORIES = (\n    "docs",\n    "migration/oracle",\n    "native",\n    "policy",\n'''
+          if '    "docs",\n    "migration/oracle",' not in text:
+              if old not in text:
+                  raise SystemExit('NATIVE_DIRECTORIES anchor changed unexpectedly')
+              text = text.replace(old, new, 1)
+          old_tail = '''    "tests/WinCare.Infrastructure.Tests",\n    "tests/native",\n)'''
+          new_tail = '''    "tests/WinCare.Infrastructure.Tests",\n    "tests/native",\n    "tests/tools",\n    "tools/wincare-plugin-cli",\n)'''
+          if '    "tools/wincare-plugin-cli",' not in text:
+              if old_tail not in text:
+                  raise SystemExit('NATIVE_DIRECTORIES tail anchor changed unexpectedly')
+              text = text.replace(old_tail, new_tail, 1)
+          finalizer.write_text(text, encoding='utf-8')
+
+          test = Path('tests/native/test_release_source_completeness.py')
+          test.write_text('''from __future__ import annotations\n\nimport re\nimport tempfile\nimport unittest\nfrom pathlib import Path\nfrom urllib.parse import unquote, urlsplit\n\nfrom tools.finalize_native_release import stage_native_source\n\n\nROOT = Path(__file__).resolve().parents[2]\nMARKDOWN_LINK = re.compile(r"!?\\[[^\\]]*\\]\\(([^)]+)\\)")\n\n\ndef _local_markdown_targets(markdown: Path, staging_root: Path) -> list[tuple[str, Path]]:\n    missing: list[tuple[str, Path]] = []\n    text = markdown.read_text(encoding="utf-8")\n    for raw_target in MARKDOWN_LINK.findall(text):\n        target = raw_target.strip().split(maxsplit=1)[0].strip("<>")\n        if not target or target.startswith("#"):\n            continue\n        parsed = urlsplit(target)\n        if parsed.scheme or parsed.netloc:\n            continue\n        relative_path = unquote(parsed.path)\n        if not relative_path:\n            continue\n        resolved = (staging_root / relative_path.lstrip("/")) if relative_path.startswith("/") else (markdown.parent / relative_path)\n        if not resolved.exists():\n            missing.append((raw_target, resolved))\n    return missing\n\n\nclass ReleaseSourceCompletenessTests(unittest.TestCase):\n    def test_native_source_archive_contains_security_and_reproducibility_evidence(self) -> None:\n        with tempfile.TemporaryDirectory() as td:\n            staged = Path(td) / "native-source"\n            stage_native_source(ROOT, staged)\n\n            required = (\n                "NuGet.Config",\n                ".github/CODEOWNERS",\n                ".github/dependabot.yml",\n                ".github/pull_request_template.md",\n                "docs/Screenshots.md",\n                "docs/diagrams/plugin-admission.html",\n                "docs/images/runtime-dashboard.png",\n                "tools/wincare-plugin-cli/package.json",\n                "tools/wincare-plugin-cli/bin/wincare-plugin.js",\n                "tests/tools/test_plugin_cli.py",\n                "tests/WinCare.Infrastructure.Tests/WinCare.Infrastructure.Tests.csproj",\n                "tests/WinCare.Infrastructure.Tests/PluginInstallerServiceTests.cs",\n                "tests/WinCare.Infrastructure.Tests/packages.lock.json",\n            )\n            for relative in required:\n                self.assertTrue((staged / relative).is_file(), relative)\n\n            variants = list(staged.glob("src/*/packages.portable.*.lock.json"))\n            self.assertEqual(10, len(variants))\n\n            missing_links: list[str] = []\n            for markdown in staged.rglob("*.md"):\n                for raw_target, resolved in _local_markdown_targets(markdown, staged):\n                    source = markdown.relative_to(staged).as_posix()\n                    try:\n                        destination = resolved.relative_to(staged).as_posix()\n                    except ValueError:\n                        destination = str(resolved)\n                    missing_links.append(f"{source} -> {raw_target} ({destination})")\n            self.assertEqual([], missing_links)\n\n\nif __name__ == "__main__":\n    unittest.main()\n''', encoding='utf-8')
+
+          changelog = Path('CHANGELOG.md')
+          text = changelog.read_text(encoding='utf-8')
+          old = '- Expanded finalized native-source evidence to include NuGet configuration, infrastructure security tests, repository review guardrails, and all committed dependency lock graphs.'
+          new = '- Expanded finalized native-source evidence to include NuGet configuration, infrastructure security tests, repository review guardrails, all committed dependency lock graphs, complete linked documentation/assets, and the plugin developer CLI with its tests.'
+          if old in text:
+              text = text.replace(old, new, 1)
+          changelog.write_text(text, encoding='utf-8')
+          PY
+
+          git diff --check
+          git diff -- tools/finalize_native_release.py tests/native/test_release_source_completeness.py CHANGELOG.md
+          if git diff --quiet; then
+            echo "No patch required."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add tools/finalize_native_release.py tests/native/test_release_source_completeness.py CHANGELOG.md
+          git commit -m "build: make finalized source self-contained"
+          git push origin HEAD:arena/01a06cc8-wincare
