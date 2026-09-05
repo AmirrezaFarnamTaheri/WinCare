@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 import unittest
 from pathlib import Path
 
@@ -20,7 +21,7 @@ class ToolchainDeterminismTests(unittest.TestCase):
     def test_ci_provisions_the_pinned_dotnet_sdk(self) -> None:
         workflow = (ROOT / ".github/workflows/native-winui.yml").read_text(encoding="utf-8")
         self.assertIn("global-json-file: global.json", workflow)
-        self.assertIn("dotnet-version: 8.0.416", workflow)
+        self.assertRegex(workflow, r"dotnet-version:\s*[\"']?8\.0\.416[\"']?")
 
 
 if __name__ == "__main__":
