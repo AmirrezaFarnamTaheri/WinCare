@@ -8,11 +8,12 @@ public sealed class ActivityJournalServiceTests : IDisposable
     private readonly string _root = Path.Combine(Path.GetTempPath(), "wincare-journal-" + Guid.NewGuid().ToString("N"));
 
     [Fact]
-    public void Restart_marks_unfinished_operations_for_review()
+    public async Task Restart_marks_unfinished_operations_for_review()
     {
         var path = Path.Combine(_root, "journal.json");
         var journal = new ActivityJournalService(path);
         var running = journal.Begin("test", "Test");
+        await journal.FlushAsync();
         var reloaded = new ActivityJournalService(path);
         var record = Assert.Single(reloaded.GetAll());
         Assert.Equal(running.Id, record.Id);
@@ -21,7 +22,7 @@ public sealed class ActivityJournalServiceTests : IDisposable
     }
 
     [Fact]
-    public void Completed_history_is_bounded_without_evicting_active_operations()
+    public async Task Completed_history_is_bounded_without_evicting_active_operations()
     {
         var journal = new ActivityJournalService(Path.Combine(_root, "journal.json"));
         var active = journal.Begin("active", "Still running");
@@ -34,6 +35,7 @@ public sealed class ActivityJournalServiceTests : IDisposable
         Assert.Contains(journal.GetAll(), record => record.Id == active.Id);
         journal.Complete(active.Id, "Finally done");
         Assert.Contains(journal.GetAll(), record => record.Id == active.Id && record.State == ActivityState.Completed);
+        await journal.FlushAsync();
     }
 
     [Fact]
@@ -43,6 +45,22 @@ public sealed class ActivityJournalServiceTests : IDisposable
         var path = Path.Combine(_root, "journal.json");
         File.WriteAllText(path, "[null]");
         Assert.Empty(new ActivityJournalService(path).GetAll());
+    }
+
+    [Fact]
+    public async Task Persistence_failure_is_visible_while_memory_journal_remains_available()
+    {
+        Directory.CreateDirectory(_root);
+        string blocker = Path.Combine(_root, "not-a-directory");
+        File.WriteAllText(blocker, "file");
+        var journal = new ActivityJournalService(Path.Combine(blocker, "activity.json"));
+
+        ActivityRecord record = journal.Begin("test", "Test");
+        await journal.FlushAsync();
+
+        Assert.Contains(journal.GetAll(), item => item.Id == record.Id);
+        Assert.False(journal.IsPersistenceHealthy);
+        Assert.False(string.IsNullOrWhiteSpace(journal.PersistenceStatusMessage));
     }
 
     public void Dispose()
