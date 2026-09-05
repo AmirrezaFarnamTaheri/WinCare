@@ -283,7 +283,7 @@ public sealed class CommandSafetyTests
 
         Assert.Equal(CommandResultStatus.Blocked, result.Status);
         Assert.Equal("command.approval_plan_invalid", result.Code);
-        Assert.Contains("requires a valid ApprovedMutationPlan", result.Message);
+        Assert.Contains("current, single-use review plan issued by this dispatcher", result.Message);
     }
 
     [Fact]
@@ -313,11 +313,7 @@ public sealed class CommandSafetyTests
         CommandResult previewResult = await dispatcher.ExecuteAsync(previewReq, CommandExecutionOptions.Default, CancellationToken.None);
         Assert.Equal(CommandResultStatus.Succeeded, previewResult.Status);
 
-        ApprovedMutationPlan approval = ApprovedMutationPlan.Create(
-            previewReq.CommandId,
-            previewReq.Parameters,
-            previewReq.CorrelationId);
-
+        ApprovedMutationPlan approval = Assert.IsType<ApprovedMutationPlan>(previewResult.ReviewPlan);
         CommandRequest applyReq = CommandRequest.Execute(previewReq.CommandId, previewReq.Parameters, approval);
         CommandResult applyResult = await dispatcher.ExecuteAsync(applyReq, new CommandExecutionOptions(ReviewApproved: true), CancellationToken.None);
 
