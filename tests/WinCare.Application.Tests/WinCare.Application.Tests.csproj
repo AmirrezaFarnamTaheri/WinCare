@@ -23,6 +23,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\WinCare.Application\WinCare.Application.csproj" />
     <Compile Include="..\..\src\WinCare.App\ViewModels\Pages\ToolExecutionViewModel.cs" Link="ViewModels\ToolExecutionViewModel.cs" />
+    <Compile Include="..\..\src\WinCare.App\ViewModels\Pages\ToolParameterFieldViewModel.cs" Link="ViewModels\ToolParameterFieldViewModel.cs" />
     <Compile Include="..\..\src\WinCare.App\ViewModels\Pages\ToolRowViewModel.cs" Link="ViewModels\ToolRowViewModel.cs" />
     <Compile Include="..\..\src\WinCare.App\ViewModels\Pages\HomePageViewModel.cs" Link="ViewModels\HomePageViewModel.cs" />
     <Compile Include="..\..\src\WinCare.App\Services\AppPreferences.cs" Link="Services\AppPreferences.cs" />
