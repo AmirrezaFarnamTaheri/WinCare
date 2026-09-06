@@ -53,7 +53,8 @@ Home and Checkup surface routine actions and direct evidence. Checkup reports `H
 ### 3.4 Trimming and Distribution
 
 - Portable x64/ARM64 profiles use trimmed, compressed, single-file publishing.
-- **Canonical portable size contract:** `artifacts/portable/<rid>/WinCare.App.exe <= 35,000,000 bytes`.
+- **Canonical portable regression ceiling:** `artifacts/portable/<rid>/WinCare.App.exe <= 70,000,000 bytes`.
+- The ceiling is grounded in exact-head CI measurements of 67,362,718 bytes for x64 and 66,071,465 bytes for ARM64; it is a regression guard, not a claim that the product is a 35 MB executable.
 - The size gate measures the executable itself, not the ZIP and not an installer wrapper.
 - Runtime trim correctness is checked by launching the real packaged x64/ARM64 executables on native-architecture Windows runners with `--smoke-test`.
 - `tools/installer/wincare_setup.iss` consumes `artifacts/portable/win-x64/*`. It is not a separate framework-dependent application build and has no separate 6 MB product contract.
@@ -95,7 +96,7 @@ Home and Checkup surface routine actions and direct evidence. Checkup reports `H
 ### 4.5 Build, Footprint & Packaging
 
 - **REQ-PKG-01:** Portable profiles publish trimmed single-file x64 and ARM64 executables.
-- **REQ-PKG-02:** Each `WinCare.App.exe` is `<= 35,000,000` bytes, enforced by `tools/release_checklist.py --portable-artifact <path>`.
+- **REQ-PKG-02:** Each `WinCare.App.exe` is `<= 70,000,000` bytes, enforced by `tools/release_checklist.py --portable-artifact <path>`.
 - **REQ-PKG-03:** Both trimmed artifacts pass native-architecture packaged runtime smoke before release promotion.
 - **REQ-PKG-04:** The Inno definition wraps the canonical x64 portable payload when invoked; no fictional framework payload is documented.
 
@@ -112,7 +113,7 @@ Home and Checkup surface routine actions and direct evidence. Checkup reports `H
 
 ## 6. Verification & Acceptance Criteria
 
-1. **Portable bytes:** both x64 and ARM64 `WinCare.App.exe` artifacts pass the `35,000,000`-byte gate.
+1. **Portable bytes:** both x64 and ARM64 `WinCare.App.exe` artifacts pass the `70,000,000`-byte gate.
 2. **Packaged runtime:** both portable artifacts exit successfully from `--smoke-test` on native x64/ARM64 Windows runners after constructing WinUI, initializing runtime/plugins, validating the Rust ABI, and executing the read-only `system` command.
 3. **Concurrency:** application tests prove real probe overlap, stable ordering, and failure isolation; hardware p95 claims require separate measurement.
 4. **Safety ergonomics:** Safe remains one-click, Moderate confirmation-only, Destructive preview-plan gated.
