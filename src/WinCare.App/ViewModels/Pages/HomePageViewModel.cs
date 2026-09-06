@@ -17,10 +17,11 @@ public sealed record TelemetryInspectorMetrics(
     ulong RamTotalBytes = 0,
     ulong DiskFreeBytes = 0,
     ulong DiskTotalBytes = 0,
-    bool NetActive = false)
+    bool NetActive = false,
+    bool CpuAvailable = false)
 {
     public string LatencyFormatted => $"{LatencyMicroseconds} µs";
-    public string CpuFormatted => $"{CpuUsagePct:F1}%";
+    public string CpuFormatted => CpuAvailable ? $"{CpuUsagePct:F1}%" : "N/A";
     public string RamFormatted => RamTotalBytes > 0
         ? $"{RamUsedBytes / (1024.0 * 1024 * 1024):F1} GB / {RamTotalBytes / (1024.0 * 1024 * 1024):F1} GB"
         : "N/A";
@@ -229,6 +230,7 @@ public sealed class HomePageViewModel : ObservableObject
         IsInspectorExpanded = true;
 
         float cpu = 0f;
+        bool cpuAvailable = false;
         ulong ramUsed = 0, ramTotal = 0, diskFree = 0, diskTotal = 0;
         bool netActive = false;
 
@@ -239,6 +241,7 @@ public sealed class HomePageViewModel : ObservableObject
             {
                 SystemSnapshot snapshot = await _probeRepository.GetSystemSnapshotAsync(cancellationToken);
                 cpu = snapshot.CpuUsagePct;
+                cpuAvailable = true;
                 ramUsed = snapshot.RamUsedBytes;
                 ramTotal = snapshot.RamTotalBytes;
                 diskFree = snapshot.DiskFreeBytes;
@@ -260,7 +263,8 @@ public sealed class HomePageViewModel : ObservableObject
             RamTotalBytes: ramTotal,
             DiskFreeBytes: diskFree,
             DiskTotalBytes: diskTotal,
-            NetActive: netActive);
+            NetActive: netActive,
+            CpuAvailable: cpuAvailable);
     }
 
     public void RefreshActivity(IReadOnlyList<ActivityRecord> records)
