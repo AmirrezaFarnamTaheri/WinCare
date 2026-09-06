@@ -95,9 +95,9 @@ C4Component
     Container(infra_exec, "WindowsCommandExecutor", "WinCare.Infrastructure", "Executes native Windows actions.")
     ContainerDb(activity_file, "activity.jsonl", "Disk File", "Audit log.")
 
-    Rel(app_vm, dispatcher, "Executes commands", "DispatchAsync")
-    Rel(app_vm, parallel_runner, "Runs multi-probe diagnostics", "RunParallelAsync")
-    Rel(parallel_runner, dispatcher, "Dispatches individual probes", "DispatchAsync(preview)")
+    Rel(app_vm, dispatcher, "Executes commands", "CommandDispatcher.ExecuteAsync")
+    Rel(app_vm, parallel_runner, "Runs multi-probe diagnostics", "ParallelCommandProbeRunner.RunPreviewsAsync")
+    Rel(parallel_runner, dispatcher, "Dispatches individual probes", "CommandDispatcher.ExecuteAsync(preview)")
     Rel(dispatcher, admission_policy, "Evaluates risk tier", "ValidateAdmission")
     Rel(dispatcher, journal_service, "Records audit trail", "Begin / Complete / Fail")
     Rel(dispatcher, infra_exec, "Executes admitted command", "ExecuteAsync")
@@ -119,7 +119,7 @@ sequenceDiagram
     participant Jrnl as ActivityJournalService
 
     User->>UI: Clicks "Quick Clean" (Apply = true)
-    UI->>Disp: DispatchAsync(CommandRequest, Apply=true)
+    UI->>Disp: ExecuteAsync(CommandRequest, Apply=true)
     Disp->>Disp: Check RiskTier == Safe
     Note over Disp: Safe: Bypass ApprovedMutationPlan requirement!
     Disp->>Jrnl: Begin("cleaner-disk-pressure")
@@ -141,14 +141,14 @@ sequenceDiagram
     participant Jrnl as ActivityJournalService
 
     User->>UI: Requests "Safe deep clean"
-    UI->>Disp: DispatchAsync(request, Apply=false) [PREVIEW PASS]
+    UI->>Disp: ExecuteAsync(request, Apply=false) [PREVIEW PASS]
     Disp->>Exec: ExecuteAsync(request) [Read-only simulation]
     Exec-->>Disp: Outcome(PreviewData)
     Disp->>Disp: IssueReviewPlan(SHA-256 Digest Token)
     Disp-->>UI: CommandResult(Preview, ApprovedMutationPlan)
     UI-->>User: Displays Warning Dialog + Affected Resources
     User->>UI: Confirms & Approves
-    UI->>Disp: DispatchAsync(request, Apply=true, Approval=PlanToken, ReviewApproved=true)
+    UI->>Disp: ExecuteAsync(request, Apply=true, Approval=PlanToken, ReviewApproved=true)
     Disp->>Disp: Validate & Consume PlanToken (Single-use, unexpired)
     Disp->>Jrnl: Begin("deep-clean")
     Disp->>Exec: ExecuteAsync(request) [MUTATION PASS]
