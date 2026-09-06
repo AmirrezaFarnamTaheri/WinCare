@@ -3,11 +3,13 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:controls="using:WinCare.App.Controls"
+    xmlns:views="using:WinCare.App.Views"
     NavigationCacheMode="Required"
     SizeChanged="Page_SizeChanged">
     <ScrollViewer VerticalScrollBarVisibility="Auto">
         <Grid x:Name="PageLayout" Padding="40,30,40,40" RowSpacing="24">
             <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
@@ -149,7 +151,276 @@
                 </Border>
             </Grid>
 
-            <Grid x:Name="SecondaryLayout" Grid.Row="2" ColumnSpacing="20" RowSpacing="20">
+            <!-- 3 Curated 1-Click Smart Actions -->
+            <StackPanel Grid.Row="2" Spacing="12">
+                <TextBlock FontSize="16" FontWeight="SemiBold" Foreground="{ThemeResource TextPrimaryBrush}" Text="Quick actions" />
+                <Grid x:Name="CuratedActionsLayout" ColumnSpacing="16" RowSpacing="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Action 1: Quick Clean (Double-Bezel) -->
+                    <Border x:Name="QuickCleanCard" CornerRadius="14" Padding="3" Background="{ThemeResource CardBorderBrush}">
+                        <Border CornerRadius="10" Background="{ThemeResource CardSurfaceBrush}" Padding="18">
+                            <Grid RowSpacing="12">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="*" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+                                <Grid>
+                                    <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                                        <Border Width="36" Height="36" CornerRadius="18" Background="{ThemeResource AccentTealSubtleBrush}" BorderBrush="{ThemeResource AccentTealBrush}" BorderThickness="1">
+                                            <FontIcon Glyph="&#xE74D;" FontSize="18" Foreground="{ThemeResource AccentTealBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                        </Border>
+                                        <StackPanel VerticalAlignment="Center" Spacing="2">
+                                            <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="Quick Clean" />
+                                            <TextBlock FontFamily="{StaticResource TelemetryFontFamily}" FontSize="11" Foreground="{ThemeResource TextSecondaryBrush}" Text="cleaner-disk-pressure" />
+                                        </StackPanel>
+                                    </StackPanel>
+                                    <Border HorizontalAlignment="Right" VerticalAlignment="Center" Padding="8,3" Background="{ThemeResource AccentTealSubtleBrush}" BorderBrush="{ThemeResource AccentTealBrush}" BorderThickness="1" CornerRadius="{StaticResource RadiusPill}">
+                                        <TextBlock FontFamily="{StaticResource TelemetryFontFamily}" FontSize="10" FontWeight="SemiBold" Foreground="{ThemeResource AccentTealBrush}" Text="[ SAFE · 1-CLICK ]" />
+                                    </Border>
+                                </Grid>
+                                <TextBlock Grid.Row="1" Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind ViewModel.CleanDetailText, Mode=OneWay}" TextWrapping="Wrap" MinHeight="36" />
+                                <Grid Grid.Row="2">
+                                    <TextBlock Style="{StaticResource RowSecondaryTextStyle}" Text="Status" FontWeight="SemiBold" />
+                                    <TextBlock HorizontalAlignment="Right" FontFamily="{StaticResource TelemetryFontFamily}" FontSize="12" FontWeight="SemiBold" Foreground="{ThemeResource AccentTealBrush}" Text="{x:Bind ViewModel.CleanStatusText, Mode=OneWay}" />
+                                </Grid>
+                                <!-- Button-in-Button CTA -->
+                                <Grid Grid.Row="3" ColumnSpacing="8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <Button
+                                        HorizontalAlignment="Stretch"
+                                        Style="{StaticResource AccentButtonStyle}"
+                                        Command="{x:Bind ViewModel.QuickCleanCommand}"
+                                        AutomationProperties.AutomationId="HomeQuickCleanButton"
+                                        AutomationProperties.Name="Run Quick Clean">
+                                        <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
+                                            <ProgressRing Width="16" Height="16" IsActive="{x:Bind ViewModel.IsCleaning, Mode=OneWay}" />
+                                            <TextBlock Text="{x:Bind ViewModel.CleanActionText, Mode=OneWay}" />
+                                        </StackPanel>
+                                    </Button>
+                                    <Button
+                                        Grid.Column="1"
+                                        Command="{x:Bind ViewModel.ToggleInspectorCommand}"
+                                        Padding="12,0"
+                                        Height="44"
+                                        CornerRadius="{StaticResource RadiusControl}"
+                                        Background="{ThemeResource AccentTealSubtleBrush}"
+                                        BorderBrush="{ThemeResource AccentTealBrush}"
+                                        BorderThickness="1"
+                                        AutomationProperties.AutomationId="QuickCleanInspectorButton"
+                                        AutomationProperties.Name="Toggle Telemetry Inspector"
+                                        ToolTipService.ToolTip="Inspect kernel telemetry and targets">
+                                        <FontIcon Glyph="&#xE9D9;" FontSize="16" Foreground="{ThemeResource AccentTealBrush}" />
+                                    </Button>
+                                </Grid>
+                            </Grid>
+                        </Border>
+                    </Border>
+
+                    <!-- Action 2: Startup Boost (Double-Bezel) -->
+                    <Border x:Name="StartupBoostCard" Grid.Column="1" CornerRadius="14" Padding="3" Background="{ThemeResource CardBorderBrush}">
+                        <Border CornerRadius="10" Background="{ThemeResource CardSurfaceBrush}" Padding="18">
+                            <Grid RowSpacing="12">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="*" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+                                <Grid>
+                                    <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                                        <Border Width="36" Height="36" CornerRadius="18" Background="{ThemeResource AccentTealSubtleBrush}" BorderBrush="{ThemeResource AccentTealBrush}" BorderThickness="1">
+                                            <FontIcon Glyph="&#xE7F4;" FontSize="18" Foreground="{ThemeResource AccentTealBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                        </Border>
+                                        <StackPanel VerticalAlignment="Center" Spacing="2">
+                                            <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="Startup Boost" />
+                                            <TextBlock FontFamily="{StaticResource TelemetryFontFamily}" FontSize="11" Foreground="{ThemeResource TextSecondaryBrush}" Text="startup" />
+                                        </StackPanel>
+                                    </StackPanel>
+                                    <Border HorizontalAlignment="Right" VerticalAlignment="Center" Padding="8,3" Background="{ThemeResource AccentTealSubtleBrush}" BorderBrush="{ThemeResource AccentTealBrush}" BorderThickness="1" CornerRadius="{StaticResource RadiusPill}">
+                                        <TextBlock FontFamily="{StaticResource TelemetryFontFamily}" FontSize="10" FontWeight="SemiBold" Foreground="{ThemeResource AccentTealBrush}" Text="[ SAFE · 1-CLICK ]" />
+                                    </Border>
+                                </Grid>
+                                <TextBlock Grid.Row="1" Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind ViewModel.StartupDetailText, Mode=OneWay}" TextWrapping="Wrap" MinHeight="36" />
+                                <Grid Grid.Row="2">
+                                    <TextBlock Style="{StaticResource RowSecondaryTextStyle}" Text="Status" FontWeight="SemiBold" />
+                                    <TextBlock HorizontalAlignment="Right" FontFamily="{StaticResource TelemetryFontFamily}" FontSize="12" FontWeight="SemiBold" Foreground="{ThemeResource AccentTealBrush}" Text="{x:Bind ViewModel.StartupStatusText, Mode=OneWay}" />
+                                </Grid>
+                                <!-- Button-in-Button CTA -->
+                                <Grid Grid.Row="3" ColumnSpacing="8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <Button
+                                        HorizontalAlignment="Stretch"
+                                        Style="{StaticResource AccentButtonStyle}"
+                                        Command="{x:Bind ViewModel.StartupBoostCommand}"
+                                        AutomationProperties.AutomationId="HomeStartupBoostButton"
+                                        AutomationProperties.Name="Analyze Startup">
+                                        <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
+                                            <ProgressRing Width="16" Height="16" IsActive="{x:Bind ViewModel.IsAuditingStartup, Mode=OneWay}" />
+                                            <TextBlock Text="{x:Bind ViewModel.StartupActionText, Mode=OneWay}" />
+                                        </StackPanel>
+                                    </Button>
+                                    <Button
+                                        Grid.Column="1"
+                                        Command="{x:Bind ViewModel.ToggleInspectorCommand}"
+                                        Padding="12,0"
+                                        Height="44"
+                                        CornerRadius="{StaticResource RadiusControl}"
+                                        Background="{ThemeResource AccentTealSubtleBrush}"
+                                        BorderBrush="{ThemeResource AccentTealBrush}"
+                                        BorderThickness="1"
+                                        AutomationProperties.AutomationId="StartupBoostInspectorButton"
+                                        AutomationProperties.Name="Toggle Telemetry Inspector"
+                                        ToolTipService.ToolTip="Inspect kernel telemetry and targets">
+                                        <FontIcon Glyph="&#xE9D9;" FontSize="16" Foreground="{ThemeResource AccentTealBrush}" />
+                                    </Button>
+                                </Grid>
+                            </Grid>
+                        </Border>
+                    </Border>
+
+                    <!-- Action 3: Network Refresh (Double-Bezel) -->
+                    <Border x:Name="NetworkRefreshCard" Grid.Column="2" CornerRadius="14" Padding="3" Background="{ThemeResource CardBorderBrush}">
+                        <Border CornerRadius="10" Background="{ThemeResource CardSurfaceBrush}" Padding="18">
+                            <Grid RowSpacing="12">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="*" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+                                <Grid>
+                                    <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                                        <Border Width="36" Height="36" CornerRadius="18" Background="{ThemeResource AccentTealSubtleBrush}" BorderBrush="{ThemeResource AccentTealBrush}" BorderThickness="1">
+                                            <FontIcon Glyph="&#xE704;" FontSize="18" Foreground="{ThemeResource AccentTealBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                        </Border>
+                                        <StackPanel VerticalAlignment="Center" Spacing="2">
+                                            <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="Network Refresh" />
+                                            <TextBlock FontFamily="{StaticResource TelemetryFontFamily}" FontSize="11" Foreground="{ThemeResource TextSecondaryBrush}" Text="network" />
+                                        </StackPanel>
+                                    </StackPanel>
+                                    <Border HorizontalAlignment="Right" VerticalAlignment="Center" Padding="8,3" Background="{ThemeResource AccentTealSubtleBrush}" BorderBrush="{ThemeResource AccentTealBrush}" BorderThickness="1" CornerRadius="{StaticResource RadiusPill}">
+                                        <TextBlock FontFamily="{StaticResource TelemetryFontFamily}" FontSize="10" FontWeight="SemiBold" Foreground="{ThemeResource AccentTealBrush}" Text="[ SAFE · 1-CLICK ]" />
+                                    </Border>
+                                </Grid>
+                                <TextBlock Grid.Row="1" Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind ViewModel.NetworkDetailText, Mode=OneWay}" TextWrapping="Wrap" MinHeight="36" />
+                                <Grid Grid.Row="2">
+                                    <TextBlock Style="{StaticResource RowSecondaryTextStyle}" Text="Status" FontWeight="SemiBold" />
+                                    <TextBlock HorizontalAlignment="Right" FontFamily="{StaticResource TelemetryFontFamily}" FontSize="12" FontWeight="SemiBold" Foreground="{ThemeResource AccentTealBrush}" Text="{x:Bind ViewModel.NetworkStatusText, Mode=OneWay}" />
+                                </Grid>
+                                <!-- Button-in-Button CTA -->
+                                <Grid Grid.Row="3" ColumnSpacing="8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <Button
+                                        HorizontalAlignment="Stretch"
+                                        Style="{StaticResource AccentButtonStyle}"
+                                        Command="{x:Bind ViewModel.NetworkRefreshCommand}"
+                                        AutomationProperties.AutomationId="HomeNetworkRefreshButton"
+                                        AutomationProperties.Name="Check Network">
+                                        <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
+                                            <ProgressRing Width="16" Height="16" IsActive="{x:Bind ViewModel.IsRefreshingNetwork, Mode=OneWay}" />
+                                            <TextBlock Text="{x:Bind ViewModel.NetworkActionText, Mode=OneWay}" />
+                                        </StackPanel>
+                                    </Button>
+                                    <Button
+                                        Grid.Column="1"
+                                        Command="{x:Bind ViewModel.ToggleInspectorCommand}"
+                                        Padding="12,0"
+                                        Height="44"
+                                        CornerRadius="{StaticResource RadiusControl}"
+                                        Background="{ThemeResource AccentTealSubtleBrush}"
+                                        BorderBrush="{ThemeResource AccentTealBrush}"
+                                        BorderThickness="1"
+                                        AutomationProperties.AutomationId="NetworkRefreshInspectorButton"
+                                        AutomationProperties.Name="Toggle Telemetry Inspector"
+                                        ToolTipService.ToolTip="Inspect kernel telemetry and targets">
+                                        <FontIcon Glyph="&#xE9D9;" FontSize="16" Foreground="{ThemeResource AccentTealBrush}" />
+                                    </Button>
+                                </Grid>
+                            </Grid>
+                        </Border>
+                    </Border>
+
+                    <!-- Progressive Disclosure: Telemetry Bay -->
+                    <Border
+                        x:Name="TelemetryBayCard"
+                        Grid.Row="1"
+                        Grid.ColumnSpan="3"
+                        Margin="0,4,0,0"
+                        CornerRadius="10"
+                        Background="{ThemeResource TelemetryFrameBrush}"
+                        BorderBrush="{ThemeResource CardBorderBrush}"
+                        BorderThickness="1"
+                        Padding="16"
+                        Visibility="{x:Bind views:LayoutVisibility.BoolToVisibility(ViewModel.IsInspectorExpanded), Mode=OneWay}">
+                        <Grid RowSpacing="12">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <Grid>
+                                <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                    <FontIcon Glyph="&#xE9D9;" FontSize="14" Foreground="{ThemeResource AccentTealBrush}" />
+                                    <TextBlock FontFamily="{StaticResource TelemetryFontFamily}" FontSize="12" FontWeight="SemiBold" Foreground="{ThemeResource TextPrimaryBrush}" Text="NATIVE KERNEL TELEMETRY PROBE" />
+                                </StackPanel>
+                                <Border HorizontalAlignment="Right" Padding="8,2" Background="{ThemeResource AccentTealSubtleBrush}" BorderBrush="{ThemeResource AccentTealBrush}" BorderThickness="1" CornerRadius="{StaticResource RadiusPill}">
+                                    <StackPanel Orientation="Horizontal" Spacing="4">
+                                        <TextBlock FontFamily="{StaticResource TelemetryFontFamily}" FontSize="11" FontWeight="SemiBold" Foreground="{ThemeResource AccentTealBrush}" Text="PROBE LATENCY:" />
+                                        <TextBlock FontFamily="{StaticResource TelemetryFontFamily}" FontSize="11" FontWeight="Bold" Foreground="{ThemeResource AccentTealBrush}" Text="{x:Bind ViewModel.TelemetryMetrics.LatencyFormatted, Mode=OneWay}" />
+                                    </StackPanel>
+                                </Border>
+                            </Grid>
+                            <Grid Grid.Row="1" ColumnSpacing="16">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="2*" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Spacing="2">
+                                    <TextBlock FontFamily="{StaticResource TelemetryFontFamily}" FontSize="11" Foreground="{ThemeResource TextSecondaryBrush}" Text="TARGET DISK ROOTS / PATHS" />
+                                    <TextBlock FontFamily="{StaticResource TelemetryFontFamily}" FontSize="12" Foreground="{ThemeResource TextPrimaryBrush}" Text="{x:Bind ViewModel.TelemetryMetrics.TargetPathsSummary, Mode=OneWay}" TextWrapping="Wrap" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Spacing="2">
+                                    <TextBlock FontFamily="{StaticResource TelemetryFontFamily}" FontSize="11" Foreground="{ThemeResource TextSecondaryBrush}" Text="KERNEL CPU" />
+                                    <TextBlock FontFamily="{StaticResource TelemetryFontFamily}" FontSize="12" Foreground="{ThemeResource TextPrimaryBrush}" Text="{x:Bind ViewModel.TelemetryMetrics.CpuFormatted, Mode=OneWay}" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="2" Spacing="2">
+                                    <TextBlock FontFamily="{StaticResource TelemetryFontFamily}" FontSize="11" Foreground="{ThemeResource TextSecondaryBrush}" Text="SYSTEM RAM" />
+                                    <TextBlock FontFamily="{StaticResource TelemetryFontFamily}" FontSize="12" Foreground="{ThemeResource TextPrimaryBrush}" Text="{x:Bind ViewModel.TelemetryMetrics.RamFormatted, Mode=OneWay}" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="3" Spacing="2">
+                                    <TextBlock FontFamily="{StaticResource TelemetryFontFamily}" FontSize="11" Foreground="{ThemeResource TextSecondaryBrush}" Text="DISK FREE" />
+                                    <TextBlock FontFamily="{StaticResource TelemetryFontFamily}" FontSize="12" Foreground="{ThemeResource TextPrimaryBrush}" Text="{x:Bind ViewModel.TelemetryMetrics.DiskFormatted, Mode=OneWay}" />
+                                </StackPanel>
+                            </Grid>
+                        </Grid>
+                    </Border>
+                </Grid>
+            </StackPanel>
+
+            <Grid x:Name="SecondaryLayout" Grid.Row="3" ColumnSpacing="20" RowSpacing="20">
                 <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
@@ -186,7 +457,7 @@
                 </Border>
             </Grid>
 
-            <StackPanel x:Name="ActionLayout" Grid.Row="3" Orientation="Horizontal" Spacing="12">
+            <StackPanel x:Name="ActionLayout" Grid.Row="4" Orientation="Horizontal" Spacing="12">
                 <Button Content="Run Checkup" Click="RunCheckupButton_Click" Style="{StaticResource AccentButtonStyle}" AutomationProperties.AutomationId="HomeRunCheckup" AutomationProperties.Name="Run Checkup" />
                 <Button Content="View Activity" Click="ViewActivityButton_Click" CornerRadius="{StaticResource RadiusControl}" AutomationProperties.AutomationId="HomeViewActivity" AutomationProperties.Name="View Activity" />
                 <Button Content="Browse All Tools" Click="BrowseToolsButton_Click" CornerRadius="{StaticResource RadiusControl}" AutomationProperties.AutomationId="HomeBrowseTools" AutomationProperties.Name="Browse All Tools" />
@@ -194,7 +465,7 @@
 
             <InfoBar
                 x:Name="PluginWidgetError"
-                Grid.Row="4"
+                Grid.Row="5"
                 IsOpen="False"
                 IsClosable="True"
                 Severity="Warning"
@@ -202,7 +473,7 @@
                 AutomationProperties.AutomationId="PluginWidgetError"
                 AutomationProperties.Name="Plugin widget loading warning" />
 
-            <controls:WidgetContainer x:Name="PluginWidgets" Grid.Row="5" Visibility="Collapsed" />
+            <controls:WidgetContainer x:Name="PluginWidgets" Grid.Row="6" Visibility="Collapsed" />
         </Grid>
     </ScrollViewer>
 </Page>

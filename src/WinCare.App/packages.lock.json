@@ -160,7 +160,10 @@
         }
       },
       "wincare.commandcatalog": {
-        "type": "Project"
+        "type": "Project",
+        "dependencies": {
+          "WinCare.Domain": "[2.5.0-rc5, )"
+        }
       },
       "wincare.domain": {
         "type": "Project"

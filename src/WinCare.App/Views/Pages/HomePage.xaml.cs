@@ -14,7 +14,9 @@ public sealed partial class HomePage : Page
 
     public HomePage()
     {
-        ViewModel = new HomePageViewModel();
+        ViewModel = new HomePageViewModel(
+            dispatcherResolver: () => AppRuntime.Current.Dispatcher,
+            probeRepository: AppRuntime.Current.SystemProbe);
         InitializeComponent();
     }
 
@@ -95,6 +97,23 @@ public sealed partial class HomePage : Page
         Grid.SetRow(StatusCard, compact ? 1 : 0);
         Grid.SetColumn(SafetyCard, compact ? 0 : 1);
         Grid.SetRow(SafetyCard, compact ? 1 : 0);
+        if (CuratedActionsLayout != null)
+        {
+            CuratedActionsLayout.ColumnDefinitions[0].Width = new GridLength(1, GridUnitType.Star);
+            CuratedActionsLayout.ColumnDefinitions[1].Width = compact ? new GridLength(0) : new GridLength(1, GridUnitType.Star);
+            CuratedActionsLayout.ColumnDefinitions[2].Width = compact ? new GridLength(0) : new GridLength(1, GridUnitType.Star);
+            Grid.SetColumn(QuickCleanCard, 0);
+            Grid.SetRow(QuickCleanCard, 0);
+            Grid.SetColumn(StartupBoostCard, compact ? 0 : 1);
+            Grid.SetRow(StartupBoostCard, compact ? 1 : 0);
+            Grid.SetColumn(NetworkRefreshCard, compact ? 0 : 2);
+            Grid.SetRow(NetworkRefreshCard, compact ? 2 : 0);
+            if (TelemetryBayCard != null)
+            {
+                Grid.SetColumn(TelemetryBayCard, 0);
+                Grid.SetRow(TelemetryBayCard, compact ? 3 : 1);
+            }
+        }
         ActionLayout.Orientation = compact ? Orientation.Vertical : Orientation.Horizontal;
         int columns = compact ? 2 : 3;
         CategoryLayout.ColumnDefinitions[2].Width = compact ? new GridLength(0) : new GridLength(1, GridUnitType.Star);

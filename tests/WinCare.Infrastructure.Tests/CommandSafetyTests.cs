@@ -263,7 +263,7 @@ public sealed class CommandSafetyTests
             Summary: "Configure pagefile settings",
             Area: "System",
             Section: "Memory",
-            Risk: CommandRisk.Low,
+            Risk: CommandRisk.High,
             ReadOnly: false,
             AdministratorAccess: AdministratorAccess.Required,
             Restart: RestartExpectation.No,

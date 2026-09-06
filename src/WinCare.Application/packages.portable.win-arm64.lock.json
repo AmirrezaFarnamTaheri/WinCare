@@ -9,7 +9,10 @@
         "contentHash": "MhcMithKEiyyNkD2ZfbDZPmcOdi0GheGfg8saEIIEfD/fol3iHmcV8TsZkD4ZYz5gdUuoX4YtlVySUU7Sxl9SQ=="
       },
       "wincare.commandcatalog": {
-        "type": "Project"
+        "type": "Project",
+        "dependencies": {
+          "WinCare.Domain": "[2.5.0-rc5, )"
+        }
       },
       "wincare.domain": {
         "type": "Project"

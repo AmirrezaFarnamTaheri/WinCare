@@ -79,7 +79,10 @@ def stage_assets(src_dir: Path, dest_dir: Path, version: str) -> list[Path]:
             if f.endswith(".msix"):
                 dest_name = f"WinCare-{version_tag}-{platform_tag}.msix" if platform_tag else f
             elif f.endswith(".exe"):
-                dest_name = f"WinCare-{version_tag}-{platform_tag}.exe" if platform_tag else f
+                if "setup" in lower_name or "installer" in lower_name:
+                    dest_name = f"WinCare-{version_tag}-{platform_tag}-Setup.exe" if platform_tag else f"WinCare-{version_tag}-Setup.exe"
+                else:
+                    dest_name = f"WinCare-{version_tag}-{platform_tag}.exe" if platform_tag else f
             elif f.endswith(".zip") and "portable" in lower_name:
                 dest_name = f"WinCare-{version_tag}-{platform_tag}-portable.zip" if platform_tag else f
             elif f.endswith(".cer"):

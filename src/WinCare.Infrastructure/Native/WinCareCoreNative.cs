@@ -2,6 +2,25 @@ using System.Runtime.InteropServices;
 
 namespace WinCare.Infrastructure.Native;
 
+[StructLayout(LayoutKind.Sequential)]
+internal struct NativeSysSnapshot
+{
+    public float CpuUsagePct;
+    public ulong RamUsedBytes;
+    public ulong RamTotalBytes;
+    public ulong DiskFreeBytes;
+    public ulong DiskTotalBytes;
+    public byte NetActive;
+}
+
+[StructLayout(LayoutKind.Sequential)]
+internal struct NativeCleanResult
+{
+    public ulong BytesReclaimed;
+    public uint FilesRemoved;
+    public int ErrorCode;
+}
+
 internal static class WinCareCoreNative
 {
     private const string LibraryName = "wincare_core";
@@ -31,4 +50,10 @@ internal static class WinCareCoreNative
         byte* buffer,
         nuint bufferLength,
         nuint* written);
+
+    [DllImport(LibraryName, EntryPoint = "wincare_sys_snapshot_all", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
+    internal static extern unsafe int WinCareSysSnapshotAll(NativeSysSnapshot* outSnapshot);
+
+    [DllImport(LibraryName, EntryPoint = "wincare_clean_temp_files", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
+    internal static extern unsafe int WinCareCleanTempFiles(byte dryRun, NativeCleanResult* outResult);
 }

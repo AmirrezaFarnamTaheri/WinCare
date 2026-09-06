@@ -17,6 +17,8 @@ public sealed record CommandRequest(
     Guid CorrelationId,
     ApprovedMutationPlan? Approval = null)
 {
+    private static readonly JsonElement EmptyParameters = CreateEmptyParameters();
+
     /// <summary>
     /// Creates a non-mutative preview request.
     /// </summary>
@@ -27,11 +29,23 @@ public sealed record CommandRequest(
     /// Creates a non-mutative preview request without parameters.
     /// </summary>
     public static CommandRequest Preview(string commandId) =>
-        new(commandId, JsonSerializer.SerializeToElement(new { }), Apply: false, Guid.NewGuid());
+        new(commandId, EmptyParameters, Apply: false, Guid.NewGuid());
 
     /// <summary>
     /// Creates a mutative execution request.
     /// </summary>
     public static CommandRequest Execute(string commandId, JsonElement parameters, ApprovedMutationPlan? approval = null) =>
         new(commandId, parameters, Apply: true, approval?.CorrelationId ?? Guid.NewGuid(), approval);
+
+    /// <summary>
+    /// Creates a mutative execution request without parameters.
+    /// </summary>
+    public static CommandRequest Execute(string commandId, ApprovedMutationPlan? approval = null) =>
+        new(commandId, EmptyParameters, Apply: true, approval?.CorrelationId ?? Guid.NewGuid(), approval);
+
+    private static JsonElement CreateEmptyParameters()
+    {
+        using JsonDocument document = JsonDocument.Parse("{}");
+        return document.RootElement.Clone();
+    }
 }
