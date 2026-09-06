@@ -34,13 +34,21 @@ class PortableLockContractTests(unittest.TestCase):
             self.assertEqual(2, lock["version"], relative)
             self.assertIn("dependencies", lock, relative)
 
-    def test_msbuild_stages_runtime_variant_before_locked_portable_restore(self) -> None:
+    def test_msbuild_uses_runtime_variant_without_overwriting_canonical_locks(self) -> None:
         props = (ROOT / "Directory.Build.props").read_text(encoding="utf-8")
-        self.assertIn('Target Name="StagePortablePublishLockFiles"', props)
-        self.assertIn('BeforeTargets="Restore"', props)
         self.assertIn("packages.portable.$(RuntimeIdentifier).lock.json", props)
-        self.assertIn("Staged locked portable dependency graphs for $(RuntimeIdentifier).", props)
-        self.assertNotIn("NuGetLockFilePath", props)
+        self.assertIn("<NuGetLockFilePath>", props)
+        self.assertNotIn('Target Name="StagePortablePublishLockFiles"', props)
+        self.assertNotIn('BeforeTargets="Restore"', props)
+        self.assertNotIn("DestinationFiles=", props)
+        self.assertNotIn("Staged locked portable dependency graphs", props)
+
+        for project in PROJECTS:
+            canonical = ROOT / "src" / project / "packages.lock.json"
+            canonical_text = canonical.read_text(encoding="utf-8-sig")
+            self.assertNotIn('"Microsoft.NET.ILLink.Tasks"', canonical_text, project)
+            self.assertNotIn('/win-x64"', canonical_text, project)
+            self.assertNotIn('/win-arm64"', canonical_text, project)
 
     def test_app_portable_lock_variants_cover_the_declared_runtime_set(self) -> None:
         project = (ROOT / "src/WinCare.App/WinCare.App.csproj").read_text(encoding="utf-8")
