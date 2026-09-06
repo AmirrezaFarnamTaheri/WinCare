@@ -66,7 +66,7 @@ fn clean_directory_contents(dir: &Path, dry_run: bool, reclaimed: &mut u64, coun
 
     for entry in entries.flatten() {
         let path = entry.path();
-        if let Ok(metadata) = entry.metadata() {
+        if let Ok(metadata) = std::fs::symlink_metadata(&path) {
             if is_reparse_point(&metadata) {
                 continue;
             }
@@ -77,7 +77,7 @@ fn clean_directory_contents(dir: &Path, dry_run: bool, reclaimed: &mut u64, coun
                 if let Ok(sub_entries) = std::fs::read_dir(&path) {
                     for sub in sub_entries.flatten() {
                         let sub_path = sub.path();
-                        if let Ok(sub_meta) = sub.metadata() {
+                        if let Ok(sub_meta) = std::fs::symlink_metadata(&sub_path) {
                             if is_reparse_point(&sub_meta) {
                                 continue;
                             }
