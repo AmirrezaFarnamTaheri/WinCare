@@ -94,8 +94,9 @@ def capture_screenshot(
 ) -> bool:
     """Renders a source HTML document to a target PNG file using a headless browser instance.
 
-    Removes any pre-existing target file prior to launch and asserts process return code 0,
-    file creation, size threshold, and PNG structural integrity.
+    Removes any pre-existing target file prior to launch, supplies virtual-time and compositor
+    flags for deterministic rendering, and asserts process return code 0, file creation,
+    size threshold, PNG structural integrity, and content non-emptiness.
     """
     if not source_html.is_file():
         print(f"[-] Source HTML not found: {source_html}", file=sys.stderr)
@@ -112,10 +113,14 @@ def capture_screenshot(
 
     cmd = [
         browser_path,
-        "--headless",
-        "--disable-gpu",
+        "--headless=new",
         "--hide-scrollbars",
         "--force-device-scale-factor=1",
+        "--virtual-time-budget=5000",
+        "--run-all-compositor-stages-before-draw",
+        "--enable-webgl",
+        "--use-gl=angle",
+        "--allow-file-access-from-files",
         f"--window-size={width},{height}",
         f"--screenshot={target_png.resolve()}",
         file_url,
@@ -129,11 +134,32 @@ def capture_screenshot(
             text=True,
             timeout=35,
         )
+        if proc.returncode != 0 and "--headless=new" in cmd:
+            fallback_cmd = [
+                browser_path,
+                "--headless",
+                "--hide-scrollbars",
+                "--force-device-scale-factor=1",
+                "--virtual-time-budget=5000",
+                "--run-all-compositor-stages-before-draw",
+                "--enable-webgl",
+                f"--window-size={width},{height}",
+                f"--screenshot={target_png.resolve()}",
+                file_url,
+            ]
+            proc = subprocess.run(
+                fallback_cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                timeout=35,
+            )
+
         if (
             proc.returncode == 0
             and target_png.is_file()
             and target_png.stat().st_size > 1024
-            and verify_image_integrity(target_png, min_bytes=1024)
+            and verify_image_integrity(target_png, min_bytes=1024, check_content=True)
         ):
             size_kb = target_png.stat().st_size / 1024
             print(f"[+] Captured {target_png.name} ({width}x{height}, {size_kb:.1f} KB)")
@@ -149,11 +175,12 @@ def capture_screenshot(
         return False
 
 
-def verify_image_integrity(image_path: Path, min_bytes: int = 2048) -> bool:
-    """Validates the structural integrity of a PNG file through chunk verification and CRC32 calculation.
+def verify_image_integrity(image_path: Path, min_bytes: int = 2048, check_content: bool = True) -> bool:
+    """Validates structural integrity, chunk stream, CRC32, and visual content of a PNG file.
 
-    Checks file existence, minimum byte size, standard 8-byte PNG magic header, and parses
-    all chunks (including IHDR and IEND) to verify chunk lengths and chunk CRC values.
+    Checks file existence, minimum byte size, standard 8-byte PNG magic header, parses
+    all chunks (including IHDR and IEND) to verify chunk lengths and chunk CRC values,
+    and inspects decompressed IDAT bytes to verify non-empty visual content and color entropy.
     """
     if not image_path.is_file():
         print(f"[-] Missing required screenshot: {image_path}", file=sys.stderr)
@@ -173,6 +200,8 @@ def verify_image_integrity(image_path: Path, min_bytes: int = 2048) -> bool:
 
             saw_ihdr = False
             saw_iend = False
+            ihdr_data = b""
+            idat_chunks = []
 
             while True:
                 length_bytes = f.read(4)
@@ -213,13 +242,63 @@ def verify_image_integrity(image_path: Path, min_bytes: int = 2048) -> bool:
                     )
                     return False
 
-                if chunk_type == b"IEND":
+                if chunk_type == b"IHDR":
+                    ihdr_data = chunk_data
+                elif chunk_type == b"IDAT":
+                    idat_chunks.append(chunk_data)
+                elif chunk_type == b"IEND":
                     saw_iend = True
                     break
 
             if not (saw_ihdr and saw_iend):
                 print(f"[-] PNG missing IHDR or IEND chunk in {image_path.name}", file=sys.stderr)
                 return False
+
+            if check_content and ihdr_data and idat_chunks:
+                raw = zlib.decompress(b"".join(idat_chunks))
+                width, height, _, color_type = struct.unpack(">IIBB", ihdr_data[:10])
+                bpp = 3 if color_type == 2 else 4 if color_type == 6 else 1 if color_type in (0, 3) else 2
+                stride = 1 + width * bpp
+                expected_min_len = stride * height
+                if len(raw) < expected_min_len:
+                    print(
+                        f"[-] Image data truncated for {image_path.name}: {len(raw)} < {expected_min_len} bytes",
+                        file=sys.stderr,
+                    )
+                    return False
+
+                # Sample pixel colors across grid
+                sampled_colors = set()
+                step_y = max(1, height // 100)
+                step_x = max(1, width // 100)
+                for y in range(0, height, step_y):
+                    line_start = y * stride + 1
+                    for x in range(0, width, step_x):
+                        px_start = line_start + x * bpp
+                        sampled_colors.add(tuple(raw[px_start:px_start + min(bpp, 3)]))
+
+                if len(sampled_colors) < 30:
+                    print(
+                        f"[-] Visual content check failed for {image_path.name}: only {len(sampled_colors)} unique sampled colors (solid or blank image)",
+                        file=sys.stderr,
+                    )
+                    return False
+
+                # Target-specific ROI verification for showcase preview canvas
+                if "showcase" in image_path.name.lower():
+                    canvas_colors = set()
+                    for y in range(180, min(620, height), 4):
+                        line_start = y * stride + 1
+                        for x in range(850, min(1350, width), 4):
+                            px_start = line_start + x * bpp
+                            canvas_colors.add(tuple(raw[px_start:px_start + min(bpp, 3)]))
+
+                    if len(canvas_colors) < 25:
+                        print(
+                            f"[-] Visual content check failed for {image_path.name}: telemetry canvas region is empty (only {len(canvas_colors)} distinct colors)",
+                            file=sys.stderr,
+                        )
+                        return False
 
     except Exception as ex:
         print(f"[-] Failed to read or parse PNG {image_path.name}: {ex}", file=sys.stderr)

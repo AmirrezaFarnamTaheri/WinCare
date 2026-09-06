@@ -315,7 +315,7 @@ jobs:
 
   release-gate:
     needs: [verify-source, rust, managed-and-package]
-    if: (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')) && github.event_name != 'pull_request'
+    if: startsWith(github.ref, 'refs/tags/v') && github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -343,9 +343,7 @@ jobs:
           suffix = props.find('.//VersionSuffix').text if props.find('.//VersionSuffix') is not None else ''
           expected = f'v{prefix}-{suffix}' if suffix else f'v{prefix}'
           actual = os.environ.get('RELEASE_TAG', '')
-          if actual in ('master', 'main', '') or not actual.startswith('v'):
-              print(f"Triggered from branch '{actual}', defaulting release tag to '{expected}'.")
-              actual = expected
+          assert actual.startswith('v'), f"Triggered ref '{actual}' is not a valid version tag ('v*')."
           assert actual == expected, f'Release tag {actual} does not match product version {expected}'
           is_prerelease = any(x in expected for x in ('-rc', '-beta', '-alpha'))
           flags = '--prerelease' if is_prerelease else '--latest'

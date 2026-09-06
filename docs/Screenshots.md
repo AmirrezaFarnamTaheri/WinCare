@@ -30,11 +30,13 @@ Concept images remain design references and are explicitly marked as concepts.
 
 ![Conceptual WinCare system checkup showing a health score and review-before-apply results](images/checkup-preview.png)
 
-## Spectre.Console TUI
+## Terminal REPL (Historical Concept)
 
-### Headless Terminal & Diagnostic REPL
+### Headless Terminal Exploration Prototype
 
-![WinCare Spectre.Console headless terminal REPL with live telemetry and process isolation](images/tui-preview.png)
+![Historical concept for a WinCare headless terminal REPL](images/tui-preview.png)
+
+*Design concept only. WinCare ships exclusively as a native WinUI 3 desktop shell; the standalone terminal interface was an exploratory prototype and is not part of the active product distribution.*
 
 ## Platform Architecture
 
@@ -44,11 +46,11 @@ Concept images remain design references and are explicitly marked as concepts.
 
 ## Interactive Web Showcase
 
-### Awwwards-Tier Engineering Showcase
+### Diagnostic Core Showcase
 
-![WinCare interactive web showcase featuring Three.js neural topology, live telemetry dials, and tactile diagnostic inspection](images/showcase-preview.png)
+![WinCare interactive web showcase featuring holographic diagnostic topology, live telemetry dials, and tactile inspection](images/showcase-preview.png)
 
-**Interactive experience:** Open [`docs/showcase.html`](showcase.html) in any modern browser for the live WebGL neural topology, interactive command execution simulator, and responsive telemetry panels.
+**Interactive experience:** Open [`docs/showcase.html`](showcase.html) in any modern browser for the live holographic diagnostic topology, command simulator, and responsive telemetry panels.
 
 ## Capture policy
 
