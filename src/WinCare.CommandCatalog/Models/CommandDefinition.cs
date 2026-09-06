@@ -94,7 +94,25 @@ public sealed record CommandDefinition(
     /// <summary>
     /// Gets the operational admission risk tier.
     /// </summary>
-    public RiskTier RiskTier => ExplicitRiskTier ?? DetermineDefaultRiskTier(Risk, ReadOnly, Id);
+    public RiskTier RiskTier
+    {
+        get
+        {
+            RiskTier derived = DetermineDefaultRiskTier(Risk, ReadOnly, Id);
+            if (ExplicitRiskTier is not { } explicitTier)
+            {
+                return derived;
+            }
+
+            // Preserve unrecognized enum values so the dispatcher can reject them explicitly.
+            if (!Enum.IsDefined(explicitTier))
+            {
+                return explicitTier;
+            }
+
+            return (RiskTier)Math.Max((int)derived, (int)explicitTier);
+        }
+    }
 
     private static RiskTier DetermineDefaultRiskTier(CommandRisk risk, bool readOnly, string id)
     {
