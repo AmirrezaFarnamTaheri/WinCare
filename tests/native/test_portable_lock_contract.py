@@ -51,6 +51,19 @@ class PortableLockContractTests(unittest.TestCase):
             canonical_text = canonical.read_text(encoding="utf-8-sig")
             self.assertNotIn('"Microsoft.NET.ILLink.Tasks"', canonical_text, project)
 
+    def test_catalog_lock_graphs_include_domain_project_reference(self) -> None:
+        relative_paths = [
+            "src/WinCare.CommandCatalog/packages.lock.json",
+            *[
+                f"src/WinCare.CommandCatalog/packages.portable.{runtime}.lock.json"
+                for runtime in RUNTIMES
+            ],
+        ]
+        for relative in relative_paths:
+            lock = json.loads((ROOT / relative).read_text(encoding="utf-8-sig"))
+            base_graph = lock["dependencies"]["net8.0"]
+            self.assertEqual("Project", base_graph["wincare.domain"]["type"], relative)
+
     def test_app_portable_lock_variants_cover_the_declared_runtime_set(self) -> None:
         project = (ROOT / "src/WinCare.App/WinCare.App.csproj").read_text(encoding="utf-8")
         self.assertIn("<RuntimeIdentifiers>win-x64;win-arm64</RuntimeIdentifiers>", project)
