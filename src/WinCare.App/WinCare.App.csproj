@@ -28,6 +28,12 @@
     <ProjectReference Include="..\WinCare.CommandCatalog\WinCare.CommandCatalog.csproj" />
     <ProjectReference Include="..\WinCare.Infrastructure\WinCare.Infrastructure.csproj" />
   </ItemGroup>
+  <PropertyGroup Condition="'$(Configuration)' == 'Release' and '$(PublishSingleFile)' == 'true' and '$(WindowsPackageType)' == 'None'">
+    <PublishTrimmed>true</PublishTrimmed>
+    <TrimMode>partial</TrimMode>
+    <SuppressTrimAnalysisWarnings>true</SuppressTrimAnalysisWarnings>
+    <PublishReadyToRun>false</PublishReadyToRun>
+  </PropertyGroup>
   <ItemGroup Condition="'$(PublishTrimmed)' == 'true'">
     <TrimmerRootAssembly Include="WinCare.App" />
     <TrimmerRootAssembly Include="WinCare.Domain" />
