@@ -140,7 +140,7 @@ public sealed class HomePageViewModel : ObservableObject
             using JsonDocument doc = JsonDocument.Parse("{}");
             CommandResult result = await dispatcher.ExecuteAsync(
                 CommandRequest.Execute("cleaner-disk-pressure", doc.RootElement),
-                new CommandExecutionOptions(ReviewApproved: true),
+                new CommandExecutionOptions(ReviewApproved: false),
                 cancellationToken);
 
             CleanStatusText = result.Status == CommandResultStatus.Succeeded ? "Clean Complete" : "Failed";
@@ -230,7 +230,7 @@ public sealed class HomePageViewModel : ObservableObject
 
         float cpu = 0f;
         ulong ramUsed = 0, ramTotal = 0, diskFree = 0, diskTotal = 0;
-        bool netActive = true;
+        bool netActive = false;
 
         long start = Stopwatch.GetTimestamp();
         if (_probeRepository is not null)
@@ -247,14 +247,14 @@ public sealed class HomePageViewModel : ObservableObject
             }
             catch
             {
-                // Fall back to baseline probe metrics on probe fault
+                // Keep metrics unavailable on probe fault rather than inventing live values.
             }
         }
         long latencyUs = (long)Stopwatch.GetElapsedTime(start).TotalMicroseconds;
 
         TelemetryMetrics = new TelemetryInspectorMetrics(
             LatencyMicroseconds: latencyUs,
-            TargetPathsSummary: "%TEMP% (User) • %SYSTEMROOT%\\Temp (System)",
+            TargetPathsSummary: "%TEMP% / LocalAppData\\Temp (expired files)",
             CpuUsagePct: cpu,
             RamUsedBytes: ramUsed,
             RamTotalBytes: ramTotal,
