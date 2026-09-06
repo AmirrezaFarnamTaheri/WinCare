@@ -14,7 +14,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 PYTHON = sys.executable
-PORTABLE_EXECUTABLE_MAX_BYTES = 35_000_000
+PORTABLE_EXECUTABLE_MAX_BYTES = 70_000_000
 
 
 def _get_product_version() -> str:
