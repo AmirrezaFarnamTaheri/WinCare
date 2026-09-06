@@ -24,10 +24,16 @@ public partial class App : Microsoft.UI.Xaml.Application
 
     protected override void OnLaunched(LaunchActivatedEventArgs args)
     {
-        bool runPortableSmoke = string.Equals(
-            args.Arguments?.Trim(),
-            PortableSmokeArgument,
-            StringComparison.OrdinalIgnoreCase);
+        string[] processArguments = Environment.GetCommandLineArgs();
+        string? directArgument = processArguments
+            .Skip(1)
+            .FirstOrDefault(argument => !string.IsNullOrWhiteSpace(argument));
+        bool runPortableSmoke = processArguments
+            .Skip(1)
+            .Any(argument => string.Equals(
+                argument,
+                PortableSmokeArgument,
+                StringComparison.OrdinalIgnoreCase));
 
         _window = new MainWindow();
         StartupTelemetry.Mark("WindowCreated");
@@ -43,9 +49,9 @@ public partial class App : Microsoft.UI.Xaml.Application
         {
             _window.HandleProtocolActivation(protocolArgs.Uri);
         }
-        else if (!string.IsNullOrWhiteSpace(args.Arguments))
+        else if (!string.IsNullOrWhiteSpace(directArgument))
         {
-            _window.HandleProtocolActivation(args.Arguments);
+            _window.HandleProtocolActivation(directArgument);
         }
         _ = InitializeRuntimeAsync();
     }
