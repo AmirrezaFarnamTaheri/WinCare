@@ -14,6 +14,7 @@ PROJECTS = (
     "WinCare.Infrastructure",
 )
 RUNTIMES = ("win-x64", "win-arm64")
+CATALOG_DOMAIN_VERSION = "[2.5.0-rc5, )"
 
 
 class PortableLockContractTests(unittest.TestCase):
@@ -51,7 +52,7 @@ class PortableLockContractTests(unittest.TestCase):
             canonical_text = canonical.read_text(encoding="utf-8-sig")
             self.assertNotIn('"Microsoft.NET.ILLink.Tasks"', canonical_text, project)
 
-    def test_catalog_lock_graphs_include_domain_project_reference(self) -> None:
+    def test_catalog_own_lock_graphs_include_domain_project_reference(self) -> None:
         relative_paths = [
             "src/WinCare.CommandCatalog/packages.lock.json",
             *[
@@ -63,6 +64,28 @@ class PortableLockContractTests(unittest.TestCase):
             lock = json.loads((ROOT / relative).read_text(encoding="utf-8-sig"))
             base_graph = lock["dependencies"]["net8.0"]
             self.assertEqual("Project", base_graph["wincare.domain"]["type"], relative)
+
+    def test_embedded_catalog_project_graphs_include_domain_dependency(self) -> None:
+        lock_paths = [
+            *ROOT.glob("src/*/packages.lock.json"),
+            *ROOT.glob("src/*/packages.portable.*.lock.json"),
+            *ROOT.glob("tests/*/packages.lock.json"),
+        ]
+        checked = 0
+        for path in lock_paths:
+            lock = json.loads(path.read_text(encoding="utf-8-sig"))
+            for framework_graph in lock["dependencies"].values():
+                command_catalog = framework_graph.get("wincare.commandcatalog")
+                if command_catalog is None:
+                    continue
+                checked += 1
+                self.assertEqual("Project", command_catalog["type"], path.as_posix())
+                self.assertEqual(
+                    CATALOG_DOMAIN_VERSION,
+                    command_catalog.get("dependencies", {}).get("WinCare.Domain"),
+                    path.as_posix(),
+                )
+        self.assertGreater(checked, 0)
 
     def test_app_portable_lock_variants_cover_the_declared_runtime_set(self) -> None:
         project = (ROOT / "src/WinCare.App/WinCare.App.csproj").read_text(encoding="utf-8")
