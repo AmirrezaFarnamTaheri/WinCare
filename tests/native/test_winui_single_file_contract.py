@@ -24,6 +24,7 @@ class WinUiSingleFileContractTests(unittest.TestCase):
         )
         self.assertIn("<PublishTrimmed>true</PublishTrimmed>", project)
         self.assertIn("<TrimMode>partial</TrimMode>", project)
+        self.assertIn("<JsonSerializerIsReflectionEnabledByDefault>true</JsonSerializerIsReflectionEnabledByDefault>", project)
         self.assertIn("<SuppressTrimAnalysisWarnings>true</SuppressTrimAnalysisWarnings>", project)
         self.assertIn("<PublishReadyToRun>false</PublishReadyToRun>", project)
 
