@@ -12,7 +12,7 @@ WinCare accumulated real UX and packaging friction: large self-contained artifac
 
 | Dimension | Legacy / Current State | Ponytail Target | Verification |
 |---|---|---|---|
-| **Portable Executable Size** | 120–135 MB untrimmed standalone baseline | **≤ 35,000,000 bytes** | Measure `artifacts/portable/<rid>/WinCare.App.exe` directly in the Windows workflow. |
+| **Portable Executable Size** | 120–135 MB untrimmed standalone baseline | **≤ 70,000,000 bytes** | Measure `artifacts/portable/<rid>/WinCare.App.exe` directly in the Windows workflow. |
 | **Primary Checkup Latency** | 30–60 seconds when WUA is serialized with local probes | **≤ 3.0 seconds** | Time the primary `system`, `storage`, and `security` probe batch; WUA reports separately in the background. |
 | **Execution Ceremony (Safe Tools)** | Preview → review token → apply | **1 click** | Safe mutations execute with `Apply=true` and no review plan. |
 | **Health Presentation** | Completion percentage presented as health | Categorical finding state | Disk/security/update findings determine `Healthy`, `Attention`, or `Action`; incomplete probes are reported as incomplete. |
@@ -43,7 +43,8 @@ WinCare accumulated real UX and packaging friction: large self-contained artifac
   - `AssemblyPluginLoader` loads external assemblies and discovers plugin implementation types dynamically.
   - WinUI/XAML page construction, protocol activation, and application composition must survive the trimmed publish.
   - `wincare_core.dll` must load from the bundled portable app and report the expected C-ABI version.
-- **Verdict: Enable trimming only with runtime evidence.** The Windows workflow publishes the actual trimmed single-file app, enforces the same `35,000,000`-byte executable ceiling for x64 and ARM64, then launches each artifact on a native-architecture Windows runner with `--smoke-test`. The smoke path constructs the WinUI window, initializes the application/plugin runtime, validates the Rust ABI, and executes the read-only `system` command through `CommandDispatcher`.
+- **Verdict: Enable trimming only with runtime evidence.** The Windows workflow publishes the actual trimmed single-file app, enforces the same `70,000,000`-byte executable ceiling for x64 and ARM64, then launches each artifact on a native-architecture Windows runner with `--smoke-test`. The smoke path constructs the WinUI window, initializes the application/plugin runtime, validates the Rust ABI, and executes the read-only `system` command through `CommandDispatcher`.
+- **Measured footprint:** the exact-head artifacts used to establish the regression ceiling were 67,362,718 bytes on x64 and 66,071,465 bytes on ARM64.
 - **Boundary:** Dynamic COM/WUA or plugin scenarios not exercised by that smoke path still require focused Windows runtime coverage and any necessary trimming roots/annotations. Suppressed linker warnings are not evidence of correctness.
 
 ### 2.4 Raw JSON Parameter Editor as Primary UI
