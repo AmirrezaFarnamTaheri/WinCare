@@ -29,6 +29,7 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
     private string _healthScoreDetail = "awaiting check";
     private string _healthScoreBrushKey = "AccentTealBrush";
     private bool _hasResults;
+    private int _runVersion;
 
     public CheckupPageViewModel() : this(AppRuntime.Current.Dispatcher) { }
 
@@ -110,6 +111,7 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
 
     private async Task RunQuickCheckAsync()
     {
+        int runVersion = ++_runVersion;
         IsRunning = true;
         RunSummary = "Collecting read-only evidence concurrently…";
         HealthScoreText = "…";
@@ -141,10 +143,7 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
                 wuaRow.ActionCommand = null;
             }
 
-            // Start background WUA search without blocking fast probes
-            // ponytail: Fire-and-forget background Task.Run without a full job service.
-            // Ceiling: Process death abandons in-flight WUA COM query.
-            // Upgrade path: Channel-based background worker service if persistence is required.
+            // Keep the slower WUA COM query off the UI thread while fast probes finish first.
             Task<CommandResult> wuaTask = Task.Run(async () =>
             {
                 try
@@ -169,13 +168,13 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
                 }
             });
 
-            // Fast probes run concurrently via ParallelCommandProbeRunner
+            // Await on the captured UI context because the continuation updates bound rows.
             IReadOnlyList<CommandResult> fastResults = await ParallelCommandProbeRunner.RunPreviewsAsync(
                 _dispatcher,
                 FastCheckCommands.Select(item => item.CommandId).ToArray(),
                 TimeSpan.FromSeconds(3),
                 maxConcurrency: 3,
-                cancellationToken: CancellationToken.None).ConfigureAwait(false);
+                cancellationToken: CancellationToken.None);
 
             _resultRows.Clear();
             var fastDict = new Dictionary<string, CommandResult>(StringComparer.OrdinalIgnoreCase);
@@ -204,7 +203,6 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
                 });
             }
 
-            // Placeholder for WUA in result rows
             _resultRows.Add(new PageRow(
                 WuaRowTitle,
                 WuaCommandId,
@@ -215,8 +213,6 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
             });
 
             _hasResults = true;
-
-            // Evaluate provisional score from primary fast probes
             EvaluateFindings(fastDict, null);
 
             if (SelectedIndex == ResultsSectionIndex)
@@ -225,7 +221,6 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
                 SelectSection(ResultsSectionIndex);
             }
 
-            // Stream background WUA results asynchronously
             _ = wuaTask.ContinueWith(t =>
             {
                 CommandResult wuaResult = (t.IsFaulted || t.IsCanceled)
@@ -243,13 +238,19 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
 
                 DispatchToUi(() =>
                 {
-                    ApplyWuaResult(wuaResult, fastDict);
+                    if (runVersion == _runVersion)
+                    {
+                        ApplyWuaResult(wuaResult, fastDict);
+                    }
                 });
-            });
+            }, CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
         }
         finally
         {
-            IsRunning = false;
+            if (runVersion == _runVersion)
+            {
+                IsRunning = false;
+            }
         }
     }
 
@@ -282,11 +283,10 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
             row.State = state;
             row.Detail = detail;
             row.StatusBrushKey = brushKey;
-            if (brushKey == "WarningBrush")
-            {
-                row.ActionText = "Windows Update";
-                row.ActionCommand = new RelayCommand(() => LaunchProtocol("ms-settings:windowsupdate"));
-            }
+            row.ActionText = brushKey == "WarningBrush" ? "Windows Update" : null;
+            row.ActionCommand = brushKey == "WarningBrush"
+                ? new RelayCommand(() => LaunchProtocol("ms-settings:windowsupdate"))
+                : null;
         }
 
         if (resRow is not null)
@@ -309,9 +309,23 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
     {
         bool hasCritical = false;
         bool hasWarning = false;
+        bool updatesPending = wuaResult is null;
+        bool hasIncompleteProbe = fastDict.Values.Any(result => result.Status != CommandResultStatus.Succeeded) ||
+            (wuaResult is not null && wuaResult.Status != CommandResultStatus.Succeeded);
         var findings = new List<string>();
 
-        // 1. Evaluate Storage
+        foreach ((string commandId, string rowTitle) in FastCheckCommands)
+        {
+            if (fastDict.TryGetValue(commandId, out CommandResult? result) && result.Status != CommandResultStatus.Succeeded)
+            {
+                findings.Add($"{rowTitle} check did not complete");
+            }
+        }
+        if (wuaResult is not null && wuaResult.Status != CommandResultStatus.Succeeded)
+        {
+            findings.Add("Windows Update check did not complete");
+        }
+
         if (fastDict.TryGetValue("storage", out CommandResult? storageResult) && storageResult.Status == CommandResultStatus.Succeeded)
         {
             PageRow? storageRow = Sections[0].Rows.FirstOrDefault(c => c.Title == "Storage");
@@ -354,7 +368,6 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
             }
         }
 
-        // 2. Evaluate Security
         if (fastDict.TryGetValue("security", out CommandResult? secResult) && secResult.Status == CommandResultStatus.Succeeded)
         {
             PageRow? secRow = Sections[0].Rows.FirstOrDefault(c => c.Title == "Security");
@@ -385,21 +398,17 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
             }
         }
 
-        // 3. Evaluate Updates
-        if (wuaResult is not null && wuaResult.Status == CommandResultStatus.Succeeded)
+        if (wuaResult is not null && wuaResult.Status == CommandResultStatus.Succeeded &&
+            wuaResult.Data?.ValueKind == JsonValueKind.Array)
         {
-            if (wuaResult.Data?.ValueKind == JsonValueKind.Array)
+            int count = wuaResult.Data.Value.GetArrayLength();
+            if (count > 0)
             {
-                int count = wuaResult.Data.Value.GetArrayLength();
-                if (count > 0)
-                {
-                    hasWarning = true;
-                    findings.Add($"{count} updates waiting");
-                }
+                hasWarning = true;
+                findings.Add($"{count} updates waiting");
             }
         }
 
-        // Categorical health score determination (DESIGN.md §3.2)
         if (hasCritical)
         {
             HealthScoreText = "Action";
@@ -414,29 +423,60 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
             HealthScoreBrushKey = "WarningBrush";
             RunSummary = $"Needs attention: {string.Join("; ", findings)}. Review category details below.";
         }
+        else if (hasIncompleteProbe)
+        {
+            HealthScoreText = "Review";
+            HealthScoreDetail = "some checks incomplete";
+            HealthScoreBrushKey = "WarningBrush";
+            RunSummary = $"Some diagnostics did not complete: {string.Join("; ", findings)}.";
+        }
+        else if (updatesPending)
+        {
+            HealthScoreText = "Checking";
+            HealthScoreDetail = "Windows Update still checking";
+            HealthScoreBrushKey = "AccentTealBrush";
+            RunSummary = "Fast diagnostics completed. Windows Update readiness is still being checked in the background.";
+        }
         else
         {
             HealthScoreText = "Healthy";
-            HealthScoreDetail = "all systems optimal";
+            HealthScoreDetail = "checked areas look healthy";
             HealthScoreBrushKey = "SuccessBrush";
-            RunSummary = "All system diagnostics healthy. No critical warnings or disk pressure detected.";
+            RunSummary = "Completed diagnostics found no critical warnings, update backlog, or disk pressure.";
         }
     }
 
     private async Task RunQuickCleanAsync()
     {
+        PageRow? storageRow = Sections[0].Rows.FirstOrDefault(candidate => candidate.Title == "Storage");
         try
         {
-            await _dispatcher.ExecuteAsync(
-                CommandRequest.Execute("cleaner-disk-pressure", default),
-                new CommandExecutionOptions(ReviewApproved: true, Deadline: DateTimeOffset.UtcNow + TimeSpan.FromMinutes(2)),
-                CancellationToken.None).ConfigureAwait(false);
+            CommandResult result = await _dispatcher.ExecuteAsync(
+                CommandRequest.Execute("cleaner-disk-pressure", JsonSerializer.SerializeToElement(new { })),
+                new CommandExecutionOptions(ReviewApproved: false, Deadline: DateTimeOffset.UtcNow + TimeSpan.FromMinutes(2)),
+                CancellationToken.None);
 
-            await RunQuickCheckAsync().ConfigureAwait(false);
+            if (result.Status != CommandResultStatus.Succeeded)
+            {
+                if (storageRow is not null)
+                {
+                    storageRow.State = "Cleanup failed";
+                    storageRow.Detail = result.Message;
+                    storageRow.StatusBrushKey = "WarningBrush";
+                }
+                return;
+            }
+
+            await RunQuickCheckAsync();
         }
-        catch
+        catch (Exception ex)
         {
-            // Ponytail: Non-critical clean action failure is safely suppressed without crashing the UI.
+            if (storageRow is not null)
+            {
+                storageRow.State = "Cleanup failed";
+                storageRow.Detail = ex.Message;
+                storageRow.StatusBrushKey = "WarningBrush";
+            }
         }
     }
 
@@ -456,7 +496,7 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
     {
         if (_dispatcherQueue is not null && !_dispatcherQueue.HasThreadAccess)
         {
-            _dispatcherQueue.TryEnqueue(() => action());
+            _dispatcherQueue.TryEnqueue(action);
         }
         else
         {
