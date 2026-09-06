@@ -156,7 +156,10 @@ mod tests {
         let mut count = 0;
         clean_directory_contents(&cleanup_root, false, &mut reclaimed, &mut count);
 
-        assert!(sentinel.exists(), "cleaner must not traverse the junction target");
+        assert!(
+            sentinel.exists(),
+            "cleaner must not traverse the junction target"
+        );
         assert_eq!(0, reclaimed);
         assert_eq!(0, count);
 
