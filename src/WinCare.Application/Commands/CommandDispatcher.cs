@@ -195,7 +195,8 @@ public sealed class CommandDispatcher : ICommandDispatcher
 
         if (!definition.ReadOnly && request.Apply)
         {
-            if (definition.RiskTier == RiskTier.Destructive)
+            RiskTier riskTier = definition.RiskTier;
+            if (riskTier == RiskTier.Destructive)
             {
                 if (!options.ReviewApproved)
                 {
@@ -209,7 +210,7 @@ public sealed class CommandDispatcher : ICommandDispatcher
                         $"Destructive command '{request.CommandId}' requires a current, single-use review plan issued by this dispatcher after a successful preview.", null, false, startedAt);
                 }
             }
-            else if (definition.RiskTier == RiskTier.Moderate)
+            else if (riskTier == RiskTier.Moderate)
             {
                 if (!options.ReviewApproved)
                 {
@@ -224,7 +225,12 @@ public sealed class CommandDispatcher : ICommandDispatcher
                         $"The review plan supplied for '{request.CommandId}' is invalid, expired, or has already been used.", null, false, startedAt);
                 }
             }
-            // For RiskTier.Safe mutating commands: admitted directly with Apply=true without review plan or confirmation.
+            else if (riskTier != RiskTier.Safe)
+            {
+                return CreateResult(request, CommandResultStatus.Blocked, "command.risk_tier_invalid",
+                    $"Command '{request.CommandId}' has an unsupported risk tier.", null, false, startedAt);
+            }
+            // RiskTier.Safe mutating commands are admitted directly with Apply=true.
         }
 
         using CancellationTokenSource linkedCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
