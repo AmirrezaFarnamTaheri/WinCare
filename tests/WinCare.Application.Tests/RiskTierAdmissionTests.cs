@@ -148,4 +148,62 @@ public sealed class RiskTierAdmissionTests
         Assert.Equal("command.approval_plan_invalid", replayed.Code);
         Assert.Equal(2, handler.InvocationCount); // Not invoked again
     }
+
+    [Fact]
+    public void Explicit_safe_tier_cannot_downgrade_a_destructive_command()
+    {
+        CommandDefinition definition = new(
+            "critical-clean",
+            "critical-clean",
+            "Critical cleanup",
+            "Maintenance",
+            "Cleanup",
+            CommandRisk.Critical,
+            ReadOnly: false,
+            AdministratorAccess.Required,
+            RestartExpectation.No,
+            "test",
+            MigrationStatus.Implemented,
+            ["critical-clean"],
+            RiskTier.Safe);
+
+        Assert.Equal(RiskTier.Destructive, definition.RiskTier);
+    }
+
+    [Fact]
+    public async Task Unsupported_dynamic_risk_tier_is_blocked_before_handler_execution()
+    {
+        const string commandId = "plugin-invalid-risk";
+        CommandDefinition definition = new(
+            commandId,
+            commandId,
+            "Dynamic command with invalid risk metadata",
+            "Plugin",
+            "Test",
+            CommandRisk.Low,
+            ReadOnly: false,
+            AdministratorAccess.No,
+            RestartExpectation.No,
+            "test",
+            MigrationStatus.Implemented,
+            [commandId],
+            (RiskTier)99);
+        EchoHandler handler = new(commandId);
+        CommandDispatcher dispatcher = new([], []);
+
+        Assert.True(dispatcher.RegisterDynamicCommand(definition, handler));
+
+        CommandResult result = await dispatcher.ExecuteAsync(
+            new CommandRequest(
+                commandId,
+                JsonSerializer.SerializeToElement(new { target = "cache" }),
+                Apply: true,
+                Guid.NewGuid()),
+            new CommandExecutionOptions(ReviewApproved: true),
+            CancellationToken.None);
+
+        Assert.Equal(CommandResultStatus.Blocked, result.Status);
+        Assert.Equal("command.risk_tier_invalid", result.Code);
+        Assert.Equal(0, handler.InvocationCount);
+    }
 }
