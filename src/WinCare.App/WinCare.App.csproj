@@ -38,6 +38,7 @@
   <PropertyGroup Condition="'$(Configuration)' == 'Release'">
     <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
     <IncludeAllContentForSelfExtract Condition="'$(PublishSingleFile)' == 'true'">true</IncludeAllContentForSelfExtract>
+    <ProjectPriFileName Condition="'$(PublishSingleFile)' == 'true'">resources.pri</ProjectPriFileName>
     <DebugType>none</DebugType>
     <AppxPackageSigningEnabled Condition="'$(PackageCertificateKeyFile)' != ''">true</AppxPackageSigningEnabled>
     <_WinCareRustTarget Condition="'$(Platform)' == 'x64'">x86_64-pc-windows-msvc</_WinCareRustTarget>
