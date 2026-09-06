@@ -102,6 +102,7 @@ NATIVE_DOCUMENT_FILES = (
 NATIVE_TOOL_FILES = (
     "tools/__init__.py",
     "tools/wincare-plugin-cli/bin/wincare-plugin.js",
+    "tools/capture_screenshots.py",
     "tools/finalize_native_release.py",
     "tools/install_msix.py",
     "tools/package_portable.py",

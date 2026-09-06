@@ -24,6 +24,11 @@
 
 <p align="center"><em>Historical x64 runtime capture from the v2.5.0-rc5 package. Current source has since changed; see <code>docs/Screenshots.md</code> for capture provenance and recapture status.</em></p>
 
+<p align="center">
+  <a href="docs/showcase.html"><strong>Explore the Live Interactive Web Showcase</strong></a> &bull;
+  <a href="docs/Screenshots.md"><strong>Full Interface Screenshots & Previews</strong></a>
+</p>
+
 WinCare brings everyday Windows care into one focused desktop app. It starts with evidence, keeps read-only work separate from changes, and records what happened so technicians and power users can make informed decisions.
 
 | When you need to… | WinCare helps you… |
