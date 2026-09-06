@@ -143,7 +143,6 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
                 wuaRow.ActionCommand = null;
             }
 
-            // Keep the slower WUA COM query off the UI thread while fast probes finish first.
             Task<CommandResult> wuaTask = Task.Run(async () =>
             {
                 try
@@ -168,7 +167,6 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
                 }
             });
 
-            // Await on the captured UI context because the continuation updates bound rows.
             IReadOnlyList<CommandResult> fastResults = await ParallelCommandProbeRunner.RunPreviewsAsync(
                 _dispatcher,
                 FastCheckCommands.Select(item => item.CommandId).ToArray(),
@@ -496,7 +494,7 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
     {
         if (_dispatcherQueue is not null && !_dispatcherQueue.HasThreadAccess)
         {
-            _dispatcherQueue.TryEnqueue(action);
+            _dispatcherQueue.TryEnqueue(() => action());
         }
         else
         {
