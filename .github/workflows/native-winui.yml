@@ -347,14 +347,12 @@ jobs:
               print(f"Triggered from branch '{actual}', defaulting release tag to '{expected}'.")
               actual = expected
           assert actual == expected, f'Release tag {actual} does not match product version {expected}'
+          is_prerelease = any(x in expected for x in ('-rc', '-beta', '-alpha'))
+          flags = '--prerelease' if is_prerelease else '--latest'
           with open(os.environ['GITHUB_ENV'], 'a', encoding='utf-8') as f:
               f.write(f'RELEASE_TAG={expected}\n')
+              f.write(f'RELEASE_FLAGS={flags}\n')
           PY
-          if [[ "$RELEASE_TAG" == *"-rc"* || "$RELEASE_TAG" == *"-beta"* || "$RELEASE_TAG" == *"-alpha"* ]]; then
-            echo "RELEASE_FLAGS=--prerelease" >> $GITHUB_ENV
-          else
-            echo "RELEASE_FLAGS=--latest" >> $GITHUB_ENV
-          fi
       - name: Prepare release assets
         run: |
           python tools/stage_release_assets.py --version "$RELEASE_TAG"
@@ -369,8 +367,16 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           if gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            echo "Release '$RELEASE_TAG' already exists. Uploading build assets to existing release..."
-            gh release upload "$RELEASE_TAG" release_assets/* --repo "$GITHUB_REPOSITORY" || true
+            echo "Release '$RELEASE_TAG' already exists. Checking and uploading missing assets..."
+            for asset in release_assets/*; do
+              asset_name=$(basename "$asset")
+              if gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --json assets --jq ".assets.[].name" | grep -qx "$asset_name"; then
+                echo "Asset '$asset_name' already present in release '$RELEASE_TAG', skipping."
+              else
+                echo "Uploading '$asset_name' to release '$RELEASE_TAG'..."
+                gh release upload "$RELEASE_TAG" "$asset" --repo "$GITHUB_REPOSITORY"
+              fi
+            done
           else
             gh release create "$RELEASE_TAG" release_assets/* \
               --title "WinCare $RELEASE_TAG" \

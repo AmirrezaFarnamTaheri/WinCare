@@ -48,7 +48,7 @@ Concept images remain design references and are explicitly marked as concepts.
 
 ![WinCare interactive web showcase featuring Three.js neural topology, live telemetry dials, and tactile diagnostic inspection](images/showcase-preview.png)
 
-**Interactive experience:** Open [`docs/showcase.html`](file:///D:/Github/WinCare/docs/showcase.html) in any modern browser for the live WebGL neural topology, interactive command execution simulator, and responsive telemetry panels.
+**Interactive experience:** Open [`docs/showcase.html`](showcase.html) in any modern browser for the live WebGL neural topology, interactive command execution simulator, and responsive telemetry panels.
 
 ## Capture policy
 
