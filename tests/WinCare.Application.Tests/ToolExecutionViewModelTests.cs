@@ -29,10 +29,8 @@ public sealed class ToolExecutionViewModelTests
         else viewModel.ParameterJson = "{\"changed\":true}";
         handler.Completion.SetResult(CommandHandlerOutcome.Succeeded("test.preview", "Old preview"));
         await execution;
-        Assert.False(viewModel.CanApproveReview);
+        Assert.True(viewModel.CanApproveReview);
         Assert.False(viewModel.HasExecutionResult);
-        viewModel.IsReviewApproved = true;
-        Assert.False(viewModel.IsReviewApproved);
     }
 
     [Fact]
@@ -59,6 +57,32 @@ public sealed class ToolExecutionViewModelTests
     }
 
     [Fact]
+    public async Task Moderate_tool_can_apply_after_lightweight_confirmation_without_preview()
+    {
+        var moderateDef = new CommandDefinition("moderate-change", "Moderate Change", "Moderate Change", "Area", "Section",
+            CommandRisk.Moderate, false, AdministratorAccess.No, RestartExpectation.No,
+            "test", MigrationStatus.Implemented, ["moderate"], RiskTier.Moderate);
+
+        var handler = new DirectHandler("moderate-change");
+        var viewModel = new ToolExecutionViewModel(new CommandDispatcher([moderateDef], [handler]), _ => { });
+        viewModel.SelectTool(new ToolRowViewModel(moderateDef));
+
+        Assert.True(viewModel.IsModerateTool);
+        Assert.True(viewModel.RequiresApprovalSwitch);
+        Assert.True(viewModel.CanApproveReview);
+
+        viewModel.IsReviewApproved = true;
+        Assert.True(viewModel.IsReviewApproved);
+        Assert.Equal("Apply changes", viewModel.PrimaryActionLabel);
+
+        await viewModel.ExecuteSelectedToolCommand.ExecuteAsync(null);
+
+        Assert.True(viewModel.IsExecutionSuccess);
+        Assert.Equal(1, handler.CallCount);
+        Assert.True(handler.LastWasApply);
+    }
+
+    [Fact]
     public async Task Destructive_tool_enforces_two_phase_preview_and_approval()
     {
         var destDef = new CommandDefinition("dest-wipe", "Destructive Wipe", "Destructive Wipe", "Area", "Section",
@@ -75,17 +99,14 @@ public sealed class ToolExecutionViewModelTests
         Assert.False(viewModel.CanApproveReview);
         Assert.Equal("Preview Impact", viewModel.PrimaryActionLabel);
 
-        // First click: Preview Impact
         await viewModel.ExecuteSelectedToolCommand.ExecuteAsync(null);
         Assert.True(viewModel.IsExecutionSuccess);
         Assert.False(handler.LastWasApply);
         Assert.True(viewModel.CanApproveReview);
 
-        // User approves
         viewModel.IsReviewApproved = true;
         Assert.Equal("Execute Destructive Action", viewModel.PrimaryActionLabel);
 
-        // Second click: Execute with approval plan
         await viewModel.ExecuteSelectedToolCommand.ExecuteAsync(null);
         Assert.True(viewModel.IsExecutionSuccess);
         Assert.True(handler.LastWasApply);
