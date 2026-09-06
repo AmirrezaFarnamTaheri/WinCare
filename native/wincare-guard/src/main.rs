@@ -34,7 +34,10 @@ fn main() {
     println!("WinCare Guard Daemon starting on Windows (Polling interval: 30s)...");
     daemon.run_loop(None, |snapshot| {
         if snapshot.has_critical_alerts {
-            eprintln!("⚠ Alert: Critical system resource threshold reached!");
+            // Source-Driven Development Citation:
+            // Pattern: Windows console ASCII-safe logging without UTF-8 codepage 65001 dependency
+            // Source: https://learn.microsoft.com/en-us/windows/console/console-code-pages
+            eprintln!("ALERT: Critical system resource threshold reached!");
             raise_critical_alert(snapshot);
         }
     });

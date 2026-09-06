@@ -15,41 +15,15 @@ namespace WinCare.App;
 
 public sealed partial class MainWindow : Window
 {
-    private const int SwShownormal = 1;
-    private const int SwShowmaximized = 3;
-    private const int WpfRestoreToMaximized = 0x0002;
-    private const uint MonitorDefaultToNull = 0;
-
-    [StructLayout(LayoutKind.Sequential)]
-    private struct Point { public int X; public int Y; }
-
-    [StructLayout(LayoutKind.Sequential)]
-    private struct Rect { public int Left; public int Top; public int Right; public int Bottom; }
-
-    [StructLayout(LayoutKind.Sequential)]
-    private struct WindowPlacement
-    {
-        public int Length;
-        public int Flags;
-        public int ShowCmd;
-        public Point MinPosition;
-        public Point MaxPosition;
-        public Rect NormalPosition;
-    }
+    // Source-Driven Development Citation:
+    // Pattern: Windows App SDK AppWindow screen-coordinate positioning and DisplayArea bounds validation
+    // Source: https://learn.microsoft.com/en-us/windows/windows-app-sdk/api/winrt/microsoft.ui.windowing.appwindow
+    // Source: https://learn.microsoft.com/en-us/windows/windows-app-sdk/api/winrt/microsoft.ui.windowing.displayarea
+    // Source: https://learn.microsoft.com/en-us/windows/windows-app-sdk/api/winrt/microsoft.ui.windowing.overlappedpresenter
+    // "AppWindow provides native screen coordinates and presenter state without requiring manual Win32 P/Invoke window placement."
 
     [DllImport("user32.dll")]
     private static extern uint GetDpiForWindow(nint windowHandle);
-
-    [DllImport("user32.dll", SetLastError = true)]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    private static extern bool GetWindowPlacement(nint windowHandle, ref WindowPlacement placement);
-
-    [DllImport("user32.dll", SetLastError = true)]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    private static extern bool SetWindowPlacement(nint windowHandle, [In] ref WindowPlacement placement);
-
-    [DllImport("user32.dll")]
-    private static extern nint MonitorFromRect([In] ref Rect rect, uint flags);
 
     public MainWindow()
     {
@@ -118,41 +92,26 @@ public sealed partial class MainWindow : Window
         WindowPlacementData? saved = AppPreferences.WindowPlacement;
         if (saved is null || !saved.IsUsable) return false;
 
-        var rect = new Rect
-        {
-            Left = saved.Left,
-            Top = saved.Top,
-            Right = saved.Left + saved.Width,
-            Bottom = saved.Top + saved.Height,
-        };
-        if (MonitorFromRect(ref rect, MonitorDefaultToNull) == nint.Zero) return false;
+        var rect = new RectInt32(saved.Left, saved.Top, saved.Width, saved.Height);
+        var displayArea = DisplayArea.GetFromRect(rect, DisplayAreaFallback.None);
+        if (displayArea is null) return false;
 
-        nint handle = Win32Interop.GetWindowFromWindowId(AppWindow.Id);
-        var placement = new WindowPlacement
+        AppWindow.MoveAndResize(rect);
+        if (saved.Maximized && AppWindow.Presenter is OverlappedPresenter presenter)
         {
-            Length = Marshal.SizeOf<WindowPlacement>(),
-            Flags = 0,
-            ShowCmd = saved.Maximized ? SwShowmaximized : SwShownormal,
-            NormalPosition = rect,
-        };
-        return SetWindowPlacement(handle, ref placement);
+            presenter.Maximize();
+        }
+        return true;
     }
 
     private void PersistWindowPlacement()
     {
         try
         {
-            nint handle = Win32Interop.GetWindowFromWindowId(AppWindow.Id);
-            var placement = new WindowPlacement { Length = Marshal.SizeOf<WindowPlacement>() };
-            if (!GetWindowPlacement(handle, ref placement)) return;
-
-            Rect bounds = placement.NormalPosition;
-            var saved = new WindowPlacementData(
-                bounds.Left,
-                bounds.Top,
-                bounds.Right - bounds.Left,
-                bounds.Bottom - bounds.Top,
-                placement.ShowCmd == SwShowmaximized || (placement.Flags & WpfRestoreToMaximized) != 0);
+            PointInt32 pos = AppWindow.Position;
+            SizeInt32 size = AppWindow.Size;
+            bool isMaximized = AppWindow.Presenter is OverlappedPresenter { State: OverlappedPresenterState.Maximized };
+            var saved = new WindowPlacementData(pos.X, pos.Y, size.Width, size.Height, isMaximized);
             if (saved.IsUsable) AppPreferences.SaveWindowPlacement(saved);
         }
         catch (Exception ex)
