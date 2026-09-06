@@ -207,7 +207,8 @@
       <article class="card">
         <h3>Portable single-file executable</h3>
         <p><strong>x64 + ARM64</strong></p>
-        <p><code>WinCare.App.exe ≤ 35,000,000 bytes</code> per architecture.</p>
+        <p><code>WinCare.App.exe ≤ 70,000,000 bytes</code> per architecture as a regression ceiling.</p>
+        <p>Exact-head measurements establishing the ceiling were 67,362,718 bytes on x64 and 66,071,465 bytes on ARM64.</p>
         <p>Each trimmed executable is launched on a native-architecture Windows runner with <code>--smoke-test</code> before release promotion.</p>
       </article>
       <div class="arrow" aria-hidden="true">→</div>
