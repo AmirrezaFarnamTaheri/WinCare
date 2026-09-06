@@ -31,6 +31,7 @@
   <PropertyGroup Condition="'$(Configuration)' == 'Release' and '$(PublishSingleFile)' == 'true' and '$(WindowsPackageType)' == 'None'">
     <PublishTrimmed>true</PublishTrimmed>
     <TrimMode>partial</TrimMode>
+    <JsonSerializerIsReflectionEnabledByDefault>true</JsonSerializerIsReflectionEnabledByDefault>
     <SuppressTrimAnalysisWarnings>true</SuppressTrimAnalysisWarnings>
     <PublishReadyToRun>false</PublishReadyToRun>
   </PropertyGroup>
