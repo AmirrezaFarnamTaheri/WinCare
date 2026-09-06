@@ -25,17 +25,50 @@ public sealed class ParallelCommandProbeRunnerTests
             [id],
             RiskTier.Safe);
 
-    private sealed class DelayedProbeHandler(string commandId, TimeSpan delay) : ICommandHandler
+    private sealed class ConcurrencyTracker
+    {
+        private readonly object _gate = new();
+        private int _active;
+
+        public int Peak { get; private set; }
+
+        public void Enter()
+        {
+            lock (_gate)
+            {
+                _active++;
+                Peak = Math.Max(Peak, _active);
+            }
+        }
+
+        public void Exit()
+        {
+            lock (_gate)
+            {
+                _active--;
+            }
+        }
+    }
+
+    private sealed class DelayedProbeHandler(string commandId, TimeSpan delay, ConcurrencyTracker? tracker = null) : ICommandHandler
     {
         public string CommandId { get; } = commandId;
 
         public async Task<CommandHandlerOutcome> ExecuteAsync(CommandRequest request, CancellationToken cancellationToken)
         {
-            await Task.Delay(delay, cancellationToken);
-            return CommandHandlerOutcome.Succeeded(
-                $"{CommandId}.ok",
-                $"{CommandId} completed",
-                JsonSerializer.SerializeToElement(new { id = CommandId }));
+            tracker?.Enter();
+            try
+            {
+                await Task.Delay(delay, cancellationToken);
+                return CommandHandlerOutcome.Succeeded(
+                    $"{CommandId}.ok",
+                    $"{CommandId} completed",
+                    JsonSerializer.SerializeToElement(new { id = CommandId }));
+            }
+            finally
+            {
+                tracker?.Exit();
+            }
         }
     }
 
@@ -44,12 +77,12 @@ public sealed class ParallelCommandProbeRunnerTests
     {
         string[] commandIds = ["probe-1", "probe-2", "probe-3"];
         CommandDefinition[] defs = commandIds.Select(CreateDef).ToArray();
-        // Each probe delays 150ms. Running serially would take >= 450ms. Running in parallel should take ~150-250ms.
+        var tracker = new ConcurrencyTracker();
         ICommandHandler[] handlers =
         [
-            new DelayedProbeHandler("probe-1", TimeSpan.FromMilliseconds(150)),
-            new DelayedProbeHandler("probe-2", TimeSpan.FromMilliseconds(150)),
-            new DelayedProbeHandler("probe-3", TimeSpan.FromMilliseconds(150))
+            new DelayedProbeHandler("probe-1", TimeSpan.FromMilliseconds(150), tracker),
+            new DelayedProbeHandler("probe-2", TimeSpan.FromMilliseconds(150), tracker),
+            new DelayedProbeHandler("probe-3", TimeSpan.FromMilliseconds(150), tracker)
         ];
 
         CommandDispatcher dispatcher = new(defs, handlers);
@@ -67,10 +100,10 @@ public sealed class ParallelCommandProbeRunnerTests
         Assert.Equal("probe-1", results[0].CommandId);
         Assert.Equal("probe-2", results[1].CommandId);
         Assert.Equal("probe-3", results[2].CommandId);
-
         Assert.All(results, r => Assert.Equal(CommandResultStatus.Succeeded, r.Status));
-        // Verify concurrency: total elapsed time is significantly less than sum of individual probe times
-        Assert.True(sw.ElapsedMilliseconds < 400, $"Expected parallel execution < 400ms, but took {sw.ElapsedMilliseconds}ms");
+
+        Assert.True(tracker.Peak > 1, $"Expected overlapping probe execution, observed peak concurrency {tracker.Peak}.");
+        Assert.True(sw.Elapsed < TimeSpan.FromSeconds(3), $"Parallel probe test exceeded loose 3s bound: {sw.Elapsed}.");
     }
 
     [Fact]
