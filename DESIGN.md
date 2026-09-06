@@ -132,6 +132,7 @@ At widths below 920 DIP:
 - System Care, Security, Repair & Recovery, and Activity use compact row presentations.
 
 ### 6.2 Strict Exclusions & Product Truth
+- **Accessibility floor is mandatory.** Every interactive surface supports keyboard navigation in logical order, preserves a visible focus indicator, exposes meaningful automation names for assistive technology, provides a minimum `44 x 44 DIP` interactive target, and remains usable in Windows High Contrast mode.
 - **No hero gradients.** Hero and accent resources are tonal solid brushes.
 - **No decorative glass orbs.** Use native Mica/Acrylic and restrained tonal surfaces.
 - **No caller-minted approval.** Mutation requires a dispatcher-issued preview receipt bound to command, parameters, correlation ID, lifetime, and single use.
