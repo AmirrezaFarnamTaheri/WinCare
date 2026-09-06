@@ -1,3 +1,5 @@
+using WinCare.Domain.Commands;
+
 namespace WinCare.CommandCatalog.Models;
 
 /// <summary>
@@ -73,6 +75,7 @@ public enum MigrationStatus
 /// <param name="LegacySource">Legacy oracle source path for provenance.</param>
 /// <param name="MigrationStatus">Current migration lifecycle state.</param>
 /// <param name="Keywords">Search keywords.</param>
+/// <param name="ExplicitRiskTier">Optional explicit risk tier override.</param>
 public sealed record CommandDefinition(
     string Id,
     string Title,
@@ -85,7 +88,41 @@ public sealed record CommandDefinition(
     RestartExpectation Restart,
     string LegacySource,
     MigrationStatus MigrationStatus,
-    IReadOnlyList<string> Keywords);
+    IReadOnlyList<string> Keywords,
+    RiskTier? ExplicitRiskTier = null)
+{
+    /// <summary>
+    /// Gets the operational admission risk tier.
+    /// </summary>
+    public RiskTier RiskTier => ExplicitRiskTier ?? DetermineDefaultRiskTier(Risk, ReadOnly, Id);
+
+    private static RiskTier DetermineDefaultRiskTier(CommandRisk risk, bool readOnly, string id)
+    {
+        if (readOnly || risk == CommandRisk.ReadOnly)
+        {
+            return RiskTier.Safe;
+        }
+
+        if (risk is CommandRisk.Critical or CommandRisk.High)
+        {
+            return RiskTier.Destructive;
+        }
+
+        if (risk == CommandRisk.Low)
+        {
+            return RiskTier.Safe;
+        }
+
+        // Routine safe maintenance cleanups
+        if (id.StartsWith("cleaner-", StringComparison.OrdinalIgnoreCase) &&
+            !id.Contains("schedule", StringComparison.OrdinalIgnoreCase))
+        {
+            return RiskTier.Safe;
+        }
+
+        return RiskTier.Moderate;
+    }
+}
 
 internal sealed record CommandCatalogDocument(
     int SchemaVersion,

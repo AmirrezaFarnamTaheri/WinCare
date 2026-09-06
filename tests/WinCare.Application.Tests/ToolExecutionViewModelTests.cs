@@ -35,6 +35,79 @@ public sealed class ToolExecutionViewModelTests
         Assert.False(viewModel.IsReviewApproved);
     }
 
+    [Fact]
+    public async Task Safe_mutating_tool_executes_in_one_click_without_approval_switch()
+    {
+        var safeDef = new CommandDefinition("safe-clean", "Safe Clean", "Safe Clean", "Area", "Section",
+            CommandRisk.Low, false, AdministratorAccess.No, RestartExpectation.No,
+            "test", MigrationStatus.Implemented, ["safe"], RiskTier.Safe);
+
+        var handler = new DirectHandler("safe-clean");
+        var viewModel = new ToolExecutionViewModel(new CommandDispatcher([safeDef], [handler]), _ => { });
+        var row = new ToolRowViewModel(safeDef);
+        viewModel.SelectTool(row);
+
+        Assert.True(viewModel.IsSafeTool);
+        Assert.False(viewModel.RequiresApprovalSwitch);
+        Assert.Equal("Run tool", viewModel.PrimaryActionLabel);
+
+        await viewModel.ExecuteSelectedToolCommand.ExecuteAsync(null);
+
+        Assert.True(viewModel.IsExecutionSuccess);
+        Assert.Equal(1, handler.CallCount);
+        Assert.True(handler.LastWasApply);
+    }
+
+    [Fact]
+    public async Task Destructive_tool_enforces_two_phase_preview_and_approval()
+    {
+        var destDef = new CommandDefinition("dest-wipe", "Destructive Wipe", "Destructive Wipe", "Area", "Section",
+            CommandRisk.Critical, false, AdministratorAccess.No, RestartExpectation.No,
+            "test", MigrationStatus.Implemented, ["dest"], RiskTier.Destructive);
+
+        var handler = new DirectHandler("dest-wipe");
+        var viewModel = new ToolExecutionViewModel(new CommandDispatcher([destDef], [handler]), _ => { });
+        var row = new ToolRowViewModel(destDef);
+        viewModel.SelectTool(row);
+
+        Assert.True(viewModel.IsDestructiveTool);
+        Assert.True(viewModel.RequiresApprovalSwitch);
+        Assert.False(viewModel.CanApproveReview);
+        Assert.Equal("Preview Impact", viewModel.PrimaryActionLabel);
+
+        // First click: Preview Impact
+        await viewModel.ExecuteSelectedToolCommand.ExecuteAsync(null);
+        Assert.True(viewModel.IsExecutionSuccess);
+        Assert.False(handler.LastWasApply);
+        Assert.True(viewModel.CanApproveReview);
+
+        // User approves
+        viewModel.IsReviewApproved = true;
+        Assert.Equal("Execute Destructive Action", viewModel.PrimaryActionLabel);
+
+        // Second click: Execute with approval plan
+        await viewModel.ExecuteSelectedToolCommand.ExecuteAsync(null);
+        Assert.True(viewModel.IsExecutionSuccess);
+        Assert.True(handler.LastWasApply);
+    }
+
+    private sealed class DirectHandler(string commandId) : ICommandHandler
+    {
+        public string CommandId { get; } = commandId;
+        public int CallCount { get; private set; }
+        public bool LastWasApply { get; private set; }
+
+        public Task<CommandHandlerOutcome> ExecuteAsync(CommandRequest request, CancellationToken cancellationToken)
+        {
+            CallCount++;
+            LastWasApply = request.Apply;
+            return Task.FromResult(CommandHandlerOutcome.Succeeded(
+                $"{CommandId}.ok",
+                request.Apply ? "Executed directly." : "Preview generated.",
+                System.Text.Json.JsonSerializer.SerializeToElement(new { apply = request.Apply })));
+        }
+    }
+
     private sealed class PendingHandler : ICommandHandler
     {
         public string CommandId => "test";
