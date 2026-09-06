@@ -10,6 +10,12 @@ use std::path::Path;
 use std::slice;
 use std::str;
 
+pub mod cleaner;
+pub mod telemetry;
+
+pub use cleaner::NativeCleanResult;
+pub use telemetry::NativeSysSnapshot;
+
 #[cfg(target_os = "windows")]
 #[allow(non_camel_case_types, non_snake_case, clippy::upper_case_acronyms)]
 mod win32 {
@@ -529,6 +535,37 @@ fn read_registry_os_build_bytes(out_buf: &mut [u8; 32]) -> Option<&str> {
         }
         None
     }
+}
+
+/// Queries instantaneous system telemetry snapshot across CPU, RAM, disk, and network.
+///
+/// # Safety
+///
+/// `out_snapshot` must point to a valid, properly aligned, writable `NativeSysSnapshot`.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wincare_sys_snapshot_all(out_snapshot: *mut NativeSysSnapshot) -> i32 {
+    std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        // SAFETY: Delegated to telemetry::query_sys_snapshot with matching safety contract.
+        unsafe { telemetry::query_sys_snapshot(out_snapshot) }
+    }))
+    .unwrap_or(Status::InternalError.code())
+}
+
+/// Safely cleans temporary files or performs dry-run inspection without disk modification.
+///
+/// # Safety
+///
+/// `out_result` must point to a valid, properly aligned, writable `NativeCleanResult`.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wincare_clean_temp_files(
+    dry_run: u8,
+    out_result: *mut NativeCleanResult,
+) -> i32 {
+    std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        // SAFETY: Delegated to cleaner::clean_temp_files_internal with matching safety contract.
+        unsafe { cleaner::clean_temp_files_internal(dry_run, out_result) }
+    }))
+    .unwrap_or(Status::InternalError.code())
 }
 
 #[cfg(test)]

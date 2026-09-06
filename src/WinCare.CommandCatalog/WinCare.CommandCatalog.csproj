@@ -6,6 +6,9 @@
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
   </PropertyGroup>
   <ItemGroup>
+    <ProjectReference Include="..\WinCare.Domain\WinCare.Domain.csproj" />
+  </ItemGroup>
+  <ItemGroup>
     <EmbeddedResource Include="Data\commands.json" LogicalName="WinCare.CommandCatalog.Data.commands.json" />
     <EmbeddedResource Include="Data\remediation-rules.json" LogicalName="WinCare.CommandCatalog.Data.remediation-rules.json" />
     <EmbeddedResource Include="Data\presets.json" LogicalName="WinCare.CommandCatalog.Data.presets.json" />

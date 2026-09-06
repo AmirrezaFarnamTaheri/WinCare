@@ -177,6 +177,24 @@ class FinalizationTests(unittest.TestCase):
             self.assertEqual(b"WINCARE", staged[0].read_bytes())
             self.assertFalse(any("WindowsAppRuntime" in path.name for path in staged))
 
+    def test_stage_release_assets_stages_installer_executable(self) -> None:
+        from tools.stage_release_assets import stage_assets
+        with tempfile.TemporaryDirectory() as src_dir, tempfile.TemporaryDirectory() as dst_dir:
+            src = Path(src_dir)
+            dst = Path(dst_dir)
+            portable_dir = src / "win-x64" / "portable"
+            portable_dir.mkdir(parents=True)
+            (portable_dir / "WinCare.App.exe").write_bytes(b"PORTABLE_EXE")
+            installer_dir = src / "installer"
+            installer_dir.mkdir(parents=True)
+            (installer_dir / "WinCare-Setup.exe").write_bytes(b"SETUP_EXE")
+
+            staged = stage_assets(src, dst, version="2.5.0-rc1")
+            staged_names = [path.name for path in staged]
+            self.assertIn("WinCare-v2.5.0-rc1-x64.exe", staged_names)
+            self.assertIn("WinCare-v2.5.0-rc1-Setup.exe", staged_names)
+            self.assertEqual(2, len(staged))
+
     def test_finalizer_rejects_unsafe_version_labels(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             with self.assertRaisesRegex(ValueError, "version label"):

@@ -2,12 +2,15 @@ using System.IO;
 using Microsoft.UI.Xaml;
 using Microsoft.Windows.AppLifecycle;
 using ProtocolActivatedEventArgs = Windows.ApplicationModel.Activation.ProtocolActivatedEventArgs;
+using WinCare.Application.Commands;
+using WinCare.Domain.Commands;
 using WinCare.Infrastructure.Observability;
 
 namespace WinCare.App;
 
 public partial class App : Microsoft.UI.Xaml.Application
 {
+    private const string PortableSmokeArgument = "--smoke-test";
     private MainWindow? _window;
 
     public MainWindow? MainWindow => _window;
@@ -21,9 +24,21 @@ public partial class App : Microsoft.UI.Xaml.Application
 
     protected override void OnLaunched(LaunchActivatedEventArgs args)
     {
+        bool runPortableSmoke = string.Equals(
+            args.Arguments?.Trim(),
+            PortableSmokeArgument,
+            StringComparison.OrdinalIgnoreCase);
+
         _window = new MainWindow();
         StartupTelemetry.Mark("WindowCreated");
         _window.Activate();
+
+        if (runPortableSmoke)
+        {
+            _ = RunPortableSmokeTestAsync();
+            return;
+        }
+
         if (AppInstance.GetCurrent().GetActivatedEventArgs().Data is ProtocolActivatedEventArgs protocolArgs)
         {
             _window.HandleProtocolActivation(protocolArgs.Uri);
@@ -33,6 +48,42 @@ public partial class App : Microsoft.UI.Xaml.Application
             _window.HandleProtocolActivation(args.Arguments);
         }
         _ = InitializeRuntimeAsync();
+    }
+
+    private static async Task RunPortableSmokeTestAsync()
+    {
+        try
+        {
+            Services.AppRuntime runtime = Services.AppRuntime.Current;
+            uint abiVersion = runtime.NativeCore.GetAbiVersion();
+            if (abiVersion != CommandDispatcher.SupportedAbiVersion)
+            {
+                throw new InvalidOperationException(
+                    $"Native ABI mismatch during packaged smoke test: expected {CommandDispatcher.SupportedAbiVersion}, got {abiVersion}.");
+            }
+
+            await runtime.InitializePluginsAsync().ConfigureAwait(true);
+            CommandResult result = await runtime.Dispatcher.ExecuteAsync(
+                CommandRequest.Preview("system"),
+                new CommandExecutionOptions(
+                    ReviewApproved: false,
+                    Deadline: DateTimeOffset.UtcNow + TimeSpan.FromSeconds(15)),
+                CancellationToken.None).ConfigureAwait(true);
+
+            if (result.Status != CommandResultStatus.Succeeded)
+            {
+                throw new InvalidOperationException(
+                    $"Packaged system preview failed with {result.Status} ({result.Code}).");
+            }
+
+            StartupTelemetry.Mark("PortableSmokePassed");
+            Environment.Exit(0);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[App] Portable smoke test failed: {ex}");
+            Environment.Exit(1);
+        }
     }
 
     private static async Task InitializeRuntimeAsync()

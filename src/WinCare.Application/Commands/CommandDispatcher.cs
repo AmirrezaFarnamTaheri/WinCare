@@ -195,17 +195,42 @@ public sealed class CommandDispatcher : ICommandDispatcher
 
         if (!definition.ReadOnly && request.Apply)
         {
-            if (!options.ReviewApproved)
+            RiskTier riskTier = definition.RiskTier;
+            if (riskTier == RiskTier.Destructive)
             {
-                return CreateResult(request, CommandResultStatus.Blocked, "command.review_required",
-                    $"Mutating command '{request.CommandId}' requires explicit ReviewApproved confirmation.", null, false, startedAt);
-            }
+                if (!options.ReviewApproved)
+                {
+                    return CreateResult(request, CommandResultStatus.Blocked, "command.review_required",
+                        $"Destructive command '{request.CommandId}' requires explicit ReviewApproved confirmation.", null, false, startedAt);
+                }
 
-            if (!TryConsumeIssuedReviewPlan(request, definition))
-            {
-                return CreateResult(request, CommandResultStatus.Blocked, "command.approval_plan_invalid",
-                    $"Mutating command '{request.CommandId}' requires a current, single-use review plan issued by this dispatcher after a successful preview.", null, false, startedAt);
+                if (!TryConsumeIssuedReviewPlan(request, definition))
+                {
+                    return CreateResult(request, CommandResultStatus.Blocked, "command.approval_plan_invalid",
+                        $"Destructive command '{request.CommandId}' requires a current, single-use review plan issued by this dispatcher after a successful preview.", null, false, startedAt);
+                }
             }
+            else if (riskTier == RiskTier.Moderate)
+            {
+                if (!options.ReviewApproved)
+                {
+                    return CreateResult(request, CommandResultStatus.Blocked, "command.review_required",
+                        $"Mutating command '{request.CommandId}' requires explicit ReviewApproved confirmation.", null, false, startedAt);
+                }
+
+                // If an approval plan was explicitly supplied, validate and consume it.
+                if (request.Approval is not null && !TryConsumeIssuedReviewPlan(request, definition))
+                {
+                    return CreateResult(request, CommandResultStatus.Blocked, "command.approval_plan_invalid",
+                        $"The review plan supplied for '{request.CommandId}' is invalid, expired, or has already been used.", null, false, startedAt);
+                }
+            }
+            else if (riskTier != RiskTier.Safe)
+            {
+                return CreateResult(request, CommandResultStatus.Blocked, "command.risk_tier_invalid",
+                    $"Command '{request.CommandId}' has an unsupported risk tier.", null, false, startedAt);
+            }
+            // RiskTier.Safe mutating commands are admitted directly with Apply=true.
         }
 
         using CancellationTokenSource linkedCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);

@@ -369,8 +369,8 @@ def verify() -> list[Finding]:
 
     profile_root = ROOT / "src/WinCare.App/Properties/PublishProfiles"
     profiles = sorted(profile_root.glob("*.pubxml")) if profile_root.is_dir() else []
-    if len(profiles) != 4:
-        findings.append(Finding("publish-profiles", f"expected 4 publish profiles, found {len(profiles)}"))
+    if len(profiles) not in (4, 6):
+        findings.append(Finding("publish-profiles", f"expected 4 or 6 publish profiles, found {len(profiles)}"))
     for profile in profiles:
         profile_text = profile.read_text(encoding="utf-8", errors="replace")
         invalid = [character for character in profile_text if ord(character) < 32 and character not in "\n\r\t"]

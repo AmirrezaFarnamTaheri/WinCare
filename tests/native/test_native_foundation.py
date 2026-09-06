@@ -59,11 +59,17 @@ class NativeFoundationTests(unittest.TestCase):
             self.assertNotIn("CompactThreshold", code, name)
 
         checkup_vm = (root / "src/WinCare.App/ViewModels/Pages/CheckupPageViewModel.cs").read_text(encoding="utf-8")
-        probe_runner = (root / "src/WinCare.Application/Commands/SequentialCommandProbeRunner.cs").read_text(encoding="utf-8")
+        sequential_probe_runner = (root / "src/WinCare.Application/Commands/SequentialCommandProbeRunner.cs").read_text(encoding="utf-8")
+        parallel_probe_runner = (root / "src/WinCare.Application/Commands/ParallelCommandProbeRunner.cs").read_text(encoding="utf-8")
         self.assertNotIn("Parallel.ForEachAsync", checkup_vm)
-        self.assertIn("SequentialCommandProbeRunner.RunPreviewsAsync", checkup_vm)
-        self.assertIn("foreach (string commandId in commandIds)", probe_runner)
-        self.assertNotIn("Task.WhenAll", probe_runner)
+        self.assertIn("ParallelCommandProbeRunner.RunPreviewsAsync", checkup_vm)
+        self.assertIn("foreach (string commandId in commandIds)", sequential_probe_runner)
+        self.assertNotIn("Task.WhenAll", sequential_probe_runner)
+        self.assertIn("public static class ParallelCommandProbeRunner", parallel_probe_runner)
+        self.assertIn("RunPreviewsAsync(", parallel_probe_runner)
+        self.assertIn("SemaphoreSlim", parallel_probe_runner)
+        self.assertIn("Task.WhenAll", parallel_probe_runner)
+        self.assertIn("tasks[i] = RunSingleProbeAsync", parallel_probe_runner)
 
         plugin_store = (root / "src/WinCare.App/Views/Pages/PluginStorePage.xaml").read_text(encoding="utf-8")
         self.assertIn('MinWindowWidth="920"', plugin_store)
@@ -142,7 +148,7 @@ class NativeFoundationTests(unittest.TestCase):
     def test_package_profiles_are_clean_and_stage_native_core(self) -> None:
         root = __import__("pathlib").Path(__file__).resolve().parents[2]
         profiles = sorted((root / "src/WinCare.App/Properties/PublishProfiles").glob("*.pubxml"))
-        self.assertEqual(4, len(profiles))
+        self.assertEqual(6, len(profiles), sorted(profile.name for profile in profiles))
         for profile in profiles:
             text = profile.read_text(encoding="utf-8")
             invalid = [character for character in text if ord(character) < 32 and character not in "\n\r\t"]
@@ -175,6 +181,24 @@ class NativeFoundationTests(unittest.TestCase):
         managed_test_marker = "      - name: Managed tests\n        if: matrix.platform == 'x64'"
         self.assertIn(managed_test_marker, workflow)
         self.assertIn("python -m unittest discover -s tests/native -v", workflow)
+
+    def test_windows_ci_validates_real_trimmed_portable_artifacts(self) -> None:
+        root = __import__("pathlib").Path(__file__).resolve().parents[2]
+        workflow = (root / ".github/workflows/native-winui.yml").read_text(encoding="utf-8")
+        app = (root / "src/WinCare.App/App.xaml.cs").read_text(encoding="utf-8")
+        checklist = (root / "tools/release_checklist.py").read_text(encoding="utf-8")
+
+        self.assertIn("PORTABLE_EXECUTABLE_MAX_BYTES = 70_000_000", checklist)
+        self.assertIn("--portable-artifact", checklist)
+        self.assertIn("Validate portable executable size", workflow)
+        self.assertIn("python tools/release_checklist.py --portable-artifact", workflow)
+        self.assertIn("portable-runtime-smoke:", workflow)
+        self.assertIn("windows-11-vs2026-arm", workflow)
+        self.assertIn("--smoke-test", workflow)
+        self.assertIn("portable-runtime-smoke", workflow.split("release-gate:", 1)[1])
+        self.assertIn('PortableSmokeArgument = "--smoke-test"', app)
+        self.assertIn('CommandRequest.Preview("system")', app)
+        self.assertIn("GetAbiVersion()", app)
 
 
 if __name__ == "__main__":

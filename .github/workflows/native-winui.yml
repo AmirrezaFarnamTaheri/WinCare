@@ -296,6 +296,9 @@ jobs:
       - name: Publish single binary executable
         shell: bash
         run: dotnet publish src/WinCare.App/WinCare.App.csproj -c Release -p:Platform=${{ matrix.platform }} -r ${{ matrix.runtime }} -p:WindowsPackageType=None -p:WindowsAppSDKSelfContained=true -p:SelfContained=true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:DebugType=none -p:DebugSymbols=false -o artifacts/portable/${{ matrix.runtime }}
+      - name: Validate portable executable size
+        shell: bash
+        run: python tools/release_checklist.py --portable-artifact artifacts/portable/${{ matrix.runtime }}/WinCare.App.exe
       - name: Stage single binary executable and portable archive
         shell: bash
         run: |
@@ -324,8 +327,45 @@ jobs:
             artifacts/release/*.zip
           if-no-files-found: error
 
+  portable-runtime-smoke:
+    needs: [managed-and-package]
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: x64
+            runner: windows-latest
+          - platform: ARM64
+            runner: windows-11-vs2026-arm
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: WinCare-${{ matrix.platform }}
+          path: artifacts/smoke
+      - name: Run trimmed portable startup and core-flow smoke
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $executables = @(
+            Get-ChildItem -Path artifacts/smoke -Recurse -File -Filter "WinCare-v*-${{ matrix.platform }}.exe"
+          )
+          if ($executables.Count -ne 1) {
+            throw "Expected exactly one ${{ matrix.platform }} portable executable, found $($executables.Count)."
+          }
+
+          $process = Start-Process -FilePath $executables[0].FullName -ArgumentList '--smoke-test' -PassThru
+          if (-not $process.WaitForExit(30000)) {
+            Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
+            throw "Portable ${{ matrix.platform }} smoke test timed out after 30 seconds."
+          }
+          if ($process.ExitCode -ne 0) {
+            throw "Portable ${{ matrix.platform }} smoke test failed with exit code $($process.ExitCode)."
+          }
+
   release-gate:
-    needs: [verify-source, rust, managed-and-package]
+    needs: [verify-source, rust, managed-and-package, portable-runtime-smoke]
     if: >-
       github.event_name != 'pull_request' &&
       (
