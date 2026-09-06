@@ -27,7 +27,7 @@
     <ProjectReference Include="..\..\src\WinCare.Infrastructure\WinCare.Infrastructure.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\..\src\WinCare.App\Native\x64\wincare_core.dll" Condition="Exists('..\..\src\WinCare.App\Native\x64\wincare_core.dll')">
+    <None Include="..\..\src\WinCare.App\Native\x64\wincare_core.dll">
       <Link>wincare_core.dll</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
