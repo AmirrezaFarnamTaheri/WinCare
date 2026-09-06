@@ -13,8 +13,8 @@ public sealed class ToolExecutionViewModelTests
     public async Task Changed_selection_or_parameters_invalidate_inflight_preview(bool changeSelection)
     {
         var definition = new CommandDefinition("test", "Test", "Test", "Test", "Test",
-            CommandRisk.Moderate, false, AdministratorAccess.No, RestartExpectation.No,
-            "test", MigrationStatus.Implemented, []);
+            CommandRisk.Critical, false, AdministratorAccess.No, RestartExpectation.No,
+            "test", MigrationStatus.Implemented, [], RiskTier.Destructive);
         var handler = new PendingHandler();
         var viewModel = new ToolExecutionViewModel(new CommandDispatcher([definition], [handler]), _ => { });
         var row = new ToolRowViewModel(definition);
@@ -29,8 +29,10 @@ public sealed class ToolExecutionViewModelTests
         else viewModel.ParameterJson = "{\"changed\":true}";
         handler.Completion.SetResult(CommandHandlerOutcome.Succeeded("test.preview", "Old preview"));
         await execution;
-        Assert.True(viewModel.CanApproveReview);
+        Assert.False(viewModel.CanApproveReview);
         Assert.False(viewModel.HasExecutionResult);
+        viewModel.IsReviewApproved = true;
+        Assert.False(viewModel.IsReviewApproved);
     }
 
     [Fact]
