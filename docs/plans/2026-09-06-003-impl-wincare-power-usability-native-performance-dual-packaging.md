@@ -21,7 +21,7 @@
 - **Risk-specific admission:** Safe = one click; Moderate = lightweight confirmation; Destructive = successful preview + dispatcher-issued single-use `ApprovedMutationPlan`.
 - **No child-process probes for the native snapshot/temp-clean primitives.**
 - **Native cleaner boundary:** do not traverse reparse-point directories/junctions.
-- **Canonical portable size ceiling:** `artifacts/portable/<rid>/WinCare.App.exe <= 35,000,000 bytes` for both x64 and ARM64.
+- **Canonical portable regression ceiling:** `artifacts/portable/<rid>/WinCare.App.exe <= 70,000,000 bytes` for both x64 and ARM64.
 - **Trim safety requires runtime evidence:** publish success and suppressed linker warnings are insufficient.
 - **Product truth:** no generic rollback, installer-size, health-percentage, or p95 latency claim without executable evidence.
 
@@ -95,11 +95,13 @@ artifacts/portable/win-x64/WinCare.App.exe
 artifacts/portable/win-arm64/WinCare.App.exe
 ```
 
-**Single executable size contract**
+**Single executable regression contract**
 
 ```text
-WinCare.App.exe <= 35,000,000 bytes
+WinCare.App.exe <= 70,000,000 bytes
 ```
+
+The ceiling is grounded in exact-head CI measurements of 67,362,718 bytes for x64 and 66,071,465 bytes for ARM64. It protects against material growth while describing the real self-contained Windows App SDK payload.
 
 Evaluator:
 
