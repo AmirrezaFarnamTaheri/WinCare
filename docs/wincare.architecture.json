@@ -3,7 +3,7 @@
   "diagram_type": "architecture",
   "meta": {
     "title": "WinCare Modern Architecture",
-    "subtitle": "WinUI 3 Progressive Disclosure, Tri-Tier Safety Governance, Microsecond Rust Core, and Dual Packaging",
+    "subtitle": "WinUI 3 Progressive Disclosure, Tri-Tier Safety Governance, Rust Core, and Portable Packaging",
     "output": "docs/architecture.html",
     "visual_preset": "classic",
     "animation": "none",
@@ -19,7 +19,7 @@
           "wincare_core",
           "windows_os"
         ],
-        "note": "1-click daily actions route through tri-tier safety validation and execute in microseconds via native Rust."
+        "note": "1-click Safe actions route through risk-tier validation and execute through the native command plane."
       },
       {
         "id": "power-elevation",
@@ -31,18 +31,18 @@
           "wincare_guard",
           "journal_store"
         ],
-        "note": "Deep inspector discloses exact microsecond probe timings, pre-mutation snapshots, and diff journals."
+        "note": "Deep inspector surfaces measured telemetry and operation evidence; destructive mutations use dispatcher-issued review plans."
       },
       {
         "id": "dual-packaging",
-        "label": "Dual Packaging & Trimming Pipeline",
+        "label": "Portable + Setup Packaging Pipeline",
         "focus": [
           "winui_shell",
           "wincare_core",
           "pkg_portable",
-          "pkg_framework"
+          "pkg_installer"
         ],
-        "note": "Distribution targets: ~22 MB zero-dependency portable executable vs ~4–6 MB framework-dependent installer."
+        "note": "Each portable WinCare.App.exe is capped at 35,000,000 bytes; Inno Setup consumes the same x64 portable publish directory as its payload."
       }
     ]
   },
@@ -82,7 +82,7 @@
       "type": "backend",
       "label": "Parallel Probe Runner",
       "sublabel": "Bounded Async Concurrency",
-      "tag": "Zero-Alloc P/Invoke",
+      "tag": "Ordered Results",
       "pos": [
         460,
         205
@@ -153,8 +153,8 @@
     {
       "id": "snapshot_store",
       "type": "database",
-      "label": "Snapshot & Rollback",
-      "sublabel": "Pre-Mutation Restore Points",
+      "label": "Review Plan Store",
+      "sublabel": "Single-Use ApprovedMutationPlan",
       "pos": [
         460,
         415
@@ -168,7 +168,7 @@
       "id": "wincare_guard",
       "type": "security",
       "label": "Rust Telemetry Ring",
-      "sublabel": "Zero-Allocation Cyclic Buffer",
+      "sublabel": "Experimental Background Guard",
       "pos": [
         670,
         415
@@ -182,7 +182,7 @@
       "id": "journal_store",
       "type": "database",
       "label": "Activity Journal",
-      "sublabel": "Audit Receipts & Diff History",
+      "sublabel": "Operation Receipts & History",
       "pos": [
         880,
         415
@@ -196,8 +196,8 @@
       "id": "pkg_portable",
       "type": "cloud",
       "label": "Portable Single-File Exe",
-      "sublabel": "Standalone ~22 MB (No R2R)",
-      "tag": "Zero Prerequisites",
+      "sublabel": "≤35,000,000 bytes per executable",
+      "tag": "x64 + ARM64",
       "pos": [
         250,
         615
@@ -208,11 +208,11 @@
       ]
     },
     {
-      "id": "pkg_framework",
+      "id": "pkg_installer",
       "type": "cloud",
-      "label": "Framework Installer",
-      "sublabel": "Featherweight ~4–6 MB (Winget)",
-      "tag": "Shared System SDK",
+      "label": "Inno Setup Installer",
+      "sublabel": "Wraps artifacts/portable/win-x64",
+      "tag": "Same x64 Payload",
       "pos": [
         460,
         615
@@ -257,10 +257,10 @@
     },
     {
       "kind": "region",
-      "label": "Dual Distribution Packaging Profiles",
+      "label": "Portable + Setup Distribution",
       "wraps": [
         "pkg_portable",
-        "pkg_framework"
+        "pkg_installer"
       ],
       "pad": 18
     }
@@ -317,14 +317,14 @@
       "to": "journal_store"
     },
     {
-      "from": "domain_catalog",
+      "from": "wincare_core",
       "to": "pkg_portable",
       "route": "orthogonal-v",
       "variant": "dashed"
     },
     {
-      "from": "snapshot_store",
-      "to": "pkg_framework",
+      "from": "pkg_portable",
+      "to": "pkg_installer",
       "route": "orthogonal-v",
       "variant": "dashed"
     }
@@ -336,25 +336,25 @@
       "items": [
         "WinUI 3 desktop shell with Mica backdrop and progressive disclosure",
         "1-click daily maintenance cards for immediate non-destructive fixes",
-        "Deep Inspector reveals exact microsecond probe timings and diffs"
+        "Deep Inspector reveals measured native telemetry and affected paths"
       ]
     },
     {
       "dot": "emerald",
       "title": "Safety & Governance",
       "items": [
-        "Tri-tier safety model: Safe (1-click), Moderate (preview), Destructive (token)",
+        "Tri-tier model: Safe (1-click), Moderate (confirmation), Destructive (preview plan)",
         "Bounded concurrency via ParallelCommandProbeRunner",
-        "Pre-mutation snapshots ensure deterministic 1-click rollback"
+        "Undo is shown only when an executable compensator exists"
       ]
     },
     {
       "dot": "rose",
-      "title": "Native Performance & Size",
+      "title": "Native Performance & Packaging",
       "items": [
-        "Rust Edition 2024 C-ABI engine eliminates child process spawning",
-        "Zero-allocation cyclic telemetry ring buffer directly queryable",
-        "Dual packaging: ~22 MB portable standalone vs ~4–6 MB framework installer"
+        "Rust Edition 2024 C-ABI provides native snapshot and safe temp-clean primitives",
+        "Portable x64 and ARM64 executables are runtime-smoke-tested on native runners",
+        "Portable WinCare.App.exe uses one enforced 35,000,000-byte ceiling; Inno wraps the x64 payload"
       ]
     }
   ]
