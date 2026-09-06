@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>WinCare Spectre.Console TUI</title>
+  <title>WinCare Terminal REPL (Historical Prototype Concept)</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -154,7 +154,7 @@
     <div class="terminal-titlebar">
       <div class="tabs">
         <div class="tab">
-          <span>🛡</span> WinCare · Spectre.Console TUI [v2.5.0-rc5]
+          WinCare · Terminal REPL [Historical Prototype]
         </div>
       </div>
       <div class="window-controls">
@@ -165,6 +165,7 @@
     </div>
 
     <div class="terminal-body">
+      <div style="background: rgba(234, 179, 8, 0.12); border: 1px solid rgba(234, 179, 8, 0.35); color: #fde047; padding: 10px 14px; font-size: 11px; margin-bottom: 16px; border-radius: 6px; line-height: 1.5;"><strong>Historical Design Prototype:</strong> WinCare ships exclusively as a WinUI 3 desktop shell. This terminal interface was an exploratory concept and is not part of the active product distribution.</div>
       <pre class="ascii-banner">
  ██╗    ██╗██╗███╗   ██╗ ██████╗ █████╗ ██████╗ ███████╗
  ██║    ██║██║████╗  ██║██╔════╝██╔══██╗██╔══██╗██╔════╝
@@ -172,7 +173,7 @@
  ██║███╗██║██║██║╚██╗██║██║     ██╔══██║██╔══██╗██╔══╝  
  ╚███╔███╔╝██║██║ ╚████║╚██████╗██║  ██║██║  ██║███████╗
   ╚══╝╚══╝ ╚═╝╚═╝  ╚═══╝ ╚═════╝╚═╝  ╚═╝╚═╝  ╚═╝╚══════╝</pre>
-      <div><span class="dim">[09:42:01.104]</span> <span class="teal bold">WINCARE KERNEL ENGINE</span> · <span class="cyan">Rust 2024 C ABI</span> + <span class="green">.NET 8 Spectre.Console REPL</span></div>
+      <div><span class="dim">[09:42:01.104]</span> <span class="teal bold">WINCARE KERNEL ENGINE</span> · <span class="cyan">Rust 2024 C ABI</span> + <span class="green">.NET 8 Host</span></div>
       <div><span class="dim">[09:42:01.108]</span> <span class="green">Policy Guard:</span> <span class="bold">READ-ONLY BY DEFAULT</span> · Safe Windows Subsystem Invariants Active</div>
 
       <div class="table-box">
@@ -195,10 +196,10 @@
           <div class="dim">Event Dispatcher (Fail-Closed)</div>
         </div>
         <div class="table-row">
-          <div class="bold">ONNX Runtime Anomaly</div>
+          <div class="bold">Rule-Based Intent Engine</div>
           <div><span class="tag-sec">ACTIVE</span></div>
-          <div class="cyan">DirectML HW Accel: &lt; 14 ms</div>
-          <div class="dim">Local evaluation only · No telemetry exfil</div>
+          <div class="cyan">Deterministic Rules: &lt; 1 ms</div>
+          <div class="dim">On-device evaluation · No external model dependencies</div>
         </div>
         <div class="table-row">
           <div class="bold">Process Isolation Pool</div>
@@ -210,7 +211,7 @@
           <div class="bold">Audit Journal Store</div>
           <div><span class="tag-ok">SECURED</span></div>
           <div class="cyan">AES-256-GCM Receipts</div>
-          <div class="dim">Deterministic rollback trail preserved</div>
+          <div class="dim">Cryptographic audit receipts with parameter hashes</div>
         </div>
       </div>
 

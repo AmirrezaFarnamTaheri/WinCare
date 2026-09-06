@@ -4498,10 +4498,10 @@
         <div class="pulse-dot"></div>
         <h1>WinCare Platform Architecture</h1>
       </div>
-      <p class="subtitle">WinUI 3 Presentation, Fail-Closed Command Governance, ONNX Anomaly Inference, and Rust 2024 Core</p>
+      <p class="subtitle">WinUI 3 Presentation, Fail-Closed Command Governance, Rule-Based Diagnostics, and Rust 2024 Core</p>
     </div>
 
-    <script id="archify-guided-views-data" type="application/json">[{"id":"command-lifecycle","label":"Command execution lifecycle","focus":["winui_shell","dispatcher","infra_runner","wincare_core","windows_os"],"note":"Follow user requests through preflight validation, two-phase review, and native C ABI execution."},{"id":"diagnostics-ml","label":"Diagnostics and ML anomaly pipeline","focus":["winui_shell","dispatcher","onnx_engine","wincare_guard","journal_store"],"note":"Local DirectML-accelerated ONNX inference evaluates system health and logs receipts to the activity journal."},{"id":"plugin-governance","label":"Plugin admission \u0026 isolation","focus":["plugin_cli","plugin_host","domain_catalog","dispatcher"],"note":"External plugins are verified by SHA-256 digests and isolated under strict process bounds."}]</script>
+    <script id="archify-guided-views-data" type="application/json">[{"id":"command-lifecycle","label":"Command execution lifecycle","focus":["winui_shell","dispatcher","infra_runner","wincare_core","windows_os"],"note":"Follow user requests through preflight validation, two-phase review, and native C ABI execution."},{"id":"diagnostics-intent","label":"Diagnostics and symptom intent pipeline","focus":["winui_shell","dispatcher","intent_engine","wincare_guard","journal_store"],"note":"Deterministic symptom rule inference evaluates system health and logs receipts to the activity journal."},{"id":"plugin-governance","label":"Plugin admission \u0026 isolation","focus":["plugin_cli","plugin_host","domain_catalog","dispatcher"],"note":"External plugins are verified by SHA-256 digests and isolated under in-process AssemblyLoadContext boundaries."}]</script>
 
     <div class="guided-views no-print" id="guided-views" hidden aria-label="Guided diagram views">
       <button id="guided-view-prev" type="button" aria-label="Previous guided view" title="Previous guided view ([)">&#8592;</button>
@@ -4546,7 +4546,7 @@
     <div class="diagram-container" data-detail-level="map">
       <svg viewBox="0 0 1103 771" role="img" aria-labelledby="archify-diagram-title archify-diagram-description" data-preset="classic" data-quality-profile="standard">
         <title id="archify-diagram-title">WinCare Platform Architecture</title>
-        <desc id="archify-diagram-description">WinUI 3 Presentation, Fail-Closed Command Governance, ONNX Anomaly Inference, and Rust 2024 Core</desc>
+        <desc id="archify-diagram-description">WinUI 3 Presentation, Fail-Closed Command Governance, Rule-Based Diagnostics, and Rust 2024 Core</desc>
         <!-- Definitions -->
         <defs>
           <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
@@ -4589,8 +4589,8 @@
         <path data-edge-from="wincare_guard" data-edge-to="windows_os" data-edge-key="6" data-composition-points="835,449;835,344;880,344;880,239" d="M 835 449 L 835 352 Q 835 344 843 344 L 872 344 Q 880 344 880 336 L 880 239" class="a-security" stroke-width="1.5" marker-end="url(#arrowhead-security)"/>
         <path data-edge-from="plugin_cli" data-edge-to="plugin_host" data-edge-key="7" data-composition-points="205,649;250,649" d="M 205 649 L 250 649" class="a-dashed" stroke-width="1.5" marker-end="url(#arrowhead-dashed)"/>
         <path data-edge-from="plugin_host" data-edge-to="domain_catalog" data-edge-key="8" data-composition-points="332.5,615;332.5,549;332.5,549;332.5,483" d="M 332.5 615 L 332.5 549 L 332.5 549 L 332.5 483" class="a-default" stroke-width="1.5" marker-end="url(#arrowhead)"/>
-        <path data-edge-from="infra_runner" data-edge-to="onnx_engine" data-edge-key="9" data-composition-points="542.5,273;542.5,344;542.5,344;542.5,415" d="M 542.5 273 L 542.5 344 L 542.5 344 L 542.5 415" class="a-emphasis" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
-        <path data-edge-from="onnx_engine" data-edge-to="journal_store" data-edge-key="10" data-composition-points="542.5,483;542.5,549;542.5,549;542.5,615" d="M 542.5 483 L 542.5 549 L 542.5 549 L 542.5 615" class="a-emphasis" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
+        <path data-edge-from="infra_runner" data-edge-to="intent_engine" data-edge-key="9" data-composition-points="542.5,273;542.5,344;542.5,344;542.5,415" d="M 542.5 273 L 542.5 344 L 542.5 344 L 542.5 415" class="a-emphasis" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
+        <path data-edge-from="intent_engine" data-edge-to="journal_store" data-edge-key="10" data-composition-points="542.5,483;542.5,549;542.5,549;542.5,615" d="M 542.5 483 L 542.5 549 L 542.5 549 L 542.5 615" class="a-emphasis" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
         <path data-edge-from="wincare_guard" data-edge-to="journal_store" data-edge-key="11" data-composition-points="670,449;670,549;625,549;625,649" d="M 670 449 L 670 541 Q 670 549 662 549 L 633 549 Q 625 549 625 557 L 625 649" class="a-dashed" stroke-width="1.5" marker-end="url(#arrowhead-dashed)"/>
 
         <!-- Components -->
@@ -4654,8 +4654,8 @@
         <text data-detail="context" x="962.5" y="253" class="t-muted" font-size="9" text-anchor="middle">Job Objects, Win32 APIs, Toast XML</text>
         </g>
 
-        <g id="node-spectre_tui" data-node-id="spectre_tui" data-node-label="Spectre.Console TUI" tabindex="0" role="button" aria-label="Focus Spectre.Console TUI, Terminal control &amp; diagnostic REPL, WinCare .NET 8 Host Application" aria-pressed="false" data-node-kind="frontend" data-node-sublabel="Terminal control &amp; diagnostic REPL" data-node-context="WinCare .NET 8 Host Application">
-          <title>Spectre.Console TUI · Terminal control &amp; diagnostic REPL · WinCare .NET 8 Host Application</title>
+        <g id="node-spectre_tui" data-node-id="spectre_tui" data-node-label="Terminal REPL (Concept)" tabindex="0" role="button" aria-label="Focus Terminal REPL (Concept), Archived design prototype, WinCare .NET 8 Host Application" aria-pressed="false" data-node-kind="frontend" data-node-sublabel="Archived design prototype" data-node-context="WinCare .NET 8 Host Application">
+          <title>Terminal REPL (Concept) · Archived design prototype · WinCare .NET 8 Host Application</title>
           <rect x="40" y="415" width="165" height="68" rx="6" class="c-mask"/>
           <rect x="40" y="415" width="165" height="68" rx="6" class="c-frontend" stroke-width="1.5"/>
           <g aria-hidden="true" data-semantic-sigil="frontend" class="semantic-sigil s-frontend" transform="translate(46 421) scale(0.6875)">
@@ -4664,8 +4664,8 @@
             <circle cx="4.1" cy="4.8" r=".7" class="sigil-fill"/>
             <circle cx="6.3" cy="4.8" r=".7" class="sigil-fill"/>
           </g>
-          <text data-detail-anchor x="122.5" y="447" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Spectre.Console TUI</text>
-        <text data-detail="context" x="122.5" y="463" class="t-muted" font-size="9" text-anchor="middle">Terminal control &amp; diagnostic REPL</text>
+          <text data-detail-anchor x="122.5" y="447" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Terminal REPL (Concept)</text>
+        <text data-detail="context" x="122.5" y="463" class="t-muted" font-size="9" text-anchor="middle">Archived design prototype</text>
         </g>
 
         <g id="node-domain_catalog" data-node-id="domain_catalog" data-node-label="Command Catalog" tabindex="0" role="button" aria-label="Focus Command Catalog, 259 frozen typed definitions, WinCare .NET 8 Host Application" aria-pressed="false" data-node-kind="database" data-node-sublabel="259 frozen typed definitions" data-node-context="WinCare .NET 8 Host Application">
@@ -4716,26 +4716,26 @@
         <text data-detail="context" x="122.5" y="663" class="t-muted" font-size="9" text-anchor="middle">Node.js manifest validator &amp; packager</text>
         </g>
 
-        <g id="node-plugin_host" data-node-id="plugin_host" data-node-label="Dynamic Plugin Host" tabindex="0" role="button" aria-label="Focus Dynamic Plugin Host, Process sandbox, capability bounds, WinCare .NET 8 Host Application" aria-pressed="false" data-node-kind="backend" data-node-sublabel="Process sandbox, capability bounds" data-node-context="WinCare .NET 8 Host Application">
-          <title>Dynamic Plugin Host · Process sandbox, capability bounds · WinCare .NET 8 Host Application</title>
+        <g id="node-plugin_host" data-node-id="plugin_host" data-node-label="Dynamic Plugin Host" tabindex="0" role="button" aria-label="Focus Dynamic Plugin Host, In-process ALC, manifest admission, WinCare .NET 8 Host Application" aria-pressed="false" data-node-kind="backend" data-node-sublabel="In-process ALC, manifest admission" data-node-context="WinCare .NET 8 Host Application">
+          <title>Dynamic Plugin Host · In-process ALC, manifest admission · WinCare .NET 8 Host Application</title>
           <rect x="250" y="615" width="165" height="68" rx="6" class="c-mask"/>
           <rect x="250" y="615" width="165" height="68" rx="6" class="c-backend" stroke-width="1.5"/>
           <g aria-hidden="true" data-semantic-sigil="backend" class="semantic-sigil s-backend" transform="translate(256 621) scale(0.6875)">
             <path d="M6 3 3 8l3 5M10 3l3 5-3 5"/>
           </g>
           <text data-detail-anchor x="332.5" y="647" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Dynamic Plugin Host</text>
-        <text data-detail="context" x="332.5" y="663" class="t-muted" font-size="9" text-anchor="middle">Process sandbox, capability bounds</text>
+        <text data-detail="context" x="332.5" y="663" class="t-muted" font-size="9" text-anchor="middle">In-process ALC, manifest admission</text>
         </g>
 
-        <g id="node-onnx_engine" data-node-id="onnx_engine" data-node-label="ONNX Runtime Engine" tabindex="0" role="button" aria-label="Focus ONNX Runtime Engine, DirectML acceleration, anomaly eval, WinCare .NET 8 Host Application" aria-pressed="false" data-node-kind="backend" data-node-sublabel="DirectML acceleration, anomaly eval" data-node-context="WinCare .NET 8 Host Application">
-          <title>ONNX Runtime Engine · DirectML acceleration, anomaly eval · WinCare .NET 8 Host Application</title>
+        <g id="node-intent_engine" data-node-id="intent_engine" data-node-label="Rule-Based Intent Engine" tabindex="0" role="button" aria-label="Focus Rule-Based Intent Engine, Deterministic symptom classifier, WinCare .NET 8 Host Application" aria-pressed="false" data-node-kind="backend" data-node-sublabel="Deterministic symptom classifier" data-node-context="WinCare .NET 8 Host Application">
+          <title>Rule-Based Intent Engine · Deterministic symptom classifier · WinCare .NET 8 Host Application</title>
           <rect x="460" y="415" width="165" height="68" rx="6" class="c-mask"/>
           <rect x="460" y="415" width="165" height="68" rx="6" class="c-backend" stroke-width="1.5"/>
           <g aria-hidden="true" data-semantic-sigil="backend" class="semantic-sigil s-backend" transform="translate(466 421) scale(0.6875)">
             <path d="M6 3 3 8l3 5M10 3l3 5-3 5"/>
           </g>
-          <text data-detail-anchor x="542.5" y="447" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">ONNX Runtime Engine</text>
-        <text data-detail="context" x="542.5" y="463" class="t-muted" font-size="9" text-anchor="middle">DirectML acceleration, anomaly eval</text>
+          <text data-detail-anchor x="542.5" y="447" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Rule-Based Intent Engine</text>
+        <text data-detail="context" x="542.5" y="463" class="t-muted" font-size="9" text-anchor="middle">Deterministic symptom classifier</text>
         </g>
 
         <!-- Connection labels -->
@@ -4966,7 +4966,7 @@
         </div>
         <ul>
           <li>&bull; WinUI 3 desktop shell with Mica backdrop and XAML controls</li>
-          <li>&bull; Spectre.Console terminal interface for headless operation</li>
+          <li>&bull; Pure WinUI 3 desktop shell with native accessibility</li>
           <li>&bull; Zero PowerShell dependencies in native runtime distribution</li>
         </ul>
       </div>
@@ -4979,7 +4979,7 @@
         <ul>
           <li>&bull; Fail-closed CommandDispatcher requiring preflight validation</li>
           <li>&bull; Two-phase review and apply lifecycle for sensitive mutations</li>
-          <li>&bull; Dynamic plugin isolation bounded by BoundedProcessRunner</li>
+          <li>&bull; In-process collectible AssemblyLoadContext and manifest admission</li>
         </ul>
       </div>
 
@@ -4990,7 +4990,7 @@
         </div>
         <ul>
           <li>&bull; Rust 2024 C ABI dynamic library for high-speed bounded operations</li>
-          <li>&bull; Local ONNX Runtime with DirectML GPU acceleration</li>
+          <li>&bull; Deterministic rule-based symptom intent classifier</li>
           <li>&bull; Windows Job Objects for strict memory and CPU throttling</li>
         </ul>
       </div>

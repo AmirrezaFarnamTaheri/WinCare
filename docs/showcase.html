@@ -142,6 +142,40 @@
       pointer-events: none;
     }
 
+    
+    /* Standalone CSS Fallbacks for deterministic layout without external CDN */
+    .w-full { width: 100%; }
+    .h-full { height: 100%; }
+    .aspect-square { aspect-ratio: 1 / 1; }
+    .max-w-7xl { max-width: 80rem; }
+    .mx-auto { margin-left: auto; margin-right: auto; }
+    .grid { display: grid; }
+    .grid-cols-1 { grid-template-columns: repeat(1, minmax(0, 1fr)); }
+    .flex { display: flex; }
+    .flex-col { flex-direction: column; }
+    .items-center { align-items: center; }
+    .justify-center { justify-content: center; }
+    .relative { position: relative; }
+    .absolute { position: absolute; }
+    .overflow-hidden { overflow: hidden; }
+    .rounded-2xl { border-radius: 1rem; }
+    .rounded-lg { border-radius: 0.5rem; }
+    .rounded-full { border-radius: 9999px; }
+    .border { border-width: 1px; }
+    .border-white\/10 { border-color: rgba(255, 255, 255, 0.1); }
+    .bg-obsidian-950 { background-color: #07090E; }
+    .bg-obsidian-900\/60 { background-color: rgba(11, 16, 23, 0.6); }
+    .bg-obsidian-850 { background-color: #101722; }
+    .text-teal-accent { color: #00D2B4; }
+    .text-white { color: #FFFFFF; }
+    .text-slate-400 { color: #94A3B8; }
+    .font-mono { font-family: 'Geist Mono', 'Cascadia Code', Consolas, monospace; }
+    @media (min-width: 1024px) {
+      .lg\:grid-cols-12 { grid-template-columns: repeat(12, minmax(0, 1fr)); }
+      .lg\:col-span-7 { grid-column: span 7 / span 7; }
+      .lg\:col-span-5 { grid-column: span 5 / span 5; }
+    }
+
     /* Focus ring standard */
     a:focus-visible, button:focus-visible {
       outline: 2px solid #00D2B4;
@@ -260,8 +294,8 @@
               <div class="font-mono text-[11px] text-slate-400 uppercase tracking-wider">C-ABI Latency</div>
             </div>
             <div>
-              <div class="font-mono text-xl md:text-2xl font-bold text-teal-accent tracking-tight">100%</div>
-              <div class="font-mono text-[11px] text-slate-400 uppercase tracking-wider">Safe Rust Guard</div>
+              <div class="font-mono text-xl md:text-2xl font-bold text-teal-accent tracking-tight">Experimental</div>
+              <div class="font-mono text-[11px] text-slate-400 uppercase tracking-wider">Local Rust Guard</div>
             </div>
             <div>
               <div class="font-mono text-xl md:text-2xl font-bold text-white tracking-tight">WCAG AA</div>
@@ -348,7 +382,7 @@
               <div class="flex items-center gap-2">
                 <span class="text-teal-accent">[0.198ms]</span>
                 <span class="text-blue-400">JOURNAL</span>
-                <span>SHA-256 state snapshot committed to immutable ledger.</span>
+                <span>Activity journal receipt recorded with parameter hash.</span>
               </div>
               <div class="flex items-center gap-2 text-teal-accent animate-pulse">
                 <span>&gt;</span>
@@ -409,15 +443,15 @@
               <span class="telemetry-pill pill-mutating">MUTATION GUARD</span>
               <span class="font-mono text-xs text-slate-400">CRYPTOGRAPHIC JOURNAL</span>
             </div>
-            <h3 class="text-2xl font-bold text-white">Explicit Approval & Rollback Engine</h3>
+            <h3 class="text-2xl font-bold text-white">Explicit Approval & Verified Compensation</h3>
             <p class="text-sm text-slate-400 mt-2 leading-relaxed">
-              Mutating actions are strictly prohibited from silent execution. Every repair operation generates a pre-flight risk manifest, prompts for operator confirmation, and commits SHA-256 diffs for instant rollback.
+              Mutating actions require explicit operator review and one-time receipts. Unsafe operations fail closed, and Activity offers undo compensation only when a concrete verified reverser exists.
             </p>
           </div>
           <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 w-full md:w-auto">
             <div class="px-5 py-3 rounded-xl bg-obsidian-950 border border-white/10 font-mono text-xs text-center">
-              <div class="text-slate-400">Rollback Integrity</div>
-              <div class="text-teal-accent font-bold text-sm mt-0.5">Deterministic 100%</div>
+              <div class="text-slate-400">Compensation Model</div>
+              <div class="text-teal-accent font-bold text-sm mt-0.5">Fail-Closed / Admitted</div>
             </div>
             <a href="#safety-model" class="px-5 py-3 rounded-xl bg-teal-accent text-obsidian-950 font-mono text-xs font-bold text-center hover:bg-teal-hover transition-all">
               Inspect Pipeline
@@ -610,7 +644,7 @@
           <div class="pt-8 flex flex-wrap items-center justify-center gap-6 font-mono text-xs text-slate-400">
             <span>REQUIREMENTS: Windows 10/11 (x64 / ARM64)</span>
             <span>•</span>
-            <span>LICENSE: MIT</span>
+            <span>LICENSE: Apache-2.0</span>
             <span>•</span>
             <span>SIZE: 24.8 MB</span>
           </div>
@@ -642,283 +676,426 @@
       const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
       // ==========================================
-      // 1. HERO 3D SCENE (Three.js Shield Hologram)
+      // 1. HERO 3D SCENE (Deterministic 2D/WebGL Shield Hologram)
       // ==========================================
       const initHero3D = () => {
         const canvas = document.getElementById('hero-3d-canvas');
         if (!canvas) return;
 
-        const scene = new THREE.Scene();
-        const camera = new THREE.PerspectiveCamera(45, canvas.clientWidth / canvas.clientHeight, 0.1, 100);
-        camera.position.set(0, 0, 5);
+        // Render deterministic 2D diagnostic hologram immediately
+        const render2D = () => {
+          const dpr = Math.min(window.devicePixelRatio || 1, 2);
+          const w = canvas.clientWidth || 480;
+          const h = canvas.clientHeight || 480;
+          canvas.width = w * dpr;
+          canvas.height = h * dpr;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) return;
+          ctx.save();
+          ctx.scale(dpr, dpr);
+          const cx = w / 2;
+          const cy = h / 2;
 
-        const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
-        renderer.setSize(canvas.clientWidth, canvas.clientHeight, false);
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+          // Background fill
+          ctx.fillStyle = '#090d15';
+          ctx.fillRect(0, 0, w, h);
 
-        // Core Shield Group
-        const coreGroup = new THREE.Group();
-        scene.add(coreGroup);
-
-        // 1. Inner Shield Octahedron
-        const geomOcta = new THREE.OctahedronGeometry(1.2, 1);
-        const matOcta = new THREE.MeshStandardMaterial({
-          color: 0x00D2B4,
-          wireframe: true,
-          transparent: true,
-          opacity: 0.6,
-          roughness: 0.2,
-          metalness: 0.8
-        });
-        const meshOcta = new THREE.Mesh(geomOcta, matOcta);
-        coreGroup.add(meshOcta);
-
-        // 2. Central Core Icosahedron
-        const geomCore = new THREE.IcosahedronGeometry(0.7, 0);
-        const matCore = new THREE.MeshPhysicalMaterial({
-          color: 0x2F80ED,
-          emissive: 0x00D2B4,
-          emissiveIntensity: 0.4,
-          roughness: 0.1,
-          metalness: 0.9,
-          clearcoat: 1.0,
-          clearcoatRoughness: 0.1
-        });
-        const meshCore = new THREE.Mesh(geomCore, matCore);
-        coreGroup.add(meshCore);
-
-        // 3. Orbital Particles
-        const particleCount = 200;
-        const particleGeom = new THREE.BufferGeometry();
-        const positions = new Float32Array(particleCount * 3);
-        for(let i = 0; i < particleCount * 3; i += 3) {
-          const r = 1.8 + Math.random() * 0.6;
-          const theta = Math.random() * Math.PI * 2;
-          const phi = Math.acos((Math.random() * 2) - 1);
-          positions[i] = r * Math.sin(phi) * Math.cos(theta);
-          positions[i+1] = r * Math.sin(phi) * Math.sin(theta);
-          positions[i+2] = r * Math.cos(phi);
-        }
-        particleGeom.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-        const particleMat = new THREE.PointsMaterial({
-          color: 0x00D2B4,
-          size: 0.04,
-          transparent: true,
-          opacity: 0.8
-        });
-        const particleSystem = new THREE.Points(particleGeom, particleMat);
-        coreGroup.add(particleSystem);
-
-        // Lighting
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
-        scene.add(ambientLight);
-
-        const pointLight = new THREE.PointLight(0x00D2B4, 2, 10);
-        pointLight.position.set(3, 3, 3);
-        scene.add(pointLight);
-
-        const blueLight = new THREE.PointLight(0x2F80ED, 2, 10);
-        blueLight.position.set(-3, -3, 2);
-        scene.add(blueLight);
-
-        // Interaction state
-        let isDragging = false;
-        let prevMouseX = 0;
-        let prevMouseY = 0;
-        let targetRotX = 0;
-        let targetRotY = 0;
-
-        canvas.addEventListener('mousedown', (e) => {
-          isDragging = true;
-          prevMouseX = e.clientX;
-          prevMouseY = e.clientY;
-        });
-
-        window.addEventListener('mouseup', () => isDragging = false);
-
-        canvas.addEventListener('mousemove', (e) => {
-          if (!isDragging) return;
-          const deltaX = e.clientX - prevMouseX;
-          const deltaY = e.clientY - prevMouseY;
-          targetRotY += deltaX * 0.005;
-          targetRotX += deltaY * 0.005;
-          prevMouseX = e.clientX;
-          prevMouseY = e.clientY;
-        });
-
-        // Resize handler
-        const handleResize = () => {
-          const w = canvas.clientWidth;
-          const h = canvas.clientHeight;
-          if (w === 0 || h === 0) return;
-          renderer.setSize(w, h, false);
-          renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-          camera.aspect = w / h;
-          camera.updateProjectionMatrix();
-        };
-        window.addEventListener('resize', handleResize);
-        handleResize();
-
-        // Animation Loop
-        let animationFrameId;
-        const animate = (time) => {
-          if (!prefersReducedMotion) {
-            coreGroup.rotation.y += (targetRotY - coreGroup.rotation.y) * 0.05 + 0.003;
-            coreGroup.rotation.x += (targetRotX - coreGroup.rotation.x) * 0.05;
-            particleSystem.rotation.y -= 0.002;
-            meshCore.rotation.x += 0.004;
+          // Grid lines
+          ctx.strokeStyle = 'rgba(0, 210, 180, 0.08)';
+          ctx.lineWidth = 1;
+          for (let x = 0; x < w; x += 40) {
+            ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke();
           }
-          renderer.render(scene, camera);
-          animationFrameId = requestAnimationFrame(animate);
+          for (let y = 0; y < h; y += 40) {
+            ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
+          }
+
+          // Concentric targeting rings
+          [60, 110, 160, 200].forEach((r, idx) => {
+            ctx.beginPath();
+            ctx.arc(cx, cy, r, 0, Math.PI * 2);
+            ctx.strokeStyle = idx % 2 === 0 ? 'rgba(0, 210, 180, 0.25)' : 'rgba(47, 128, 237, 0.20)';
+            ctx.lineWidth = idx === 1 ? 1.5 : 1;
+            if (idx === 2) ctx.setLineDash([4, 6]);
+            else ctx.setLineDash([]);
+            ctx.stroke();
+          });
+          ctx.setLineDash([]);
+
+          // Azimuth ticks on outer ring
+          for (let a = 0; a < Math.PI * 2; a += Math.PI / 12) {
+            const x1 = cx + Math.cos(a) * 195;
+            const y1 = cy + Math.sin(a) * 195;
+            const x2 = cx + Math.cos(a) * 205;
+            const y2 = cy + Math.sin(a) * 205;
+            ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2);
+            ctx.strokeStyle = 'rgba(0, 210, 180, 0.35)';
+            ctx.stroke();
+          }
+
+          // 3D projected Octahedron wireframe
+          const rotX = 0.25;
+          const rotY = 0.45;
+          const scale = 110;
+          const fov = 400;
+
+          function project(x, y, z) {
+            let x1 = x * Math.cos(rotY) + z * Math.sin(rotY);
+            let z1 = -x * Math.sin(rotY) + z * Math.cos(rotY);
+            let y2 = y * Math.cos(rotX) - z1 * Math.sin(rotX);
+            let z2 = y * Math.sin(rotX) + z1 * Math.cos(rotX);
+            let p = fov / (fov + z2 * 80);
+            return [cx + x1 * scale * p, cy - y2 * scale * p];
+          }
+
+          const v = [
+            [0, 1.4, 0], [0, -1.4, 0],
+            [1.2, 0, 0], [0, 0, 1.2], [-1.2, 0, 0], [0, 0, -1.2]
+          ];
+          const proj = v.map(pt => project(pt[0], pt[1], pt[2]));
+          const edges = [
+            [0, 2], [0, 3], [0, 4], [0, 5],
+            [1, 2], [1, 3], [1, 4], [1, 5],
+            [2, 3], [3, 4], [4, 5], [5, 2]
+          ];
+
+          // Draw Octahedron edges with glow
+          ctx.strokeStyle = '#00D2B4';
+          ctx.lineWidth = 1.8;
+          ctx.shadowColor = 'rgba(0, 210, 180, 0.6)';
+          ctx.shadowBlur = 10;
+          edges.forEach(([i1, i2]) => {
+            ctx.beginPath();
+            ctx.moveTo(proj[i1][0], proj[i1][1]);
+            ctx.lineTo(proj[i2][0], proj[i2][1]);
+            ctx.stroke();
+          });
+          ctx.shadowBlur = 0;
+
+          // Inner Core (Icosahedron / Diamond)
+          const innerScale = 0.6;
+          const vInner = v.map(pt => [pt[0] * innerScale, pt[1] * innerScale, pt[2] * innerScale]);
+          const projInner = vInner.map(pt => project(pt[0], pt[1], pt[2]));
+          ctx.strokeStyle = '#2F80ED';
+          ctx.lineWidth = 1.2;
+          edges.forEach(([i1, i2]) => {
+            ctx.beginPath();
+            ctx.moveTo(projInner[i1][0], projInner[i1][1]);
+            ctx.lineTo(projInner[i2][0], projInner[i2][1]);
+            ctx.stroke();
+          });
+
+          // Deterministic orbital particles (Fibonacci sphere distribution)
+          const numPts = 160;
+          for (let i = 0; i < numPts; i++) {
+            const y_pos = 1 - (i / (numPts - 1)) * 2;
+            const r_at_y = Math.sqrt(Math.max(0, 1 - y_pos * y_pos));
+            const phi = i * 2.399963229728653;
+            const r = 1.6 + (i % 5) * 0.08;
+            const px = r * Math.cos(phi) * r_at_y;
+            const py = r * y_pos;
+            const pz = r * Math.sin(phi) * r_at_y;
+            const [sx, sy] = project(px, py, pz);
+            ctx.beginPath();
+            ctx.arc(sx, sy, (i % 3 === 0) ? 2.0 : 1.2, 0, Math.PI * 2);
+            ctx.fillStyle = (i % 4 === 0) ? '#38BDF8' : '#00D2B4';
+            ctx.fill();
+          }
+
+          // Diagnostic HUD Overlays
+          ctx.font = '10px "Cascadia Code", Consolas, monospace';
+          ctx.fillStyle = '#94A3B8';
+          ctx.fillText('RADAR: 0.38ms C-ABI', 16, h - 28);
+          ctx.fillText('STATUS: FAIL-CLOSED NOMINAL', 16, h - 14);
+          ctx.fillStyle = '#00D2B4';
+          ctx.fillText('259 ENFORCED TARGETS', w - 150, h - 14);
+
+          ctx.restore();
         };
-        animate();
+
+        // Try Three.js WebGL if available
+        let webglSuccess = false;
+        if (typeof THREE !== 'undefined') {
+          try {
+            const scene = new THREE.Scene();
+            const w = canvas.clientWidth || 480;
+            const h = canvas.clientHeight || 480;
+            const camera = new THREE.PerspectiveCamera(45, w / h, 0.1, 100);
+            camera.position.set(0, 0, 5);
+
+            const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+            renderer.setSize(w, h, false);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+
+            const coreGroup = new THREE.Group();
+            scene.add(coreGroup);
+
+            const geomOcta = new THREE.OctahedronGeometry(1.2, 1);
+            const matOcta = new THREE.MeshStandardMaterial({
+              color: 0x00D2B4,
+              wireframe: true,
+              transparent: true,
+              opacity: 0.6,
+              roughness: 0.2,
+              metalness: 0.8
+            });
+            coreGroup.add(new THREE.Mesh(geomOcta, matOcta));
+
+            const geomCore = new THREE.IcosahedronGeometry(0.7, 0);
+            const matCore = new THREE.MeshPhysicalMaterial({
+              color: 0x2F80ED,
+              emissive: 0x00D2B4,
+              emissiveIntensity: 0.4,
+              roughness: 0.1,
+              metalness: 0.9,
+              clearcoat: 1.0,
+              clearcoatRoughness: 0.1
+            });
+            const meshCore = new THREE.Mesh(geomCore, matCore);
+            coreGroup.add(meshCore);
+
+            // Deterministic orbital particles (Fibonacci sphere distribution)
+            const particleCount = 200;
+            const particleGeom = new THREE.BufferGeometry();
+            const positions = new Float32Array(particleCount * 3);
+            for (let i = 0; i < particleCount; i++) {
+              const y_pos = 1 - (i / (particleCount - 1)) * 2;
+              const r_at_y = Math.sqrt(Math.max(0, 1 - y_pos * y_pos));
+              const phi = i * 2.399963229728653;
+              const r = 1.8 + (i % 5) * 0.08;
+              positions[i * 3] = r * Math.cos(phi) * r_at_y;
+              positions[i * 3 + 1] = r * y_pos;
+              positions[i * 3 + 2] = r * Math.sin(phi) * r_at_y;
+            }
+            particleGeom.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            const particleMat = new THREE.PointsMaterial({
+              color: 0x00D2B4,
+              size: 0.04,
+              transparent: true,
+              opacity: 0.8
+            });
+            const particleSystem = new THREE.Points(particleGeom, particleMat);
+            coreGroup.add(particleSystem);
+
+            scene.add(new THREE.AmbientLight(0xffffff, 0.7));
+            const pointLight = new THREE.PointLight(0x00D2B4, 2, 10);
+            pointLight.position.set(3, 3, 3);
+            scene.add(pointLight);
+
+            const blueLight = new THREE.PointLight(0x2F80ED, 2, 10);
+            blueLight.position.set(-3, -3, 2);
+            scene.add(blueLight);
+
+            coreGroup.rotation.y = 0.45;
+            coreGroup.rotation.x = 0.25;
+            meshCore.rotation.x = 0.15;
+
+            renderer.render(scene, camera);
+            webglSuccess = true;
+
+            let isDragging = false;
+            let prevMouseX = 0, prevMouseY = 0;
+            let targetRotX = 0.25, targetRotY = 0.45;
+
+            canvas.addEventListener('mousedown', (e) => {
+              isDragging = true;
+              prevMouseX = e.clientX;
+              prevMouseY = e.clientY;
+            });
+            window.addEventListener('mouseup', () => isDragging = false);
+            canvas.addEventListener('mousemove', (e) => {
+              if (!isDragging) return;
+              targetRotY += (e.clientX - prevMouseX) * 0.005;
+              targetRotX += (e.clientY - prevMouseY) * 0.005;
+              prevMouseX = e.clientX;
+              prevMouseY = e.clientY;
+            });
+
+            const handleResize = () => {
+              const curW = canvas.clientWidth || 480;
+              const curH = canvas.clientHeight || 480;
+              renderer.setSize(curW, curH, false);
+              renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+              camera.aspect = curW / curH;
+              camera.updateProjectionMatrix();
+              renderer.render(scene, camera);
+            };
+            window.addEventListener('resize', handleResize);
+
+            if (!prefersReducedMotion) {
+              const animate = () => {
+                coreGroup.rotation.y += (targetRotY - coreGroup.rotation.y) * 0.05 + 0.003;
+                coreGroup.rotation.x += (targetRotX - coreGroup.rotation.x) * 0.05;
+                particleSystem.rotation.y -= 0.002;
+                meshCore.rotation.x += 0.004;
+                renderer.render(scene, camera);
+                requestAnimationFrame(animate);
+              };
+              requestAnimationFrame(animate);
+            }
+          } catch (err) {
+            console.warn('WebGL initialization failed, falling back to deterministic 2D canvas:', err);
+            webglSuccess = false;
+          }
+        }
+
+        if (!webglSuccess) {
+          render2D();
+          window.addEventListener('resize', render2D);
+        }
+
+        document.body.setAttribute('data-rendered', 'true');
+        window.__RENDER_READY__ = true;
+        window.__CANVAS_RENDERED__ = true;
       };
 
       // ==========================================
-      // 2. LAB 3D SCENE (Full Interactive Telemetry)
+      // 2. LAB 3D SCENE (Interactive Telemetry)
       // ==========================================
       const initLab3D = () => {
         const canvas = document.getElementById('lab-3d-canvas');
         if (!canvas) return;
 
-        const scene = new THREE.Scene();
-        const camera = new THREE.PerspectiveCamera(45, canvas.clientWidth / canvas.clientHeight, 0.1, 100);
-        camera.position.set(0, 1.5, 6);
+        if (typeof THREE === 'undefined') return;
 
-        const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
-        renderer.setSize(canvas.clientWidth, canvas.clientHeight, false);
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        try {
+          const scene = new THREE.Scene();
+          const curW = canvas.clientWidth || 600;
+          const curH = canvas.clientHeight || 400;
+          const camera = new THREE.PerspectiveCamera(45, curW / curH, 0.1, 100);
+          camera.position.set(0, 1.5, 6);
 
-        const labGroup = new THREE.Group();
-        scene.add(labGroup);
+          const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+          renderer.setSize(curW, curH, false);
+          renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
 
-        // Torus Wireframe Shield Layer
-        const torusGeom = new THREE.TorusGeometry(1.8, 0.3, 16, 60);
-        const torusMat = new THREE.MeshStandardMaterial({
-          color: 0x00D2B4,
-          wireframe: true,
-          roughness: 0.3,
-          metalness: 0.8
-        });
-        const torusMesh = new THREE.Mesh(torusGeom, torusMat);
-        torusMesh.rotation.x = Math.PI / 2;
-        labGroup.add(torusMesh);
+          const labGroup = new THREE.Group();
+          scene.add(labGroup);
 
-        // Core Dodecahedron (Diagnostic Hub)
-        const dGeom = new THREE.DodecahedronGeometry(1.0, 0);
-        const dMat = new THREE.MeshPhysicalMaterial({
-          color: 0x123A72,
-          emissive: 0x00D2B4,
-          emissiveIntensity: 0.3,
-          roughness: 0.1,
-          metalness: 0.8,
-          clearcoat: 1.0
-        });
-        const dMesh = new THREE.Mesh(dGeom, dMat);
-        labGroup.add(dMesh);
-
-        // Surrounding diagnostic grid plane
-        const gridHelper = new THREE.GridHelper(8, 16, 0x00D2B4, 0x162030);
-        gridHelper.position.y = -1.5;
-        scene.add(gridHelper);
-
-        // Lighting
-        scene.add(new THREE.AmbientLight(0xffffff, 0.8));
-        const dirLight = new THREE.DirectionalLight(0x00D2B4, 1.5);
-        dirLight.position.set(4, 5, 3);
-        scene.add(dirLight);
-
-        let autoSpin = true;
-        let wireframeActive = true;
-
-        // UI Controls
-        const btnWireframe = document.getElementById('btn-toggle-wireframe');
-        const btnPulse = document.getElementById('btn-trigger-pulse');
-        const btnSpin = document.getElementById('btn-toggle-rotation');
-        const btnReset = document.getElementById('btn-reset-view');
-        const statusText = document.getElementById('telemetry-status-text');
-
-        if (btnWireframe) {
-          btnWireframe.addEventListener('click', () => {
-            wireframeActive = !wireframeActive;
-            torusMat.wireframe = wireframeActive;
-            dMat.wireframe = !wireframeActive;
-            if (statusText) statusText.innerText = wireframeActive ? "WIREFRAME ACTIVE" : "SHADED SOLID";
+          const torusGeom = new THREE.TorusGeometry(1.8, 0.3, 16, 60);
+          const torusMat = new THREE.MeshStandardMaterial({
+            color: 0x00D2B4,
+            wireframe: true,
+            roughness: 0.3,
+            metalness: 0.8
           });
-        }
+          const torusMesh = new THREE.Mesh(torusGeom, torusMat);
+          torusMesh.rotation.x = Math.PI / 2;
+          labGroup.add(torusMesh);
 
-        if (btnPulse) {
-          btnPulse.addEventListener('click', () => {
-            if (statusText) statusText.innerText = "SWEEP IN PROGRESS...";
-            gsap.to(dMesh.scale, {
-              x: 1.4, y: 1.4, z: 1.4,
-              duration: 0.3,
-              yoyo: true,
-              repeat: 1,
-              ease: "power2.out",
-              onComplete: () => {
-                if (statusText) statusText.innerText = "SWEEP VERIFIED (0 ERRORS)";
-              }
-            });
+          const dGeom = new THREE.DodecahedronGeometry(1.0, 0);
+          const dMat = new THREE.MeshPhysicalMaterial({
+            color: 0x123A72,
+            emissive: 0x00D2B4,
+            emissiveIntensity: 0.3,
+            roughness: 0.1,
+            metalness: 0.8,
+            clearcoat: 1.0
           });
-        }
+          const dMesh = new THREE.Mesh(dGeom, dMat);
+          labGroup.add(dMesh);
 
-        if (btnSpin) {
-          btnSpin.addEventListener('click', () => {
-            autoSpin = !autoSpin;
-            if (statusText) statusText.innerText = autoSpin ? "AUTO-SPIN RESUMED" : "MANUAL PAUSE";
-          });
-        }
+          const gridHelper = new THREE.GridHelper(8, 16, 0x00D2B4, 0x162030);
+          gridHelper.position.y = -1.5;
+          scene.add(gridHelper);
 
-        if (btnReset) {
-          btnReset.addEventListener('click', () => {
-            gsap.to(labGroup.rotation, { x: 0, y: 0, z: 0, duration: 0.6, ease: "power2.inOut" });
-            if (statusText) statusText.innerText = "ORIENTATION ALIGNED";
-          });
-        }
+          scene.add(new THREE.AmbientLight(0xffffff, 0.8));
+          const dirLight = new THREE.DirectionalLight(0x00D2B4, 1.5);
+          dirLight.position.set(4, 5, 3);
+          scene.add(dirLight);
 
-        // Mouse drag interaction
-        let isDraggingLab = false;
-        let prevX = 0, prevY = 0;
-        canvas.addEventListener('mousedown', (e) => { isDraggingLab = true; prevX = e.clientX; prevY = e.clientY; });
-        window.addEventListener('mouseup', () => isDraggingLab = false);
-        canvas.addEventListener('mousemove', (e) => {
-          if (!isDraggingLab) return;
-          const dx = e.clientX - prevX;
-          const dy = e.clientY - prevY;
-          labGroup.rotation.y += dx * 0.005;
-          labGroup.rotation.x += dy * 0.005;
-          prevX = e.clientX;
-          prevY = e.clientY;
-        });
-
-        // Resize
-        const handleLabResize = () => {
-          const w = canvas.clientWidth;
-          const h = canvas.clientHeight;
-          if (w === 0 || h === 0) return;
-          renderer.setSize(w, h, false);
-          renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-          camera.aspect = w / h;
-          camera.updateProjectionMatrix();
-        };
-        window.addEventListener('resize', handleLabResize);
-        handleLabResize();
-
-        // Loop
-        const animateLab = () => {
-          if (autoSpin && !prefersReducedMotion && !isDraggingLab) {
-            labGroup.rotation.y += 0.004;
-            torusMesh.rotation.z += 0.006;
-          }
           renderer.render(scene, camera);
-          requestAnimationFrame(animateLab);
-        };
-        animateLab();
+
+          let autoSpin = true;
+          let wireframeActive = true;
+
+          const btnWireframe = document.getElementById('btn-toggle-wireframe');
+          const btnPulse = document.getElementById('btn-trigger-pulse');
+          const btnSpin = document.getElementById('btn-toggle-rotation');
+          const btnReset = document.getElementById('btn-reset-view');
+          const statusText = document.getElementById('telemetry-status-text');
+
+          if (btnWireframe) {
+            btnWireframe.addEventListener('click', () => {
+              wireframeActive = !wireframeActive;
+              torusMat.wireframe = wireframeActive;
+              dMat.wireframe = !wireframeActive;
+              if (statusText) statusText.innerText = wireframeActive ? "WIREFRAME ACTIVE" : "SHADED SOLID";
+            });
+          }
+
+          if (btnPulse && typeof gsap !== 'undefined') {
+            btnPulse.addEventListener('click', () => {
+              if (statusText) statusText.innerText = "SWEEP IN PROGRESS...";
+              gsap.to(dMesh.scale, {
+                x: 1.4, y: 1.4, z: 1.4,
+                duration: 0.3,
+                yoyo: true,
+                repeat: 1,
+                ease: "power2.out",
+                onComplete: () => {
+                  if (statusText) statusText.innerText = "SWEEP VERIFIED (0 ERRORS)";
+                }
+              });
+            });
+          }
+
+          if (btnSpin) {
+            btnSpin.addEventListener('click', () => {
+              autoSpin = !autoSpin;
+              if (statusText) statusText.innerText = autoSpin ? "AUTO-SPIN RESUMED" : "MANUAL PAUSE";
+            });
+          }
+
+          if (btnReset && typeof gsap !== 'undefined') {
+            btnReset.addEventListener('click', () => {
+              gsap.to(labGroup.rotation, { x: 0, y: 0, z: 0, duration: 0.6, ease: "power2.inOut" });
+              if (statusText) statusText.innerText = "ORIENTATION ALIGNED";
+            });
+          }
+
+          let isDraggingLab = false;
+          let prevX = 0, prevY = 0;
+          canvas.addEventListener('mousedown', (e) => { isDraggingLab = true; prevX = e.clientX; prevY = e.clientY; });
+          window.addEventListener('mouseup', () => isDraggingLab = false);
+          canvas.addEventListener('mousemove', (e) => {
+            if (!isDraggingLab) return;
+            labGroup.rotation.y += (e.clientX - prevX) * 0.005;
+            labGroup.rotation.x += (e.clientY - prevY) * 0.005;
+            prevX = e.clientX;
+            prevY = e.clientY;
+          });
+
+          const handleLabResize = () => {
+            const w = canvas.clientWidth || 600;
+            const h = canvas.clientHeight || 400;
+            renderer.setSize(w, h, false);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+            camera.aspect = w / h;
+            camera.updateProjectionMatrix();
+            renderer.render(scene, camera);
+          };
+          window.addEventListener('resize', handleLabResize);
+
+          if (!prefersReducedMotion) {
+            const animateLab = () => {
+              if (autoSpin && !isDraggingLab) {
+                labGroup.rotation.y += 0.004;
+                torusMesh.rotation.z += 0.006;
+              }
+              renderer.render(scene, camera);
+              requestAnimationFrame(animateLab);
+            };
+            requestAnimationFrame(animateLab);
+          }
+        } catch (err) {
+          console.warn('Lab WebGL initialization failed:', err);
+        }
       };
 
       initHero3D();
       initLab3D();
+
 
       // ==========================================
       // 3. GSAP SCROLL ANIMATIONS

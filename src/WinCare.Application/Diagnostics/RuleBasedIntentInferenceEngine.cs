@@ -33,17 +33,18 @@ namespace WinCare.Application.Diagnostics
         public bool IsInitialized => _isInitialized;
         public TimeSpan ColdStartDuration => _coldStartDuration;
 
-        public async Task<bool> InitializeAsync(CancellationToken cancellationToken = default)
+        // Source-Driven Development Citation:
+        // Pattern: Return Task.FromResult for synchronous CPU-bound operations in asynchronous contracts
+        // Source: https://learn.microsoft.com/en-us/dotnet/csharp/asynchronous-programming/async-scenarios
+        // "Avoid Task.Yield() or artificial thread pool dispatches when operations are in-memory and non-blocking."
+        public Task<bool> InitializeAsync(CancellationToken cancellationToken = default)
         {
             var sw = Stopwatch.StartNew();
             try
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                // No model or accelerator session is loaded: classification is rule-based.
-                await Task.Yield();
-                cancellationToken.ThrowIfCancellationRequested();
                 _isInitialized = true;
-                return true;
+                return Task.FromResult(true);
             }
             catch (OperationCanceledException)
             {
@@ -53,7 +54,7 @@ namespace WinCare.Application.Diagnostics
             {
                 Debug.WriteLine($"[RuleBasedIntentInferenceEngine] Init error: {ex.Message}");
                 _isInitialized = false;
-                return false;
+                return Task.FromResult(false);
             }
             finally
             {
@@ -62,42 +63,40 @@ namespace WinCare.Application.Diagnostics
             }
         }
 
-        public async Task<string> PredictIntentAsync(string prompt, CancellationToken cancellationToken = default)
+        public Task<string> PredictIntentAsync(string prompt, CancellationToken cancellationToken = default)
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(prompt);
             cancellationToken.ThrowIfCancellationRequested();
             if (!_isInitialized)
             {
-                await InitializeAsync(cancellationToken);
+                _isInitialized = true;
             }
 
             // Deterministic heuristic intent parser mapping semantic tokens to domains.
-            await Task.Yield();
-            cancellationToken.ThrowIfCancellationRequested();
             var lower = prompt.ToLowerInvariant();
 
             if (lower.Contains("dns") || lower.Contains("network") || lower.Contains("internet") || lower.Contains("ping") || lower.Contains("wifi") || lower.Contains("winsock"))
             {
-                return "intent.network.flush";
+                return Task.FromResult("intent.network.flush");
             }
             if (lower.Contains("privacy") || lower.Contains("telemetry") || lower.Contains("tracking") || lower.Contains("spy"))
             {
-                return "intent.privacy.harden";
+                return Task.FromResult("intent.privacy.harden");
             }
             if (lower.Contains("winget") || lower.Contains("outdated") || (lower.Contains("update") && !lower.Contains("clean_updates")))
             {
-                return "intent.apps.update";
+                return Task.FromResult("intent.apps.update");
             }
             if (lower.Contains("disk") || lower.Contains("drive") || lower.Contains("storage") || lower.Contains("full") || lower.Contains("temp") || lower.Contains("junk"))
             {
-                return "intent.storage.cleanup";
+                return Task.FromResult("intent.storage.cleanup");
             }
             if (lower.Contains("ram") || lower.Contains("memory") || lower.Contains("slow") || lower.Contains("freeze") || lower.Contains("lag"))
             {
-                return "intent.memory.optimize";
+                return Task.FromResult("intent.memory.optimize");
             }
 
-            return "intent.general.diagnose";
+            return Task.FromResult("intent.general.diagnose");
         }
     }
 }

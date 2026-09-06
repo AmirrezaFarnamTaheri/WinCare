@@ -3,7 +3,7 @@
   "diagram_type": "architecture",
   "meta": {
     "title": "WinCare Platform Architecture",
-    "subtitle": "WinUI 3 Presentation, Fail-Closed Command Governance, ONNX Anomaly Inference, and Rust 2024 Core",
+    "subtitle": "WinUI 3 Presentation, Fail-Closed Command Governance, Rule-Based Diagnostics, and Rust 2024 Core",
     "output": "docs/architecture.html",
     "visual_preset": "classic",
     "animation": "none",
@@ -22,16 +22,16 @@
         "note": "Follow user requests through preflight validation, two-phase review, and native C ABI execution."
       },
       {
-        "id": "diagnostics-ml",
-        "label": "Diagnostics and ML anomaly pipeline",
+        "id": "diagnostics-intent",
+        "label": "Diagnostics and symptom intent pipeline",
         "focus": [
           "winui_shell",
           "dispatcher",
-          "onnx_engine",
+          "intent_engine",
           "wincare_guard",
           "journal_store"
         ],
-        "note": "Local DirectML-accelerated ONNX inference evaluates system health and logs receipts to the activity journal."
+        "note": "Deterministic symptom rule inference evaluates system health and logs receipts to the activity journal."
       },
       {
         "id": "plugin-governance",
@@ -42,7 +42,7 @@
           "domain_catalog",
           "dispatcher"
         ],
-        "note": "External plugins are verified by SHA-256 digests and isolated under strict process bounds."
+        "note": "External plugins are verified by SHA-256 digests and isolated under in-process AssemblyLoadContext boundaries."
       }
     ]
   },
@@ -120,8 +120,8 @@
     {
       "id": "spectre_tui",
       "type": "frontend",
-      "label": "Spectre.Console TUI",
-      "sublabel": "Terminal control & diagnostic REPL",
+      "label": "Terminal REPL (Concept)",
+      "sublabel": "Archived design prototype",
       "pos": [
         40,
         415
@@ -191,7 +191,7 @@
       "id": "plugin_host",
       "type": "backend",
       "label": "Dynamic Plugin Host",
-      "sublabel": "Process sandbox, capability bounds",
+      "sublabel": "In-process ALC, manifest admission",
       "pos": [
         250,
         615
@@ -202,10 +202,10 @@
       ]
     },
     {
-      "id": "onnx_engine",
+      "id": "intent_engine",
       "type": "backend",
-      "label": "ONNX Runtime Engine",
-      "sublabel": "DirectML acceleration, anomaly eval",
+      "label": "Rule-Based Intent Engine",
+      "sublabel": "Deterministic symptom classifier",
       "pos": [
         460,
         415
@@ -228,7 +228,7 @@
         "domain_catalog",
         "journal_store",
         "plugin_host",
-        "onnx_engine"
+        "intent_engine"
       ],
       "pad": 18
     },
@@ -298,12 +298,12 @@
     },
     {
       "from": "infra_runner",
-      "to": "onnx_engine",
+      "to": "intent_engine",
       "route": "orthogonal-v",
       "variant": "emphasis"
     },
     {
-      "from": "onnx_engine",
+      "from": "intent_engine",
       "to": "journal_store",
       "route": "orthogonal-v",
       "variant": "emphasis"
@@ -321,7 +321,7 @@
       "title": "Presentation",
       "items": [
         "WinUI 3 desktop shell with Mica backdrop and XAML controls",
-        "Spectre.Console terminal interface for headless operation",
+        "Pure WinUI 3 desktop shell with native accessibility",
         "Zero PowerShell dependencies in native runtime distribution"
       ]
     },
@@ -331,7 +331,7 @@
       "items": [
         "Fail-closed CommandDispatcher requiring preflight validation",
         "Two-phase review and apply lifecycle for sensitive mutations",
-        "Dynamic plugin isolation bounded by BoundedProcessRunner"
+        "In-process collectible AssemblyLoadContext and manifest admission"
       ]
     },
     {
@@ -339,7 +339,7 @@
       "title": "Native Engine",
       "items": [
         "Rust 2024 C ABI dynamic library for high-speed bounded operations",
-        "Local ONNX Runtime with DirectML GPU acceleration",
+        "Deterministic rule-based symptom intent classifier",
         "Windows Job Objects for strict memory and CPU throttling"
       ]
     }

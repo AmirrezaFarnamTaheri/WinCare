@@ -32,12 +32,6 @@ CHECKS = [
     ("Python repository tests", [PYTHON, "-m", "unittest", "discover", "-s", "tests", "-t", ".", "-v"], 300),
 ]
 
-if (ROOT / "src/WinCare/WinCare.psm1").is_file():
-    CHECKS.append((
-        "RC source finalization",
-        [PYTHON, "tools/finalize_native_release.py", "--version", _get_product_version(), "--output", "artifacts/"],
-        300,
-    ))
 
 def main() -> int:
     if sys.version_info < (3, 11):

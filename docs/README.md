@@ -7,7 +7,7 @@ This directory is the product-facing and engineering reference for WinCare. Star
 | Document | Purpose |
 |---|---|
 | [User guide](User-Guide.md) | Install safely, navigate the app, understand approvals, and troubleshoot. |
-| [Interface screenshots](Screenshots.md) | Runtime captures from v2.5.0-rc5 alongside the original design concepts. |
+| [Interface screenshots](Screenshots.md) | Runtime captures and interactive showcase previews for v2.5.0-rc5 alongside original design concepts. |
 | [Release page](https://github.com/AmirrezaFarnamTaheri/WinCare/releases) | Current x64 and ARM64 packages, portable archives, certificates, and release notes. |
 
 ## Build or review it
@@ -22,6 +22,9 @@ This directory is the product-facing and engineering reference for WinCare. Star
 
 ## Reference material
 
+- [Interactive Web Showcase](showcase.html) — interactive diagnostic simulation and telemetry visualization.
+- [Architecture Blueprint](architecture.html) — C4 model interactive governance diagram matching canonical architecture.
+- [Terminal REPL Preview](terminal-preview.html) — historical terminal exploration concept (WinCare ships exclusively as a WinUI 3 desktop shell).
 - [Command parity ledger](migration/command-parity-ledger.md) — native catalog accounting and evidence limits.
 - [Windows validation](migration/windows-validation.md) — Windows packaging and runtime-validation procedures.
 - [Design system](../DESIGN.md) — visual tokens, accessibility, and UI conventions.

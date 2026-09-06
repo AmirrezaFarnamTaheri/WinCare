@@ -8,8 +8,12 @@ namespace WinCare.Application.Commands;
 /// </summary>
 public static class SequentialCommandProbeRunner
 {
+    // Source-Driven Development Citation:
+    // Pattern: Dependency Inversion - Program to an interface, not an implementation
+    // Source: https://learn.microsoft.com/en-us/dotnet/csharp/fundamentals/types/interfaces
+    // "Interfaces define contracts that decouple callers from specific concrete implementations."
     public static async Task<IReadOnlyList<CommandResult>> RunPreviewsAsync(
-        CommandDispatcher dispatcher,
+        ICommandDispatcher dispatcher,
         IReadOnlyList<string> commandIds,
         TimeSpan perProbeBudget,
         CancellationToken cancellationToken = default)

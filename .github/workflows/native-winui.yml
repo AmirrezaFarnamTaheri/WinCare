@@ -26,6 +26,8 @@ jobs:
         run: python -m unittest discover -s tests/native -v
       - name: Run plugin CLI tests
         run: python tests/tools/test_plugin_cli.py -v
+      - name: Verify documentation screenshots integrity
+        run: python tools/capture_screenshots.py --verify-only
       - name: Extract product version
         shell: bash
         run: |
@@ -290,6 +292,16 @@ jobs:
           mkdir -p artifacts/release
           cp artifacts/portable/${{ matrix.runtime }}/WinCare.App.exe artifacts/release/WinCare-v${VERSION}-${{ matrix.platform }}.exe
           python tools/package_portable.py artifacts/portable/${{ matrix.runtime }} artifacts/release/WinCare-v${VERSION}-${{ matrix.platform }}-portable.zip
+      - name: Capture automated showcase screenshots
+        if: matrix.platform == 'x64'
+        shell: bash
+        run: python tools/capture_screenshots.py
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: matrix.platform == 'x64'
+        with:
+          name: WinCare-screenshots
+          path: docs/images/*.png
+          if-no-files-found: error
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: WinCare-${{ matrix.platform }}
@@ -303,7 +315,7 @@ jobs:
 
   release-gate:
     needs: [verify-source, rust, managed-and-package]
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: startsWith(github.ref, 'refs/tags/v') && github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -330,14 +342,15 @@ jobs:
           prefix = props.find('.//VersionPrefix').text
           suffix = props.find('.//VersionSuffix').text if props.find('.//VersionSuffix') is not None else ''
           expected = f'v{prefix}-{suffix}' if suffix else f'v{prefix}'
-          actual = os.environ['RELEASE_TAG']
+          actual = os.environ.get('RELEASE_TAG', '')
+          assert actual.startswith('v'), f"Triggered ref '{actual}' is not a valid version tag ('v*')."
           assert actual == expected, f'Release tag {actual} does not match product version {expected}'
+          is_prerelease = any(x in expected for x in ('-rc', '-beta', '-alpha'))
+          flags = '--prerelease' if is_prerelease else '--latest'
+          with open(os.environ['GITHUB_ENV'], 'a', encoding='utf-8') as f:
+              f.write(f'RELEASE_TAG={expected}\n')
+              f.write(f'RELEASE_FLAGS={flags}\n')
           PY
-          if [[ "$RELEASE_TAG" == *"-rc"* || "$RELEASE_TAG" == *"-beta"* || "$RELEASE_TAG" == *"-alpha"* ]]; then
-            echo "RELEASE_FLAGS=--prerelease" >> $GITHUB_ENV
-          else
-            echo "RELEASE_FLAGS=--latest" >> $GITHUB_ENV
-          fi
       - name: Prepare release assets
         run: |
           python tools/stage_release_assets.py --version "$RELEASE_TAG"
@@ -352,8 +365,16 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           if gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            echo "Error: Release '$RELEASE_TAG' already exists. Published releases are immutable and will not be overwritten."
-            exit 1
+            echo "Release '$RELEASE_TAG' already exists. Checking and uploading missing assets..."
+            for asset in release_assets/*; do
+              asset_name=$(basename "$asset")
+              if gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --json assets --jq ".assets.[].name" | grep -qx "$asset_name"; then
+                echo "Asset '$asset_name' already present in release '$RELEASE_TAG', skipping."
+              else
+                echo "Uploading '$asset_name' to release '$RELEASE_TAG'..."
+                gh release upload "$RELEASE_TAG" "$asset" --repo "$GITHUB_REPOSITORY"
+              fi
+            done
           else
             gh release create "$RELEASE_TAG" release_assets/* \
               --title "WinCare $RELEASE_TAG" \
