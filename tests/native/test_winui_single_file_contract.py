@@ -14,6 +14,10 @@ class WinUiSingleFileContractTests(unittest.TestCase):
             "<IncludeAllContentForSelfExtract Condition=\"'$(PublishSingleFile)' == 'true'\">true</IncludeAllContentForSelfExtract>",
             project,
         )
+        self.assertIn(
+            "<ProjectPriFileName Condition=\"'$(PublishSingleFile)' == 'true'\">resources.pri</ProjectPriFileName>",
+            project,
+        )
 
         profiles = root / "src/WinCare.App/Properties/PublishProfiles"
         for name in ("portable-x64.pubxml", "portable-ARM64.pubxml"):
