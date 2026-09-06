@@ -119,17 +119,26 @@
                                 Severity="Informational"
                                 Title="Migration status"
                                 Message="A tool becomes runnable when its native implementation is available. Behavior parity remains visible in Advanced details." />
+                            <InfoBar
+                                IsOpen="{x:Bind ViewModel.Execution.IsDestructiveTool, Mode=OneWay}"
+                                IsClosable="False"
+                                Severity="Error"
+                                Title="Destructive Operation"
+                                Message="This command makes irreversible system changes. A preflight preview and explicit review approval are strictly required before execution."
+                                AutomationProperties.AutomationId="DestructiveToolWarning"
+                                AutomationProperties.Name="Destructive tool warning" />
                             <ToggleSwitch
                                 Header="Approve mutating execution"
                                 OffContent="Preview only"
                                 OnContent="Review approved"
                                 IsEnabled="{x:Bind ViewModel.Execution.CanApproveReview, Mode=OneWay}"
                                 IsOn="{x:Bind ViewModel.Execution.IsReviewApproved, Mode=TwoWay}"
-                                Visibility="{x:Bind local:AllToolsPage.BoolToVisibility(ViewModel.Execution.IsMutatingTool), Mode=OneWay}"
+                                Visibility="{x:Bind local:AllToolsPage.BoolToVisibility(ViewModel.Execution.RequiresApprovalSwitch), Mode=OneWay}"
                                 AutomationProperties.AutomationId="ReviewApprovedToggle"
                                 AutomationProperties.Name="Approve mutating command execution after preview" />
                             <Expander
-                                Header="Command parameters"
+                                Header="Advanced Parameters (JSON)"
+                                IsExpanded="False"
                                 HorizontalAlignment="Stretch"
                                 HorizontalContentAlignment="Stretch"
                                 AutomationProperties.Name="Command parameters JSON">

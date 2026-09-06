@@ -2,47 +2,47 @@
   "schema_version": 1,
   "diagram_type": "architecture",
   "meta": {
-    "title": "WinCare Platform Architecture",
-    "subtitle": "WinUI 3 Presentation, Fail-Closed Command Governance, Rule-Based Diagnostics, and Rust 2024 Core",
+    "title": "WinCare Modern Architecture",
+    "subtitle": "WinUI 3 Progressive Disclosure, Tri-Tier Safety Governance, Microsecond Rust Core, and Dual Packaging",
     "output": "docs/architecture.html",
     "visual_preset": "classic",
     "animation": "none",
     "quality_profile": "standard",
     "views": [
       {
-        "id": "command-lifecycle",
-        "label": "Command execution lifecycle",
+        "id": "daily-flow",
+        "label": "1-Click Everyday Maintenance Flow",
         "focus": [
           "winui_shell",
           "dispatcher",
-          "infra_runner",
+          "probe_runner",
           "wincare_core",
           "windows_os"
         ],
-        "note": "Follow user requests through preflight validation, two-phase review, and native C ABI execution."
+        "note": "1-click daily actions route through tri-tier safety validation and execute in microseconds via native Rust."
       },
       {
-        "id": "diagnostics-intent",
-        "label": "Diagnostics and symptom intent pipeline",
+        "id": "power-elevation",
+        "label": "Power-User Inspection & Telemetry",
         "focus": [
           "winui_shell",
-          "dispatcher",
-          "intent_engine",
+          "domain_catalog",
+          "snapshot_store",
           "wincare_guard",
           "journal_store"
         ],
-        "note": "Deterministic symptom rule inference evaluates system health and logs receipts to the activity journal."
+        "note": "Deep inspector discloses exact microsecond probe timings, pre-mutation snapshots, and diff journals."
       },
       {
-        "id": "plugin-governance",
-        "label": "Plugin admission & isolation",
+        "id": "dual-packaging",
+        "label": "Dual Packaging & Trimming Pipeline",
         "focus": [
-          "plugin_cli",
-          "plugin_host",
-          "domain_catalog",
-          "dispatcher"
+          "winui_shell",
+          "wincare_core",
+          "pkg_portable",
+          "pkg_framework"
         ],
-        "note": "External plugins are verified by SHA-256 digests and isolated under in-process AssemblyLoadContext boundaries."
+        "note": "Distribution targets: ~22 MB zero-dependency portable executable vs ~4–6 MB framework-dependent installer."
       }
     ]
   },
@@ -50,8 +50,9 @@
     {
       "id": "winui_shell",
       "type": "frontend",
-      "label": "WinUI 3 Desktop Shell",
-      "sublabel": "Mica backdrop, XAML views, AI Doctor",
+      "label": "WinUI 3 Cockpit",
+      "sublabel": "1-Click Surface + Deep Inspector",
+      "tag": "Progressive Disclosure",
       "pos": [
         40,
         205
@@ -65,7 +66,8 @@
       "id": "dispatcher",
       "type": "backend",
       "label": "Command Dispatcher",
-      "sublabel": "Fail-closed routing, two-phase apply",
+      "sublabel": "Tri-Tier Safety Admission",
+      "tag": "Safe • Mod • Destruct",
       "pos": [
         250,
         205
@@ -76,10 +78,11 @@
       ]
     },
     {
-      "id": "infra_runner",
+      "id": "probe_runner",
       "type": "backend",
-      "label": "Bounded Process Runner",
-      "sublabel": "Timeout limits, PII sanitization",
+      "label": "Parallel Probe Runner",
+      "sublabel": "Bounded Async Concurrency",
+      "tag": "Zero-Alloc P/Invoke",
       "pos": [
         460,
         205
@@ -93,7 +96,8 @@
       "id": "wincare_core",
       "type": "security",
       "label": "Rust Core Engine",
-      "sublabel": "C ABI DLL: sys_info, dir_size, sha256",
+      "sublabel": "C-ABI DLL (Edition 2024)",
+      "tag": "opt-level=3, LTO",
       "pos": [
         670,
         205
@@ -107,7 +111,8 @@
       "id": "windows_os",
       "type": "external",
       "label": "Windows OS & Kernel",
-      "sublabel": "Job Objects, Win32 APIs, Toast XML",
+      "sublabel": "Win32, NT APIs, FileSystem",
+      "tag": "Direct Kernel / Win32",
       "pos": [
         880,
         205
@@ -118,10 +123,10 @@
       ]
     },
     {
-      "id": "spectre_tui",
-      "type": "frontend",
-      "label": "Terminal REPL (Concept)",
-      "sublabel": "Archived design prototype",
+      "id": "intent_engine",
+      "type": "backend",
+      "label": "Symptom Resolver",
+      "sublabel": "Deterministic Problem Triage",
       "pos": [
         40,
         415
@@ -135,9 +140,37 @@
       "id": "domain_catalog",
       "type": "database",
       "label": "Command Catalog",
-      "sublabel": "259 frozen typed definitions",
+      "sublabel": "Typed Definitions & RiskTiers",
       "pos": [
         250,
+        415
+      ],
+      "size": [
+        165,
+        68
+      ]
+    },
+    {
+      "id": "snapshot_store",
+      "type": "database",
+      "label": "Snapshot & Rollback",
+      "sublabel": "Pre-Mutation Restore Points",
+      "pos": [
+        460,
+        415
+      ],
+      "size": [
+        165,
+        68
+      ]
+    },
+    {
+      "id": "wincare_guard",
+      "type": "security",
+      "label": "Rust Telemetry Ring",
+      "sublabel": "Zero-Allocation Cyclic Buffer",
+      "pos": [
+        670,
         415
       ],
       "size": [
@@ -149,23 +182,9 @@
       "id": "journal_store",
       "type": "database",
       "label": "Activity Journal",
-      "sublabel": "AES-256-GCM encrypted audit store",
+      "sublabel": "Audit Receipts & Diff History",
       "pos": [
-        460,
-        615
-      ],
-      "size": [
-        165,
-        68
-      ]
-    },
-    {
-      "id": "wincare_guard",
-      "type": "security",
-      "label": "Rust Guard Daemon",
-      "sublabel": "RAM, thermal, disk quota monitor",
-      "pos": [
-        670,
+        880,
         415
       ],
       "size": [
@@ -174,24 +193,11 @@
       ]
     },
     {
-      "id": "plugin_cli",
-      "type": "external",
-      "label": "Plugin Developer CLI",
-      "sublabel": "Node.js manifest validator & packager",
-      "pos": [
-        40,
-        615
-      ],
-      "size": [
-        165,
-        68
-      ]
-    },
-    {
-      "id": "plugin_host",
-      "type": "backend",
-      "label": "Dynamic Plugin Host",
-      "sublabel": "In-process ALC, manifest admission",
+      "id": "pkg_portable",
+      "type": "cloud",
+      "label": "Portable Single-File Exe",
+      "sublabel": "Standalone ~22 MB (No R2R)",
+      "tag": "Zero Prerequisites",
       "pos": [
         250,
         615
@@ -202,13 +208,14 @@
       ]
     },
     {
-      "id": "intent_engine",
-      "type": "backend",
-      "label": "Rule-Based Intent Engine",
-      "sublabel": "Deterministic symptom classifier",
+      "id": "pkg_framework",
+      "type": "cloud",
+      "label": "Framework Installer",
+      "sublabel": "Featherweight ~4–6 MB (Winget)",
+      "tag": "Shared System SDK",
       "pos": [
         460,
-        415
+        615
       ],
       "size": [
         165,
@@ -219,33 +226,41 @@
   "boundaries": [
     {
       "kind": "security-group",
-      "label": "WinCare .NET 8 Host Application",
+      "label": "WinUI 3 Presentation Shell (.NET 8)",
       "wraps": [
         "winui_shell",
-        "dispatcher",
-        "infra_runner",
-        "spectre_tui",
-        "domain_catalog",
-        "journal_store",
-        "plugin_host",
         "intent_engine"
       ],
       "pad": 18
     },
     {
-      "kind": "region",
-      "label": "Native Rust 2024 Runtime",
+      "kind": "security-group",
+      "label": "Command Governance & Safety Pipeline",
       "wraps": [
-        "wincare_core",
-        "wincare_guard"
+        "dispatcher",
+        "probe_runner",
+        "domain_catalog",
+        "snapshot_store"
       ],
       "pad": 18
     },
     {
       "kind": "region",
-      "label": "Windows Platform Subsystem",
+      "label": "Native Rust Core & Kernel Interop",
       "wraps": [
-        "windows_os"
+        "wincare_core",
+        "wincare_guard",
+        "windows_os",
+        "journal_store"
+      ],
+      "pad": 18
+    },
+    {
+      "kind": "region",
+      "label": "Dual Distribution Packaging Profiles",
+      "wraps": [
+        "pkg_portable",
+        "pkg_framework"
       ],
       "pad": 18
     }
@@ -257,21 +272,12 @@
       "variant": "emphasis"
     },
     {
-      "from": "spectre_tui",
-      "to": "dispatcher"
-    },
-    {
       "from": "dispatcher",
-      "to": "infra_runner",
+      "to": "probe_runner",
       "variant": "emphasis"
     },
     {
-      "from": "dispatcher",
-      "to": "domain_catalog",
-      "route": "orthogonal-v"
-    },
-    {
-      "from": "infra_runner",
+      "from": "probe_runner",
       "to": "wincare_core",
       "variant": "security"
     },
@@ -281,36 +287,44 @@
       "variant": "security"
     },
     {
-      "from": "wincare_guard",
-      "to": "windows_os",
-      "route": "orthogonal-v",
-      "variant": "security"
+      "from": "winui_shell",
+      "to": "intent_engine",
+      "route": "orthogonal-v"
     },
     {
-      "from": "plugin_cli",
-      "to": "plugin_host",
-      "variant": "dashed"
-    },
-    {
-      "from": "plugin_host",
+      "from": "dispatcher",
       "to": "domain_catalog",
       "route": "orthogonal-v"
     },
     {
-      "from": "infra_runner",
-      "to": "intent_engine",
-      "route": "orthogonal-v",
-      "variant": "emphasis"
+      "from": "probe_runner",
+      "to": "snapshot_store",
+      "route": "orthogonal-v"
     },
     {
-      "from": "intent_engine",
-      "to": "journal_store",
+      "from": "wincare_core",
+      "to": "wincare_guard",
       "route": "orthogonal-v",
-      "variant": "emphasis"
+      "variant": "security"
+    },
+    {
+      "from": "windows_os",
+      "to": "journal_store",
+      "route": "orthogonal-v"
     },
     {
       "from": "wincare_guard",
-      "to": "journal_store",
+      "to": "journal_store"
+    },
+    {
+      "from": "domain_catalog",
+      "to": "pkg_portable",
+      "route": "orthogonal-v",
+      "variant": "dashed"
+    },
+    {
+      "from": "snapshot_store",
+      "to": "pkg_framework",
       "route": "orthogonal-v",
       "variant": "dashed"
     }
@@ -318,29 +332,29 @@
   "cards": [
     {
       "dot": "cyan",
-      "title": "Presentation",
+      "title": "Presentation & Usability",
       "items": [
-        "WinUI 3 desktop shell with Mica backdrop and XAML controls",
-        "Pure WinUI 3 desktop shell with native accessibility",
-        "Zero PowerShell dependencies in native runtime distribution"
+        "WinUI 3 desktop shell with Mica backdrop and progressive disclosure",
+        "1-click daily maintenance cards for immediate non-destructive fixes",
+        "Deep Inspector reveals exact microsecond probe timings and diffs"
       ]
     },
     {
       "dot": "emerald",
-      "title": "Governance",
+      "title": "Safety & Governance",
       "items": [
-        "Fail-closed CommandDispatcher requiring preflight validation",
-        "Two-phase review and apply lifecycle for sensitive mutations",
-        "In-process collectible AssemblyLoadContext and manifest admission"
+        "Tri-tier safety model: Safe (1-click), Moderate (preview), Destructive (token)",
+        "Bounded concurrency via ParallelCommandProbeRunner",
+        "Pre-mutation snapshots ensure deterministic 1-click rollback"
       ]
     },
     {
       "dot": "rose",
-      "title": "Native Engine",
+      "title": "Native Performance & Size",
       "items": [
-        "Rust 2024 C ABI dynamic library for high-speed bounded operations",
-        "Deterministic rule-based symptom intent classifier",
-        "Windows Job Objects for strict memory and CPU throttling"
+        "Rust Edition 2024 C-ABI engine eliminates child process spawning",
+        "Zero-allocation cyclic telemetry ring buffer directly queryable",
+        "Dual packaging: ~22 MB portable standalone vs ~4–6 MB framework installer"
       ]
     }
   ]

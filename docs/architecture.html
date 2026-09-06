@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="generator" content="archify 2.12.0">
-  <title>WinCare Platform Architecture Diagram</title>
+  <title>WinCare Modern Architecture Diagram</title>
   <script>
     // Resolve the theme before first paint so light-preference users don't
     // see a dark flash. The toolbar script below re-applies with UI state.
@@ -4496,12 +4496,12 @@
     <div class="header">
       <div class="header-row">
         <div class="pulse-dot"></div>
-        <h1>WinCare Platform Architecture</h1>
+        <h1>WinCare Modern Architecture</h1>
       </div>
-      <p class="subtitle">WinUI 3 Presentation, Fail-Closed Command Governance, Rule-Based Diagnostics, and Rust 2024 Core</p>
+      <p class="subtitle">WinUI 3 Progressive Disclosure, Tri-Tier Safety Governance, Microsecond Rust Core, and Dual Packaging</p>
     </div>
 
-    <script id="archify-guided-views-data" type="application/json">[{"id":"command-lifecycle","label":"Command execution lifecycle","focus":["winui_shell","dispatcher","infra_runner","wincare_core","windows_os"],"note":"Follow user requests through preflight validation, two-phase review, and native C ABI execution."},{"id":"diagnostics-intent","label":"Diagnostics and symptom intent pipeline","focus":["winui_shell","dispatcher","intent_engine","wincare_guard","journal_store"],"note":"Deterministic symptom rule inference evaluates system health and logs receipts to the activity journal."},{"id":"plugin-governance","label":"Plugin admission \u0026 isolation","focus":["plugin_cli","plugin_host","domain_catalog","dispatcher"],"note":"External plugins are verified by SHA-256 digests and isolated under in-process AssemblyLoadContext boundaries."}]</script>
+    <script id="archify-guided-views-data" type="application/json">[{"id":"daily-flow","label":"1-Click Everyday Maintenance Flow","focus":["winui_shell","dispatcher","probe_runner","wincare_core","windows_os"],"note":"1-click daily actions route through tri-tier safety validation and execute in microseconds via native Rust."},{"id":"power-elevation","label":"Power-User Inspection \u0026 Telemetry","focus":["winui_shell","domain_catalog","snapshot_store","wincare_guard","journal_store"],"note":"Deep inspector discloses exact microsecond probe timings, pre-mutation snapshots, and diff journals."},{"id":"dual-packaging","label":"Dual Packaging \u0026 Trimming Pipeline","focus":["winui_shell","wincare_core","pkg_portable","pkg_framework"],"note":"Distribution targets: ~22 MB zero-dependency portable executable vs ~4–6 MB framework-dependent installer."}]</script>
 
     <div class="guided-views no-print" id="guided-views" hidden aria-label="Guided diagram views">
       <button id="guided-view-prev" type="button" aria-label="Previous guided view" title="Previous guided view ([)">&#8592;</button>
@@ -4545,8 +4545,8 @@
     <!-- Main Diagram -->
     <div class="diagram-container" data-detail-level="map">
       <svg viewBox="0 0 1103 771" role="img" aria-labelledby="archify-diagram-title archify-diagram-description" data-preset="classic" data-quality-profile="standard">
-        <title id="archify-diagram-title">WinCare Platform Architecture</title>
-        <desc id="archify-diagram-description">WinUI 3 Presentation, Fail-Closed Command Governance, Rule-Based Diagnostics, and Rust 2024 Core</desc>
+        <title id="archify-diagram-title">WinCare Modern Architecture</title>
+        <desc id="archify-diagram-description">WinUI 3 Progressive Disclosure, Tri-Tier Safety Governance, Microsecond Rust Core, and Dual Packaging</desc>
         <!-- Definitions -->
         <defs>
           <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
@@ -4570,32 +4570,35 @@
         <rect width="100%" height="100%" fill="url(#grid)" />
 
         <!-- Boundaries (behind everything) -->
-        <rect data-graph-role="structural-frame" data-composition-frame-kind="security-group" data-composition-frame-id="0" x="22" y="187" width="621" height="516" rx="8" class="c-security-group" stroke-width="1"/>
-        <text x="30" y="205" class="t-security" font-size="9" font-weight="600">WinCare .NET 8 Host Application</text>
+        <rect data-graph-role="structural-frame" data-composition-frame-kind="security-group" data-composition-frame-id="0" x="22" y="187" width="201" height="316" rx="8" class="c-security-group" stroke-width="1"/>
+        <text x="30" y="205" class="t-security" font-size="9" font-weight="600">WinUI 3 Presentation Shell (.NET 8)</text>
 
-        <rect data-graph-role="structural-frame" data-composition-frame-kind="region" data-composition-frame-id="1" x="652" y="187" width="201" height="316" rx="12" class="c-region" stroke-width="1"/>
-        <text x="660" y="205" class="t-cloud" font-size="9" font-weight="600">Native Rust 2024 Runtime</text>
+        <rect data-graph-role="structural-frame" data-composition-frame-kind="security-group" data-composition-frame-id="1" x="232" y="187" width="411" height="316" rx="8" class="c-security-group" stroke-width="1"/>
+        <text x="240" y="205" class="t-security" font-size="9" font-weight="600">Command Governance &amp; Safety Pipeline</text>
 
-        <rect data-graph-role="structural-frame" data-composition-frame-kind="region" data-composition-frame-id="2" x="862" y="187" width="201" height="106" rx="12" class="c-region" stroke-width="1"/>
-        <text x="870" y="205" class="t-cloud" font-size="9" font-weight="600">Windows Platform Subsystem</text>
+        <rect data-graph-role="structural-frame" data-composition-frame-kind="region" data-composition-frame-id="2" x="652" y="187" width="411" height="316" rx="12" class="c-region" stroke-width="1"/>
+        <text x="660" y="205" class="t-cloud" font-size="9" font-weight="600">Native Rust Core &amp; Kernel Interop</text>
+
+        <rect data-graph-role="structural-frame" data-composition-frame-kind="region" data-composition-frame-id="3" x="232" y="597" width="411" height="106" rx="12" class="c-region" stroke-width="1"/>
+        <text x="240" y="615" class="t-cloud" font-size="9" font-weight="600">Dual Distribution Packaging Profiles</text>
 
         <!-- Connection paths (before components for correct z-order) -->
-        <path data-edge-from="winui_shell" data-edge-to="dispatcher" data-edge-key="0" data-composition-points="205,239;227.5,239;227.5,232;250,232" d="M 205 239 L 224 239 Q 227.5 239 227.5 235.5 L 227.5 235.5 Q 227.5 232 231 232 L 250 232" class="a-emphasis" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
-        <path data-edge-from="spectre_tui" data-edge-to="dispatcher" data-edge-key="1" data-composition-points="205,449;227.5,449;227.5,246;250,246" d="M 205 449 L 219.5 449 Q 227.5 449 227.5 441 L 227.5 254 Q 227.5 246 235.5 246 L 250 246" class="a-default" stroke-width="1.5" marker-end="url(#arrowhead)"/>
-        <path data-edge-from="dispatcher" data-edge-to="infra_runner" data-edge-key="2" data-composition-points="415,239;460,239" d="M 415 239 L 460 239" class="a-emphasis" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
-        <path data-edge-from="dispatcher" data-edge-to="domain_catalog" data-edge-key="3" data-composition-points="332.5,273;332.5,344;332.5,344;332.5,415" d="M 332.5 273 L 332.5 344 L 332.5 344 L 332.5 415" class="a-default" stroke-width="1.5" marker-end="url(#arrowhead)"/>
-        <path data-edge-from="infra_runner" data-edge-to="wincare_core" data-edge-key="4" data-composition-points="625,239;670,239" d="M 625 239 L 670 239" class="a-security" stroke-width="1.5" marker-end="url(#arrowhead-security)"/>
-        <path data-edge-from="wincare_core" data-edge-to="windows_os" data-edge-key="5" data-composition-points="835,239;880,239" d="M 835 239 L 880 239" class="a-security" stroke-width="1.5" marker-end="url(#arrowhead-security)"/>
-        <path data-edge-from="wincare_guard" data-edge-to="windows_os" data-edge-key="6" data-composition-points="835,449;835,344;880,344;880,239" d="M 835 449 L 835 352 Q 835 344 843 344 L 872 344 Q 880 344 880 336 L 880 239" class="a-security" stroke-width="1.5" marker-end="url(#arrowhead-security)"/>
-        <path data-edge-from="plugin_cli" data-edge-to="plugin_host" data-edge-key="7" data-composition-points="205,649;250,649" d="M 205 649 L 250 649" class="a-dashed" stroke-width="1.5" marker-end="url(#arrowhead-dashed)"/>
-        <path data-edge-from="plugin_host" data-edge-to="domain_catalog" data-edge-key="8" data-composition-points="332.5,615;332.5,549;332.5,549;332.5,483" d="M 332.5 615 L 332.5 549 L 332.5 549 L 332.5 483" class="a-default" stroke-width="1.5" marker-end="url(#arrowhead)"/>
-        <path data-edge-from="infra_runner" data-edge-to="intent_engine" data-edge-key="9" data-composition-points="542.5,273;542.5,344;542.5,344;542.5,415" d="M 542.5 273 L 542.5 344 L 542.5 344 L 542.5 415" class="a-emphasis" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
-        <path data-edge-from="intent_engine" data-edge-to="journal_store" data-edge-key="10" data-composition-points="542.5,483;542.5,549;542.5,549;542.5,615" d="M 542.5 483 L 542.5 549 L 542.5 549 L 542.5 615" class="a-emphasis" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
-        <path data-edge-from="wincare_guard" data-edge-to="journal_store" data-edge-key="11" data-composition-points="670,449;670,549;625,549;625,649" d="M 670 449 L 670 541 Q 670 549 662 549 L 633 549 Q 625 549 625 557 L 625 649" class="a-dashed" stroke-width="1.5" marker-end="url(#arrowhead-dashed)"/>
+        <path data-edge-from="winui_shell" data-edge-to="dispatcher" data-edge-key="0" data-composition-points="205,239;250,239" d="M 205 239 L 250 239" class="a-emphasis" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
+        <path data-edge-from="dispatcher" data-edge-to="probe_runner" data-edge-key="1" data-composition-points="415,239;460,239" d="M 415 239 L 460 239" class="a-emphasis" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
+        <path data-edge-from="probe_runner" data-edge-to="wincare_core" data-edge-key="2" data-composition-points="625,239;670,239" d="M 625 239 L 670 239" class="a-security" stroke-width="1.5" marker-end="url(#arrowhead-security)"/>
+        <path data-edge-from="wincare_core" data-edge-to="windows_os" data-edge-key="3" data-composition-points="835,239;880,239" d="M 835 239 L 880 239" class="a-security" stroke-width="1.5" marker-end="url(#arrowhead-security)"/>
+        <path data-edge-from="winui_shell" data-edge-to="intent_engine" data-edge-key="4" data-composition-points="122.5,273;122.5,344;122.5,344;122.5,415" d="M 122.5 273 L 122.5 344 L 122.5 344 L 122.5 415" class="a-default" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+        <path data-edge-from="dispatcher" data-edge-to="domain_catalog" data-edge-key="5" data-composition-points="332.5,273;332.5,344;332.5,344;332.5,415" d="M 332.5 273 L 332.5 344 L 332.5 344 L 332.5 415" class="a-default" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+        <path data-edge-from="probe_runner" data-edge-to="snapshot_store" data-edge-key="6" data-composition-points="542.5,273;542.5,344;542.5,344;542.5,415" d="M 542.5 273 L 542.5 344 L 542.5 344 L 542.5 415" class="a-default" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+        <path data-edge-from="wincare_core" data-edge-to="wincare_guard" data-edge-key="7" data-composition-points="752.5,273;752.5,344;752.5,344;752.5,415" d="M 752.5 273 L 752.5 344 L 752.5 344 L 752.5 415" class="a-security" stroke-width="1.5" marker-end="url(#arrowhead-security)"/>
+        <path data-edge-from="windows_os" data-edge-to="journal_store" data-edge-key="8" data-composition-points="962.5,273;962.5,344;962.5,344;962.5,415" d="M 962.5 273 L 962.5 344 L 962.5 344 L 962.5 415" class="a-default" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+        <path data-edge-from="wincare_guard" data-edge-to="journal_store" data-edge-key="9" data-composition-points="835,449;880,449" d="M 835 449 L 880 449" class="a-default" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+        <path data-edge-from="domain_catalog" data-edge-to="pkg_portable" data-edge-key="10" data-composition-points="332.5,483;332.5,549;332.5,549;332.5,615" d="M 332.5 483 L 332.5 549 L 332.5 549 L 332.5 615" class="a-dashed" stroke-width="1.5" marker-end="url(#arrowhead-dashed)"/>
+        <path data-edge-from="snapshot_store" data-edge-to="pkg_framework" data-edge-key="11" data-composition-points="542.5,483;542.5,549;542.5,549;542.5,615" d="M 542.5 483 L 542.5 549 L 542.5 549 L 542.5 615" class="a-dashed" stroke-width="1.5" marker-end="url(#arrowhead-dashed)"/>
 
         <!-- Components -->
-        <g id="node-winui_shell" data-node-id="winui_shell" data-node-label="WinUI 3 Desktop Shell" tabindex="0" role="button" aria-label="Focus WinUI 3 Desktop Shell, Mica backdrop, XAML views, AI Doctor, WinCare .NET 8 Host Application" aria-pressed="false" data-node-kind="frontend" data-node-sublabel="Mica backdrop, XAML views, AI Doctor" data-node-context="WinCare .NET 8 Host Application">
-          <title>WinUI 3 Desktop Shell · Mica backdrop, XAML views, AI Doctor · WinCare .NET 8 Host Application</title>
+        <g id="node-winui_shell" data-node-id="winui_shell" data-node-label="WinUI 3 Cockpit" tabindex="0" role="button" aria-label="Focus WinUI 3 Cockpit, 1-Click Surface + Deep Inspector, WinUI 3 Presentation Shell (.NET 8)" aria-pressed="false" data-node-kind="frontend" data-node-sublabel="1-Click Surface + Deep Inspector" data-node-tag="Progressive Disclosure" data-node-context="WinUI 3 Presentation Shell (.NET 8)">
+          <title>WinUI 3 Cockpit · 1-Click Surface + Deep Inspector · WinUI 3 Presentation Shell (.NET 8) · Progressive Disclosure</title>
           <rect x="40" y="205" width="165" height="68" rx="6" class="c-mask"/>
           <rect x="40" y="205" width="165" height="68" rx="6" class="c-frontend" stroke-width="1.5"/>
           <g aria-hidden="true" data-semantic-sigil="frontend" class="semantic-sigil s-frontend" transform="translate(46 211) scale(0.6875)">
@@ -4604,34 +4607,37 @@
             <circle cx="4.1" cy="4.8" r=".7" class="sigil-fill"/>
             <circle cx="6.3" cy="4.8" r=".7" class="sigil-fill"/>
           </g>
-          <text data-detail-anchor x="122.5" y="237" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">WinUI 3 Desktop Shell</text>
-        <text data-detail="context" x="122.5" y="253" class="t-muted" font-size="9" text-anchor="middle">Mica backdrop, XAML views, AI Doctor</text>
+          <text data-detail-anchor x="122.5" y="237" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">WinUI 3 Cockpit</text>
+        <text data-detail="context" x="122.5" y="253" class="t-muted" font-size="9" text-anchor="middle">1-Click Surface + Deep Inspector</text>
+        <text data-detail="fine" x="122.5" y="265" class="t-frontend" font-size="7" text-anchor="middle">Progressive Disclosure</text>
         </g>
 
-        <g id="node-dispatcher" data-node-id="dispatcher" data-node-label="Command Dispatcher" tabindex="0" role="button" aria-label="Focus Command Dispatcher, Fail-closed routing, two-phase apply, WinCare .NET 8 Host Application" aria-pressed="false" data-node-kind="backend" data-node-sublabel="Fail-closed routing, two-phase apply" data-node-context="WinCare .NET 8 Host Application">
-          <title>Command Dispatcher · Fail-closed routing, two-phase apply · WinCare .NET 8 Host Application</title>
+        <g id="node-dispatcher" data-node-id="dispatcher" data-node-label="Command Dispatcher" tabindex="0" role="button" aria-label="Focus Command Dispatcher, Tri-Tier Safety Admission, Command Governance &amp; Safety Pipeline" aria-pressed="false" data-node-kind="backend" data-node-sublabel="Tri-Tier Safety Admission" data-node-tag="Safe • Mod • Destruct" data-node-context="Command Governance &amp; Safety Pipeline">
+          <title>Command Dispatcher · Tri-Tier Safety Admission · Command Governance &amp; Safety Pipeline · Safe • Mod • Destruct</title>
           <rect x="250" y="205" width="165" height="68" rx="6" class="c-mask"/>
           <rect x="250" y="205" width="165" height="68" rx="6" class="c-backend" stroke-width="1.5"/>
           <g aria-hidden="true" data-semantic-sigil="backend" class="semantic-sigil s-backend" transform="translate(256 211) scale(0.6875)">
             <path d="M6 3 3 8l3 5M10 3l3 5-3 5"/>
           </g>
           <text data-detail-anchor x="332.5" y="237" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Command Dispatcher</text>
-        <text data-detail="context" x="332.5" y="253" class="t-muted" font-size="9" text-anchor="middle">Fail-closed routing, two-phase apply</text>
+        <text data-detail="context" x="332.5" y="253" class="t-muted" font-size="9" text-anchor="middle">Tri-Tier Safety Admission</text>
+        <text data-detail="fine" x="332.5" y="265" class="t-backend" font-size="7" text-anchor="middle">Safe • Mod • Destruct</text>
         </g>
 
-        <g id="node-infra_runner" data-node-id="infra_runner" data-node-label="Bounded Process Runner" tabindex="0" role="button" aria-label="Focus Bounded Process Runner, Timeout limits, PII sanitization, WinCare .NET 8 Host Application" aria-pressed="false" data-node-kind="backend" data-node-sublabel="Timeout limits, PII sanitization" data-node-context="WinCare .NET 8 Host Application">
-          <title>Bounded Process Runner · Timeout limits, PII sanitization · WinCare .NET 8 Host Application</title>
+        <g id="node-probe_runner" data-node-id="probe_runner" data-node-label="Parallel Probe Runner" tabindex="0" role="button" aria-label="Focus Parallel Probe Runner, Bounded Async Concurrency, Command Governance &amp; Safety Pipeline" aria-pressed="false" data-node-kind="backend" data-node-sublabel="Bounded Async Concurrency" data-node-tag="Zero-Alloc P/Invoke" data-node-context="Command Governance &amp; Safety Pipeline">
+          <title>Parallel Probe Runner · Bounded Async Concurrency · Command Governance &amp; Safety Pipeline · Zero-Alloc P/Invoke</title>
           <rect x="460" y="205" width="165" height="68" rx="6" class="c-mask"/>
           <rect x="460" y="205" width="165" height="68" rx="6" class="c-backend" stroke-width="1.5"/>
           <g aria-hidden="true" data-semantic-sigil="backend" class="semantic-sigil s-backend" transform="translate(466 211) scale(0.6875)">
             <path d="M6 3 3 8l3 5M10 3l3 5-3 5"/>
           </g>
-          <text data-detail-anchor x="542.5" y="237" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Bounded Process Runner</text>
-        <text data-detail="context" x="542.5" y="253" class="t-muted" font-size="9" text-anchor="middle">Timeout limits, PII sanitization</text>
+          <text data-detail-anchor x="542.5" y="237" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Parallel Probe Runner</text>
+        <text data-detail="context" x="542.5" y="253" class="t-muted" font-size="9" text-anchor="middle">Bounded Async Concurrency</text>
+        <text data-detail="fine" x="542.5" y="265" class="t-backend" font-size="7" text-anchor="middle">Zero-Alloc P/Invoke</text>
         </g>
 
-        <g id="node-wincare_core" data-node-id="wincare_core" data-node-label="Rust Core Engine" tabindex="0" role="button" aria-label="Focus Rust Core Engine, C ABI DLL: sys_info, dir_size, sha256, Native Rust 2024 Runtime" aria-pressed="false" data-node-kind="security" data-node-sublabel="C ABI DLL: sys_info, dir_size, sha256" data-node-context="Native Rust 2024 Runtime">
-          <title>Rust Core Engine · C ABI DLL: sys_info, dir_size, sha256 · Native Rust 2024 Runtime</title>
+        <g id="node-wincare_core" data-node-id="wincare_core" data-node-label="Rust Core Engine" tabindex="0" role="button" aria-label="Focus Rust Core Engine, C-ABI DLL (Edition 2024), Native Rust Core &amp; Kernel Interop" aria-pressed="false" data-node-kind="security" data-node-sublabel="C-ABI DLL (Edition 2024)" data-node-tag="opt-level=3, LTO" data-node-context="Native Rust Core &amp; Kernel Interop">
+          <title>Rust Core Engine · C-ABI DLL (Edition 2024) · Native Rust Core &amp; Kernel Interop · opt-level=3, LTO</title>
           <rect x="670" y="205" width="165" height="68" rx="6" class="c-mask"/>
           <rect x="670" y="205" width="165" height="68" rx="6" class="c-security" stroke-width="1.5"/>
           <g aria-hidden="true" data-semantic-sigil="security" class="semantic-sigil s-security" transform="translate(676 211) scale(0.6875)">
@@ -4639,11 +4645,12 @@
             <path d="m5.8 8 1.5 1.5 3-3"/>
           </g>
           <text data-detail-anchor x="752.5" y="237" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Rust Core Engine</text>
-        <text data-detail="context" x="752.5" y="253" class="t-muted" font-size="9" text-anchor="middle">C ABI DLL: sys_info, dir_size, sha256</text>
+        <text data-detail="context" x="752.5" y="253" class="t-muted" font-size="9" text-anchor="middle">C-ABI DLL (Edition 2024)</text>
+        <text data-detail="fine" x="752.5" y="265" class="t-security" font-size="7" text-anchor="middle">opt-level=3, LTO</text>
         </g>
 
-        <g id="node-windows_os" data-node-id="windows_os" data-node-label="Windows OS &amp; Kernel" tabindex="0" role="button" aria-label="Focus Windows OS &amp; Kernel, Job Objects, Win32 APIs, Toast XML, Windows Platform Subsystem" aria-pressed="false" data-node-kind="external" data-node-sublabel="Job Objects, Win32 APIs, Toast XML" data-node-context="Windows Platform Subsystem">
-          <title>Windows OS &amp; Kernel · Job Objects, Win32 APIs, Toast XML · Windows Platform Subsystem</title>
+        <g id="node-windows_os" data-node-id="windows_os" data-node-label="Windows OS &amp; Kernel" tabindex="0" role="button" aria-label="Focus Windows OS &amp; Kernel, Win32, NT APIs, FileSystem, Native Rust Core &amp; Kernel Interop" aria-pressed="false" data-node-kind="external" data-node-sublabel="Win32, NT APIs, FileSystem" data-node-tag="Direct Kernel / Win32" data-node-context="Native Rust Core &amp; Kernel Interop">
+          <title>Windows OS &amp; Kernel · Win32, NT APIs, FileSystem · Native Rust Core &amp; Kernel Interop · Direct Kernel / Win32</title>
           <rect x="880" y="205" width="165" height="68" rx="6" class="c-mask"/>
           <rect x="880" y="205" width="165" height="68" rx="6" class="c-external" stroke-width="1.5"/>
           <g aria-hidden="true" data-semantic-sigil="external" class="semantic-sigil s-external" transform="translate(886 211) scale(0.6875)">
@@ -4651,25 +4658,23 @@
             <path d="M8 2.5h5.5V8M13.5 2.5 7.5 8.5"/>
           </g>
           <text data-detail-anchor x="962.5" y="237" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Windows OS &amp; Kernel</text>
-        <text data-detail="context" x="962.5" y="253" class="t-muted" font-size="9" text-anchor="middle">Job Objects, Win32 APIs, Toast XML</text>
+        <text data-detail="context" x="962.5" y="253" class="t-muted" font-size="9" text-anchor="middle">Win32, NT APIs, FileSystem</text>
+        <text data-detail="fine" x="962.5" y="265" class="t-external" font-size="7" text-anchor="middle">Direct Kernel / Win32</text>
         </g>
 
-        <g id="node-spectre_tui" data-node-id="spectre_tui" data-node-label="Terminal REPL (Concept)" tabindex="0" role="button" aria-label="Focus Terminal REPL (Concept), Archived design prototype, WinCare .NET 8 Host Application" aria-pressed="false" data-node-kind="frontend" data-node-sublabel="Archived design prototype" data-node-context="WinCare .NET 8 Host Application">
-          <title>Terminal REPL (Concept) · Archived design prototype · WinCare .NET 8 Host Application</title>
+        <g id="node-intent_engine" data-node-id="intent_engine" data-node-label="Symptom Resolver" tabindex="0" role="button" aria-label="Focus Symptom Resolver, Deterministic Problem Triage, WinUI 3 Presentation Shell (.NET 8)" aria-pressed="false" data-node-kind="backend" data-node-sublabel="Deterministic Problem Triage" data-node-context="WinUI 3 Presentation Shell (.NET 8)">
+          <title>Symptom Resolver · Deterministic Problem Triage · WinUI 3 Presentation Shell (.NET 8)</title>
           <rect x="40" y="415" width="165" height="68" rx="6" class="c-mask"/>
-          <rect x="40" y="415" width="165" height="68" rx="6" class="c-frontend" stroke-width="1.5"/>
-          <g aria-hidden="true" data-semantic-sigil="frontend" class="semantic-sigil s-frontend" transform="translate(46 421) scale(0.6875)">
-            <rect x="2" y="3" width="12" height="10" rx="2"/>
-            <path d="M2 6.5h12"/>
-            <circle cx="4.1" cy="4.8" r=".7" class="sigil-fill"/>
-            <circle cx="6.3" cy="4.8" r=".7" class="sigil-fill"/>
+          <rect x="40" y="415" width="165" height="68" rx="6" class="c-backend" stroke-width="1.5"/>
+          <g aria-hidden="true" data-semantic-sigil="backend" class="semantic-sigil s-backend" transform="translate(46 421) scale(0.6875)">
+            <path d="M6 3 3 8l3 5M10 3l3 5-3 5"/>
           </g>
-          <text data-detail-anchor x="122.5" y="447" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Terminal REPL (Concept)</text>
-        <text data-detail="context" x="122.5" y="463" class="t-muted" font-size="9" text-anchor="middle">Archived design prototype</text>
+          <text data-detail-anchor x="122.5" y="447" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Symptom Resolver</text>
+        <text data-detail="context" x="122.5" y="463" class="t-muted" font-size="9" text-anchor="middle">Deterministic Problem Triage</text>
         </g>
 
-        <g id="node-domain_catalog" data-node-id="domain_catalog" data-node-label="Command Catalog" tabindex="0" role="button" aria-label="Focus Command Catalog, 259 frozen typed definitions, WinCare .NET 8 Host Application" aria-pressed="false" data-node-kind="database" data-node-sublabel="259 frozen typed definitions" data-node-context="WinCare .NET 8 Host Application">
-          <title>Command Catalog · 259 frozen typed definitions · WinCare .NET 8 Host Application</title>
+        <g id="node-domain_catalog" data-node-id="domain_catalog" data-node-label="Command Catalog" tabindex="0" role="button" aria-label="Focus Command Catalog, Typed Definitions &amp; RiskTiers, Command Governance &amp; Safety Pipeline" aria-pressed="false" data-node-kind="database" data-node-sublabel="Typed Definitions &amp; RiskTiers" data-node-context="Command Governance &amp; Safety Pipeline">
+          <title>Command Catalog · Typed Definitions &amp; RiskTiers · Command Governance &amp; Safety Pipeline</title>
           <rect x="250" y="415" width="165" height="68" rx="6" class="c-mask"/>
           <rect x="250" y="415" width="165" height="68" rx="6" class="c-database" stroke-width="1.5"/>
           <g aria-hidden="true" data-semantic-sigil="database" class="semantic-sigil s-database" transform="translate(256 421) scale(0.6875)">
@@ -4677,65 +4682,67 @@
             <path d="M3 4v8c0 1.1 2.2 2 5 2s5-.9 5-2V4M3 8c0 1.1 2.2 2 5 2s5-.9 5-2"/>
           </g>
           <text data-detail-anchor x="332.5" y="447" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Command Catalog</text>
-        <text data-detail="context" x="332.5" y="463" class="t-muted" font-size="9" text-anchor="middle">259 frozen typed definitions</text>
+        <text data-detail="context" x="332.5" y="463" class="t-muted" font-size="9" text-anchor="middle">Typed Definitions &amp; RiskTiers</text>
         </g>
 
-        <g id="node-journal_store" data-node-id="journal_store" data-node-label="Activity Journal" tabindex="0" role="button" aria-label="Focus Activity Journal, AES-256-GCM encrypted audit store, WinCare .NET 8 Host Application" aria-pressed="false" data-node-kind="database" data-node-sublabel="AES-256-GCM encrypted audit store" data-node-context="WinCare .NET 8 Host Application">
-          <title>Activity Journal · AES-256-GCM encrypted audit store · WinCare .NET 8 Host Application</title>
-          <rect x="460" y="615" width="165" height="68" rx="6" class="c-mask"/>
-          <rect x="460" y="615" width="165" height="68" rx="6" class="c-database" stroke-width="1.5"/>
-          <g aria-hidden="true" data-semantic-sigil="database" class="semantic-sigil s-database" transform="translate(466 621) scale(0.6875)">
+        <g id="node-snapshot_store" data-node-id="snapshot_store" data-node-label="Snapshot &amp; Rollback" tabindex="0" role="button" aria-label="Focus Snapshot &amp; Rollback, Pre-Mutation Restore Points, Command Governance &amp; Safety Pipeline" aria-pressed="false" data-node-kind="database" data-node-sublabel="Pre-Mutation Restore Points" data-node-context="Command Governance &amp; Safety Pipeline">
+          <title>Snapshot &amp; Rollback · Pre-Mutation Restore Points · Command Governance &amp; Safety Pipeline</title>
+          <rect x="460" y="415" width="165" height="68" rx="6" class="c-mask"/>
+          <rect x="460" y="415" width="165" height="68" rx="6" class="c-database" stroke-width="1.5"/>
+          <g aria-hidden="true" data-semantic-sigil="database" class="semantic-sigil s-database" transform="translate(466 421) scale(0.6875)">
             <ellipse cx="8" cy="4" rx="5" ry="2"/>
             <path d="M3 4v8c0 1.1 2.2 2 5 2s5-.9 5-2V4M3 8c0 1.1 2.2 2 5 2s5-.9 5-2"/>
           </g>
-          <text data-detail-anchor x="542.5" y="647" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Activity Journal</text>
-        <text data-detail="context" x="542.5" y="663" class="t-muted" font-size="9" text-anchor="middle">AES-256-GCM encrypted audit store</text>
+          <text data-detail-anchor x="542.5" y="447" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Snapshot &amp; Rollback</text>
+        <text data-detail="context" x="542.5" y="463" class="t-muted" font-size="9" text-anchor="middle">Pre-Mutation Restore Points</text>
         </g>
 
-        <g id="node-wincare_guard" data-node-id="wincare_guard" data-node-label="Rust Guard Daemon" tabindex="0" role="button" aria-label="Focus Rust Guard Daemon, RAM, thermal, disk quota monitor, Native Rust 2024 Runtime" aria-pressed="false" data-node-kind="security" data-node-sublabel="RAM, thermal, disk quota monitor" data-node-context="Native Rust 2024 Runtime">
-          <title>Rust Guard Daemon · RAM, thermal, disk quota monitor · Native Rust 2024 Runtime</title>
+        <g id="node-wincare_guard" data-node-id="wincare_guard" data-node-label="Rust Telemetry Ring" tabindex="0" role="button" aria-label="Focus Rust Telemetry Ring, Zero-Allocation Cyclic Buffer, Native Rust Core &amp; Kernel Interop" aria-pressed="false" data-node-kind="security" data-node-sublabel="Zero-Allocation Cyclic Buffer" data-node-context="Native Rust Core &amp; Kernel Interop">
+          <title>Rust Telemetry Ring · Zero-Allocation Cyclic Buffer · Native Rust Core &amp; Kernel Interop</title>
           <rect x="670" y="415" width="165" height="68" rx="6" class="c-mask"/>
           <rect x="670" y="415" width="165" height="68" rx="6" class="c-security" stroke-width="1.5"/>
           <g aria-hidden="true" data-semantic-sigil="security" class="semantic-sigil s-security" transform="translate(676 421) scale(0.6875)">
             <path d="M8 2.2 13 4v3.5c0 3.1-1.8 5.4-5 6.5-3.2-1.1-5-3.4-5-6.5V4Z"/>
             <path d="m5.8 8 1.5 1.5 3-3"/>
           </g>
-          <text data-detail-anchor x="752.5" y="447" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Rust Guard Daemon</text>
-        <text data-detail="context" x="752.5" y="463" class="t-muted" font-size="9" text-anchor="middle">RAM, thermal, disk quota monitor</text>
+          <text data-detail-anchor x="752.5" y="447" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Rust Telemetry Ring</text>
+        <text data-detail="context" x="752.5" y="463" class="t-muted" font-size="9" text-anchor="middle">Zero-Allocation Cyclic Buffer</text>
         </g>
 
-        <g id="node-plugin_cli" data-node-id="plugin_cli" data-node-label="Plugin Developer CLI" tabindex="0" role="button" aria-label="Focus Plugin Developer CLI, Node.js manifest validator &amp; packager, Architecture component" aria-pressed="false" data-node-kind="external" data-node-sublabel="Node.js manifest validator &amp; packager" data-node-context="Architecture component">
-          <title>Plugin Developer CLI · Node.js manifest validator &amp; packager · Architecture component</title>
-          <rect x="40" y="615" width="165" height="68" rx="6" class="c-mask"/>
-          <rect x="40" y="615" width="165" height="68" rx="6" class="c-external" stroke-width="1.5"/>
-          <g aria-hidden="true" data-semantic-sigil="external" class="semantic-sigil s-external" transform="translate(46 621) scale(0.6875)">
-            <rect x="2.5" y="5" width="8.5" height="8" rx="1.5"/>
-            <path d="M8 2.5h5.5V8M13.5 2.5 7.5 8.5"/>
+        <g id="node-journal_store" data-node-id="journal_store" data-node-label="Activity Journal" tabindex="0" role="button" aria-label="Focus Activity Journal, Audit Receipts &amp; Diff History, Native Rust Core &amp; Kernel Interop" aria-pressed="false" data-node-kind="database" data-node-sublabel="Audit Receipts &amp; Diff History" data-node-context="Native Rust Core &amp; Kernel Interop">
+          <title>Activity Journal · Audit Receipts &amp; Diff History · Native Rust Core &amp; Kernel Interop</title>
+          <rect x="880" y="415" width="165" height="68" rx="6" class="c-mask"/>
+          <rect x="880" y="415" width="165" height="68" rx="6" class="c-database" stroke-width="1.5"/>
+          <g aria-hidden="true" data-semantic-sigil="database" class="semantic-sigil s-database" transform="translate(886 421) scale(0.6875)">
+            <ellipse cx="8" cy="4" rx="5" ry="2"/>
+            <path d="M3 4v8c0 1.1 2.2 2 5 2s5-.9 5-2V4M3 8c0 1.1 2.2 2 5 2s5-.9 5-2"/>
           </g>
-          <text data-detail-anchor x="122.5" y="647" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Plugin Developer CLI</text>
-        <text data-detail="context" x="122.5" y="663" class="t-muted" font-size="9" text-anchor="middle">Node.js manifest validator &amp; packager</text>
+          <text data-detail-anchor x="962.5" y="447" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Activity Journal</text>
+        <text data-detail="context" x="962.5" y="463" class="t-muted" font-size="9" text-anchor="middle">Audit Receipts &amp; Diff History</text>
         </g>
 
-        <g id="node-plugin_host" data-node-id="plugin_host" data-node-label="Dynamic Plugin Host" tabindex="0" role="button" aria-label="Focus Dynamic Plugin Host, In-process ALC, manifest admission, WinCare .NET 8 Host Application" aria-pressed="false" data-node-kind="backend" data-node-sublabel="In-process ALC, manifest admission" data-node-context="WinCare .NET 8 Host Application">
-          <title>Dynamic Plugin Host · In-process ALC, manifest admission · WinCare .NET 8 Host Application</title>
+        <g id="node-pkg_portable" data-node-id="pkg_portable" data-node-label="Portable Single-File Exe" tabindex="0" role="button" aria-label="Focus Portable Single-File Exe, Standalone ~22 MB (No R2R), Dual Distribution Packaging Profiles" aria-pressed="false" data-node-kind="cloud" data-node-sublabel="Standalone ~22 MB (No R2R)" data-node-tag="Zero Prerequisites" data-node-context="Dual Distribution Packaging Profiles">
+          <title>Portable Single-File Exe · Standalone ~22 MB (No R2R) · Dual Distribution Packaging Profiles · Zero Prerequisites</title>
           <rect x="250" y="615" width="165" height="68" rx="6" class="c-mask"/>
-          <rect x="250" y="615" width="165" height="68" rx="6" class="c-backend" stroke-width="1.5"/>
-          <g aria-hidden="true" data-semantic-sigil="backend" class="semantic-sigil s-backend" transform="translate(256 621) scale(0.6875)">
-            <path d="M6 3 3 8l3 5M10 3l3 5-3 5"/>
+          <rect x="250" y="615" width="165" height="68" rx="6" class="c-cloud" stroke-width="1.5"/>
+          <g aria-hidden="true" data-semantic-sigil="cloud" class="semantic-sigil s-cloud" transform="translate(256 621) scale(0.6875)">
+            <path d="M4.3 12.5h7.3a2.4 2.4 0 0 0 .2-4.8 4 4 0 0 0-7.5-1.3A3.1 3.1 0 0 0 4.3 12.5Z"/>
           </g>
-          <text data-detail-anchor x="332.5" y="647" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Dynamic Plugin Host</text>
-        <text data-detail="context" x="332.5" y="663" class="t-muted" font-size="9" text-anchor="middle">In-process ALC, manifest admission</text>
+          <text data-detail-anchor x="332.5" y="647" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Portable Single-File Exe</text>
+        <text data-detail="context" x="332.5" y="663" class="t-muted" font-size="9" text-anchor="middle">Standalone ~22 MB (No R2R)</text>
+        <text data-detail="fine" x="332.5" y="675" class="t-cloud" font-size="7" text-anchor="middle">Zero Prerequisites</text>
         </g>
 
-        <g id="node-intent_engine" data-node-id="intent_engine" data-node-label="Rule-Based Intent Engine" tabindex="0" role="button" aria-label="Focus Rule-Based Intent Engine, Deterministic symptom classifier, WinCare .NET 8 Host Application" aria-pressed="false" data-node-kind="backend" data-node-sublabel="Deterministic symptom classifier" data-node-context="WinCare .NET 8 Host Application">
-          <title>Rule-Based Intent Engine · Deterministic symptom classifier · WinCare .NET 8 Host Application</title>
-          <rect x="460" y="415" width="165" height="68" rx="6" class="c-mask"/>
-          <rect x="460" y="415" width="165" height="68" rx="6" class="c-backend" stroke-width="1.5"/>
-          <g aria-hidden="true" data-semantic-sigil="backend" class="semantic-sigil s-backend" transform="translate(466 421) scale(0.6875)">
-            <path d="M6 3 3 8l3 5M10 3l3 5-3 5"/>
+        <g id="node-pkg_framework" data-node-id="pkg_framework" data-node-label="Framework Installer" tabindex="0" role="button" aria-label="Focus Framework Installer, Featherweight ~4–6 MB (Winget), Dual Distribution Packaging Profiles" aria-pressed="false" data-node-kind="cloud" data-node-sublabel="Featherweight ~4–6 MB (Winget)" data-node-tag="Shared System SDK" data-node-context="Dual Distribution Packaging Profiles">
+          <title>Framework Installer · Featherweight ~4–6 MB (Winget) · Dual Distribution Packaging Profiles · Shared System SDK</title>
+          <rect x="460" y="615" width="165" height="68" rx="6" class="c-mask"/>
+          <rect x="460" y="615" width="165" height="68" rx="6" class="c-cloud" stroke-width="1.5"/>
+          <g aria-hidden="true" data-semantic-sigil="cloud" class="semantic-sigil s-cloud" transform="translate(466 621) scale(0.6875)">
+            <path d="M4.3 12.5h7.3a2.4 2.4 0 0 0 .2-4.8 4 4 0 0 0-7.5-1.3A3.1 3.1 0 0 0 4.3 12.5Z"/>
           </g>
-          <text data-detail-anchor x="542.5" y="447" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Rule-Based Intent Engine</text>
-        <text data-detail="context" x="542.5" y="463" class="t-muted" font-size="9" text-anchor="middle">Deterministic symptom classifier</text>
+          <text data-detail-anchor x="542.5" y="647" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Framework Installer</text>
+        <text data-detail="context" x="542.5" y="663" class="t-muted" font-size="9" text-anchor="middle">Featherweight ~4–6 MB (Winget)</text>
+        <text data-detail="fine" x="542.5" y="675" class="t-cloud" font-size="7" text-anchor="middle">Shared System SDK</text>
         </g>
 
         <!-- Connection labels -->
@@ -4774,6 +4781,10 @@
           <g data-legend-kind="database">
             <rect x="451" y="747" width="14" height="9" rx="2" class="c-database" stroke-width="1"/>
             <text x="471" y="755" class="t-muted" font-size="8">Database</text>
+          </g>
+          <g data-legend-kind="cloud">
+            <rect x="555" y="747" width="14" height="9" rx="2" class="c-cloud" stroke-width="1"/>
+            <text x="575" y="755" class="t-muted" font-size="8">Cloud</text>
           </g>
         </g>
       </svg>
@@ -4962,36 +4973,36 @@
       <div class="card">
         <div class="card-header">
           <div class="card-dot cyan"></div>
-          <h3>Presentation</h3>
+          <h3>Presentation &amp; Usability</h3>
         </div>
         <ul>
-          <li>&bull; WinUI 3 desktop shell with Mica backdrop and XAML controls</li>
-          <li>&bull; Pure WinUI 3 desktop shell with native accessibility</li>
-          <li>&bull; Zero PowerShell dependencies in native runtime distribution</li>
+          <li>&bull; WinUI 3 desktop shell with Mica backdrop and progressive disclosure</li>
+          <li>&bull; 1-click daily maintenance cards for immediate non-destructive fixes</li>
+          <li>&bull; Deep Inspector reveals exact microsecond probe timings and diffs</li>
         </ul>
       </div>
 
       <div class="card">
         <div class="card-header">
           <div class="card-dot emerald"></div>
-          <h3>Governance</h3>
+          <h3>Safety &amp; Governance</h3>
         </div>
         <ul>
-          <li>&bull; Fail-closed CommandDispatcher requiring preflight validation</li>
-          <li>&bull; Two-phase review and apply lifecycle for sensitive mutations</li>
-          <li>&bull; In-process collectible AssemblyLoadContext and manifest admission</li>
+          <li>&bull; Tri-tier safety model: Safe (1-click), Moderate (preview), Destructive (token)</li>
+          <li>&bull; Bounded concurrency via ParallelCommandProbeRunner</li>
+          <li>&bull; Pre-mutation snapshots ensure deterministic 1-click rollback</li>
         </ul>
       </div>
 
       <div class="card">
         <div class="card-header">
           <div class="card-dot rose"></div>
-          <h3>Native Engine</h3>
+          <h3>Native Performance &amp; Size</h3>
         </div>
         <ul>
-          <li>&bull; Rust 2024 C ABI dynamic library for high-speed bounded operations</li>
-          <li>&bull; Deterministic rule-based symptom intent classifier</li>
-          <li>&bull; Windows Job Objects for strict memory and CPU throttling</li>
+          <li>&bull; Rust Edition 2024 C-ABI engine eliminates child process spawning</li>
+          <li>&bull; Zero-allocation cyclic telemetry ring buffer directly queryable</li>
+          <li>&bull; Dual packaging: ~22 MB portable standalone vs ~4–6 MB framework installer</li>
         </ul>
       </div>
     </div>

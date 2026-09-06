@@ -74,13 +74,16 @@ public sealed class ToolExecutionViewModel : ObservableObject
     public bool CanRunSelectedTool => !IsExecuting &&
         (_selectedTool?.Definition.MigrationStatus is MigrationStatus.Implemented or MigrationStatus.BehaviorVerified);
 
-    public string PrimaryActionLabel => IsExecuting
-        ? "Running"
-        : IsMutatingTool && IsReviewApproved
-            ? "Apply changes"
-            : IsMutatingTool
-                ? "Review changes"
-                : "Run tool";
+    public string PrimaryActionLabel
+    {
+        get
+        {
+            if (IsExecuting) return "Running";
+            if (IsSafeTool) return "Run tool";
+            if (IsDestructiveTool) return IsReviewApproved ? "Execute Destructive Action" : "Preview Impact";
+            return IsReviewApproved ? "Apply changes" : "Review changes";
+        }
+    }
 
     public bool HasExecutionResult => _executionStatus is not null;
     public bool IsExecutionSuccess => _executionStatus == CommandResultStatus.Succeeded;
@@ -148,7 +151,11 @@ public sealed class ToolExecutionViewModel : ObservableObject
         ? $"{ParameterFields.Count} declared input{(ParameterFields.Count == 1 ? string.Empty : "s")}. Required fields are marked with *."
         : "This command takes no declared inputs. Use Advanced JSON only for an explicitly documented extension field.";
 
+    public bool IsSafeTool => _selectedTool is null || _selectedTool.Definition.RiskTier == RiskTier.Safe;
+    public bool IsModerateTool => _selectedTool?.Definition.RiskTier == RiskTier.Moderate;
+    public bool IsDestructiveTool => _selectedTool?.Definition.RiskTier == RiskTier.Destructive;
     public bool IsMutatingTool => _selectedTool?.Definition.ReadOnly == false;
+    public bool RequiresApprovalSwitch => IsMutatingTool && !IsSafeTool;
     public bool CanApproveReview => IsMutatingTool && _hasSuccessfulPreview && !IsExecuting;
 
     public bool IsReviewApproved
@@ -221,9 +228,9 @@ public sealed class ToolExecutionViewModel : ObservableObject
         ToolRowViewModel? selected = _selectedTool;
         if (selected is null || !CanRunSelectedTool) return;
 
-        bool apply = IsMutatingTool && IsReviewApproved;
+        bool apply = IsMutatingTool && (IsSafeTool || IsReviewApproved);
         long reviewVersion = _reviewVersion;
-        if (apply && !CanApproveReview) return;
+        if (apply && !CanApproveReview && !IsSafeTool) return;
 
         if (!TryBuildExecutionParameters(out JsonElement parameters, out string parameterError))
         {
@@ -235,7 +242,7 @@ public sealed class ToolExecutionViewModel : ObservableObject
         ClearExecutionResult();
         try
         {
-            ApprovedMutationPlan? approval = apply ? _lastApprovedPlan : null;
+            ApprovedMutationPlan? approval = (apply && IsDestructiveTool) ? _lastApprovedPlan : null;
             CommandRequest request = apply
                 ? CommandRequest.Execute(selected.Id, parameters, approval)
                 : CommandRequest.Preview(selected.Id, parameters);
@@ -528,6 +535,10 @@ public sealed class ToolExecutionViewModel : ObservableObject
         OnPropertyChanged(nameof(CanRunSelectedTool));
         OnPropertyChanged(nameof(PrimaryActionLabel));
         OnPropertyChanged(nameof(IsMutatingTool));
+        OnPropertyChanged(nameof(IsSafeTool));
+        OnPropertyChanged(nameof(IsModerateTool));
+        OnPropertyChanged(nameof(IsDestructiveTool));
+        OnPropertyChanged(nameof(RequiresApprovalSwitch));
         OnPropertyChanged(nameof(CanApproveReview));
         ExecuteSelectedToolCommand.NotifyCanExecuteChanged();
     }

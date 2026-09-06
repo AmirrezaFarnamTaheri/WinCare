@@ -2,6 +2,7 @@ using WinCare.Application.Activity;
 using WinCare.Application.Commands;
 using WinCare.Application.Plugins;
 using WinCare.Application.Tools;
+using WinCare.Domain.Telemetry;
 using WinCare.Infrastructure.Commands;
 using WinCare.Infrastructure.Native;
 using WinCare.Infrastructure.Plugins;
@@ -21,6 +22,7 @@ public sealed class AppRuntime
     {
         Journal = new ActivityJournalService();
         NativeCore = new NativeCoreService();
+        SystemProbe = new NativeSystemProbeRepository();
         CommandExecutor = new WindowsCommandExecutor(NativeCore);
         Dispatcher = CommandRuntime.CreateDefault(CommandExecutor, NativeCore, Journal);
         PluginState = new PluginStateRepository();
@@ -49,6 +51,11 @@ public sealed class AppRuntime
     /// Gets the native core service instance.
     /// </summary>
     public NativeCoreService NativeCore { get; }
+
+    /// <summary>
+    /// Gets the native system probe repository instance.
+    /// </summary>
+    public INativeSystemProbeRepository SystemProbe { get; }
 
     /// <summary>
     /// Gets the Windows command executor instance.

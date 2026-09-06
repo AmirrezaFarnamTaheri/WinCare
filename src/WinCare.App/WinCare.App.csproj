@@ -11,8 +11,13 @@
     <RuntimeIdentifiers>win-x64;win-arm64</RuntimeIdentifiers>
     <UseWinUI>true</UseWinUI>
     <EnableMsixTooling>true</EnableMsixTooling>
+    <DefaultItemExcludes>$(DefaultItemExcludes);AppPackages\**</DefaultItemExcludes>
     <PublishProfile Condition="'$(WindowsPackageType)' != 'None'">Properties\PublishProfiles\win-$(Platform).pubxml</PublishProfile>
   </PropertyGroup>
+  <ItemGroup>
+    <Content Remove="AppPackages\**" />
+    <None Remove="AppPackages\**" />
+  </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.WindowsAppSDK" />
     <PackageReference Include="CommunityToolkit.Mvvm" />
@@ -22,6 +27,13 @@
     <ProjectReference Include="..\WinCare.Domain\WinCare.Domain.csproj" />
     <ProjectReference Include="..\WinCare.CommandCatalog\WinCare.CommandCatalog.csproj" />
     <ProjectReference Include="..\WinCare.Infrastructure\WinCare.Infrastructure.csproj" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(PublishTrimmed)' == 'true'">
+    <TrimmerRootAssembly Include="WinCare.App" />
+    <TrimmerRootAssembly Include="WinCare.Domain" />
+    <TrimmerRootAssembly Include="WinCare.CommandCatalog" />
+    <TrimmerRootAssembly Include="WinCare.Application" />
+    <TrimmerRootAssembly Include="WinCare.Infrastructure" />
   </ItemGroup>
   <PropertyGroup Condition="'$(Configuration)' == 'Release'">
     <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
@@ -59,5 +71,28 @@
       Query="/p:Package/p:Identity/@Version"
       Value="$(AppxPackageVersion)"
       Namespaces="&lt;Namespace Prefix='p' Uri='http://schemas.microsoft.com/appx/manifest/foundation/windows10' /&gt;" />
+  </Target>
+
+  <!-- Prune unused DirectML, ONNX runtime, Widgets, WebView2, and Windows.AI projections from unpackaged portable single-file bundle -->
+  <!-- ponytail: ultra - trim dead weight without affecting WinUI 3 runtime stability -->
+  <Target Name="PruneUnusedHeavyweightProjections" BeforeTargets="_ComputeFilesToBundle" Condition="'$(PublishSingleFile)' == 'true'">
+    <ItemGroup>
+      <_PruneFiles Include="@(ResolvedFileToPublish)" Condition="
+        $([System.String]::Copy('%(Filename)').Contains('DirectML')) or
+        $([System.String]::Copy('%(Filename)').Contains('onnxruntime')) or
+        $([System.String]::Copy('%(Filename)').Contains('PerceptiveStreaming')) or
+        $([System.String]::Copy('%(Filename)').Contains('NPUDetect')) or
+        $([System.String]::Copy('%(Filename)').Contains('WebView2')) or
+        $([System.String]::Copy('%(Filename)').StartsWith('Microsoft.Windows.Widgets')) or
+        $([System.String]::Copy('%(Filename)').StartsWith('Microsoft.Windows.AI')) or
+        $([System.String]::Copy('%(Filename)').StartsWith('Microsoft.Windows.Workloads')) or
+        $([System.String]::Copy('%(Filename)').StartsWith('workloads.')) or
+        $([System.String]::Copy('%(Filename)').StartsWith('packages.')) or
+        $([System.String]::Copy('%(Filename)').EndsWith('.lock')) or
+        $([System.String]::Copy('%(RelativeDir)').StartsWith('Native')) or
+        ('%(Extension)' == '.mui' and !$([System.String]::Copy('%(RelativeDir)').ToLower().Contains('en-us')) and !$([System.String]::Copy('%(RelativeDir)').ToLower().Contains('en-gb')))" />
+      <ResolvedFileToPublish Remove="@(_PruneFiles)" />
+    </ItemGroup>
+    <Message Importance="high" Text="Pruned unused heavyweight projections from portable bundle." />
   </Target>
 </Project>
