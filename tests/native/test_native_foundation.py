@@ -69,7 +69,7 @@ class NativeFoundationTests(unittest.TestCase):
         self.assertIn("RunPreviewsAsync(", parallel_probe_runner)
         self.assertIn("SemaphoreSlim", parallel_probe_runner)
         self.assertIn("Task.WhenAll", parallel_probe_runner)
-        self.assertIn("results[index]", parallel_probe_runner)
+        self.assertIn("tasks[i] = RunSingleProbeAsync", parallel_probe_runner)
 
         plugin_store = (root / "src/WinCare.App/Views/Pages/PluginStorePage.xaml").read_text(encoding="utf-8")
         self.assertIn('MinWindowWidth="920"', plugin_store)
