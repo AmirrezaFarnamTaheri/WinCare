@@ -153,8 +153,8 @@
                                         <Button
                                             Grid.Column="3"
                                             Visibility="{x:Bind views:LayoutVisibility.BoolToVisibility(HasAction), Mode=OneWay}"
-                                            Command="{x:Bind ActionCommand}"
-                                            Content="{x:Bind ActionText}"
+                                            Command="{x:Bind ActionCommand, Mode=OneWay}"
+                                            Content="{x:Bind ActionText, Mode=OneWay}"
                                             Style="{StaticResource AccentButtonStyle}"
                                             Padding="12,4"
                                             MinHeight="30"
@@ -187,8 +187,8 @@
                                         </Grid>
                                         <Button
                                             Visibility="{x:Bind views:LayoutVisibility.BoolToVisibility(HasAction), Mode=OneWay}"
-                                            Command="{x:Bind ActionCommand}"
-                                            Content="{x:Bind ActionText}"
+                                            Command="{x:Bind ActionCommand, Mode=OneWay}"
+                                            Content="{x:Bind ActionText, Mode=OneWay}"
                                             Style="{StaticResource AccentButtonStyle}"
                                             Padding="10,4"
                                             MinHeight="28"
