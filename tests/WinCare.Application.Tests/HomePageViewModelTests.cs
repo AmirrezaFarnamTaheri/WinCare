@@ -2,6 +2,7 @@ using WinCare.App.ViewModels.Pages;
 using WinCare.Application.Commands;
 using WinCare.Domain.Activity;
 using WinCare.Domain.Commands;
+using WinCare.Domain.Telemetry;
 
 namespace WinCare.Application.Tests;
 
@@ -96,11 +97,36 @@ public sealed class HomePageViewModelTests
         Assert.NotNull(vm.TelemetryMetrics);
         Assert.True(vm.TelemetryMetrics.LatencyMicroseconds >= 0);
         Assert.False(string.IsNullOrWhiteSpace(vm.TelemetryMetrics.TargetPathsSummary));
+        Assert.Equal("N/A", vm.TelemetryMetrics.CpuFormatted);
 
         await vm.ToggleInspectorCommand.ExecuteAsync(null);
         Assert.False(vm.IsInspectorExpanded);
     }
 
+    [Fact]
+    public async Task Inspector_marks_cpu_unavailable_when_native_probe_fails()
+    {
+        var vm = new HomePageViewModel(probeRepository: new TestProbeRepository(failure: new InvalidOperationException("probe failed")));
+
+        await vm.ToggleInspectorCommand.ExecuteAsync(null);
+
+        Assert.NotNull(vm.TelemetryMetrics);
+        Assert.False(vm.TelemetryMetrics.CpuAvailable);
+        Assert.Equal("N/A", vm.TelemetryMetrics.CpuFormatted);
+    }
+
+    [Fact]
+    public async Task Inspector_formats_cpu_when_native_probe_succeeds()
+    {
+        var snapshot = new SystemSnapshot(8.7f, 4, 8, 16, 32, true);
+        var vm = new HomePageViewModel(probeRepository: new TestProbeRepository(snapshot));
+
+        await vm.ToggleInspectorCommand.ExecuteAsync(null);
+
+        Assert.NotNull(vm.TelemetryMetrics);
+        Assert.True(vm.TelemetryMetrics.CpuAvailable);
+        Assert.Equal("8.7%", vm.TelemetryMetrics.CpuFormatted);
+    }
 
     private sealed class TestHandler(string id, string message) : ICommandHandler
     {
@@ -115,5 +141,25 @@ public sealed class HomePageViewModelTests
                 message,
                 System.Text.Json.JsonSerializer.SerializeToElement(new { success = true })));
         }
+    }
+
+    private sealed class TestProbeRepository : INativeSystemProbeRepository
+    {
+        private readonly SystemSnapshot? _snapshot;
+        private readonly Exception? _failure;
+
+        public TestProbeRepository(SystemSnapshot? snapshot = null, Exception? failure = null)
+        {
+            _snapshot = snapshot;
+            _failure = failure;
+        }
+
+        public ValueTask<SystemSnapshot> GetSystemSnapshotAsync(CancellationToken ct = default) =>
+            _failure is not null
+                ? ValueTask.FromException<SystemSnapshot>(_failure)
+                : ValueTask.FromResult(_snapshot ?? new SystemSnapshot(0, 0, 0, 0, 0, false));
+
+        public ValueTask<CleanExecutionResult> CleanTempFilesAsync(bool dryRun, CancellationToken ct = default) =>
+            ValueTask.FromResult(new CleanExecutionResult(0, 0, 0));
     }
 }
