@@ -43,12 +43,13 @@ class PortableLockContractTests(unittest.TestCase):
         self.assertNotIn("DestinationFiles=", props)
         self.assertNotIn("Staged locked portable dependency graphs", props)
 
+        # The app's normal lock may legitimately contain RID sections because the project
+        # declares RuntimeIdentifiers. Portable-only linker packages must not leak into any
+        # canonical lock, and no build target may overwrite canonical lockfiles.
         for project in PROJECTS:
             canonical = ROOT / "src" / project / "packages.lock.json"
             canonical_text = canonical.read_text(encoding="utf-8-sig")
             self.assertNotIn('"Microsoft.NET.ILLink.Tasks"', canonical_text, project)
-            self.assertNotIn('/win-x64"', canonical_text, project)
-            self.assertNotIn('/win-arm64"', canonical_text, project)
 
     def test_app_portable_lock_variants_cover_the_declared_runtime_set(self) -> None:
         project = (ROOT / "src/WinCare.App/WinCare.App.csproj").read_text(encoding="utf-8")
