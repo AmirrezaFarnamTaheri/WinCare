@@ -188,7 +188,7 @@ class NativeFoundationTests(unittest.TestCase):
         app = (root / "src/WinCare.App/App.xaml.cs").read_text(encoding="utf-8")
         checklist = (root / "tools/release_checklist.py").read_text(encoding="utf-8")
 
-        self.assertIn("PORTABLE_EXECUTABLE_MAX_BYTES = 35_000_000", checklist)
+        self.assertIn("PORTABLE_EXECUTABLE_MAX_BYTES = 70_000_000", checklist)
         self.assertIn("--portable-artifact", checklist)
         self.assertIn("Validate portable executable size", workflow)
         self.assertIn("python tools/release_checklist.py --portable-artifact", workflow)
