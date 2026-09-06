@@ -6,108 +6,174 @@ date: 2026-09-06
 status: completed
 ---
 
-# WinCare Power Usability, Native Performance, and Dual Packaging - Plan
+# WinCare Power Usability, Native Performance, and Portable Packaging - Plan
 
 ## Goal Capsule
-* **Objective:** Elevate WinCare into a premier, high-utility Windows optimization suite that pairs 1-click everyday simplicity with power-user depth, backed by sub-millisecond Rust native kernel execution and dual distribution packaging (~22 MB portable single-file executable and < 6 MB framework-dependent installer).
-* **Product Authority:** User design approval on 2026-09-06 (Understanding Lock confirmed).
-* **Open Blockers:** None. Architecture validated and rendered via Archify into [`docs/architecture.html`](file:///D:/github/WinCare/docs/architecture.html).
+
+- **Objective:** Pair 1-click everyday maintenance with inspectable power-user detail, a Rust native C-ABI core, parallel read-only diagnostics, and portable x64/ARM64 distribution.
+- **Product Authority:** User design approval on 2026-09-06 (Understanding Lock confirmed).
+- **Architecture:** [Interactive diagram](../architecture.html), authored from [`docs/wincare.architecture.json`](../wincare.architecture.json).
+- **Portable size contract:** `artifacts/portable/<rid>/WinCare.App.exe` must be `<= 35,000,000` bytes.
 
 ---
 
 ## Product Contract
 
 ### 1. Problem Statement & Strategic Vision
-Current PC optimization utilities suffer from a false dichotomy: they are either opaque, untrustworthy "snake-oil" tools that break operating systems, or intimidating administrative consoles that overwhelm regular users. 
 
-WinCare solves this by executing a **Hybrid Progressive Disclosure Model**:
-1. **Daily Users:** Immediate, non-destructive 1-click solutions on the surface (reclaiming gigabytes of storage, tuning network latency, streamlining background startup).
-2. **Power Users:** Complete operational transparency underneath. A non-intrusive inspector reveals exact microsecond probe timings, active Win32/NT system calls, dry-run file/registry diffs, and instant rollback snapshots.
-3. **Daily to Power Elevation:** Regular users are actively educated on how their operating system functions without cognitive overload, turning everyday users into confident, empowered power users.
+WinCare uses progressive disclosure instead of a false choice between opaque one-click utilities and an admin console:
+
+1. **Daily users:** curated Safe operations remain one-click.
+2. **Power users:** measured telemetry and affected-resource detail are available without blocking the primary workflow.
+3. **Risk-specific review:** Moderate operations use lightweight confirmation; only Destructive operations require the dispatcher-issued preview plan.
+
+Product-truth rule: telemetry, health, rollback, installer, and performance claims must correspond to an executable implementation or measurement. Do not infer runtime safety from build success alone.
 
 ---
 
 ### 2. Architecture & Interactive Diagram
-The architecture is modeled and delivered as a zero-dependency interactive SVG diagram in [`docs/architecture.html`](file:///D:/github/WinCare/docs/architecture.html) (authored in [`docs/wincare.architecture.json`](file:///D:/github/WinCare/docs/wincare.architecture.json)):
 
-* **Presentation Layer (WinUI 3 / .NET 8):** Native Windows Mica backdrop, Fluent 2 visual tokens, high-density telemetry rendering, and responsive card layouts.
-* **Governance Layer (`WinCare.Application`):** Tri-tier safety admission (`RiskTier.Safe`, `Moderate`, `Destructive`), single-use `ApprovedMutationPlan` gating, and bounded parallel concurrency via `ParallelCommandProbeRunner`.
-* **Native Kernel Layer (`wincare-core` in Rust 2024):** High-speed C-ABI dynamic library (`opt-level = 3`, `lto = "fat"`, `strip = true`) executing direct Win32/NT queries without child process spawning.
-* **Distribution Layer:** Dual packaging profiles addressing both zero-prerequisite standalone portability and ultra-lightweight system framework distribution.
+The repository-relative architecture sources are:
+
+- [Interactive architecture diagram](../architecture.html)
+- [C4 architecture model](../architecture/c4-model.md)
+- [Ponytail trimming/complexity audit](../architecture/ponytail-audit.md)
+
+Layers:
+
+- **Presentation (`WinCare.App`):** WinUI 3, responsive layouts, curated actions, and progressive telemetry disclosure.
+- **Governance (`WinCare.Application`):** `CommandDispatcher.ExecuteAsync`, risk-tier admission, activity journal integration, and `ParallelCommandProbeRunner.RunPreviewsAsync`.
+- **Native (`native/wincare-core`):** Rust 2024 C-ABI primitives used by the managed native repositories.
+- **Distribution:** MSIX plus trimmed portable x64/ARM64 artifacts. The Inno Setup definition consumes the same `artifacts/portable/win-x64/*` payload when an installer is built; it is not a separate framework application.
 
 ---
 
 ### 3. Decision Log
 
-| ID | Decision | Alternatives Considered | Rationale |
-|---|---|---|---|
-| **DEC-01** | **Progressive Disclosure Cockpit** | Modal popups, separate "Advanced Mode" toggle | Keeps 1-click simplicity intact while allowing in-place elevation to power-user telemetry. |
-| **DEC-02** | **Shift Heavy Probes & Mutations to Rust (`wincare-core`)** | Pure C# Win32 P/Invoke, PowerShell background daemon | Maximizes CPU/memory efficiency, eliminates child process latency, and reduces managed assembly size. |
-| **DEC-03** | **Dual Distribution Packaging** | Single-File only, MSIX-only, Installer-only | Delivers an ultra-portable ~22 MB standalone zero-dependency exe alongside a featherweight < 6 MB framework installer. |
-| **DEC-04** | **Eliminate ReadyToRun in Portable Profile** | Keep R2R enabled | Removes 10–12 MB of pre-compiled native JIT bloat with an unnoticeable ≤40ms cold-start delta on modern PCs. |
-| **DEC-05** | **Zero-Allocation Telemetry Pipeline** | Dynamic JSON serialization over FFI | Pinned `Span<byte>` buffers and unmanaged structs generate 0 bytes of managed GC allocation in live monitoring loops. |
+| ID | Decision | Rationale |
+|---|---|---|
+| **DEC-01** | Progressive-disclosure cockpit | Keeps everyday actions direct while allowing deeper inspection. |
+| **DEC-02** | Rust C-ABI for native snapshot/clean primitives | Avoids child-process probes and provides a typed native boundary. |
+| **DEC-03** | Risk-tiered admission | Safe = direct; Moderate = confirmation; Destructive = preview plan. |
+| **DEC-04** | Parallel local probes + background WUA | Prevents Windows Update latency from blocking the primary Checkup result. |
+| **DEC-05** | One portable size contract | Avoids conflicting 22/24/35 MB and framework-installer size claims. |
+| **DEC-06** | Native-architecture trimmed runtime smoke | Build/link success is insufficient evidence for XAML/reflection/COM/plugin/native paths. |
 
 ---
 
 ### 4. Functional Requirements
 
-* **FR-1: 1-Click Action Cards (Surface Layer):**
-  * Home and Checkup pages present curated, high-impact 1-click action cards (`cleaner-disk-pressure`, `startup-streamline`, `network-latency-tune`).
-  * Instant execution with inline progress ring and non-blocking asynchronous UI updates.
-* **FR-2: Deep System Inspector (Power-User Layer):**
-  * Action cards and checkup categories feature an expander toggle (`Inspect System Impact & Telemetry`).
-  * Monospace tabular telemetry displays: probe latency in microseconds ($\mu$s), targeted filesystem paths, registry keys, dry-run diff preview, and rollback snapshot IDs.
-* **FR-3: Native Rust Core Migration:**
-  * Implement C-ABI exported functions in `crates/wincare-core`:
-    * `wincare_sys_snapshot_all`: Batched retrieval of CPU, RAM, disk pressure, and network health.
-    * `wincare_probe_category`: Sub-millisecond direct Win32/NT query for each diagnostic category.
-    * `wincare_clean_locations`: Safe, parallel filesystem purge of temp caches and stale logs.
-  * Wrap all C-ABI entry points in `std::panic::catch_unwind` returning negative `i32` error codes on failure.
-* **FR-4: Zero-Allocation Telemetry Interop:**
-  * Expose `ref NativeSnapshot` P/Invoke struct mapping directly to blittable Rust memory.
-  * C# ViewModels consume telemetry without per-tick string or collection allocations.
-* **FR-5: Dual Packaging Pipeline:**
-  * Configure `portable-x64.pubxml` with `<PublishReadyToRun>false</PublishReadyToRun>` and localized PRI resource pruning to reach **~20–24 MB**.
-  * Add `framework-x64.pubxml` with `<PublishSelfContained>false</PublishSelfContained>` to compile the **~4–6 MB** installer/winget release.
+#### FR-1: 1-Click Surface Actions
+
+- Safe routine maintenance executes directly with `Apply=true`.
+- UI shows in-flight and result state inline.
+- No mandatory preview/approval toggle is added to Safe commands.
+
+#### FR-2: Deep System Inspector
+
+- Inspector values identify unavailable telemetry instead of inventing values such as `0.0%` CPU after a probe failure.
+- Metrics and affected paths remain inspectable without changing admission policy.
+
+#### FR-3: Native Rust Core
+
+Implement and consume the existing C-ABI surface under `native/wincare-core`:
+
+- `wincare_sys_snapshot_all`: batched CPU/RAM/disk/network snapshot.
+- `wincare_clean_temp_files`: safe temp cleanup / dry-run result.
+
+The cleaner must not traverse Windows reparse-point directories/junctions. Native tests include a junction-to-outside sentinel regression.
+
+#### FR-4: Checkup Concurrency
+
+- `system`, `storage`, and `security` use `ParallelCommandProbeRunner.RunPreviewsAsync` with bounded concurrency and request-order preservation.
+- `wua-search` runs independently and updates the view later.
+- A failed/incomplete probe is reported as incomplete/review-needed; it must not produce a Healthy result.
+
+#### FR-5: Portable Packaging
+
+- Build trimmed single-file `win-x64` and `win-arm64` executables.
+- Canonical artifact under measurement: `artifacts/portable/<rid>/WinCare.App.exe`.
+- Canonical ceiling: **35,000,000 bytes**, enforced by:
+
+```text
+python tools/release_checklist.py --portable-artifact artifacts/portable/<rid>/WinCare.App.exe
+```
+
+- The Inno script consumes `artifacts/portable/win-x64/*`; do not describe it as a separate 4–6 MB framework-dependent application.
+- MSIX packaging/signature validation remains a separate CI path.
 
 ---
 
 ### 5. Non-Functional Requirements & Evaluator Contracts
 
-* **NFR-1 (Latency):** Total system health checkup across all 10 diagnostic categories completes in $\le 5.0\text{ ms}$ (Evaluator command: `dotnet test --filter Category=PerfBenchmark`).
-* **NFR-2 (Process Spawning):** $0$ child processes (`powershell.exe`, `cmd.exe`, `wmic.exe`) spawned during diagnostic checkup or Safe tier execution.
-* **NFR-3 (Memory & Allocation):**
-  * Steady-state memory footprint of the desktop app $\le 35\text{ MB}$ idle.
-  * Live telemetry polling loop generates $0\text{ bytes}$ of managed Gen0/Gen1 heap allocations.
-* **NFR-4 (Binary Footprint):**
-  * Portable Standalone Executable (`WinCare.App.exe`): $\le 24\text{ MB}$ (Zip archive $\le 19\text{ MB}$).
-  * Framework-Dependent Installer (`WinCare-Setup.exe`): $\le 6\text{ MB}$.
-* **NFR-5 (Accessibility & Visual Standards):**
-  * Full WCAG 2.2 AA contrast compliance across light and dark themes.
-  * Monospace numerical metrics (`Cascadia Code`) paired with `Segoe UI Variable` headings and body.
+#### NFR-1A: Native Probe Latency
+
+The native snapshot primitive has a **native-call** latency objective. This is distinct from the user-visible Quick Check SLA.
+
+Correctness evaluator:
+
+```text
+cargo test --manifest-path native/Cargo.toml --release
+```
+
+A concrete p95 microsecond/millisecond claim requires a dedicated Windows benchmark of `wincare_sys_snapshot_all`; the Rust correctness suite alone does not establish p95 latency.
+
+#### NFR-1B: Primary Quick Check Latency
+
+The primary local Checkup batch (`system`, `storage`, `security`, excluding background WUA completion) targets **<= 3.0 seconds on representative Windows hardware**.
+
+Concurrency/correctness evaluator:
+
+```text
+dotnet test tests/WinCare.Application.Tests/WinCare.Application.Tests.csproj --filter FullyQualifiedName~ParallelCommandProbeRunnerTests
+```
+
+This test proves overlap, result ordering, and failure isolation. It is not a hardware p95 benchmark; documentation must not publish a p95 claim until an end-to-end Windows measurement is captured.
+
+#### NFR-2: Child Processes
+
+Native snapshot and Safe temp-clean primitives do not introduce PowerShell/cmd/wmic child processes.
+
+#### NFR-3: Trimmed Runtime Correctness
+
+- x64 portable artifact runs `--smoke-test` on a native x64 Windows runner.
+- ARM64 portable artifact runs the same test on a native Windows ARM64 runner.
+- Smoke constructs the WinUI window, initializes app/plugin runtime, validates Rust ABI loading, and executes a read-only `system` command through the dispatcher.
+- Dynamic COM/WUA/plugin paths outside this smoke require their own focused Windows runtime coverage and any required preservation roots/annotations; suppressed trim warnings are not proof.
+
+#### NFR-4: Accessibility
+
+Primary interactive surfaces follow the mandatory `DESIGN.md` accessibility floor: keyboard navigation, visible focus, meaningful automation names, minimum 44 x 44 DIP targets, and Windows High Contrast operation.
 
 ---
 
 ### 6. Scope Boundaries
 
-* **In-Scope:**
-  * Expansion of `wincare-core` with native C-ABI probes and cleaners.
-  * C# P/Invoke bridge and ViewModel progressive disclosure expanders.
-  * ReadyToRun removal and PRI stripping in portable publish profiles.
-  * Inno Setup framework-dependent installer target definition.
-* **Explicit Non-Goals:**
-  * No kernel-mode driver installation.
-  * No third-party analytics, telemetry, or network phone-home.
-  * No aggressive or unverified registry tweaks that risk Windows update stability.
-  * No background persistent daemons consuming > 10 MB RAM at idle.
+**In scope**
+
+- Native C-ABI snapshot and safe temp cleaner.
+- Managed native repository bridge.
+- Risk-tier admission and regression coverage.
+- Parallel local diagnostics and decoupled WUA.
+- Trimmed portable x64/ARM64 outputs and native-architecture runtime smoke.
+- Inno Setup definition consuming the x64 portable payload.
+
+**Non-goals**
+
+- Kernel-mode driver installation.
+- Blanket confirmation/token ceremony for Safe or Moderate commands.
+- Generic rollback claims without an executable compensator.
+- Fabricated health percentages or performance numbers.
+- A fictional framework-dependent installer artifact used as product-truth evidence.
 
 ---
 
 ### 7. Verification & Quality Gates
 
-1. **Managed Test Suite:** 100% pass on all 172 xUnit tests in `WinCare.Native.sln`.
-2. **Native Rust Test Suite:** 100% pass on all unit tests in `native/wincare-core` including MIRI/safety validations.
-3. **Evaluator Contract Checks:**
-   * Benchmark probe run: `dotnet test --filter Category=PerfBenchmark` $\implies p95 < 5\text{ ms}$.
-   * Size validation: `python tools/release_checklist.py` $\implies$ portable exe $\le 24\text{ MB}$, framework build $\le 6\text{ MB}$.
-4. **Visual Token Audit:** Execution of `python tests/tools/verify_visual_tokens.py` and `python tests/tools/verify_pill_contrast.py` ensuring zero contrast regressions.
+1. **Managed tests:** `dotnet test WinCare.Native.sln` on x64 Windows CI.
+2. **Rust:** format, clippy, x64 unit tests, and release builds for x64 + ARM64.
+3. **Structural:** `python -m unittest discover -s tests/native -v`.
+4. **Portable bytes:** `tools/release_checklist.py --portable-artifact .../WinCare.App.exe` for each RID.
+5. **Portable runtime:** `--smoke-test` on native x64 and native ARM64 Windows runners.
+6. **MSIX:** build, sign with runner-local development identity, and verify signature/publisher in CI.
+7. **Visual/product truth:** design contract and documentation must describe the actual runtime and packaging paths.
