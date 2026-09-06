@@ -9,7 +9,7 @@
     PrimaryButtonText="Trust and install"
     CloseButtonText="Cancel"
     DefaultButton="Close"
-    CornerRadius="8"
+    CornerRadius="{StaticResource RadiusControl}"
     Style="{ThemeResource DefaultContentDialogStyle}">
 
     <ScrollViewer MaxHeight="620" VerticalScrollBarVisibility="Auto">
