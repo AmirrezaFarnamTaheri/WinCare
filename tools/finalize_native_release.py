@@ -108,6 +108,7 @@ NATIVE_TOOL_FILES = (
     "tools/package_portable.py",
     "tools/release_checklist.py",
     "tools/stage_release_assets.py",
+    "tools/installer/wincare_setup.iss",
     "tools/verify_native_foundation.py",
     "tools/verify_visual_tokens.py",
     "tools/verify_pill_contrast.py",

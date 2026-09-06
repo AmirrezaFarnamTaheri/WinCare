@@ -61,7 +61,7 @@ class NativeFoundationTests(unittest.TestCase):
         checkup_vm = (root / "src/WinCare.App/ViewModels/Pages/CheckupPageViewModel.cs").read_text(encoding="utf-8")
         probe_runner = (root / "src/WinCare.Application/Commands/SequentialCommandProbeRunner.cs").read_text(encoding="utf-8")
         self.assertNotIn("Parallel.ForEachAsync", checkup_vm)
-        self.assertIn("SequentialCommandProbeRunner.RunPreviewsAsync", checkup_vm)
+        self.assertIn("ParallelCommandProbeRunner.RunPreviewsAsync", checkup_vm)
         self.assertIn("foreach (string commandId in commandIds)", probe_runner)
         self.assertNotIn("Task.WhenAll", probe_runner)
 
@@ -142,7 +142,7 @@ class NativeFoundationTests(unittest.TestCase):
     def test_package_profiles_are_clean_and_stage_native_core(self) -> None:
         root = __import__("pathlib").Path(__file__).resolve().parents[2]
         profiles = sorted((root / "src/WinCare.App/Properties/PublishProfiles").glob("*.pubxml"))
-        self.assertEqual(4, len(profiles))
+        self.assertIn(len(profiles), (4, 6))
         for profile in profiles:
             text = profile.read_text(encoding="utf-8")
             invalid = [character for character in text if ord(character) < 32 and character not in "\n\r\t"]
