@@ -28,6 +28,16 @@ class WinUiSingleFileContractTests(unittest.TestCase):
             self.assertIn("<PublishSingleFile>true</PublishSingleFile>", profile, name)
             self.assertIn("<IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>", profile, name)
 
+    def test_desktop_smoke_reads_process_command_line(self) -> None:
+        root = Path(__file__).resolve().parents[2]
+        app = (root / "src/WinCare.App/App.xaml.cs").read_text(encoding="utf-8")
+
+        self.assertIn("Environment.GetCommandLineArgs()", app)
+        self.assertIn("PortableSmokeArgument", app)
+        self.assertIn(".Any(argument => string.Equals(", app)
+        self.assertNotIn("args.Arguments?.Trim()", app)
+        self.assertNotIn("!string.IsNullOrWhiteSpace(args.Arguments)", app)
+
 
 if __name__ == "__main__":
     unittest.main()
