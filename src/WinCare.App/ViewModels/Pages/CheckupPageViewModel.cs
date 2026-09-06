@@ -340,7 +340,7 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
                         if (freeGb < 10.0)
                         {
                             hasCritical = true;
-                            findings.Add($"Low space on {driveName} ({freeGb:0.1} GB free)");
+                            findings.Add($"Low space on {driveName} ({freeGb:0.0} GB free)");
                             if (storageRow is not null)
                             {
                                 storageRow.State = "Critical space";
@@ -352,7 +352,7 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
                         else if (freeGb < 20.0)
                         {
                             hasWarning = true;
-                            findings.Add($"Moderate space on {driveName} ({freeGb:0.1} GB free)");
+                            findings.Add($"Moderate space on {driveName} ({freeGb:0.0} GB free)");
                             if (storageRow is not null && storageRow.StatusBrushKey != "DangerBrush")
                             {
                                 storageRow.State = "Space attention";
