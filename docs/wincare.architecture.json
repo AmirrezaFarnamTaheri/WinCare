@@ -42,7 +42,7 @@
           "pkg_portable",
           "pkg_installer"
         ],
-        "note": "Each portable WinCare.App.exe is capped at 35,000,000 bytes; Inno Setup consumes the same x64 portable publish directory as its payload."
+        "note": "Each portable WinCare.App.exe is capped at 70,000,000 bytes as a measured regression ceiling; Inno Setup consumes the same x64 portable publish directory as its payload."
       }
     ]
   },
@@ -196,7 +196,7 @@
       "id": "pkg_portable",
       "type": "cloud",
       "label": "Portable Single-File Exe",
-      "sublabel": "≤35,000,000 bytes per executable",
+      "sublabel": "≤70,000,000 bytes per executable",
       "tag": "x64 + ARM64",
       "pos": [
         250,
@@ -354,7 +354,7 @@
       "items": [
         "Rust Edition 2024 C-ABI provides native snapshot and safe temp-clean primitives",
         "Portable x64 and ARM64 executables are runtime-smoke-tested on native runners",
-        "Portable WinCare.App.exe uses one enforced 35,000,000-byte ceiling; Inno wraps the x64 payload"
+        "Portable WinCare.App.exe uses one enforced 70,000,000-byte regression ceiling; Inno wraps the x64 payload"
       ]
     }
   ]
