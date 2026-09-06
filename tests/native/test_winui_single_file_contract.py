@@ -18,6 +18,14 @@ class WinUiSingleFileContractTests(unittest.TestCase):
             "<ProjectPriFileName Condition=\"'$(PublishSingleFile)' == 'true'\">resources.pri</ProjectPriFileName>",
             project,
         )
+        self.assertIn(
+            "Condition=\"'$(Configuration)' == 'Release' and '$(PublishSingleFile)' == 'true' and '$(WindowsPackageType)' == 'None'\"",
+            project,
+        )
+        self.assertIn("<PublishTrimmed>true</PublishTrimmed>", project)
+        self.assertIn("<TrimMode>partial</TrimMode>", project)
+        self.assertIn("<SuppressTrimAnalysisWarnings>true</SuppressTrimAnalysisWarnings>", project)
+        self.assertIn("<PublishReadyToRun>false</PublishReadyToRun>", project)
 
         profiles = root / "src/WinCare.App/Properties/PublishProfiles"
         for name in ("portable-x64.pubxml", "portable-ARM64.pubxml"):
@@ -27,6 +35,9 @@ class WinUiSingleFileContractTests(unittest.TestCase):
             self.assertIn("<SelfContained>true</SelfContained>", profile, name)
             self.assertIn("<PublishSingleFile>true</PublishSingleFile>", profile, name)
             self.assertIn("<IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>", profile, name)
+            self.assertIn("<PublishTrimmed>true</PublishTrimmed>", profile, name)
+            self.assertIn("<TrimMode>partial</TrimMode>", profile, name)
+            self.assertIn("<PublishReadyToRun>false</PublishReadyToRun>", profile, name)
 
     def test_desktop_smoke_reads_process_command_line(self) -> None:
         root = Path(__file__).resolve().parents[2]
