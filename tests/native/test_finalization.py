@@ -325,6 +325,15 @@ class FinalizationTests(unittest.TestCase):
         self.assertIn("--mode production", release_workflow)
         self.assertIn("workflow_dispatch", release_workflow)
 
+    def test_native_workflow_supports_manual_and_tagged_releases(self) -> None:
+        workflow = (ROOT / ".github/workflows/native-winui.yml").read_text(encoding="utf-8")
+        self.assertIn("workflow_dispatch:", workflow)
+        self.assertIn("publish_release:", workflow)
+        self.assertIn("release_tag:", workflow)
+        self.assertIn("startsWith(github.ref, 'refs/tags/v')", workflow)
+        self.assertIn("github.event_name == 'workflow_dispatch'", workflow)
+
+
 
 if __name__ == "__main__":
     unittest.main()

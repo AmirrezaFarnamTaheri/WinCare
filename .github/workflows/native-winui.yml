@@ -6,6 +6,17 @@ on:
     tags: ['v*']
   pull_request:
   workflow_dispatch:
+    inputs:
+      publish_release:
+        description: 'Publish or update GitHub release'
+        required: false
+        type: boolean
+        default: true
+      release_tag:
+        description: 'Release tag override (leave empty to derive from Directory.Build.props)'
+        required: false
+        type: string
+        default: ''
 
 concurrency:
   group: native-winui-${{ github.event.pull_request.number || github.ref }}
@@ -315,13 +326,18 @@ jobs:
 
   release-gate:
     needs: [verify-source, rust, managed-and-package]
-    if: startsWith(github.ref, 'refs/tags/v') && github.event_name != 'pull_request'
+    if: >-
+      github.event_name != 'pull_request' &&
+      (
+        startsWith(github.ref, 'refs/tags/v') ||
+        (github.event_name == 'workflow_dispatch' && inputs.publish_release != false)
+      )
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
       contents: write
     env:
-      RELEASE_TAG: ${{ github.ref_name }}
+      RELEASE_TAG: ${{ inputs.release_tag || (startsWith(github.ref, 'refs/tags/v') && github.ref_name) || '' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
@@ -342,7 +358,9 @@ jobs:
           prefix = props.find('.//VersionPrefix').text
           suffix = props.find('.//VersionSuffix').text if props.find('.//VersionSuffix') is not None else ''
           expected = f'v{prefix}-{suffix}' if suffix else f'v{prefix}'
-          actual = os.environ.get('RELEASE_TAG', '')
+          actual = os.environ.get('RELEASE_TAG', '').strip()
+          if not actual or actual in ('master', 'main'):
+              actual = expected
           assert actual.startswith('v'), f"Triggered ref '{actual}' is not a valid version tag ('v*')."
           assert actual == expected, f'Release tag {actual} does not match product version {expected}'
           is_prerelease = any(x in expected for x in ('-rc', '-beta', '-alpha'))
@@ -364,6 +382,11 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          if [[ "$GITHUB_REF" == refs/heads/* ]]; then
+            echo "Ensuring git tag '$RELEASE_TAG' points to '$GITHUB_SHA' for workflow_dispatch publication..."
+            git tag -f "$RELEASE_TAG" "$GITHUB_SHA"
+            git push origin -f "$RELEASE_TAG" || echo "Tag push skipped or rejected; continuing with release creation."
+          fi
           if gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             echo "Release '$RELEASE_TAG' already exists. Checking and uploading missing assets..."
             for asset in release_assets/*; do
@@ -380,5 +403,6 @@ jobs:
               --title "WinCare $RELEASE_TAG" \
               --generate-notes \
               $RELEASE_FLAGS \
+              --target "$GITHUB_SHA" \
               --repo "$GITHUB_REPOSITORY"
           fi
