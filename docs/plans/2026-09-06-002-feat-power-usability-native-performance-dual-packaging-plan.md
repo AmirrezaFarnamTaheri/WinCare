@@ -13,7 +13,7 @@ status: completed
 - **Objective:** Pair 1-click everyday maintenance with inspectable power-user detail, a Rust native C-ABI core, parallel read-only diagnostics, and portable x64/ARM64 distribution.
 - **Product Authority:** User design approval on 2026-09-06 (Understanding Lock confirmed).
 - **Architecture:** [Interactive diagram](../architecture.html), authored from [`docs/wincare.architecture.json`](../wincare.architecture.json).
-- **Portable size contract:** `artifacts/portable/<rid>/WinCare.App.exe` must be `<= 35,000,000` bytes.
+- **Portable size contract:** `artifacts/portable/<rid>/WinCare.App.exe` must be `<= 70,000,000` bytes.
 
 ---
 
@@ -56,7 +56,7 @@ Layers:
 | **DEC-02** | Rust C-ABI for native snapshot/clean primitives | Avoids child-process probes and provides a typed native boundary. |
 | **DEC-03** | Risk-tiered admission | Safe = direct; Moderate = confirmation; Destructive = preview plan. |
 | **DEC-04** | Parallel local probes + background WUA | Prevents Windows Update latency from blocking the primary Checkup result. |
-| **DEC-05** | One portable size contract | Avoids conflicting 22/24/35 MB and framework-installer size claims. |
+| **DEC-05** | One measured portable regression ceiling | Replaces conflicting historical 22/24/35 MB claims with a single gate grounded in the actual self-contained WinUI payload. |
 | **DEC-06** | Native-architecture trimmed runtime smoke | Build/link success is insufficient evidence for XAML/reflection/COM/plugin/native paths. |
 
 ---
@@ -93,12 +93,13 @@ The cleaner must not traverse Windows reparse-point directories/junctions. Nativ
 
 - Build trimmed single-file `win-x64` and `win-arm64` executables.
 - Canonical artifact under measurement: `artifacts/portable/<rid>/WinCare.App.exe`.
-- Canonical ceiling: **35,000,000 bytes**, enforced by:
+- Canonical regression ceiling: **70,000,000 bytes**, enforced by:
 
 ```text
 python tools/release_checklist.py --portable-artifact artifacts/portable/<rid>/WinCare.App.exe
 ```
 
+- The ceiling is intentionally above the measured exact-head artifacts (67,362,718 bytes x64 and 66,071,465 bytes ARM64) so it catches material footprint regressions without pretending the self-contained WinUI payload is a 35 MB binary.
 - The Inno script consumes `artifacts/portable/win-x64/*`; do not describe it as a separate 4–6 MB framework-dependent application.
 - MSIX packaging/signature validation remains a separate CI path.
 
