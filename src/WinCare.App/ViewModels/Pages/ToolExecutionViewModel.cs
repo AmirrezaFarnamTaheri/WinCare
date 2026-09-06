@@ -156,7 +156,7 @@ public sealed class ToolExecutionViewModel : ObservableObject
     public bool IsDestructiveTool => _selectedTool?.Definition.RiskTier == RiskTier.Destructive;
     public bool IsMutatingTool => _selectedTool?.Definition.ReadOnly == false;
     public bool RequiresApprovalSwitch => IsMutatingTool && !IsSafeTool;
-    public bool CanApproveReview => IsMutatingTool && _hasSuccessfulPreview && !IsExecuting;
+    public bool CanApproveReview => IsMutatingTool && !IsExecuting && (IsModerateTool || _hasSuccessfulPreview);
 
     public bool IsReviewApproved
     {
