@@ -239,42 +239,48 @@ class FinalizationTests(unittest.TestCase):
         self.assertIn('version = "2.5.0"', cargo)
         self.assertIn('const VERSION: &[u8] = b"2.5.0";', rust_source)
 
-    def test_native_workflows_pin_actions_and_rust_toolchain(self) -> None:
-        for relative in (
-            ".github/workflows/native-winui.yml",
-            ".github/workflows/native-release-candidate.yml",
-        ):
-            workflow = (ROOT / relative).read_text(encoding="utf-8")
-            uses_lines = [line.strip() for line in workflow.splitlines() if "uses:" in line]
-            self.assertTrue(uses_lines)
-            self.assertFalse(any("@v" in line or "@stable" in line for line in uses_lines), uses_lines)
-            if relative.endswith("native-winui.yml"):
-                self.assertIn("toolchain: 1.97.1", workflow)
+    def test_native_workflow_pins_actions_and_rust_toolchain(self) -> None:
+        workflow_path = ROOT / ".github/workflows/native-winui.yml"
+        removed_workflow = ROOT / ".github/workflows/native-release-candidate.yml"
+        workflow = workflow_path.read_text(encoding="utf-8")
+        uses_lines = [line.strip() for line in workflow.splitlines() if "uses:" in line]
+        self.assertTrue(uses_lines)
+        self.assertFalse(any("@v" in line or "@stable" in line for line in uses_lines), uses_lines)
+        self.assertIn("toolchain: 1.97.1", workflow)
+        self.assertFalse(removed_workflow.exists())
 
         toolchain = (ROOT / "rust-toolchain.toml").read_text(encoding="utf-8")
         self.assertIn('channel = "1.97.1"', toolchain)
         self.assertIn('components = ["rustfmt", "clippy"]', toolchain)
 
-    def test_tagged_release_workflow_publishes_verified_versioned_assets(self) -> None:
-        native_workflow = (ROOT / ".github/workflows/native-winui.yml").read_text(encoding="utf-8")
-        release_workflow = (ROOT / ".github/workflows/native-release-candidate.yml").read_text(encoding="utf-8")
-        self.assertIn("Validate tag matches product version", native_workflow)
-        self.assertIn("Prepare release assets", native_workflow)
-        self.assertIn("WinCare-release-${{ github.ref_name }}", native_workflow)
-        self.assertIn("contents: write", native_workflow)
-        self.assertIn("Publish GitHub release", native_workflow)
-        self.assertIn("GH_TOKEN: ${{ github.token }}", native_workflow)
-        self.assertIn("gh release create", native_workflow)
-        self.assertNotIn("--clobber", native_workflow)
-        self.assertIn("Hold artifacts for manual publication", release_workflow)
-        self.assertNotIn("gh release create", release_workflow)
-        self.assertIn("Require primary branch dispatch", release_workflow)
-        self.assertIn("refs/heads/master", release_workflow)
-        self.assertIn("refs/heads/main", release_workflow)
-        self.assertIn('actual = os.environ["WINCARE_VERSION"].removeprefix("v")', release_workflow)
-        self.assertNotIn("actual = '${WINCARE_VERSION#v}'", release_workflow)
-        self.assertNotIn("${{ github.ref }}", release_workflow)
-        self.assertIn("$GITHUB_REF", release_workflow)
+    def test_release_workflow_publishes_verified_versioned_assets(self) -> None:
+        workflow = (ROOT / ".github/workflows/native-winui.yml").read_text(encoding="utf-8")
+        self.assertIn("Resolve release metadata", workflow)
+        self.assertIn('mode = "rc" if "-" in version else "production"', workflow)
+        self.assertIn("Finalize release source", workflow)
+        self.assertIn('--mode "$FINALIZE_MODE"', workflow)
+        self.assertIn("Stage packaged release assets", workflow)
+        self.assertIn("pattern: package-*", workflow)
+        self.assertIn("WinCare-release-${{ needs.verify.outputs.product_version }}", workflow)
+        self.assertIn("contents: write", workflow)
+        self.assertIn("Publish GitHub release", workflow)
+        self.assertIn("GH_TOKEN: ${{ github.token }}", workflow)
+        self.assertIn("gh release create", workflow)
+        self.assertNotIn("--clobber", workflow)
+        self.assertNotIn("git tag -f", workflow)
+        self.assertNotIn("git push origin -f", workflow)
+
+    def test_workflow_is_consolidated_without_internal_artifact_hops(self) -> None:
+        workflow = (ROOT / ".github/workflows/native-winui.yml").read_text(encoding="utf-8")
+        self.assertIn("\n  build:\n", workflow)
+        self.assertNotIn("\n  rust:\n", workflow)
+        self.assertNotIn("native-${{ matrix.target }}", workflow)
+        self.assertNotIn("WinCare-screenshots", workflow)
+        self.assertNotIn("python tools/capture_screenshots.py\n", workflow)
+        self.assertIn("python tools/capture_screenshots.py --verify-only", workflow)
+        self.assertNotIn("WinCare-native-source-finalization", workflow)
+        self.assertIn("python -m unittest discover -s tests -t . -v", workflow)
+        self.assertIn("default: false", workflow)
 
     def test_runner_local_signing_identity_never_leaves_the_packaging_job(self) -> None:
         workflow = (ROOT / ".github/workflows/native-winui.yml").read_text(encoding="utf-8")
@@ -282,10 +288,10 @@ class FinalizationTests(unittest.TestCase):
         self.assertNotIn("artifacts/signing/*", workflow)
         self.assertNotIn("temp_signing_key.pfx", workflow)
         self.assertNotIn("PackageCertificatePassword=", workflow)
-        self.assertIn("Prepare runner-local package signing identity", workflow)
+        self.assertIn("Sign and verify MSIX", workflow)
         self.assertNotIn("WINCARE_SIGNING_CERT_BASE64", workflow)
         self.assertNotIn("WINCARE_SIGNING_CERT_PASSWORD", workflow)
-        self.assertIn("WINCARE_DEVELOPMENT_SIGNING=true", workflow)
+        self.assertNotIn("WINCARE_DEVELOPMENT_SIGNING", workflow)
         self.assertIn("WinCare.App_*.msix", workflow)
         self.assertIn("Dependencies", workflow)
         self.assertNotIn("AppPackages/**/*.msix", workflow)
@@ -293,17 +299,16 @@ class FinalizationTests(unittest.TestCase):
         self.assertNotIn("Cert:\\LocalMachine\\Root", workflow)
         self.assertIn("CustomRootTrust", workflow)
         self.assertIn("CustomTrustStore", workflow)
-        self.assertIn("cancel-in-progress: true", workflow)
         self.assertIn("timeout-minutes: 20", workflow)
 
-        verification_start = workflow.index("Verify MSIX signature and publisher")
-        cleanup_start = workflow.index("Clean runner-local signing identity")
-        verification_block = workflow[verification_start:cleanup_start]
+        verification_start = workflow.index("Sign and verify MSIX")
+        publish_start = workflow.index("Publish portable executable")
+        verification_block = workflow[verification_start:publish_start]
         self.assertIn("timeout-minutes: 3", verification_block)
         self.assertIn("CustomRootTrust", verification_block)
         self.assertIn("CustomTrustStore", verification_block)
-        self.assertIn("WINCARE_DEVELOPMENT_SIGNING", verification_block)
-        self.assertIn("Runtime negative test", verification_block)
+        self.assertIn("tamper smoke test", verification_block)
+        self.assertIn('Remove-Item -Force "Cert:\\CurrentUser\\My\\$($cert.Thumbprint)"', verification_block)
         self.assertNotIn("Cert:\\CurrentUser\\Root", verification_block)
         self.assertNotIn("Cert:\\LocalMachine\\Root", verification_block)
 
@@ -334,23 +339,23 @@ class FinalizationTests(unittest.TestCase):
         self.assertNotIn("Cert:\\\\LocalMachine\\\\Root", installer)
 
     def test_ci_runs_finalization_gates_on_master_and_main(self) -> None:
-        native_workflow = (ROOT / ".github/workflows/native-winui.yml").read_text(encoding="utf-8")
-        release_workflow = (ROOT / ".github/workflows/native-release-candidate.yml").read_text(encoding="utf-8")
-        self.assertIn("branches: [master, main]", native_workflow)
-        self.assertIn("python -m unittest discover -s tests/native -v", native_workflow)
-        self.assertIn("finalize_native_release.py", native_workflow)
-        self.assertIn("--mode rc", native_workflow)
-        self.assertIn("--mode production", release_workflow)
-        self.assertIn("workflow_dispatch", release_workflow)
+        workflow = (ROOT / ".github/workflows/native-winui.yml").read_text(encoding="utf-8")
+        self.assertIn("branches: [master, main]", workflow)
+        self.assertIn("python -m unittest discover -s tests -t . -v", workflow)
+        self.assertIn("finalize_native_release.py", workflow)
+        self.assertIn('--mode "$FINALIZE_MODE"', workflow)
+        self.assertIn('mode = "rc" if "-" in version else "production"', workflow)
+        self.assertNotIn("--mode rc", workflow)
+        self.assertNotIn("--mode production", workflow)
 
     def test_native_workflow_supports_manual_and_tagged_releases(self) -> None:
         workflow = (ROOT / ".github/workflows/native-winui.yml").read_text(encoding="utf-8")
         self.assertIn("workflow_dispatch:", workflow)
         self.assertIn("publish_release:", workflow)
         self.assertIn("release_tag:", workflow)
+        self.assertIn("default: false", workflow)
         self.assertIn("startsWith(github.ref, 'refs/tags/v')", workflow)
         self.assertIn("github.event_name == 'workflow_dispatch'", workflow)
-
 
 
 if __name__ == "__main__":

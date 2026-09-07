@@ -77,7 +77,6 @@ REQUIRED_FILES = (
     ROOT / "native/wincare-core/Cargo.toml",
     ROOT / "native/wincare-core/src/lib.rs",
     ROOT / ".github/workflows/native-winui.yml",
-    ROOT / ".github/workflows/native-release-candidate.yml",
     ROOT / "tools/finalize_native_release.py",
     ROOT / "tools/verify_visual_tokens.py",
     ROOT / "tools/verify_pill_contrast.py",
@@ -365,7 +364,6 @@ def verify() -> list[Finding]:
         for column in ("Command", "Category", "Risk", "Administrator access", "Restart"):
             if column not in text:
                 findings.append(Finding("all-tools-column", column))
-
 
     profile_root = ROOT / "src/WinCare.App/Properties/PublishProfiles"
     profiles = sorted(profile_root.glob("*.pubxml")) if profile_root.is_dir() else []

@@ -1,117 +1,107 @@
 # Native Validation and Promotion Policy
 
-WinCare establishes strict boundaries between static source validation, automated CI execution, interactive Windows evidence, package verification, and command parity. Passing one verification class never substitutes for another.
+WinCare separates source validation, hosted Windows CI, packaged-runtime evidence, interactive validation, and command-by-command behavior verification. Passing one evidence class does not silently substitute for another.
 
 ---
 
-## 🏷️ Evidence Classifications
+## Evidence classifications
 
-| Evidence Term | Definition & Contract |
+| Evidence term | Definition |
 |---|---|
-| **Verified** | Behavior executed and confirmed passing in the targeted execution environment |
-| **CI Verified** | An automated build, test, packaging, signing, or artifact contract executed successfully in the declared hosted CI environment |
-| **Statically Validated** | Source code, AST, metadata, or artifact structure confirmed via deterministic automated analysis |
-| **Reviewed** | Implementation, design tokens, or contract inspected manually or against specifications |
-| **Pending** | Required evidence has not yet been collected in the environment that can prove the behavior |
-| **Blocked** | A declared prerequisite, platform capability, or safety gate prevented execution |
-| **Failed** | A check ran and did not satisfy its acceptance contract |
+| **Verified** | Behavior executed and confirmed in the targeted environment. |
+| **CI Verified** | Build, test, packaging, signing, artifact, or runtime behavior completed successfully in the declared hosted CI environment. |
+| **Statically Validated** | Source, metadata, or artifact structure passed deterministic automated analysis. |
+| **Reviewed** | Implementation or contract was inspected against its specification. |
+| **Pending** | Required evidence has not yet been collected in the environment that can prove it. |
+| **Blocked** | A declared prerequisite or platform capability prevented execution. |
+| **Failed** | A check ran and did not satisfy its acceptance contract. |
 
 ---
 
-## 🧪 Current Verification Matrix
+## Current verification matrix
 
-### 1. Source, Rust, and Structural Verification Gates
+### 1. Source and structural verification
 
-- [x] **Native Foundation Gate (`tools/verify_native_foundation.py`)**:
-  - Exact 259/259 unique command ID parity with the frozen oracle (`migration/oracle/legacy-command-ids.json`).
-  - Zero PowerShell or WPF dependencies in native runtime roots.
-  - Required WinUI 3 pages, navigation contracts, command execution bindings, and automation metadata verified.
-  - All 259 catalog commands route through one fail-closed native executor boundary.
-- [x] **Native Structural & Safety Unit Tests (`tests/native/`)**:
-  - **88/88 passed** in PR CI.
-  - Coverage includes fail-closed execution, parameter/approval provenance, bounded process behavior, reparse-point safety, plugin admission rollback, dependency-lock determinism, portable publish lock contracts, finalized-source completeness, responsive UI contracts, and release safety gates.
-- [x] **Rust 2024 Workspace Gates (`native/Cargo.toml`)**:
-  - `cargo fmt --check` and Clippy with `-D warnings` pass for both `x86_64-pc-windows-msvc` and `aarch64-pc-windows-msvc`.
-  - Rust unit tests execute on the x64 Windows runner.
-  - Release builds compile successfully for both x64 and ARM64 targets.
-  - ARM64 Rust unit execution is intentionally skipped in hosted CI; cross-compilation is not runtime evidence on ARM hardware.
-- [x] **Community Plugin SDK & CLI Tests (`tests/tools/test_plugin_cli.py`)**:
-  - **9/9 passed**, covering scaffolding, manifest linting, SemVer validation, archive bounds, symlink/path traversal rejection, deterministic repeated packaging, and Unicode archive paths.
-- [x] **Visual Token Consistency (`tools/verify_visual_tokens.py`)**:
-  - 33/33 visual tokens verified across Light, Dark, and High Contrast theme dictionaries.
-- [x] **WCAG 2.1 AA Contrast Compliance (`tools/verify_pill_contrast.py`)**:
-  - All 8 status pill pairs pass WCAG 2.1 AA (≥ 4.5:1), achieving up to 14.68:1 contrast.
+- [x] **Native foundation contract** (`tools/verify_native_foundation.py`): exact 259/259 command ID parity with the frozen oracle, native-source boundaries, WinUI navigation contracts, and one fail-closed command executor boundary.
+- [x] **Native Python regression suite** (`tests/native/`): **95/95 passed** on the current `master` head. Coverage includes command admission, parameter/approval provenance, bounded process behavior, reparse-point safety, plugin admission rollback, dependency-lock determinism, portable publish contracts, finalized-source completeness, responsive UI contracts, and release behavior.
+- [x] **Community plugin CLI suite** (`tests/tools/`): **9/9 passed**, covering scaffolding, manifest linting, SemVer validation, archive bounds, symlink/path traversal rejection, deterministic packaging, and Unicode archive paths.
+- [x] **Visual and accessibility source contracts**: theme-token consistency and status-pill WCAG 2.1 AA contrast remain covered by the repository tests and validators.
+- [x] **Documentation image integrity**: checked-in PNG evidence is validated without regenerating screenshots during ordinary CI.
 
-### 2. Automated Windows CI Evidence
+The unified workflow runs the Python repository tests with one discovery command instead of repeating the native foundation and plugin test paths as separate workflow steps.
 
-The main PR workflow uses hosted Windows runners to exercise build/package contracts that cannot be proven by Linux-only source inspection:
+### 2. Rust and managed Windows CI
 
-- [x] **Managed x64 tests** — **164/164**: 9 Command Catalog, 58 Application, and 97 Infrastructure tests.
-- [x] **Locked NuGet restore and vulnerability audit** — the committed dependency graph is restored in locked mode and audits all transitive packages at moderate-or-higher severity.
-- [x] **x64 and ARM64 MSIX build** — both package architectures compile with the staged Rust core.
-- [x] **Runner-local development signing** — each MSIX is signed with an ephemeral certificate, signer/publisher identity is verified, and a tampered package is rejected.
-- [x] **x64 and ARM64 portable publication contract** — CI requires self-contained single-file publication plus deterministic portable ZIP staging for both RIDs using committed portable lock graphs.
+The Windows build matrix owns both the native Rust core and the managed/package build for each architecture; there is no intermediate DLL artifact upload/download hop.
 
-These checks are **CI Verified** build/package evidence. They do not prove interactive UI behavior, production-certificate deployment, or native execution on physical ARM64 hardware.
+- [x] **Rust x64 and ARM64**: formatting is checked once, Clippy runs for both Windows targets with `-D warnings`, x64 unit tests execute, and release builds compile for x64 and ARM64.
+- [x] **Managed x64 tests**: **180/180 passed** on the current `master` head: 18 Command Catalog, 73 Application, and 89 Infrastructure tests.
+- [x] **Locked NuGet restore and audit contract**: committed dependency graphs remain the build input.
+- [x] **x64 and ARM64 MSIX builds**: both architectures compile with their directly staged Rust core.
+- [x] **Runner-local development signing**: each MSIX is signed with an ephemeral certificate, signer/publisher identity is checked, a modified package is rejected, and the private certificate is removed in the same packaging step.
+- [x] **x64 and ARM64 portable publication**: self-contained, trimmed single-file executables and deterministic portable ZIPs are produced for both RIDs and checked against the canonical executable-size ceiling.
 
-### 3. Interactive / Deployment / Behavior Evidence Still Required
+These are CI-verified build/package results. Runner-local development signing does not claim production-certificate deployment trust.
 
-- [ ] **WinUI 3 shell launch and interactive command execution** — requires an interactive Windows desktop session on the candidate artifact.
-- [ ] **Narrator, keyboard-only navigation, High Contrast rendering, and 100–225% text scaling** — requires live accessibility validation; static XAML/token checks are not a substitute.
-- [ ] **Production-certificate MSIX install, repair, upgrade, and uninstall cycles** — runner-local development signing proves package integrity plumbing, not production deployment trust.
-- [ ] **ARM64 runtime execution** — requires physical or emulated ARM64 Windows execution; cross-compilation alone is insufficient.
-- [ ] **Command-by-command Windows behavior comparison against the historical oracle** — the catalog currently remains blocked from production promotion until all 259 commands reach `BehaviorVerified`.
+### 3. Packaged runtime smoke
+
+The workflow downloads the actual versioned portable artifact and executes `--smoke-test` on the matching architecture runner:
+
+- [x] **x64 portable runtime** on `windows-latest`.
+- [x] **ARM64 portable runtime** on `windows-11-vs2026-arm`.
+
+The smoke crosses WinUI startup/window activation, native Rust ABI loading, plugin/runtime initialization, and a read-only `system` dispatcher path before exiting successfully. This is meaningful packaged-runtime evidence, but it does not prove every WUA/COM path, arbitrary third-party plugin behavior, accessibility behavior, or all 259 command implementations.
+
+### 4. Interactive / deployment / command evidence still required
+
+- [ ] **Narrator, keyboard-only navigation, High Contrast rendering, and 100–225% text scaling** on the release candidate.
+- [ ] **Production-certificate MSIX install, repair, upgrade, and uninstall cycles**.
+- [ ] **Broader ARM64 Windows integration behavior** beyond the hosted portable startup/core-flow smoke.
+- [ ] **Command-by-command Windows behavior comparison against the historical oracle**. Production promotion remains blocked until all 259 commands reach `BehaviorVerified`.
 
 ---
 
-## 🛡️ Core Safety Evidence
+## Core safety evidence
 
-- **Approval Provenance**: Mutating execution requires a dispatcher-issued, parameter-bound, expiring, single-use plan produced by successful preview.
-- **Exception Sanitization**: `CommandDispatcher` logs exception type names rather than copying potentially sensitive exception messages into the activity journal.
-- **Plugin Trust Boundary**: Remote installs re-resolve against fresh catalog data, enforce package and publisher revocation, bind installed manifests to external admission records, and re-verify publisher signatures during discovery.
-- **Plugin Rollback**: Failed upgrades preserve prior plugin state and retain the last known-good admission-record backup if trust-record restoration itself fails.
-- **Namespace Reservation**: Dynamic plugin registration prohibits overwriting reserved core command namespaces.
-- **Junction & Reparse Safety**: File cleanup canonicalizes roots, rejects reparse-point roots, and skips symlink descendants during traversal.
-- **Process Isolation**: Process invocation passes discrete bounded argument arrays rather than interpolating commands through a shell.
-- **FFI Unwind Safety**: Rust FFI exports guard panic boundaries so Rust unwinds do not cross the C ABI into .NET.
+- **Approval provenance**: mutating execution uses dispatcher-issued, parameter-bound, expiring, single-use approval plans.
+- **Exception sanitization**: `CommandDispatcher` logs exception type names rather than copying arbitrary exception messages into the activity journal.
+- **Plugin trust boundary**: remote installs re-resolve catalog data, enforce package/publisher revocation, bind installed manifests to admission records, and re-verify publisher signatures during discovery.
+- **Plugin rollback**: failed upgrades preserve prior plugin state and the last known-good admission record.
+- **Namespace reservation**: dynamic plugins cannot overwrite reserved core command namespaces.
+- **Junction and reparse safety**: cleanup canonicalizes roots, rejects reparse-point roots, and skips reparse descendants during traversal.
+- **Process isolation**: native process invocation passes bounded argument arrays rather than interpolating commands through a shell.
+- **FFI unwind safety**: Rust exports guard panic boundaries so Rust unwinds do not cross the C ABI into .NET.
 
 ---
 
-## 🚀 Running the Local Verification Gate
+## Running the local verification gate
 
-Use the repository-pinned toolchains and committed lockfiles. The exact .NET SDK is defined by `global.json`; CI restores NuGet packages in locked mode.
+Use the repository-pinned toolchains and committed lockfiles. `global.json` defines the exact .NET SDK used by CI.
 
 ```bash
-# 1. Verify foundation and command parity
-python tools/verify_native_foundation.py
+# Repository Python tests (native + tooling)
+python -m unittest discover -s tests -t . -v
 
-# 2. Run Python regression suite
-python -m unittest discover -s tests/native -v
-
-# 3. Run Rust unit, FFI, and Guard tests on a supported Windows x64 development host
+# Rust checks on a supported Windows x64 development host
+cargo fmt --manifest-path native/Cargo.toml --all -- --check
+cargo clippy --manifest-path native/Cargo.toml --all-targets --all-features -- -D warnings
 cargo test --manifest-path native/Cargo.toml
 
-# 4. Run Plugin CLI developer suite
-python tests/tools/test_plugin_cli.py -v
+# Screenshot integrity only; ordinary CI does not regenerate documentation images
+python tools/capture_screenshots.py --verify-only
 
-# 5. Verify design tokens and WCAG contrast
-python tools/verify_visual_tokens.py
-python tools/verify_pill_contrast.py
-
-# 6. Run Release Checklist
-python tools/release_checklist.py
-
-# 7. Restore/test the managed solution with committed locks
-# global.json requires .NET SDK 8.0.416 exactly.
+# Managed restore/tests
 dotnet restore WinCare.Native.sln -p:Platform=x64 --locked-mode
 dotnet test WinCare.Native.sln -c Release -p:Platform=x64 --no-restore
 ```
 
+`tools/release_checklist.py` remains available when a contributor wants the broader local source checklist or a direct portable-artifact size check.
+
 ---
 
-## 📦 Deterministic Release Finalization
+## Deterministic source finalization
 
-To generate auditable release archives and separation reports:
+Source and oracle archives can be generated locally:
 
 ```bash
 python tools/finalize_native_release.py \
@@ -120,28 +110,28 @@ python tools/finalize_native_release.py \
   --mode rc
 ```
 
-The finalization tool produces:
-- `WinCare-<version>-native-source.zip`: Native release source and audit evidence, including C#, Rust, Python release/validation tooling, the JavaScript plugin developer CLI and tests, linked documentation/assets, repository guardrails, and committed dependency lock graphs; executable legacy PowerShell is excluded.
-- `WinCare-<version>-legacy-oracle.zip`: Isolated historical legacy oracle for parity tracking.
-- `WinCare-<version>-finalization-report.md`: Markdown audit report with readiness metrics and artifact-separation status.
-- `WinCare-<version>-finalization-manifest.json`: Machine-readable artifact paths, SHA-256 digests, file counts, oracle provenance, and readiness metrics.
+The finalizer produces:
 
-The structural regression suite stages the native source bundle and fails if required security/reproducibility evidence or plugin developer tooling is absent, or if staged Markdown contains a broken local target.
+- `WinCare-<version>-native-source.zip`: native C#, Rust, Python tooling, plugin developer tooling, documentation/assets, repository guardrails, and committed dependency metadata; executable legacy PowerShell is excluded.
+- `WinCare-<version>-legacy-oracle.zip`: isolated historical legacy oracle for parity tracking.
+- `WinCare-<version>-finalization-report.md`: readiness and artifact-separation report.
+- `WinCare-<version>-finalization-manifest.json`: hashes, file counts, oracle provenance, and readiness metrics.
 
-> [!IMPORTANT]
-> Running with `--mode production` exits non-zero until all 259 commands reach `BehaviorVerified`.
+The structural regression suite exercises finalization. Ordinary PR/branch CI therefore does **not** create and upload another source-finalization bundle on every run.
+
+Production mode still exits non-zero until all 259 commands are `BehaviorVerified`. That contract is intentionally retained; CI no longer exposes an independent manual mode switch that can incorrectly ask an RC version to finalize as production.
 
 ---
 
-## 🤖 Automated CI Release Pipeline
+## Unified GitHub Actions pipeline
 
-`.github/workflows/native-winui.yml` runs for pull requests, supported branch pushes, release tags, and manual dispatch. Its main gates are:
+`.github/workflows/native-winui.yml` is the single CI/build/release workflow for pull requests, `master`/`main` pushes, release tags, and manual dispatches:
 
-1. **Source Verification**: Foundation verification, the full Python structural suite, plugin CLI tests, and deterministic source finalization on Ubuntu.
-2. **Rust Gates**: Pinned Rust formatting and Clippy for x64/ARM64, x64 unit tests, and release builds for both Windows targets.
-3. **Managed Build & Packaging**: Exact .NET SDK provisioning, locked/audited NuGet restore, x64 managed tests, x64/ARM64 MSIX build and ephemeral signing verification, portable single-file publication, deterministic archive staging, and artifact upload.
-4. **Tag Release Gate**: Requires the pushed tag to exactly match checked-in version metadata, stages verified assets through `tools/stage_release_assets.py`, and creates the GitHub release. Release-candidate tags remain prereleases; stable production tags are marked latest. Existing published releases are treated as immutable and fail closed on conflicting re-upload attempts.
+1. **Verify** — one Python repository test invocation, checked-in screenshot integrity, and one product-version extraction.
+2. **Build matrix** — Rust format/lint/test/build plus managed restore/test, MSIX build/sign/verify, trimmed portable publish, size validation, and package artifact staging for x64 and ARM64.
+3. **Portable runtime smoke** — runs the versioned portable executable on matching x64 and ARM64 hosted runners.
+4. **Release gate** — only for release tags or an explicit manual `publish_release=true`; downloads package artifacts, finalizes source/oracle evidence, stages release assets, and publishes or completes the matching GitHub release.
 
-Release builds do not require repository signing secrets. Each packaging job creates a temporary runner-local development certificate, signs its architecture-specific MSIX, verifies signer/publisher identity and tamper rejection, then removes the private identity. The matching public `.cer` is published with the artifact. Non-tag CI builds produce workflow artifacts rather than GitHub release assets.
+Manual dispatch defaults to validation/build only. A supplied `release_tag` must exactly match `Directory.Build.props`. Finalization mode is derived from the checked-in product version: prerelease versions such as `2.5.0-rc5` use `rc`, while a stable version uses `production` and therefore still requires full `BehaviorVerified` command parity.
 
-The separate manual workflow, `.github/workflows/native-release-candidate.yml`, publishes source-finalization artifacts only. Dispatch it from `master` or `main` with a version matching `Directory.Build.props`; choose `production` only after all commands are `BehaviorVerified`.
+Release builds do not require repository signing secrets. Each packaging job creates a temporary runner-local development certificate, validates the resulting MSIX against its exported public certificate without adding a trusted root, and removes the private identity before the job completes.

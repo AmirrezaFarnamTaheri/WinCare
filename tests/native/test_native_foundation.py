@@ -180,7 +180,7 @@ class NativeFoundationTests(unittest.TestCase):
         self.assertIn('python-version: "3.13"', workflow)
         managed_test_marker = "      - name: Managed tests\n        if: matrix.platform == 'x64'"
         self.assertIn(managed_test_marker, workflow)
-        self.assertIn("python -m unittest discover -s tests/native -v", workflow)
+        self.assertIn("python -m unittest discover -s tests -t . -v", workflow)
 
     def test_windows_ci_validates_real_trimmed_portable_artifacts(self) -> None:
         root = __import__("pathlib").Path(__file__).resolve().parents[2]
