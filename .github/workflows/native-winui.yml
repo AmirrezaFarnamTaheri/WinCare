@@ -138,7 +138,7 @@ jobs:
             try {
               $chain.ChainPolicy.TrustMode = [System.Security.Cryptography.X509Certificates.X509ChainTrustMode]::CustomRootTrust
               [void]$chain.ChainPolicy.CustomTrustStore.Add($ExpectedCertificate)
-              $chain.ChainPolicy.RevocationMode = [System.Security.Cryptography.X509Certificates.X509ChainRevocationMode]::NoCheck
+              $chain.ChainPolicy.RevocationMode = [System.Security.Cryptography.X509Certificates.X509RevocationMode]::NoCheck
               if (-not $chain.Build($sig.SignerCertificate)) {
                 $statuses = ($chain.ChainStatus | ForEach-Object { $_.Status.ToString() }) -join ', '
                 throw "Development signer certificate chain failed custom-root validation: $statuses"
