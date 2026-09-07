@@ -2,48 +2,53 @@
 
 **Version:** 2.5.0-rc5  
 **Classification:** Native Source Release Candidate  
-**Production Promotable:** No (Gated by Windows behavioral verification)
+**Production Promotable:** No (gated by command-by-command Windows behavioral verification)
 
 ---
 
-## 📊 Current Readiness Ledger
+## Current readiness ledger
 
 | Metric | Status | Details |
 |---|:---:|---|
 | **Stable Command IDs** | **259 / 259** | 100% parity with frozen oracle (`migration/oracle/legacy-command-ids.json`) |
 | **Native Executor Routes** | **259 / 259** | Explicit routes in `WindowsCommandExecutor.cs` |
 | **Catalog Entries at `Implemented`** | **259 / 259** | All 259 commands have typed request/result contracts |
-| **Mutating Commands Preflighted** | **104 / 104** | Parameter validation executed during preview before approval |
-| **`BehaviorVerified` on Live Windows Hosts** | **0 / 259** | Pending physical Windows validation execution |
-| **Native Implementation Blockers** | **0** | Complete native routing and fail-closed handling implemented |
-| **Production Verification Blockers** | **259** | Production promotion blocked until all 259 reach `BehaviorVerified` |
-| **PowerShell Files in Native Roots** | **0** | Pure C# and Rust source tree |
+| **Mutating Commands Preflighted** | **104 / 104** | Parameter validation executes during preview before approval |
+| **`BehaviorVerified` command implementations** | **0 / 259** | Command-by-command live Windows parity evidence is still pending |
+| **Native Implementation Blockers** | **0** | Native routing and fail-closed handling are implemented |
+| **Production Verification Blockers** | **259** | Stable production promotion remains blocked until all 259 reach `BehaviorVerified` |
+| **PowerShell Files in Native Roots** | **0** | Native application/runtime roots are C# and Rust |
+
+Hosted CI now executes the packaged portable startup/core-flow smoke on both x64 and ARM64 Windows runners. That evidence is intentionally narrower than `BehaviorVerified`: it proves packaged startup, native ABI loading, runtime/plugin initialization, and a read-only dispatcher path, not every command's Windows behavior.
 
 ---
 
-## 🛠️ Key Milestones in this Release Candidate
+## Key milestones in this release candidate
 
-1. **WinUI 3 Desktop Shell & Cyber-Teal Visual System**: Complete rewrite of the presentation tier with Fluent Mica surfaces, Cascadia Code telemetry pills, WCAG 2.1 AA accessibility (up to 14.68:1 contrast), and compact layout breakpoints (<920 DIP).
-2. **Rust 2024 Native Engine & Health Guard**: Memory-safe C-ABI FFI core (`wincare-core`) with `std::panic::catch_unwind`, and a background monitoring daemon (`wincare-guard`) with local resource threshold evaluations, a real named-pipe health endpoint (`WinCareGuardIPC`), and Windows Toast XML staged to a per-user queue directory (`%LOCALAPPDATA%`) on critical thresholds (SCM service registration and a native toast popup are not yet wired).
-3. **Modular Plugin Store & Community SDK**: Dynamic command dispatching, cryptographic package admission with sidecar digital signatures and SHA-256 validation, per-capability consent enforcement, installer-side revocation checks, and a complete Node.js developer CLI (`tools/wincare-plugin-cli`).
-4. **AI System Doctor**: Rule-based on-device intent classification, natural-language symptom parsing, two-phase diagnostic evidence collection, and fail-closed action plans.
-5. **Fail-Closed Security & Governance**: Reparse-point safety, bounded iterative filesystem traversal, and PII-sanitized activity logs.
-
----
-
-## 🛡️ Deliberate Safety Boundaries
-
-`security-control-reduce` and `security-control-restore` no longer substitute Windows Firewall for the legacy security controls. Temporary reduction is fail-closed until the native product has a separately launchable recovery host that can authenticate snapshots and restore protection even if the WinUI process exits. No host mutation occurs on that blocked path.
+1. **WinUI 3 desktop shell and visual system**: Fluent Mica surfaces, responsive layout breakpoints, keyboard/automation metadata, High Contrast support, and checked contrast contracts.
+2. **Rust native engine and health guard**: bounded C-ABI primitives in `wincare-core` plus the experimental `wincare-guard` monitoring/IPC boundary.
+3. **Modular plugin store and community SDK**: dynamic command dispatch, package/publisher admission metadata, revocation handling, and the Node.js developer CLI in `tools/wincare-plugin-cli`.
+4. **AI System Doctor**: rule-based on-device intent classification, symptom parsing, two-phase diagnostic evidence collection, and fail-closed action plans.
+5. **Fail-closed system boundaries**: reparse-point-aware cleanup, bounded process/filesystem operations, and privacy-conscious activity records.
 
 ---
 
-## 📦 Artifact Contract
+## Deliberate behavior boundary
+
+`security-control-reduce` and `security-control-restore` do not substitute Windows Firewall for unrelated legacy security controls. Temporary reduction remains unavailable until WinCare has a separately launchable recovery host that can authenticate snapshots and restore protection even if the WinUI process exits. No host mutation occurs on that blocked path.
+
+---
+
+## Artifact contract
 
 Running `tools/finalize_native_release.py --mode rc` generates:
-- `WinCare-<version>-native-source.zip`: Pure native C# and Rust source code.
-- `WinCare-<version>-legacy-oracle.zip`: Isolated historical legacy oracle archive.
-- `WinCare-<version>-finalization-report.md`: Markdown audit report detailing files, hashes, and migration metrics.
-- `WinCare-<version>-finalization-manifest.json`: Machine-readable JSON metadata manifest.
+
+- `WinCare-<version>-native-source.zip`: native release source and audit evidence, excluding executable legacy PowerShell.
+- `WinCare-<version>-legacy-oracle.zip`: isolated historical legacy oracle archive.
+- `WinCare-<version>-finalization-report.md`: readiness and artifact-separation report.
+- `WinCare-<version>-finalization-manifest.json`: machine-readable hashes, counts, provenance, and readiness metrics.
+
+The GitHub Actions pipeline no longer has a second manual finalization workflow or a free-form `rc`/`production` mode input. `.github/workflows/native-winui.yml` derives finalization mode from the checked-in product version when an actual release is requested: prerelease versions such as `2.5.0-rc5` use `rc`; a stable version uses `production`.
 
 > [!CAUTION]
-> Running with `--mode production` will fail with exit code 1 until all 259 commands are marked `BehaviorVerified`.
+> `--mode production` still exits non-zero until all 259 commands are `BehaviorVerified`. The workflow consolidation removes an inconsistent manual switch; it does not weaken the production readiness contract.
