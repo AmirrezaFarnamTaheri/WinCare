@@ -8,85 +8,44 @@ on:
   workflow_dispatch:
     inputs:
       publish_release:
-        description: 'Publish or update GitHub release'
+        description: 'Publish or update the GitHub release after validation'
         required: false
         type: boolean
-        default: true
+        default: false
       release_tag:
-        description: 'Release tag override (leave empty to derive from Directory.Build.props)'
+        description: 'Release tag override (must match Directory.Build.props; empty derives it)'
         required: false
         type: string
         default: ''
 
 concurrency:
-  group: native-winui-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  group: native-winui-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' || (github.event_name == 'push' && !startsWith(github.ref, 'refs/tags/v')) }}
 
 jobs:
-  verify-source:
+  verify:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    outputs:
+      product_version: ${{ steps.version.outputs.value }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.13"
-      - name: Verify native source contract
-        run: python tools/verify_native_foundation.py
-      - name: Run structural tests
-        run: python -m unittest discover -s tests/native -v
-      - name: Run plugin CLI tests
-        run: python tests/tools/test_plugin_cli.py -v
-      - name: Verify documentation screenshots integrity
+      - name: Run repository Python tests
+        run: python -m unittest discover -s tests -t . -v
+      - name: Verify documentation screenshots
         run: python tools/capture_screenshots.py --verify-only
-      - name: Extract product version
+      - name: Read product version
+        id: version
         shell: bash
         run: |
-          VERSION=$(python -c "import xml.etree.ElementTree as ET; props = ET.parse('Directory.Build.props').getroot(); prefix = props.find('.//VersionPrefix').text; suffix = props.find('.//VersionSuffix').text if props.find('.//VersionSuffix') is not None else ''; print(f'{prefix}-{suffix}' if suffix else prefix)")
-          echo "PRODUCT_VERSION=$VERSION" >> $GITHUB_ENV
-      - name: Finalize native release candidate source
-        run: >-
-          python tools/finalize_native_release.py
-          --output artifacts/finalization
-          --version "${{ env.PRODUCT_VERSION }}"
-          --mode rc
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: WinCare-native-source-finalization
-          path: artifacts/finalization/*
-          if-no-files-found: error
+          VERSION=$(python -c "import xml.etree.ElementTree as ET; root = ET.parse('Directory.Build.props').getroot(); prefix = root.findtext('.//VersionPrefix'); suffix = root.findtext('.//VersionSuffix', ''); print(f'{prefix}-{suffix}' if suffix else prefix)")
+          echo "value=$VERSION" >> "$GITHUB_OUTPUT"
 
-  rust:
-    runs-on: windows-latest
-    timeout-minutes: 15
-    strategy:
-      fail-fast: false
-      matrix:
-        target: [x86_64-pc-windows-msvc, aarch64-pc-windows-msvc]
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772 # master 2026-08-05
-        with:
-          toolchain: 1.97.1
-          targets: ${{ matrix.target }}
-          components: rustfmt, clippy
-      - name: Check Rust formatting
-        run: cargo fmt --manifest-path native/Cargo.toml --all -- --check
-      - name: Run clippy
-        run: cargo clippy --manifest-path native/Cargo.toml --target ${{ matrix.target }} --all-targets --all-features -- -D warnings
-      - name: Run Rust unit tests
-        if: matrix.target == 'x86_64-pc-windows-msvc'
-        run: cargo test --manifest-path native/Cargo.toml
-      - name: Build Rust core
-        run: cargo build --manifest-path native/Cargo.toml --target ${{ matrix.target }} --release
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: native-${{ matrix.target }}
-          path: native/target/${{ matrix.target }}/release/wincare_core.dll
-          if-no-files-found: error
-
-  managed-and-package:
-    needs: [verify-source, rust]
+  build:
+    needs: verify
     runs-on: windows-latest
     timeout-minutes: 20
     strategy:
@@ -99,8 +58,15 @@ jobs:
           - platform: ARM64
             runtime: win-arm64
             target: aarch64-pc-windows-msvc
+    env:
+      PRODUCT_VERSION: ${{ needs.verify.outputs.product_version }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772 # master 2026-08-05
+        with:
+          toolchain: 1.97.1
+          targets: ${{ matrix.target }}
+          components: rustfmt, clippy
       - uses: actions/setup-dotnet@bbbb8c9ab609f9ab643834ffe948a0f577bc4c0c # pinned upstream commit
         with:
           dotnet-version: "8.0.416"
@@ -108,16 +74,22 @@ jobs:
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.13"
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-        with:
-          name: native-${{ matrix.target }}
-          path: artifacts/native
-      - name: Stage Rust core
+
+      - name: Check Rust formatting
+        if: matrix.platform == 'x64'
+        run: cargo fmt --manifest-path native/Cargo.toml --all -- --check
+      - name: Run Rust clippy
+        run: cargo clippy --manifest-path native/Cargo.toml --target ${{ matrix.target }} --all-targets --all-features -- -D warnings
+      - name: Run Rust unit tests
+        if: matrix.platform == 'x64'
+        run: cargo test --manifest-path native/Cargo.toml
+      - name: Build and stage Rust core
         shell: bash
         run: |
-          test -f artifacts/native/wincare_core.dll
+          cargo build --manifest-path native/Cargo.toml --target ${{ matrix.target }} --release
           mkdir -p src/WinCare.App/Native/${{ matrix.platform }}
-          cp artifacts/native/wincare_core.dll src/WinCare.App/Native/${{ matrix.platform }}/wincare_core.dll
+          cp native/target/${{ matrix.target }}/release/wincare_core.dll src/WinCare.App/Native/${{ matrix.platform }}/wincare_core.dll
+
       - name: Restore
         shell: bash
         run: dotnet restore WinCare.Native.sln -p:Platform=${{ matrix.platform }}
@@ -125,84 +97,26 @@ jobs:
         if: matrix.platform == 'x64'
         shell: bash
         run: dotnet test WinCare.Native.sln -c Release -p:Platform=${{ matrix.platform }} --no-restore
-      - name: Prepare runner-local package signing identity
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = 'Stop'
-          $signDir = "$PWD/artifacts/signing"
-          New-Item -ItemType Directory -Force -Path $signDir | Out-Null
-          $certificateParameters = @{
-            Type = 'Custom'
-            KeyUsage = 'DigitalSignature'
-            KeySpec = 'Signature'
-            Subject = 'CN=WinCare Development'
-            FriendlyName = 'WinCare Development Package'
-            CertStoreLocation = 'Cert:\CurrentUser\My'
-            HashAlgorithm = 'SHA256'
-            TextExtension = @('2.5.29.37={text}1.3.6.1.5.5.7.3.3', '2.5.29.19={text}')
-          }
-          $cert = New-SelfSignedCertificate @certificateParameters
-          Export-Certificate -Cert $cert -FilePath "$signDir/WinCare.cer" | Out-Null
-          "WINCARE_SIGNING_THUMBPRINT=$($cert.Thumbprint)" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-          'WINCARE_DEVELOPMENT_SIGNING=true' | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-          Write-Output "Runner-local package signing identity ready. Thumbprint: $($cert.Thumbprint)"
-      - name: Build unsigned MSIX package
+
+      - name: Build unsigned MSIX
         shell: bash
         run: |
           dotnet build src/WinCare.App/WinCare.App.csproj -c Release -p:Platform=${{ matrix.platform }} \
             -p:GenerateAppxPackageOnBuild=true \
             -p:AppxPackageSigningEnabled=false \
             --no-restore
-      - name: Sign MSIX package with runner-local certificate
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = 'Stop'
-          $msixFiles = @(
-            Get-ChildItem -Recurse -Filter 'WinCare.App_*.msix' src/WinCare.App/AppPackages |
-              Where-Object { $_.FullName -notmatch '[\\/]Dependencies[\\/]' }
-          )
-          if ($msixFiles.Count -ne 1) {
-            throw "Expected exactly one WinCare application MSIX, found $($msixFiles.Count)."
-          }
-
-          $signtoolCommand = Get-Command signtool.exe -ErrorAction SilentlyContinue
-          if ($signtoolCommand) {
-            $signtoolPath = $signtoolCommand.Source
-          }
-          else {
-            $kitsRoot = "${env:ProgramFiles(x86)}\Windows Kits\10\bin"
-            $signtoolCandidate = Get-ChildItem $kitsRoot -Recurse -Filter signtool.exe -ErrorAction SilentlyContinue |
-              Where-Object { $_.FullName -match '\\x64\\signtool\.exe$' } |
-              Sort-Object FullName -Descending |
-              Select-Object -First 1
-            if (-not $signtoolCandidate) {
-              throw 'signtool.exe was not found on the Windows runner.'
-            }
-            $signtoolPath = $signtoolCandidate.FullName
-          }
-
-          $file = $msixFiles[0]
-          Write-Output "Signing WinCare MSIX: $($file.FullName)"
-          & $signtoolPath sign /fd SHA256 /s My /sha1 $env:WINCARE_SIGNING_THUMBPRINT $file.FullName
-          if ($LASTEXITCODE -ne 0) {
-            throw "SignTool failed for '$($file.Name)' with exit code $LASTEXITCODE."
-          }
-      - name: Verify MSIX signature and publisher
+      - name: Sign and verify MSIX
         timeout-minutes: 3
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
-          $cerPath = "$PWD/artifacts/signing/WinCare.cer"
-          $expectedCer = [System.Security.Cryptography.X509Certificates.X509Certificate2]::new($cerPath)
-          if ($expectedCer.Subject -ne 'CN=WinCare Development') {
-            throw "Exported certificate subject '$($expectedCer.Subject)' does not match expected publisher."
-          }
+          $cert = $null
+          $tamperedPath = $null
 
           function Assert-WinCareSignature {
             param(
               [Parameter(Mandatory = $true)][string] $Path,
-              [Parameter(Mandatory = $true)][System.Security.Cryptography.X509Certificates.X509Certificate2] $ExpectedCertificate,
-              [Parameter(Mandatory = $true)][bool] $DevelopmentSigning
+              [Parameter(Mandatory = $true)][System.Security.Cryptography.X509Certificates.X509Certificate2] $ExpectedCertificate
             )
 
             $sig = Get-AuthenticodeSignature -LiteralPath $Path
@@ -211,19 +125,11 @@ jobs:
               throw "MSIX '$Path' does not expose a signer certificate (status: $($sig.Status))."
             }
             if ($sig.SignerCertificate.Subject -ne 'CN=WinCare Development') {
-              throw "MSIX '$Path' signer '$($sig.SignerCertificate.Subject)' does not exactly match the package publisher."
+              throw "MSIX '$Path' signer '$($sig.SignerCertificate.Subject)' does not match the package publisher."
             }
             if ($sig.SignerCertificate.Thumbprint -ne $ExpectedCertificate.Thumbprint) {
               throw "MSIX '$Path' signer thumbprint does not match WinCare.cer."
             }
-
-            if (-not $DevelopmentSigning) {
-              if ($sig.Status -ne 'Valid') {
-                throw "Release MSIX '$Path' signature status is '$($sig.Status)' ($($sig.StatusMessage))."
-              }
-              return
-            }
-
             if ($sig.Status -notin @('Valid', 'UnknownError')) {
               throw "Development MSIX '$Path' signature status is '$($sig.Status)' ($($sig.StatusMessage))."
             }
@@ -232,7 +138,7 @@ jobs:
             try {
               $chain.ChainPolicy.TrustMode = [System.Security.Cryptography.X509Certificates.X509ChainTrustMode]::CustomRootTrust
               [void]$chain.ChainPolicy.CustomTrustStore.Add($ExpectedCertificate)
-              $chain.ChainPolicy.RevocationMode = [System.Security.Cryptography.X509Certificates.X509RevocationMode]::NoCheck
+              $chain.ChainPolicy.RevocationMode = [System.Security.Cryptography.X509Certificates.X509ChainRevocationMode]::NoCheck
               if (-not $chain.Build($sig.SignerCertificate)) {
                 $statuses = ($chain.ChainStatus | ForEach-Object { $_.Status.ToString() }) -join ', '
                 throw "Development signer certificate chain failed custom-root validation: $statuses"
@@ -243,24 +149,58 @@ jobs:
             }
           }
 
-          $msixFiles = @(
-            Get-ChildItem -Recurse -Filter 'WinCare.App_*.msix' src/WinCare.App/AppPackages |
-              Where-Object { $_.FullName -notmatch '[\\/]Dependencies[\\/]' }
-          )
-          if ($msixFiles.Count -ne 1) {
-            throw "Expected exactly one WinCare application MSIX for verification, found $($msixFiles.Count)."
-          }
-          $file = $msixFiles[0]
-          $developmentSigning = $env:WINCARE_DEVELOPMENT_SIGNING -eq 'true'
-          Assert-WinCareSignature -Path $file.FullName -ExpectedCertificate $expectedCer -DevelopmentSigning $developmentSigning
-
-          # Runtime negative test: mutate a copy and prove the verifier rejects it.
-          $tamperedPath = Join-Path $env:RUNNER_TEMP "WinCare-tampered-${{ matrix.platform }}.msix"
-          Copy-Item -LiteralPath $file.FullName -Destination $tamperedPath -Force
           try {
+            $signDir = "$PWD/artifacts/signing"
+            New-Item -ItemType Directory -Force -Path $signDir | Out-Null
+            $cert = New-SelfSignedCertificate `
+              -Type Custom `
+              -KeyUsage DigitalSignature `
+              -KeySpec Signature `
+              -Subject 'CN=WinCare Development' `
+              -FriendlyName 'WinCare Development Package' `
+              -CertStoreLocation 'Cert:\CurrentUser\My' `
+              -HashAlgorithm SHA256 `
+              -TextExtension @('2.5.29.37={text}1.3.6.1.5.5.7.3.3', '2.5.29.19={text}')
+            Export-Certificate -Cert $cert -FilePath "$signDir/WinCare.cer" | Out-Null
+            $expectedCer = [System.Security.Cryptography.X509Certificates.X509Certificate2]::new("$signDir/WinCare.cer")
+
+            $msixFiles = @(
+              Get-ChildItem -Recurse -Filter 'WinCare.App_*.msix' src/WinCare.App/AppPackages |
+                Where-Object { $_.FullName -notmatch '[\\/]Dependencies[\\/]' }
+            )
+            if ($msixFiles.Count -ne 1) {
+              throw "Expected exactly one WinCare application MSIX, found $($msixFiles.Count)."
+            }
+            $file = $msixFiles[0]
+
+            $signtool = Get-Command signtool.exe -ErrorAction SilentlyContinue
+            if ($signtool) {
+              $signtoolPath = $signtool.Source
+            }
+            else {
+              $signtoolCandidate = Get-ChildItem "${env:ProgramFiles(x86)}\Windows Kits\10\bin" -Recurse -Filter signtool.exe -ErrorAction SilentlyContinue |
+                Where-Object { $_.FullName -match '\\x64\\signtool\.exe$' } |
+                Sort-Object FullName -Descending |
+                Select-Object -First 1
+              if (-not $signtoolCandidate) {
+                throw 'signtool.exe was not found on the Windows runner.'
+              }
+              $signtoolPath = $signtoolCandidate.FullName
+            }
+
+            & $signtoolPath sign /fd SHA256 /s My /sha1 $cert.Thumbprint $file.FullName
+            if ($LASTEXITCODE -ne 0) {
+              throw "SignTool failed for '$($file.Name)' with exit code $LASTEXITCODE."
+            }
+            Assert-WinCareSignature -Path $file.FullName -ExpectedCertificate $expectedCer
+
+            $tamperedPath = Join-Path $env:RUNNER_TEMP "WinCare-tampered-${{ matrix.platform }}.msix"
+            Copy-Item -LiteralPath $file.FullName -Destination $tamperedPath -Force
             $stream = [IO.File]::Open($tamperedPath, [IO.FileMode]::Open, [IO.FileAccess]::ReadWrite, [IO.FileShare]::None)
             try {
-              if ($stream.Length -lt 128) { throw 'MSIX is unexpectedly too small for tamper smoke test.' }
+              if ($stream.Length -lt 128) {
+                throw 'MSIX is unexpectedly too small for tamper smoke test.'
+              }
               $position = $stream.Length - 128
               $stream.Position = $position
               $original = $stream.ReadByte()
@@ -273,7 +213,7 @@ jobs:
 
             $tamperRejected = $false
             try {
-              Assert-WinCareSignature -Path $tamperedPath -ExpectedCertificate $expectedCer -DevelopmentSigning $developmentSigning
+              Assert-WinCareSignature -Path $tamperedPath -ExpectedCertificate $expectedCer
             }
             catch {
               $tamperRejected = $true
@@ -284,41 +224,42 @@ jobs:
             }
           }
           finally {
-            Remove-Item -Force $tamperedPath -ErrorAction SilentlyContinue
+            if ($tamperedPath) {
+              Remove-Item -Force $tamperedPath -ErrorAction SilentlyContinue
+            }
+            if ($cert) {
+              Remove-Item -Force "Cert:\CurrentUser\My\$($cert.Thumbprint)" -ErrorAction SilentlyContinue
+            }
           }
-      - name: Clean runner-local signing identity
-        if: always()
-        shell: pwsh
-        run: |
-          if ($env:WINCARE_SIGNING_THUMBPRINT) {
-            Remove-Item -Force "Cert:\CurrentUser\My\$env:WINCARE_SIGNING_THUMBPRINT" -ErrorAction SilentlyContinue
-          }
-      - name: Publish single binary executable
+
+      - name: Publish portable executable
         shell: bash
-        run: dotnet publish src/WinCare.App/WinCare.App.csproj -c Release -p:Platform=${{ matrix.platform }} -r ${{ matrix.runtime }} -p:WindowsPackageType=None -p:WindowsAppSDKSelfContained=true -p:SelfContained=true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:DebugType=none -p:DebugSymbols=false -o artifacts/portable/${{ matrix.runtime }}
+        run: >-
+          dotnet publish src/WinCare.App/WinCare.App.csproj
+          -c Release
+          -p:Platform=${{ matrix.platform }}
+          -r ${{ matrix.runtime }}
+          -p:WindowsPackageType=None
+          -p:WindowsAppSDKSelfContained=true
+          -p:SelfContained=true
+          -p:PublishSingleFile=true
+          -p:IncludeNativeLibrariesForSelfExtract=true
+          -p:EnableCompressionInSingleFile=true
+          -p:DebugType=none
+          -p:DebugSymbols=false
+          -o artifacts/portable/${{ matrix.runtime }}
       - name: Validate portable executable size
         shell: bash
         run: python tools/release_checklist.py --portable-artifact artifacts/portable/${{ matrix.runtime }}/WinCare.App.exe
-      - name: Stage single binary executable and portable archive
+      - name: Stage release files
         shell: bash
         run: |
-          VERSION=$(python -c "import xml.etree.ElementTree as ET; props = ET.parse('Directory.Build.props').getroot(); prefix = props.find('.//VersionPrefix').text; suffix = props.find('.//VersionSuffix').text if props.find('.//VersionSuffix') is not None else ''; print(f'{prefix}-{suffix}' if suffix else prefix)")
           mkdir -p artifacts/release
-          cp artifacts/portable/${{ matrix.runtime }}/WinCare.App.exe artifacts/release/WinCare-v${VERSION}-${{ matrix.platform }}.exe
-          python tools/package_portable.py artifacts/portable/${{ matrix.runtime }} artifacts/release/WinCare-v${VERSION}-${{ matrix.platform }}-portable.zip
-      - name: Capture automated showcase screenshots
-        if: matrix.platform == 'x64'
-        shell: bash
-        run: python tools/capture_screenshots.py
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        if: matrix.platform == 'x64'
-        with:
-          name: WinCare-screenshots
-          path: docs/images/*.png
-          if-no-files-found: error
+          cp artifacts/portable/${{ matrix.runtime }}/WinCare.App.exe artifacts/release/WinCare-v${PRODUCT_VERSION}-${{ matrix.platform }}.exe
+          python tools/package_portable.py artifacts/portable/${{ matrix.runtime }} artifacts/release/WinCare-v${PRODUCT_VERSION}-${{ matrix.platform }}-portable.zip
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: WinCare-${{ matrix.platform }}
+          name: package-${{ matrix.platform }}
           path: |
             src/WinCare.App/AppPackages/**/WinCare.App_*.msix
             artifacts/signing/WinCare.cer
@@ -328,7 +269,7 @@ jobs:
           if-no-files-found: error
 
   portable-runtime-smoke:
-    needs: [managed-and-package]
+    needs: build
     timeout-minutes: 10
     strategy:
       fail-fast: false
@@ -342,9 +283,9 @@ jobs:
     steps:
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
-          name: WinCare-${{ matrix.platform }}
+          name: package-${{ matrix.platform }}
           path: artifacts/smoke
-      - name: Run trimmed portable startup and core-flow smoke
+      - name: Run portable startup and core-flow smoke
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
@@ -365,19 +306,20 @@ jobs:
           }
 
   release-gate:
-    needs: [verify-source, rust, managed-and-package, portable-runtime-smoke]
+    needs: [verify, build, portable-runtime-smoke]
     if: >-
       github.event_name != 'pull_request' &&
       (
         startsWith(github.ref, 'refs/tags/v') ||
-        (github.event_name == 'workflow_dispatch' && inputs.publish_release != false)
+        (github.event_name == 'workflow_dispatch' && inputs.publish_release == true)
       )
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
       contents: write
     env:
-      RELEASE_TAG: ${{ inputs.release_tag || (startsWith(github.ref, 'refs/tags/v') && github.ref_name) || '' }}
+      PRODUCT_VERSION: ${{ needs.verify.outputs.product_version }}
+      RELEASE_TAG_INPUT: ${{ inputs.release_tag || '' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
@@ -385,36 +327,45 @@ jobs:
           python-version: "3.13"
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
+          pattern: package-*
           path: artifacts/downloads
-      - name: Validate tag matches product version
+      - name: Resolve release metadata
         shell: bash
         run: |
-          echo "Validating tag: $RELEASE_TAG against checked-in metadata..."
           python - <<'PY'
           import os
-          import xml.etree.ElementTree as ET
 
-          props = ET.parse('Directory.Build.props').getroot()
-          prefix = props.find('.//VersionPrefix').text
-          suffix = props.find('.//VersionSuffix').text if props.find('.//VersionSuffix') is not None else ''
-          expected = f'v{prefix}-{suffix}' if suffix else f'v{prefix}'
-          actual = os.environ.get('RELEASE_TAG', '').strip()
-          if not actual or actual in ('master', 'main'):
-              actual = expected
-          assert actual.startswith('v'), f"Triggered ref '{actual}' is not a valid version tag ('v*')."
-          assert actual == expected, f'Release tag {actual} does not match product version {expected}'
-          is_prerelease = any(x in expected for x in ('-rc', '-beta', '-alpha'))
-          flags = '--prerelease' if is_prerelease else '--latest'
-          with open(os.environ['GITHUB_ENV'], 'a', encoding='utf-8') as f:
-              f.write(f'RELEASE_TAG={expected}\n')
-              f.write(f'RELEASE_FLAGS={flags}\n')
+          version = os.environ["PRODUCT_VERSION"].strip()
+          expected_tag = f"v{version}"
+          requested = os.environ.get("RELEASE_TAG_INPUT", "").strip()
+          actual_tag = requested or expected_tag
+          if actual_tag != expected_tag:
+              raise SystemExit(f"Release tag {actual_tag!r} does not match checked-in product version {expected_tag!r}")
+
+          mode = "rc" if "-" in version else "production"
+          flags = "--prerelease" if mode == "rc" else "--latest"
+          with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as stream:
+              stream.write(f"RELEASE_TAG={expected_tag}\n")
+              stream.write(f"FINALIZE_MODE={mode}\n")
+              stream.write(f"RELEASE_FLAGS={flags}\n")
           PY
-      - name: Prepare release assets
-        run: |
-          python tools/stage_release_assets.py --version "$RELEASE_TAG"
+      - name: Finalize release source
+        shell: bash
+        run: >-
+          python tools/finalize_native_release.py
+          --output release_assets
+          --version "$PRODUCT_VERSION"
+          --mode "$FINALIZE_MODE"
+      - name: Stage packaged release assets
+        shell: bash
+        run: >-
+          python tools/stage_release_assets.py
+          --downloads artifacts/downloads
+          --output release_assets
+          --version "$RELEASE_TAG"
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: WinCare-release-${{ github.ref_name }}
+          name: WinCare-release-${{ needs.verify.outputs.product_version }}
           path: release_assets/*
           if-no-files-found: error
       - name: Publish GitHub release
@@ -422,19 +373,13 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          if [[ "$GITHUB_REF" == refs/heads/* ]]; then
-            echo "Ensuring git tag '$RELEASE_TAG' points to '$GITHUB_SHA' for workflow_dispatch publication..."
-            git tag -f "$RELEASE_TAG" "$GITHUB_SHA"
-            git push origin -f "$RELEASE_TAG" || echo "Tag push skipped or rejected; continuing with release creation."
-          fi
           if gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            echo "Release '$RELEASE_TAG' already exists. Checking and uploading missing assets..."
+            existing_assets=$(gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name')
             for asset in release_assets/*; do
               asset_name=$(basename "$asset")
-              if gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --json assets --jq ".assets.[].name" | grep -qx "$asset_name"; then
-                echo "Asset '$asset_name' already present in release '$RELEASE_TAG', skipping."
+              if grep -Fxq "$asset_name" <<<"$existing_assets"; then
+                echo "Asset '$asset_name' already exists; skipping."
               else
-                echo "Uploading '$asset_name' to release '$RELEASE_TAG'..."
                 gh release upload "$RELEASE_TAG" "$asset" --repo "$GITHUB_REPOSITORY"
               fi
             done
