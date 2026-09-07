@@ -119,7 +119,6 @@ NATIVE_WORKFLOW_FILES = (
     ".github/dependabot.yml",
     ".github/pull_request_template.md",
     ".github/workflows/native-winui.yml",
-    ".github/workflows/native-release-candidate.yml",
 )
 
 ORACLE_TOP_LEVEL_FILES = (
