@@ -13,6 +13,16 @@ public partial class App : Microsoft.UI.Xaml.Application
     private const string PortableSmokeArgument = "--smoke-test";
     private MainWindow? _window;
 
+    /// <summary>
+    /// F-003: the smoke test must exercise every navigation route — the exact journeys that
+    /// crashed the installed artifact — not only startup and backend availability.
+    /// </summary>
+    private static readonly string[] SmokeNavigationKeys =
+    [
+        "home", "checkup", "system-care", "security", "repair-recovery",
+        "all-tools", "activity", "plugin-store", "ai-doctor", "settings", "help", "about",
+    ];
+
     public MainWindow? MainWindow => _window;
 
     public App()
@@ -56,8 +66,32 @@ public partial class App : Microsoft.UI.Xaml.Application
         _ = InitializeRuntimeAsync();
     }
 
+    /// <summary>
+    /// F-003 diagnostics: the smoke test appends each stage to a trace file. Stowed XAML
+    /// exceptions bypass the managed handler, so the last trace line identifies the
+    /// failing stage when the process is terminated by a WinRT fail-fast.
+    /// </summary>
+    private static void TraceSmoke(string stage)
+    {
+        try
+        {
+            string logsDir = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "WinCare", "logs");
+            Directory.CreateDirectory(logsDir);
+            File.AppendAllText(
+                Path.Combine(logsDir, "smoke-trace.log"),
+                $"{DateTime.UtcNow:O} {stage}{Environment.NewLine}");
+        }
+        catch
+        {
+            // Tracing must never be the reason the smoke run fails.
+        }
+    }
+
     private static async Task RunPortableSmokeTestAsync()
     {
+        TraceSmoke("smoke-start");
         try
         {
             Services.AppRuntime runtime = Services.AppRuntime.Current;
@@ -69,17 +103,33 @@ public partial class App : Microsoft.UI.Xaml.Application
             }
 
             await runtime.InitializePluginsAsync().ConfigureAwait(true);
+            TraceSmoke("plugins-initialized");
             CommandResult result = await runtime.Dispatcher.ExecuteAsync(
                 CommandRequest.Preview("system"),
                 new CommandExecutionOptions(
                     ReviewApproved: false,
                     Deadline: DateTimeOffset.UtcNow + TimeSpan.FromSeconds(15)),
                 CancellationToken.None).ConfigureAwait(true);
+            TraceSmoke($"system-preview:{result.Status}");
 
             if (result.Status != CommandResultStatus.Succeeded)
             {
                 throw new InvalidOperationException(
                     $"Packaged system preview failed with {result.Status} ({result.Code}).");
+            }
+
+            // F-003: visit every real navigation destination in the shipped artifact. Page
+            // construction and XAML binding initialization run here, so missing converters
+            // or collection projection failures crash the smoke run and fail the gate.
+            MainWindow window = ((App)Current)._window
+                ?? throw new InvalidOperationException("Smoke test could not access the main window.");
+            foreach (string key in SmokeNavigationKeys)
+            {
+                TraceSmoke($"navigating:{key}");
+                window.ShellPage.NavigateTo(key);
+                await Task.Delay(200).ConfigureAwait(true); // pump the UI thread: layout, Loading, bindings
+                TraceSmoke($"navigated:{key}");
+                StartupTelemetry.Mark("PortableSmokeNavigated:" + key);
             }
 
             StartupTelemetry.Mark("PortableSmokePassed");

@@ -1,0 +1,11 @@
+{
+  "seconds": 18.020623,
+  "cpuSeconds": 1.78125,
+  "workingMiB": 149.65625,
+  "privateMiB": 67.21484375,
+  "threads": 29,
+  "handles": 1006,
+  "readBytes": 165919,
+  "writeBytes": 40,
+  "tcpConnections": 0
+}

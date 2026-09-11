@@ -1,0 +1,25 @@
+{
+  "total_commands": 259,
+  "read_only_total": 155,
+  "read_only_executed": 11,
+  "read_only_not_executed": 144,
+  "mutating_total": 104,
+  "mutating_catalog_risk_counts": {
+    "Moderate": 73,
+    "High": 17,
+    "Low": 13,
+    "Critical": 1
+  },
+  "shared_helper_source_impacted_not_executed": [
+    "widget-export",
+    "maintenance-export",
+    "telemetry-export",
+    "studio-monitoring-export",
+    "system-shortcuts-export",
+    "experience-visual-manifest",
+    "hardware-report",
+    "terminal-export",
+    "file-preview-export"
+  ],
+  "note": "Catalog risk is not necessarily effective dispatcher risk. Read-only metadata does not establish no prerequisites, negligible load, or no data exposure."
+}

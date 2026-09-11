@@ -65,22 +65,19 @@ public sealed class RiskTierAdmissionTests
     }
 
     [Fact]
-    public async Task Moderate_mutating_command_requires_confirmation_but_no_preview_plan()
+    public async Task Moderate_mutating_command_requires_confirmation_and_single_use_receipt()
     {
-        // Tier 2 (Moderate): Requires ReviewApproved = true, but DOES NOT require preflight preview plan.
+        // Tier 2 (Moderate) under the F-004 unified contract: requires ReviewApproved = true
+        // AND a single-use review plan issued by a successful preview, exactly like the
+        // Destructive tier, so every applied change has reviewed targets and a receipt.
         CommandDefinition modDef = CreateDef("mod-service", RiskTier.Moderate);
         EchoHandler handler = new("mod-service");
         CommandDispatcher dispatcher = new([modDef], [handler]);
-
-        CommandRequest request = new(
-            "mod-service",
-            JsonSerializer.SerializeToElement(new { service = "wua" }),
-            Apply: true,
-            Guid.NewGuid());
+        JsonElement parameters = JsonSerializer.SerializeToElement(new { service = "wua" });
 
         // 1. Blocked when ReviewApproved = false
         CommandResult blocked = await dispatcher.ExecuteAsync(
-            request,
+            new CommandRequest("mod-service", parameters, Apply: true, Guid.NewGuid()),
             new CommandExecutionOptions(ReviewApproved: false),
             CancellationToken.None);
 
@@ -88,14 +85,44 @@ public sealed class RiskTierAdmissionTests
         Assert.Equal("command.review_required", blocked.Code);
         Assert.Equal(0, handler.InvocationCount);
 
-        // 2. Admitted when ReviewApproved = true (even without any preview plan)
-        CommandResult admitted = await dispatcher.ExecuteAsync(
-            request,
+        // 2. Blocked when ReviewApproved = true but no review plan was supplied
+        CommandResult unreviewed = await dispatcher.ExecuteAsync(
+            new CommandRequest("mod-service", parameters, Apply: true, Guid.NewGuid()),
             new CommandExecutionOptions(ReviewApproved: true),
             CancellationToken.None);
 
-        Assert.Equal(CommandResultStatus.Succeeded, admitted.Status);
-        Assert.Equal(1, handler.InvocationCount);
+        Assert.Equal(CommandResultStatus.Blocked, unreviewed.Status);
+        Assert.Equal("command.approval_plan_invalid", unreviewed.Code);
+        Assert.Equal(0, handler.InvocationCount);
+
+        // 3. Preview pass issues the plan
+        CommandResult preview = await dispatcher.ExecuteAsync(
+            CommandRequest.Preview("mod-service", parameters),
+            CommandExecutionOptions.Default,
+            CancellationToken.None);
+
+        Assert.Equal(CommandResultStatus.Succeeded, preview.Status);
+        Assert.NotNull(preview.ReviewPlan);
+        Assert.Equal(1, handler.InvocationCount); // Preview reached the handler; nothing applied
+
+        // 4. Execution with the issued plan and ReviewApproved = true succeeds
+        CommandResult executed = await dispatcher.ExecuteAsync(
+            CommandRequest.Execute("mod-service", parameters, preview.ReviewPlan),
+            new CommandExecutionOptions(ReviewApproved: true),
+            CancellationToken.None);
+
+        Assert.Equal(CommandResultStatus.Succeeded, executed.Status);
+        Assert.Equal(2, handler.InvocationCount);
+
+        // 5. Replaying the consumed plan is blocked
+        CommandResult replayed = await dispatcher.ExecuteAsync(
+            CommandRequest.Execute("mod-service", parameters, preview.ReviewPlan),
+            new CommandExecutionOptions(ReviewApproved: true),
+            CancellationToken.None);
+
+        Assert.Equal(CommandResultStatus.Blocked, replayed.Status);
+        Assert.Equal("command.approval_plan_invalid", replayed.Code);
+        Assert.Equal(2, handler.InvocationCount);
     }
 
     [Fact]
@@ -168,6 +195,73 @@ public sealed class RiskTierAdmissionTests
             RiskTier.Safe);
 
         Assert.Equal(RiskTier.Destructive, definition.RiskTier);
+    }
+
+    [Fact]
+    public void Cleaner_commands_are_no_longer_downgraded_to_safe_by_their_identifier()
+    {
+        // F-004: cleaner-disk-pressure is declared Moderate and must derive Moderate,
+        // so quick-clean flows cannot bypass preview/review admission.
+        CommandDefinition? cleaner = WinCare.CommandCatalog.CommandCatalog.Find("cleaner-disk-pressure");
+        Assert.NotNull(cleaner);
+        Assert.Equal(RiskTier.Moderate, cleaner.RiskTier);
+    }
+
+    public static TheoryData<RiskTier, bool, bool, CommandResultStatus, string> MutationAdmissionMatrix => new()
+    {
+        // (tier, ReviewApproved, planSupplied, expectedStatus, expectedCode)
+        { RiskTier.Safe, false, false, CommandResultStatus.Succeeded, "safe.ok" },
+        { RiskTier.Safe, true, false, CommandResultStatus.Succeeded, "safe.ok" },
+        { RiskTier.Moderate, false, false, CommandResultStatus.Blocked, "command.review_required" },
+        { RiskTier.Moderate, true, false, CommandResultStatus.Blocked, "command.approval_plan_invalid" },
+        { RiskTier.Destructive, false, false, CommandResultStatus.Blocked, "command.review_required" },
+        { RiskTier.Destructive, true, false, CommandResultStatus.Blocked, "command.approval_plan_invalid" },
+    };
+
+    [Theory]
+    [MemberData(nameof(MutationAdmissionMatrix))]
+    public async Task Mutation_admission_matrix_matches_the_single_contract(
+        RiskTier tier,
+        bool reviewApproved,
+        bool planSupplied,
+        CommandResultStatus expectedStatus,
+        string expectedCodeFragment)
+    {
+        string id = tier switch
+        {
+            RiskTier.Safe => "safe",
+            RiskTier.Moderate => "moderate",
+            _ => "destructive",
+        };
+        CommandDefinition definition = CreateDef(id, tier);
+        EchoHandler handler = new(id);
+        CommandDispatcher dispatcher = new([definition], [handler]);
+        JsonElement parameters = JsonSerializer.SerializeToElement(new { target = "fixture" });
+
+        CommandRequest request = planSupplied
+            ? CommandRequest.Execute(id, parameters, await ApprovedPlanForAsync(dispatcher, definition, parameters))
+            : new CommandRequest(id, parameters, Apply: true, Guid.NewGuid());
+
+        CommandResult result = await dispatcher.ExecuteAsync(
+            request,
+            new CommandExecutionOptions(ReviewApproved: reviewApproved),
+            CancellationToken.None);
+
+        Assert.Equal(expectedStatus, result.Status);
+        Assert.Equal(expectedCodeFragment, result.Code);
+        int expectedInvocations = expectedStatus == CommandResultStatus.Succeeded ? 1 : 0;
+        Assert.Equal(expectedInvocations, handler.InvocationCount);
+    }
+
+    private static async Task<ApprovedMutationPlan> ApprovedPlanForAsync(
+        CommandDispatcher dispatcher, CommandDefinition definition, JsonElement parameters)
+    {
+        CommandResult preview = await dispatcher.ExecuteAsync(
+            CommandRequest.Preview(definition.Id, parameters),
+            CommandExecutionOptions.Default,
+            CancellationToken.None);
+        Assert.NotNull(preview.ReviewPlan);
+        return preview.ReviewPlan;
     }
 
     [Fact]

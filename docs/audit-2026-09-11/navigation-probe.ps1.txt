@@ -1,0 +1,49 @@
+param([string[]]$Pages = @('NavSystemCare','NavSecurity','NavRepairRecovery'),
+      [string]$Executable='C:\Users\ACER\Desktop\WinCare-v2.5.0-rc5-x64.exe',
+      [string]$EvidencePrefix='')
+$ErrorActionPreference = 'Stop'
+Add-Type -AssemblyName UIAutomationClient
+Add-Type -AssemblyName UIAutomationTypes
+$auditOut = Join-Path $PSScriptRoot 'evidence'
+foreach ($auditPage in $Pages) {
+    $auditStart = Get-Date
+    $auditProcess = Start-Process -FilePath $Executable -WindowStyle Hidden -PassThru
+    $auditEvidenceName=$EvidencePrefix+$auditPage
+    $auditResult = [ordered]@{Page=$auditPage;Pid=$auditProcess.Id;Started=$auditStart.ToString('o');Selected=$false;TreeAfterNavigation=$false;CrashLog=$null;Error=$null}
+    try {
+        Start-Sleep -Seconds 3
+        $auditCond = New-Object System.Windows.Automation.PropertyCondition([System.Windows.Automation.AutomationElement]::ProcessIdProperty,$auditProcess.Id)
+        $auditRoot = [System.Windows.Automation.AutomationElement]::RootElement.FindFirst([System.Windows.Automation.TreeScope]::Children,$auditCond)
+        if (-not $auditRoot) { throw 'No app automation root after startup' }
+        $auditNavCond = New-Object System.Windows.Automation.PropertyCondition([System.Windows.Automation.AutomationElement]::AutomationIdProperty,$auditPage)
+        $auditNav = $auditRoot.FindFirst([System.Windows.Automation.TreeScope]::Descendants,$auditNavCond)
+        if (-not $auditNav) { throw 'Navigation element not found' }
+        $auditNav.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select()
+        $auditResult.Selected=$true
+        Start-Sleep -Seconds 5
+        $auditProcess.Refresh()
+        if (-not $auditProcess.HasExited) {
+            $auditRoot=[System.Windows.Automation.AutomationElement]::RootElement.FindFirst([System.Windows.Automation.TreeScope]::Children,$auditCond)
+            if ($auditRoot) {
+                $auditElements=$auditRoot.FindAll([System.Windows.Automation.TreeScope]::Descendants,[System.Windows.Automation.Condition]::TrueCondition)
+                $auditElements | ForEach-Object { [pscustomobject]@{Name=$_.Current.Name;Id=$_.Current.AutomationId;Type=$_.Current.ControlType.ProgrammaticName;Enabled=$_.Current.IsEnabled;Offscreen=$_.Current.IsOffscreen} } | ConvertTo-Json -Depth 3 | Set-Content (Join-Path $auditOut "$auditEvidenceName-uia.json")
+                $auditResult.TreeAfterNavigation=$true
+            }
+        }
+    } catch { $auditResult.Error=$_.Exception.Message }
+    finally {
+        $auditCrash=Get-ChildItem "$env:LOCALAPPDATA\WinCare\logs" -Filter 'crash-*' | Where-Object {$_.LastWriteTime -ge $auditStart} | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+        if ($auditCrash) {
+            $auditResult.CrashLog=$auditCrash.Name
+            Copy-Item -LiteralPath $auditCrash.FullName -Destination (Join-Path $auditOut "$auditEvidenceName-crash.log")
+        }
+        $auditProcess.Refresh()
+        $auditResult.Exited=$auditProcess.HasExited
+        if (-not $auditProcess.HasExited) {
+            [void]$auditProcess.CloseMainWindow()
+            if (-not $auditProcess.WaitForExit(3000)) { $auditResult.CloseTimedOut=$true }
+        }
+        $auditResult | ConvertTo-Json | Set-Content (Join-Path $auditOut "$auditEvidenceName-navigation.json")
+        $auditResult | ConvertTo-Json -Compress
+    }
+}

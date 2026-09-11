@@ -8,6 +8,9 @@ namespace WinCare.App.Views.Pages;
 
 public sealed partial class AiDoctorPage : Page
 {
+    public static Visibility BoolToVisibility(bool value) => value ? Visibility.Visible : Visibility.Collapsed;
+    public static HorizontalAlignment UserToHorizontalAlignment(bool isUser) => isUser ? HorizontalAlignment.Right : HorizontalAlignment.Left;
+
     public AiDoctorPageViewModel ViewModel { get; }
 
     public AiDoctorPage()

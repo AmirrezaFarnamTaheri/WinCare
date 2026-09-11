@@ -41,6 +41,13 @@
     <TrimmerRootAssembly Include="WinCare.CommandCatalog" />
     <TrimmerRootAssembly Include="WinCare.Application" />
     <TrimmerRootAssembly Include="WinCare.Infrastructure" />
+    <!-- F-001: the installed artifact crashed in WinRT.TypeExtensions.GetAbiToProjectionVftblPtr
+         when XAML ItemsSource bindings marshaled bound collections (ObservableCollection<T>).
+         That vtable mapping lives in the CsWinRT projection runtime; trimming can strip the
+         ABI interface tables it depends on. Root the projection runtime and the WinUI
+         projection assembly so binding marshaling survives the trimmed publish. -->
+    <TrimmerRootAssembly Include="WinRT.Runtime" />
+    <TrimmerRootAssembly Include="Microsoft.WinUI" />
   </ItemGroup>
   <PropertyGroup Condition="'$(Configuration)' == 'Release'">
     <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>

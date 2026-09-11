@@ -46,7 +46,7 @@
                             <TextBlock Style="{StaticResource PageDescriptionTextStyle}" TextWrapping="Wrap" Text="{x:Bind ViewModel.RunSummary, Mode=OneWay}" />
                             <Button HorizontalAlignment="Left" Style="{StaticResource PrimaryActionButtonStyle}" Command="{x:Bind ViewModel.RunQuickCheckCommand}" AutomationProperties.AutomationId="RunQuickCheck" AutomationProperties.Name="Run a read-only quick check">
                                 <StackPanel Orientation="Horizontal" Spacing="8">
-                                    <ProgressRing Width="16" Height="16" IsActive="{x:Bind ViewModel.IsRunning, Mode=OneWay}" />
+                                    <ProgressRing Width="16" Height="16" IsActive="{x:Bind ViewModel.IsRunning, Mode=OneWay}" Visibility="{x:Bind views:LayoutVisibility.BoolToVisibility(ViewModel.IsRunning), Mode=OneWay}" />
                                     <TextBlock Text="{x:Bind ViewModel.RunActionText, Mode=OneWay}" />
                                 </StackPanel>
                             </Button>
@@ -82,7 +82,7 @@
                                 <TextBlock Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap" Text="{x:Bind ViewModel.RunSummary, Mode=OneWay}" />
                                 <Button HorizontalAlignment="Left" Style="{StaticResource PrimaryActionButtonStyle}" Command="{x:Bind ViewModel.RunQuickCheckCommand}" AutomationProperties.AutomationId="RunQuickCheckCompact" AutomationProperties.Name="Run a read-only quick check">
                                     <StackPanel Orientation="Horizontal" Spacing="8">
-                                        <ProgressRing Width="16" Height="16" IsActive="{x:Bind ViewModel.IsRunning, Mode=OneWay}" />
+                                        <ProgressRing Width="16" Height="16" IsActive="{x:Bind ViewModel.IsRunning, Mode=OneWay}" Visibility="{x:Bind views:LayoutVisibility.BoolToVisibility(ViewModel.IsRunning), Mode=OneWay}" />
                                         <TextBlock Text="{x:Bind ViewModel.RunActionText, Mode=OneWay}" TextWrapping="Wrap" />
                                     </StackPanel>
                                 </Button>

@@ -104,13 +104,13 @@ public sealed record ApprovedMutationPlan(
             case JsonValueKind.Object:
                 var sortedProps = element.EnumerateObject()
                     .OrderBy(p => p.Name, StringComparer.Ordinal)
-                    .Select(p => $"{JsonSerializer.Serialize(p.Name)}:{CanonicalizeJson(p.Value)}");
+                    .Select(p => $"{SerializeJsonString(p.Name)}:{CanonicalizeJson(p.Value)}");
                 return "{" + string.Join(",", sortedProps) + "}";
             case JsonValueKind.Array:
                 var items = element.EnumerateArray().Select(CanonicalizeJson);
                 return "[" + string.Join(",", items) + "]";
             case JsonValueKind.String:
-                return JsonSerializer.Serialize(element.GetString());
+                return SerializeJsonString(element.GetString());
             case JsonValueKind.Number:
                 return element.GetRawText();
             case JsonValueKind.True:
@@ -124,4 +124,12 @@ public sealed record ApprovedMutationPlan(
                 return "{}";
         }
     }
+
+    /// <summary>
+    /// Serializes a string as a JSON string literal without reflection-based serialization
+    /// (F-037): JsonNode.ToJsonString emits the same escaped literal the reflection
+    /// serializer produced, keeping existing parameter digests valid.
+    /// </summary>
+    private static string SerializeJsonString(string? value) =>
+        System.Text.Json.Nodes.JsonValue.Create(value)?.ToJsonString() ?? "null";
 }

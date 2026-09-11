@@ -4,10 +4,14 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:controls="using:WinCare.App.Controls"
     xmlns:views="using:WinCare.App.Views"
+    xmlns:converters="using:WinCare.App.Converters"
     NavigationCacheMode="Required"
     SizeChanged="Page_SizeChanged">
+    <Page.Resources>
+        <converters:ThemeResourceBrushConverter x:Key="ThemeResourceBrushConverter" />
+    </Page.Resources>
     <ScrollViewer VerticalScrollBarVisibility="Auto">
-        <Grid x:Name="PageLayout" Padding="40,30,40,40" RowSpacing="24">
+        <Grid x:Name="PageLayout" Padding="32,24,32,32" RowSpacing="24">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
@@ -56,12 +60,7 @@
                         </Grid.RowDefinitions>
                         <Grid>
                             <TextBlock FontSize="16" FontWeight="SemiBold" Foreground="{ThemeResource TextPrimaryBrush}" Text="Evidence by area" />
-                            <Border HorizontalAlignment="Right" Padding="10,4" Background="{ThemeResource AccentTealSubtleBrush}" BorderBrush="{ThemeResource AccentTealBrush}" BorderThickness="1" CornerRadius="{StaticResource RadiusPill}">
-                                <StackPanel Orientation="Horizontal" Spacing="6">
-                                    <FontIcon Glyph="&#xE73E;" FontSize="12" Foreground="{ThemeResource AccentTealBrush}" />
-                                    <TextBlock FontFamily="{StaticResource TelemetryFontFamily}" FontSize="11" FontWeight="SemiBold" Foreground="{ThemeResource AccentTealBrush}" Text="[ READ-ONLY ]" />
-                                </StackPanel>
-                            </Border>
+                            <ContentControl HorizontalAlignment="Right" Template="{StaticResource StatusPillTemplate}" Background="{ThemeResource PillNotReadyBgBrush}" BorderBrush="{ThemeResource BorderSubtleBrush}" Foreground="{ThemeResource TextSecondaryBrush}" Content="Read-only evidence" />
                         </Grid>
 
                         <Grid x:Name="CategoryLayout" Grid.Row="1" ColumnSpacing="12" RowSpacing="12">
@@ -76,10 +75,10 @@
                             </Grid.RowDefinitions>
 
                             <Button Click="NavCategory_System_Click" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Padding="0" Background="Transparent" BorderThickness="0" CornerRadius="{StaticResource RadiusControl}" AutomationProperties.Name="Open System Care">
-                                <Border Style="{StaticResource SurfaceBorderStyle}" Padding="14">
-                                    <StackPanel Orientation="Horizontal" Spacing="12">
-                                        <FontIcon Glyph="&#xE7F4;" FontSize="22" Foreground="{ThemeResource AccentTealBrush}" />
-                                        <StackPanel Spacing="2">
+                                <Border Background="{ThemeResource SurfaceSecondaryBrush}" CornerRadius="{StaticResource RadiusControl}" Padding="12">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <FontIcon Glyph="&#xE7F4;" FontSize="20" Foreground="{ThemeResource TextSecondaryBrush}" />
+                                        <StackPanel Spacing="4">
                                             <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="System" />
                                             <TextBlock Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind ViewModel.SystemStatus, Mode=OneWay}" TextWrapping="Wrap" />
                                         </StackPanel>
@@ -88,10 +87,10 @@
                             </Button>
 
                             <Button Grid.Column="1" Click="NavCategory_Security_Click" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Padding="0" Background="Transparent" BorderThickness="0" CornerRadius="{StaticResource RadiusControl}" AutomationProperties.Name="Open Security">
-                                <Border Style="{StaticResource SurfaceBorderStyle}" Padding="14">
-                                    <StackPanel Orientation="Horizontal" Spacing="12">
-                                        <FontIcon Glyph="&#xEA18;" FontSize="22" Foreground="{ThemeResource AccentTealBrush}" />
-                                        <StackPanel Spacing="2">
+                                <Border Background="{ThemeResource SurfaceSecondaryBrush}" CornerRadius="{StaticResource RadiusControl}" Padding="12">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <FontIcon Glyph="&#xEA18;" FontSize="20" Foreground="{ThemeResource TextSecondaryBrush}" />
+                                        <StackPanel Spacing="4">
                                             <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="Security" />
                                             <TextBlock Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind ViewModel.SecurityStatus, Mode=OneWay}" TextWrapping="Wrap" />
                                         </StackPanel>
@@ -100,10 +99,10 @@
                             </Button>
 
                             <Button Grid.Column="2" Click="NavCategory_Performance_Click" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Padding="0" Background="Transparent" BorderThickness="0" CornerRadius="{StaticResource RadiusControl}" AutomationProperties.Name="Open Performance Checkup">
-                                <Border Style="{StaticResource SurfaceBorderStyle}" Padding="14">
-                                    <StackPanel Orientation="Horizontal" Spacing="12">
-                                        <FontIcon Glyph="&#xE9D9;" FontSize="22" Foreground="{ThemeResource AccentTealBrush}" />
-                                        <StackPanel Spacing="2">
+                                <Border Background="{ThemeResource SurfaceSecondaryBrush}" CornerRadius="{StaticResource RadiusControl}" Padding="12">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <FontIcon Glyph="&#xE9D9;" FontSize="20" Foreground="{ThemeResource TextSecondaryBrush}" />
+                                        <StackPanel Spacing="4">
                                             <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="Performance evidence" />
                                             <TextBlock Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind ViewModel.PerformanceStatus, Mode=OneWay}" TextWrapping="Wrap" />
                                         </StackPanel>
@@ -112,10 +111,10 @@
                             </Button>
 
                             <Button Grid.Row="1" Click="NavCategory_Storage_Click" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Padding="0" Background="Transparent" BorderThickness="0" CornerRadius="{StaticResource RadiusControl}" AutomationProperties.Name="Open Storage Care">
-                                <Border Style="{StaticResource SurfaceBorderStyle}" Padding="14">
-                                    <StackPanel Orientation="Horizontal" Spacing="12">
-                                        <FontIcon Glyph="&#xE7F1;" FontSize="22" Foreground="{ThemeResource AccentTealBrush}" />
-                                        <StackPanel Spacing="2">
+                                <Border Background="{ThemeResource SurfaceSecondaryBrush}" CornerRadius="{StaticResource RadiusControl}" Padding="12">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <FontIcon Glyph="&#xE7F1;" FontSize="20" Foreground="{ThemeResource TextSecondaryBrush}" />
+                                        <StackPanel Spacing="4">
                                             <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="Storage" />
                                             <TextBlock Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind ViewModel.StorageStatus, Mode=OneWay}" TextWrapping="Wrap" />
                                         </StackPanel>
@@ -124,10 +123,10 @@
                             </Button>
 
                             <Button Grid.Row="1" Grid.Column="1" Click="NavCategory_Updates_Click" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Padding="0" Background="Transparent" BorderThickness="0" CornerRadius="{StaticResource RadiusControl}" AutomationProperties.Name="Open Repair and Updates">
-                                <Border Style="{StaticResource SurfaceBorderStyle}" Padding="14">
-                                    <StackPanel Orientation="Horizontal" Spacing="12">
-                                        <FontIcon Glyph="&#xE950;" FontSize="22" Foreground="{ThemeResource AccentTealBrush}" />
-                                        <StackPanel Spacing="2">
+                                <Border Background="{ThemeResource SurfaceSecondaryBrush}" CornerRadius="{StaticResource RadiusControl}" Padding="12">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <FontIcon Glyph="&#xE950;" FontSize="20" Foreground="{ThemeResource TextSecondaryBrush}" />
+                                        <StackPanel Spacing="4">
                                             <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="Updates" />
                                             <TextBlock Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind ViewModel.UpdatesStatus, Mode=OneWay}" TextWrapping="Wrap" />
                                         </StackPanel>
@@ -136,10 +135,10 @@
                             </Button>
 
                             <Button Grid.Row="1" Grid.Column="2" Click="NavCategory_Activity_Click" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Padding="0" Background="Transparent" BorderThickness="0" CornerRadius="{StaticResource RadiusControl}" AutomationProperties.Name="Open Activity Log">
-                                <Border Style="{StaticResource SurfaceBorderStyle}" Padding="14">
-                                    <StackPanel Orientation="Horizontal" Spacing="12">
-                                        <FontIcon Glyph="&#xE701;" FontSize="22" Foreground="{ThemeResource AccentTealBrush}" />
-                                        <StackPanel Spacing="2">
+                                <Border Background="{ThemeResource SurfaceSecondaryBrush}" CornerRadius="{StaticResource RadiusControl}" Padding="12">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <FontIcon Glyph="&#xE701;" FontSize="20" Foreground="{ThemeResource TextSecondaryBrush}" />
+                                        <StackPanel Spacing="4">
                                             <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="Activity" />
                                             <TextBlock Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind ViewModel.ActivityStatus, Mode=OneWay}" TextWrapping="Wrap" />
                                         </StackPanel>
@@ -168,8 +167,7 @@
                     </Grid.ColumnDefinitions>
 
                     <!-- Action 1: Quick Clean (Double-Bezel) -->
-                    <Border x:Name="QuickCleanCard" CornerRadius="14" Padding="3" Background="{ThemeResource CardBorderBrush}">
-                        <Border CornerRadius="10" Background="{ThemeResource CardSurfaceBrush}" Padding="18">
+                    <Border x:Name="QuickCleanCard" Style="{StaticResource SurfaceBorderStyle}" Padding="16">
                             <Grid RowSpacing="12">
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto" />
@@ -177,19 +175,19 @@
                                     <RowDefinition Height="Auto" />
                                     <RowDefinition Height="Auto" />
                                 </Grid.RowDefinitions>
-                                <Grid>
-                                    <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
-                                        <Border Width="36" Height="36" CornerRadius="18" Background="{ThemeResource AccentTealSubtleBrush}" BorderBrush="{ThemeResource AccentTealBrush}" BorderThickness="1">
-                                            <FontIcon Glyph="&#xE74D;" FontSize="18" Foreground="{ThemeResource AccentTealBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                                        </Border>
-                                        <StackPanel VerticalAlignment="Center" Spacing="2">
+                                <Grid ColumnSpacing="8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                        <FontIcon Glyph="&#xE74D;" FontSize="20" Foreground="{ThemeResource TextSecondaryBrush}" HorizontalAlignment="Left" />
+                                        <StackPanel VerticalAlignment="Center" Spacing="4">
                                             <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="Quick Clean" />
-                                            <TextBlock FontFamily="{StaticResource TelemetryFontFamily}" FontSize="11" Foreground="{ThemeResource TextSecondaryBrush}" Text="cleaner-disk-pressure" />
+                                            <TextBlock FontFamily="{StaticResource TelemetryFontFamily}" FontSize="11" Foreground="{ThemeResource TextSecondaryBrush}" Text="Temporary-file cleanup" />
                                         </StackPanel>
                                     </StackPanel>
-                                    <Border HorizontalAlignment="Right" VerticalAlignment="Center" Padding="8,3" Background="{ThemeResource AccentTealSubtleBrush}" BorderBrush="{ThemeResource AccentTealBrush}" BorderThickness="1" CornerRadius="{StaticResource RadiusPill}">
-                                        <TextBlock FontFamily="{StaticResource TelemetryFontFamily}" FontSize="10" FontWeight="SemiBold" Foreground="{ThemeResource AccentTealBrush}" Text="[ SAFE · 1-CLICK ]" />
-                                    </Border>
+                                    <ContentControl Grid.Column="1" VerticalAlignment="Center" Template="{StaticResource StatusPillTemplate}" Background="{x:Bind ViewModel.CleanRiskBadgeBrushKey, Mode=OneTime, Converter={StaticResource ThemeResourceBrushConverter}}" BorderBrush="Transparent" Foreground="{ThemeResource PillTextBrush}" Content="{x:Bind ViewModel.CleanRiskBadge, Mode=OneTime}" />
                                 </Grid>
                                 <TextBlock Grid.Row="1" Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind ViewModel.CleanDetailText, Mode=OneWay}" TextWrapping="Wrap" MinHeight="36" />
                                 <Grid Grid.Row="2">
@@ -209,7 +207,7 @@
                                         AutomationProperties.AutomationId="HomeQuickCleanButton"
                                         AutomationProperties.Name="Run Quick Clean">
                                         <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
-                                            <ProgressRing Width="16" Height="16" IsActive="{x:Bind ViewModel.IsCleaning, Mode=OneWay}" />
+                                            <ProgressRing Width="16" Height="16" IsActive="{x:Bind ViewModel.IsCleaning, Mode=OneWay}" Visibility="{x:Bind views:LayoutVisibility.BoolToVisibility(ViewModel.IsCleaning), Mode=OneWay}" />
                                             <TextBlock Text="{x:Bind ViewModel.CleanActionText, Mode=OneWay}" />
                                         </StackPanel>
                                     </Button>
@@ -223,18 +221,16 @@
                                         BorderBrush="{ThemeResource AccentTealBrush}"
                                         BorderThickness="1"
                                         AutomationProperties.AutomationId="QuickCleanInspectorButton"
-                                        AutomationProperties.Name="Toggle Telemetry Inspector"
+                                        AutomationProperties.Name="Toggle cleanup telemetry inspector"
                                         ToolTipService.ToolTip="Inspect kernel telemetry and targets">
                                         <FontIcon Glyph="&#xE9D9;" FontSize="16" Foreground="{ThemeResource AccentTealBrush}" />
                                     </Button>
                                 </Grid>
                             </Grid>
                         </Border>
-                    </Border>
 
                     <!-- Action 2: Startup Boost (Double-Bezel) -->
-                    <Border x:Name="StartupBoostCard" Grid.Column="1" CornerRadius="14" Padding="3" Background="{ThemeResource CardBorderBrush}">
-                        <Border CornerRadius="10" Background="{ThemeResource CardSurfaceBrush}" Padding="18">
+                    <Border x:Name="StartupBoostCard" Grid.Column="1" Style="{StaticResource SurfaceBorderStyle}" Padding="16">
                             <Grid RowSpacing="12">
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto" />
@@ -242,19 +238,19 @@
                                     <RowDefinition Height="Auto" />
                                     <RowDefinition Height="Auto" />
                                 </Grid.RowDefinitions>
-                                <Grid>
-                                    <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
-                                        <Border Width="36" Height="36" CornerRadius="18" Background="{ThemeResource AccentTealSubtleBrush}" BorderBrush="{ThemeResource AccentTealBrush}" BorderThickness="1">
-                                            <FontIcon Glyph="&#xE7F4;" FontSize="18" Foreground="{ThemeResource AccentTealBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                                        </Border>
-                                        <StackPanel VerticalAlignment="Center" Spacing="2">
-                                            <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="Startup Boost" />
+                                <Grid ColumnSpacing="8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                        <FontIcon Glyph="&#xE7F4;" FontSize="20" Foreground="{ThemeResource TextSecondaryBrush}" HorizontalAlignment="Left" />
+                                        <StackPanel VerticalAlignment="Center" Spacing="4">
+                                            <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="Audit Startup" />
                                             <TextBlock FontFamily="{StaticResource TelemetryFontFamily}" FontSize="11" Foreground="{ThemeResource TextSecondaryBrush}" Text="startup" />
                                         </StackPanel>
                                     </StackPanel>
-                                    <Border HorizontalAlignment="Right" VerticalAlignment="Center" Padding="8,3" Background="{ThemeResource AccentTealSubtleBrush}" BorderBrush="{ThemeResource AccentTealBrush}" BorderThickness="1" CornerRadius="{StaticResource RadiusPill}">
-                                        <TextBlock FontFamily="{StaticResource TelemetryFontFamily}" FontSize="10" FontWeight="SemiBold" Foreground="{ThemeResource AccentTealBrush}" Text="[ SAFE · 1-CLICK ]" />
-                                    </Border>
+                                    <ContentControl Grid.Column="1" VerticalAlignment="Center" Template="{StaticResource StatusPillTemplate}" Background="{x:Bind ViewModel.StartupRiskBadgeBrushKey, Mode=OneTime, Converter={StaticResource ThemeResourceBrushConverter}}" BorderBrush="Transparent" Foreground="{ThemeResource PillTextBrush}" Content="{x:Bind ViewModel.StartupRiskBadge, Mode=OneTime}" />
                                 </Grid>
                                 <TextBlock Grid.Row="1" Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind ViewModel.StartupDetailText, Mode=OneWay}" TextWrapping="Wrap" MinHeight="36" />
                                 <Grid Grid.Row="2">
@@ -274,7 +270,7 @@
                                         AutomationProperties.AutomationId="HomeStartupBoostButton"
                                         AutomationProperties.Name="Analyze Startup">
                                         <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
-                                            <ProgressRing Width="16" Height="16" IsActive="{x:Bind ViewModel.IsAuditingStartup, Mode=OneWay}" />
+                                            <ProgressRing Width="16" Height="16" IsActive="{x:Bind ViewModel.IsAuditingStartup, Mode=OneWay}" Visibility="{x:Bind views:LayoutVisibility.BoolToVisibility(ViewModel.IsAuditingStartup), Mode=OneWay}" />
                                             <TextBlock Text="{x:Bind ViewModel.StartupActionText, Mode=OneWay}" />
                                         </StackPanel>
                                     </Button>
@@ -288,18 +284,16 @@
                                         BorderBrush="{ThemeResource AccentTealBrush}"
                                         BorderThickness="1"
                                         AutomationProperties.AutomationId="StartupBoostInspectorButton"
-                                        AutomationProperties.Name="Toggle Telemetry Inspector"
+                                        AutomationProperties.Name="Toggle startup telemetry inspector"
                                         ToolTipService.ToolTip="Inspect kernel telemetry and targets">
                                         <FontIcon Glyph="&#xE9D9;" FontSize="16" Foreground="{ThemeResource AccentTealBrush}" />
                                     </Button>
                                 </Grid>
                             </Grid>
                         </Border>
-                    </Border>
 
                     <!-- Action 3: Network Refresh (Double-Bezel) -->
-                    <Border x:Name="NetworkRefreshCard" Grid.Column="2" CornerRadius="14" Padding="3" Background="{ThemeResource CardBorderBrush}">
-                        <Border CornerRadius="10" Background="{ThemeResource CardSurfaceBrush}" Padding="18">
+                    <Border x:Name="NetworkRefreshCard" Grid.Column="2" Style="{StaticResource SurfaceBorderStyle}" Padding="16">
                             <Grid RowSpacing="12">
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto" />
@@ -307,19 +301,19 @@
                                     <RowDefinition Height="Auto" />
                                     <RowDefinition Height="Auto" />
                                 </Grid.RowDefinitions>
-                                <Grid>
-                                    <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
-                                        <Border Width="36" Height="36" CornerRadius="18" Background="{ThemeResource AccentTealSubtleBrush}" BorderBrush="{ThemeResource AccentTealBrush}" BorderThickness="1">
-                                            <FontIcon Glyph="&#xE704;" FontSize="18" Foreground="{ThemeResource AccentTealBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                                        </Border>
-                                        <StackPanel VerticalAlignment="Center" Spacing="2">
-                                            <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="Network Refresh" />
+                                <Grid ColumnSpacing="8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                        <FontIcon Glyph="&#xE704;" FontSize="20" Foreground="{ThemeResource TextSecondaryBrush}" HorizontalAlignment="Left" />
+                                        <StackPanel VerticalAlignment="Center" Spacing="4">
+                                            <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="Inspect Network" />
                                             <TextBlock FontFamily="{StaticResource TelemetryFontFamily}" FontSize="11" Foreground="{ThemeResource TextSecondaryBrush}" Text="network" />
                                         </StackPanel>
                                     </StackPanel>
-                                    <Border HorizontalAlignment="Right" VerticalAlignment="Center" Padding="8,3" Background="{ThemeResource AccentTealSubtleBrush}" BorderBrush="{ThemeResource AccentTealBrush}" BorderThickness="1" CornerRadius="{StaticResource RadiusPill}">
-                                        <TextBlock FontFamily="{StaticResource TelemetryFontFamily}" FontSize="10" FontWeight="SemiBold" Foreground="{ThemeResource AccentTealBrush}" Text="[ SAFE · 1-CLICK ]" />
-                                    </Border>
+                                    <ContentControl Grid.Column="1" VerticalAlignment="Center" Template="{StaticResource StatusPillTemplate}" Background="{x:Bind ViewModel.NetworkRiskBadgeBrushKey, Mode=OneTime, Converter={StaticResource ThemeResourceBrushConverter}}" BorderBrush="Transparent" Foreground="{ThemeResource PillTextBrush}" Content="{x:Bind ViewModel.NetworkRiskBadge, Mode=OneTime}" />
                                 </Grid>
                                 <TextBlock Grid.Row="1" Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind ViewModel.NetworkDetailText, Mode=OneWay}" TextWrapping="Wrap" MinHeight="36" />
                                 <Grid Grid.Row="2">
@@ -339,7 +333,7 @@
                                         AutomationProperties.AutomationId="HomeNetworkRefreshButton"
                                         AutomationProperties.Name="Check Network">
                                         <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
-                                            <ProgressRing Width="16" Height="16" IsActive="{x:Bind ViewModel.IsRefreshingNetwork, Mode=OneWay}" />
+                                            <ProgressRing Width="16" Height="16" IsActive="{x:Bind ViewModel.IsRefreshingNetwork, Mode=OneWay}" Visibility="{x:Bind views:LayoutVisibility.BoolToVisibility(ViewModel.IsRefreshingNetwork), Mode=OneWay}" />
                                             <TextBlock Text="{x:Bind ViewModel.NetworkActionText, Mode=OneWay}" />
                                         </StackPanel>
                                     </Button>
@@ -353,14 +347,13 @@
                                         BorderBrush="{ThemeResource AccentTealBrush}"
                                         BorderThickness="1"
                                         AutomationProperties.AutomationId="NetworkRefreshInspectorButton"
-                                        AutomationProperties.Name="Toggle Telemetry Inspector"
+                                        AutomationProperties.Name="Toggle network telemetry inspector"
                                         ToolTipService.ToolTip="Inspect kernel telemetry and targets">
                                         <FontIcon Glyph="&#xE9D9;" FontSize="16" Foreground="{ThemeResource AccentTealBrush}" />
                                     </Button>
                                 </Grid>
                             </Grid>
                         </Border>
-                    </Border>
 
                     <!-- Progressive Disclosure: Telemetry Bay -->
                     <Border
@@ -368,7 +361,7 @@
                         Grid.Row="1"
                         Grid.ColumnSpan="3"
                         Margin="0,4,0,0"
-                        CornerRadius="10"
+                        CornerRadius="{StaticResource RadiusCardInner}"
                         Background="{ThemeResource TelemetryFrameBrush}"
                         BorderBrush="{ThemeResource CardBorderBrush}"
                         BorderThickness="1"
@@ -430,7 +423,7 @@
                 <Border Style="{StaticResource DashboardCardStyle}">
                     <StackPanel Spacing="14">
                         <TextBlock FontSize="16" FontWeight="SemiBold" Foreground="{ThemeResource TextPrimaryBrush}" Text="Recent activity" />
-                        <Border Padding="16" Background="{ThemeResource SurfaceSecondaryBrush}" BorderBrush="{ThemeResource BorderSubtleBrush}" BorderThickness="1" CornerRadius="{StaticResource RadiusControl}">
+                        <Border Padding="16" Background="{ThemeResource SurfaceSecondaryBrush}" CornerRadius="{StaticResource RadiusControl}">
                             <StackPanel Spacing="6">
                                 <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="{x:Bind ViewModel.RecentActivityTitle, Mode=OneWay}" TextWrapping="Wrap" />
                                 <TextBlock Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap" Text="{x:Bind ViewModel.RecentActivitySummary, Mode=OneWay}" />
@@ -445,20 +438,26 @@
                             <ColumnDefinition Width="84" />
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
-                        <Border Width="76" Height="76" CornerRadius="38" Background="{ThemeResource AccentTealSubtleBrush}" BorderBrush="{ThemeResource AccentTealBrush}" BorderThickness="1" VerticalAlignment="Center">
-                            <FontIcon Glyph="&#xE72E;" FontSize="32" Foreground="{ThemeResource AccentTealBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                        </Border>
-                        <StackPanel Grid.Column="1" Spacing="6" VerticalAlignment="Center">
+                        <FontIcon Grid.Column="0" Glyph="&#xE72E;" FontSize="28" Foreground="{ThemeResource TextSecondaryBrush}" VerticalAlignment="Center" />
+                        <StackPanel Grid.Column="1" Spacing="4" VerticalAlignment="Center">
                             <TextBlock FontSize="16" FontWeight="SemiBold" Foreground="{ThemeResource TextPrimaryBrush}" Text="Safety status" />
-                            <TextBlock Style="{StaticResource RowTitleTextStyle}" Foreground="{ThemeResource AccentTealBrush}" Text="Review before applying" />
-                            <TextBlock Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap" Text="WinCare collects evidence first. Any change requires a dispatcher-issued preview receipt and your explicit approval." />
+                            <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="Review before applying" />
+                            <TextBlock Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap" Text="WinCare collects evidence first: four read-only checks (Windows and hardware, storage, security, Windows Update) cover the basics and are not a complete health verdict. Any change requires a preview receipt and your explicit approval." />
+                            <!-- F-028: the primary read-only check belongs in the hero, before any decorative panels. -->
+                            <Button
+                                Content="Run Checkup"
+                                Click="RunCheckupButton_Click"
+                                Style="{StaticResource AccentButtonStyle}"
+                                HorizontalAlignment="Left"
+                                Margin="0,6,0,0"
+                                AutomationProperties.AutomationId="HomeRunCheckup"
+                                AutomationProperties.Name="Run Checkup" />
                         </StackPanel>
                     </Grid>
                 </Border>
             </Grid>
 
             <StackPanel x:Name="ActionLayout" Grid.Row="4" Orientation="Horizontal" Spacing="12">
-                <Button Content="Run Checkup" Click="RunCheckupButton_Click" Style="{StaticResource AccentButtonStyle}" AutomationProperties.AutomationId="HomeRunCheckup" AutomationProperties.Name="Run Checkup" />
                 <Button Content="View Activity" Click="ViewActivityButton_Click" CornerRadius="{StaticResource RadiusControl}" AutomationProperties.AutomationId="HomeViewActivity" AutomationProperties.Name="View Activity" />
                 <Button Content="Browse All Tools" Click="BrowseToolsButton_Click" CornerRadius="{StaticResource RadiusControl}" AutomationProperties.AutomationId="HomeBrowseTools" AutomationProperties.Name="Browse All Tools" />
             </StackPanel>

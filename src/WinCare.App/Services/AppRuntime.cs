@@ -96,6 +96,53 @@ public sealed class AppRuntime
     public IPluginInstallerService InstallerService { get; }
 
     /// <summary>
+    /// F-013: bounded application shutdown sequence. Stops accepting new plugin
+    /// discovery work, waits (bounded) for in-flight startup work to settle, flushes the
+    /// durable activity journal so recorded outcomes survive restart, then disposes the
+    /// owned command executor. Never throws: a close must not be blocked by a failing
+    /// service, and the budget bounds how long the close can take.
+    /// </summary>
+    public async Task ShutdownAsync(TimeSpan budget)
+    {
+        using CancellationTokenSource timeout = new(budget);
+        CancellationToken token = timeout.Token;
+        try
+        {
+            Task? initialization;
+            lock (_pluginInitializationLock)
+            {
+                initialization = _pluginInitializationTask;
+            }
+            if (initialization is { IsCompleted: false })
+            {
+                await initialization.WaitAsync(token).ConfigureAwait(false);
+            }
+
+            await Journal.FlushAsync(token).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            // The shutdown budget expired; remaining work is abandoned deliberately so the
+            // close completes. The journal writes that did land remain durable.
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[AppRuntime] Shutdown error: {ex}");
+        }
+        finally
+        {
+            try
+            {
+                CommandExecutor.Dispose();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[AppRuntime] Executor dispose failed: {ex}");
+            }
+        }
+    }
+
+    /// <summary>
     /// Discovers and initializes plugins asynchronously on application startup.
     /// </summary>
     public Task InitializePluginsAsync(CancellationToken ct = default)

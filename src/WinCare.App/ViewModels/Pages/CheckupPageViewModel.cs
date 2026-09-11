@@ -23,6 +23,7 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
     private readonly CommandDispatcher _dispatcher;
     private readonly Microsoft.UI.Dispatching.DispatcherQueue? _dispatcherQueue = Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread();
     private readonly List<PageRow> _resultRows = [];
+    private ApprovedMutationPlan? _pendingCleanPlan;
     private bool _isRunning;
     private string _runSummary = "No check has been run yet.";
     private string _healthScoreText = "—";
@@ -174,7 +175,6 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
                 maxConcurrency: 3,
                 cancellationToken: CancellationToken.None);
 
-            _resultRows.Clear();
             var fastDict = new Dictionary<string, CommandResult>(StringComparer.OrdinalIgnoreCase);
 
             for (int index = 0; index < FastCheckCommands.Length; index++)
@@ -190,28 +190,14 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
                     row.Detail = result.Message;
                     row.StatusBrushKey = result.Status == CommandResultStatus.Succeeded ? "SuccessBrush" : "WarningBrush";
                 }
-
-                _resultRows.Add(new PageRow(
-                    rowTitle,
-                    commandId,
-                    result.Status == CommandResultStatus.Succeeded ? "Collected" : "Needs review",
-                    result.Message)
-                {
-                    StatusBrushKey = result.Status == CommandResultStatus.Succeeded ? "SuccessBrush" : "WarningBrush"
-                });
             }
 
-            _resultRows.Add(new PageRow(
-                WuaRowTitle,
-                WuaCommandId,
-                "Checking in background…",
-                "Searching Windows Update readiness in background…")
-            {
-                StatusBrushKey = "AccentTealBrush"
-            });
-
+            // F-015: findings are represented once on the quick-check rows; the Results tab
+            // is derived from that same evaluated state afterwards, so the two views can
+            // never disagree about a check's classification.
             _hasResults = true;
             EvaluateFindings(fastDict, null);
+            RebuildResultRowsFromQuickChecks();
 
             if (SelectedIndex == ResultsSectionIndex)
             {
@@ -219,7 +205,10 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
                 SelectSection(ResultsSectionIndex);
             }
 
-            _ = wuaTask.ContinueWith(t =>
+            // F-014: one owned run — the check stays active until the background Windows
+            // Update search settles (its dispatcher deadline bounds the wait), so a second
+            // check cannot start while COM work is still in flight.
+            Task wuaCompletion = wuaTask.ContinueWith(t =>
             {
                 CommandResult wuaResult = (t.IsFaulted || t.IsCanceled)
                     ? new CommandResult(
@@ -242,6 +231,8 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
                     }
                 });
             }, CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
+
+            await wuaCompletion;
         }
         finally
         {
@@ -249,6 +240,26 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
             {
                 IsRunning = false;
             }
+        }
+    }
+
+    /// <summary>
+    /// F-015: rebuilds the Results rows from the evaluated quick-check rows, so the Results
+    /// tab always mirrors the final classification instead of a pre-evaluation copy.
+    /// </summary>
+    private void RebuildResultRowsFromQuickChecks()
+    {
+        _resultRows.Clear();
+        foreach (PageRow quickRow in Sections[0].Rows)
+        {
+            string description = FastCheckCommands.FirstOrDefault(item => item.RowTitle == quickRow.Title).CommandId
+                ?? (quickRow.Title == WuaRowTitle ? WuaCommandId : quickRow.Description);
+            _resultRows.Add(new PageRow(quickRow.Title, description, quickRow.State, quickRow.Detail)
+            {
+                StatusBrushKey = quickRow.StatusBrushKey,
+                ActionText = quickRow.ActionText,
+                ActionCommand = quickRow.ActionCommand,
+            });
         }
     }
 
@@ -337,7 +348,7 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
                         long freeBytes = freeElem.GetInt64();
                         double freeGb = freeBytes / (1024.0 * 1024.0 * 1024.0);
                         string driveName = drive.TryGetProperty("name", out JsonElement nameElem) ? nameElem.GetString() ?? "Drive" : "Drive";
-                        if (freeGb < 10.0)
+                        if (freeGb < WinCare.Domain.Assessment.AssessmentPolicy.DiskFreeCriticalGb)
                         {
                             hasCritical = true;
                             findings.Add($"Low space on {driveName} ({freeGb:0.0} GB free)");
@@ -349,7 +360,7 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
                                 storageRow.ActionCommand = new AsyncRelayCommand(RunQuickCleanAsync);
                             }
                         }
-                        else if (freeGb < 20.0)
+                        else if (freeGb < WinCare.Domain.Assessment.AssessmentPolicy.DiskFreeWarningGb)
                         {
                             hasWarning = true;
                             findings.Add($"Moderate space on {driveName} ({freeGb:0.0} GB free)");
@@ -446,13 +457,48 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
 
     private async Task RunQuickCleanAsync()
     {
+        // F-004: cleaner-disk-pressure is a Moderate mutation, so the quick clean follows the
+        // single admission contract: preview (review resolved targets, obtain the single-use
+        // receipt) first, then apply with explicit approval on the confirming click.
         PageRow? storageRow = Sections[0].Rows.FirstOrDefault(candidate => candidate.Title == "Storage");
         try
         {
+            if (_pendingCleanPlan is not { } plan)
+            {
+                CommandResult preview = await _dispatcher.ExecuteAsync(
+                    CommandRequest.Preview("cleaner-disk-pressure", JsonSerializer.SerializeToElement(new { })),
+                    CommandExecutionOptions.Default,
+                    CancellationToken.None);
+
+                if (preview.Status == CommandResultStatus.Succeeded && preview.ReviewPlan is not null)
+                {
+                    _pendingCleanPlan = preview.ReviewPlan;
+                    if (storageRow is not null)
+                    {
+                        storageRow.State = "Review cleanup";
+                        storageRow.Detail = string.IsNullOrWhiteSpace(preview.Message)
+                            ? "Review the resolved cleanup targets, then confirm to apply."
+                            : preview.Message;
+                        storageRow.StatusBrushKey = "AccentTealBrush";
+                        storageRow.ActionText = "Confirm Clean";
+                    }
+                    return;
+                }
+
+                if (storageRow is not null)
+                {
+                    storageRow.State = "Cleanup failed";
+                    storageRow.Detail = preview.Message;
+                    storageRow.StatusBrushKey = "WarningBrush";
+                }
+                return;
+            }
+
             CommandResult result = await _dispatcher.ExecuteAsync(
-                CommandRequest.Execute("cleaner-disk-pressure", JsonSerializer.SerializeToElement(new { })),
-                new CommandExecutionOptions(ReviewApproved: false, Deadline: DateTimeOffset.UtcNow + TimeSpan.FromMinutes(2)),
+                CommandRequest.Execute("cleaner-disk-pressure", JsonSerializer.SerializeToElement(new { }), plan),
+                new CommandExecutionOptions(ReviewApproved: true, Deadline: DateTimeOffset.UtcNow + TimeSpan.FromMinutes(2)),
                 CancellationToken.None);
+            _pendingCleanPlan = null; // single-use receipt consumed
 
             if (result.Status != CommandResultStatus.Succeeded)
             {

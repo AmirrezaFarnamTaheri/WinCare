@@ -22,6 +22,12 @@ public sealed partial class MainWindow : Window
     // Source: https://learn.microsoft.com/en-us/windows/windows-app-sdk/api/winrt/microsoft.ui.windowing.overlappedpresenter
     // "AppWindow provides native screen coordinates and presenter state without requiring manual Win32 P/Invoke window placement."
 
+    /// <summary>
+    /// Public access to the shell for the packaged smoke test, which drives every real
+    /// navigation route before promotion (F-003).
+    /// </summary>
+    public Views.ShellPage ShellPage => Shell;
+
     [DllImport("user32.dll")]
     private static extern uint GetDpiForWindow(nint windowHandle);
 
@@ -77,6 +83,18 @@ public sealed partial class MainWindow : Window
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"[MainWindow] Preference flush on close failed: {ex}");
+        }
+
+        // F-013: settle the runtime before the process dies — flush the activity journal
+        // and dispose owned services with a bounded budget so recorded outcomes survive
+        // restart and no owned tasks linger.
+        try
+        {
+            Services.AppRuntime.Current.ShutdownAsync(TimeSpan.FromSeconds(3)).GetAwaiter().GetResult();
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[MainWindow] Runtime shutdown on close failed: {ex}");
         }
     }
 

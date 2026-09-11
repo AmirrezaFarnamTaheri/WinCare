@@ -125,7 +125,18 @@ internal sealed partial class WindowsCommandExecutor : ICommandOperationExecutor
         }
         catch (UnauthorizedAccessException ex)
         {
-            return CommandHandlerOutcome.Blocked("command.access_denied", ex.Message);
+            if (definition.ReadOnly)
+            {
+                return CommandHandlerOutcome.Blocked("command.access_denied", ex.Message);
+            }
+
+            // F-010: an access failure during a mutating command can follow partially
+            // applied steps; report explicit state-unknown with reconciliation guidance
+            // instead of an admission-style block that implies nothing happened.
+            return CommandHandlerOutcome.Failed(
+                "command.failed_state_unknown",
+                $"{definition.Title} lost access while mutating the host: {ex.Message} " +
+                "Steps already applied may remain in effect; inspect Activity and verify the affected system state before retrying.");
         }
         catch (OperationCanceledException)
         {
@@ -137,9 +148,20 @@ internal sealed partial class WindowsCommandExecutor : ICommandOperationExecutor
         }
         catch (Exception ex) when (ex is IOException or InvalidDataException or JsonException or System.ComponentModel.Win32Exception)
         {
+            if (definition.ReadOnly)
+            {
+                return CommandHandlerOutcome.Failed(
+                    "command.native_failure",
+                    $"{definition.Title} failed without changing host state: {ex.Message}");
+            }
+
+            // F-010: never claim "failed safely" for a mutating command — multi-step
+            // handlers may have applied earlier steps before the fault. Return an explicit
+            // state-unknown outcome with reconciliation guidance instead.
             return CommandHandlerOutcome.Failed(
-                "command.native_failure",
-                $"{definition.Title} failed safely: {ex.Message}");
+                "command.failed_state_unknown",
+                $"{definition.Title} failed while mutating the host: {ex.Message} " +
+                "Effects already applied may remain; inspect Activity and verify the affected system state before retrying.");
         }
     }
 
@@ -420,7 +442,9 @@ internal sealed partial class WindowsCommandExecutor : ICommandOperationExecutor
             "appx-launch" => AppxLaunch(p),
             "terminal-export" => await TerminalExportAsync(p, cancellationToken).ConfigureAwait(false),
             "cleaner-disk-pressure" => CleanerDiskPressure(p, cancellationToken),
-            "cleaner-disk-pressure-schedule" => await UpsertStateItemAsync("cleaner-schedules", p, cancellationToken).ConfigureAwait(false),
+            // F-026: no scheduler consumer exists in this build, so the saved configuration
+            // must state that it is non-executing instead of implying a live automation.
+            "cleaner-disk-pressure-schedule" => await SaveNonExecutingScheduleAsync(p, cancellationToken).ConfigureAwait(false),
             "cleaner-winapp2-run" => CleanerWinapp2Run(p, cancellationToken),
             "cleaner-relocation" => await CleanerRelocationAsync(p, cancellationToken).ConfigureAwait(false),
             "file-preview-export" => await FilePreviewExportAsync(p, cancellationToken).ConfigureAwait(false),
@@ -684,7 +708,7 @@ internal sealed partial class WindowsCommandExecutor : ICommandOperationExecutor
     private static bool IsCommandReversible(string commandId) =>
         commandId is "pagefile-set" or "experience-power-apply" or "security-control-restore" or "security-control-reduce";
 
-    private static object GetAffectedResourcesForPreview(string commandId, CommandParameters p)
+    internal static object GetAffectedResourcesForPreview(string commandId, CommandParameters p)
     {
         bool isReversible = IsCommandReversible(commandId);
         return commandId switch
@@ -693,8 +717,9 @@ internal sealed partial class WindowsCommandExecutor : ICommandOperationExecutor
             "experience-power-apply" => new[] { new { resourceType = "PowerScheme", path = @"PowerCfg", target = "ActiveScheme", proposedValue = p.String("ProfileId", "balanced"), reversible = true } },
             "security-control-reduce" => new[] { new { resourceType = "SecurityControl", path = p.String("Control", "DefenderRealtime"), target = "State", proposedValue = "Disabled", durationMinutes = p.Int32("DurationMinutes", 15, 5, 1440), reversible = true } },
             "security-control-restore" => new[] { new { resourceType = "SecurityControl", path = p.String("RecordId", "all"), target = "State", proposedValue = "Restored", reversible = true } },
-            "cleaner-disk-pressure" => new[] { new { resourceType = "FileSystem", path = @"%TEMP%, %WINDIR%\Temp", target = "Cleanup", olderThanDays = p.Int32("OlderThanDays", 7, 0, 3650), proposedValue = "PurgeExpiredFiles", reversible = false } },
-            "deep-clean" => new[] { new { resourceType = "FileSystem", path = @"C:\Windows\Temp", target = "DeepClean", profile = p.String("ProfileId", "temp"), proposedValue = "Purge", reversible = false } },
+            // F-005: cleanup previews are derived from the same immutable root plan execution visits.
+            "cleaner-disk-pressure" => CleanupAffectedResources(p.Int32("OlderThanDays", 7, 0, 3650)),
+            "deep-clean" => DeepCleanAffectedResources(p),
             "preset" => new[] { new { resourceType = "RemediationPreset", path = p.String("PresetId", ""), target = "PresetExecution", proposedValue = "ApplyAllRules", reversible = false } },
             _ => new[] { new { resourceType = "SystemState", path = commandId, target = "HostMutation", proposedValue = "Apply", reversible = isReversible } }
         };

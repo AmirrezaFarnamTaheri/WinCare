@@ -2,7 +2,7 @@
 
 The checked-in runtime images below were captured from the locally installed **v2.5.0.0 x64 MSIX** built from the `v2.5.0-rc5` source candidate. They are **historical runtime evidence for that exact package**, not a perpetual source of truth for later source changes.
 
-PR #30 includes subsequent UI and product-hardening changes (including live Home evidence, genuine compact Checkup layouts, Activity report semantics, typed All Tools parameters, Help content, accessibility color adjustments, and plugin trust copy). Until a new installed candidate is captured, the current XAML/theme resources are authoritative for those changed surfaces and these images should be treated as baseline references only.
+Recent updates include subsequent UI modernization, audit remediation, and product-hardening changes (including live Home evidence, dynamic risk tier badges, genuine compact Checkup layouts, Activity report semantics, typed All Tools parameters, Help content, accessibility color adjustments, and plugin trust copy). Until a new installed candidate is captured, the current XAML/theme resources are authoritative for those changed surfaces and these images should be treated as baseline references only.
 
 Concept images remain design references and are explicitly marked as concepts.
 

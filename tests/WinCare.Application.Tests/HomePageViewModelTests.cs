@@ -23,15 +23,17 @@ public sealed class HomePageViewModelTests
     }
 
     [Fact]
-    public async Task Curated_quick_clean_executes_in_one_click_and_updates_status()
+    public async Task Curated_quick_clean_previews_then_applies_with_receipt()
     {
+        // F-004: quick clean follows the single mutation admission contract — the first click
+        // previews resolved targets and issues the receipt, the confirming click applies.
         var cleanDef = new WinCare.CommandCatalog.Models.CommandDefinition(
             "cleaner-disk-pressure", "Disk Cleanup", "Clean temp files", "System care", "Clean up",
-            WinCare.CommandCatalog.Models.CommandRisk.Low, false,
+            WinCare.CommandCatalog.Models.CommandRisk.Moderate, false,
             WinCare.CommandCatalog.Models.AdministratorAccess.No,
             WinCare.CommandCatalog.Models.RestartExpectation.No,
             "test", WinCare.CommandCatalog.Models.MigrationStatus.Implemented,
-            ["cleaner"], WinCare.Domain.Commands.RiskTier.Safe);
+            ["cleaner"], WinCare.Domain.Commands.RiskTier.Moderate);
 
         var handler = new TestHandler("cleaner-disk-pressure", "Cleaned 1.2 GB");
         var dispatcher = new CommandDispatcher([cleanDef], [handler]);
@@ -42,11 +44,17 @@ public sealed class HomePageViewModelTests
 
         await vm.QuickCleanCommand.ExecuteAsync(null);
 
+        Assert.Equal("Review required", vm.CleanStatusText);
+        Assert.False(vm.IsCleaning);
+        Assert.Equal(1, handler.CallCount);
+
+        await vm.QuickCleanCommand.ExecuteAsync(null);
+
         Assert.Equal("Clean Complete", vm.CleanStatusText);
         Assert.Equal("Cleaned 1.2 GB", vm.CleanDetailText);
         Assert.Equal("Clean Again", vm.CleanActionText);
         Assert.False(vm.IsCleaning);
-        Assert.Equal(1, handler.CallCount);
+        Assert.Equal(2, handler.CallCount);
     }
 
     [Fact]
@@ -74,12 +82,13 @@ public sealed class HomePageViewModelTests
         var vm = new HomePageViewModel(dispatcher);
 
         await vm.StartupBoostCommand.ExecuteAsync(null);
-        Assert.Equal("Audit Complete", vm.StartupStatusText);
+        // F-016: inspection outcomes are named for what they are, not overstated as effects.
+        Assert.Equal("Startup inspection complete", vm.StartupStatusText);
         Assert.Equal("12 startup items", vm.StartupDetailText);
         Assert.Equal(1, startupHandler.CallCount);
 
         await vm.NetworkRefreshCommand.ExecuteAsync(null);
-        Assert.Equal("Connected", vm.NetworkStatusText);
+        Assert.Equal("Network inspection complete", vm.NetworkStatusText);
         Assert.Equal("2 interfaces active", vm.NetworkDetailText);
         Assert.Equal(1, networkHandler.CallCount);
     }
@@ -126,6 +135,24 @@ public sealed class HomePageViewModelTests
         Assert.NotNull(vm.TelemetryMetrics);
         Assert.True(vm.TelemetryMetrics.CpuAvailable);
         Assert.Equal("8.7%", vm.TelemetryMetrics.CpuFormatted);
+    }
+
+    [Fact]
+    public void Curated_cards_derive_risk_badges_from_catalog_contracts()
+    {
+        var vm = new HomePageViewModel();
+
+        // DESIGN.md: Product truth outranks decoration.
+        // cleaner-disk-pressure is Moderate risk (mutating with preview + confirm)
+        Assert.Equal("Moderate · preview + confirm", vm.CleanRiskBadge);
+        Assert.Equal("PillElevatedBgBrush", vm.CleanRiskBadgeBrushKey);
+
+        // startup and network commands are read-only inspections
+        Assert.Equal("Read-only", vm.StartupRiskBadge);
+        Assert.Equal("PillReadOnlyBgBrush", vm.StartupRiskBadgeBrushKey);
+
+        Assert.Equal("Read-only", vm.NetworkRiskBadge);
+        Assert.Equal("PillReadOnlyBgBrush", vm.NetworkRiskBadgeBrushKey);
     }
 
     private sealed class TestHandler(string id, string message) : ICommandHandler

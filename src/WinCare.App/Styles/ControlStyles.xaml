@@ -7,7 +7,8 @@
 
     <CornerRadius x:Key="RadiusPill">4</CornerRadius>
     <CornerRadius x:Key="RadiusControl">8</CornerRadius>
-    <CornerRadius x:Key="RadiusCard">12</CornerRadius>
+    <CornerRadius x:Key="RadiusCardOuter">14</CornerRadius>
+    <CornerRadius x:Key="RadiusCardInner">10</CornerRadius>
 
     <Style x:Key="AppTitleTextStyle" TargetType="TextBlock">
         <Setter Property="FontFamily" Value="{StaticResource DisplayFontFamily}" />
@@ -59,13 +60,13 @@
         <Setter Property="Background" Value="{ThemeResource CardSurfaceBrush}" />
         <Setter Property="BorderBrush" Value="{ThemeResource CardBorderBrush}" />
         <Setter Property="BorderThickness" Value="1" />
-        <Setter Property="CornerRadius" Value="{StaticResource RadiusCard}" />
+        <Setter Property="CornerRadius" Value="{StaticResource RadiusCardOuter}" />
     </Style>
     <Style x:Key="DashboardCardStyle" TargetType="Border" BasedOn="{StaticResource SurfaceBorderStyle}">
         <Setter Property="Padding" Value="24" />
     </Style>
     <Style x:Key="AccentButtonStyle" TargetType="Button">
-        <Setter Property="Background" Value="{ThemeResource AccentGradientBrush}" />
+        <Setter Property="Background" Value="{ThemeResource AccentBrush}" />
         <Setter Property="Foreground" Value="{ThemeResource TextOnAccentBrush}" />
         <Setter Property="FontWeight" Value="SemiBold" />
         <Setter Property="Padding" Value="18,10" />

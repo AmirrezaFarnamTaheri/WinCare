@@ -218,11 +218,13 @@ public sealed class CommandDispatcher : ICommandDispatcher
                         $"Mutating command '{request.CommandId}' requires explicit ReviewApproved confirmation.", null, false, startedAt);
                 }
 
-                // If an approval plan was explicitly supplied, validate and consume it.
-                if (request.Approval is not null && !TryConsumeIssuedReviewPlan(request, definition))
+                // F-004: one mutation admission contract — Moderate commands, like Destructive
+                // ones, must consume a single-use review plan issued by a successful preview,
+                // so every applied change has reviewed, resolved targets and a receipt.
+                if (!TryConsumeIssuedReviewPlan(request, definition))
                 {
                     return CreateResult(request, CommandResultStatus.Blocked, "command.approval_plan_invalid",
-                        $"The review plan supplied for '{request.CommandId}' is invalid, expired, or has already been used.", null, false, startedAt);
+                        $"Mutating command '{request.CommandId}' requires a current, single-use review plan issued by this dispatcher after a successful preview.", null, false, startedAt);
                 }
             }
             else if (riskTier != RiskTier.Safe)
@@ -283,7 +285,8 @@ public sealed class CommandDispatcher : ICommandDispatcher
                 outcome.Data,
                 undoAvailable: false,
                 startedAt,
-                reviewPlan);
+                reviewPlan,
+                activity);
         }
         catch (OperationCanceledException) when (linkedCancellation.IsCancellationRequested)
         {
@@ -294,11 +297,21 @@ public sealed class CommandDispatcher : ICommandDispatcher
             bool deadlineExceeded = !cancellationToken.IsCancellationRequested &&
                 options.Deadline is DateTimeOffset configuredDeadline &&
                 configuredDeadline <= _timeProvider.GetUtcNow();
+            // F-010: a cancelled mutating command may have applied part of its work before
+            // cancellation; the outcome must carry explicit reconciliation guidance.
+            bool mutationStateUnknown = request.Apply && !definition.ReadOnly;
+            string cancelledMessage = deadlineExceeded
+                ? "The command did not complete before its deadline."
+                : "The command was cancelled.";
+            if (mutationStateUnknown)
+            {
+                cancelledMessage += " The command may have applied part of its work before cancellation; inspect Activity and verify the affected system state before retrying.";
+            }
             return CreateResult(
                 request,
                 CommandResultStatus.Cancelled,
                 deadlineExceeded ? "command.deadline_exceeded" : "command.cancelled",
-                deadlineExceeded ? "The command did not complete before its deadline." : "The command was cancelled.",
+                cancelledMessage,
                 null,
                 false,
                 startedAt);
@@ -381,8 +394,20 @@ public sealed class CommandDispatcher : ICommandDispatcher
         JsonElement? data,
         bool undoAvailable,
         DateTimeOffset startedAt,
-        ApprovedMutationPlan? reviewPlan = null) =>
-        new(
+        ApprovedMutationPlan? reviewPlan = null,
+        ActivityRecord? activity = null)
+    {
+        // F-022: admission rejections (Blocked / NotMigrated) happen before any activity
+        // record exists; they must still be visible in Activity with their reason. Paths
+        // that already own an activity record pass it in and are not double-journaled.
+        if (activity is null && _journal is not null &&
+            status is CommandResultStatus.Blocked or CommandResultStatus.NotMigrated)
+        {
+            ActivityRecord rejection = _journal.Begin(request.CommandId, request.CommandId);
+            _journal.Fail(rejection.Id, message);
+        }
+
+        return new(
             request.CommandId,
             request.CorrelationId,
             status,
@@ -393,4 +418,5 @@ public sealed class CommandDispatcher : ICommandDispatcher
             _timeProvider.GetUtcNow(),
             undoAvailable,
             reviewPlan);
+    }
 }

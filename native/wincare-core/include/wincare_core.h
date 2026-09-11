@@ -45,6 +45,38 @@ WINCARE_API int32_t wincare_core_sys_info(
     size_t buffer_len,
     size_t *written);
 
+/* F-039: aggregate telemetry snapshot and cleaner exports, previously absent from the
+ * published header although exported by the DLL and consumed through P/Invoke.
+ * Layout must stay in sync with the C# mirror in WinCareCoreNative.cs. */
+
+#define WINCARE_SYS_VALID_CPU  0x1u
+#define WINCARE_SYS_VALID_RAM  0x2u
+#define WINCARE_SYS_VALID_DISK 0x4u
+#define WINCARE_SYS_VALID_NET  0x8u
+
+typedef struct wincare_sys_snapshot {
+    float cpu_usage_pct;
+    uint64_t ram_used_bytes;
+    uint64_t ram_total_bytes;
+    uint64_t disk_free_bytes;
+    uint64_t disk_total_bytes;
+    uint8_t net_active;
+    uint32_t valid_mask;  /* per-metric validity; zero bits mean unknown, not zero */
+    uint32_t disk_volume; /* ASCII drive letter of the probed volume, 0 = unknown */
+} wincare_sys_snapshot;
+
+typedef struct wincare_clean_result {
+    uint64_t bytes_reclaimed;
+    uint32_t files_removed;
+    int32_t error_code;
+} wincare_clean_result;
+
+WINCARE_API int32_t wincare_sys_snapshot_all(wincare_sys_snapshot *out_snapshot);
+
+WINCARE_API int32_t wincare_clean_temp_files(
+    uint8_t dry_run,
+    wincare_clean_result *out_result);
+
 #ifdef __cplusplus
 }
 #endif

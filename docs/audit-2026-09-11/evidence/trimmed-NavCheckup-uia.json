@@ -1,0 +1,576 @@
+[
+  {
+    "Name": "Non Client Input Sink Window",
+    "Id": "",
+    "Type": "ControlType.Pane",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "AppWindow Custom Title Bar",
+    "Id": "",
+    "Type": "ControlType.Pane",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Minimize",
+    "Id": "Minimize",
+    "Type": "ControlType.Button",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Maximize",
+    "Id": "Maximize",
+    "Type": "ControlType.Button",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Close",
+    "Id": "Close",
+    "Type": "ControlType.Button",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "",
+    "Id": "",
+    "Type": "ControlType.Pane",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "",
+    "Id": "",
+    "Type": "ControlType.Pane",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "",
+    "Id": "",
+    "Type": "ControlType.Image",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "WinCare",
+    "Id": "AppTitleText",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Search WinCare",
+    "Id": "GlobalSearch",
+    "Type": "ControlType.Group",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Search WinCare",
+    "Id": "TextBox",
+    "Type": "ControlType.Edit",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Search tasks, tools, settings, and activity",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Primary navigation",
+    "Id": "PrimaryNavigation",
+    "Type": "ControlType.Custom",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Close Navigation",
+    "Id": "TogglePaneButton",
+    "Type": "ControlType.Button",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "",
+    "Id": "PaneTitleTextBlock",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "",
+    "Id": "PaneRoot",
+    "Type": "ControlType.Window",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "",
+    "Id": "MenuItemsScrollViewer",
+    "Type": "ControlType.Pane",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Primary navigation",
+    "Id": "MenuItemsHost",
+    "Type": "ControlType.Group",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Home",
+    "Id": "NavHome",
+    "Type": "ControlType.ListItem",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Checkup",
+    "Id": "NavCheckup",
+    "Type": "ControlType.ListItem",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "System care",
+    "Id": "NavSystemCare",
+    "Type": "ControlType.ListItem",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Security",
+    "Id": "NavSecurity",
+    "Type": "ControlType.ListItem",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Repair and recovery",
+    "Id": "NavRepairRecovery",
+    "Type": "ControlType.ListItem",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "All tools",
+    "Id": "NavAllTools",
+    "Type": "ControlType.ListItem",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Activity",
+    "Id": "NavActivity",
+    "Type": "ControlType.ListItem",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Plugin store",
+    "Id": "NavPluginStore",
+    "Type": "ControlType.ListItem",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "AI Doctor",
+    "Id": "NavAiDoctor",
+    "Type": "ControlType.ListItem",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "",
+    "Id": "FooterItemsScrollViewer",
+    "Type": "ControlType.Pane",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "",
+    "Id": "FooterMenuItemsHost",
+    "Type": "ControlType.Group",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Settings",
+    "Id": "NavSettings",
+    "Type": "ControlType.ListItem",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Help and documentation",
+    "Id": "NavHelp",
+    "Type": "ControlType.ListItem",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "About WinCare",
+    "Id": "NavAbout",
+    "Type": "ControlType.ListItem",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "",
+    "Id": "",
+    "Type": "ControlType.Pane",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "System Checkup",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Inspect first. Review the evidence before choosing any action.",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "—",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "awaiting check",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "System health",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "No check has been run yet.",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Run a read-only quick check",
+    "Id": "RunQuickCheck",
+    "Type": "ControlType.Button",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Run a read-only check",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Review before applying",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Checks observe your device. Any recommended repair stays a proposal until you review and approve it.",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Category",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Status",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Evidence",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Action",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Checkup information",
+    "Id": "CheckupPageRows",
+    "Type": "ControlType.List",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "WinCare.App.ViewModels.Pages.PageRow",
+    "Id": "",
+    "Type": "ControlType.ListItem",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Windows and hardware",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Build, uptime, memory, processor, and device basics.",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Ready",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Read-only",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "WinCare.App.ViewModels.Pages.PageRow",
+    "Id": "",
+    "Type": "ControlType.ListItem",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Storage",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Free space, volume state, and pressure thresholds.",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Ready",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Read-only",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "WinCare.App.ViewModels.Pages.PageRow",
+    "Id": "",
+    "Type": "ControlType.ListItem",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Security",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Windows Security, firewall, updates, and restart state.",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Ready",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Read-only",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "WinCare.App.ViewModels.Pages.PageRow",
+    "Id": "",
+    "Type": "ControlType.ListItem",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Updates",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Search Windows Update readiness without installing anything.",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Ready",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Read-only",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Checkup sections",
+    "Id": "CheckupPageTabs",
+    "Type": "ControlType.Group",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "",
+    "Id": "PART_ItemsView",
+    "Type": "ControlType.List",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "",
+    "Id": "PART_ScrollPresenter",
+    "Type": "ControlType.Pane",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Quick check",
+    "Id": "",
+    "Type": "ControlType.ListItem",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Quick check",
+    "Id": "PART_TextVisual",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Results",
+    "Id": "",
+    "Type": "ControlType.ListItem",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Results",
+    "Id": "PART_TextVisual",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Vertical",
+    "Id": "VerticalScrollBar",
+    "Type": "ControlType.ScrollBar",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "WinCare",
+    "Id": "TitleBar",
+    "Type": "ControlType.TitleBar",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "System Menu Bar",
+    "Id": "SystemMenuBar",
+    "Type": "ControlType.MenuBar",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "System",
+    "Id": "Item 1",
+    "Type": "ControlType.MenuItem",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Minimize",
+    "Id": "Minimize",
+    "Type": "ControlType.Button",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "Maximize",
+    "Id": "Maximize",
+    "Type": "ControlType.Button",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "Close",
+    "Id": "Close",
+    "Type": "ControlType.Button",
+    "Enabled": true,
+    "Offscreen": true
+  }
+]

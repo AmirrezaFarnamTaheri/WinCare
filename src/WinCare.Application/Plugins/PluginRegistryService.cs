@@ -26,6 +26,8 @@ public sealed class PluginRegistryService : IPluginRegistry
     private readonly ConcurrentDictionary<string, (IWinCarePlugin Plugin, PluginLoadContext? LoadContext)> _instantiatedPlugins = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, HashSet<string>> _registeredCommandIdsByPlugin = new(StringComparer.OrdinalIgnoreCase);
     private readonly IPluginStateRepository? _stateRepository;
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<string, string> _widgetErrors =
+        new(StringComparer.OrdinalIgnoreCase);
     private readonly HashSet<string> _enabledIds;
     private readonly ScriptCommandHandlerFactory? _scriptHandlerFactory;
     private readonly SemaphoreSlim _gate = new(1, 1);
@@ -136,19 +138,25 @@ public sealed class PluginRegistryService : IPluginRegistry
                     {
                         widgets.AddRange(pluginWidgets);
                     }
+                    _widgetErrors.TryRemove(kvp.Key, out _);
                 }
                 catch (Exception ex)
                 {
-                    _entries[kvp.Key] = entry with
-                    {
-                        State = PluginState.Error,
-                        ErrorMessage = $"Widget retrieval failed: {ex.Message}"
-                    };
+                    // F-034: a widget-surface failure is kept distinct from whole-plugin
+                    // lifecycle state. The plugin stays Enabled so the registry, catalog and
+                    // dispatcher remain consistent; the failure is recorded separately.
+                    _widgetErrors[kvp.Key] = $"Widget retrieval failed: {ex.Message}";
                 }
             }
         }
         return widgets;
     }
+
+    /// <summary>
+    /// F-034: last widget-surface failure per plugin id. Empty when every enabled plugin's
+    /// widget surface is healthy; registry state itself is unaffected.
+    /// </summary>
+    public IReadOnlyDictionary<string, string> WidgetErrors => _widgetErrors;
 
     /// <inheritdoc />
     public async Task EnablePluginAsync(string pluginId, IPluginHost host, CancellationToken ct = default)

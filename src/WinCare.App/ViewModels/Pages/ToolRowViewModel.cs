@@ -58,19 +58,19 @@ public sealed class ToolRowViewModel : ObservableObject
 
     public string RiskPillLabel => Risk switch
     {
-        "Read-only" => "[ READ-ONLY ]",
-        "Low" => "[ LOW      ]",
-        "Moderate" => "[ MODERATE ]",
-        "High" => "[ HIGH RISK]",
-        "Critical" => "[ CRITICAL ]",
-        _ => $"[ {Risk?.ToUpperInvariant()?.PadRight(8) ?? "UNKNOWN ",8} ]",
+        "Read-only" => "Read-only",
+        "Low" => "Low",
+        "Moderate" => "Moderate",
+        "High" => "High risk",
+        "Critical" => "Critical",
+        _ => Risk ?? "Unknown",
     };
 
     public string StatusPillLabel => MigrationState switch
     {
-        "Behavior verified" => "[ VERIFIED ]",
-        "Implemented" => "[ READY    ]",
-        _ => "[ NOT READY]",
+        "Behavior verified" => "Verified",
+        "Implemented" => "Ready",
+        _ => "Not ready",
     };
 
     public string StatusPillBackgroundResourceKey
@@ -108,6 +108,12 @@ public sealed class ToolRowViewModel : ObservableObject
             };
         }
     }
+
+    /// <summary>
+    /// F-032: concise, meaningful accessible name for the selectable row — the tool title
+    /// with its area and risk — instead of the view-model type name exposed to UIA.
+    /// </summary>
+    public string ToolAccessibleName => $"{Title}, {Definition.Area}, risk {Risk}";
 
 }
 

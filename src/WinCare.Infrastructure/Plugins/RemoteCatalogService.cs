@@ -96,9 +96,19 @@ public class RemoteCatalogService : IRemoteCatalogService
 
         try
         {
+            // F-033: remote catalog reads are bounded explicitly. Without a cap, a hostile
+            // or misbehaving catalog host could exhaust memory before parsing begins.
+            const long MaxCatalogBytes = 16 * 1024 * 1024;
+            const long MaxSignatureBytes = 256 * 1024;
+
             using var response = await _httpClient.GetAsync(_catalogUrl, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
-            byte[] catalogBytes = await response.Content.ReadAsByteArrayAsync(cancellationToken).ConfigureAwait(false);
+            if (response.Content.Headers.ContentLength is long catalogLength && catalogLength > MaxCatalogBytes)
+            {
+                throw new InvalidOperationException(
+                    $"Remote catalog payload is {catalogLength} bytes, exceeding the {MaxCatalogBytes}-byte limit.");
+            }
+            byte[] catalogBytes = await ReadBoundedAsync(response.Content, MaxCatalogBytes, cancellationToken).ConfigureAwait(false);
 
             string? detachedSignature = null;
             bool trustVerified = false;
@@ -107,7 +117,13 @@ public class RemoteCatalogService : IRemoteCatalogService
             {
                 using var signatureResponse = await _httpClient.GetAsync(_catalogSignatureUrl, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
                 signatureResponse.EnsureSuccessStatusCode();
-                detachedSignature = (await signatureResponse.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false)).Trim();
+                if (signatureResponse.Content.Headers.ContentLength is long signatureLength && signatureLength > MaxSignatureBytes)
+                {
+                    throw new InvalidOperationException(
+                        $"Remote catalog signature payload is {signatureLength} bytes, exceeding the {MaxSignatureBytes}-byte limit.");
+                }
+                byte[] signatureBytes = await ReadBoundedAsync(signatureResponse.Content, MaxSignatureBytes, cancellationToken).ConfigureAwait(false);
+                detachedSignature = System.Text.Encoding.UTF8.GetString(signatureBytes).Trim();
                 trustVerified = PluginAdmissionTrustStore.VerifyManifestSignature(
                     catalogBytes,
                     detachedSignature,
@@ -214,6 +230,31 @@ public class RemoteCatalogService : IRemoteCatalogService
                 plugin.RevocationReason ??= "Author entity is listed on the security revocation advisory.";
             }
         }
+    }
+
+    /// <summary>
+    /// F-033: reads a response body up to <paramref name="maxBytes"/>; a larger body
+    /// (absent or lying Content-Length included) aborts the read instead of buffering
+    /// unbounded data.
+    /// </summary>
+    private static async Task<byte[]> ReadBoundedAsync(HttpContent content, long maxBytes, CancellationToken cancellationToken)
+    {
+        await using Stream stream = await content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
+        var buffer = new MemoryStream();
+        byte[] chunk = new byte[64 * 1024];
+        long total = 0;
+        int read;
+        while ((read = await stream.ReadAsync(chunk, cancellationToken).ConfigureAwait(false)) > 0)
+        {
+            total += read;
+            if (total > maxBytes)
+            {
+                throw new InvalidOperationException(
+                    $"Remote payload exceeded the {maxBytes}-byte read limit.");
+            }
+            buffer.Write(chunk, 0, read);
+        }
+        return buffer.ToArray();
     }
 
     private static void NormalizeCatalog(RemotePluginCatalog catalog)

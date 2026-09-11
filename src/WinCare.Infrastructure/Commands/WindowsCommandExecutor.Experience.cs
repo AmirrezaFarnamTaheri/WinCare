@@ -302,18 +302,80 @@ internal sealed partial class WindowsCommandExecutor
         return Success("cleaner-preview-cards", "Cleanup preview generated from measured native targets.", new { targets = targets.Data, safety = "Preview only; no files removed." });
     }
 
+    /// <summary>
+    /// Single source of truth for the cleaner's temporary-file roots (F-005).
+    /// Both the mutation preview and execution must resolve the same deduplicated set,
+    /// so previews never name roots the executor does not visit (or vice versa).
+    /// </summary>
+    internal static string[] CleanupTempRoots()
+    {
+        string userTemp = Path.GetTempPath();
+        string localTemp = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Temp");
+        string[] candidates = [userTemp, localTemp];
+        return candidates
+            .Select(root => root.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
+
+    private static readonly string[] CleanupExclusions =
+    [
+        "Files with a last-write time newer than OlderThanDays",
+        "Reparse points and junctions",
+        "Files that fail deletion are skipped and counted, not fatal",
+    ];
+
+    internal static object[] CleanupAffectedResources(int olderThanDays) =>
+    [
+        new
+        {
+            resourceType = "FileSystem",
+            path = string.Join(", ", CleanupTempRoots()),
+            target = "Cleanup",
+            olderThanDays,
+            proposedValue = "PurgeExpiredFiles",
+            exclusions = CleanupExclusions,
+            reversible = false,
+        },
+    ];
+
+    internal static object[] DeepCleanAffectedResources(CommandParameters p)
+    {
+        string profile = p.String("ProfileId", "temp");
+        string path = profile.Equals("wincare-cache", StringComparison.OrdinalIgnoreCase)
+            ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "WinCare", "cache")
+            : string.Join(", ", CleanupTempRoots());
+        return
+        [
+            new
+            {
+                resourceType = "FileSystem",
+                path,
+                target = "DeepClean",
+                profile,
+                proposedValue = "Purge",
+                exclusions = CleanupExclusions,
+                reversible = false,
+            },
+        ];
+    }
+
     private CommandHandlerOutcome CleanerDiskPressure(CommandParameters p, CancellationToken cancellationToken)
     {
         int olderThanDays = p.Int32("OlderThanDays", 7, 0, 3650);
         DateTime threshold = DateTime.UtcNow.AddDays(-olderThanDays);
-        string[] roots = [Path.GetTempPath(), Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Temp")];
+        string[] roots = CleanupTempRoots();
         long freed = 0; int removed = 0; int skipped = 0;
-        foreach (string root in roots.Distinct(StringComparer.OrdinalIgnoreCase))
+        bool scanCapped = false;
+        foreach (string root in roots)
         {
             if (!Directory.Exists(root)) continue;
-            foreach (string file in Directory.EnumerateFiles(root, "*", SafeRecursiveEnumeration).Take(200_000))
+            // F-021: over-scan by one so a truncated enumeration is detected and disclosed
+            // instead of silently presenting a capped scan as complete.
+            foreach (string file in Directory.EnumerateFiles(root, "*", SafeRecursiveEnumeration).Take(200_001))
             {
                 cancellationToken.ThrowIfCancellationRequested();
+                if (removed + skipped >= 200_000) { scanCapped = true; break; }
                 try
                 {
                     FileInfo info = new(file);
@@ -322,8 +384,25 @@ internal sealed partial class WindowsCommandExecutor
                 }
                 catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { skipped++; }
             }
+            if (scanCapped) break;
         }
-        return Success("cleaner-disk-pressure", $"Removed {removed} eligible temporary files.", new { olderThanDays, removed, skipped, freedBytes = freed }, undo: false);
+
+        // F-021: the outcome message must carry the omissions (skipped entries, truncated
+        // enumeration) so a partial result is never presented as a complete cleanup.
+        string message = scanCapped
+            ? $"Removed {removed} eligible temporary files; enumeration stopped at the 200,000-file scan cap, so more eligible files may remain. {skipped} entries were skipped."
+            : skipped > 0
+                ? $"Removed {removed} eligible temporary files; {skipped} entries were skipped (locked, newer, reparse points, or inaccessible)."
+                : $"Removed {removed} eligible temporary files.";
+        return Success("cleaner-disk-pressure", message, new
+        {
+            olderThanDays,
+            removed,
+            skipped,
+            freedBytes = freed,
+            scanCapped,
+            outcome = scanCapped ? "partial:scan-capped" : "complete",
+        }, undo: false);
     }
 
     private CommandHandlerOutcome Winapp2Admission(CommandParameters p)

@@ -1,0 +1,653 @@
+[
+  {
+    "Name": "Non Client Input Sink Window",
+    "Id": "",
+    "Type": "ControlType.Pane",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "AppWindow Custom Title Bar",
+    "Id": "",
+    "Type": "ControlType.Pane",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Minimize",
+    "Id": "Minimize",
+    "Type": "ControlType.Button",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Maximize",
+    "Id": "Maximize",
+    "Type": "ControlType.Button",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Close",
+    "Id": "Close",
+    "Type": "ControlType.Button",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "",
+    "Id": "",
+    "Type": "ControlType.Pane",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "",
+    "Id": "",
+    "Type": "ControlType.Pane",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "",
+    "Id": "",
+    "Type": "ControlType.Image",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "WinCare",
+    "Id": "AppTitleText",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Search WinCare",
+    "Id": "GlobalSearch",
+    "Type": "ControlType.Group",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Search WinCare",
+    "Id": "TextBox",
+    "Type": "ControlType.Edit",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Search tasks, tools, settings, and activity",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Primary navigation",
+    "Id": "PrimaryNavigation",
+    "Type": "ControlType.Custom",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Close Navigation",
+    "Id": "TogglePaneButton",
+    "Type": "ControlType.Button",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "",
+    "Id": "PaneTitleTextBlock",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "",
+    "Id": "PaneRoot",
+    "Type": "ControlType.Window",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "",
+    "Id": "MenuItemsScrollViewer",
+    "Type": "ControlType.Pane",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Primary navigation",
+    "Id": "MenuItemsHost",
+    "Type": "ControlType.Group",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Home",
+    "Id": "NavHome",
+    "Type": "ControlType.ListItem",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Checkup",
+    "Id": "NavCheckup",
+    "Type": "ControlType.ListItem",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "System care",
+    "Id": "NavSystemCare",
+    "Type": "ControlType.ListItem",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Security",
+    "Id": "NavSecurity",
+    "Type": "ControlType.ListItem",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Repair and recovery",
+    "Id": "NavRepairRecovery",
+    "Type": "ControlType.ListItem",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "All tools",
+    "Id": "NavAllTools",
+    "Type": "ControlType.ListItem",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Activity",
+    "Id": "NavActivity",
+    "Type": "ControlType.ListItem",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Plugin store",
+    "Id": "NavPluginStore",
+    "Type": "ControlType.ListItem",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "AI Doctor",
+    "Id": "NavAiDoctor",
+    "Type": "ControlType.ListItem",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "",
+    "Id": "FooterItemsScrollViewer",
+    "Type": "ControlType.Pane",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "",
+    "Id": "FooterMenuItemsHost",
+    "Type": "ControlType.Group",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Settings",
+    "Id": "NavSettings",
+    "Type": "ControlType.ListItem",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Help and documentation",
+    "Id": "NavHelp",
+    "Type": "ControlType.ListItem",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "About WinCare",
+    "Id": "NavAbout",
+    "Type": "ControlType.ListItem",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Plugin store",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Review installed extensions and browse catalog metadata. Remote installation is available only from a catalog verified against a WinCare-pinned signing key.",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Search plugins or authors",
+    "Id": "PluginSearch",
+    "Type": "ControlType.Group",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Search plugins or authors",
+    "Id": "TextBox",
+    "Type": "ControlType.Edit",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Search plugins or authors",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Filter plugins by category",
+    "Id": "PluginCategoryFilter",
+    "Type": "ControlType.ComboBox",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Plugin catalog trust status",
+    "Id": "PluginCatalogTrustStatus",
+    "Type": "ControlType.StatusBar",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Informational icon",
+    "Id": "StandardIcon",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Plugin catalog trust",
+    "Id": "Title",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Offline sample catalog. Remote installation is unavailable.",
+    "Id": "Message",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Plugins list",
+    "Id": "PluginCatalog",
+    "Type": "ControlType.List",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "WinCare.App.ViewModels.Pages.PluginCardViewModel",
+    "Id": "",
+    "Type": "ControlType.ListItem",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Enhanced Disk Cleaner",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "ONLINE CATALOG",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "UNVERIFIED",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Deep cleaner for Windows temp files, browser caches, and delivery optimization files. (Offline sample — not installable.)",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "System Care",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "•",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "WinCare Community",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "•",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "1.0.0",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "View plugin details",
+    "Id": "",
+    "Type": "ControlType.Button",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "WinCare.App.ViewModels.Pages.PluginCardViewModel",
+    "Id": "",
+    "Type": "ControlType.ListItem",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Network DNS Diagnostic Kit",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "ONLINE CATALOG",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "UNVERIFIED",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Flush DNS cache, test DNS latency across multiple providers, and reset Winsock. (Offline sample — not installable.)",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Utilities",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "•",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "WinCare Network Group",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "•",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "1.1.0",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "View plugin details",
+    "Id": "",
+    "Type": "ControlType.Button",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "WinCare.App.ViewModels.Pages.PluginCardViewModel",
+    "Id": "",
+    "Type": "ControlType.ListItem",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "System Care Pack",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "BUILT-IN",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "UNVERIFIED",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Essential system maintenance, storage cleanup, and memory optimization tools.",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "System Care",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "•",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "WinCare Core Team",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "•",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "2.4.0",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "View plugin details",
+    "Id": "",
+    "Type": "ControlType.Button",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "WinCare.App.ViewModels.Pages.PluginCardViewModel",
+    "Id": "",
+    "Type": "ControlType.ListItem",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Security & Protection Pack",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "BUILT-IN",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "UNVERIFIED",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Windows Security, Defender audit, firewall checks, and telemetry controls.",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "Security",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "•",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "WinCare Core Team",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "•",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "2.4.0",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "View plugin details",
+    "Id": "",
+    "Type": "ControlType.Button",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "WinCare",
+    "Id": "TitleBar",
+    "Type": "ControlType.TitleBar",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "System Menu Bar",
+    "Id": "SystemMenuBar",
+    "Type": "ControlType.MenuBar",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "System",
+    "Id": "Item 1",
+    "Type": "ControlType.MenuItem",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Minimize",
+    "Id": "Minimize",
+    "Type": "ControlType.Button",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "Maximize",
+    "Id": "Maximize",
+    "Type": "ControlType.Button",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "Close",
+    "Id": "Close",
+    "Type": "ControlType.Button",
+    "Enabled": true,
+    "Offscreen": true
+  }
+]

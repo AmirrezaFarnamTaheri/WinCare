@@ -59,8 +59,10 @@ public sealed class ToolExecutionViewModelTests
     }
 
     [Fact]
-    public async Task Moderate_tool_can_apply_after_lightweight_confirmation_without_preview()
+    public async Task Moderate_tool_requires_preview_before_approval_and_apply()
     {
+        // F-004: Moderate tools follow the same two-phase contract as destructive tools —
+        // approval requires a successful preview, and apply consumes the single-use receipt.
         var moderateDef = new CommandDefinition("moderate-change", "Moderate Change", "Moderate Change", "Area", "Section",
             CommandRisk.Moderate, false, AdministratorAccess.No, RestartExpectation.No,
             "test", MigrationStatus.Implemented, ["moderate"], RiskTier.Moderate);
@@ -71,8 +73,16 @@ public sealed class ToolExecutionViewModelTests
 
         Assert.True(viewModel.IsModerateTool);
         Assert.True(viewModel.RequiresApprovalSwitch);
+        Assert.False(viewModel.CanApproveReview);
+        Assert.Equal("Review changes", viewModel.PrimaryActionLabel);
+
+        // Phase 1: preview issues the receipt.
+        await viewModel.ExecuteSelectedToolCommand.ExecuteAsync(null);
+        Assert.True(viewModel.IsExecutionSuccess);
+        Assert.False(handler.LastWasApply);
         Assert.True(viewModel.CanApproveReview);
 
+        // Phase 2: approval then apply consumes the receipt.
         viewModel.IsReviewApproved = true;
         Assert.True(viewModel.IsReviewApproved);
         Assert.Equal("Apply changes", viewModel.PrimaryActionLabel);
@@ -80,7 +90,7 @@ public sealed class ToolExecutionViewModelTests
         await viewModel.ExecuteSelectedToolCommand.ExecuteAsync(null);
 
         Assert.True(viewModel.IsExecutionSuccess);
-        Assert.Equal(1, handler.CallCount);
+        Assert.Equal(2, handler.CallCount);
         Assert.True(handler.LastWasApply);
     }
 

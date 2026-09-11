@@ -1,0 +1,26 @@
+$ErrorActionPreference='Stop'
+Add-Type -AssemblyName UIAutomationClient
+Add-Type -AssemblyName UIAutomationTypes
+$auditProcess=Start-Process "$PSScriptRoot/../../artifacts/audit/untrimmed/WinCare.App.exe" -WindowStyle Hidden -PassThru
+try {
+ Start-Sleep -Seconds 4
+ $auditCond=New-Object System.Windows.Automation.PropertyCondition([System.Windows.Automation.AutomationElement]::ProcessIdProperty,$auditProcess.Id)
+ $auditRoot=[System.Windows.Automation.AutomationElement]::RootElement.FindFirst([System.Windows.Automation.TreeScope]::Children,$auditCond)
+ $auditNavCond=New-Object System.Windows.Automation.PropertyCondition([System.Windows.Automation.AutomationElement]::AutomationIdProperty,'NavAllTools')
+ $auditRoot.FindFirst([System.Windows.Automation.TreeScope]::Descendants,$auditNavCond).GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select()
+ Start-Sleep -Seconds 2
+ $auditSearchCond=New-Object System.Windows.Automation.PropertyCondition([System.Windows.Automation.AutomationElement]::AutomationIdProperty,'ToolSearch')
+ $auditSearch=$auditRoot.FindFirst([System.Windows.Automation.TreeScope]::Descendants,$auditSearchCond)
+ $auditSearch.GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern).SetValue('window-search')
+ Start-Sleep -Seconds 1
+ $auditRowCond=New-Object System.Windows.Automation.PropertyCondition([System.Windows.Automation.AutomationElement]::ControlTypeProperty,[System.Windows.Automation.ControlType]::ListItem)
+ $auditTableCond=New-Object System.Windows.Automation.PropertyCondition([System.Windows.Automation.AutomationElement]::AutomationIdProperty,'AllToolsTable')
+ $auditTable=$auditRoot.FindFirst([System.Windows.Automation.TreeScope]::Descendants,$auditTableCond)
+ $auditRow=$auditTable.FindFirst([System.Windows.Automation.TreeScope]::Descendants,$auditRowCond)
+ $auditRow.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select()
+ Start-Sleep -Seconds 2
+ $auditRoot.FindAll([System.Windows.Automation.TreeScope]::Descendants,[System.Windows.Automation.Condition]::TrueCondition) | ForEach-Object { [pscustomobject]@{name=$_.Current.Name;id=$_.Current.AutomationId;type=$_.Current.ControlType.ProgrammaticName;enabled=$_.Current.IsEnabled;offscreen=$_.Current.IsOffscreen} } | ConvertTo-Json | Set-Content "$PSScriptRoot/evidence/tool-editor-uia.json"
+} finally {
+ $auditProcess.Refresh()
+ if(-not $auditProcess.HasExited){[void]$auditProcess.CloseMainWindow();[void]$auditProcess.WaitForExit(5000)}
+}

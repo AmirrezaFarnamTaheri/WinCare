@@ -1,0 +1,10 @@
+  OK   ReadOnly dark [Dark]: 5.48:1 (fg=#FFFFFF bg=#047857)
+  OK   Mutating dark [Dark]: 5.98:1 (fg=#FFFFFF bg=#C41A1A)
+  OK   Elevated dark [Dark]: 8.10:1 (fg=#1A1A1A bg=#F59E0B)
+  OK   NotReady dark [Dark]: 14.68:1 (fg=#FFFFFF bg=#1F2937)
+  OK   ReadOnly light [Light]: 5.48:1 (fg=#FFFFFF bg=#047857)
+  OK   Mutating light [Light]: 4.83:1 (fg=#FFFFFF bg=#DC2626)
+  OK   Elevated light [Light]: 5.46:1 (fg=#1A1A1A bg=#D97706)
+  OK   NotReady light [Light]: 14.12:1 (fg=#1A1A1A bg=#E2E8F0)
+
+OK: all 8 pairs pass WCAG 2.1 AA 4.5:1.

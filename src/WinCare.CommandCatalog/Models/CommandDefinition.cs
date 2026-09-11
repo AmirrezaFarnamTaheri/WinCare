@@ -131,12 +131,9 @@ public sealed record CommandDefinition(
             return RiskTier.Safe;
         }
 
-        // Routine safe maintenance cleanups
-        if (id.StartsWith("cleaner-", StringComparison.OrdinalIgnoreCase) &&
-            !id.Contains("schedule", StringComparison.OrdinalIgnoreCase))
-        {
-            return RiskTier.Safe;
-        }
+        // F-004: cleaner commands are no longer downgraded from Moderate to Safe by their
+        // identifier. Mutation admission is derived from the declared risk, so cleanup
+        // actions receive preview/review/receipt handling like any other Moderate mutation.
 
         return RiskTier.Moderate;
     }

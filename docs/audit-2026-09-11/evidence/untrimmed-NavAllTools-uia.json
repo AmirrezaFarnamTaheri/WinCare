@@ -1,0 +1,2312 @@
+[
+  {
+    "Name": "Non Client Input Sink Window",
+    "Id": "",
+    "Type": "ControlType.Pane",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "AppWindow Custom Title Bar",
+    "Id": "",
+    "Type": "ControlType.Pane",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Minimize",
+    "Id": "Minimize",
+    "Type": "ControlType.Button",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Maximize",
+    "Id": "Maximize",
+    "Type": "ControlType.Button",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Close",
+    "Id": "Close",
+    "Type": "ControlType.Button",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "",
+    "Id": "",
+    "Type": "ControlType.Pane",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "",
+    "Id": "",
+    "Type": "ControlType.Pane",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "",
+    "Id": "",
+    "Type": "ControlType.Image",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "WinCare",
+    "Id": "AppTitleText",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Search WinCare",
+    "Id": "GlobalSearch",
+    "Type": "ControlType.Group",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Search WinCare",
+    "Id": "TextBox",
+    "Type": "ControlType.Edit",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Search tasks, tools, settings, and activity",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Primary navigation",
+    "Id": "PrimaryNavigation",
+    "Type": "ControlType.Custom",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Close Navigation",
+    "Id": "TogglePaneButton",
+    "Type": "ControlType.Button",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "",
+    "Id": "PaneTitleTextBlock",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "",
+    "Id": "PaneRoot",
+    "Type": "ControlType.Window",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "",
+    "Id": "MenuItemsScrollViewer",
+    "Type": "ControlType.Pane",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Primary navigation",
+    "Id": "MenuItemsHost",
+    "Type": "ControlType.Group",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Home",
+    "Id": "NavHome",
+    "Type": "ControlType.ListItem",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Checkup",
+    "Id": "NavCheckup",
+    "Type": "ControlType.ListItem",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "System care",
+    "Id": "NavSystemCare",
+    "Type": "ControlType.ListItem",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Security",
+    "Id": "NavSecurity",
+    "Type": "ControlType.ListItem",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Repair and recovery",
+    "Id": "NavRepairRecovery",
+    "Type": "ControlType.ListItem",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "All tools",
+    "Id": "NavAllTools",
+    "Type": "ControlType.ListItem",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Activity",
+    "Id": "NavActivity",
+    "Type": "ControlType.ListItem",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Plugin store",
+    "Id": "NavPluginStore",
+    "Type": "ControlType.ListItem",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "AI Doctor",
+    "Id": "NavAiDoctor",
+    "Type": "ControlType.ListItem",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "",
+    "Id": "FooterItemsScrollViewer",
+    "Type": "ControlType.Pane",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "",
+    "Id": "FooterMenuItemsHost",
+    "Type": "ControlType.Group",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Settings",
+    "Id": "NavSettings",
+    "Type": "ControlType.ListItem",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Help and documentation",
+    "Id": "NavHelp",
+    "Type": "ControlType.ListItem",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "About WinCare",
+    "Id": "NavAbout",
+    "Type": "ControlType.ListItem",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "All tools",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Search every retained WinCare command. Plain-language workflows stay primary, while command IDs and source details remain available on demand.",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "All tools sections",
+    "Id": "AllToolsTabs",
+    "Type": "ControlType.Group",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "",
+    "Id": "PART_ItemsView",
+    "Type": "ControlType.List",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "",
+    "Id": "PART_ScrollPresenter",
+    "Type": "ControlType.Pane",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Commands",
+    "Id": "",
+    "Type": "ControlType.ListItem",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Commands",
+    "Id": "PART_TextVisual",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Categories",
+    "Id": "",
+    "Type": "ControlType.ListItem",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Categories",
+    "Id": "PART_TextVisual",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Favorites",
+    "Id": "",
+    "Type": "ControlType.ListItem",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Favorites",
+    "Id": "PART_TextVisual",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Recent",
+    "Id": "",
+    "Type": "ControlType.ListItem",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Recent",
+    "Id": "PART_TextVisual",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Presets",
+    "Id": "",
+    "Type": "ControlType.ListItem",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Presets",
+    "Id": "PART_TextVisual",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Search all tools",
+    "Id": "ToolSearch",
+    "Type": "ControlType.Edit",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Search tools",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Filter tools by area",
+    "Id": "AreaFilter",
+    "Type": "ControlType.ComboBox",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Filter tools by risk",
+    "Id": "RiskFilter",
+    "Type": "ControlType.ComboBox",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Show read-only tools only",
+    "Id": "ReadOnlyFilter",
+    "Type": "ControlType.CheckBox",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "262 tools",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Command",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Category",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Risk",
+    "Id": "RiskHeader",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Administrator access",
+    "Id": "AdministratorHeader",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Restart",
+    "Id": "RestartHeader",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Status",
+    "Id": "StatusColumnHeader",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "All WinCare tools",
+    "Id": "AllToolsTable",
+    "Type": "ControlType.List",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "WinCare.App.ViewModels.Pages.ToolRowViewModel",
+    "Id": "",
+    "Type": "ControlType.ListItem",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Accessibility tree snapshot",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "ui-automation-snapshot",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "All tools",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Read-only",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "No",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "No",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "[ READY    ]",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "WinCare.App.ViewModels.Pages.ToolRowViewModel",
+    "Id": "",
+    "Type": "ControlType.ListItem",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Add a telemetry record",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "telemetry-ingest",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "All tools",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Moderate",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Required",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "No",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "[ READY    ]",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "WinCare.App.ViewModels.Pages.ToolRowViewModel",
+    "Id": "",
+    "Type": "ControlType.ListItem",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Add color",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "color-add",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "All tools",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Low",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "May be required",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "No",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "[ READY    ]",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "WinCare.App.ViewModels.Pages.ToolRowViewModel",
+    "Id": "",
+    "Type": "ControlType.ListItem",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "App packages launch targets",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "appx-launch-targets",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "All tools",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Read-only",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "No",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "No",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "[ READY    ]",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "WinCare.App.ViewModels.Pages.ToolRowViewModel",
+    "Id": "",
+    "Type": "ControlType.ListItem",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Apply experience power",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "experience-power-apply",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "All tools",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Moderate",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Required",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "No",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "[ READY    ]",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "WinCare.App.ViewModels.Pages.ToolRowViewModel",
+    "Id": "",
+    "Type": "ControlType.ListItem",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "AppX runtime inventory",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "appx-runtime",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "All tools",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Read-only",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "No",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "No",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "[ READY    ]",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "WinCare.App.ViewModels.Pages.ToolRowViewModel",
+    "Id": "",
+    "Type": "ControlType.ListItem",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Archive safety inspection",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "archive-inspect",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "All tools",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Read-only",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "No",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "No",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "[ READY    ]",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "WinCare.App.ViewModels.Pages.ToolRowViewModel",
+    "Id": "",
+    "Type": "ControlType.ListItem",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "Assess experience power",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "experience-power-assess",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "All tools",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "Read-only",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "No",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "No",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "[ READY    ]",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "WinCare.App.ViewModels.Pages.ToolRowViewModel",
+    "Id": "",
+    "Type": "ControlType.ListItem",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "Assess fullscreen shell",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "fullscreen-shell-assess",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "All tools",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "Read-only",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "No",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "No",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "[ READY    ]",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "WinCare.App.ViewModels.Pages.ToolRowViewModel",
+    "Id": "",
+    "Type": "ControlType.ListItem",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "Automation profiles",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "automation-profiles",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "All tools",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "Read-only",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "No",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "No",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "[ READY    ]",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "WinCare.App.ViewModels.Pages.ToolRowViewModel",
+    "Id": "",
+    "Type": "ControlType.ListItem",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "Available operations",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "catalog",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "All tools",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "Read-only",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "No",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "No",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "[ READY    ]",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "WinCare.App.ViewModels.Pages.ToolRowViewModel",
+    "Id": "",
+    "Type": "ControlType.ListItem",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "Bluetooth",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "bluetooth",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "All tools",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "Read-only",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "No",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "No",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "[ READY    ]",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "WinCare.App.ViewModels.Pages.ToolRowViewModel",
+    "Id": "",
+    "Type": "ControlType.ListItem",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "Bluetooth events",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "bluetooth-events",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "All tools",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "Read-only",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "No",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "No",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "[ READY    ]",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "WinCare.App.ViewModels.Pages.ToolRowViewModel",
+    "Id": "",
+    "Type": "ControlType.ListItem",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "Browser extensions",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "browser-extensions",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "All tools",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "Read-only",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "No",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "No",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "[ READY    ]",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "WinCare.App.ViewModels.Pages.ToolRowViewModel",
+    "Id": "",
+    "Type": "ControlType.ListItem",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "Browser workspace",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "browsers",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "All tools",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "Read-only",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "No",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "No",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "[ READY    ]",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "WinCare.App.ViewModels.Pages.ToolRowViewModel",
+    "Id": "",
+    "Type": "ControlType.ListItem",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "Calculator",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "calculator",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "All tools",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "Read-only",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "No",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "No",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "[ READY    ]",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "WinCare.App.ViewModels.Pages.ToolRowViewModel",
+    "Id": "",
+    "Type": "ControlType.ListItem",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "Calibrate a display",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "display-calibrate",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "All tools",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "High",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "Required",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "No",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "[ READY    ]",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "WinCare.App.ViewModels.Pages.ToolRowViewModel",
+    "Id": "",
+    "Type": "ControlType.ListItem",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "Cancel a running operation",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "cancel-operation",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "All tools",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "Moderate",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "Required",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "No",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "[ READY    ]",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "WinCare.App.ViewModels.Pages.ToolRowViewModel",
+    "Id": "",
+    "Type": "ControlType.ListItem",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "Capability evidence cards",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "experience-cards",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "All tools",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "Read-only",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "No",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "No",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "[ READY    ]",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "WinCare.App.ViewModels.Pages.ToolRowViewModel",
+    "Id": "",
+    "Type": "ControlType.ListItem",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "Capture a local telemetry snapshot",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "telemetry-capture",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "All tools",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "Moderate",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "Required",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "No",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "[ READY    ]",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "WinCare.App.ViewModels.Pages.ToolRowViewModel",
+    "Id": "",
+    "Type": "ControlType.ListItem",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "Capture an event trace",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "etw-capture",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "All tools",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "Moderate",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "Required",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "No",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "[ READY    ]",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "WinCare.App.ViewModels.Pages.ToolRowViewModel",
+    "Id": "",
+    "Type": "ControlType.ListItem",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "Capture color",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "color-capture",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "All tools",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "Read-only",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "No",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "No",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "[ READY    ]",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "WinCare.App.ViewModels.Pages.ToolRowViewModel",
+    "Id": "",
+    "Type": "ControlType.ListItem",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "Change experience location",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "experience-location-set",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "All tools",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "Moderate",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "Required",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "No",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "[ READY    ]",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "WinCare.App.ViewModels.Pages.ToolRowViewModel",
+    "Id": "",
+    "Type": "ControlType.ListItem",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "Change experience remote",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "experience-remote-set",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "All tools",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "Moderate",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "Required",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "No",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "[ READY    ]",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "WinCare.App.ViewModels.Pages.ToolRowViewModel",
+    "Id": "",
+    "Type": "ControlType.ListItem",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "Change telemetry retention",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "telemetry-retention",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "All tools",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "Moderate",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "Required",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "No",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "[ READY    ]",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "WinCare.App.ViewModels.Pages.ToolRowViewModel",
+    "Id": "",
+    "Type": "ControlType.ListItem",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "Change virtual memory settings",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "pagefile-set",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "All tools",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "Moderate",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "Required",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "No",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "[ READY    ]",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "WinCare.App.ViewModels.Pages.ToolRowViewModel",
+    "Id": "",
+    "Type": "ControlType.ListItem",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "Color palette",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "color-palette",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "All tools",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "Read-only",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "No",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "No",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "[ READY    ]",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "WinCare.App.ViewModels.Pages.ToolRowViewModel",
+    "Id": "",
+    "Type": "ControlType.ListItem",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "Create remote consent",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "remote-consent-create",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "All tools",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "Moderate",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "Required",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "No",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "[ READY    ]",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "WinCare.App.ViewModels.Pages.ToolRowViewModel",
+    "Id": "",
+    "Type": "ControlType.ListItem",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "Display pipeline status",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "display-pipeline",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "All tools",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "Read-only",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "No",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "No",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "[ READY    ]",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "WinCare.App.ViewModels.Pages.ToolRowViewModel",
+    "Id": "",
+    "Type": "ControlType.ListItem",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "Event tracing sessions",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "etw-sessions",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "All tools",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "Read-only",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "May be required",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "No",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "[ READY    ]",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "WinCare.App.ViewModels.Pages.ToolRowViewModel",
+    "Id": "",
+    "Type": "ControlType.ListItem",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "Experience download strategy",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "experience-download-strategy",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "All tools",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "Read-only",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "No",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "No",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "[ READY    ]",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "WinCare.App.ViewModels.Pages.ToolRowViewModel",
+    "Id": "",
+    "Type": "ControlType.ListItem",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "Experience location state",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "experience-location-state",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "All tools",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "Read-only",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "No",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "No",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "[ READY    ]",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "WinCare.App.ViewModels.Pages.ToolRowViewModel",
+    "Id": "",
+    "Type": "ControlType.ListItem",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "Experience power profiles",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "experience-power-profiles",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "All tools",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "Read-only",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "No",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "No",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "[ READY    ]",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "WinCare",
+    "Id": "TitleBar",
+    "Type": "ControlType.TitleBar",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "System Menu Bar",
+    "Id": "SystemMenuBar",
+    "Type": "ControlType.MenuBar",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "System",
+    "Id": "Item 1",
+    "Type": "ControlType.MenuItem",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Minimize",
+    "Id": "Minimize",
+    "Type": "ControlType.Button",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "Maximize",
+    "Id": "Maximize",
+    "Type": "ControlType.Button",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "Close",
+    "Id": "Close",
+    "Type": "ControlType.Button",
+    "Enabled": true,
+    "Offscreen": true
+  }
+]

@@ -9,8 +9,8 @@
             <SolidColorBrush x:Key="SurfaceSecondaryBrush" Color="#F8F8F8" />
             <SolidColorBrush x:Key="SurfaceHoverBrush" Color="#F0F0F0" />
             <SolidColorBrush x:Key="BorderSubtleBrush" Color="#1F000000" />
-            <SolidColorBrush x:Key="TextPrimaryBrush" Color="#1A1A1A" />
-            <SolidColorBrush x:Key="TextSecondaryBrush" Color="#5D5D5D" />
+            <SolidColorBrush x:Key="TextPrimaryBrush" Color="#0F172A" />
+            <SolidColorBrush x:Key="TextSecondaryBrush" Color="#475569" />
             <SolidColorBrush x:Key="TextOnAccentBrush" Color="#FFFFFF" />
             <SolidColorBrush x:Key="SuccessBrush" Color="#0F7B0F" />
             <SolidColorBrush x:Key="WarningBrush" Color="#8A5700" />
@@ -22,7 +22,7 @@
             <SolidColorBrush x:Key="NavigationRailBrush" Color="#F8F8F8" />
             <SolidColorBrush x:Key="CardBorderBrush" Color="#1F000000" />
             <SolidColorBrush x:Key="HeroBackgroundBrush" Color="#F8F8F8" />
-            <SolidColorBrush x:Key="AccentGradientBrush" Color="#006F87" />
+            <SolidColorBrush x:Key="AccentBrush" Color="#006F87" />
             <SolidColorBrush x:Key="PillReadOnlyBgBrush" Color="#047857" />
             <SolidColorBrush x:Key="PillMutatingBgBrush" Color="#DC2626" />
             <SolidColorBrush x:Key="PillElevatedBgBrush" Color="#D97706" />
@@ -39,7 +39,7 @@
             <SolidColorBrush x:Key="SurfaceHoverBrush" Color="#263946" />
             <SolidColorBrush x:Key="BorderSubtleBrush" Color="#3AFFFFFF" />
             <SolidColorBrush x:Key="TextPrimaryBrush" Color="#F5F8FB" />
-            <SolidColorBrush x:Key="TextSecondaryBrush" Color="#B7C2CC" />
+            <SolidColorBrush x:Key="TextSecondaryBrush" Color="#94A3B8" />
             <SolidColorBrush x:Key="TextOnAccentBrush" Color="#06151C" />
             <SolidColorBrush x:Key="SuccessBrush" Color="#75D36B" />
             <SolidColorBrush x:Key="WarningBrush" Color="#FFCB45" />
@@ -51,7 +51,7 @@
             <SolidColorBrush x:Key="NavigationRailBrush" Color="#0F1B25" />
             <SolidColorBrush x:Key="CardBorderBrush" Color="#45FFFFFF" />
             <SolidColorBrush x:Key="HeroBackgroundBrush" Color="#192A38" />
-            <SolidColorBrush x:Key="AccentGradientBrush" Color="#27D6CE" />
+            <SolidColorBrush x:Key="AccentBrush" Color="#27D6CE" />
             <SolidColorBrush x:Key="PillReadOnlyBgBrush" Color="#047857" />
             <SolidColorBrush x:Key="PillMutatingBgBrush" Color="#C41A1A" />
             <SolidColorBrush x:Key="PillElevatedBgBrush" Color="#F59E0B" />
@@ -80,7 +80,7 @@
             <SolidColorBrush x:Key="NavigationRailBrush" Color="{ThemeResource SystemColorWindowColor}" />
             <SolidColorBrush x:Key="CardBorderBrush" Color="{ThemeResource SystemColorWindowTextColor}" />
             <SolidColorBrush x:Key="HeroBackgroundBrush" Color="{ThemeResource SystemColorWindowColor}" />
-            <SolidColorBrush x:Key="AccentGradientBrush" Color="{ThemeResource SystemColorHighlightColor}" />
+            <SolidColorBrush x:Key="AccentBrush" Color="{ThemeResource SystemColorHighlightColor}" />
             <SolidColorBrush x:Key="PillReadOnlyBgBrush" Color="{ThemeResource SystemColorHighlightColor}" />
             <SolidColorBrush x:Key="PillMutatingBgBrush" Color="{ThemeResource SystemColorHighlightColor}" />
             <SolidColorBrush x:Key="PillElevatedBgBrush" Color="{ThemeResource SystemColorHighlightColor}" />

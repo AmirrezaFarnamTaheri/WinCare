@@ -156,7 +156,9 @@ public sealed class ToolExecutionViewModel : ObservableObject
     public bool IsDestructiveTool => _selectedTool?.Definition.RiskTier == RiskTier.Destructive;
     public bool IsMutatingTool => _selectedTool?.Definition.ReadOnly == false;
     public bool RequiresApprovalSwitch => IsMutatingTool && !IsSafeTool;
-    public bool CanApproveReview => IsMutatingTool && !IsExecuting && (IsModerateTool || _hasSuccessfulPreview);
+    // F-004: approval is only possible after a successful preview, for every mutating tier,
+    // so the receipt presented at execution always corresponds to reviewed resolved targets.
+    public bool CanApproveReview => IsMutatingTool && !IsExecuting && _hasSuccessfulPreview;
 
     public bool IsReviewApproved
     {
@@ -242,7 +244,9 @@ public sealed class ToolExecutionViewModel : ObservableObject
         ClearExecutionResult();
         try
         {
-            ApprovedMutationPlan? approval = (apply && IsDestructiveTool) ? _lastApprovedPlan : null;
+            // F-004: every non-Safe mutation must carry the single-use review plan issued by
+            // the preceding preview, so applied changes always have reviewed, resolved targets.
+            ApprovedMutationPlan? approval = (apply && !IsSafeTool) ? _lastApprovedPlan : null;
             CommandRequest request = apply
                 ? CommandRequest.Execute(selected.Id, parameters, approval)
                 : CommandRequest.Preview(selected.Id, parameters);
@@ -442,9 +446,11 @@ public sealed class ToolExecutionViewModel : ObservableObject
                 };
             }
         }
-        catch (JsonException)
+        catch (JsonException ex)
         {
-            // Invalid advanced JSON remains available in the raw editor and will be blocked on run.
+            // F-007: invalid advanced JSON is surfaced immediately instead of silently
+            // ignored; the raw editor keeps the text and execution stays blocked.
+            SetParameterError($"Advanced parameter JSON is invalid: {ex.Message} Fix the JSON before running the command.");
         }
     }
 
@@ -477,21 +483,28 @@ public sealed class ToolExecutionViewModel : ObservableObject
     {
         _executionStatus = result.Status;
         _executionMessage = result.Message;
-        _executionResultText = JsonSerializer.Serialize(
-            new
-            {
-                commandId = result.CommandId,
-                correlationId = result.CorrelationId,
-                status = result.Status,
-                code = result.Code,
-                message = result.Message,
-                startedAt = result.StartedAt,
-                completedAt = result.CompletedAt,
-                durationMilliseconds = result.Duration.TotalMilliseconds,
-                undoAvailable = result.UndoAvailable,
-                data = result.Data,
-            },
-            ResultJsonOptions);
+        try
+        {
+            _executionResultText = JsonSerializer.Serialize(
+                new
+                {
+                    commandId = result.CommandId,
+                    correlationId = result.CorrelationId,
+                    status = result.Status,
+                    code = result.Code,
+                    message = result.Message,
+                    startedAt = result.StartedAt,
+                    completedAt = result.CompletedAt,
+                    durationMilliseconds = result.Duration.TotalMilliseconds,
+                    undoAvailable = result.UndoAvailable,
+                    data = result.Data,
+                },
+                ResultJsonOptions);
+        }
+        catch (Exception)
+        {
+            _executionResultText = result.Message;
+        }
         IsExecutionResultOpen = true;
         NotifyExecutionResultChanged();
     }

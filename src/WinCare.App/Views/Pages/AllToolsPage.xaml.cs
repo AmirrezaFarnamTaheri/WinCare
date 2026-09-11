@@ -26,7 +26,10 @@ public sealed partial class AllToolsPage : Page
         ToolTabs.SelectedItem = ToolTabs.Items[0] as SelectorBarItem;
         ViewModel.PropertyChanged += ViewModel_PropertyChanged;
         CaptureResponsiveControls();
-        ReplaceRawParameterEditor();
+        // F-007: the parameter expander lives in a data template that is not materialized in
+        // the constructor's visual tree; mount the editor once the page is loaded instead of
+        // giving up immediately.
+        Loaded += (_, _) => ReplaceRawParameterEditor();
     }
 
     public AllToolsPageViewModel ViewModel { get; }
@@ -37,7 +40,10 @@ public sealed partial class AllToolsPage : Page
     protected override void OnNavigatedTo(NavigationEventArgs e)
     {
         base.OnNavigatedTo(e);
-        if (e.Parameter is string query && !string.IsNullOrWhiteSpace(query))
+        // F-025: an explicit navigation parameter resets the search even when empty, so a
+        // cached page cannot keep a stale query; only a plain navigation (null parameter)
+        // preserves the current filter state.
+        if (e.Parameter is string query)
         {
             ViewModel.SearchText = query;
             (ViewModel.IsCompactLayout ? FindCompactSearchBox() : ToolSearchBox)?.Focus(FocusState.Programmatic);
@@ -75,7 +81,7 @@ public sealed partial class AllToolsPage : Page
 
     private void ViewModel_PropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName == nameof(AllToolsPageViewModel.SelectedTool))
+        if (e.PropertyName is nameof(AllToolsPageViewModel.SelectedTool) or nameof(AllToolsPageViewModel.IsDetailsOpen))
             RebuildParameterEditor();
     }
 
@@ -230,17 +236,26 @@ public sealed partial class AllToolsPage : Page
         };
         root.Children.Add(rawEditor);
 
-        void ApplyMode(bool advanced)
+        advancedToggle.Toggled += (_, _) =>
         {
-            ViewModel.Execution.UseAdvancedParameterJson = advanced;
-            structuredPanel.Visibility = advanced ? Visibility.Collapsed : Visibility.Visible;
-            rawEditor.Visibility = advanced ? Visibility.Visible : Visibility.Collapsed;
-            if (advanced)
+            bool leavingAdvanced = !advancedToggle.IsOn;
+            ViewModel.Execution.UseAdvancedParameterJson = advancedToggle.IsOn;
+            if (leavingAdvanced)
+            {
+                // F-007: rebuild typed controls so they pick up values imported from the raw
+                // JSON; the mounted controls otherwise keep their initial values.
+                RebuildParameterEditor();
+            }
+            else
+            {
+                structuredPanel.Visibility = Visibility.Collapsed;
+                rawEditor.Visibility = Visibility.Visible;
                 rawEditor.Text = ViewModel.Execution.ParameterJson;
-        }
+            }
+        };
 
-        advancedToggle.Toggled += (_, _) => ApplyMode(advancedToggle.IsOn);
-        ApplyMode(advancedToggle.IsOn);
+        structuredPanel.Visibility = advancedToggle.IsOn ? Visibility.Collapsed : Visibility.Visible;
+        rawEditor.Visibility = advancedToggle.IsOn ? Visibility.Visible : Visibility.Collapsed;
         _parameterExpander.Content = root;
     }
 

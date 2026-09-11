@@ -173,7 +173,10 @@ internal sealed partial class WindowsCommandExecutor
         FirewallProfileState[] firewallProfiles = ReadFirewallProfileStates();
         bool firewall = firewallProfiles.All(profile => profile.Enabled);
         var findings = new List<object>();
-        findings.AddRange(drives.Where(d => d.freePercent < 10).Select(d => (object)new { area = "Storage", item = d.Name, severity = "High", message = $"Only {d.freePercent}% free." }));
+        // F-020: thresholds come from the shared versioned assessment policy, not local literals.
+        findings.AddRange(drives.Where(d => d.freePercent < WinCare.Domain.Assessment.AssessmentPolicy.DiskFreePercentWarning)
+            .Select(d => (object)new { area = "Storage", item = d.Name, severity = "High", message = $"Only {d.freePercent}% free." }));
+        findings.Add(new { area = "Assessment policy", item = "Thresholds", severity = "Information", message = $"Assessment rules v{WinCare.Domain.Assessment.AssessmentPolicy.Version}: storage High below {WinCare.Domain.Assessment.AssessmentPolicy.DiskFreePercentWarning}% free; this overview is not a complete health verdict of installed protection." });
         if (memory.MemoryLoad >= 90) findings.Add(new { area = "Memory", item = "Physical memory", severity = "Moderate", message = $"Memory load is {memory.MemoryLoad}%." });
         if (!firewall) findings.Add(new { area = "Security", item = "Windows Firewall", severity = "High", message = "One or more firewall profiles appear disabled." });
         int score = Math.Max(0, 100 - findings.Count * 15);

@@ -1,0 +1,331 @@
+[
+  {
+    "Name": "Non Client Input Sink Window",
+    "Id": "",
+    "Type": "ControlType.Pane",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "AppWindow Custom Title Bar",
+    "Id": "",
+    "Type": "ControlType.Pane",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Minimize",
+    "Id": "Minimize",
+    "Type": "ControlType.Button",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Maximize",
+    "Id": "Maximize",
+    "Type": "ControlType.Button",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Close",
+    "Id": "Close",
+    "Type": "ControlType.Button",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "",
+    "Id": "",
+    "Type": "ControlType.Pane",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "",
+    "Id": "",
+    "Type": "ControlType.Pane",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "",
+    "Id": "",
+    "Type": "ControlType.Image",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "WinCare",
+    "Id": "AppTitleText",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Search WinCare",
+    "Id": "GlobalSearch",
+    "Type": "ControlType.Group",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Search WinCare",
+    "Id": "TextBox",
+    "Type": "ControlType.Edit",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Search tasks, tools, settings, and activity",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Primary navigation",
+    "Id": "PrimaryNavigation",
+    "Type": "ControlType.Custom",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Close Navigation",
+    "Id": "TogglePaneButton",
+    "Type": "ControlType.Button",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "",
+    "Id": "PaneTitleTextBlock",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "",
+    "Id": "PaneRoot",
+    "Type": "ControlType.Window",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "",
+    "Id": "MenuItemsScrollViewer",
+    "Type": "ControlType.Pane",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Primary navigation",
+    "Id": "MenuItemsHost",
+    "Type": "ControlType.Group",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Home",
+    "Id": "NavHome",
+    "Type": "ControlType.ListItem",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Checkup",
+    "Id": "NavCheckup",
+    "Type": "ControlType.ListItem",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "System care",
+    "Id": "NavSystemCare",
+    "Type": "ControlType.ListItem",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Security",
+    "Id": "NavSecurity",
+    "Type": "ControlType.ListItem",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Repair and recovery",
+    "Id": "NavRepairRecovery",
+    "Type": "ControlType.ListItem",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "All tools",
+    "Id": "NavAllTools",
+    "Type": "ControlType.ListItem",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Activity",
+    "Id": "NavActivity",
+    "Type": "ControlType.ListItem",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Plugin store",
+    "Id": "NavPluginStore",
+    "Type": "ControlType.ListItem",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "AI Doctor",
+    "Id": "NavAiDoctor",
+    "Type": "ControlType.ListItem",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "",
+    "Id": "FooterItemsScrollViewer",
+    "Type": "ControlType.Pane",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "",
+    "Id": "FooterMenuItemsHost",
+    "Type": "ControlType.Group",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Settings",
+    "Id": "NavSettings",
+    "Type": "ControlType.ListItem",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Help and documentation",
+    "Id": "NavHelp",
+    "Type": "ControlType.ListItem",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "About WinCare",
+    "Id": "NavAbout",
+    "Type": "ControlType.ListItem",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "",
+    "Id": "",
+    "Type": "ControlType.Pane",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "WinCare logo",
+    "Id": "",
+    "Type": "ControlType.Image",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "WinCare",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Native Windows care, repair, security, and recovery tools. Mutating commands require a dispatcher-issued preview receipt and explicit approval before apply.",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Version",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "2.5.0-rc5",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Build information comes from the running application assembly rather than a hard-coded release label.",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Safety model",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Read-only evidence is separated from mutation. Remote plugin installation remains disabled unless catalog trust is anchored to a WinCare-pinned signing key. Activity records preserve outcomes and explicitly flag uncertain final state after a mutation fault.",
+    "Id": "",
+    "Type": "ControlType.Text",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "WinCare",
+    "Id": "TitleBar",
+    "Type": "ControlType.TitleBar",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "System Menu Bar",
+    "Id": "SystemMenuBar",
+    "Type": "ControlType.MenuBar",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "System",
+    "Id": "Item 1",
+    "Type": "ControlType.MenuItem",
+    "Enabled": true,
+    "Offscreen": false
+  },
+  {
+    "Name": "Minimize",
+    "Id": "Minimize",
+    "Type": "ControlType.Button",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "Maximize",
+    "Id": "Maximize",
+    "Type": "ControlType.Button",
+    "Enabled": true,
+    "Offscreen": true
+  },
+  {
+    "Name": "Close",
+    "Id": "Close",
+    "Type": "ControlType.Button",
+    "Enabled": true,
+    "Offscreen": true
+  }
+]

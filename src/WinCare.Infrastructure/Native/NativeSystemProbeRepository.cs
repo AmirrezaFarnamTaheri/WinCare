@@ -23,13 +23,20 @@ public sealed class NativeSystemProbeRepository : INativeSystemProbeRepository
                 throw new InvalidOperationException($"wincare_sys_snapshot_all failed with status code {status}.");
             }
 
+            // F-018: per-metric validity is carried through instead of collapsing
+            // unknown into zero-valued metrics.
             var snapshot = new SystemSnapshot(
                 raw.CpuUsagePct,
                 raw.RamUsedBytes,
                 raw.RamTotalBytes,
                 raw.DiskFreeBytes,
                 raw.DiskTotalBytes,
-                raw.NetActive != 0);
+                raw.NetActive != 0,
+                CpuMetricValid: (raw.ValidMask & 0x1) != 0,
+                RamMetricValid: (raw.ValidMask & 0x2) != 0,
+                DiskMetricValid: (raw.ValidMask & 0x4) != 0,
+                NetMetricValid: (raw.ValidMask & 0x8) != 0,
+                DiskVolume: raw.DiskVolume == 0 ? '\0' : (char)raw.DiskVolume);
 
             return ValueTask.FromResult(snapshot);
         }

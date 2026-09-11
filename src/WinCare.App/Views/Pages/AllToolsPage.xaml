@@ -290,6 +290,8 @@
                         <Style TargetType="ListViewItem">
                             <Setter Property="HorizontalContentAlignment" Value="Stretch" />
                             <Setter Property="MinHeight" Value="62" />
+                            <!-- F-032: selectable rows must announce the tool, not the view-model type name. -->
+                            <Setter Property="AutomationProperties.Name" Value="{Binding ToolAccessibleName}" />
                         </Style>
                     </ListView.ItemContainerStyle>
                     <ListView.ItemTemplate>

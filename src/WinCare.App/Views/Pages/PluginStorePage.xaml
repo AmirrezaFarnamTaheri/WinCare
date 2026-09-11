@@ -53,7 +53,7 @@
                  IsClosable="False"
                  AutomationProperties.LiveSetting="Assertive" />
 
-        <ProgressRing Grid.Row="3" IsActive="{x:Bind ViewModel.IsLoading, Mode=OneWay}" Width="32" Height="32" HorizontalAlignment="Center" AutomationProperties.Name="Loading plugin catalog"/>
+        <ProgressRing Grid.Row="3" IsActive="{x:Bind ViewModel.IsLoading, Mode=OneWay}" Visibility="{x:Bind local:PluginStorePage.BoolToVisibility(ViewModel.IsLoading), Mode=OneWay}" Width="32" Height="32" HorizontalAlignment="Center" AutomationProperties.Name="Loading plugin catalog"/>
 
         <ListView Grid.Row="4"
                   ItemsSource="{x:Bind ViewModel.Plugins, Mode=OneWay}"

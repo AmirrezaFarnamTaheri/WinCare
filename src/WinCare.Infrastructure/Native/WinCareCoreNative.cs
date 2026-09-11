@@ -11,6 +11,9 @@ internal struct NativeSysSnapshot
     public ulong DiskFreeBytes;
     public ulong DiskTotalBytes;
     public byte NetActive;
+    // F-018: per-metric validity and probed-volume identity from the native snapshot.
+    public uint ValidMask;
+    public uint DiskVolume;
 }
 
 [StructLayout(LayoutKind.Sequential)]

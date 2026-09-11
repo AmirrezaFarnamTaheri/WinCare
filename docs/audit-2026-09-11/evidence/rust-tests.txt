@@ -1,0 +1,104 @@
+   Compiling wincare-core v2.5.0 (D:\GitHub\WinCare\native\wincare-core)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 11.16s
+     Running unittests src\lib.rs (native\target\debug\deps\wincare_core-1fe8782ee2a4067e.exe)
+
+running 19 tests
+test tests::abi_version_is_stable ... ok
+test tests::dir_size_rejects_null_pointer ... ok
+test tests::dir_size_on_non_utf8_path_returns_invalid_utf8 ... ok
+test tests::rejects_non_utf8_paths ... ok
+test tests::rejects_null_pointers_and_short_output ... ok
+test tests::reports_a_missing_file ... ok
+test tests::sys_info_fills_buffer_with_valid_json ... ok
+test tests::sys_info_rejects_null_written_pointer ... ok
+test tests::sys_info_json_contains_expected_keys ... ok
+test tests::dir_size_on_nonexistent_path_returns_not_found ... ok
+test tests::version_rejects_a_null_written_pointer ... ok
+test tests::version_reports_required_buffer_length ... ok
+test tests::sys_info_reports_required_buffer_length_before_copy ... ok
+test tests::rejects_a_file_above_the_limit ... ok
+test tests::dir_size_on_empty_dir_returns_zero ... ok
+test tests::dir_size_on_known_file_dir_returns_correct_size ... ok
+test tests::hashes_a_file_within_the_limit ... ok
+Junction created for C:\Users\ACER\AppData\Local\Temp\wincare-cleaner-junction-1789080474794888800\cleanup-root\outside-link <<===>> C:\Users\ACER\AppData\Local\Temp\wincare-cleaner-junction-1789080474794888800\outside
+test cleaner::tests::cleaner_does_not_traverse_junctions ... ok
+test tests::dir_size_handles_deep_directory_tree_without_recursion ... ok
+
+test result: ok. 19 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.60s
+
+     Running tests\c_abi_tests.rs (native\target\debug\deps\c_abi_tests-c98a7ca24c18c296.exe)
+
+running 2 tests
+test test_sys_snapshot_c_abi ... ok
+test test_clean_temp_dry_run_c_abi ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.32s
+
+     Running tests\ffi_contract.rs (native\target\debug\deps\ffi_contract-c1d43c54a4805f91.exe)
+
+running 5 tests
+test test_wincare_core_abi_version ... ok
+test test_wincare_core_version ... ok
+test test_wincare_core_sha256_file ... ok
+test test_wincare_core_sys_info ... ok
+test test_wincare_core_dir_size ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src\lib.rs (native\target\debug\deps\wincare_guard-6646bbce17c0d7cb.exe)
+
+running 10 tests
+test ipc::pipe_server::security_tests::pipe_acl_is_explicit_and_does_not_grant_everyone_or_anonymous ... ok
+test monitors::thermal::tests::non_windows_fallback_is_not_throttling ... ok
+test monitors::disk::tests::flags_low_percentage_on_large_drive ... ok
+test monitors::ram::tests::test_ram_pressure_threshold ... ok
+test monitors::disk::tests::accepts_space_above_both_thresholds ... ok
+test monitors::thermal::tests::passive_cooling_mode_means_throttling ... ok
+test notifications::toast::tests::escapes_untrusted_xml_and_uri_values ... ok
+test notifications::toast::tests::test_toast_xml_generation ... ok
+test notifications::toast::tests::removes_xml_invalid_control_characters ... ok
+test monitors::disk::tests::test_disk_space_threshold ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src\main.rs (native\target\debug\deps\wincare_guard-0e08579be394daac.exe)
+
+running 10 tests
+test monitors::disk::tests::accepts_space_above_both_thresholds ... ok
+test ipc::pipe_server::security_tests::pipe_acl_is_explicit_and_does_not_grant_everyone_or_anonymous ... ok
+test monitors::disk::tests::flags_low_percentage_on_large_drive ... ok
+test monitors::disk::tests::test_disk_space_threshold ... ok
+test monitors::thermal::tests::non_windows_fallback_is_not_throttling ... ok
+test monitors::thermal::tests::passive_cooling_mode_means_throttling ... ok
+test notifications::toast::tests::escapes_untrusted_xml_and_uri_values ... ok
+test notifications::toast::tests::removes_xml_invalid_control_characters ... ok
+test notifications::toast::tests::test_toast_xml_generation ... ok
+test monitors::ram::tests::test_ram_pressure_threshold ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\guard_tests.rs (native\target\debug\deps\guard_tests-76f07deb85c38b27.exe)
+
+running 7 tests
+test test_daemon_restart_and_state_recovery ... ok
+test test_daemon_single_tick_completes_within_budget ... ok
+test test_daemon_zero_tick_limit_does_not_sample ... ok
+test test_toast_notification_schema ... ok
+test test_daemon_sleep_resume_simulation ... ok
+test test_daemon_loop_terminates_cleanly ... ok
+test test_ipc_pipe_lifecycle_and_transition ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.11s
+
+   Doc-tests wincare_core
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests wincare_guard
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
