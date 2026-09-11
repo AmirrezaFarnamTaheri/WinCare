@@ -29,7 +29,6 @@ This directory is the product-facing and engineering reference for WinCare. Star
 - [Windows validation](migration/windows-validation.md) — Windows packaging and runtime-validation procedures.
 - [Design system](../DESIGN.md) — visual tokens, accessibility, and UI conventions.
 - [Plugin admission diagram](diagrams/plugin-admission.html) — interactive trust-flow companion to the architecture guide.
-- [`plans/`](plans/) — dated design records retained for historical context; they are not current implementation instructions.
 
 > [!NOTE]
 > Historical PowerShell material remains isolated in the separately hashed legacy-oracle release archive. It is not included in the native runtime source tree.

@@ -1,5 +1,0 @@
-native foundation verification passed
-catalog: 259 unique command IDs with exact frozen-oracle parity
-native source: no PowerShell or WPF references
-WinUI source: approved navigation, tabs, table contract, command execution binding, and automation metadata present
-command runtime: all 259 catalog commands route through one fail-closed native executor

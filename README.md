@@ -61,14 +61,18 @@ The helper verifies the package signature, requires the certificate to match its
 
 ## A deliberate safety model
 
-WinCare does not treat a listed tool as permission to run it. Mutating commands follow a bounded two-phase path:
+WinCare does not treat a listed tool as unconditional permission to run it. Mutating commands enforce a strict risk-tiered admission model:
 
 ```text
-Observe → validate typed inputs → preview → inspect evidence → dispatcher issues one-time receipt → explicit approval → execute → record outcome
+Observe → validate typed inputs → check risk tier (Safe 1-click / Moderate confirm / Destructive preview+token+approval) → execute → record Activity receipt
 ```
 
+- **Risk-Tiered Admission:**
+  - `RiskTier.Safe`: Routine, low-impact maintenance (e.g. temporary file purge, DNS flush) executes directly with 1-click ergonomics.
+  - `RiskTier.Moderate`: Configuration and non-destructive system settings require explicit user confirmation.
+  - `RiskTier.Destructive`: High-impact mutations require a mandatory read-only preview and a dispatcher-issued, single-use, parameter-bound review receipt before explicit approval.
 - Unknown, unavailable, unauthorized, and unsafe operations fail closed.
-- A caller cannot manufacture a valid mutation approval. Review receipts are dispatcher-issued, parameter-bound, short-lived, and single-use.
+- A caller cannot manufacture a valid mutation approval for destructive actions. Review receipts are dispatcher-issued, parameter-bound, short-lived, and single-use.
 - Editing parameters or replaying a receipt requires a new preview.
 - If mutation has started and a handler faults before the final state is known, WinCare reports that uncertainty rather than claiming nothing changed.
 - Read-only diagnostic work is separated from mutating repair work.

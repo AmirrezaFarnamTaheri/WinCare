@@ -114,24 +114,20 @@ class FullNativeMigrationTests(unittest.TestCase):
                 fields.update(re.findall(r'"([^"]+)"', call))
             fields.update(re.findall(r'RequireIds\(p,\s*"([^"]+)"\)', body))
 
-            compatibility_aliases = {("offline-feature-set", "State")}
             for label in labels:
                 declared = schemas.get(label, set())
                 for field in fields:
-                    if field not in declared and (label, field) not in compatibility_aliases:
+                    if field not in declared:
                         missing.append(f"{label}.{field}")
             labels.clear()
 
         self.assertEqual([], missing)
 
-    def test_offline_feature_legacy_state_and_enabled_are_synchronized(self) -> None:
-        compatibility = (ROOT / "src/WinCare.Application/Commands/CommandRequestCompatibility.cs").read_text(encoding="utf-8")
+    def test_command_execution_dispatches_directly_without_legacy_normalization(self) -> None:
         handler = (ROOT / "src/WinCare.Application/Commands/DelegatingCommandHandler.cs").read_text(encoding="utf-8")
-        self.assertIn('"offline-feature-set"', compatibility)
-        self.assertIn('parameters["Enabled"] = enabled', compatibility)
-        self.assertIn('parameters["State"] = enabled ? "Enable" : "Disable"', compatibility)
-        self.assertIn("parameters conflict", compatibility)
-        self.assertIn("CommandRequestCompatibility.TryNormalize", handler)
+        self.assertNotIn("CommandRequestCompatibility", handler)
+        self.assertIn("return _executor.ExecuteAsync(_definition, request, cancellationToken);", handler)
+        self.assertFalse((ROOT / "src/WinCare.Application/Commands/CommandRequestCompatibility.cs").exists())
 
     def test_activity_runtime_has_no_last_journal_service_locator(self) -> None:
         runtime = (ROOT / "src/WinCare.Application/Commands/CommandRuntime.cs").read_text(encoding="utf-8")

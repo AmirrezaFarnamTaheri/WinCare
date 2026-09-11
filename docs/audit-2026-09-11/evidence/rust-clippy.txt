@@ -1,2 +1,0 @@
-    Checking wincare-core v2.5.0 (D:\GitHub\WinCare\native\wincare-core)
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.80s

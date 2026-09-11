@@ -38,6 +38,9 @@ All notable changes to WinCare are documented in this file in accordance with [K
 - Pinned .NET SDK 8.0.416 exactly with feature-band roll-forward and prerelease SDKs disabled; Rust and GitHub Actions remain pinned as well.
 - Committed normal NuGet dependency lockfiles for all eight solution projects and RID-specific portable publish lock variants for all five source projects on `win-x64` and `win-arm64`.
 - Enabled CI locked restore plus NuGet auditing of all transitive packages at moderate-or-higher severity; audit warnings are not suppressed.
+- Removed legacy backward compatibility parameter shims (`CommandRequestCompatibility.cs`) in favor of canonical boolean contract dispatch.
+- Completely purged out-of-date historical plans, reviews, ephemeral audit probe scripts, and one-time test harness artifacts.
+- Synchronized repository architecture and user documentation with active risk tier admission policies and verified documentation screenshots.
 - Expanded Dependabot coverage to GitHub Actions, NuGet, Cargo, and npm.
 - Added CODEOWNERS and a pull-request template covering safety/trust, accessibility, supply chain, exact verification evidence, documentation truth, and residual risk.
 - Expanded finalized native-source evidence to include NuGet configuration, infrastructure security tests, repository review guardrails, all committed dependency lock graphs, complete linked documentation/assets, and the plugin developer CLI with its tests.

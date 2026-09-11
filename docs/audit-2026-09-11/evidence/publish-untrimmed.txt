@@ -1,7 +1,0 @@
-  WinCare.Domain -> D:\GitHub\WinCare\src\WinCare.Domain\bin\x64\Release\net8.0\WinCare.Domain.dll
-  WinCare.CommandCatalog -> D:\GitHub\WinCare\src\WinCare.CommandCatalog\bin\x64\Release\net8.0\WinCare.CommandCatalog.dll
-  WinCare.Application -> D:\GitHub\WinCare\src\WinCare.Application\bin\x64\Release\net8.0-windows10.0.19041.0\WinCare.Application.dll
-  WinCare.Infrastructure -> D:\GitHub\WinCare\src\WinCare.Infrastructure\bin\x64\Release\net8.0-windows10.0.19041.0\WinCare.Infrastructure.dll
-  WinCare.App -> D:\GitHub\WinCare\src\WinCare.App\bin\x64\Release\net8.0-windows10.0.19041.0\win-x64\WinCare.App.dll
-  Pruned unused heavyweight projections from portable bundle.
-  WinCare.App -> D:\GitHub\WinCare\artifacts\audit\untrimmed\

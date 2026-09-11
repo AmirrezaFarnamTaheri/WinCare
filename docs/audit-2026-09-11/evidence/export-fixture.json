@@ -1,6 +1,0 @@
-{
-  "outcome": "IOException",
-  "message": "The process cannot access the file because it is being used by another process.",
-  "targetExists": false,
-  "temporaryFiles": 0
-}

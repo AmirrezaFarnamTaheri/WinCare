@@ -17,25 +17,25 @@ The native source distribution contains **zero PowerShell files**. Historical Po
 | `native/wincare-guard` | **Experimental** local health daemon and local named-pipe endpoint; production SCM lifecycle and app notification consumption are not complete |
 | `tools/wincare-plugin-cli` | Plugin development/validation/packaging CLI |
 
-## 2. Command lifecycle
+## 2. Command lifecycle and risk tiering
 
-A command's catalog presence is never execution authority.
+A command's catalog presence is never unconditional execution authority. Mutation admission enforces a strict risk-tiered model:
 
 ```text
 UI / automation request
   → command and handler lookup
   → typed parameter preflight
-  → read-only preview
-  → evidence / affected-resource presentation
-  → dispatcher issues short-lived, parameter-bound, single-use review receipt
-  → explicit user approval
-  → admitted execution
+  → risk tier admission check:
+      ├── RiskTier.Safe: Direct 1-click execution; no preview or approval token required
+      ├── RiskTier.Moderate: Explicit user confirmation required
+      └── RiskTier.Destructive: Mandatory read-only preview → dispatcher issues short-lived,
+          parameter-bound, single-use review receipt → explicit user approval → admitted execution
   → postcondition / outcome collection
   → Activity receipt with outcome certainty
   → compensation only when an executable compensator exists
 ```
 
-For mutating commands, callers cannot mint a valid approval. `CommandDispatcher` issues the receipt only after a successful preview and consumes it atomically during Apply. Parameter edits, correlation changes, expiry, or replay all fail closed.
+For `RiskTier.Destructive` mutating commands, callers cannot mint a valid approval. `CommandDispatcher` issues the receipt only after a successful preview and consumes it atomically during Apply. Parameter edits, correlation changes, expiry, or replay all fail closed. For `RiskTier.Moderate`, user confirmation is required, while `RiskTier.Safe` actions execute with single-click convenience without bypassing audit journaling.
 
 If a mutating handler faults after execution starts and the final state cannot be proven, WinCare reports **final system state unknown** and directs the user to verify the affected resource before retrying.
 

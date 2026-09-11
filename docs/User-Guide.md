@@ -34,22 +34,26 @@ The self-contained `.exe` runs directly. The portable ZIP should be extracted be
 
 On launch, WinCare restores the last usable window placement by default. Disable **Settings → Window continuity** if you prefer the default startup size each time.
 
-## 3. Safety model: preview is not permission
+## 3. Safety model: risk tiers and admission
 
-A listed tool is not automatically authorized to change Windows.
+A listed tool is not automatically authorized to change Windows. Mutation operations follow a risk-tiered admission model:
 
 ```text
 Choose tool
   → validate typed inputs
-  → run read-only preview
-  → inspect evidence and affected resources
-  → dispatcher issues a short-lived, single-use review receipt
-  → explicitly approve
+  → check risk tier:
+      ├── Safe: direct 1-click execution; no preview or approval token required
+      ├── Moderate: explicit user confirmation dialog required
+      └── Destructive: read-only preview → dispatcher-issued one-time receipt → explicit approval
   → apply
-  → record outcome in Activity
+  → record outcome in Activity journal
 ```
 
-For mutating commands, the receipt is issued by the command dispatcher only after a successful preview. It is bound to the exact command, canonical parameter values, correlation ID, and issuance time. Editing parameters, waiting past expiry, changing correlation, fabricating a receipt, or replaying an already-used receipt requires a new preview.
+- **Safe:** Low-impact, routine maintenance operations (e.g. temporary file purge, DNS flush) execute directly in 1 click without unnecessary ceremony while maintaining full Activity journaling.
+- **Moderate:** Non-destructive system settings and configuration changes require explicit confirmation before execution.
+- **Destructive:** High-impact mutations (e.g. disk formatting, service deletion, permanent resets) require a mandatory read-only preview and a dispatcher-issued, single-use, parameter-bound review receipt before explicit user approval.
+
+For `Destructive` commands, editing parameters, waiting past expiry, changing correlation, fabricating a receipt, or replaying an already-used receipt requires a fresh preview.
 
 If a mutating handler faults after execution starts and WinCare cannot prove the final machine state, the result is **not** “nothing changed.” WinCare reports that the final state is unknown and tells you to verify the affected resource before retrying.
 
