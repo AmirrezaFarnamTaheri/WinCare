@@ -68,7 +68,7 @@ The main navigation is task-oriented:
 - **System Care** — maintenance-oriented command groups.
 - **Security** — security/privacy command groups.
 - **Repair & Recovery** — repair and recovery command groups.
-- **All Tools** — complete 259-command catalog with search, filters, typed parameters, preview/apply, favorites, and recent commands.
+- **All Tools** — complete 269-command catalog with search, filters, typed parameters, preview/apply, favorites, and recent commands.
 - **System Doctor** — local rule-based symptom triage and evidence-guided recommendations.
 - **Plugin Store** — installed-plugin lifecycle plus browse-only remote catalog metadata unless a production catalog trust root is configured.
 - **Activity** — running work, items needing attention, completed operations, and aggregated daily reports.
@@ -101,10 +101,12 @@ These pages organize the native command catalog into task-focused groups. They d
 - Mutating work is routed to the same preview → receipt → explicit approval path used by All Tools.
 - Compact windows use stacked records at the shared 920-DIP boundary.
 - Repair & Recovery shows recovery-oriented tools and Activity guidance; it does not imply that every historical operation has a generic Undo command.
+- **Portable playbooks** accept a schema-versioned list of catalog command IDs and typed parameters for review. Imported steps open individually and receive a fresh live preview; the file carries no execution approval.
+- **Restore a reversible remediation** is available only for completed individual registry-value remediations with complete receipts. WinCare verifies the receipt digest and current registry value before each restore step, and records complete, partial, or conflict outcomes.
 
 ## 8. All Tools
 
-All Tools exposes all 259 native command definitions while keeping common input safer than hand-written JSON.
+All Tools exposes all 269 native command definitions while keeping common input safer than hand-written JSON.
 
 ### Search and filters
 

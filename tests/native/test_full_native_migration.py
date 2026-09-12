@@ -14,9 +14,11 @@ class FullNativeMigrationTests(unittest.TestCase):
     def setUp(self) -> None:
         self.catalog = json.loads(CATALOG.read_text(encoding="utf-8"))["commands"]
 
-    def test_all_259_commands_are_implemented_or_behavior_verified(self) -> None:
-        self.assertEqual(259, len(self.catalog))
-        self.assertEqual(259, len({item["id"] for item in self.catalog}))
+    def test_all_admitted_commands_are_implemented_or_behavior_verified(self) -> None:
+        document = json.loads(CATALOG.read_text(encoding="utf-8"))
+        self.assertEqual(document["commandCount"], len(self.catalog))
+        self.assertGreaterEqual(len(self.catalog), 259)
+        self.assertEqual(len(self.catalog), len({item["id"] for item in self.catalog}))
         incomplete = {
             item["id"]: item["migrationStatus"]
             for item in self.catalog

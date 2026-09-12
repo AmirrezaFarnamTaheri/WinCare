@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?><root>
+<resheader name="resmimetype"><value>text/microsoft-resx</value></resheader><resheader name="version"><value>2.0</value></resheader>
+<data name="NavHome.Content" xml:space="preserve"><value>Home</value></data>
+<data name="NavCheckup.Content" xml:space="preserve"><value>Checkup</value></data>
+<data name="NavAllTools.Content" xml:space="preserve"><value>All tools</value></data>
+<data name="NavSystemCare.Content" xml:space="preserve"><value>System care</value></data>
+<data name="NavSecurity.Content" xml:space="preserve"><value>Security</value></data>
+<data name="NavRepairRecovery.Content" xml:space="preserve"><value>Repair &amp; recovery</value></data>
+<data name="NavActivity.Content" xml:space="preserve"><value>Activity</value></data>
+<data name="NavPluginStore.Content" xml:space="preserve"><value>Plugin store</value></data>
+<data name="NavAiDoctor.Content" xml:space="preserve"><value>AI Doctor</value></data>
+<data name="NavHelp.Content" xml:space="preserve"><value>Help and documentation</value></data>
+<data name="NavAbout.Content" xml:space="preserve"><value>About WinCare</value></data>
+<data name="NavSettings.Content" xml:space="preserve"><value>Settings</value></data>
+<data name="AboutPageTitle.Text" xml:space="preserve"><value>WinCare</value></data>
+<data name="ActivityPageTitle.Text" xml:space="preserve"><value>Activity</value></data>
+<data name="AllToolsPageTitle.Text" xml:space="preserve"><value>All tools</value></data>
+<data name="CheckupPageTitle.Text" xml:space="preserve"><value>Check the evidence</value></data>
+<data name="HelpPageTitle.Text" xml:space="preserve"><value>Help and documentation</value></data>
+<data name="HomePageTitle.Text" xml:space="preserve"><value>A clearer view of your PC.</value></data>
+<data name="RepairRecoveryPageTitle.Text" xml:space="preserve"><value>Repair &amp; recovery</value></data>
+<data name="SecurityPageTitle.Text" xml:space="preserve"><value>Security</value></data>
+<data name="SettingsPageTitle.Text" xml:space="preserve"><value>Settings</value></data>
+<data name="SystemCarePageTitle.Text" xml:space="preserve"><value>System care</value></data>
+</root>

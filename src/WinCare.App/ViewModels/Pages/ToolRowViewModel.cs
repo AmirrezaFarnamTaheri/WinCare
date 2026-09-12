@@ -15,6 +15,7 @@ public sealed class ToolRowViewModel : ObservableObject
     public CommandDefinition Definition { get; }
     public string Id => Definition.Id;
     public string Title => Definition.Title;
+    public override string ToString() => Title;
     public string Summary => Definition.Summary;
     public string Area => Definition.Area;
     public string Section => Definition.Section;
@@ -34,6 +35,7 @@ public sealed class ToolRowViewModel : ObservableObject
         WinCare.CommandCatalog.Models.AdministratorAccess.Required => "Required",
         _ => "Unknown",
     };
+    public string AdministratorText => $"Administrator: {AdministratorAccess}";
     public string Restart => Definition.Restart switch
     {
         RestartExpectation.No => "No",
@@ -41,6 +43,7 @@ public sealed class ToolRowViewModel : ObservableObject
         RestartExpectation.Required => "Required",
         _ => "Unknown",
     };
+    public string RestartText => $"Restart: {Restart}";
     public string MigrationState => Definition.MigrationStatus switch
     {
         MigrationStatus.Cataloged => "Cataloged",
@@ -116,4 +119,3 @@ public sealed class ToolRowViewModel : ObservableObject
     public string ToolAccessibleName => $"{Title}, {Definition.Area}, risk {Risk}";
 
 }
-

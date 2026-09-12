@@ -1,145 +1,77 @@
-# WinCare Native Design System & Visual Specification
+# WinCare — Precision Workspace
 
-**Status:** Approved native Operate-mode design system  
-**Visual Direction:** Tactile Telemetry / Cyber-Operate Cockpit  
-**Target Platform:** Windows 10 (19041+) / Windows 11 (WinUI 3 / Windows App SDK 2.3.1)  
-**Authoritative Standard:** `frontend-design-deslop` / `impeccable` / `high-end-visual-design` (Operate Mode)
+The user selected a hybrid of Instrument Bench (A), System Atlas (C), Focus (D), and Care Board (E) in September 2026. This replaces the former Cyber-Operate visual specification. The app remains native WinUI 3.
 
----
+## Design intent
 
-## 1. Global Vision & Aesthetic Philosophy
+Give people a clear starting point, an understandable view of their PC, and a reliable place to maintain it. Character comes from the custom exploded-system illustration, precise diagnostic channels, generous action hierarchy, and the sequence **Understand → Maintain → Review**.
 
-WinCare is a native Windows maintenance, diagnostic, and optimization cockpit. Its visual language combines WinUI 3 Fluent materials, restrained tonal surfaces, monospaced tabular telemetry, and a vivid diagnostic teal accent.
+Studies in `design/redesign-2026-09/precision-character/` are concept art, not runtime evidence. The implementation combines their strongest ideas rather than duplicating one screenshot.
 
-### Core Product Principles
-1. **Product Truth Outranks Decoration:** Words such as *verified*, *reviewed*, *safe*, *undo*, and *healthy* appear ONLY when proven by runtime facts. No artificial 100% scores based on mere probe completion. Undo is exposed only when a tool produces an invertible receipt snapshot.
-2. **Elevate Daily Users to Power Users (Progressive Disclosure):**
-   - **Surface Layer:** 1-click everyday maintenance cards designed for speed and clarity.
-   - **Deep Layer:** Non-intrusive "System Impact & Telemetry" inspector revealing exact microsecond probe timings, active Win32/NT kernel calls, dry-run diffs, and rollback snapshot IDs.
-3. **Anti-Slop Strictness:**
-   - ❌ NO gratuitous purple-to-blue AI gradient glows or floating decorative orbs.
-   - ❌ NO fake "glassmorphism" that compromises light mode contrast.
-   - ❌ NO layout shifts on hover or state transitions; use `scale(0.98)` on active press.
-   - ❌ NO confirmation fatigue for safe, idempotent tasks.
-   - ❌ NO non-tabular numerals for telemetry or latency metrics.
+## Canonical owners
 
----
+- `src/WinCare.App/Styles/ThemeResources.xaml` owns semantic brushes in Light, Dark and HighContrast.
+- `src/WinCare.App/Styles/ControlStyles.xaml` owns typography, radii and shared controls.
+- `ThemeResourceBrushConverter` resolves view-model keys against the window theme and updates stable brushes for cached pages on appearance changes.
+- `UX-CONTRACT.md` records navigation, feedback and action behavior.
 
-## 2. Design Tokens
+## Palette
 
-The theme resources in `src/WinCare.App/Styles/ThemeResources.xaml` are the authoritative palette.
+| Role / resource | Light | Dark |
+|---|---|---|
+| PageBackgroundBrush | #EDF2F5 | #101B24 |
+| SurfaceBrush / CardSurfaceBrush | #FFFFFF | #182A35 |
+| SurfaceSecondaryBrush | #F2F6F8 | #203542 |
+| SurfaceHoverBrush | #E0EBF0 | #2B4655 |
+| HeroBackgroundBrush | #E5EFF4 | #14232D |
+| NavigationRailBrush | #E4ECF1 | #14232D |
+| CardBorderBrush / BorderSubtleBrush | #CBD8E0 | #36505E |
+| TextPrimaryBrush | #172D3B | #EEF5F7 |
+| TextSecondaryBrush | #435C6B | #B0C4CE |
+| AccentTealBrush / AccentBrush | #006B80 | #70D6DF |
+| AccentTealSubtleBrush | #DCEFF2 | #203F4A |
+| TextOnAccentBrush | #FFFFFF | #06151C |
 
-### 2.1 Color Palette & Semantic Roles (60-30-10 Distribution)
+Status colors retain semantic meaning. Brand color is not a health result. High contrast uses Windows system colors; native caption controls follow appearance too.
 
-- **Canvas / Backdrop (60%):** Restrained neutral canvas (`PageBackgroundBrush`).
-- **Elevated Surfaces (30%):** Structured functional panels (`CardSurfaceBrush`) separated by clean 1px borders (`CardBorderBrush`).
-- **Semantic Accents (10%):** Single diagnostic focus accent paired with strict status indicators.
+## Typography and geometry
 
-| Token Name | Light Value | Dark Value | Semantic Purpose |
-|---|---|---|---|
-| `PageBackgroundBrush` | `#F3F3F3` | `#09131D` | Canvas and shell surface (60% field) |
-| `CardSurfaceBrush` | `#FFFFFF` | `#172531` | Cards, grouped containers, and list rows (30% surface) |
-| `CardBorderBrush` | `#E2E8F0` | `#223544` | Subtle container outline (1px border) |
-| `TextPrimaryBrush` | `#0F172A` | `#F5F8FB` | High-contrast headers and primary text |
-| `TextSecondaryBrush` | `#475569` | `#94A3B8` | Subtitles, labels, and secondary metadata |
-| `AccentTealBrush` | `#006F87` | `#27D6CE` | Diagnostic focus, active tabs, progress (10% accent) |
-| `TextOnAccentBrush` | `#FFFFFF` | `#06151C` | Text overlaid on primary accent controls |
-| `SuccessBrush` | `#0F7B0F` | `#75D36B` | Confirmed healthy states / completed actions |
-| `WarningBrush` | `#8A5700` | `#FFCB45` | Needs attention / non-critical warnings |
-| `DangerBrush` | `#C42B1C` | `#FF99A4` | Destructive risk / critical alerts |
+- Segoe UI Variable Display for headings, Segoe UI Variable Text for controls and prose. Native Windows legibility is intentional.
+- Cascadia Code / Cascadia Mono / Consolas only for measurements, identifiers and technical evidence.
+- Page title 34 DIP; section 20; row title 15; body 14 with 21-DIP line height; secondary prose 13 with 18-DIP line height. No decorative labels above page headings.
+- Four-DIP rhythm, 32-DIP desktop inset, 20-DIP compact inset. Related controls use 8–12 DIP gaps; sections use 24–28.
+- Outer panels 12-DIP corners, inner panels and controls 8, status labels 4. Use one enclosure per functional group.
+- Primary actions use cyan. Secondary actions use QuietButtonStyle. Diagnostic channels share a native button style with visible focus.
+- Preserve native hover, pressed, disabled and busy states. No perpetual animation or delayed feedback for effect.
 
-### 2.2 Typography Hierarchy
-- **Display Font:** `Segoe UI Variable Display` / `Segoe UI`
-  - Page Titles: `32 DIP`, SemiBold (`FontWeight.SemiBold`)
-  - Section Headers: `20 DIP`, SemiBold
-- **Body Font:** `Segoe UI Variable Text` / `Segoe UI`
-  - Card Titles: `16 DIP`, SemiBold
-  - Body Descriptions: `14 DIP`, Normal (`LineHeight = 20 DIP`)
-  - Micro-Labels & Captions: `12 DIP`, Medium
-- **Telemetry & Metric Font:** `Cascadia Code` / `Cascadia Mono` (Strictly Tabular Figures)
-  - Latencies (`142 µs`), hashes, byte counts (`2.4 GB`), registry keys, paths, and status codes.
+## Composition
 
-### 2.3 Spacing Rhythm & Scale (4px Base)
-All padding, margins, and gaps must strictly adhere to the 4-pixel base scale:
-- `Space-1` = `4 DIP` (micro-gaps inside badges/pills)
-- `Space-2` = `8 DIP` (spacing between icon and label, tight form fields)
-- `Space-3` = `12 DIP` (standard button padding, inner card margins)
-- `Space-4` = `16 DIP` (card content padding, stack panel gaps)
-- `Space-6` = `24 DIP` (section vertical separation)
-- `Space-8` = `32 DIP` (major page margins and grid gutters)
+Home begins with its checkup action. The atlas and live category buttons share a diagnostic workspace. Maintenance follows with catalog-derived risk badges, busy feedback and expandable evidence. Activity and review guidance close the page. The atlas is an illustration, never a detected hardware inventory.
 
-### 2.4 Mathematical Concentric Radii Scale
-- `RadiusOuterCard` = `14 DIP` — Outer shell container
-- `RadiusInnerCard` = `10 DIP` — Inner content core (`calc(14 - 4)`)
-- `RadiusControl` = `8 DIP` — Standard buttons, inputs, dropdowns
-- `RadiusPill` = `4 DIP` — Status pills, badges, micro-tags
+Checkup uses a rectangular findings readout rather than a health gauge. All Tools puts search and filters first, retaining typed parameters, its inspector and execution feedback. Settings and documentation favor flowing sections.
 
----
+Wide navigation uses an open left instrument rail. Below 920 DIP it becomes compact; below 680 DIP it becomes an overlay menu. All routes remain available, grouped as overview, care areas, and workspace tools.
 
-## 3. Component State Matrix & Interactive Patterns
+Home preserves its atlas-and-evidence split down to 780 DIP because its channels use short labels. Data-heavy pages continue to use the shared 920 DIP compact boundary.
 
-Every interactive component must implement its full state lifecycle:
+All Tools uses its own measured thresholds: the data table compacts below 840 DIP, while the 390-DIP inspector overlays below 1320 DIP so selecting a command never crushes the table.
 
-| Component | Resting (Idle) | Hover | Active (Pressed) | In-Flight (Running) | Success | Error |
-|---|---|---|---|---|---|---|
-| **1-Click Card** | Clean 1px border, teal action button | Subtle border tint (`CardBorderBrushHover`) | `scale(0.98)` physical push | Action button replaced by indeterminate ProgressRing | Green check badge + reclaimed summary | Amber/Red inline InfoBar with retry |
-| **Deep Inspector** | Collapsed expander with subtle chevron | Text underline on header | Immediate expand/collapse animation | Live streaming data rows | Verified checkmark next to metric | Red warning tag on failed probe |
-| **Safety Button** | Ranked by risk tier (Safe = Teal, Destructive = Red) | Elevated brightness +10% | `-translate-y(1px)` | Disabled with spinner | Toast receipt | Shake animation + error message |
+System care, Security and Repair share `CareToolList`: descriptions sit under tool names, catalog status and requirements form supporting columns, and records stack below 760 DIP of available list width. Selecting a record opens its exact command in the inspector; these lists do not claim to be live machine assessments.
 
----
+`LayoutVisibility.CompactBreakpointDip = 920.0` remains the page-level boundary. Home stacks the illustration/evidence and maintenance sections; below 600 DIP channels form a single column. Data pages preserve stacked records and All Tools retains its overlay inspector. Avoid fixed-height prose.
 
-## 4. Anti-Slop Quality Gate & Self-Audit
+## Product truth and accessibility
 
-Before delivering any UI surface, the implementation must pass this audit:
-- [x] **No AI Slop Colorways:** 0 purple/indigo gradient buttons; 0 raw uncalibrated pure-black `#000000` fills.
-- [x] **Tabular Numerals:** All latency ($\mu$s, ms), memory, and size metrics use `Cascadia Code` with tabular digits.
-- [x] **WCAG 2.2 AA Contrast:** All button labels, status pills, and text elements satisfy $\ge 4.5:1$ contrast ratio against their immediate background.
-- [x] **Zero Layout Jumps:** Expanders use bounded transitions; buttons do not resize on hover or active states.
-- [x] **Deterministic Copy:** No AI copywriting filler ("Elevate your experience", "Seamless optimization"). Use direct action verbs ("Reclaim 2.4 GB", "Flush DNS", "Optimize Startup").
-- [x] **Complete State Coverage:** Every card and button handles Idle, Hover, Pressed, In-Flight, and Error fallback states.
+Activity uses a theme-aware document illustration and a separate empty composition; an empty message never overlays column headings. The tool inspector retains invalid raw input and focuses it for correction. Cancellation uses a pending “Stopping…” state until execution settles.
 
----
+- No generic Undo claim: show Undo only with an executable compensator.
+- No unverifiable health score: collection coverage is not machine health. Findings retain their actual runtime interpretation.
+- No blanket approval claim: risk determines direct execution, confirmation or destructive preview/receipt requirements. The dispatcher remains authoritative.
+- No false publisher verification, invented plugin availability, decorative settings or telemetry.
+- Meaningful automation names, keyboard access and visible focus; target 44-DIP controls.
+- Validate text, accent and status contrast in both themes. High contrast uses system brushes.
+- The decorative atlas is excluded from the accessibility tree; adjacent text explains its role.
 
-## 5. High-End Haptic Craft & Visual Architecture (`high-end-visual-design` / `impeccable`)
+## Verification
 
-### 5.1 The "Double-Bezel" (Doppelrand) Architecture
-To escape flat, generic card boundaries, major action containers employ a machined double enclosure:
-- **Outer Shell:** Subtle outer hairline boundary (`CardBorderBrush`, `CornerRadius="14"`) with `3 DIP` padding.
-- **Inner Core:** Distinct elevated surface (`CardSurfaceBrush`, `CornerRadius="10"`) featuring a subtle top edge highlight simulating physical hardware machining.
-
-### 5.2 Button-in-Button Trailing Icon Architecture
-Primary action buttons on 1-click cards pair action text with an embedded circular icon container:
-- **Action Label:** Left-aligned text (`"Clean Now"`, `"Tune Latency"`).
-- **Embedded Icon Circle:** Right-aligned `24x24 DIP` circular pill (`CornerRadius="12"`, background tinted with `AccentTealSubtleBrush`) housing the action glyph (`FontIcon`). On active press, the inner icon translates subtly to provide tactile kinetic feedback.
-
-### 5.3 Deep Telemetry Inspector Bay
-When the power-user expander is toggled:
-- **Telemetry Surface:** Renders inside an indented telemetry bay with a darker contrast background (`#0D1924` in dark mode, `#F1F5F9` in light mode).
-- **Tabular Grid:** Left-aligned metric name, right-aligned monospace value in `Cascadia Code`, and a middle status indicator pill. Zero visual clutter; maximum scanability.
-
----
-
-## 6. Responsive Architecture & Strict Policy Exclusions
-
-### 6.1 Responsive Breakpoint
-`LayoutVisibility.CompactBreakpointDip = 920.0` is the app-level compact-mode boundary.
-
-At widths below 920 DIP:
-- Desktop tables collapse into stacked records;
-- Checkup collapses both hero and evidence layouts;
-- All Tools stacks its search/filter controls and uses an overlay detail pane;
-- Home stacks its hero/status/safety surfaces and primary actions;
-- System Care, Security, Repair & Recovery, and Activity use compact row presentations.
-
-### 6.2 Strict Exclusions & Product Truth
-- **Accessibility floor is mandatory.** Every interactive surface supports keyboard navigation in logical order, preserves a visible focus indicator, exposes meaningful automation names for assistive technology, provides a minimum `44 x 44 DIP` interactive target, and remains usable in Windows High Contrast mode.
-- **No hero gradients.** Hero and accent resources are tonal solid brushes.
-- **No decorative glass orbs.** Use native Mica/Acrylic and restrained tonal surfaces.
-- **No caller-minted approval.** Mutation requires a dispatcher-issued preview receipt bound to command, parameters, correlation ID, lifetime, and single use.
-- **No generic Undo claim.** Show Undo only when an executable compensator exists.
-- **No unverifiable health score.** Checkup reports evidence-collection coverage unless an actual health model exists.
-- **No false publisher verification.** Catalog/package consistency is not publisher identity unless the catalog trust root verified.
-- **No decorative settings.** A setting exists only when it changes real persisted behavior.
-- **No inconsistent icon family.** Use Windows Fluent iconography.
-- **No raw exception disclosure in user-facing copy.** Detailed failures belong in protected diagnostics.
-
+Build/source checks do not establish runtime accessibility. Record captures and exercised interactions in `docs/design/hybrid-validation.md`. Historical captures remain labeled by build. Generated art never counts as execution evidence.

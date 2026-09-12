@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
+using System.Security.Principal;
 using System.Text.Json;
 using WinCare.Application.Activity;
 using WinCare.Application.Native;
@@ -274,7 +275,11 @@ public sealed class CommandDispatcher : ICommandDispatcher
             ApprovedMutationPlan? reviewPlan = null;
             if (!definition.ReadOnly && !request.Apply && outcome.Status == CommandResultStatus.Succeeded)
             {
-                reviewPlan = IssueReviewPlan(definition.Id, request.Parameters, request.CorrelationId);
+                reviewPlan = IssueReviewPlan(
+                    definition.Id,
+                    request.Parameters,
+                    request.CorrelationId,
+                    ExecutionDigestFromPreview(definition.Id, outcome.Data));
             }
 
             return CreateResult(
@@ -337,7 +342,7 @@ public sealed class CommandDispatcher : ICommandDispatcher
         }
     }
 
-    private ApprovedMutationPlan IssueReviewPlan(string commandId, JsonElement parameters, Guid correlationId)
+    private ApprovedMutationPlan IssueReviewPlan(string commandId, JsonElement parameters, Guid correlationId, string? executionDigest)
     {
         DateTimeOffset now = _timeProvider.GetUtcNow();
         foreach ((string planId, ApprovedMutationPlan plan) in _issuedReviewPlans)
@@ -353,7 +358,8 @@ public sealed class CommandDispatcher : ICommandDispatcher
             commandId,
             ApprovedMutationPlan.ComputeCanonicalDigest(parameters),
             now,
-            correlationId);
+            correlationId,
+            executionDigest);
         _issuedReviewPlans[issued.PlanId] = issued;
         return issued;
     }
@@ -377,13 +383,48 @@ public sealed class CommandDispatcher : ICommandDispatcher
             issued.CorrelationId == Guid.Empty ||
             issued.CorrelationId != request.CorrelationId ||
             !string.Equals(issued.CommandId, definition.Id, StringComparison.OrdinalIgnoreCase) ||
-            !string.Equals(issued.ParametersDigest, ApprovedMutationPlan.ComputeCanonicalDigest(request.Parameters), StringComparison.OrdinalIgnoreCase))
+            !string.Equals(issued.ParametersDigest, ApprovedMutationPlan.ComputeCanonicalDigest(request.Parameters), StringComparison.OrdinalIgnoreCase) ||
+            !string.Equals(issued.ExecutionDigest, CurrentExecutionDigest(definition.Id, request.Parameters, submitted.ExecutionDigest), StringComparison.OrdinalIgnoreCase))
         {
             _issuedReviewPlans.TryRemove(submitted.PlanId, out _);
             return false;
         }
 
         return _issuedReviewPlans.TryRemove(submitted.PlanId, out _);
+    }
+
+    private static string? ExecutionDigestFromPreview(string commandId, JsonElement? previewData)
+    {
+        if (commandId is not ("preset" or "remediation-restore") || previewData is not JsonElement data ||
+            data.ValueKind != JsonValueKind.Object || !data.TryGetProperty("executionDigest", out JsonElement digest) ||
+            digest.ValueKind != JsonValueKind.String)
+        {
+            return null;
+        }
+
+        return digest.GetString();
+    }
+
+    private static string? CurrentExecutionDigest(string commandId, JsonElement parameters, string? submittedExecutionDigest)
+    {
+        if (commandId.Equals("remediation-restore", StringComparison.OrdinalIgnoreCase))
+            return submittedExecutionDigest;
+        if (!commandId.Equals("preset", StringComparison.OrdinalIgnoreCase) ||
+            !parameters.TryGetProperty("PresetId", out JsonElement presetId) || presetId.ValueKind != JsonValueKind.String ||
+            string.IsNullOrWhiteSpace(presetId.GetString()))
+        {
+            return null;
+        }
+
+        using WindowsIdentity identity = WindowsIdentity.GetCurrent();
+        bool isAdministrator = new WindowsPrincipal(identity).IsInRole(WindowsBuiltInRole.Administrator);
+        RemediationPresetPlan plan = RemediationPresetPlanner.Create(
+            presetId.GetString()!,
+            WinCare.CommandCatalog.RemediationCatalog.LoadPresets(),
+            WinCare.CommandCatalog.RemediationCatalog.LoadRules(),
+            Environment.OSVersion.Version.Build,
+            isAdministrator);
+        return plan.IsExecutable ? plan.Digest : null;
     }
 
     private CommandResult CreateResult(

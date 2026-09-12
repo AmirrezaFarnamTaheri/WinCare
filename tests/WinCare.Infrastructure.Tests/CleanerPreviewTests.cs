@@ -85,4 +85,18 @@ public sealed class CleanerPreviewTests
         string cache = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "WinCare", "cache");
         Assert.Equal(cache, path);
     }
+
+    [Fact]
+    public void Preset_preview_expands_the_resolved_rules_and_plan_digest()
+    {
+        JsonElement preview = PreviewAsJson("preset", new { PresetId = "safe" });
+
+        Assert.Equal(3, preview.GetArrayLength());
+        Assert.Equal("explorer.show-extensions", preview[0].GetProperty("path").GetString());
+        Assert.Equal("RemediationRule", preview[0].GetProperty("resourceType").GetString());
+        Assert.True(preview[0].GetProperty("changes").GetArrayLength() > 0);
+        string digest = preview[0].GetProperty("planDigest").GetString()!;
+        Assert.Equal(64, digest.Length);
+        Assert.Equal(digest, preview[1].GetProperty("planDigest").GetString());
+    }
 }

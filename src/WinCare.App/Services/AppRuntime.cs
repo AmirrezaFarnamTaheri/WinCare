@@ -6,6 +6,8 @@ using WinCare.Domain.Telemetry;
 using WinCare.Infrastructure.Commands;
 using WinCare.Infrastructure.Native;
 using WinCare.Infrastructure.Plugins;
+using WinCare.Infrastructure.Storage;
+using WinCare.Application.Storage;
 
 namespace WinCare.App.Services;
 
@@ -22,6 +24,7 @@ public sealed class AppRuntime
     {
         Journal = new ActivityJournalService();
         NativeCore = new NativeCoreService();
+        StorageReports = new StorageReportService();
         SystemProbe = new NativeSystemProbeRepository();
         CommandExecutor = new WindowsCommandExecutor(NativeCore);
         Dispatcher = CommandRuntime.CreateDefault(CommandExecutor, NativeCore, Journal);
@@ -51,6 +54,11 @@ public sealed class AppRuntime
     /// Gets the native core service instance.
     /// </summary>
     public NativeCoreService NativeCore { get; }
+
+    /// <summary>
+    /// Gets the bounded, read-only storage report service used by storage discovery views.
+    /// </summary>
+    public IStorageReportService StorageReports { get; }
 
     /// <summary>
     /// Gets the native system probe repository instance.

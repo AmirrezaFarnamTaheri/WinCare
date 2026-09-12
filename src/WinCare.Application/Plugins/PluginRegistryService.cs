@@ -491,8 +491,10 @@ public sealed class PluginRegistryService : IPluginRegistry
         return commandId.ToLowerInvariant() switch
         {
             "cleaner.system_temp" => "cleaner-disk-pressure",
-            "cleaner.recycle_bin" => "cleaner-disk-pressure",
-            "security.defender_status" => "security-defender-audit",
+            // The broad security collector is the supported native surface for Defender
+            // state. Do not delegate to a synthetic command id that the core catalog does
+            // not expose: that would register a plugin card which always fails at runtime.
+            "security.defender_status" => "security",
             _ => null
         };
     }

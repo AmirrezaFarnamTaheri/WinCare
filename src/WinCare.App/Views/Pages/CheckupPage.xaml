@@ -11,7 +11,7 @@
         <converters:ThemeResourceBrushConverter x:Key="ThemeResourceBrushConverter" />
     </Page.Resources>
     <ScrollViewer VerticalScrollBarVisibility="Auto">
-        <Grid Padding="40,30,40,40" RowSpacing="20">
+        <Grid Padding="28,28,28,32" RowSpacing="24">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
@@ -20,29 +20,29 @@
             </Grid.RowDefinitions>
 
             <StackPanel Spacing="6">
-                <TextBlock Style="{StaticResource PageTitleTextStyle}" Text="System Checkup" />
+                <TextBlock x:Uid="CheckupPageTitle" Style="{StaticResource PageTitleTextStyle}" Text="Check the evidence" />
                 <TextBlock Style="{StaticResource PageDescriptionTextStyle}" Text="Inspect first. Review the evidence before choosing any action." TextWrapping="Wrap" />
             </StackPanel>
 
             <Border Grid.Row="1" Style="{StaticResource DashboardCardStyle}" Background="{ThemeResource HeroBackgroundBrush}">
                 <Grid>
                     <Grid
-                        ColumnSpacing="26"
+                        ColumnSpacing="24"
                         Visibility="{x:Bind views:LayoutVisibility.InvertBoolToVisibility(ViewModel.IsCompactLayout), Mode=OneWay}">
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="190" />
+                            <ColumnDefinition Width="180" />
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="1" />
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
-                        <Border Width="144" Height="144" CornerRadius="72" BorderThickness="8" BorderBrush="{x:Bind ViewModel.HealthScoreBrushKey, Mode=OneWay, Converter={StaticResource ThemeResourceBrushConverter}}" Background="{ThemeResource AccentTealSubtleBrush}" HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <Border MinHeight="132" Padding="16" CornerRadius="{StaticResource RadiusControl}" BorderThickness="1" BorderBrush="{x:Bind ViewModel.HealthScoreBrushKey, Mode=OneWay, Converter={StaticResource ThemeResourceBrushConverter}}" Background="{ThemeResource AccentTealSubtleBrush}" HorizontalAlignment="Center" VerticalAlignment="Center">
                             <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="2">
-                                <TextBlock FontFamily="{StaticResource DisplayFontFamily}" FontSize="28" FontWeight="SemiBold" Foreground="{x:Bind ViewModel.HealthScoreBrushKey, Mode=OneWay, Converter={StaticResource ThemeResourceBrushConverter}}" HorizontalAlignment="Center" Text="{x:Bind ViewModel.HealthScoreText, Mode=OneWay}" />
+                                <TextBlock FontFamily="{StaticResource DisplayFontFamily}" FontSize="32" FontWeight="SemiBold" Foreground="{x:Bind ViewModel.HealthScoreBrushKey, Mode=OneWay, Converter={StaticResource ThemeResourceBrushConverter}}" HorizontalAlignment="Center" Text="{x:Bind ViewModel.HealthScoreText, Mode=OneWay}" />
                                 <TextBlock Style="{StaticResource RowSecondaryTextStyle}" HorizontalAlignment="Center" Text="{x:Bind ViewModel.HealthScoreDetail, Mode=OneWay}" TextWrapping="Wrap" />
                             </StackPanel>
                         </Border>
                         <StackPanel Grid.Column="1" Spacing="10" VerticalAlignment="Center">
-                            <TextBlock FontSize="20" FontWeight="SemiBold" Foreground="{ThemeResource TextPrimaryBrush}" Text="System health" />
+                            <TextBlock Style="{StaticResource SectionHeaderTextStyle}" Text="Checkup findings" />
                             <TextBlock Style="{StaticResource PageDescriptionTextStyle}" TextWrapping="Wrap" Text="{x:Bind ViewModel.RunSummary, Mode=OneWay}" />
                             <Button HorizontalAlignment="Left" Style="{StaticResource PrimaryActionButtonStyle}" Command="{x:Bind ViewModel.RunQuickCheckCommand}" AutomationProperties.AutomationId="RunQuickCheck" AutomationProperties.Name="Run a read-only quick check">
                                 <StackPanel Orientation="Horizontal" Spacing="8">
@@ -54,7 +54,7 @@
                         <Border Grid.Column="2" Width="1" Background="{ThemeResource CardBorderBrush}" Margin="0,8" />
                         <StackPanel Grid.Column="3" Spacing="8" VerticalAlignment="Center">
                             <StackPanel Orientation="Horizontal" Spacing="10">
-                                <Border Width="42" Height="42" CornerRadius="21" Background="{ThemeResource AccentTealSubtleBrush}" BorderThickness="1" BorderBrush="{ThemeResource AccentTealBrush}">
+                                <Border Width="44" Height="44" CornerRadius="{StaticResource RadiusControl}" Background="{ThemeResource AccentTealSubtleBrush}" BorderThickness="1" BorderBrush="{ThemeResource AccentTealBrush}">
                                     <FontIcon Glyph="&#xE8C8;" Foreground="{ThemeResource AccentTealBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
                                 </Border>
                                 <TextBlock FontSize="18" FontWeight="SemiBold" Foreground="{ThemeResource TextPrimaryBrush}" VerticalAlignment="Center" Text="Review before applying" />
@@ -68,17 +68,17 @@
                         Visibility="{x:Bind views:LayoutVisibility.BoolToVisibility(ViewModel.IsCompactLayout), Mode=OneWay}">
                         <Grid ColumnSpacing="16">
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="96" />
+                                <ColumnDefinition Width="140" />
                                 <ColumnDefinition Width="*" />
                             </Grid.ColumnDefinitions>
-                            <Border Width="88" Height="88" CornerRadius="44" BorderThickness="6" BorderBrush="{x:Bind ViewModel.HealthScoreBrushKey, Mode=OneWay, Converter={StaticResource ThemeResourceBrushConverter}}" Background="{ThemeResource AccentTealSubtleBrush}" HorizontalAlignment="Left" VerticalAlignment="Top">
+                            <Border MinHeight="100" Padding="12" CornerRadius="{StaticResource RadiusControl}" BorderThickness="1" BorderBrush="{x:Bind ViewModel.HealthScoreBrushKey, Mode=OneWay, Converter={StaticResource ThemeResourceBrushConverter}}" Background="{ThemeResource AccentTealSubtleBrush}" HorizontalAlignment="Left" VerticalAlignment="Top">
                                 <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="1">
                                     <TextBlock FontFamily="{StaticResource DisplayFontFamily}" FontSize="20" FontWeight="SemiBold" Foreground="{x:Bind ViewModel.HealthScoreBrushKey, Mode=OneWay, Converter={StaticResource ThemeResourceBrushConverter}}" HorizontalAlignment="Center" Text="{x:Bind ViewModel.HealthScoreText, Mode=OneWay}" />
-                                    <TextBlock FontSize="10" Foreground="{ThemeResource TextSecondaryBrush}" HorizontalAlignment="Center" Text="{x:Bind ViewModel.HealthScoreDetail, Mode=OneWay}" TextWrapping="Wrap" />
+                                    <TextBlock FontSize="12" Foreground="{ThemeResource TextSecondaryBrush}" HorizontalAlignment="Center" Text="{x:Bind ViewModel.HealthScoreDetail, Mode=OneWay}" TextWrapping="Wrap" />
                                 </StackPanel>
                             </Border>
                             <StackPanel Grid.Column="1" Spacing="8" VerticalAlignment="Center">
-                                <TextBlock FontSize="18" FontWeight="SemiBold" Foreground="{ThemeResource TextPrimaryBrush}" Text="System health" />
+                                <TextBlock FontSize="18" FontWeight="SemiBold" Foreground="{ThemeResource TextPrimaryBrush}" Text="Checkup findings" />
                                 <TextBlock Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap" Text="{x:Bind ViewModel.RunSummary, Mode=OneWay}" />
                                 <Button HorizontalAlignment="Left" Style="{StaticResource PrimaryActionButtonStyle}" Command="{x:Bind ViewModel.RunQuickCheckCommand}" AutomationProperties.AutomationId="RunQuickCheckCompact" AutomationProperties.Name="Run a read-only quick check">
                                     <StackPanel Orientation="Horizontal" Spacing="8">
@@ -130,7 +130,7 @@
                     </ListView.ItemContainerStyle>
                     <ListView.ItemTemplate>
                         <DataTemplate x:DataType="vm:PageRow">
-                            <Border Style="{StaticResource SurfaceBorderStyle}" Padding="18,15">
+                            <Border Style="{StaticResource SurfaceBorderStyle}" Padding="20,16">
                                 <Grid>
                                     <Grid
                                         ColumnSpacing="16"
@@ -155,10 +155,10 @@
                                             Visibility="{x:Bind views:LayoutVisibility.BoolToVisibility(HasAction), Mode=OneWay}"
                                             Command="{x:Bind ActionCommand, Mode=OneWay}"
                                             Content="{x:Bind ActionText, Mode=OneWay}"
-                                            Style="{StaticResource AccentButtonStyle}"
+                                            Style="{StaticResource QuietButtonStyle}"
                                             Padding="12,4"
-                                            MinHeight="30"
-                                            FontSize="11"
+                                            MinHeight="44"
+                                            FontSize="13"
                                             VerticalAlignment="Center"
                                             Margin="8,0,0,0"
                                             AutomationProperties.Name="Resolve finding" />
@@ -189,10 +189,10 @@
                                             Visibility="{x:Bind views:LayoutVisibility.BoolToVisibility(HasAction), Mode=OneWay}"
                                             Command="{x:Bind ActionCommand, Mode=OneWay}"
                                             Content="{x:Bind ActionText, Mode=OneWay}"
-                                            Style="{StaticResource AccentButtonStyle}"
+                                            Style="{StaticResource QuietButtonStyle}"
                                             Padding="10,4"
-                                            MinHeight="28"
-                                            FontSize="11"
+                                            MinHeight="44"
+                                            FontSize="13"
                                             HorizontalAlignment="Left"
                                             Margin="0,4,0,0"
                                             AutomationProperties.Name="Resolve finding" />

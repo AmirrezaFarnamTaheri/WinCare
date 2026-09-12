@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using WinCare.Application.Commands;
 using WinCare.Application.Tools;
 using WinCare.App.Services;
+using WinCare.CommandCatalog;
 using WinCare.CommandCatalog.Models;
 
 
@@ -65,6 +66,11 @@ public sealed class AllToolsPageViewModel : ObservableObject, IDisposable
         _selectedAreaOption = AreaOptions[0];
         _selectedRiskOption = RiskOptions[0];
         Execution = new ToolExecutionViewModel(dispatcher, RecordRecent);
+        IReadOnlyDictionary<string, RemediationRule> rules = RemediationCatalog.LoadRules()
+            .ToDictionary(rule => rule.Id, StringComparer.OrdinalIgnoreCase);
+        PresetCards = RemediationCatalog.LoadPresets()
+            .Select(preset => PresetCardViewModel.Create(preset, rules))
+            .ToArray();
 
         _catalog.CatalogChanged += OnCatalogChanged;
 
@@ -75,8 +81,27 @@ public sealed class AllToolsPageViewModel : ObservableObject, IDisposable
     public IReadOnlyList<AreaFilterOption> AreaOptions { get; private set; }
     public IReadOnlyList<RiskFilterOption> RiskOptions { get; }
     public ToolExecutionViewModel Execution { get; }
+    public IReadOnlyList<PresetCardViewModel> PresetCards { get; }
+    public bool IsPresetTab => string.Equals(_selectedTab, "Presets", StringComparison.Ordinal);
 
     private CancellationTokenSource? _searchCts;
+
+    public void OpenSearch(string query)
+    {
+        _searchCts?.Cancel();
+        _selectedTab = "Commands";
+        _selectedAreaOption = AreaOptions[0];
+        _selectedRiskOption = RiskOptions[0];
+        _readOnlyOnly = false;
+        _searchText = query;
+        OnPropertyChanged(nameof(IsPresetTab));
+        OnPropertyChanged(nameof(SelectedAreaOption));
+        OnPropertyChanged(nameof(SelectedRiskOption));
+        OnPropertyChanged(nameof(ReadOnlyOnly));
+        OnPropertyChanged(nameof(SearchText));
+        Refresh();
+        SelectedTool = VisibleTools.FirstOrDefault(tool => string.Equals(tool.Id, query, StringComparison.OrdinalIgnoreCase));
+    }
 
     public string SearchText
     {
@@ -221,7 +246,21 @@ public sealed class AllToolsPageViewModel : ObservableObject, IDisposable
             return;
         }
         _selectedTab = tab;
+        _searchCts?.Cancel();
+        OnPropertyChanged(nameof(IsPresetTab));
         Refresh();
+    }
+
+    public void SelectPresetForReview(string presetId)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(presetId);
+        if (!PresetCards.Any(preset => string.Equals(preset.Id, presetId, StringComparison.Ordinal)))
+            throw new ArgumentException("Choose a preset from the catalog.", nameof(presetId));
+        _searchCts?.Cancel();
+        CommandDefinition command = _catalog.All.Single(item => string.Equals(item.Id, "preset", StringComparison.Ordinal));
+        SelectedTool = new ToolRowViewModel(command) { IsCompact = IsCompactLayout };
+        ToolParameterFieldViewModel field = Execution.ParameterFields.Single(item => string.Equals(item.Name, "PresetId", StringComparison.Ordinal));
+        field.Value = presetId;
     }
 
     public void SetCompactLayout(bool isCompact)
@@ -292,6 +331,12 @@ public sealed class AllToolsPageViewModel : ObservableObject, IDisposable
 
     private void Refresh()
     {
+        if (IsPresetTab)
+        {
+            VisibleTools.Clear();
+            SelectedTool = null;
+            return;
+        }
         ToolFilter filter = new(
             Area: SelectedAreaOption.Value,
             Risk: SelectedRiskOption.Value,
@@ -360,5 +405,32 @@ public sealed class AllToolsPageViewModel : ObservableObject, IDisposable
         _searchCts?.Cancel();
         _searchCts?.Dispose();
         _searchCts = null;
+    }
+}
+
+public sealed record PresetCardViewModel(
+    string Id,
+    string Title,
+    string Description,
+    string RuleCountText,
+    string ImpactText,
+    string RecoveryText)
+{
+    public string InspectAccessibleName => $"Inspect {Title} plan";
+
+    public static PresetCardViewModel Create(PresetDefinition preset, IReadOnlyDictionary<string, RemediationRule> ruleCatalog)
+    {
+        RemediationRule[] rules = preset.RuleIds.Select(id => ruleCatalog[id]).ToArray();
+        RemediationRisk highestRisk = rules.Max(rule => rule.Risk);
+        string admin = rules.Any(rule => rule.RequiresAdmin) ? "Administrator access" : "Standard access";
+        string restart = rules.Any(rule => rule.RestartPossible) ? "restart may be needed" : "no restart expected";
+        int reversible = rules.Count(rule => rule.Reversible);
+        return new PresetCardViewModel(
+            preset.Id,
+            preset.Title,
+            preset.Description,
+            $"{rules.Length} rule{(rules.Length == 1 ? string.Empty : "s")}",
+            $"Up to {highestRisk} risk · {admin} · {restart}",
+            $"{reversible} of {rules.Length} rules declare recovery");
     }
 }

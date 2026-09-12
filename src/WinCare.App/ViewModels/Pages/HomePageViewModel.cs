@@ -407,18 +407,18 @@ public sealed class HomePageViewModel : ObservableObject
         if (collected == QuickCheckCommandIds.Length)
         {
             DateTimeOffset newestCheck = latestByCommand.Values.Max(record => record.StartedAt);
-            EvidenceTitle = "Latest check evidence collected";
-            EvidenceSummary = $"All four read-only probes reported an outcome. Last evidence: {newestCheck.ToLocalTime():g}. Review category details before acting.";
+            EvidenceTitle = "Your latest check is ready";
+            EvidenceSummary = $"All four safe checks finished. Last checked: {newestCheck.ToLocalTime():g}. Review the details before making changes.";
         }
         else if (latestByCommand.Count > 0)
         {
-            EvidenceTitle = needsReview > 0 ? "Check evidence needs review" : "Check evidence is incomplete";
-            EvidenceSummary = $"{collected} of {QuickCheckCommandIds.Length} read-only probes completed. This is evidence coverage, not a machine-health score.";
+            EvidenceTitle = needsReview > 0 ? "Some checks need your attention" : "Your PC snapshot is taking shape";
+            EvidenceSummary = $"{collected} of {QuickCheckCommandIds.Length} safe checks finished. Open a result to see what WinCare found.";
         }
         else
         {
-            EvidenceTitle = "No check evidence yet";
-            EvidenceSummary = "Run a read-only check to collect current evidence before WinCare recommends anything.";
+            EvidenceTitle = "Start with a fresh PC snapshot";
+            EvidenceSummary = "Run a safe check to see what is happening before WinCare suggests a next step.";
         }
     }
 

@@ -6,7 +6,7 @@
     xmlns:vm="using:WinCare.App.ViewModels.Pages"
     NavigationCacheMode="Required"
     SizeChanged="Page_SizeChanged">
-    <Grid Padding="32,24,32,32" RowSpacing="20">
+    <Grid Padding="28,28,28,32" RowSpacing="20">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
@@ -14,8 +14,8 @@
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <StackPanel Spacing="6">
-            <TextBlock Style="{StaticResource PageTitleTextStyle}" Text="Activity" />
+        <StackPanel Spacing="8">
+            <TextBlock x:Uid="ActivityPageTitle" Style="{StaticResource PageTitleTextStyle}" Text="Activity" />
             <TextBlock MaxWidth="760" HorizontalAlignment="Left" Style="{StaticResource PageDescriptionTextStyle}" Text="Track running work, decisions that need attention, completed changes, and daily operation reports. Activity keeps only the most recent 200 records; older history is trimmed." />
         </StackPanel>
 
@@ -63,15 +63,16 @@
         </SelectorBar>
 
         <Grid Grid.Row="3">
-            <Border Style="{StaticResource SurfaceBorderStyle}">
+            <Border Style="{StaticResource SurfaceBorderStyle}"
+                    Visibility="{x:Bind views:LayoutVisibility.InvertBoolToVisibility(ViewModel.IsEmpty), Mode=OneWay}">
                 <Grid>
                     <Grid.RowDefinitions>
-                        <RowDefinition Height="42" />
+                        <RowDefinition Height="Auto" />
                         <RowDefinition Height="*" />
                     </Grid.RowDefinitions>
                     <Grid
                         x:Name="TableHeader"
-                        Height="42"
+                        Height="48"
                         Padding="16,0"
                         ColumnSpacing="16"
                         Background="{ThemeResource SurfaceSecondaryBrush}"
@@ -96,12 +97,12 @@
                         <ListView.ItemContainerStyle>
                             <Style TargetType="ListViewItem">
                                 <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-                                <Setter Property="MinHeight" Value="68" />
+                                <Setter Property="MinHeight" Value="76" />
                             </Style>
                         </ListView.ItemContainerStyle>
                         <ListView.ItemTemplate>
                             <DataTemplate x:DataType="vm:PageRow">
-                                <Grid Padding="16,10">
+                                <Grid Padding="16">
                                     <Grid
                                         ColumnSpacing="16"
                                         Visibility="{x:Bind views:LayoutVisibility.InvertBoolToVisibility(IsCompact), Mode=OneWay}">
@@ -117,7 +118,7 @@
                                         <TextBlock Grid.Column="3" Style="{StaticResource RowSecondaryTextStyle}" FontFamily="{StaticResource TelemetryFontFamily}" Text="{x:Bind Detail, Mode=OneWay}" TextWrapping="Wrap" />
                                     </Grid>
                                     <StackPanel
-                                        Spacing="5"
+                                        Spacing="8"
                                         Visibility="{x:Bind views:LayoutVisibility.BoolToVisibility(IsCompact), Mode=OneWay}">
                                         <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="{x:Bind Title}" TextWrapping="Wrap" />
                                         <TextBlock Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind Description}" TextWrapping="Wrap" />
@@ -144,14 +145,24 @@
                     </ListView>
                 </Grid>
             </Border>
-            <InfoBar
-                Margin="12"
-                VerticalAlignment="Top"
-                IsOpen="{x:Bind ViewModel.IsEmpty, Mode=OneWay}"
-                IsClosable="False"
-                Severity="Informational"
-                Title="Nothing to show"
-                Message="{x:Bind ViewModel.EmptyMessage, Mode=OneWay}" />
+            <ScrollViewer VerticalScrollBarVisibility="Auto"
+                          Visibility="{x:Bind views:LayoutVisibility.BoolToVisibility(ViewModel.IsEmpty), Mode=OneWay}">
+                <StackPanel MaxWidth="440" Padding="24,48" Spacing="16" HorizontalAlignment="Center"
+                            AutomationProperties.LiveSetting="Polite">
+                    <Viewbox Width="64" Height="64" HorizontalAlignment="Left"
+                             AutomationProperties.AccessibilityView="Raw" IsHitTestVisible="False">
+                        <Canvas Width="64" Height="64">
+                            <Rectangle Canvas.Left="12" Canvas.Top="4" Width="40" Height="56" RadiusX="8" RadiusY="8"
+                                       Fill="{ThemeResource SurfaceSecondaryBrush}" Stroke="{ThemeResource CardBorderBrush}" StrokeThickness="2" />
+                            <Path Data="M 22,20 L 42,20 M 22,28 L 38,28 M 22,40 L 28,46 L 42,34"
+                                  Stroke="{ThemeResource AccentTealBrush}" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
+                        </Canvas>
+                    </Viewbox>
+                    <TextBlock Style="{StaticResource SectionHeaderTextStyle}" Text="{x:Bind ViewModel.EmptyMessage, Mode=OneWay}" />
+                    <TextBlock Style="{StaticResource PageDescriptionTextStyle}"
+                               Text="Every operation leaves a record here, so you can review what ran and what happened next." />
+                </StackPanel>
+            </ScrollViewer>
         </Grid>
     </Grid>
 </Page>

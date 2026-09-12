@@ -3,31 +3,31 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     <ScrollViewer VerticalScrollBarVisibility="Auto">
-        <StackPanel Padding="32,24,32,32" MaxWidth="900" HorizontalAlignment="Left" Spacing="18">
+        <StackPanel Padding="28,28,28,32" MaxWidth="900" HorizontalAlignment="Left" Spacing="18">
             <StackPanel Spacing="6">
-                <TextBlock Style="{StaticResource PageTitleTextStyle}" Text="Help and documentation" />
+                <TextBlock x:Uid="HelpPageTitle" Style="{StaticResource PageTitleTextStyle}" Text="Help and documentation" />
                 <TextBlock Style="{StaticResource PageDescriptionTextStyle}" TextWrapping="Wrap" Text="Start with read-only evidence, review every proposed change, and use Activity when an operation needs verification or follow-up." />
             </StackPanel>
 
             <InfoBar IsOpen="True" IsClosable="False" Severity="Informational" Title="Keyboard" Message="Press Ctrl+K to search all tasks and tools. Use Tab and arrow keys to move through navigation, tabs, tables, dialogs, and details." />
 
-            <Border Style="{StaticResource DashboardCardStyle}">
+            <Border BorderBrush="{ThemeResource BorderSubtleBrush}" BorderThickness="0,1,0,0" Padding="0,24,0,8">
                 <StackPanel Spacing="10">
                     <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="1. Start with evidence" />
-                    <TextBlock Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap" Text="Run Checkup first. Its four probes are read-only and report evidence coverage, not a blanket machine-health score. Open Results to inspect each command outcome before acting." />
-                    <Button Content="Open Checkup" Click="OpenCheckup_Click" HorizontalAlignment="Left" AutomationProperties.AutomationId="HelpOpenCheckup" AutomationProperties.Name="Open Checkup" />
+                    <TextBlock Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap" Text="Run Checkup first. Its four safe checks report exactly what they inspected, without changing your PC. Open Results to review each outcome before acting." />
+                    <Button Content="Open Checkup" Style="{StaticResource AccentButtonStyle}" Click="OpenCheckup_Click" HorizontalAlignment="Left" AutomationProperties.AutomationId="HelpOpenCheckup" AutomationProperties.Name="Open Checkup" />
                 </StackPanel>
             </Border>
 
-            <Border Style="{StaticResource DashboardCardStyle}">
+            <Border BorderBrush="{ThemeResource BorderSubtleBrush}" BorderThickness="0,1,0,0" Padding="0,24,0,8">
                 <StackPanel Spacing="10">
                     <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="2. Review before applying" />
-                    <TextBlock Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap" Text="A mutating command must complete a preview before WinCare issues a short-lived, single-use review receipt. The receipt is bound to the exact command, parameters, and request. Editing the parameters or replaying the receipt requires a new preview." />
-                    <TextBlock Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap" Text="If an applied command faults after mutation begins, WinCare reports that the final system state is unknown. Verify the affected resource before retrying." />
+                    <TextBlock Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap" Text="Before a tool changes Windows, review its preview and approve the exact action. Approval expires and works only once. If you change the options, run a new preview." />
+                    <TextBlock Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap" Text="If a tool fails after starting a change, its final result may be uncertain. Check the affected part of Windows before trying again." />
                 </StackPanel>
             </Border>
 
-            <Border Style="{StaticResource DashboardCardStyle}">
+            <Border BorderBrush="{ThemeResource BorderSubtleBrush}" BorderThickness="0,1,0,0" Padding="0,24,0,8">
                 <StackPanel Spacing="10">
                     <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="3. Use Activity for outcomes and reports" />
                     <TextBlock Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap" Text="Running work, items that need attention, completed operations, and daily reports are recorded in Activity. WinCare only promises Undo when a concrete executable compensator exists; it does not manufacture a generic rollback for commands that cannot safely provide one." />
@@ -35,7 +35,7 @@
                 </StackPanel>
             </Border>
 
-            <Border Style="{StaticResource DashboardCardStyle}">
+            <Border BorderBrush="{ThemeResource BorderSubtleBrush}" BorderThickness="0,1,0,0" Padding="0,24,0,8">
                 <StackPanel Spacing="10">
                     <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="Plugin trust" />
                     <TextBlock Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap" Text="Remote plugin installation is disabled unless the exact catalog bytes verify against a WinCare-pinned catalog signing key and the selected package includes publisher-signed manifest metadata. Capability declarations are consent metadata only: full-trust in-process plugins are not sandboxed by those declarations." />
@@ -43,14 +43,14 @@
                 </StackPanel>
             </Border>
 
-            <Border Style="{StaticResource DashboardCardStyle}">
+            <Border BorderBrush="{ThemeResource BorderSubtleBrush}" BorderThickness="0,1,0,0" Padding="0,24,0,8">
                 <StackPanel Spacing="10">
                     <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="Guard status" />
                     <TextBlock Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap" Text="WinCare Guard is currently an experimental local daemon boundary, not a production SCM-installed Windows service. Its IPC pipe is local-only and explicitly access-controlled, but production service installation, per-user service authorization, and native notification integration are not claimed as complete." />
                 </StackPanel>
             </Border>
 
-            <Border Style="{StaticResource DashboardCardStyle}">
+            <Border BorderBrush="{ThemeResource BorderSubtleBrush}" BorderThickness="0,1,0,0" Padding="0,24,0,8">
                 <StackPanel Spacing="10">
                     <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="Troubleshooting and logs" />
                     <TextBlock Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap" Text="Open Settings to find the local WinCare data directory. Activity persistence and preference-save problems are surfaced in the app. Fatal UI faults are written under the WinCare logs directory and the process exits rather than continuing in an unknown state." />
@@ -61,7 +61,7 @@
                 </StackPanel>
             </Border>
 
-            <Border Style="{StaticResource DashboardCardStyle}">
+            <Border BorderBrush="{ThemeResource BorderSubtleBrush}" BorderThickness="0,1,0,0" Padding="0,24,0,8">
                 <StackPanel Spacing="8">
                     <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="Accessibility" />
                     <TextBlock Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap" Text="WinCare uses native WinUI controls and explicit automation names for interactive controls. Windows text scaling, High Contrast, keyboard navigation, and Narrator remain first-class release checks. If a screen clips at your text or display scale, report the exact screen and scale so it can be reproduced." />

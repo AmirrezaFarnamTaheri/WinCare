@@ -20,6 +20,11 @@ public sealed class PageRow : ObservableObject
     }
 
     public string Title { get; }
+    public override string ToString() => Title;
+    public string? CommandId { get; init; }
+    public string LatestActivity { get; init; } = string.Empty;
+    public bool HasActivity => LatestActivity.Length > 0;
+    public string AccessibleName => $"{Title}. {Description}. {State}. {Detail}";
     public string Description { get; }
 
     public string State

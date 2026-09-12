@@ -17,9 +17,16 @@ All notable changes to WinCare are documented in this file in accordance with [K
 - Hardened Guard named-pipe access control and retained fail-closed semantics for future mutating IPC.
 - Versioned encrypted profile envelopes, retained legacy decryption compatibility, and raised PBKDF2-HMAC-SHA256 work factor to 600,000 iterations.
 - Changed mutation-handler fault reporting to state when final machine state is unknown rather than implying that no change occurred.
+- Corrected built-in plugin aliases so Defender targets the implemented security collector, temp cleanup declares its real risk and elevation needs, and an unsupported Recycle Bin shortcut is no longer presented as working.
+- Normalized online package-removal receipts across success, reboot-required, elevated user-scope skips, and partial failures while retaining per-package output.
+- Made native CPU telemetry sampling atomic across idle, kernel, and user counters so concurrent callers cannot observe a mixed Windows sample.
 
 ### UX, Accessibility & Reliability
 
+- Reimagined the complete WinCare interface as the Precision Workspace hybrid: an illustrated system atlas, evidence-led checkup language, focused maintenance cards, denser tool inspection, responsive navigation, and coordinated light, dark, and High Contrast themes.
+- Refined every capability, activity, settings, help, plugin, and AI Doctor surface around a shared type, spacing, radius, control, and status vocabulary while preserving existing commands and safety disclosures.
+- Exposed all seven validated remediation presets as reviewable plan cards with rule counts, maximum risk, administrator/restart impact, declared recovery coverage, and direct entry into the existing preview-and-approval flow.
+- Added a persistent labeled instrument rail, page-specific technical identifiers, and independent responsive thresholds for Home, command tables, and the tool inspector.
 - Connected Home curated action cards (`Quick Clean`, `Audit Startup`, `Inspect Network`) directly to live catalog risk tiers (`Safe`, `Moderate`, `Destructive`, `Critical`) and theme brushes instead of static labels.
 - Bound explicit `Visibility` on action `ProgressRing` controls across Home, Checkup, Plugin Store, and AI Doctor to prevent phantom whitespace and layout jumps.
 - Resolved WinRT collection projection crashes across Checkup, Activity, and capability pages; registered `ThemeResourceBrushConverter` and added `InverseBooleanConverter`.

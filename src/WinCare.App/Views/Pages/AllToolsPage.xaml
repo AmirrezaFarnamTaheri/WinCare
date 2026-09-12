@@ -11,7 +11,7 @@
     <Page.Resources>
         <converters:ThemeResourceBrushConverter x:Key="ThemeResourceBrushConverter" />
     </Page.Resources>
-    <Grid Padding="32,24,32,32" RowSpacing="16">
+    <Grid Padding="28,28,28,32" RowSpacing="20">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
@@ -20,24 +20,24 @@
         </Grid.RowDefinitions>
 
         <StackPanel Spacing="6">
-            <TextBlock Style="{StaticResource PageTitleTextStyle}" Text="All tools" />
-            <TextBlock MaxWidth="820" HorizontalAlignment="Left" Style="{StaticResource PageDescriptionTextStyle}" Text="Search every retained WinCare command. Plain-language workflows stay primary, while command IDs and source details remain available on demand." />
+            <TextBlock x:Uid="AllToolsPageTitle" Style="{StaticResource PageTitleTextStyle}" Text="All tools" />
+            <TextBlock MaxWidth="820" HorizontalAlignment="Left" Style="{StaticResource PageDescriptionTextStyle}" Text="Find the right tool, inspect its impact, then choose your next step. Search by name, purpose, or the part of Windows you want to work on." />
         </StackPanel>
 
         <SelectorBar
             x:Name="ToolTabs"
-            Grid.Row="1"
+            Grid.Row="2"
             SelectionChanged="ToolTabs_SelectionChanged"
             AutomationProperties.AutomationId="AllToolsTabs"
             AutomationProperties.Name="All tools sections">
-            <SelectorBarItem Text="Commands" AutomationProperties.Name="Commands" />
-            <SelectorBarItem Text="Categories" AutomationProperties.Name="Categories" />
-            <SelectorBarItem Text="Favorites" AutomationProperties.Name="Favorites" />
-            <SelectorBarItem Text="Recent" AutomationProperties.Name="Recent" />
-            <SelectorBarItem Text="Presets" AutomationProperties.Name="Presets" />
+            <SelectorBarItem Text="Commands" AutomationProperties.AutomationId="ToolsTabCommands" AutomationProperties.Name="Commands" />
+            <SelectorBarItem Text="Categories" AutomationProperties.AutomationId="ToolsTabCategories" AutomationProperties.Name="Categories" />
+            <SelectorBarItem Text="Favorites" AutomationProperties.AutomationId="ToolsTabFavorites" AutomationProperties.Name="Favorites" />
+            <SelectorBarItem Text="Recent" AutomationProperties.AutomationId="ToolsTabRecent" AutomationProperties.Name="Recent" />
+            <SelectorBarItem Text="Presets" AutomationProperties.AutomationId="ToolsTabPresets" AutomationProperties.Name="Presets" />
         </SelectorBar>
 
-        <Grid Grid.Row="2" ColumnSpacing="12">
+        <Grid x:Name="SearchFilterGrid" Grid.Row="1" ColumnSpacing="12">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="2*" />
                 <ColumnDefinition Width="220" />
@@ -47,8 +47,9 @@
             </Grid.ColumnDefinitions>
             <TextBox
                 x:Name="ToolSearchBox"
-                Header="Search tools"
-                PlaceholderText="Name, command ID, category, or purpose"
+                Header="Find a tool"
+                MinHeight="44"
+                PlaceholderText="What do you want to inspect or change?"
                 Text="{x:Bind ViewModel.SearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                 ToolTipService.ToolTip="Filter catalog tools by name or description (Ctrl+F)"
                 AutomationProperties.AutomationId="ToolSearch"
@@ -100,6 +101,7 @@
             IsPaneOpen="{x:Bind ViewModel.IsDetailsOpen, Mode=TwoWay}">
             <SplitView.Pane>
                 <Border
+                    KeyDown="Inspector_KeyDown"
                     Margin="16,0,0,0"
                     Padding="20"
                     Background="{ThemeResource CardSurfaceBrush}"
@@ -108,27 +110,42 @@
                     CornerRadius="{StaticResource RadiusControl}">
                     <ScrollViewer VerticalScrollBarVisibility="Auto">
                         <StackPanel Spacing="16">
+                            <Button x:Name="InspectorCloseButton" HorizontalAlignment="Right" Style="{StaticResource QuietButtonStyle}" Click="CloseInspector_Click" AutomationProperties.Name="Close tool details" ToolTipService.ToolTip="Close tool details (Esc)">
+                                <FontIcon Glyph="&#xE711;" FontSize="14" />
+                            </Button>
                             <StackPanel Spacing="6">
-                                <TextBlock Style="{StaticResource PageTitleTextStyle}" FontSize="22" Text="{x:Bind ViewModel.SelectedToolTitle, Mode=OneWay}" TextWrapping="Wrap" />
+                                <TextBlock Style="{StaticResource SectionHeaderTextStyle}" Text="{x:Bind ViewModel.SelectedToolTitle, Mode=OneWay}" TextWrapping="Wrap" />
                                 <TextBlock Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind ViewModel.SelectedToolMetadata, Mode=OneWay}" TextWrapping="Wrap" />
                                 <TextBlock Style="{StaticResource PageDescriptionTextStyle}" Text="{x:Bind ViewModel.SelectedToolSummary, Mode=OneWay}" />
                             </StackPanel>
-                            <InfoBar
-                                IsOpen="True"
-                                IsClosable="False"
-                                Severity="Informational"
-                                Title="Migration status"
-                                Message="A tool becomes runnable when its native implementation is available. Behavior parity remains visible in Advanced details." />
+                            <Border
+                                Padding="14"
+                                Background="{ThemeResource SurfaceSecondaryBrush}"
+                                BorderBrush="{ThemeResource CardBorderBrush}"
+                                BorderThickness="1"
+                                CornerRadius="{StaticResource RadiusControl}">
+                                <Grid ColumnSpacing="12">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="4" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <Border Background="{ThemeResource AccentTealBrush}" CornerRadius="2" />
+                                    <StackPanel Grid.Column="1" Spacing="4">
+                                        <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="{x:Bind ViewModel.Execution.ActionFlowTitle, Mode=OneWay}" />
+                                        <TextBlock Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind ViewModel.Execution.ActionFlowDescription, Mode=OneWay}" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
                             <InfoBar
                                 IsOpen="{x:Bind ViewModel.Execution.IsDestructiveTool, Mode=OneWay}"
                                 IsClosable="False"
                                 Severity="Error"
-                                Title="Destructive Operation"
+                                Title="Irreversible change"
                                 Message="This command makes irreversible system changes. A preflight preview and explicit review approval are strictly required before execution."
                                 AutomationProperties.AutomationId="DestructiveToolWarning"
                                 AutomationProperties.Name="Destructive tool warning" />
                             <ToggleSwitch
-                                Header="Approve mutating execution"
+                                Header="Approve this change"
                                 OffContent="Preview only"
                                 OnContent="Review approved"
                                 IsEnabled="{x:Bind ViewModel.Execution.CanApproveReview, Mode=OneWay}"
@@ -136,6 +153,11 @@
                                 Visibility="{x:Bind local:AllToolsPage.BoolToVisibility(ViewModel.Execution.RequiresApprovalSwitch), Mode=OneWay}"
                                 AutomationProperties.AutomationId="ReviewApprovedToggle"
                                 AutomationProperties.Name="Approve mutating command execution after preview" />
+                            <Expander Header="Included changes and recovery" IsExpanded="True" AutomationProperties.Name="Included preset changes and recovery"
+                                Visibility="{x:Bind local:AllToolsPage.BoolToVisibility(ViewModel.Execution.IsPresetTool), Mode=OneWay}">
+                                <TextBlock Style="{StaticResource PageDescriptionTextStyle}" IsTextSelectionEnabled="True"
+                                    Text="{x:Bind ViewModel.Execution.PresetContents, Mode=OneWay}" />
+                            </Expander>
                             <Expander
                                 Header="Advanced Parameters (JSON)"
                                 IsExpanded="False"
@@ -155,13 +177,24 @@
                                     AutomationProperties.AutomationId="CommandParameterJson"
                                     AutomationProperties.Name="Command parameters as JSON" />
                             </Expander>
-                            <StackPanel Orientation="Horizontal" Spacing="8">
+                            <Grid ColumnSpacing="8" RowSpacing="8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
                                 <Button
+                                    Style="{StaticResource PrimaryActionButtonStyle}"
+                                    HorizontalAlignment="Stretch"
                                     Command="{x:Bind ViewModel.Execution.ExecuteSelectedToolCommand}"
                                     Content="{x:Bind ViewModel.Execution.PrimaryActionLabel, Mode=OneWay}"
                                     AutomationProperties.AutomationId="ExecuteSelectedTool"
                                     AutomationProperties.Name="Run or review the selected tool" />
                                 <ProgressRing
+                                    Grid.Column="1"
                                     Width="20"
                                     Height="20"
                                     VerticalAlignment="Center"
@@ -169,13 +202,17 @@
                                     Visibility="{x:Bind local:AllToolsPage.BoolToVisibility(ViewModel.Execution.IsExecuting), Mode=OneWay}"
                                     AutomationProperties.Name="Selected tool is running" />
                                 <Button
+                                    Grid.Row="1"
                                     Command="{x:Bind ViewModel.Execution.CancelSelectedToolCommand}"
-                                    Content="Cancel"
+                                    Content="{x:Bind ViewModel.Execution.CancelActionLabel, Mode=OneWay}"
                                     Visibility="{x:Bind local:AllToolsPage.BoolToVisibility(ViewModel.Execution.IsExecuting), Mode=OneWay}"
                                     AutomationProperties.AutomationId="CancelSelectedTool"
                                     AutomationProperties.Name="Cancel active tool operation" />
                                 <ToggleButton
                                     x:Name="FavoriteToggleButton"
+                                    Grid.Row="1"
+                                    Grid.Column="1"
+                                    MinHeight="44" MinWidth="44" HorizontalAlignment="Left"
                                     Content="&#xE735;"
                                     FontFamily="Segoe Fluent Icons"
                                     IsChecked="{x:Bind ViewModel.IsSelectedToolFavorite, Mode=OneWay}"
@@ -183,7 +220,7 @@
                                     ToolTipService.ToolTip="Toggle favorite bookmark"
                                     AutomationProperties.AutomationId="FavoriteSelectedTool"
                                     AutomationProperties.Name="Add or remove selected tool from favorites" />
-                            </StackPanel>
+                            </Grid>
                             <InfoBar
                                 IsOpen="{x:Bind ViewModel.Execution.IsExecutionSuccess, Mode=OneWay}"
                                 IsClosable="False"
@@ -202,8 +239,11 @@
                                 Severity="Warning"
                                 Title="{x:Bind ViewModel.Execution.ExecutionTitle, Mode=OneWay}"
                                 Message="{x:Bind ViewModel.Execution.ExecutionMessage, Mode=OneWay}" />
+                            <Expander Header="Evidence summary" IsExpanded="True" AutomationProperties.Name="Plain-language command evidence" Visibility="{x:Bind local:AllToolsPage.BoolToVisibility(ViewModel.Execution.HasPackageInventory), Mode=OneWay}">
+                                <TextBox Text="{x:Bind ViewModel.Execution.PackageInventoryText, Mode=OneWay}" IsReadOnly="True" AcceptsReturn="True" TextWrapping="Wrap" MaxHeight="360" ScrollViewer.VerticalScrollBarVisibility="Auto" AutomationProperties.Name="Command evidence summary" />
+                            </Expander>
                             <Expander
-                                Header="Result details"
+                                Header="Technical result"
                                 IsExpanded="{x:Bind ViewModel.Execution.IsExecutionResultOpen, Mode=TwoWay}"
                                 Visibility="{x:Bind local:AllToolsPage.BoolToVisibility(ViewModel.Execution.HasExecutionResult), Mode=OneWay}"
                                 AutomationProperties.AutomationId="CommandResultDetails"
@@ -237,13 +277,14 @@
             </SplitView.Pane>
 
             <Grid>
+              <Grid Visibility="{x:Bind local:AllToolsPage.InvertBoolToVisibility(ViewModel.IsPresetTab), Mode=OneWay}">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="*" />
                 </Grid.RowDefinitions>
                 <Grid
                     x:Name="TableHeader"
-                    Height="42"
+                    Height="48"
                     Padding="16,0"
                     ColumnSpacing="12"
                     Background="{ThemeResource SurfaceSecondaryBrush}"
@@ -284,19 +325,21 @@
                     ItemsSource="{x:Bind ViewModel.VisibleTools, Mode=OneWay}"
                     SelectedItem="{x:Bind ViewModel.SelectedTool, Mode=TwoWay}"
                     SelectionMode="Single"
+                    IsItemClickEnabled="True"
+                    ItemClick="ToolTable_ItemClick"
                     AutomationProperties.AutomationId="AllToolsTable"
                     AutomationProperties.Name="All WinCare tools">
                     <ListView.ItemContainerStyle>
                         <Style TargetType="ListViewItem">
                             <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-                            <Setter Property="MinHeight" Value="62" />
+                            <Setter Property="MinHeight" Value="76" />
                             <!-- F-032: selectable rows must announce the tool, not the view-model type name. -->
                             <Setter Property="AutomationProperties.Name" Value="{Binding ToolAccessibleName}" />
                         </Style>
                     </ListView.ItemContainerStyle>
                     <ListView.ItemTemplate>
                         <DataTemplate x:DataType="vm:ToolRowViewModel">
-                            <Grid Padding="16,9" ColumnSpacing="12">
+                            <Grid Padding="16,14" ColumnSpacing="12">
                                 <Grid
                                     Visibility="{x:Bind local:AllToolsPage.InvertBoolToVisibility(IsCompact), Mode=OneWay}">
                                     <Grid.ColumnDefinitions>
@@ -324,11 +367,55 @@
                                     <TextBlock Style="{StaticResource RowSecondaryTextStyle}" FontFamily="{StaticResource TelemetryFontFamily}" Text="{x:Bind Id}" />
                                     <TextBlock Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind Area}" />
                                     <TextBlock Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind Risk}" />
+                                    <TextBlock Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind AdministratorText}" />
+                                    <TextBlock Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind RestartText}" />
+                                    <ContentControl HorizontalAlignment="Left" Margin="0,4,0,0" Template="{StaticResource StatusPillTemplate}" Content="{x:Bind StatusPillLabel}" AutomationProperties.Name="{x:Bind StatusPillLabel}" Background="{x:Bind StatusPillBackgroundResourceKey, Mode=OneWay, Converter={StaticResource ThemeResourceBrushConverter}}" Foreground="{x:Bind StatusPillForegroundResourceKey, Mode=OneWay, Converter={StaticResource ThemeResourceBrushConverter}}" />
                                 </StackPanel>
                             </Grid>
                         </DataTemplate>
                     </ListView.ItemTemplate>
                 </ListView>
+              </Grid>
+                <ScrollViewer
+                    Grid.RowSpan="2"
+                    Canvas.ZIndex="10"
+                    Background="{ThemeResource PageBackgroundBrush}"
+                    VerticalScrollBarVisibility="Auto"
+                    Visibility="{x:Bind local:AllToolsPage.BoolToVisibility(ViewModel.IsPresetTab), Mode=OneWay}">
+                    <StackPanel Spacing="16" Padding="0,0,4,20">
+                        <StackPanel Spacing="5">
+                            <TextBlock Style="{StaticResource SectionHeaderTextStyle}" Text="Curated care plans" />
+                            <TextBlock Style="{StaticResource PageDescriptionTextStyle}" Text="Choose a plan to inspect every included rule. WinCare previews the current targets and impact before any approval is available." />
+                        </StackPanel>
+                        <ItemsControl ItemsSource="{x:Bind ViewModel.PresetCards, Mode=OneWay}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:PresetCardViewModel">
+                                    <Border MinHeight="180" Margin="0,0,0,12" Padding="20" Style="{StaticResource SurfaceBorderStyle}">
+                                        <Grid RowSpacing="12">
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="Auto" />
+                                                <RowDefinition Height="Auto" />
+                                                <RowDefinition Height="*" />
+                                                <RowDefinition Height="Auto" />
+                                            </Grid.RowDefinitions>
+                                            <Grid ColumnSpacing="12">
+                                                <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                                                <TextBlock Style="{StaticResource SectionHeaderTextStyle}" Text="{x:Bind Title}" />
+                                                <TextBlock Grid.Column="1" Style="{StaticResource TelemetryTextStyle}" Foreground="{ThemeResource AccentTealBrush}" Text="{x:Bind RuleCountText}" />
+                                            </Grid>
+                                            <TextBlock Grid.Row="1" Style="{StaticResource PageDescriptionTextStyle}" Text="{x:Bind Description}" />
+                                            <StackPanel Grid.Row="2" Spacing="5">
+                                                <TextBlock Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind ImpactText}" />
+                                                <TextBlock Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind RecoveryText}" />
+                                            </StackPanel>
+                                            <Button Grid.Row="3" HorizontalAlignment="Left" Style="{StaticResource QuietButtonStyle}" Content="Inspect plan" Tag="{x:Bind Id}" Click="ReviewPresetButton_Click" AutomationProperties.Name="{x:Bind InspectAccessibleName}" />
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </ScrollViewer>
             </Grid>
         </SplitView>
     </Grid>

@@ -24,6 +24,9 @@ internal struct NativeCleanResult
     public int ErrorCode;
 }
 
+/// <summary>Native cleaner call boundary, injectable only for adapter tests.</summary>
+internal unsafe delegate int CleanTempFilesNativeCall(byte dryRun, NativeCleanResult* outResult);
+
 internal static class WinCareCoreNative
 {
     private const string LibraryName = "wincare_core";

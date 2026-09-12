@@ -14,6 +14,18 @@ namespace WinCare.Infrastructure.Tests;
 public class RemoteCatalogServiceTests
 {
     [Fact]
+    public async Task Offline_without_cache_reports_failure_instead_of_inventing_plugins()
+    {
+        string cachePath = Path.Combine(Path.GetTempPath(), $"wincare_catalog_{Guid.NewGuid():N}.json");
+        using var client = new HttpClient(new FakeHttpMessageHandler(_ =>
+            throw new HttpRequestException("Offline")));
+        var service = new RemoteCatalogService(client, cachePath);
+        var error = await Assert.ThrowsAsync<InvalidOperationException>(() => service.GetCatalogAsync());
+        Assert.Contains("no saved catalog", error.Message);
+        Assert.False(File.Exists(cachePath));
+    }
+
+    [Fact]
     public async Task SearchPluginsAsync_NormalizesNullCollectionsAndTextFromRemoteCatalog()
     {
         string cachePath = Path.Combine(Path.GetTempPath(), $"wincare_catalog_{Guid.NewGuid():N}.json");

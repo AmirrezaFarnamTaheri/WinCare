@@ -8,7 +8,6 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
-using WinCare.App.Services;
 using WinCare.Application.Plugins;
 
 /// <summary>
@@ -20,7 +19,7 @@ public sealed class PluginStorePageViewModel : INotifyPropertyChanged, IDisposab
     private readonly IRemoteCatalogService _catalogService;
     private readonly IPluginInstallerService _installerService;
     private readonly IPluginHost _host;
-    private readonly bool _usesSharedRuntime;
+    private readonly Func<CancellationToken, Task>? _initializePlugins;
 
     private string _searchQuery = string.Empty;
     private string _selectedCategory = "All";
@@ -30,20 +29,23 @@ public sealed class PluginStorePageViewModel : INotifyPropertyChanged, IDisposab
     private bool _isCatalogTrustVerified;
     private CancellationTokenSource? _searchCts;
     private long _refreshVersion;
+    private bool _disposed;
+    private string? _catalogErrorMessage;
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
     public PluginStorePageViewModel(
-        IPluginRegistry? registry = null,
-        IRemoteCatalogService? catalogService = null,
-        IPluginInstallerService? installerService = null,
-        IPluginHost? host = null)
+        IPluginRegistry registry,
+        IRemoteCatalogService catalogService,
+        IPluginInstallerService installerService,
+        IPluginHost host,
+        Func<CancellationToken, Task>? initializePlugins = null)
     {
-        _usesSharedRuntime = registry is null && host is null;
-        _host = host ?? AppRuntime.Current.PluginHost;
-        _registry = registry ?? AppRuntime.Current.PluginRegistry;
-        _catalogService = catalogService ?? AppRuntime.Current.CatalogService;
-        _installerService = installerService ?? AppRuntime.Current.InstallerService;
+        _initializePlugins = initializePlugins;
+        _host = host ?? throw new ArgumentNullException(nameof(host));
+        _registry = registry ?? throw new ArgumentNullException(nameof(registry));
+        _catalogService = catalogService ?? throw new ArgumentNullException(nameof(catalogService));
+        _installerService = installerService ?? throw new ArgumentNullException(nameof(installerService));
 
         Plugins = new ObservableCollection<PluginCardViewModel>();
         Categories = new ObservableCollection<string> { "All", "System Care", "Security", "Utilities", "Installed" };
@@ -59,6 +61,7 @@ public sealed class PluginStorePageViewModel : INotifyPropertyChanged, IDisposab
         {
             if (_searchQuery == value) return;
             _searchQuery = value;
+            Interlocked.Increment(ref _refreshVersion);
             OnPropertyChanged();
             var previous = _searchCts;
             _searchCts = new CancellationTokenSource();
@@ -89,10 +92,13 @@ public sealed class PluginStorePageViewModel : INotifyPropertyChanged, IDisposab
             _errorMessage = value;
             OnPropertyChanged();
             OnPropertyChanged(nameof(HasError));
+            OnPropertyChanged(nameof(HasCatalogError));
+            OnPropertyChanged(nameof(IsEmpty));
         }
     }
 
     public bool HasError => !string.IsNullOrWhiteSpace(_errorMessage);
+    public bool HasCatalogError => _catalogErrorMessage is not null && ErrorMessage == _catalogErrorMessage;
 
     /// <summary>Runtime trust/freshness description for the currently displayed catalog.</summary>
     public string CatalogStatusMessage
@@ -127,7 +133,8 @@ public sealed class PluginStorePageViewModel : INotifyPropertyChanged, IDisposab
     }
 
     public bool IsCatalogBrowseOnly => !IsCatalogTrustVerified;
-    public bool IsEmpty => !IsLoading && Plugins.Count == 0;
+    public bool IsEmpty => !IsLoading && !HasError && Plugins.Count == 0;
+    public bool CanRefresh => !IsLoading;
 
     public bool IsLoading
     {
@@ -138,6 +145,7 @@ public sealed class PluginStorePageViewModel : INotifyPropertyChanged, IDisposab
             _isLoading = value;
             OnPropertyChanged();
             OnPropertyChanged(nameof(IsEmpty));
+            OnPropertyChanged(nameof(CanRefresh));
         }
     }
 
@@ -145,9 +153,9 @@ public sealed class PluginStorePageViewModel : INotifyPropertyChanged, IDisposab
     {
         try
         {
-            if (_usesSharedRuntime)
+            if (_initializePlugins is not null)
             {
-                await AppRuntime.Current.InitializePluginsAsync(cancellationToken).ConfigureAwait(true);
+                await _initializePlugins(cancellationToken).ConfigureAwait(true);
             }
             else
             {
@@ -197,10 +205,14 @@ public sealed class PluginStorePageViewModel : INotifyPropertyChanged, IDisposab
 
     public async Task RefreshPluginsAsync(bool forceRemoteRefresh = false, CancellationToken cancellationToken = default)
     {
+        if (_disposed) return;
         long refreshVersion = Interlocked.Increment(ref _refreshVersion);
         string selectedCategory = _selectedCategory;
         string searchQuery = _searchQuery;
         IsLoading = true;
+        string statusMessage = "Showing locally installed plugins. Remote catalog trust does not affect this view.";
+        bool trustVerified = false;
+        string? catalogError = null;
         try
         {
             var installedPlugins = _registry.GetAllPlugins().ToDictionary(p => p.Id, StringComparer.OrdinalIgnoreCase);
@@ -208,8 +220,6 @@ public sealed class PluginStorePageViewModel : INotifyPropertyChanged, IDisposab
 
             if (string.Equals(selectedCategory, "Installed", StringComparison.OrdinalIgnoreCase))
             {
-                CatalogStatusMessage = "Showing locally installed plugins. Remote catalog trust does not affect this view.";
-                IsCatalogTrustVerified = false;
                 foreach (var installed in installedPlugins.Values)
                 {
                     if (MatchesSearch(searchQuery, installed.Id, installed.Name, installed.Description, installed.Author, installed.Category, installed.Commands.Select(command => command.Id)))
@@ -222,8 +232,8 @@ public sealed class PluginStorePageViewModel : INotifyPropertyChanged, IDisposab
                 try
                 {
                     catalog = await _catalogService.GetCatalogAsync(forceRemoteRefresh, cancellationToken).ConfigureAwait(true);
-                    CatalogStatusMessage = catalog.TrustStatusMessage;
-                    IsCatalogTrustVerified = catalog.IsTrustVerified;
+                    statusMessage = catalog.TrustStatusMessage;
+                    trustVerified = catalog.IsTrustVerified;
                 }
                 catch (OperationCanceledException)
                 {
@@ -235,9 +245,8 @@ public sealed class PluginStorePageViewModel : INotifyPropertyChanged, IDisposab
                     {
                         TrustStatusMessage = "The online plugin catalog is currently unavailable. Installed plugins are still shown. Remote installation is unavailable."
                     };
-                    CatalogStatusMessage = catalog.TrustStatusMessage;
-                    IsCatalogTrustVerified = false;
-                    ErrorMessage = "The online plugin catalog could not be loaded. Installed plugins remain available.";
+                    statusMessage = catalog.TrustStatusMessage;
+                    catalogError = "The online plugin catalog could not be loaded. Check your connection and retry, or choose Installed to work offline.";
                     System.Diagnostics.Debug.WriteLine($"[PluginStorePageViewModel] Catalog refresh error: {ex}");
                 }
 
@@ -261,7 +270,16 @@ public sealed class PluginStorePageViewModel : INotifyPropertyChanged, IDisposab
                 }
             }
 
-            if (refreshVersion != Volatile.Read(ref _refreshVersion)) return;
+            cancellationToken.ThrowIfCancellationRequested();
+            if (_disposed || refreshVersion != Volatile.Read(ref _refreshVersion)) return;
+
+            // Publish the cards and their trust/error state as one request generation.
+            CatalogStatusMessage = statusMessage;
+            IsCatalogTrustVerified = trustVerified;
+            if (ErrorMessage == _catalogErrorMessage || catalogError is not null)
+                ErrorMessage = catalogError;
+            _catalogErrorMessage = catalogError;
+            OnPropertyChanged(nameof(HasCatalogError));
 
             Plugins.Clear();
             foreach (var card in cards) Plugins.Add(card);
@@ -434,7 +452,10 @@ public sealed class PluginStorePageViewModel : INotifyPropertyChanged, IDisposab
 
     public void Dispose()
     {
+        _disposed = true;
+        Interlocked.Increment(ref _refreshVersion);
         _searchCts?.Cancel();
         _searchCts?.Dispose();
+        _searchCts = null;
     }
 }

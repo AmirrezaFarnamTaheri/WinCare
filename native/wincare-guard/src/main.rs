@@ -93,13 +93,7 @@ fn prune_alert_queue(directory: &std::path::Path, max_files: usize) {
         .into_iter()
         .flatten()
         .filter_map(|entry| entry.ok().map(|e| e.path()))
-        .filter(|path| {
-            path.is_file()
-                && path
-                    .extension()
-                    .map(|ext| ext == "xml")
-                    .unwrap_or(false)
-        })
+        .filter(|path| path.is_file() && path.extension().map(|ext| ext == "xml").unwrap_or(false))
         .collect();
     if entries.len() <= max_files {
         return;

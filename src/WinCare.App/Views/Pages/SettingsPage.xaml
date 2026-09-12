@@ -4,10 +4,10 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     NavigationCacheMode="Required">
     <ScrollViewer VerticalScrollBarVisibility="Auto">
-        <StackPanel Padding="32,24,32,32" Spacing="20">
+        <StackPanel Padding="28,28,28,32" MaxWidth="960" HorizontalAlignment="Left" Spacing="24">
             <StackPanel Spacing="8">
-                <TextBlock Style="{StaticResource PageTitleTextStyle}" Text="Settings" />
-                <TextBlock MaxWidth="760" HorizontalAlignment="Left" Style="{StaticResource PageDescriptionTextStyle}" Text="Choose the persistent preferences WinCare currently supports for this Windows account." />
+                <TextBlock x:Uid="SettingsPageTitle" Style="{StaticResource PageTitleTextStyle}" Text="Settings" />
+                <TextBlock MaxWidth="760" HorizontalAlignment="Left" Style="{StaticResource PageDescriptionTextStyle}" Text="Make this workspace yours. Preferences are saved for this Windows account." />
                 <InfoBar
                     IsOpen="{x:Bind ViewModel.HasPersistenceWarning, Mode=OneWay}"
                     IsClosable="False"
@@ -27,24 +27,24 @@
             </StackPanel>
 
             <Border Style="{StaticResource DashboardCardStyle}">
-                <Grid ColumnSpacing="24">
-                    <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="240" /></Grid.ColumnDefinitions>
+                <Grid RowSpacing="16">
+                    <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
                     <StackPanel Spacing="5" VerticalAlignment="Center">
                         <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="App theme" />
                         <TextBlock Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap" Text="Use the Windows theme or choose a persistent light or dark appearance." />
                     </StackPanel>
-                    <ComboBox x:Name="ThemeSelector" Grid.Column="1" ItemsSource="{x:Bind ViewModel.Themes}" SelectedItem="{x:Bind ViewModel.SelectedTheme, Mode=TwoWay}" SelectionChanged="ThemeSelector_SelectionChanged" AutomationProperties.AutomationId="ThemeSelector" AutomationProperties.Name="App theme" />
+                    <ComboBox x:Name="ThemeSelector" Grid.Row="1" HorizontalAlignment="Left" ItemsSource="{x:Bind ViewModel.Themes}" SelectedItem="{x:Bind ViewModel.SelectedTheme, Mode=TwoWay}" SelectionChanged="ThemeSelector_SelectionChanged" AutomationProperties.AutomationId="ThemeSelector" AutomationProperties.Name="App theme" />
                 </Grid>
             </Border>
 
             <Border Style="{StaticResource DashboardCardStyle}">
-                <Grid ColumnSpacing="24">
-                    <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                <Grid RowSpacing="16">
+                    <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
                     <StackPanel Spacing="5" VerticalAlignment="Center">
                         <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="Window continuity" />
                         <TextBlock Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap" Text="Restore the last usable window size, position, and maximized state on the next launch. Turn this off to always start from the default window size." />
                     </StackPanel>
-                    <ToggleSwitch Grid.Column="1"
+                    <ToggleSwitch Grid.Row="1" HorizontalAlignment="Left"
                                   IsOn="{x:Bind ViewModel.RememberWindowPlacement, Mode=TwoWay}"
                                   OnContent="Remember"
                                   OffContent="Use default"
@@ -54,21 +54,21 @@
             </Border>
 
             <Border Style="{StaticResource DashboardCardStyle}">
-                <Grid ColumnSpacing="24">
-                    <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                <Grid RowSpacing="16">
+                    <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
                     <StackPanel Spacing="5" VerticalAlignment="Center">
                         <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="Local data" />
                         <TextBlock Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap" Text="Open WinCare's settings, reports, operation records, and local diagnostics for this account." />
                         <TextBlock Style="{StaticResource RowSecondaryTextStyle}" FontFamily="{StaticResource TelemetryFontFamily}" Text="{x:Bind ViewModel.DataDirectory}" TextWrapping="Wrap" />
                     </StackPanel>
-                    <Button Grid.Column="1" Content="Open folder" Click="OpenDataFolderButton_Click" AutomationProperties.AutomationId="OpenDataFolder" AutomationProperties.Name="Open WinCare data folder" />
+                    <Button Grid.Row="1" HorizontalAlignment="Left" Content="Open folder" Click="OpenDataFolderButton_Click" AutomationProperties.AutomationId="OpenDataFolder" AutomationProperties.Name="Open WinCare data folder" />
                 </Grid>
             </Border>
 
             <Border Style="{StaticResource DashboardCardStyle}">
                 <StackPanel Spacing="8">
                     <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="Safety policy" />
-                    <TextBlock Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap" Text="Read-only checks run directly. Changes remain locked behind a dispatcher-issued preview receipt and explicit approval. Activity records preserve outcomes and provide recovery guidance when a command can supply it; WinCare does not claim a generic undo when no executable compensator exists." />
+                    <TextBlock Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap" Text="Checks can run without changing Windows. Before a change, review its preview and approve it. Activity keeps the outcome and any available recovery guidance. Undo is offered only when the tool supports it." />
                 </StackPanel>
             </Border>
         </StackPanel>

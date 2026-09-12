@@ -9,6 +9,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Xml.Linq;
 using Microsoft.Win32;
+using Windows.Management.Deployment;
 using WinCare.CommandCatalog.Models;
 using WinCare.Domain.Commands;
 using System.Net;
@@ -224,6 +225,47 @@ internal sealed partial class WindowsCommandExecutor
         using RegistryKey? packages = Registry.CurrentUser.OpenSubKey(@"Software\Classes\Local Settings\Software\Microsoft\Windows\CurrentVersion\AppModel\Repository\Packages");
         string[] packageKeys = packages?.GetSubKeyNames().Take(5000).ToArray() ?? [];
         return Success("appx-runtime", "AppX/MSIX runtime repository inspected.", new { windowsAppsPresent = Directory.Exists(windowsApps), registeredPackageCount = packageKeys.Length, packageKeys });
+    }
+
+    private CommandHandlerOutcome AppxInstalledInventory()
+    {
+        // This repository is scoped to the current user's registrations. Do not imply
+        // all-user coverage: querying that requires the AppX deployment API, which is
+        // deliberately not reached through a shell here.
+        using RegistryKey? packages = Registry.CurrentUser.OpenSubKey(@"Software\Classes\Local Settings\Software\Microsoft\Windows\CurrentVersion\AppModel\Repository\Packages");
+        string[] packageFullNames = packages?.GetSubKeyNames().OrderBy(name => name, StringComparer.OrdinalIgnoreCase).ToArray() ?? [];
+        return Success("appx-installed-inventory", "Current-user installed AppX registrations enumerated.", new
+        {
+            scope = "CurrentUser",
+            allUsers = false,
+            packageFullNames,
+            count = packageFullNames.Length,
+            removalIdentity = "Use exact WinGet package IDs with appx-installed-remove; a registered AppX package may not have a WinGet manifest.",
+        });
+    }
+
+    private async Task<CommandHandlerOutcome> AppxProvisionedInventoryAsync(CancellationToken cancellationToken)
+    {
+        ProcessExecutionResult result = await RunAppxProcessAsync("dism.exe", ["/Online", "/Get-ProvisionedAppxPackages", "/English"], cancellationToken).ConfigureAwait(false);
+        if (result.ExitCode != 0)
+            return CommandHandlerOutcome.Failed("appx-provisioned-inventory.failed", "DISM could not enumerate provisioned AppX packages.", Data(new { exitCode = result.ExitCode, standardOutput = result.StandardOutput, standardError = result.StandardError }));
+
+        string[] packageNames = result.StandardOutput
+            .Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Where(line => line.StartsWith("PackageName :", StringComparison.OrdinalIgnoreCase))
+            .Select(line => line[(line.IndexOf(':') + 1)..].Trim())
+            .Where(name => name.Length > 0)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        return Success("appx-provisioned-inventory", "Online provisioned AppX packages enumerated.", new
+        {
+            scope = "OnlineImageProvisioning",
+            packageNames,
+            count = packageNames.Length,
+            standardOutput = result.StandardOutput,
+            standardError = result.StandardError,
+            removalEffect = "Removing a provisioned package prevents registration for future user profiles; it does not remove existing users' registered packages.",
+        });
     }
 
     private CommandHandlerOutcome AppxLaunchTargets(CommandParameters p)
@@ -539,31 +581,169 @@ internal sealed partial class WindowsCommandExecutor
         return Success("appx-selection-assess", "Explicit AppX package selection validated.", new { packages, exactMatchOnly = true, wildcardExpansion = false, destructiveScope = "selected packages only" });
     }
 
-    private async Task<CommandHandlerOutcome> AppxSelectionAsync(CommandParameters p, bool online, CancellationToken cancellationToken)
+    private enum AppxPackageTarget { InstalledWinGet, ProvisionedOnline, ProvisionedOffline }
+
+    internal sealed record AppxRegisteredRemovalResult(bool Succeeded, int ExtendedErrorCode, string? ErrorText);
+
+    private async Task<CommandHandlerOutcome> AppxRegisteredRemovalAsync(CommandParameters p, CancellationToken cancellationToken)
+    {
+        IReadOnlyList<string> packages = p.StringArray("PackageNames");
+        if (packages.Count == 0) throw new CommandParameterException("PackageNames", "Provide at least one exact registered package full name.");
+        string[] admitted = packages.Select(ValidateExactPackageName).ToArray();
+        if (admitted.Distinct(StringComparer.OrdinalIgnoreCase).Count() != admitted.Length) throw new CommandParameterException("PackageNames", "Package names must not contain duplicates.");
+        var results = new List<object>(); int succeeded = 0; int failed = 0;
+        foreach (string packageFullName in admitted)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            AppxRegisteredRemovalResult result = await RemoveRegisteredAppxAsync(packageFullName, cancellationToken).ConfigureAwait(false);
+            if (result.Succeeded) succeeded++; else failed++;
+            results.Add(new { packageFullName, outcome = result.Succeeded ? "Succeeded" : "Failed", extendedErrorCode = result.ExtendedErrorCode, errorText = result.ErrorText });
+        }
+        JsonElement receipt = Data(new { scope = "CurrentUser", allUsers = false, succeeded, failed, failurePolicy = "Every validated package full name is attempted after a package-level failure. Cancellation stops the batch immediately.", packages = results });
+        return failed > 0 ? CommandHandlerOutcome.Failed("appx-registered-remove.partial_failure", $"Registered AppX removal finished with {succeeded} succeeded and {failed} failed.", receipt) : Success("appx-registered-remove", $"Removed {succeeded} current-user registered AppX package{(succeeded == 1 ? string.Empty : "s")}.", receipt, undo: false);
+    }
+
+    private async Task<AppxRegisteredRemovalResult> RemoveRegisteredAppxAsync(string packageFullName, CancellationToken cancellationToken)
+    {
+        if (AppxRegisteredRemovalSeam is { } seam) return await seam(packageFullName, cancellationToken).ConfigureAwait(false);
+        try
+        {
+            DeploymentResult result = await new PackageManager()
+                .RemovePackageAsync(packageFullName, RemovalOptions.None)
+                .AsTask(cancellationToken).ConfigureAwait(false);
+            int errorCode = result.ExtendedErrorCode?.HResult ?? 0;
+            return new AppxRegisteredRemovalResult(errorCode >= 0, errorCode, result.ErrorText);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException) { return new AppxRegisteredRemovalResult(false, ex.HResult, ex.Message); }
+    }
+
+
+    private async Task<CommandHandlerOutcome> AppxSelectionAsync(CommandParameters p, AppxPackageTarget target, string commandId, CancellationToken cancellationToken)
     {
         IReadOnlyList<string> packages = p.StringArray("PackageNames");
         if (packages.Count == 0) throw new CommandParameterException("PackageNames", "Provide at least one exact package name.");
+
+        // Validate every package and every dependency before starting the first removal.
+        // A malformed later ID must not turn a nominally rejected batch into a partial
+        // mutation of its earlier items.
+        string[] admittedPackages = packages.Select(ValidateExactPackageName).ToArray();
+        if (admittedPackages.Distinct(StringComparer.OrdinalIgnoreCase).Count() != admittedPackages.Length)
+        {
+            throw new CommandParameterException("PackageNames", "Package names must not contain duplicates.");
+        }
+
+        bool installedWinGet = target == AppxPackageTarget.InstalledWinGet;
+        string? executable = null;
+        string? image = null;
+        if (installedWinGet)
+        {
+            executable = FindExecutable("winget.exe") ?? throw new CommandDependencyException("winget.exe", "winget.exe is required for online AppX selection removal.");
+        }
+        else if (target == AppxPackageTarget.ProvisionedOffline)
+        {
+            image = RequireExistingDirectory(p.RequiredString("ImagePath"));
+        }
+
         var results = new List<object>();
-        foreach (string package in packages)
+        int succeeded = 0;
+        int skipped = 0;
+        int failed = 0;
+        bool restartRequired = false;
+        foreach (string package in admittedPackages)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (package.IndexOfAny(['*', '?', '"', '\r', '\n']) >= 0) throw new CommandParameterException("PackageNames", "Package names must be exact; wildcards are not admitted.");
             ProcessExecutionResult result;
-            if (online)
+            if (installedWinGet)
             {
-                string winget = FindExecutable("winget.exe") ?? throw new CommandDependencyException("winget.exe", "winget.exe is required for online AppX selection removal.");
-                result = await _process.RunAsync(winget, ["uninstall", "--id", package, "--exact", "--silent", "--accept-source-agreements"], cancellationToken, TimeSpan.FromMinutes(5)).ConfigureAwait(false);
+                result = await RunAppxProcessAsync(executable!, ["uninstall", "--id", package, "--exact", "--silent", "--accept-source-agreements"], cancellationToken).ConfigureAwait(false);
+            }
+            else if (target == AppxPackageTarget.ProvisionedOnline)
+            {
+                result = await RunAppxProcessAsync("dism.exe", ["/Online", "/Remove-ProvisionedAppxPackage", "/PackageName:" + package, "/English"], cancellationToken).ConfigureAwait(false);
             }
             else
             {
-                string image = RequireExistingDirectory(p.RequiredString("ImagePath"));
-                result = await _process.RunAsync("dism.exe", ["/Image:" + image, "/Remove-ProvisionedAppxPackage", "/PackageName:" + package, "/English"], cancellationToken, TimeSpan.FromMinutes(5)).ConfigureAwait(false);
+                result = await RunAppxProcessAsync("dism.exe", ["/Image:" + image!, "/Remove-ProvisionedAppxPackage", "/PackageName:" + package, "/English"], cancellationToken).ConfigureAwait(false);
             }
-            results.Add(new { package, result.ExitCode, result.StandardOutput, result.StandardError });
-            if (result.ExitCode != 0) return CommandHandlerOutcome.Failed("appx-selection.failed", $"Package operation failed for '{package}'.");
+            bool packageRestartRequired = result.ExitCode is 3010 or 1641 || (installedWinGet && result.ExitCode == -1978334967);
+            bool packageSkipped = installedWinGet && result.ExitCode == -1978335107;
+            bool packageSucceeded = result.ExitCode == 0 || packageRestartRequired;
+            string outcome = packageSucceeded ? "Succeeded" : packageSkipped ? "Skipped" : "Failed";
+
+            restartRequired |= packageRestartRequired;
+            if (packageSucceeded) succeeded++;
+            else if (packageSkipped) skipped++;
+            else failed++;
+
+            results.Add(new
+            {
+                package,
+                outcome,
+                exitCode = result.ExitCode,
+                exitCodeMeaning = AppxExitCodeMeaning(result.ExitCode, installedWinGet),
+                restartRequired = packageRestartRequired,
+                scopeHint = packageSkipped ? "WinGet prohibits an elevated process from changing this user-scoped package." : null,
+                standardOutput = result.StandardOutput,
+                standardError = result.StandardError,
+            });
         }
-        return Success(online ? "appx-selection" : "offline-appx-selection", "Selected AppX package operations completed.", results, undo: false);
+
+        JsonElement receipt = Data(new
+        {
+            succeeded,
+            skipped,
+            failed,
+            restartRequired,
+            target = target.ToString(),
+            effect = target == AppxPackageTarget.InstalledWinGet
+                ? "Attempts to uninstall the exact WinGet package ID. WinGet availability does not prove an AppX registration has a removable manifest."
+                : "Removes the exact provisioned package from the selected image. Existing user registrations are unaffected.",
+            failurePolicy = "All validated package IDs are attempted after a package-manager failure so the receipt retains every outcome. Cancellation and process-launch faults stop the batch immediately.",
+            packages = results,
+        });
+        if (failed > 0)
+        {
+            return CommandHandlerOutcome.Failed(
+                "appx-selection.partial_failure",
+                $"Package operation finished with {succeeded} succeeded, {skipped} skipped, and {failed} failed.",
+                receipt);
+        }
+
+        string message = skipped > 0
+            ? $"Package operation finished with {succeeded} succeeded and {skipped} user-scoped package{(skipped == 1 ? string.Empty : "s")} skipped."
+            : $"Selected package operations completed for {succeeded} package{(succeeded == 1 ? string.Empty : "s")}.";
+        return Success(commandId, message, receipt, undo: false);
     }
+
+    private async Task<ProcessExecutionResult> RunAppxProcessAsync(
+        string executable,
+        IReadOnlyList<string> arguments,
+        CancellationToken cancellationToken) =>
+        AppxProcessRunnerSeam is { } seam
+            ? await seam(executable, arguments, cancellationToken, TimeSpan.FromMinutes(5)).ConfigureAwait(false)
+            : await _process.RunAsync(executable, arguments, cancellationToken, TimeSpan.FromMinutes(5)).ConfigureAwait(false);
+
+    private static string ValidateExactPackageName(string package)
+    {
+        if (string.IsNullOrWhiteSpace(package) || package.Length > 512 ||
+            !string.Equals(package, package.Trim(), StringComparison.Ordinal) ||
+            package.IndexOfAny(['*', '?', '"', '\r', '\n']) >= 0)
+        {
+            throw new CommandParameterException("PackageNames", "Package names must be non-empty exact IDs without wildcards, quotes, or surrounding whitespace.");
+        }
+
+        return package;
+    }
+
+    private static string AppxExitCodeMeaning(int exitCode, bool online) => exitCode switch
+    {
+        0 => "The package manager reported success.",
+        3010 => "The package manager reported success and requires a restart.",
+        1641 => "The package manager reported success and initiated a restart.",
+        -1978334967 when online => "WinGet reported that a restart is required to finish; the package operation completed.",
+        -1978335107 when online => "WinGet prohibits this action from an administrator context for a user-scoped package.",
+        _ => "The package manager reported failure; inspect retained standard output and error.",
+    };
 
     private CommandHandlerOutcome ExplorerQuick(CommandParameters p)
     {

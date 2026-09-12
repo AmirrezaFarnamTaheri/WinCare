@@ -1,7 +1,15 @@
+using System.Collections.ObjectModel;
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+using WinCare.Application.Commands;
+
 namespace WinCare.App.ViewModels.Pages;
 
 public sealed class RepairRecoveryPageViewModel : TabbedPageViewModel
 {
+    private string _portablePlaybookJson = string.Empty;
+    private string _playbookStatus = "Paste a WinCare schema-v1 portable playbook to review its steps. Import never carries approval or execution authority.";
+
     public string ToolSearchQuery => SelectedIndex switch
     {
         0 => "repair",
@@ -10,18 +18,56 @@ public sealed class RepairRecoveryPageViewModel : TabbedPageViewModel
         // reversible-change records live, so point the Undo tab's search there.
         2 => "reports",
         3 => "export backup",
-        _ => "recovery reset",
+        4 => "recovery reset",
+        _ => string.Empty,
     };
 
+    public bool IsPlaybookSection => SelectedIndex == 5;
+    public ObservableCollection<PageRow> ImportedPlaybookSteps { get; } = [];
+    public IRelayCommand ReviewPortablePlaybookCommand { get; }
+    public string PortablePlaybookJson { get => _portablePlaybookJson; set => SetProperty(ref _portablePlaybookJson, value ?? string.Empty); }
+    public string PlaybookStatus { get => _playbookStatus; private set => SetProperty(ref _playbookStatus, value); }
+    public bool HasImportedPlaybook => ImportedPlaybookSteps.Count > 0;
+
     public RepairRecoveryPageViewModel() : base([
-        new PageSection("Repair", "No repair assessment is available.", [
-            new PageRow("Windows components", "Diagnose component store, update, service, and package issues.", "Tool", "Evidence required"),
-            new PageRow("Network repair", "Build a bounded repair plan from current adapter and connectivity evidence.", "Tool", "Review first")]),
-        new PageSection("Restore", "No restore points are listed.", [
-            new PageRow("System restore", "Inspect restore points and create or apply an admitted restore operation.", "Tool", "Administrator approval required")]),
-        new PageSection("Undo", "No reversible WinCare changes are available.", []),
-        new PageSection("Backup", "No WinCare backup has been created.", [
-            new PageRow("Export settings and reports", "Create a portable record before higher-impact work.", "Tool", "Local files only")]),
-        new PageSection("Reset & media", "No reset or recovery-media task is active.", [
-            new PageRow("Recovery options", "Review reset, offline repair, and recovery media workflows.", "Tool", "High-impact confirmation")])]) { }
+        new PageSection("Repair", "No tools are available in this section.", []),
+        new PageSection("Restore", "No tools are available in this section.", []),
+        new PageSection("Change records", "No tools are available in this section.", []),
+        new PageSection("Backup", "No tools are available in this section.", []),
+        new PageSection("Reset & media", "No tools are available in this section.", []),
+        new PageSection("Portable playbooks", "No portable playbook has been reviewed.", [])])
+    {
+        ReviewPortablePlaybookCommand = new RelayCommand(ReviewPortablePlaybook);
+    }
+
+    public override void SelectSection(int index)
+    {
+        base.SelectSection(index);
+        OnPropertyChanged(nameof(IsPlaybookSection));
+    }
+
+    private void ReviewPortablePlaybook()
+    {
+        ImportedPlaybookSteps.Clear();
+        try
+        {
+            ImportedPortablePlaybook playbook = PortablePlaybookExchange.Import(
+                PortablePlaybookJson,
+                WinCare.CommandCatalog.CommandCatalog.Load());
+            var catalog = WinCare.CommandCatalog.CommandCatalog.Load().ToDictionary(command => command.Id, StringComparer.OrdinalIgnoreCase);
+            foreach (PortablePlaybookStep step in playbook.Steps)
+            {
+                var command = catalog[step.CommandId];
+                ImportedPlaybookSteps.Add(new PageRow(command.Title, command.Summary,
+                    command.ReadOnly ? "Read-only" : "Change",
+                    "Fresh preview required before execution") { CommandId = command.Id });
+            }
+            PlaybookStatus = $"Reviewed “{playbook.Name}”: {playbook.Steps.Count} steps. Each step must be opened, previewed, and approved through the current catalog and policy.";
+        }
+        catch (PortablePlaybookValidationException ex)
+        {
+            PlaybookStatus = ex.Message;
+        }
+        OnPropertyChanged(nameof(HasImportedPlaybook));
+    }
 }

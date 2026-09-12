@@ -13,12 +13,14 @@ namespace WinCare.Domain.Commands;
 /// <param name="ParametersDigest">SHA256 digest of canonical parameter payload.</param>
 /// <param name="ApprovedAtUtc">Timestamp when approval was recorded.</param>
 /// <param name="CorrelationId">Correlation ID of preview request.</param>
+/// <param name="ExecutionDigest">Optional digest of an expanded execution plan resolved during preview.</param>
 public sealed record ApprovedMutationPlan(
     string PlanId,
     string CommandId,
     string ParametersDigest,
     DateTimeOffset ApprovedAtUtc,
-    Guid CorrelationId)
+    Guid CorrelationId,
+    string? ExecutionDigest = null)
 {
     /// <summary>
     /// Creates an approved mutation plan with a canonical parameter digest and a new correlation ID.

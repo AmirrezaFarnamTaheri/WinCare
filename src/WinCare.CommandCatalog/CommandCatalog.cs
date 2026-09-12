@@ -11,7 +11,9 @@ namespace WinCare.CommandCatalog;
 public static class CommandCatalog
 {
     private const string ResourceName = "WinCare.CommandCatalog.Data.commands.json";
-    private const int ExpectedCommandCount = 259;
+    // 259 frozen legacy IDs, five native AppX inventory/removal commands, installer-cache analysis,
+    // three read-only discovery routes, and one receipt-bound remediation restore route.
+    private const int ExpectedCommandCount = 269;
 
     private static readonly Lazy<IReadOnlyList<CommandDefinition>> Commands = new(LoadCore);
     private static readonly Lazy<IReadOnlyDictionary<string, CommandDefinition>> CommandsById = new(

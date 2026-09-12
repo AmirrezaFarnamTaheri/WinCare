@@ -1,7 +1,8 @@
 //! Native zero-allocation system telemetry probes for WinCare.
 #![allow(missing_docs)]
 
-use std::sync::atomic::{AtomicU64, Ordering};
+#[cfg(target_os = "windows")]
+use std::sync::Mutex;
 
 #[repr(C)]
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -82,9 +83,19 @@ mod win32_telemetry {
     }
 }
 
-static PREV_IDLE: AtomicU64 = AtomicU64::new(0);
-static PREV_KERNEL: AtomicU64 = AtomicU64::new(0);
-static PREV_USER: AtomicU64 = AtomicU64::new(0);
+/// The CPU counters must be read and updated as one snapshot. Independent
+/// atomics can combine the idle value from one sample with kernel and user
+/// values from another concurrent sample, producing a fabricated percentage.
+#[cfg(target_os = "windows")]
+static PREVIOUS_CPU_TIMES: Mutex<Option<CpuTimes>> = Mutex::new(None);
+
+#[cfg(target_os = "windows")]
+#[derive(Clone, Copy)]
+struct CpuTimes {
+    idle: u64,
+    kernel: u64,
+    user: u64,
+}
 
 /// Queries instantaneous system telemetry into a caller-allocated POD struct.
 ///
@@ -116,24 +127,26 @@ pub unsafe fn query_sys_snapshot(out: *mut NativeSysSnapshot) -> i32 {
         };
 
         // 2. CPU Usage
+        // Hold the lock across the Win32 read and update so concurrent callers
+        // cannot reorder samples or mix fields from separate observations.
+        let mut previous_cpu_times = PREVIOUS_CPU_TIMES
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
         let mut idle = FILETIME::default();
         let mut kernel = FILETIME::default();
         let mut user = FILETIME::default();
 
         let mut cpu_valid = false;
         let cpu_usage = if unsafe { GetSystemTimes(&mut idle, &mut kernel, &mut user) } != 0 {
-            let cur_idle = idle.as_u64();
-            let cur_kernel = kernel.as_u64();
-            let cur_user = user.as_u64();
-
-            let last_idle = PREV_IDLE.swap(cur_idle, Ordering::Relaxed);
-            let last_kernel = PREV_KERNEL.swap(cur_kernel, Ordering::Relaxed);
-            let last_user = PREV_USER.swap(cur_user, Ordering::Relaxed);
-
-            if last_kernel > 0 || last_user > 0 {
-                let delta_idle = cur_idle.saturating_sub(last_idle);
-                let delta_kernel = cur_kernel.saturating_sub(last_kernel);
-                let delta_user = cur_user.saturating_sub(last_user);
+            let current = CpuTimes {
+                idle: idle.as_u64(),
+                kernel: kernel.as_u64(),
+                user: user.as_u64(),
+            };
+            let usage = if let Some(previous) = *previous_cpu_times {
+                let delta_idle = current.idle.saturating_sub(previous.idle);
+                let delta_kernel = current.kernel.saturating_sub(previous.kernel);
+                let delta_user = current.user.saturating_sub(previous.user);
                 let total_sys = delta_kernel.saturating_add(delta_user);
 
                 if total_sys > 0 && total_sys >= delta_idle {
@@ -146,7 +159,9 @@ pub unsafe fn query_sys_snapshot(out: *mut NativeSysSnapshot) -> i32 {
             } else {
                 // Baseline established on frame 0; the first sample is unknown, not zero.
                 0.0
-            }
+            };
+            *previous_cpu_times = Some(current);
+            usage
         } else {
             0.0
         };
@@ -184,12 +199,11 @@ pub unsafe fn query_sys_snapshot(out: *mut NativeSysSnapshot) -> i32 {
 
         // 4. Network Connectivity
         let mut net_flags: u32 = 0;
-        let net_active;
-        if unsafe { InternetGetConnectedState(&mut net_flags, 0) } != 0 {
+        let net_active = if unsafe { InternetGetConnectedState(&mut net_flags, 0) } != 0 {
             valid_mask |= SYS_VALID_NET;
-            net_active = 1u8;
+            1u8
         } else {
-            net_active = 0u8;
+            0u8
         };
 
         // SAFETY: Pointer validity verified at start of function.

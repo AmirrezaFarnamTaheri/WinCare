@@ -174,10 +174,8 @@ public class RemoteCatalogService : IRemoteCatalogService
                 return fallbackCatalog;
             }
 
-            // Return bundled offline default catalog with illustrative (non-installable) sample metadata
-            var defaultCatalog = GetOfflineDefaultCatalog();
-            ApplyRevocationPolicy(defaultCatalog);
-            return defaultCatalog;
+            throw new InvalidOperationException(
+                "The plugin catalog is unavailable and no saved catalog could be loaded.", ex);
         }
     }
 
@@ -273,50 +271,6 @@ public class RemoteCatalogService : IRemoteCatalogService
             plugin.CommandsProvided ??= new List<string>();
             plugin.Permissions ??= new List<string>();
         }
-    }
-
-    private static RemotePluginCatalog GetOfflineDefaultCatalog()
-    {
-        // Offline fallback entries are illustrative sample metadata only. They are not
-        // installable: PackageUrl and Sha256 are intentionally empty so the offline catalog
-        // never fabricates a download endpoint or an integrity digest for packages that are
-        // not actually distributable through it.
-        var catalog = new RemotePluginCatalog
-        {
-            CatalogVersion = "1.0",
-            LastUpdated = DateTime.UtcNow,
-            Plugins = new List<RemotePluginItem>
-            {
-                new()
-                {
-                    Id = "org.wincare.diskcleaner",
-                    Name = "Enhanced Disk Cleaner",
-                    Author = "WinCare Community",
-                    Version = "1.0.0",
-                    Description = "Deep cleaner for Windows temp files, browser caches, and delivery optimization files. (Offline sample — not installable.)",
-                    Category = "System Care",
-                    Sha256 = string.Empty,
-                    PackageUrl = string.Empty,
-                    Permissions = new List<string> { "filesystem.read", "filesystem.write" },
-                    CommandsProvided = new List<string> { "org.wincare.diskcleaner.run" }
-                },
-                new()
-                {
-                    Id = "org.wincare.dnstools",
-                    Name = "Network DNS Diagnostic Kit",
-                    Author = "WinCare Network Group",
-                    Version = "1.1.0",
-                    Description = "Flush DNS cache, test DNS latency across multiple providers, and reset Winsock. (Offline sample — not installable.)",
-                    Category = "Utilities",
-                    Sha256 = string.Empty,
-                    PackageUrl = string.Empty,
-                    Permissions = new List<string> { "network.query", "process.spawn" },
-                    CommandsProvided = new List<string> { "org.wincare.dnstools.flush", "org.wincare.dnstools.bench" }
-                }
-            }
-        };
-        SetTrustState(catalog, false, "Offline sample catalog. Remote installation is unavailable.");
-        return catalog;
     }
 
     private async Task<RemotePluginCatalog?> TryLoadFromCacheAsync(CancellationToken cancellationToken)

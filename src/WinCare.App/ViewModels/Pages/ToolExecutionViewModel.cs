@@ -31,6 +31,9 @@ public sealed class ToolExecutionViewModel : ObservableObject
     private CommandResultStatus? _executionStatus;
     private string _executionMessage = string.Empty;
     private string _executionResultText = string.Empty;
+    private string _packageInventoryText = string.Empty;
+    public string PackageInventoryText => _packageInventoryText;
+    public bool HasPackageInventory => _packageInventoryText.Length > 0;
     private bool _isReviewApproved;
     private string _parameterJson = "{}";
     private bool _useAdvancedParameterJson;
@@ -38,6 +41,7 @@ public sealed class ToolExecutionViewModel : ObservableObject
     private long _reviewVersion;
 
     private CancellationTokenSource? _activeCts;
+    private bool _isCancellationRequested;
 
     public ToolExecutionViewModel(CommandDispatcher dispatcher, Action<string> recordRecent)
     {
@@ -46,14 +50,35 @@ public sealed class ToolExecutionViewModel : ObservableObject
         ExecuteSelectedToolCommand = new AsyncRelayCommand(
             ExecuteSelectedToolAsync,
             CanExecuteSelectedTool);
-        CancelSelectedToolCommand = new RelayCommand(CancelSelectedTool);
+        CancelSelectedToolCommand = new RelayCommand(CancelSelectedTool, () => IsExecuting && !IsCancellationRequested);
     }
 
     public IAsyncRelayCommand ExecuteSelectedToolCommand { get; }
     public IRelayCommand CancelSelectedToolCommand { get; }
     public ObservableCollection<ToolParameterFieldViewModel> ParameterFields { get; } = new();
 
-    private void CancelSelectedTool() => _activeCts?.Cancel();
+    public bool IsCancellationRequested
+    {
+        get => _isCancellationRequested;
+        private set
+        {
+            if (SetProperty(ref _isCancellationRequested, value))
+            {
+                OnPropertyChanged(nameof(CancelActionLabel));
+                OnPropertyChanged(nameof(PrimaryActionLabel));
+                CancelSelectedToolCommand.NotifyCanExecuteChanged();
+            }
+        }
+    }
+
+    public string CancelActionLabel => IsCancellationRequested ? "Stopping…" : "Cancel";
+
+    private void CancelSelectedTool()
+    {
+        if (_activeCts is null || IsCancellationRequested) return;
+        IsCancellationRequested = true;
+        _activeCts.Cancel();
+    }
 
     public bool IsExecuting
     {
@@ -78,9 +103,9 @@ public sealed class ToolExecutionViewModel : ObservableObject
     {
         get
         {
-            if (IsExecuting) return "Running";
+            if (IsExecuting) return IsCancellationRequested ? "Stopping…" : "Running";
             if (IsSafeTool) return "Run tool";
-            if (IsDestructiveTool) return IsReviewApproved ? "Execute Destructive Action" : "Preview Impact";
+            if (IsDestructiveTool) return IsReviewApproved ? "Apply destructive change" : "Preview impact";
             return IsReviewApproved ? "Apply changes" : "Review changes";
         }
     }
@@ -102,6 +127,42 @@ public sealed class ToolExecutionViewModel : ObservableObject
 
     public string ExecutionMessage => _executionMessage;
     public string ExecutionResultText => _executionResultText;
+    public bool IsPresetTool => _selectedTool?.Id == "preset";
+    public string PresetContents
+    {
+        get
+        {
+            if (!IsPresetTool) return string.Empty;
+            if (!TryBuildExecutionParameters(out JsonElement parameters, out _) ||
+                !parameters.TryGetProperty("PresetId", out JsonElement id) || id.ValueKind != JsonValueKind.String)
+                return "Choose a preset to see its included changes.";
+            PresetDefinition? preset = WinCare.CommandCatalog.RemediationCatalog.LoadPresets()
+                .FirstOrDefault(item => string.Equals(item.Id, id.GetString(), StringComparison.OrdinalIgnoreCase));
+            if (preset is null) return "This preset is not in the built-in catalog. Choose a listed plan.";
+            var rules = WinCare.CommandCatalog.RemediationCatalog.LoadRules().ToDictionary(rule => rule.Id);
+            return preset.Title + "\n\n" + string.Join("\n\n", preset.RuleIds.Select(ruleId =>
+            {
+                RemediationRule rule = rules[ruleId];
+                string builds = rule.Compatibility.MaxBuild is int maximum
+                    ? $"Windows builds {rule.Compatibility.MinBuild}–{maximum}"
+                    : $"Windows build {rule.Compatibility.MinBuild} or later";
+                return $"{rule.Title}\n{rule.Description}\n{rule.Risk} risk · {builds}\nRecovery: {rule.Recovery}";
+            })) + "\n\nCompatibility and current targets are checked during preview. Recovery guidance does not guarantee one-click Undo.";
+        }
+    }
+    public string ActionFlowTitle => IsSafeTool
+        ? (IsMutatingTool ? "Direct, low-risk change" : "Read-only inspection")
+        : IsReviewApproved
+            ? "Reviewed and ready"
+            : "Preview before applying";
+
+    public string ActionFlowDescription => IsSafeTool
+        ? (IsMutatingTool
+            ? "WinCare will run this bounded action and record the outcome in Activity."
+            : "This tool gathers evidence without changing Windows. The result is recorded in Activity.")
+        : IsReviewApproved
+            ? "The approved preview matches the current inputs. Applying consumes this approval once and records the outcome."
+            : "Run a preview to resolve targets and impact. Review the result, then approve this exact plan to apply it.";
 
     /// <summary>Raw JSON editor used only when Advanced parameter mode is enabled.</summary>
     public string ParameterJson
@@ -132,7 +193,7 @@ public sealed class ToolExecutionViewModel : ObservableObject
             }
             else
             {
-                TryImportAdvancedValues();
+                if (!TryImportAdvancedValues()) return;
             }
 
             if (SetProperty(ref _useAdvancedParameterJson, value))
@@ -167,7 +228,11 @@ public sealed class ToolExecutionViewModel : ObservableObject
         {
             bool next = value && CanApproveReview;
             if (SetProperty(ref _isReviewApproved, next))
+            {
                 OnPropertyChanged(nameof(PrimaryActionLabel));
+                OnPropertyChanged(nameof(ActionFlowTitle));
+                OnPropertyChanged(nameof(ActionFlowDescription));
+            }
         }
     }
 
@@ -290,6 +355,7 @@ public sealed class ToolExecutionViewModel : ObservableObject
         finally
         {
             IsExecuting = false;
+            IsCancellationRequested = false;
         }
     }
 
@@ -426,12 +492,21 @@ public sealed class ToolExecutionViewModel : ObservableObject
             throw new FormatException($"must be at most {maximum}");
     }
 
-    private void TryImportAdvancedValues()
+    private bool TryImportAdvancedValues()
     {
+        if (_parameterJson.Length > MaxParameterJsonCharacters)
+        {
+            SetParameterError("Command parameter JSON exceeds the 1 MiB safety limit.");
+            return false;
+        }
         try
         {
             using JsonDocument document = JsonDocument.Parse(string.IsNullOrWhiteSpace(_parameterJson) ? "{}" : _parameterJson);
-            if (document.RootElement.ValueKind != JsonValueKind.Object) return;
+            if (document.RootElement.ValueKind != JsonValueKind.Object)
+            {
+                SetParameterError("Command parameters must be a JSON object. Fix the JSON before switching editors.");
+                return false;
+            }
             foreach (ToolParameterFieldViewModel field in ParameterFields)
             {
                 if (!document.RootElement.TryGetProperty(field.Name, out JsonElement value)) continue;
@@ -445,12 +520,14 @@ public sealed class ToolExecutionViewModel : ObservableObject
                     _ => value.GetRawText(),
                 };
             }
+            return true;
         }
         catch (JsonException ex)
         {
             // F-007: invalid advanced JSON is surfaced immediately instead of silently
             // ignored; the raw editor keeps the text and execution stays blocked.
             SetParameterError($"Advanced parameter JSON is invalid: {ex.Message} Fix the JSON before running the command.");
+            return false;
         }
     }
 
@@ -467,6 +544,7 @@ public sealed class ToolExecutionViewModel : ObservableObject
 
     private void SetParameterError(string message)
     {
+        _packageInventoryText = string.Empty;
         _executionStatus = CommandResultStatus.Blocked;
         _executionMessage = message;
         _executionResultText = JsonSerializer.Serialize(new
@@ -481,6 +559,7 @@ public sealed class ToolExecutionViewModel : ObservableObject
 
     private void ApplyExecutionResult(CommandResult result)
     {
+        _packageInventoryText = PackageInventoryPresentation.Format(result.CommandId, result.Data);
         _executionStatus = result.Status;
         _executionMessage = result.Message;
         try
@@ -505,12 +584,13 @@ public sealed class ToolExecutionViewModel : ObservableObject
         {
             _executionResultText = result.Message;
         }
-        IsExecutionResultOpen = true;
+        IsExecutionResultOpen = !HasPackageInventory;
         NotifyExecutionResultChanged();
     }
 
     private void ClearExecutionResult()
     {
+        _packageInventoryText = string.Empty;
         _executionStatus = null;
         _executionMessage = string.Empty;
         _executionResultText = string.Empty;
@@ -553,11 +633,18 @@ public sealed class ToolExecutionViewModel : ObservableObject
         OnPropertyChanged(nameof(IsDestructiveTool));
         OnPropertyChanged(nameof(RequiresApprovalSwitch));
         OnPropertyChanged(nameof(CanApproveReview));
+        OnPropertyChanged(nameof(ActionFlowTitle));
+        OnPropertyChanged(nameof(ActionFlowDescription));
         ExecuteSelectedToolCommand.NotifyCanExecuteChanged();
+        CancelSelectedToolCommand.NotifyCanExecuteChanged();
+        OnPropertyChanged(nameof(IsPresetTool));
+        OnPropertyChanged(nameof(PresetContents));
     }
 
     private void NotifyExecutionResultChanged()
     {
+        OnPropertyChanged(nameof(PackageInventoryText));
+        OnPropertyChanged(nameof(HasPackageInventory));
         OnPropertyChanged(nameof(HasExecutionResult));
         OnPropertyChanged(nameof(IsExecutionSuccess));
         OnPropertyChanged(nameof(IsExecutionError));

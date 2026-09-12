@@ -10,6 +10,21 @@ namespace WinCare.Infrastructure.Native;
 /// </summary>
 public sealed class NativeSystemProbeRepository : INativeSystemProbeRepository
 {
+    private readonly CleanTempFilesNativeCall _cleanTempFiles;
+
+    /// <summary>Initializes the repository with the production native cleaner.</summary>
+    public unsafe NativeSystemProbeRepository()
+        : this(WinCareCoreNative.WinCareCleanTempFiles)
+    {
+    }
+
+    /// <summary>Initializes the repository with a native-call seam for adapter tests.</summary>
+    internal NativeSystemProbeRepository(CleanTempFilesNativeCall cleanTempFiles)
+    {
+        ArgumentNullException.ThrowIfNull(cleanTempFiles);
+        _cleanTempFiles = cleanTempFiles;
+    }
+
     /// <inheritdoc/>
     public ValueTask<SystemSnapshot> GetSystemSnapshotAsync(CancellationToken ct = default)
     {
@@ -49,7 +64,7 @@ public sealed class NativeSystemProbeRepository : INativeSystemProbeRepository
         unsafe
         {
             NativeCleanResult raw = default;
-            int status = WinCareCoreNative.WinCareCleanTempFiles(dryRun ? (byte)1 : (byte)0, &raw);
+            int status = _cleanTempFiles(dryRun ? (byte)1 : (byte)0, &raw);
             if (status != 0)
             {
                 throw new InvalidOperationException($"wincare_clean_temp_files failed with status code {status}.");

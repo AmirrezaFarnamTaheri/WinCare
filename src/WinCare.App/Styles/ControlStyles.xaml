@@ -7,8 +7,33 @@
 
     <CornerRadius x:Key="RadiusPill">4</CornerRadius>
     <CornerRadius x:Key="RadiusControl">8</CornerRadius>
-    <CornerRadius x:Key="RadiusCardOuter">14</CornerRadius>
-    <CornerRadius x:Key="RadiusCardInner">10</CornerRadius>
+    <CornerRadius x:Key="RadiusCardOuter">12</CornerRadius>
+    <CornerRadius x:Key="RadiusCardInner">8</CornerRadius>
+
+    <Style x:Key="SectionHeaderTextStyle" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{StaticResource DisplayFontFamily}" />
+        <Setter Property="FontSize" Value="20" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Foreground" Value="{ThemeResource TextPrimaryBrush}" />
+        <Setter Property="TextWrapping" Value="Wrap" />
+    </Style>
+    <Style x:Key="QuietButtonStyle" TargetType="Button">
+        <Setter Property="MinHeight" Value="44" />
+        <Setter Property="MinWidth" Value="44" />
+        <Setter Property="Padding" Value="16,10" />
+        <Setter Property="CornerRadius" Value="{StaticResource RadiusControl}" />
+        <Setter Property="Background" Value="{ThemeResource SurfaceSecondaryBrush}" />
+        <Setter Property="Foreground" Value="{ThemeResource TextPrimaryBrush}" />
+        <Setter Property="BorderBrush" Value="{ThemeResource CardBorderBrush}" />
+    </Style>
+    <Style x:Key="DiagnosticChannelStyle" TargetType="Button" BasedOn="{StaticResource QuietButtonStyle}">
+        <Setter Property="HorizontalAlignment" Value="Stretch" />
+        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+        <Setter Property="Padding" Value="12" />
+        <Setter Property="MinHeight" Value="72" />
+        <Setter Property="FocusVisualPrimaryBrush" Value="{ThemeResource AccentTealBrush}" />
+        <Setter Property="FocusVisualSecondaryBrush" Value="{ThemeResource SurfaceBrush}" />
+    </Style>
 
     <Style x:Key="AppTitleTextStyle" TargetType="TextBlock">
         <Setter Property="FontFamily" Value="{StaticResource DisplayFontFamily}" />
@@ -18,7 +43,7 @@
     </Style>
     <Style x:Key="PageTitleTextStyle" TargetType="TextBlock">
         <Setter Property="FontFamily" Value="{StaticResource DisplayFontFamily}" />
-        <Setter Property="FontSize" Value="32" />
+        <Setter Property="FontSize" Value="34" />
         <Setter Property="FontWeight" Value="SemiBold" />
         <Setter Property="Foreground" Value="{ThemeResource TextPrimaryBrush}" />
         <Setter Property="TextWrapping" Value="Wrap" />
@@ -26,6 +51,7 @@
     <Style x:Key="PageDescriptionTextStyle" TargetType="TextBlock">
         <Setter Property="FontFamily" Value="{StaticResource BodyFontFamily}" />
         <Setter Property="FontSize" Value="14" />
+        <Setter Property="LineHeight" Value="21" />
         <Setter Property="TextWrapping" Value="Wrap" />
         <Setter Property="Foreground" Value="{ThemeResource TextSecondaryBrush}" />
     </Style>
@@ -39,14 +65,15 @@
     </Style>
     <Style x:Key="RowTitleTextStyle" TargetType="TextBlock">
         <Setter Property="FontFamily" Value="{StaticResource BodyFontFamily}" />
-        <Setter Property="FontSize" Value="14" />
+        <Setter Property="FontSize" Value="15" />
         <Setter Property="FontWeight" Value="SemiBold" />
         <Setter Property="Foreground" Value="{ThemeResource TextPrimaryBrush}" />
         <Setter Property="TextWrapping" Value="Wrap" />
     </Style>
     <Style x:Key="RowSecondaryTextStyle" TargetType="TextBlock">
         <Setter Property="FontFamily" Value="{StaticResource BodyFontFamily}" />
-        <Setter Property="FontSize" Value="12" />
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="LineHeight" Value="18" />
         <Setter Property="Foreground" Value="{ThemeResource TextSecondaryBrush}" />
         <Setter Property="TextWrapping" Value="Wrap" />
     </Style>
@@ -69,21 +96,22 @@
         <Setter Property="Background" Value="{ThemeResource AccentBrush}" />
         <Setter Property="Foreground" Value="{ThemeResource TextOnAccentBrush}" />
         <Setter Property="FontWeight" Value="SemiBold" />
-        <Setter Property="Padding" Value="18,10" />
+        <Setter Property="Padding" Value="20,12" />
         <Setter Property="CornerRadius" Value="{StaticResource RadiusControl}" />
         <Setter Property="MinHeight" Value="44" />
+        <Setter Property="MinWidth" Value="44" />
     </Style>
     <Style x:Key="PrimaryActionButtonStyle" TargetType="Button" BasedOn="{StaticResource AccentButtonStyle}" />
     <ControlTemplate x:Key="StatusPillTemplate" TargetType="ContentControl">
         <Border
-            Padding="6,2"
+            Padding="8,4"
             Background="{TemplateBinding Background}"
             BorderBrush="{TemplateBinding BorderBrush}"
             BorderThickness="1"
             CornerRadius="{StaticResource RadiusPill}">
             <ContentPresenter
-                FontFamily="{StaticResource TelemetryFontFamily}"
-                FontSize="11"
+                FontFamily="{StaticResource BodyFontFamily}"
+                FontSize="12"
                 FontWeight="SemiBold"
                 Foreground="{TemplateBinding Foreground}"
                 HorizontalAlignment="Center"
