@@ -143,8 +143,7 @@ public sealed class ToolExecutionViewModelTests
     [Fact]
     public async Task Moderate_tool_requires_preview_before_approval_and_apply()
     {
-        // F-004: Moderate tools follow the same two-phase contract as destructive tools —
-        // approval requires a successful preview, and apply consumes the single-use receipt.
+        // In the tools view, Moderate tools use the review and approval flow.
         var moderateDef = new CommandDefinition("moderate-change", "Moderate Change", "Moderate Change", "Area", "Section",
             CommandRisk.Moderate, false, AdministratorAccess.No, RestartExpectation.No,
             "test", MigrationStatus.Implemented, ["moderate"], RiskTier.Moderate);

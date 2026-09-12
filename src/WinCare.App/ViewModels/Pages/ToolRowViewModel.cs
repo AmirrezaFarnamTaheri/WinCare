@@ -113,8 +113,7 @@ public sealed class ToolRowViewModel : ObservableObject
     }
 
     /// <summary>
-    /// F-032: concise, meaningful accessible name for the selectable row — the tool title
-    /// with its area and risk — instead of the view-model type name exposed to UIA.
+    /// Concise accessible name for the selectable row (title, area, and risk).
     /// </summary>
     public string ToolAccessibleName => $"{Title}, {Definition.Area}, risk {Risk}";
 

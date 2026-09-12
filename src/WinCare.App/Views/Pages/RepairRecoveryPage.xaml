@@ -39,7 +39,7 @@
             <StackPanel Spacing="16" MaxWidth="900" HorizontalAlignment="Left">
                 <TextBlock Style="{StaticResource SectionHeaderTextStyle}" Text="Review a portable playbook" />
                 <TextBlock Style="{StaticResource PageDescriptionTextStyle}" MaxWidth="720"
-                    Text="Portable playbooks contain catalog command IDs and typed parameters only. Reviewing a file does not run it, preserve an earlier approval, or bypass current policy." />
+                    Text="Portable playbooks contain catalog command IDs and parameters. Reviewing a playbook inspects the steps without running them." />
                 <TextBox Header="Playbook JSON" PlaceholderText="Paste a schema-v1 WinCare portable playbook"
                     MinHeight="180" AcceptsReturn="True" TextWrapping="NoWrap"
                     FontFamily="{StaticResource TelemetryFontFamily}"

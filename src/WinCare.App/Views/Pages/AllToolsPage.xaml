@@ -140,8 +140,8 @@
                                 IsOpen="{x:Bind ViewModel.Execution.IsDestructiveTool, Mode=OneWay}"
                                 IsClosable="False"
                                 Severity="Error"
-                                Title="Irreversible change"
-                                Message="This command makes irreversible system changes. A preflight preview and explicit review approval are strictly required before execution."
+                                Title="Permanent change"
+                                Message="This tool makes permanent changes to files or settings. Preview the effect before applying."
                                 AutomationProperties.AutomationId="DestructiveToolWarning"
                                 AutomationProperties.Name="Destructive tool warning" />
                             <ToggleSwitch
@@ -332,8 +332,7 @@
                     <ListView.ItemContainerStyle>
                         <Style TargetType="ListViewItem">
                             <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-                            <Setter Property="MinHeight" Value="76" />
-                            <!-- F-032: selectable rows must announce the tool, not the view-model type name. -->
+                            <!-- Selectable rows announce tool name and details -->
                             <Setter Property="AutomationProperties.Name" Value="{Binding ToolAccessibleName}" />
                         </Style>
                     </ListView.ItemContainerStyle>

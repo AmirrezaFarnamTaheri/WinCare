@@ -48,9 +48,8 @@ namespace WinCare.Application.Diagnostics
             DiagnosticSeverity severity = DiagnosticSeverity.Information;
             string summary;
 
-            // F-019: only evidence that is both measured and flagged as pressure may be
-            // treated as verified telemetry; unavailable probes must not promote a
-            // hypothesis into a measured finding.
+            // Only evidence that is both measured and flagged as pressure may be
+            // treated as verified telemetry; unavailable probes do not promote hypotheses.
             var pressureEvidence = evidence.FirstOrDefault(e => e.IndicatesPressure && e.HasMeasuredEvidence);
             bool hasTelemetryEvidence = pressureEvidence != null;
 

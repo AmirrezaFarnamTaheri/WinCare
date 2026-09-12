@@ -1,10 +1,7 @@
 namespace WinCare.Domain.Assessment;
 
 /// <summary>
-/// F-020: centralized, versioned assessment thresholds. Every entry point (Checkup page,
-/// AI Doctor evidence collector, executor health command) must read its boundaries from
-/// this policy instead of re-declaring divergent local constants, so the same measurement
-/// cannot be classified differently by different surfaces.
+/// Centralized assessment thresholds shared across Checkup, AI Doctor, and health probes.
 /// </summary>
 public static class AssessmentPolicy
 {

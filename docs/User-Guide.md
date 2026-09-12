@@ -1,24 +1,24 @@
 # WinCare User Guide
 
-WinCare is a native Windows diagnostics, maintenance, security, and recovery workspace. It is currently a **release candidate**. Start with read-only evidence, review every proposed change, and treat any outcome marked **final state unknown** as a reason to verify the affected Windows resource before retrying.
+WinCare is a fast, native Windows workspace for system maintenance, diagnostics, and recovery.
 
 > [!NOTE]
-> The images in [Screenshots.md](Screenshots.md) are build-specific historical captures. Current source has changed since the v2.5.0-rc5 images, so use their provenance notes rather than assuming every label/layout is current.
+> The screenshots in [Screenshots.md](Screenshots.md) are reference captures from recent builds. UI layouts may be updated as features evolve.
 
 ## 1. System requirements
 
 | Requirement | Supported configuration |
 |---|---|
-| Windows | Windows 10 2004 / build 19041 or newer, or Windows 11 |
+| Windows | Windows 10 (build 19041 or newer) or Windows 11 |
 | Architecture | x64 or ARM64 |
-| Privilege | Standard user for many read-only checks; Administrator for commands whose catalog policy requires elevation |
-| Distribution | MSIX, self-contained executable, or portable ZIP as published by the release workflow |
+| Privilege | Standard user for diagnostics; Administrator for actions requiring elevation |
+| Distribution | MSIX, self-contained executable, or portable ZIP |
 
 ## 2. Installation and first launch
 
 ### MSIX
 
-Download the package matching your architecture from GitHub Releases. Development-certificate releases also publish a matching `.cer` and `install_msix.py` helper. The helper verifies the package signature, verifies that the supplied certificate matches the package signer, imports that certificate only to `LocalMachine\TrustedPeople`, verifies again, and then installs.
+Download the package matching your architecture from GitHub Releases. Development-certificate releases also publish a matching `.cer` and `install_msix.py` helper:
 
 ```powershell
 python install_msix.py `
@@ -26,38 +26,27 @@ python install_msix.py `
   --certificate .\WinCare-v<version>-x64.cer
 ```
 
-Run the helper from an elevated terminal only when the certificate is not already trusted. Do not manually trust an unrelated certificate.
+Run the helper from an elevated terminal only when the certificate is not already trusted.
 
 ### Standalone and portable builds
 
-The self-contained `.exe` runs directly. The portable ZIP should be extracted before launching `WinCare.App.exe`. These formats are useful for technician/recovery workflows but do not replace production signed-install testing.
+The self-contained `.exe` runs directly without installation. The portable ZIP can be extracted to any folder, which is ideal for USB technician toolkits.
 
-On launch, WinCare restores the last usable window placement by default. Disable **Settings → Window continuity** if you prefer the default startup size each time.
+On launch, WinCare restores your previous window position. You can disable this under **Settings → Window continuity** if you prefer a standard default size.
 
-## 3. Safety model: risk tiers and admission
+## 3. Safety tiers
 
-A listed tool is not automatically authorized to change Windows. Mutation operations follow a risk-tiered admission model:
+WinCare organizes tools into three simple tiers:
 
 ```text
-Choose tool
-  → validate typed inputs
-  → check risk tier:
-      ├── Safe: direct 1-click execution; no preview or approval token required
-      ├── Moderate: explicit user confirmation dialog required
-      └── Destructive: read-only preview → dispatcher-issued one-time receipt → explicit approval
-  → apply
-  → record outcome in Activity journal
+Safe: 1-click execution  │  Moderate: confirmation dialog  │  Destructive: preview & approval
 ```
 
-- **Safe:** Low-impact, routine maintenance operations (e.g. temporary file purge, DNS flush) execute directly in 1 click without unnecessary ceremony while maintaining full Activity journaling.
-- **Moderate:** Non-destructive system settings and configuration changes require explicit confirmation before execution.
-- **Destructive:** High-impact mutations (e.g. disk formatting, service deletion, permanent resets) require a mandatory read-only preview and a dispatcher-issued, single-use, parameter-bound review receipt before explicit user approval.
-
-For `Destructive` commands, editing parameters, waiting past expiry, changing correlation, fabricating a receipt, or replaying an already-used receipt requires a fresh preview.
-
-If a mutating handler faults after execution starts and WinCare cannot prove the final machine state, the result is **not** “nothing changed.” WinCare reports that the final state is unknown and tells you to verify the affected resource before retrying.
-
-WinCare only advertises Undo when a concrete executable compensator exists. It does not manufacture a generic rollback promise for commands that cannot safely reverse themselves.
+- **Safe:** Routine, low-risk tasks (like cleaning temporary files or flushing DNS caches) execute immediately in 1 click.
+- **Moderate:** Non-destructive configuration changes prompt for a quick user confirmation before applying.
+- **Destructive:** High-impact changes (like partition formatting or service removal) require a read-only preview before you can confirm and apply.
+- **Activity Log:** All actions and their outcomes are recorded in the local Activity log so you always have a full history.
+- **Honest Status:** If an operation encounters an error mid-way, WinCare reports exactly where it stopped rather than assuming no state changed. Undo is offered only when a real rollback mechanism is available.
 
 ## 4. Navigation
 

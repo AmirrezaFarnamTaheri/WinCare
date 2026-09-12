@@ -5,10 +5,7 @@ using Xunit;
 namespace WinCare.Infrastructure.Tests;
 
 /// <summary>
-/// Regression tests for F-011: read-modify-write updates were atomic only within one
-/// CommandStateStore instance, so independent instances (or processes) sharing the data
-/// root could silently lose updates. Writers now serialize on an OS-wide lock named after
-/// the data root, with a bounded wait.
+/// Regression tests for cross-instance state store concurrency.
 /// </summary>
 public sealed class CommandStateStoreCrossInstanceTests : IDisposable
 {

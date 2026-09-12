@@ -16,9 +16,7 @@ public sealed class CommandStateStore
     private readonly Semaphore _crossProcessGate;
 
     /// <summary>
-    /// Bounded wait for the cross-process state lock (F-011): writers from independent
-    /// store instances (or processes) serialize on a named mutex derived from the data
-    /// root, so read-modify-write updates cannot silently lose one another.
+    /// Bounded wait for the cross-process state lock.
     /// </summary>
     private static readonly TimeSpan CrossProcessLockTimeout = TimeSpan.FromSeconds(5);
 
@@ -82,7 +80,7 @@ public sealed class CommandStateStore
     }
 
     /// <summary>
-    /// Acquires the OS-wide write lock for this data root with a bounded wait (F-011).
+    /// Acquires the OS-wide write lock for this data root with a bounded wait.
     /// </summary>
     /// <returns>True when the lock was acquired; the caller must release it in finally.</returns>
     private bool TryAcquireCrossProcessGate()

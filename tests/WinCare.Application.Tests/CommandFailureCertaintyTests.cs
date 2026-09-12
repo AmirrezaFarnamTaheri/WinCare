@@ -119,8 +119,7 @@ public sealed class CommandFailureCertaintyTests
 }
 
 /// <summary>
-/// Regression tests for F-022: admission rejections were absent from the Activity journal.
-/// A blocked admission must now produce a journal record carrying the rejection reason.
+/// Regression tests for journal records on admission rejection.
 /// </summary>
 public sealed class AdmissionJournalTests
 {

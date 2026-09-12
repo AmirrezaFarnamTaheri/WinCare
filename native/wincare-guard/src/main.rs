@@ -80,9 +80,8 @@ fn raise_critical_alert(snapshot: &monitors::SystemHealthSnapshot) {
     eprintln!("{xml}");
 }
 
-/// F-027: the on-disk alert queue is bounded and namespaced. The WinCare app does not yet
-/// consume these files (the feature stays experimental), so retention is enforced at the
-/// producer to keep repeated critical ticks from growing storage without a consumer.
+/// The on-disk alert queue is bounded and namespaced. Retention is enforced
+/// at the producer to prevent unbounded disk usage.
 #[cfg(target_os = "windows")]
 const MAX_QUEUED_ALERTS: usize = 32;
 

@@ -13,7 +13,7 @@ public sealed record SystemSnapshot(
     ulong DiskFreeBytes,
     ulong DiskTotalBytes,
     bool NetActive,
-    // F-018: per-metric validity and the probed volume letter, carried through the FFI.
+    // Per-metric validity and probed volume letter carried through FFI.
     bool CpuMetricValid = false,
     bool RamMetricValid = false,
     bool DiskMetricValid = false,

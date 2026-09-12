@@ -5,8 +5,7 @@ using Xunit;
 namespace WinCare.Infrastructure.Tests;
 
 /// <summary>
-/// Regression tests for F-008: shared JSON exports failed because the temp file's
-/// exclusive-write stream was still open when File.Move replaced the destination.
+/// Regression tests for shared JSON export file writing.
 /// </summary>
 public sealed class JsonExportStreamTests
 {

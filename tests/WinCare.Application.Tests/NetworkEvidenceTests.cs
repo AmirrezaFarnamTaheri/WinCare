@@ -4,10 +4,7 @@ using Xunit;
 namespace WinCare.Application.Tests;
 
 /// <summary>
-/// Regression tests for F-006: the Doctor's network branch emitted a fixed
-/// "Active Socket Table and DNS Entries Present" observation stamped as measured
-/// evidence without probing anything. The probe must now report real adapter
-/// telemetry or explicitly mark evidence unavailable.
+/// Regression tests for network evidence collection without fixed observations.
 /// </summary>
 public sealed class NetworkEvidenceTests
 {

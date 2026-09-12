@@ -45,8 +45,7 @@ WINCARE_API int32_t wincare_core_sys_info(
     size_t buffer_len,
     size_t *written);
 
-/* F-039: aggregate telemetry snapshot and cleaner exports, previously absent from the
- * published header although exported by the DLL and consumed through P/Invoke.
+/* Aggregate telemetry snapshot and cleaner exports.
  * Layout must stay in sync with the C# mirror in WinCareCoreNative.cs. */
 
 #define WINCARE_SYS_VALID_CPU  0x1u

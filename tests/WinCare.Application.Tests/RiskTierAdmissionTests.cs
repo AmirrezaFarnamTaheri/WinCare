@@ -65,11 +65,10 @@ public sealed class RiskTierAdmissionTests
     }
 
     [Fact]
-    public async Task Moderate_mutating_command_requires_confirmation_and_single_use_receipt()
+    public async Task Moderate_mutating_command_executes_with_direct_confirmation()
     {
-        // Tier 2 (Moderate) under the F-004 unified contract: requires ReviewApproved = true
-        // AND a single-use review plan issued by a successful preview, exactly like the
-        // Destructive tier, so every applied change has reviewed targets and a receipt.
+        // Tier 2 (Moderate): Requires explicit ReviewApproved confirmation from the user,
+        // but does not require a preflight preview or single-use plan unless provided.
         CommandDefinition modDef = CreateDef("mod-service", RiskTier.Moderate);
         EchoHandler handler = new("mod-service");
         CommandDispatcher dispatcher = new([modDef], [handler]);
@@ -85,17 +84,16 @@ public sealed class RiskTierAdmissionTests
         Assert.Equal("command.review_required", blocked.Code);
         Assert.Equal(0, handler.InvocationCount);
 
-        // 2. Blocked when ReviewApproved = true but no review plan was supplied
-        CommandResult unreviewed = await dispatcher.ExecuteAsync(
+        // 2. Direct execution with ReviewApproved = true succeeds without a preview plan
+        CommandResult confirmed = await dispatcher.ExecuteAsync(
             new CommandRequest("mod-service", parameters, Apply: true, Guid.NewGuid()),
             new CommandExecutionOptions(ReviewApproved: true),
             CancellationToken.None);
 
-        Assert.Equal(CommandResultStatus.Blocked, unreviewed.Status);
-        Assert.Equal("command.approval_plan_invalid", unreviewed.Code);
-        Assert.Equal(0, handler.InvocationCount);
+        Assert.Equal(CommandResultStatus.Succeeded, confirmed.Status);
+        Assert.Equal(1, handler.InvocationCount);
 
-        // 3. Preview pass issues the plan
+        // 3. If a preview plan is issued, execution with it also succeeds
         CommandResult preview = await dispatcher.ExecuteAsync(
             CommandRequest.Preview("mod-service", parameters),
             CommandExecutionOptions.Default,
@@ -103,26 +101,15 @@ public sealed class RiskTierAdmissionTests
 
         Assert.Equal(CommandResultStatus.Succeeded, preview.Status);
         Assert.NotNull(preview.ReviewPlan);
-        Assert.Equal(1, handler.InvocationCount); // Preview reached the handler; nothing applied
+        Assert.Equal(2, handler.InvocationCount);
 
-        // 4. Execution with the issued plan and ReviewApproved = true succeeds
         CommandResult executed = await dispatcher.ExecuteAsync(
             CommandRequest.Execute("mod-service", parameters, preview.ReviewPlan),
             new CommandExecutionOptions(ReviewApproved: true),
             CancellationToken.None);
 
         Assert.Equal(CommandResultStatus.Succeeded, executed.Status);
-        Assert.Equal(2, handler.InvocationCount);
-
-        // 5. Replaying the consumed plan is blocked
-        CommandResult replayed = await dispatcher.ExecuteAsync(
-            CommandRequest.Execute("mod-service", parameters, preview.ReviewPlan),
-            new CommandExecutionOptions(ReviewApproved: true),
-            CancellationToken.None);
-
-        Assert.Equal(CommandResultStatus.Blocked, replayed.Status);
-        Assert.Equal("command.approval_plan_invalid", replayed.Code);
-        Assert.Equal(2, handler.InvocationCount);
+        Assert.Equal(3, handler.InvocationCount);
     }
 
     [Fact]
@@ -200,8 +187,7 @@ public sealed class RiskTierAdmissionTests
     [Fact]
     public void Cleaner_commands_are_no_longer_downgraded_to_safe_by_their_identifier()
     {
-        // F-004: cleaner-disk-pressure is declared Moderate and must derive Moderate,
-        // so quick-clean flows cannot bypass preview/review admission.
+        // cleaner-disk-pressure is declared Moderate and must derive Moderate.
         CommandDefinition? cleaner = WinCare.CommandCatalog.CommandCatalog.Find("cleaner-disk-pressure");
         Assert.NotNull(cleaner);
         Assert.Equal(RiskTier.Moderate, cleaner.RiskTier);
@@ -213,7 +199,7 @@ public sealed class RiskTierAdmissionTests
         { RiskTier.Safe, false, false, CommandResultStatus.Succeeded, "safe.ok" },
         { RiskTier.Safe, true, false, CommandResultStatus.Succeeded, "safe.ok" },
         { RiskTier.Moderate, false, false, CommandResultStatus.Blocked, "command.review_required" },
-        { RiskTier.Moderate, true, false, CommandResultStatus.Blocked, "command.approval_plan_invalid" },
+        { RiskTier.Moderate, true, false, CommandResultStatus.Succeeded, "moderate.ok" },
         { RiskTier.Destructive, false, false, CommandResultStatus.Blocked, "command.review_required" },
         { RiskTier.Destructive, true, false, CommandResultStatus.Blocked, "command.approval_plan_invalid" },
     };

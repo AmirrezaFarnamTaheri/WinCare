@@ -142,7 +142,7 @@ public sealed class PluginRegistryService : IPluginRegistry
                 }
                 catch (Exception ex)
                 {
-                    // F-034: a widget-surface failure is kept distinct from whole-plugin
+                    // A widget-surface failure is kept distinct from whole-plugin
                     // lifecycle state. The plugin stays Enabled so the registry, catalog and
                     // dispatcher remain consistent; the failure is recorded separately.
                     _widgetErrors[kvp.Key] = $"Widget retrieval failed: {ex.Message}";
@@ -153,7 +153,7 @@ public sealed class PluginRegistryService : IPluginRegistry
     }
 
     /// <summary>
-    /// F-034: last widget-surface failure per plugin id. Empty when every enabled plugin's
+    /// Last widget-surface failure per plugin id. Empty when every enabled plugin's
     /// widget surface is healthy; registry state itself is unaffected.
     /// </summary>
     public IReadOnlyDictionary<string, string> WidgetErrors => _widgetErrors;

@@ -104,11 +104,9 @@ public sealed class AppRuntime
     public IPluginInstallerService InstallerService { get; }
 
     /// <summary>
-    /// F-013: bounded application shutdown sequence. Stops accepting new plugin
-    /// discovery work, waits (bounded) for in-flight startup work to settle, flushes the
-    /// durable activity journal so recorded outcomes survive restart, then disposes the
-    /// owned command executor. Never throws: a close must not be blocked by a failing
-    /// service, and the budget bounds how long the close can take.
+    /// Bounded application shutdown sequence. Stops accepting new plugin
+    /// discovery work, waits for in-flight work to settle, flushes the
+    /// activity journal, and disposes the command executor.
     /// </summary>
     public async Task ShutdownAsync(TimeSpan budget)
     {

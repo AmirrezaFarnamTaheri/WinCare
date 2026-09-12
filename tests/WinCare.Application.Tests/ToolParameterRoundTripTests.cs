@@ -6,9 +6,7 @@ using WinCare.Domain.Commands;
 namespace WinCare.Application.Tests;
 
 /// <summary>
-/// Regression tests for F-007 (view-model level): raw JSON imports must update the typed
-/// field values, and invalid advanced JSON must surface an error instead of being ignored.
-/// The page-level control mounting is covered by the AllToolsPage Loaded retry.
+/// Regression tests for raw JSON imports updating typed fields and surfacing validation errors.
 /// </summary>
 public sealed class ToolParameterRoundTripTests
 {

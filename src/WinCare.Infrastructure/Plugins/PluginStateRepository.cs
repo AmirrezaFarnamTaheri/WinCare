@@ -49,7 +49,7 @@ public sealed class PluginStateRepository : IPluginStateRepository
     {
         if (!File.Exists(_stateFilePath))
         {
-            // F-012: a missing file is a fresh install, not an error; damaged or unreadable
+            // A missing file indicates a fresh install, not an error; damaged or unreadable
             // data is reported distinctly through LastError instead of silently returning
             // an empty set.
             LastError = null;
@@ -96,9 +96,9 @@ public sealed class PluginStateRepository : IPluginStateRepository
         }
         catch (Exception ex)
         {
-            // F-012: never crash the host, but do not pretend the save succeeded — the
-            // failed write leaves the previous state file intact and the failure is
-            // published so callers can warn the user that persistence is broken.
+            // Do not crash the host, but report that the save failed — the
+            // write failure leaves the previous state file intact and the error is
+            // recorded so callers can inform the user.
             LastError = $"Plugin state could not be saved to '{_stateFilePath}': {ex.Message} " +
                 "The last known good state was retained; changes will be lost on restart.";
             System.Diagnostics.Debug.WriteLine($"[PluginStateRepository] {LastError}");

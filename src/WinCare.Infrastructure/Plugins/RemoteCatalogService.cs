@@ -96,8 +96,7 @@ public class RemoteCatalogService : IRemoteCatalogService
 
         try
         {
-            // F-033: remote catalog reads are bounded explicitly. Without a cap, a hostile
-            // or misbehaving catalog host could exhaust memory before parsing begins.
+            // Remote catalog reads are bounded explicitly to prevent memory exhaustion.
             const long MaxCatalogBytes = 16 * 1024 * 1024;
             const long MaxSignatureBytes = 256 * 1024;
 
@@ -231,9 +230,8 @@ public class RemoteCatalogService : IRemoteCatalogService
     }
 
     /// <summary>
-    /// F-033: reads a response body up to <paramref name="maxBytes"/>; a larger body
-    /// (absent or lying Content-Length included) aborts the read instead of buffering
-    /// unbounded data.
+    /// Reads a response body up to <paramref name="maxBytes"/>; a larger body
+    /// aborts the read instead of buffering unbounded data.
     /// </summary>
     private static async Task<byte[]> ReadBoundedAsync(HttpContent content, long maxBytes, CancellationToken cancellationToken)
     {

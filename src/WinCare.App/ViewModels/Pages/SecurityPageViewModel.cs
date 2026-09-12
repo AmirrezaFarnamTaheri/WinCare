@@ -5,8 +5,7 @@ public sealed class SecurityPageViewModel : TabbedPageViewModel
     public string ToolSearchQuery => SelectedIndex switch
     {
         0 => "security",
-        // F-009: the catalog exposes protection controls as security-control-* commands;
-        // "defender firewall" matched no tools at all.
+        // Protection controls are cataloged as security-control commands.
         1 => "security-control",
         2 => "privacy",
         _ => "hardening",

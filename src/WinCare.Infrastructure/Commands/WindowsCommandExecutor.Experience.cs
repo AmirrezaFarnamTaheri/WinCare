@@ -345,9 +345,7 @@ internal sealed partial class WindowsCommandExecutor
     }
 
     /// <summary>
-    /// Single source of truth for the cleaner's temporary-file roots (F-005).
-    /// Both the mutation preview and execution must resolve the same deduplicated set,
-    /// so previews never name roots the executor does not visit (or vice versa).
+    /// Temporary-file roots for cleanup preview and execution.
     /// </summary>
     internal static string[] CleanupTempRoots()
     {
@@ -412,7 +410,7 @@ internal sealed partial class WindowsCommandExecutor
         foreach (string root in roots)
         {
             if (!Directory.Exists(root)) continue;
-            // F-021: over-scan by one so a truncated enumeration is detected and disclosed
+            // Over-scan by one so a truncated enumeration is detected and disclosed
             // instead of silently presenting a capped scan as complete.
             foreach (string file in Directory.EnumerateFiles(root, "*", SafeRecursiveEnumeration).Take(200_001))
             {
@@ -429,8 +427,8 @@ internal sealed partial class WindowsCommandExecutor
             if (scanCapped) break;
         }
 
-        // F-021: the outcome message must carry the omissions (skipped entries, truncated
-        // enumeration) so a partial result is never presented as a complete cleanup.
+        // The outcome message discloses omissions (skipped entries, truncated enumeration)
+        // so partial results are accurately reported.
         string message = scanCapped
             ? $"Removed {removed} eligible temporary files; enumeration stopped at the 200,000-file scan cap, so more eligible files may remain. {skipped} entries were skipped."
             : skipped > 0

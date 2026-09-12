@@ -18,9 +18,9 @@ public interface IPluginStateRepository
     void SaveEnabledPluginIds(IEnumerable<string> enabledPluginIds);
 
     /// <summary>
-    /// F-012: describes the failure of the last persistence operation, or is null when the
-    /// last load/save succeeded (a missing file is not an error). Callers must surface this
-    /// instead of treating silent empty results as a healthy persistence success.
+    /// Describes the failure of the last persistence operation, or is null when the
+    /// last load/save succeeded (a missing file is not an error). Callers should surface this
+    /// instead of treating empty results as healthy persistence success.
     /// </summary>
     string? LastError { get; }
 }

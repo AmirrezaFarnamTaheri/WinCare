@@ -86,7 +86,7 @@
   </defs>
 
   <!-- 1. Background Squircle Tile (Fluent continuous curvature) -->
-  <rect x="36" y="36" width="440" height="440" rx="108" ry="108" 
+  <rect x="36" y="36" width="440" height="440" rx="108" ry="108"
         fill="url(#tileBg)" stroke="url(#tileBorder)" stroke-width="2.5"/>
 
   <!-- 2. Ambient Radiance Glow -->

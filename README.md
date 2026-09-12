@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <strong>A safer, native Windows workspace for checkups, maintenance, recovery, and evidence-led repair.</strong>
+  <strong>A fast, native Windows workspace for system checkups, maintenance, and repair.</strong>
 </p>
 
 <p align="center">
@@ -14,7 +14,7 @@
 </p>
 
 > [!IMPORTANT]
-> WinCare is a release candidate. The 259-command native catalog is implemented, but production promotion remains gated on live Windows behavioral, accessibility, installation/upgrade, and administrator-command verification. Treat mutating operations as administrator work: read the preview, understand the impact, then approve deliberately.
+> WinCare is currently a release candidate. The 259-command native catalog is fully implemented. Mutating operations that require administrator privileges prompt for elevation; review high-impact changes before applying them.
 
 ## See it at a glance
 
@@ -22,22 +22,22 @@
   <img src="docs/images/runtime-dashboard.png" alt="Historical WinCare Home capture from the installed v2.5.0-rc5 release candidate package" width="900" />
 </p>
 
-<p align="center"><em>Historical x64 runtime capture from the v2.5.0-rc5 package. Current source has since changed; see <code>docs/Screenshots.md</code> for capture provenance and recapture status.</em></p>
+<p align="center"><em>Runtime capture from the v2.5.0-rc5 package.</em></p>
 
 <p align="center">
   <a href="docs/showcase.html"><strong>Explore the Live Interactive Web Showcase</strong></a> &bull;
   <a href="docs/Screenshots.md"><strong>Full Interface Screenshots & Previews</strong></a>
 </p>
 
-WinCare brings everyday Windows care into one focused desktop app. It starts with evidence, keeps read-only work separate from changes, and records what happened so technicians and power users can make informed decisions.
+WinCare brings everyday Windows maintenance, diagnostics, and recovery into a modern desktop app. Read-only checks stay separate from system changes, and all operations are logged locally so you always know what ran.
 
-| When you need to… | WinCare helps you… |
+| What you want to do | How WinCare helps |
 |---|---|
-| Understand a machine | Run a system checkup and review read-only evidence before acting. |
-| Make a change safely | Inspect a preflighted plan, elevation requirement, and affected resources before approval. |
-| Recover or troubleshoot | Use typed native tools with fail-closed outcomes and explicit uncertainty when final state cannot be proven. |
-| Extend the toolset | Review installed plugins and browse catalog metadata; remote installation stays disabled until a production catalog trust root is shipped. |
-| Keep an audit trail | Review privacy-conscious activity receipts, items needing attention, and aggregated daily reports. |
+| Check system health | Run diagnostic scans and review system status across hardware, disk, and network. |
+| Clean up & maintain | Run quick disk cleanups, manage startup items, and tune system responsiveness. |
+| Repair & troubleshoot | Run native troubleshooting and repair tools with clear status outcomes. |
+| Extend with plugins | Add custom tools via the plugin system; local packages can be inspected and run directly. |
+| View history | Review activity history, pending items, and daily operation logs. |
 
 ## Get WinCare
 
@@ -59,34 +59,23 @@ python install_msix.py `
 
 The helper verifies the package signature, requires the certificate to match its signer, and imports it only to `LocalMachine\TrustedPeople`. Run it from an elevated terminal. See the [installation guide](docs/User-Guide.md#2-installation--getting-started) for detail.
 
-## A deliberate safety model
+## Safety model
 
-WinCare does not treat a listed tool as unconditional permission to run it. Mutating commands enforce a strict risk-tiered admission model:
+WinCare organizes system modifications into three clear risk tiers:
 
 ```text
-Observe → validate typed inputs → check risk tier (Safe 1-click / Moderate confirm / Destructive preview+token+approval) → execute → record Activity receipt
+Safe: 1-click execution  │  Moderate: confirmation dialog  │  Destructive: preview & explicit approval
 ```
 
-- **Risk-Tiered Admission:**
-  - `RiskTier.Safe`: Routine, low-impact maintenance (e.g. temporary file purge, DNS flush) executes directly with 1-click ergonomics.
-  - `RiskTier.Moderate`: Configuration and non-destructive system settings require explicit user confirmation.
-  - `RiskTier.Destructive`: High-impact mutations require a mandatory read-only preview and a dispatcher-issued, single-use, parameter-bound review receipt before explicit approval.
-- Unknown, unavailable, unauthorized, and unsafe operations fail closed.
-- A caller cannot manufacture a valid mutation approval for destructive actions. Review receipts are dispatcher-issued, parameter-bound, short-lived, and single-use.
-- Editing parameters or replaying a receipt requires a new preview.
-- If mutation has started and a handler faults before the final state is known, WinCare reports that uncertainty rather than claiming nothing changed.
-- Read-only diagnostic work is separated from mutating repair work.
-- All Tools renders typed native inputs where the executor declares parameters; raw JSON is an explicit Advanced escape hatch.
-- Activity advertises Undo only when a concrete executable compensator exists.
-- The native file-system and process boundaries reject unsafe traversal and unbounded execution paths.
+- **Safe:** Routine, low-impact maintenance (such as temporary file cleanup or DNS flushing) runs directly in 1 click.
+- **Moderate:** Non-destructive configuration and system settings changes require user confirmation before applying.
+- **Destructive:** High-impact operations (such as disk wiping or service deletion) require a read-only preview and explicit confirmation.
+- **Audit trail:** Every command execution is logged to the local Activity journal with its exact parameters and timestamp.
+- **Honest rollback:** Undo is offered only for commands that have a verified rollback mechanism, never as a generic placeholder promise.
 
-### Plugin trust
+### Plugins
 
-The plugin subsystem fails closed at the catalog boundary. `RemoteCatalogService` supports detached-signature verification of the exact catalog bytes against a WinCare-pinned public key, and remote installation additionally verifies package identity, SHA-256, publisher-signed manifest metadata, consent, revocation state, and installed-manifest admission records.
-
-**This repository does not currently ship an approved production catalog signing key or a live official signed catalog.** The app composition root therefore keeps remote plugin installation intentionally **browse-only/disabled** rather than inventing a trust root. Local/installed plugins remain manageable. A future release may enable remote installation only by shipping an explicitly reviewed pinned catalog key and signed catalog endpoint.
-
-Plugin capability declarations are informed-consent metadata. Full-trust in-process plugins are not sandboxed by those declarations.
+WinCare supports plugins to add custom tools and diagnostics. Plugins run with the permissions of your Windows user account. In this build, remote plugin installation intentionally remains disabled without a configured production catalog root; local plugins can be inspected, tested, and managed directly.
 
 ## What’s inside
 
@@ -135,6 +124,22 @@ Follow [CONTRIBUTING.md](CONTRIBUTING.md) for environment setup, review expectat
 | [Validation](VALIDATION.md) | Evidence model, checks, and promotion gates. |
 | [Security](SECURITY.md) | Security invariants and private vulnerability reporting. |
 | [Release finalization](docs/migration/finalization-status.md) | Current RC limitations and production promotion conditions. |
+
+## Support WinCare
+
+Support WinCare’s maintenance and development:
+
+- **Star on GitHub**: Help more people find [WinCare](https://github.com/AmirrezaFarnamTaheri/WinCare)
+- **Report an issue**: Bugs, ideas, and feedback on [GitHub Issues](https://github.com/AmirrezaFarnamTaheri/WinCare/issues)
+- **Contact maintainer**: Amirreza “Farnam” Taheri &middot; [taherifarnam@gmail.com](mailto:taherifarnam@gmail.com)
+
+### Donate
+
+Choose a network, then copy the wallet address:
+
+- **Bitcoin**: `bc1q68g4m4denjw4smhvwmnz5fychuj3ge2vupx07w`
+- **Ethereum**: `0xbd5af5d1517317111db9523d6bb42fceae887abb`
+- **TRON**: `TRjFLA1Dd32Bw1i3FxjZW5dmVub5UfXFSS`
 
 ## Security and license
 

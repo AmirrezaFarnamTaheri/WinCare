@@ -47,8 +47,7 @@ public sealed class CommandCatalogTests
     [Theory]
     [InlineData("system", RiskTier.Safe)]
     [InlineData("note-save", RiskTier.Safe)]
-    // F-004: cleaner commands keep their declared Moderate tier; the identifier-based
-    // Safe downgrade that bypassed mutation review was removed.
+    // Cleaner commands declare Moderate tier.
     [InlineData("cleaner-disk-pressure", RiskTier.Moderate)]
     [InlineData("cleaner-winapp2-run", RiskTier.Moderate)]
     [InlineData("pagefile-set", RiskTier.Moderate)]

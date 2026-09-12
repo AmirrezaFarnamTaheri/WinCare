@@ -25,7 +25,7 @@ public sealed class PluginStorePageViewModel : INotifyPropertyChanged, IDisposab
     private string _selectedCategory = "All";
     private bool _isLoading;
     private string? _errorMessage;
-    private string _catalogStatusMessage = "Catalog trust has not been evaluated yet.";
+    private string _catalogStatusMessage = "Catalog status has not been evaluated yet.";
     private bool _isCatalogTrustVerified;
     private CancellationTokenSource? _searchCts;
     private long _refreshVersion;
@@ -210,7 +210,7 @@ public sealed class PluginStorePageViewModel : INotifyPropertyChanged, IDisposab
         string selectedCategory = _selectedCategory;
         string searchQuery = _searchQuery;
         IsLoading = true;
-        string statusMessage = "Showing locally installed plugins. Remote catalog trust does not affect this view.";
+        string statusMessage = "Showing locally installed plugins.";
         bool trustVerified = false;
         string? catalogError = null;
         try
@@ -243,10 +243,10 @@ public sealed class PluginStorePageViewModel : INotifyPropertyChanged, IDisposab
                 {
                     catalog = new RemotePluginCatalog
                     {
-                        TrustStatusMessage = "The online plugin catalog is currently unavailable. Installed plugins are still shown. Remote installation is unavailable."
+                        TrustStatusMessage = "The online plugin catalog is currently unavailable. Installed plugins are still shown."
                     };
                     statusMessage = catalog.TrustStatusMessage;
-                    catalogError = "The online plugin catalog could not be loaded. Check your connection and retry, or choose Installed to work offline.";
+                    catalogError = "The online plugin catalog could not be loaded. Check your connection and retry, or choose Installed.";
                     System.Diagnostics.Debug.WriteLine($"[PluginStorePageViewModel] Catalog refresh error: {ex}");
                 }
 

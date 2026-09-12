@@ -25,8 +25,7 @@ public sealed class HomePageViewModelTests
     [Fact]
     public async Task Curated_quick_clean_previews_then_applies_with_receipt()
     {
-        // F-004: quick clean follows the single mutation admission contract — the first click
-        // previews resolved targets and issues the receipt, the confirming click applies.
+        // Quick clean workflow: first click previews and issues review plan, confirming click applies.
         var cleanDef = new WinCare.CommandCatalog.Models.CommandDefinition(
             "cleaner-disk-pressure", "Disk Cleanup", "Clean temp files", "System care", "Clean up",
             WinCare.CommandCatalog.Models.CommandRisk.Moderate, false,
@@ -82,7 +81,7 @@ public sealed class HomePageViewModelTests
         var vm = new HomePageViewModel(dispatcher);
 
         await vm.StartupBoostCommand.ExecuteAsync(null);
-        // F-016: inspection outcomes are named for what they are, not overstated as effects.
+        // Inspection outcomes report inspection status directly.
         Assert.Equal("Startup inspection complete", vm.StartupStatusText);
         Assert.Equal("12 startup items", vm.StartupDetailText);
         Assert.Equal(1, startupHandler.CallCount);

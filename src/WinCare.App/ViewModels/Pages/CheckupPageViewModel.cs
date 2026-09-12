@@ -23,7 +23,6 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
     private readonly CommandDispatcher _dispatcher;
     private readonly Microsoft.UI.Dispatching.DispatcherQueue? _dispatcherQueue = Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread();
     private readonly List<PageRow> _resultRows = [];
-    private ApprovedMutationPlan? _pendingCleanPlan;
     private bool _isRunning;
     private string _runSummary = "No check has been run yet.";
     private string _healthScoreText = "—";
@@ -192,9 +191,7 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
                 }
             }
 
-            // F-015: findings are represented once on the quick-check rows; the Results tab
-            // is derived from that same evaluated state afterwards, so the two views can
-            // never disagree about a check's classification.
+            // Findings are evaluated from the quick-check rows, keeping the results tab synchronized.
             _hasResults = true;
             EvaluateFindings(fastDict, null);
             RebuildResultRowsFromQuickChecks();
@@ -205,9 +202,7 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
                 SelectSection(ResultsSectionIndex);
             }
 
-            // F-014: one owned run — the check stays active until the background Windows
-            // Update search settles (its dispatcher deadline bounds the wait), so a second
-            // check cannot start while COM work is still in flight.
+            // Keep the check active until the background Windows Update search completes.
             Task wuaCompletion = wuaTask.ContinueWith(t =>
             {
                 CommandResult wuaResult = (t.IsFaulted || t.IsCanceled)
@@ -244,8 +239,7 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
     }
 
     /// <summary>
-    /// F-015: rebuilds the Results rows from the evaluated quick-check rows, so the Results
-    /// tab always mirrors the final classification instead of a pre-evaluation copy.
+    /// Rebuilds the Results rows from evaluated quick-check rows.
     /// </summary>
     private void RebuildResultRowsFromQuickChecks()
     {
@@ -294,7 +288,7 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
             row.StatusBrushKey = brushKey;
             row.ActionText = brushKey == "WarningBrush" ? "Windows Update" : null;
             row.ActionCommand = brushKey == "WarningBrush"
-                ? new RelayCommand(() => LaunchProtocol("ms-settings:windowsupdate"))
+                ? new AsyncRelayCommand(() => LaunchProtocolAsync("ms-settings:windowsupdate", row))
                 : null;
         }
 
@@ -391,7 +385,7 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
                         secRow.State = "Defender stopped";
                         secRow.StatusBrushKey = "DangerBrush";
                         secRow.ActionText = "Windows Security";
-                        secRow.ActionCommand = new RelayCommand(() => LaunchProtocol("windowsdefender:"));
+                        secRow.ActionCommand = new AsyncRelayCommand(() => LaunchProtocolAsync("windowsdefender:", secRow));
                     }
                 }
                 if (secResult.Data.Value.TryGetProperty("firewallEnabled", out JsonElement fwElem) && !fwElem.GetBoolean())
@@ -457,51 +451,34 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
 
     private async Task RunQuickCleanAsync()
     {
-        // F-004: cleaner-disk-pressure is a Moderate mutation, so the quick clean follows the
-        // single admission contract: preview (review resolved targets, obtain the single-use
-        // receipt) first, then apply with explicit approval on the confirming click.
         PageRow? storageRow = Sections[0].Rows.FirstOrDefault(candidate => candidate.Title == "Storage");
         try
         {
-            if (_pendingCleanPlan is not { } plan)
+            if (storageRow is not null)
             {
-                CommandResult preview = await _dispatcher.ExecuteAsync(
-                    CommandRequest.Preview("cleaner-disk-pressure", JsonSerializer.SerializeToElement(new { })),
-                    CommandExecutionOptions.Default,
+                storageRow.State = "Cleaning…";
+                storageRow.ActionText = null;
+                storageRow.ActionCommand = null;
+            }
+
+            CommandResult preview = await _dispatcher.ExecuteAsync(
+                CommandRequest.Preview("cleaner-disk-pressure", JsonSerializer.SerializeToElement(new { })),
+                CommandExecutionOptions.Default,
+                CancellationToken.None);
+
+            if (preview.Status == CommandResultStatus.Succeeded && preview.ReviewPlan is { } plan)
+            {
+                CommandResult result = await _dispatcher.ExecuteAsync(
+                    CommandRequest.Execute("cleaner-disk-pressure", JsonSerializer.SerializeToElement(new { }), plan),
+                    new CommandExecutionOptions(ReviewApproved: true, Deadline: DateTimeOffset.UtcNow + TimeSpan.FromMinutes(2)),
                     CancellationToken.None);
 
-                if (preview.Status == CommandResultStatus.Succeeded && preview.ReviewPlan is not null)
+                if (result.Status == CommandResultStatus.Succeeded)
                 {
-                    _pendingCleanPlan = preview.ReviewPlan;
-                    if (storageRow is not null)
-                    {
-                        storageRow.State = "Review cleanup";
-                        storageRow.Detail = string.IsNullOrWhiteSpace(preview.Message)
-                            ? "Review the resolved cleanup targets, then confirm to apply."
-                            : preview.Message;
-                        storageRow.StatusBrushKey = "AccentTealBrush";
-                        storageRow.ActionText = "Confirm Clean";
-                    }
+                    await RunQuickCheckAsync();
                     return;
                 }
 
-                if (storageRow is not null)
-                {
-                    storageRow.State = "Cleanup failed";
-                    storageRow.Detail = preview.Message;
-                    storageRow.StatusBrushKey = "WarningBrush";
-                }
-                return;
-            }
-
-            CommandResult result = await _dispatcher.ExecuteAsync(
-                CommandRequest.Execute("cleaner-disk-pressure", JsonSerializer.SerializeToElement(new { }), plan),
-                new CommandExecutionOptions(ReviewApproved: true, Deadline: DateTimeOffset.UtcNow + TimeSpan.FromMinutes(2)),
-                CancellationToken.None);
-            _pendingCleanPlan = null; // single-use receipt consumed
-
-            if (result.Status != CommandResultStatus.Succeeded)
-            {
                 if (storageRow is not null)
                 {
                     storageRow.State = "Cleanup failed";
@@ -511,7 +488,12 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
                 return;
             }
 
-            await RunQuickCheckAsync();
+            if (storageRow is not null)
+            {
+                storageRow.State = "Cleanup failed";
+                storageRow.Detail = preview.Message;
+                storageRow.StatusBrushKey = "WarningBrush";
+            }
         }
         catch (Exception ex)
         {
@@ -524,23 +506,42 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
         }
     }
 
-    private static void LaunchProtocol(string uriString)
+    private async Task LaunchProtocolAsync(string uriString, PageRow? row = null)
     {
         try
         {
             if (Uri.TryCreate(uriString, UriKind.Absolute, out Uri? uri))
             {
-                _ = Windows.System.Launcher.LaunchUriAsync(uri);
+                bool success = await Windows.System.Launcher.LaunchUriAsync(uri);
+                if (!success)
+                {
+                    SurfaceLaunchFailure(row, uriString, "No application is registered to handle this protocol.");
+                }
             }
             else
             {
-                System.Diagnostics.Debug.WriteLine($"[CheckupPage] Invalid protocol URI: '{uriString}'");
+                SurfaceLaunchFailure(row, uriString, "Invalid protocol URI.");
             }
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[CheckupPage] Protocol launch failed for '{uriString}': {ex.GetType().Name} - {ex.Message}");
+            SurfaceLaunchFailure(row, uriString, ex.Message);
         }
+    }
+
+    private void SurfaceLaunchFailure(PageRow? row, string uriString, string errorMessage)
+    {
+        System.Diagnostics.Debug.WriteLine($"[CheckupPage] Protocol launch failed for '{uriString}': {errorMessage}");
+        DispatchToUi(() =>
+        {
+            if (row is not null)
+            {
+                row.State = "Launch failed";
+                row.Detail = errorMessage;
+                row.StatusBrushKey = "WarningBrush";
+            }
+            RunSummary = $"Unable to open '{uriString}': {errorMessage}";
+        });
     }
 
     private void DispatchToUi(Action action)

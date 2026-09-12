@@ -6,10 +6,7 @@ using Xunit;
 namespace WinCare.Application.Tests;
 
 /// <summary>
-/// Regression tests for F-009: five built-in category shortcuts searched for whole phrases
-/// ("storage cleanup", "network update", "defender firewall", "export backup", "recovery reset")
-/// that matched zero tools. Multi-word queries now match per token, and every built-in
-/// shortcut must resolve to a nonempty command set.
+/// Regression tests for built-in category shortcuts resolving to nonempty command sets.
 /// </summary>
 public sealed class CategoryShortcutTests
 {

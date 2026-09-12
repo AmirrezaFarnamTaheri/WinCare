@@ -284,10 +284,7 @@ const MAX_DIR_ENTRIES: usize = 500_000;
 
 fn accumulate_dir_size(path: &Path) -> io::Result<(u64, bool)> {
     let mut total = 0_u64;
-    // F-040: the entry budget bounds queued plus processed work. Child paths are admitted
-    // only while total admitted work stays within the cap, so pending work can never grow
-    // past the limit regardless of directory fan-out; truncation stays observable through
-    // the returned  flag.
+    // Entry budget bounds queued plus processed work to prevent unbounded memory growth.
     let mut admitted = 0_usize;
     let mut pending = vec![path.to_path_buf()];
     let mut complete = true;

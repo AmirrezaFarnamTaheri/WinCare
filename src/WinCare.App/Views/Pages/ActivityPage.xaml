@@ -16,7 +16,7 @@
 
         <StackPanel Spacing="8">
             <TextBlock x:Uid="ActivityPageTitle" Style="{StaticResource PageTitleTextStyle}" Text="Activity" />
-            <TextBlock MaxWidth="760" HorizontalAlignment="Left" Style="{StaticResource PageDescriptionTextStyle}" Text="Track running work, decisions that need attention, completed changes, and daily operation reports. Activity keeps only the most recent 200 records; older history is trimmed." />
+            <TextBlock MaxWidth="760" HorizontalAlignment="Left" Style="{StaticResource PageDescriptionTextStyle}" Text="View running tasks, pending confirmations, completed actions, and daily reports." />
         </StackPanel>
 
         <StackPanel Grid.Row="1" Spacing="8">

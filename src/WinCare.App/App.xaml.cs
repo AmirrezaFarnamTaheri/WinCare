@@ -14,8 +14,7 @@ public partial class App : Microsoft.UI.Xaml.Application
     private MainWindow? _window;
 
     /// <summary>
-    /// F-003: the smoke test must exercise every navigation route — the exact journeys that
-    /// crashed the installed artifact — not only startup and backend availability.
+    /// Exercises every navigation route during packaged smoke testing.
     /// </summary>
     private static readonly string[] SmokeNavigationKeys =
     [
@@ -67,9 +66,7 @@ public partial class App : Microsoft.UI.Xaml.Application
     }
 
     /// <summary>
-    /// F-003 diagnostics: the smoke test appends each stage to a trace file. Stowed XAML
-    /// exceptions bypass the managed handler, so the last trace line identifies the
-    /// failing stage when the process is terminated by a WinRT fail-fast.
+    /// Appends each smoke test stage to a diagnostic trace log.
     /// </summary>
     private static void TraceSmoke(string stage)
     {
@@ -118,9 +115,7 @@ public partial class App : Microsoft.UI.Xaml.Application
                     $"Packaged system preview failed with {result.Status} ({result.Code}).");
             }
 
-            // F-003: visit every real navigation destination in the shipped artifact. Page
-            // construction and XAML binding initialization run here, so missing converters
-            // or collection projection failures crash the smoke run and fail the gate.
+            // Exercise each navigation destination to verify UI controls and bindings.
             MainWindow window = ((App)Current)._window
                 ?? throw new InvalidOperationException("Smoke test could not access the main window.");
             foreach (string key in SmokeNavigationKeys)

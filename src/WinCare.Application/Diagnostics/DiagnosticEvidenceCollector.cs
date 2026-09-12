@@ -60,9 +60,8 @@ namespace WinCare.Application.Diagnostics
 
         private static List<TelemetryEvidence> ProbeNetworkAdapters()
         {
-            // F-006: never fabricate a healthy network observation. Measure what is actually
-            // observable at this layer (adapter presence and operational status); when nothing
-            // can be measured, report the evidence as unavailable instead of measured.
+            // Measure observable adapter presence and status; when unmeasurable,
+            // report evidence as unavailable instead of fabricated.
             try
             {
                 var interfaces = System.Net.NetworkInformation.NetworkInterface.GetAllNetworkInterfaces();
@@ -173,9 +172,8 @@ namespace WinCare.Application.Diagnostics
                     ? (double)gcInfo.MemoryLoadBytes / totalBytes * 100.0
                     : 0.0;
 
-                // F-019: GC bookkeeping describes the WinCare process, not machine-wide
-                // memory pressure; when the runtime reports no usable figures the evidence
-                // is marked unavailable instead of measured.
+                // GC bookkeeping describes the WinCare process, not machine-wide
+                // memory pressure; when the runtime reports no usable figures, mark unavailable.
                 if (totalBytes <= 0)
                 {
                     results.Add(new TelemetryEvidence(

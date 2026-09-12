@@ -135,9 +135,8 @@ internal sealed partial class WindowsCommandExecutor : ICommandOperationExecutor
                 return CommandHandlerOutcome.Blocked("command.access_denied", ex.Message);
             }
 
-            // F-010: an access failure during a mutating command can follow partially
-            // applied steps; report explicit state-unknown with reconciliation guidance
-            // instead of an admission-style block that implies nothing happened.
+            // An access failure during a mutating command may follow partially applied steps;
+            // report explicit failure so the user knows to verify affected resources.
             return CommandHandlerOutcome.Failed(
                 "command.failed_state_unknown",
                 $"{definition.Title} lost access while mutating the host: {ex.Message} " +
@@ -160,9 +159,7 @@ internal sealed partial class WindowsCommandExecutor : ICommandOperationExecutor
                     $"{definition.Title} failed without changing host state: {ex.Message}");
             }
 
-            // F-010: never claim "failed safely" for a mutating command — multi-step
-            // handlers may have applied earlier steps before the fault. Return an explicit
-            // state-unknown outcome with reconciliation guidance instead.
+            // Report partial mutation state if a multi-step operation faults mid-way.
             return CommandHandlerOutcome.Failed(
                 "command.failed_state_unknown",
                 $"{definition.Title} failed while mutating the host: {ex.Message} " +
@@ -456,8 +453,7 @@ internal sealed partial class WindowsCommandExecutor : ICommandOperationExecutor
             "appx-launch" => AppxLaunch(p),
             "terminal-export" => await TerminalExportAsync(p, cancellationToken).ConfigureAwait(false),
             "cleaner-disk-pressure" => CleanerDiskPressure(p, cancellationToken),
-            // F-026: no scheduler consumer exists in this build, so the saved configuration
-            // must state that it is non-executing instead of implying a live automation.
+            // Scheduler consumer is not yet active in this build; saved as configuration only.
             "cleaner-disk-pressure-schedule" => await SaveNonExecutingScheduleAsync(p, cancellationToken).ConfigureAwait(false),
             "cleaner-winapp2-run" => CleanerWinapp2Run(p, cancellationToken),
             "cleaner-relocation" => await CleanerRelocationAsync(p, cancellationToken).ConfigureAwait(false),
@@ -738,7 +734,7 @@ internal sealed partial class WindowsCommandExecutor : ICommandOperationExecutor
             "experience-power-apply" => new[] { new { resourceType = "PowerScheme", path = @"PowerCfg", target = "ActiveScheme", proposedValue = p.String("ProfileId", "balanced"), reversible = true } },
             "security-control-reduce" => new[] { new { resourceType = "SecurityControl", path = p.String("Control", "DefenderRealtime"), target = "State", proposedValue = "Disabled", durationMinutes = p.Int32("DurationMinutes", 15, 5, 1440), reversible = true } },
             "security-control-restore" => new[] { new { resourceType = "SecurityControl", path = p.String("RecordId", "all"), target = "State", proposedValue = "Restored", reversible = true } },
-            // F-005: cleanup previews are derived from the same immutable root plan execution visits.
+            // Cleanup previews are derived from the same root plan as execution.
             "cleaner-disk-pressure" => CleanupAffectedResources(p.Int32("OlderThanDays", 7, 0, 3650)),
             "deep-clean" => DeepCleanAffectedResources(p),
             "preset" => PresetAffectedResources(p.RequiredString("PresetId")),

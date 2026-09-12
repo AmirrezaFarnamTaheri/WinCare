@@ -128,9 +128,7 @@ public sealed record ApprovedMutationPlan(
     }
 
     /// <summary>
-    /// Serializes a string as a JSON string literal without reflection-based serialization
-    /// (F-037): JsonNode.ToJsonString emits the same escaped literal the reflection
-    /// serializer produced, keeping existing parameter digests valid.
+    /// Serializes a string as a JSON string literal without reflection-based serialization.
     /// </summary>
     private static string SerializeJsonString(string? value) =>
         System.Text.Json.Nodes.JsonValue.Create(value)?.ToJsonString() ?? "null";

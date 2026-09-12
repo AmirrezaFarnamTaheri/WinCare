@@ -23,8 +23,7 @@ public sealed partial class MainWindow : Window
     // "AppWindow provides native screen coordinates and presenter state without requiring manual Win32 P/Invoke window placement."
 
     /// <summary>
-    /// Public access to the shell for the packaged smoke test, which drives every real
-    /// navigation route before promotion (F-003).
+    /// Shell access for testing navigation routes.
     /// </summary>
     public Views.ShellPage ShellPage => Shell;
     private readonly Windows.UI.ViewManagement.AccessibilitySettings _accessibilitySettings = new();
@@ -124,9 +123,8 @@ public sealed partial class MainWindow : Window
             System.Diagnostics.Debug.WriteLine($"[MainWindow] Preference flush on close failed: {ex}");
         }
 
-        // F-013: settle the runtime before the process dies — flush the activity journal
-        // and dispose owned services with a bounded budget so recorded outcomes survive
-        // restart and no owned tasks linger.
+        // Settle the runtime before process exit — flush the activity journal
+        // and dispose owned services with a bounded budget so recorded outcomes survive.
         try
         {
             Services.AppRuntime.Current.ShutdownAsync(TimeSpan.FromSeconds(3)).GetAwaiter().GetResult();

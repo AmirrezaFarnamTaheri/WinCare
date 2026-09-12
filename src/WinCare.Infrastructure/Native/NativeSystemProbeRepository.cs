@@ -38,7 +38,7 @@ public sealed class NativeSystemProbeRepository : INativeSystemProbeRepository
                 throw new InvalidOperationException($"wincare_sys_snapshot_all failed with status code {status}.");
             }
 
-            // F-018: per-metric validity is carried through instead of collapsing
+            // Per-metric validity is carried through instead of collapsing
             // unknown into zero-valued metrics.
             var snapshot = new SystemSnapshot(
                 raw.CpuUsagePct,

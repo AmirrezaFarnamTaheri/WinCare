@@ -20,8 +20,8 @@
             </Grid.RowDefinitions>
 
             <StackPanel Spacing="6">
-                <TextBlock x:Uid="CheckupPageTitle" Style="{StaticResource PageTitleTextStyle}" Text="Check the evidence" />
-                <TextBlock Style="{StaticResource PageDescriptionTextStyle}" Text="Inspect first. Review the evidence before choosing any action." TextWrapping="Wrap" />
+                <TextBlock x:Uid="CheckupPageTitle" Style="{StaticResource PageTitleTextStyle}" Text="Checkup" />
+                <TextBlock Style="{StaticResource PageDescriptionTextStyle}" Text="Inspect system health and review recommended maintenance." TextWrapping="Wrap" />
             </StackPanel>
 
             <Border Grid.Row="1" Style="{StaticResource DashboardCardStyle}" Background="{ThemeResource HeroBackgroundBrush}">

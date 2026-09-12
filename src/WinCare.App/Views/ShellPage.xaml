@@ -18,7 +18,7 @@
         AutomationProperties.AutomationId="PrimaryNavigation"
         AutomationProperties.Name="Primary navigation">
         <NavigationView.MenuItems>
-            <NavigationViewItemHeader Content="OVERVIEW" />
+            <NavigationViewItemHeader Content="Overview" />
             <NavigationViewItem x:Uid="NavHome" Content="Home" Tag="home" AutomationProperties.AutomationId="NavHome" AutomationProperties.Name="{Binding Content, RelativeSource={RelativeSource Self}}">
                 <NavigationViewItem.Icon><FontIcon Glyph="&#xE80F;" /></NavigationViewItem.Icon>
             </NavigationViewItem>
@@ -28,7 +28,7 @@
             <NavigationViewItem x:Uid="NavAllTools" Content="All tools" Tag="all-tools" AutomationProperties.AutomationId="NavAllTools" AutomationProperties.Name="{Binding Content, RelativeSource={RelativeSource Self}}">
                 <NavigationViewItem.Icon><FontIcon Glyph="&#xE71D;" /></NavigationViewItem.Icon>
             </NavigationViewItem>
-            <NavigationViewItemHeader Content="CARE AREAS" />
+            <NavigationViewItemHeader Content="Care areas" />
             <NavigationViewItem x:Uid="NavSystemCare" Content="System care" Tag="system-care" AutomationProperties.AutomationId="NavSystemCare" AutomationProperties.Name="{Binding Content, RelativeSource={RelativeSource Self}}">
                 <NavigationViewItem.Icon><FontIcon Glyph="&#xE90F;" /></NavigationViewItem.Icon>
             </NavigationViewItem>
@@ -39,7 +39,7 @@
                 <NavigationViewItem.Icon><FontIcon Glyph="&#xE777;" /></NavigationViewItem.Icon>
             </NavigationViewItem>
 
-            <NavigationViewItemHeader Content="WORKSPACE" />
+            <NavigationViewItemHeader Content="Workspace" />
             <NavigationViewItem x:Uid="NavActivity" Content="Activity" Tag="activity" AutomationProperties.AutomationId="NavActivity" AutomationProperties.Name="{Binding Content, RelativeSource={RelativeSource Self}}">
                 <NavigationViewItem.Icon><FontIcon Glyph="&#xE81C;" /></NavigationViewItem.Icon>
             </NavigationViewItem>

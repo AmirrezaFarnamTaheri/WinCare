@@ -63,18 +63,18 @@ public sealed class PluginCardViewModel
 
     public string StatusBadgeText => IsInstalled switch
     {
-        true when IsBuiltIn => "BUILT-IN",
-        true when InstalledState == PluginState.Enabled => "ENABLED",
-        true when InstalledState == PluginState.Disabled => "DISABLED",
-        true when InstalledState == PluginState.Error => "ERROR",
-        _ => "ONLINE CATALOG"
+        true when IsBuiltIn => "Built-in",
+        true when InstalledState == PluginState.Enabled => "Enabled",
+        true when InstalledState == PluginState.Disabled => "Disabled",
+        true when InstalledState == PluginState.Error => "Error",
+        _ => "Available online"
     };
 
     public string PublisherTrustBadgeText => IsRevoked
-        ? $"REVOKED: {RemoteItem?.RevocationReason ?? "Security Advisory"}"
-        : IsVerifiedPublisher ? "TRUSTED CATALOG / SIGNED PACKAGE"
-        : HasPublisherSignature ? "SIGNED PACKAGE / CATALOG UNVERIFIED"
-        : "UNVERIFIED";
+        ? $"Revoked: {RemoteItem?.RevocationReason ?? "Security advisory"}"
+        : IsVerifiedPublisher ? "Verified package"
+        : HasPublisherSignature ? "Signed package"
+        : "Community";
 
     public bool HasPublisherSignature =>
         !string.IsNullOrWhiteSpace(RemoteItem?.PublicKeyPem) &&
@@ -101,8 +101,8 @@ public sealed class PluginCardViewModel
         : IsInstalled ? "This plugin is already installed."
         : string.IsNullOrWhiteSpace(PackageUrl) ? "This package has no download location."
         : string.IsNullOrWhiteSpace(Sha256) ? "This package has no integrity digest."
-        : RemoteItem?.IsCatalogTrustVerified != true ? "Remote installation is disabled because the catalog signature is not anchored to a WinCare-pinned trust root."
-        : !HasPublisherSignature ? "The trusted catalog entry has no publisher manifest signature."
+        : RemoteItem?.IsCatalogTrustVerified != true ? "Remote installation is disabled because the catalog signature is unverified."
+        : !HasPublisherSignature ? "The package entry has no publisher manifest signature."
         : "Ready to install.";
     public bool CanEnable => IsInstalled && !IsBuiltIn && InstalledState == PluginState.Disabled && !IsRevoked;
     public bool CanDisable => IsInstalled && !IsBuiltIn && InstalledState == PluginState.Enabled;

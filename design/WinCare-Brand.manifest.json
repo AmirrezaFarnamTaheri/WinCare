@@ -12,13 +12,13 @@
     },
     {
       "path": "design/WinCare-Logo.svg",
-      "sha256": "5542b518aebba73959733314c3371b785907ec6472b06bcec48c9cd8af2bd036",
-      "bytes": 7681
+      "sha256": "8770b99ff37e6561803826936e15da75363e8b4e89cb6cbb37b12c888c3f6e12",
+      "bytes": 7680
     },
     {
       "path": "design/WinCare-Wordmark.svg",
-      "sha256": "86b7a92c32074193c9bf65547aa62866171516ce7ac4f4dbcb869cdee70aae13",
-      "bytes": 7160
+      "sha256": "7ee8aa8a9656a01e5689f222fff1425784409b28b72c15d4056fc72d18f1d9ea",
+      "bytes": 7159
     },
     {
       "path": "design/WinCare.ico",

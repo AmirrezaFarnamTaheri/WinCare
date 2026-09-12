@@ -169,9 +169,7 @@ public sealed class HomePageViewModel : ObservableObject
     {
         if (IsCleaning) return;
 
-        // F-004: cleaner-disk-pressure is a Moderate mutation, so Home's quick clean follows
-        // the single admission contract: preview first (review resolved targets, obtain the
-        // single-use receipt), then apply with explicit approval.
+        // Quick clean collects cleanup targets for review, then confirms with the user before applying.
         CommandDispatcher dispatcher = GetDispatcher();
         IsCleaning = true;
         try
@@ -244,8 +242,7 @@ public sealed class HomePageViewModel : ObservableObject
                 CommandExecutionOptions.Default,
                 cancellationToken);
 
-            // F-016: show the inspected entries instead of discarding them, and name the
-            // action for what it does (an inspection, not a performance change).
+            // Display inspected startup entries without changing system state.
             if (result.Status == CommandResultStatus.Succeeded && result.Data?.ValueKind == JsonValueKind.Array)
             {
                 var entries = result.Data.Value.EnumerateArray().ToList();
@@ -292,8 +289,7 @@ public sealed class HomePageViewModel : ObservableObject
                 CommandExecutionOptions.Default,
                 cancellationToken);
 
-            // F-016: report actual interface evidence instead of a "Connected" verdict the
-            // payload cannot establish, and show the inspected adapter states.
+            // Display observed adapter states.
             if (result.Status == CommandResultStatus.Succeeded && result.Data?.ValueKind == JsonValueKind.Array)
             {
                 var adapters = result.Data.Value.EnumerateArray().ToList();
@@ -431,9 +427,7 @@ public sealed class HomePageViewModel : ObservableObject
     public void SetCompactLayout(bool isCompact) => IsCompactLayout = isCompact;
 
     /// <summary>
-    /// F-017: activity history is not a measurement-session store. Evidence older than this
-    /// window is labelled stale instead of presented as current, and a failed latest record
-    /// can never stand in for a completed check.
+    /// Activity history older than this window is treated as stale.
     /// </summary>
     private static readonly TimeSpan EvidenceFreshnessWindow = TimeSpan.FromMinutes(30);
 

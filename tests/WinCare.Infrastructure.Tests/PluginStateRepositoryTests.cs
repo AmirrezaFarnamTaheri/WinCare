@@ -39,10 +39,7 @@ public class PluginStateRepositoryTests
 }
 
 /// <summary>
-/// Regression tests for F-012: persistence failures were swallowed silently and load
-/// errors were indistinguishable from a missing file. The repository must now distinguish
-/// missing from damaged data, publish failures via LastError, and retain the last known
-/// good state file when a save fails.
+/// Regression tests for plugin state persistence failures and error reporting.
 /// </summary>
 public sealed class PluginStateRepositoryFailureTests
 {

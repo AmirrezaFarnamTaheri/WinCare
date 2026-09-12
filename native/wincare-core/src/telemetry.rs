@@ -13,15 +13,14 @@ pub struct NativeSysSnapshot {
     pub disk_free_bytes: u64,
     pub disk_total_bytes: u64,
     pub net_active: u8,
-    /// F-018: per-metric validity bitmask (bit0 CPU, bit1 RAM, bit2 disk, bit3 network).
-    /// Callers must not display a metric whose validity bit is clear: zero is unknown, not
-    /// a measurement.
+    /// Per-metric validity bitmask (bit0 CPU, bit1 RAM, bit2 disk, bit3 network).
+    /// Callers should not display a metric whose validity bit is clear.
     pub valid_mask: u32,
-    /// F-018: ASCII drive letter of the probed volume (e.g. b'C'), 0 when unknown.
+    /// ASCII drive letter of the probed volume (e.g. b'C'), 0 when unknown.
     pub disk_volume: u32,
 }
 
-/// F-018: validity bits for the valid_mask field.
+/// Validity bits for the valid_mask field.
 pub const SYS_VALID_CPU: u32 = 1 << 0;
 pub const SYS_VALID_RAM: u32 = 1 << 1;
 pub const SYS_VALID_DISK: u32 = 1 << 2;
@@ -111,8 +110,7 @@ pub unsafe fn query_sys_snapshot(out: *mut NativeSysSnapshot) -> i32 {
     {
         use win32_telemetry::*;
 
-        // 1. Memory
-        // F-018: per-metric validity; a failed API call leaves the metric unknown.
+        // 1. Memory: a failed API call leaves the metric unknown.
         let mut valid_mask: u32 = 0;
         let mut ms = unsafe { std::mem::zeroed::<MEMORYSTATUSEX>() };
         ms.dwLength = std::mem::size_of::<MEMORYSTATUSEX>() as u32;
@@ -226,7 +224,7 @@ pub unsafe fn query_sys_snapshot(out: *mut NativeSysSnapshot) -> i32 {
     #[cfg(not(target_os = "windows"))]
     {
         unsafe {
-            // F-018: non-Windows stubs report unknown metrics instead of fabricated values.
+            // Non-Windows stubs report unknown metrics instead of fabricated values.
             out.write(NativeSysSnapshot {
                 cpu_usage_pct: 0.0,
                 ram_used_bytes: 0,

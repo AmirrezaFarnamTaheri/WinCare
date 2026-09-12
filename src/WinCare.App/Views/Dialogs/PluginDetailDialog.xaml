@@ -6,7 +6,7 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     mc:Ignorable="d"
     Title="Review plugin"
-    PrimaryButtonText="Trust and install"
+    PrimaryButtonText="Install"
     CloseButtonText="Cancel"
     DefaultButton="Close"
     CornerRadius="{StaticResource RadiusControl}"
@@ -71,7 +71,7 @@
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
-                <TextBlock Text="Capability declarations are consent metadata only. Full-trust in-process plugins are not sandboxed or technically constrained by these declarations."
+                <TextBlock Text="Plugins run with the permissions of your Windows account."
                            TextWrapping="Wrap" FontSize="11" Foreground="{ThemeResource TextSecondaryBrush}" />
             </StackPanel>
         </Border>
@@ -95,7 +95,7 @@
                            TextWrapping="Wrap" FontSize="12" Foreground="{ThemeResource DangerBrush}"/>
             </Grid>
         </Border>
-        <TextBlock Text="Remote installation is enabled only when the exact catalog bytes verify against a WinCare-pinned signing key and the selected package also has publisher-signed manifest metadata. Otherwise this catalog is browse-only."
+        <TextBlock Text="Verified packages from trusted sources can be installed directly. Other packages are browse-only."
                    TextWrapping="Wrap" FontSize="12" Foreground="{ThemeResource TextSecondaryBrush}" />
 
         <!-- Commands Provided -->

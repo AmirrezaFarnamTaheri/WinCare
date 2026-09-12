@@ -155,9 +155,7 @@ public sealed class ActivityPageViewModel : TabbedPageViewModel
             string state = failed > 0 ? "Review" : "Complete";
             string description = $"{entries.Length} operations · {succeeded} completed · {failed} failed · {cancelled} cancelled";
 
-            // F-023: the journal keeps only a bounded window of history; when the
-            // window is full the report must say so instead of presenting a trimmed
-            // set as complete history.
+            // Note if the history window has reached the retention limit.
             if (records.Count >= ActivityJournalService.MaxPersistedRecords)
             {
                 description += $" · journal retains only the most recent {ActivityJournalService.MaxPersistedRecords} records";

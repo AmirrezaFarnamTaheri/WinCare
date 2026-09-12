@@ -29,9 +29,7 @@ public sealed partial class AllToolsPage : Page
         ToolTabs.SelectedItem = ToolTabs.Items[0] as SelectorBarItem;
         ViewModel.PropertyChanged += ViewModel_PropertyChanged;
         CaptureResponsiveControls();
-        // F-007: the parameter expander lives in a data template that is not materialized in
-        // the constructor's visual tree; mount the editor once the page is loaded instead of
-        // giving up immediately.
+        // Mount the editor once the page is loaded so the template is materialized.
         Loaded += (_, _) => ReplaceRawParameterEditor();
     }
 
@@ -43,9 +41,7 @@ public sealed partial class AllToolsPage : Page
     protected override void OnNavigatedTo(NavigationEventArgs e)
     {
         base.OnNavigatedTo(e);
-        // F-025: an explicit navigation parameter resets the search even when empty, so a
-        // cached page cannot keep a stale query; only a plain navigation (null parameter)
-        // preserves the current filter state.
+        // Reset search when an explicit navigation query is provided.
         if (e.Parameter is string query)
         {
             ToolTabs.SelectedItem = ToolTabs.Items[0] as SelectorBarItem;
@@ -294,8 +290,7 @@ public sealed partial class AllToolsPage : Page
                     rawEditor.Focus(FocusState.Programmatic);
                     return;
                 }
-                // F-007: rebuild typed controls so they pick up values imported from the raw
-                // JSON; the mounted controls otherwise keep their initial values.
+                // Rebuild typed controls so they reflect imported raw JSON values.
                 RebuildParameterEditor();
             }
             else

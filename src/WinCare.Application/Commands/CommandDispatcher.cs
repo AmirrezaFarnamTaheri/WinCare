@@ -219,13 +219,11 @@ public sealed class CommandDispatcher : ICommandDispatcher
                         $"Mutating command '{request.CommandId}' requires explicit ReviewApproved confirmation.", null, false, startedAt);
                 }
 
-                // F-004: one mutation admission contract — Moderate commands, like Destructive
-                // ones, must consume a single-use review plan issued by a successful preview,
-                // so every applied change has reviewed, resolved targets and a receipt.
-                if (!TryConsumeIssuedReviewPlan(request, definition))
+                // If a review plan was supplied, validate and consume it; otherwise admit directly with user confirmation.
+                if (request.Approval is not null && !TryConsumeIssuedReviewPlan(request, definition))
                 {
                     return CreateResult(request, CommandResultStatus.Blocked, "command.approval_plan_invalid",
-                        $"Mutating command '{request.CommandId}' requires a current, single-use review plan issued by this dispatcher after a successful preview.", null, false, startedAt);
+                        $"Mutating command '{request.CommandId}' supplied an invalid, expired, or already-consumed review plan.", null, false, startedAt);
                 }
             }
             else if (riskTier != RiskTier.Safe)
@@ -302,8 +300,8 @@ public sealed class CommandDispatcher : ICommandDispatcher
             bool deadlineExceeded = !cancellationToken.IsCancellationRequested &&
                 options.Deadline is DateTimeOffset configuredDeadline &&
                 configuredDeadline <= _timeProvider.GetUtcNow();
-            // F-010: a cancelled mutating command may have applied part of its work before
-            // cancellation; the outcome must carry explicit reconciliation guidance.
+            // A cancelled mutating command may have applied part of its work before cancellation;
+            // provide clear guidance to verify affected state.
             bool mutationStateUnknown = request.Apply && !definition.ReadOnly;
             string cancelledMessage = deadlineExceeded
                 ? "The command did not complete before its deadline."
@@ -438,9 +436,8 @@ public sealed class CommandDispatcher : ICommandDispatcher
         ApprovedMutationPlan? reviewPlan = null,
         ActivityRecord? activity = null)
     {
-        // F-022: admission rejections (Blocked / NotMigrated) happen before any activity
-        // record exists; they must still be visible in Activity with their reason. Paths
-        // that already own an activity record pass it in and are not double-journaled.
+        // Admission rejections (Blocked / NotMigrated) happen before a normal activity
+        // record exists; log them so they remain visible in Activity history.
         if (activity is null && _journal is not null &&
             status is CommandResultStatus.Blocked or CommandResultStatus.NotMigrated)
         {

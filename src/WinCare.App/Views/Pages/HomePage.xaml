@@ -20,11 +20,8 @@
                 <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
                 <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
                 <StackPanel Spacing="8">
-                    <Border Style="{StaticResource EyebrowBadgeStyle}" Margin="0,0,0,4">
-                        <TextBlock Style="{StaticResource EyebrowBadgeTextStyle}" Text="PRECISION SYSTEM BENCH • 64-BIT NATIVE PLANE" />
-                    </Border>
-                    <TextBlock x:Uid="HomePageTitle" Style="{StaticResource PageTitleTextStyle}" Text="Deterministic Windows diagnostics &amp; care." />
-                    <TextBlock Style="{StaticResource PageDescriptionTextStyle}" Text="Deep kernel telemetry. Transparent risk boundaries. Zero unapproved mutations." />
+                    <TextBlock x:Uid="HomePageTitle" Style="{StaticResource PageTitleTextStyle}" Text="A clearer view of your PC." />
+                    <TextBlock Style="{StaticResource PageDescriptionTextStyle}" Text="Inspect system health, review recommendations, and keep Windows running smoothly." />
                 </StackPanel>
                 <Button x:Name="StartCheckupButton" Grid.Column="1" Click="RunCheckupButton_Click" Style="{StaticResource IslandPrimaryButtonStyle}" VerticalAlignment="Center" HorizontalAlignment="Left" AutomationProperties.AutomationId="HomeRunCheckup" AutomationProperties.Name="Open system checkup">
                     <Grid ColumnSpacing="12">
@@ -53,29 +50,23 @@
                         <Grid RowSpacing="10">
                             <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
                             <StackPanel Spacing="4">
-                                <Border Style="{StaticResource EyebrowBadgeStyle}">
-                                    <TextBlock Style="{StaticResource EyebrowBadgeTextStyle}" Text="SUBSYSTEM ATLAS • ARCHITECTURAL TOPOLOGY" />
-                                </Border>
-                                <TextBlock Style="{StaticResource SectionHeaderTextStyle}" Text="Hardware &amp; Kernel Topology" />
+                                <TextBlock Style="{StaticResource SectionHeaderTextStyle}" Text="Hardware &amp; Subsystems" />
                             </StackPanel>
                             <Image x:Name="SystemAtlasImage" Grid.Row="1" Source="ms-appx:///Assets/SystemAtlas.png" Height="200" Stretch="Uniform" IsHitTestVisible="False" AutomationProperties.AccessibilityView="Raw" />
-                            <TextBlock Grid.Row="2" Style="{StaticResource RowSecondaryTextStyle}" Text="Structural architecture map · Real-time telemetry routed through native C ABI" HorizontalAlignment="Center" />
+                            <TextBlock Grid.Row="2" Style="{StaticResource RowSecondaryTextStyle}" Text="Hardware layout and component health overview" HorizontalAlignment="Center" />
                         </Grid>
                         <Grid x:Name="StatusCard" Grid.Column="1" RowSpacing="16">
                             <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
                             <Grid ColumnSpacing="12">
                                 <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
                                 <StackPanel Spacing="4">
-                                    <Border Style="{StaticResource EyebrowBadgeStyle}">
-                                        <TextBlock Style="{StaticResource EyebrowBadgeTextStyle}" Text="PROBE VERIFICATION • TELEMETRY MAPPING" />
-                                    </Border>
                                     <TextBlock Style="{StaticResource SectionHeaderTextStyle}" Text="{x:Bind ViewModel.EvidenceTitle, Mode=OneWay}" />
                                     <TextBlock Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind ViewModel.EvidenceSummary, Mode=OneWay}" />
                                 </StackPanel>
                                 <Border Grid.Column="1" Style="{StaticResource HudSensorBoxStyle}" VerticalAlignment="Center">
                                     <StackPanel Spacing="2" HorizontalAlignment="Center">
                                         <TextBlock FontFamily="{StaticResource TelemetryFontFamily}" FontSize="24" FontWeight="Bold" Foreground="{ThemeResource AccentTealBrush}" HorizontalAlignment="Center" Text="{x:Bind ViewModel.EvidenceScoreText, Mode=OneWay}" />
-                                        <TextBlock Style="{StaticResource RowSecondaryTextStyle}" FontSize="11" HorizontalAlignment="Center" Text="probes completed" />
+                                        <TextBlock Style="{StaticResource RowSecondaryTextStyle}" FontSize="11" HorizontalAlignment="Center" Text="checks completed" />
                                     </StackPanel>
                                 </Border>
                             </Grid>
@@ -89,7 +80,7 @@
                                             <FontIcon Glyph="&#xE770;" FontSize="16" Foreground="{ThemeResource AccentTealBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
                                         </Border>
                                         <StackPanel Grid.Column="1" Spacing="3" VerticalAlignment="Center">
-                                            <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="System Core" />
+                                            <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="System" />
                                             <TextBlock Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind ViewModel.SystemStatus, Mode=OneWay}" />
                                         </StackPanel>
                                     </Grid>
@@ -101,7 +92,7 @@
                                             <FontIcon Glyph="&#xEA18;" FontSize="16" Foreground="{ThemeResource AccentTealBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
                                         </Border>
                                         <StackPanel Grid.Column="1" Spacing="3" VerticalAlignment="Center">
-                                            <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="Security &amp; Defenses" />
+                                            <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="Security" />
                                             <TextBlock Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind ViewModel.SecurityStatus, Mode=OneWay}" />
                                         </StackPanel>
                                     </Grid>
@@ -113,7 +104,7 @@
                                             <FontIcon Glyph="&#xE9D9;" FontSize="16" Foreground="{ThemeResource AccentTealBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
                                         </Border>
                                         <StackPanel Grid.Column="1" Spacing="3" VerticalAlignment="Center">
-                                            <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="Performance &amp; Timing" />
+                                            <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="Performance" />
                                             <TextBlock Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind ViewModel.PerformanceStatus, Mode=OneWay}" />
                                         </StackPanel>
                                     </Grid>
@@ -125,7 +116,7 @@
                                             <FontIcon Glyph="&#xE7F1;" FontSize="16" Foreground="{ThemeResource AccentTealBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
                                         </Border>
                                         <StackPanel Grid.Column="1" Spacing="3" VerticalAlignment="Center">
-                                            <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="Storage &amp; Volumes" />
+                                            <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="Storage" />
                                             <TextBlock Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind ViewModel.StorageStatus, Mode=OneWay}" />
                                         </StackPanel>
                                     </Grid>
@@ -137,7 +128,7 @@
                                             <FontIcon Glyph="&#xE950;" FontSize="16" Foreground="{ThemeResource AccentTealBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
                                         </Border>
                                         <StackPanel Grid.Column="1" Spacing="3" VerticalAlignment="Center">
-                                            <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="Servicing &amp; Updates" />
+                                            <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="Updates" />
                                             <TextBlock Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind ViewModel.UpdatesStatus, Mode=OneWay}" />
                                         </StackPanel>
                                     </Grid>
@@ -149,13 +140,13 @@
                                             <FontIcon Glyph="&#xE81C;" FontSize="16" Foreground="{ThemeResource AccentTealBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
                                         </Border>
                                         <StackPanel Grid.Column="1" Spacing="3" VerticalAlignment="Center">
-                                            <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="Journal &amp; Auditing" />
+                                            <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="Activity" />
                                             <TextBlock Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind ViewModel.ActivityStatus, Mode=OneWay}" />
                                         </StackPanel>
                                     </Grid>
                                 </Button>
                             </Grid>
-                            <TextBlock Grid.Row="2" Style="{StaticResource RowSecondaryTextStyle}" Text="Select any diagnostic channel to inspect raw evidence and cataloged remediation tools." />
+                            <TextBlock Grid.Row="2" Style="{StaticResource RowSecondaryTextStyle}" Text="Select any category to view diagnostic details and available tools." />
                         </Grid>
                     </Grid>
                 </Border>
@@ -163,11 +154,8 @@
             <!-- Curated Operations & Progressive Telemetry HUD -->
             <StackPanel Grid.Row="2" Spacing="14">
                 <StackPanel Spacing="4">
-                    <Border Style="{StaticResource EyebrowBadgeStyle}">
-                        <TextBlock Style="{StaticResource EyebrowBadgeTextStyle}" Text="BOUNDED OPERATIONS • ADMISSION CONTROLS" />
-                    </Border>
-                    <TextBlock Style="{StaticResource SectionHeaderTextStyle}" Text="Curated System Interventions" />
-                    <TextBlock Style="{StaticResource RowSecondaryTextStyle}" Text="Every mutating action executes strictly through bounded process isolation with preflight preview verification." />
+                    <TextBlock Style="{StaticResource SectionHeaderTextStyle}" Text="Quick actions" />
+                    <TextBlock Style="{StaticResource RowSecondaryTextStyle}" Text="Reclaim disk space, review startup applications, or check network status." />
                 </StackPanel>
                 <Grid x:Name="CuratedActionsLayout" ColumnSpacing="16" RowSpacing="16">
                     <Grid.RowDefinitions>
@@ -203,7 +191,7 @@
                                             <FontIcon Glyph="&#xE74D;" FontSize="16" Foreground="{ThemeResource AccentTealBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
                                         </Border>
                                         <StackPanel VerticalAlignment="Center" Spacing="2">
-                                            <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="Storage Reclamation" />
+                                            <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="Storage cleanup" />
                                             <TextBlock FontFamily="{StaticResource TelemetryFontFamily}" FontSize="11" Foreground="{ThemeResource TextSecondaryBrush}" Text="cleaner-disk-pressure" />
                                         </StackPanel>
                                     </StackPanel>
@@ -212,7 +200,7 @@
                                 <TextBlock Grid.Row="1" Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind ViewModel.CleanDetailText, Mode=OneWay}" TextWrapping="Wrap" MinHeight="36" />
                                 <Border Grid.Row="2" Style="{StaticResource HudSensorBoxStyle}">
                                     <Grid>
-                                        <TextBlock Style="{StaticResource RowSecondaryTextStyle}" FontSize="11" Text="EXECUTION STATE" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                        <TextBlock Style="{StaticResource RowSecondaryTextStyle}" FontSize="11" Text="Status" FontWeight="SemiBold" VerticalAlignment="Center" />
                                         <TextBlock HorizontalAlignment="Right" FontFamily="{StaticResource TelemetryFontFamily}" FontSize="11" FontWeight="SemiBold" Foreground="{ThemeResource AccentTealBrush}" Text="{x:Bind ViewModel.CleanStatusText, Mode=OneWay}" VerticalAlignment="Center" />
                                     </Grid>
                                 </Border>
@@ -273,7 +261,7 @@
                                             <FontIcon Glyph="&#xE7F4;" FontSize="16" Foreground="{ThemeResource AccentTealBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
                                         </Border>
                                         <StackPanel VerticalAlignment="Center" Spacing="2">
-                                            <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="Startup Execution Audit" />
+                                            <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="Startup apps" />
                                             <TextBlock FontFamily="{StaticResource TelemetryFontFamily}" FontSize="11" Foreground="{ThemeResource TextSecondaryBrush}" Text="startup · run keys &amp; tasks" />
                                         </StackPanel>
                                     </StackPanel>
@@ -282,7 +270,7 @@
                                 <TextBlock Grid.Row="1" Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind ViewModel.StartupDetailText, Mode=OneWay}" TextWrapping="Wrap" MinHeight="36" />
                                 <Border Grid.Row="2" Style="{StaticResource HudSensorBoxStyle}">
                                     <Grid>
-                                        <TextBlock Style="{StaticResource RowSecondaryTextStyle}" FontSize="11" Text="AUDIT STATE" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                        <TextBlock Style="{StaticResource RowSecondaryTextStyle}" FontSize="11" Text="Status" FontWeight="SemiBold" VerticalAlignment="Center" />
                                         <TextBlock HorizontalAlignment="Right" FontFamily="{StaticResource TelemetryFontFamily}" FontSize="11" FontWeight="SemiBold" Foreground="{ThemeResource AccentTealBrush}" Text="{x:Bind ViewModel.StartupStatusText, Mode=OneWay}" VerticalAlignment="Center" />
                                     </Grid>
                                 </Border>
@@ -343,7 +331,7 @@
                                             <FontIcon Glyph="&#xE704;" FontSize="16" Foreground="{ThemeResource AccentTealBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
                                         </Border>
                                         <StackPanel VerticalAlignment="Center" Spacing="2">
-                                            <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="Network Stack Inspection" />
+                                            <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="Network inspection" />
                                             <TextBlock FontFamily="{StaticResource TelemetryFontFamily}" FontSize="11" Foreground="{ThemeResource TextSecondaryBrush}" Text="network · adapter telemetry" />
                                         </StackPanel>
                                     </StackPanel>
@@ -352,7 +340,7 @@
                                 <TextBlock Grid.Row="1" Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind ViewModel.NetworkDetailText, Mode=OneWay}" TextWrapping="Wrap" MinHeight="36" />
                                 <Border Grid.Row="2" Style="{StaticResource HudSensorBoxStyle}">
                                     <Grid>
-                                        <TextBlock Style="{StaticResource RowSecondaryTextStyle}" FontSize="11" Text="ADAPTER STATE" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                        <TextBlock Style="{StaticResource RowSecondaryTextStyle}" FontSize="11" Text="Status" FontWeight="SemiBold" VerticalAlignment="Center" />
                                         <TextBlock HorizontalAlignment="Right" FontFamily="{StaticResource TelemetryFontFamily}" FontSize="11" FontWeight="SemiBold" Foreground="{ThemeResource AccentTealBrush}" Text="{x:Bind ViewModel.NetworkStatusText, Mode=OneWay}" VerticalAlignment="Center" />
                                     </Grid>
                                 </Border>
@@ -412,15 +400,12 @@
                                             <FontIcon Glyph="&#xE9D9;" FontSize="14" Foreground="{ThemeResource AccentTealBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
                                         </Border>
                                         <StackPanel Spacing="2">
-                                            <Border Style="{StaticResource EyebrowBadgeStyle}">
-                                                <TextBlock Style="{StaticResource EyebrowBadgeTextStyle}" Text="LOW-LEVEL KERNEL TELEMETRY PROBE" />
-                                            </Border>
-                                            <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="Hardware Subsystem Sensor Array" />
+                                            <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="Hardware &amp; System Sensors" />
                                         </StackPanel>
                                     </StackPanel>
                                     <Border HorizontalAlignment="Right" Padding="10,4" Background="{ThemeResource AccentBadgeSubtleBrush}" BorderBrush="{ThemeResource AccentBadgeBorderBrush}" BorderThickness="1" CornerRadius="{StaticResource RadiusPill}" VerticalAlignment="Center">
                                         <StackPanel Orientation="Horizontal" Spacing="6">
-                                            <TextBlock FontFamily="{StaticResource TelemetryFontFamily}" FontSize="11" FontWeight="SemiBold" Foreground="{ThemeResource AccentTealBrush}" Text="PROBE LATENCY:" />
+                                            <TextBlock FontFamily="{StaticResource TelemetryFontFamily}" FontSize="11" FontWeight="SemiBold" Foreground="{ThemeResource AccentTealBrush}" Text="Latency:" />
                                             <TextBlock FontFamily="{StaticResource TelemetryFontFamily}" FontSize="11" FontWeight="Bold" Foreground="{ThemeResource AccentTealBrush}" Text="{x:Bind ViewModel.TelemetryMetrics.LatencyFormatted, Mode=OneWay}" />
                                         </StackPanel>
                                     </Border>
@@ -434,25 +419,25 @@
                                     </Grid.ColumnDefinitions>
                                     <Border Style="{StaticResource HudSensorBoxStyle}">
                                         <StackPanel Spacing="4">
-                                            <TextBlock FontFamily="{StaticResource TelemetryFontFamily}" FontSize="10" FontWeight="Bold" Foreground="{ThemeResource TextSecondaryBrush}" Text="TARGET DISK ROOTS / REPARSE BOUNDS" />
+                                            <TextBlock FontFamily="{StaticResource TelemetryFontFamily}" FontSize="10" FontWeight="Bold" Foreground="{ThemeResource TextSecondaryBrush}" Text="Paths inspected" />
                                             <TextBlock FontFamily="{StaticResource TelemetryFontFamily}" FontSize="12" FontWeight="SemiBold" Foreground="{ThemeResource TextPrimaryBrush}" Text="{x:Bind ViewModel.TelemetryMetrics.TargetPathsSummary, Mode=OneWay}" TextWrapping="Wrap" />
                                         </StackPanel>
                                     </Border>
                                     <Border Grid.Column="1" Style="{StaticResource HudSensorBoxStyle}">
                                         <StackPanel Spacing="4">
-                                            <TextBlock FontFamily="{StaticResource TelemetryFontFamily}" FontSize="10" FontWeight="Bold" Foreground="{ThemeResource TextSecondaryBrush}" Text="KERNEL CPU LOAD" />
+                                            <TextBlock FontFamily="{StaticResource TelemetryFontFamily}" FontSize="10" FontWeight="Bold" Foreground="{ThemeResource TextSecondaryBrush}" Text="CPU usage" />
                                             <TextBlock FontFamily="{StaticResource TelemetryFontFamily}" FontSize="14" FontWeight="Bold" Foreground="{ThemeResource AccentTealBrush}" Text="{x:Bind ViewModel.TelemetryMetrics.CpuFormatted, Mode=OneWay}" />
                                         </StackPanel>
                                     </Border>
                                     <Border Grid.Column="2" Style="{StaticResource HudSensorBoxStyle}">
                                         <StackPanel Spacing="4">
-                                            <TextBlock FontFamily="{StaticResource TelemetryFontFamily}" FontSize="10" FontWeight="Bold" Foreground="{ThemeResource TextSecondaryBrush}" Text="SYSTEM PHYSICAL RAM" />
+                                            <TextBlock FontFamily="{StaticResource TelemetryFontFamily}" FontSize="10" FontWeight="Bold" Foreground="{ThemeResource TextSecondaryBrush}" Text="Memory usage" />
                                             <TextBlock FontFamily="{StaticResource TelemetryFontFamily}" FontSize="14" FontWeight="Bold" Foreground="{ThemeResource AccentTealBrush}" Text="{x:Bind ViewModel.TelemetryMetrics.RamFormatted, Mode=OneWay}" />
                                         </StackPanel>
                                     </Border>
                                     <Border Grid.Column="3" Style="{StaticResource HudSensorBoxStyle}">
                                         <StackPanel Spacing="4">
-                                            <TextBlock FontFamily="{StaticResource TelemetryFontFamily}" FontSize="10" FontWeight="Bold" Foreground="{ThemeResource TextSecondaryBrush}" Text="VOLUME FREE HEADROOM" />
+                                            <TextBlock FontFamily="{StaticResource TelemetryFontFamily}" FontSize="10" FontWeight="Bold" Foreground="{ThemeResource TextSecondaryBrush}" Text="Free storage" />
                                             <TextBlock FontFamily="{StaticResource TelemetryFontFamily}" FontSize="14" FontWeight="Bold" Foreground="{ThemeResource AccentTealBrush}" Text="{x:Bind ViewModel.TelemetryMetrics.DiskFormatted, Mode=OneWay}" />
                                         </StackPanel>
                                     </Border>
@@ -463,17 +448,14 @@
                 </Grid>
             </StackPanel>
 
-            <!-- Activity Journal & Authoritative Safety Governance -->
+            <!-- Activity & Safety Governance -->
             <Grid x:Name="SecondaryLayout" Grid.Row="3" ColumnSpacing="24" RowSpacing="16">
                 <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
                 <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
                 <Border Style="{StaticResource DoubleBezelOuterCardStyle}">
                     <Border Style="{StaticResource DoubleBezelInnerCardStyle}">
                         <StackPanel Spacing="10">
-                            <Border Style="{StaticResource EyebrowBadgeStyle}">
-                                <TextBlock Style="{StaticResource EyebrowBadgeTextStyle}" Text="AUDIT TRAIL • LOCAL JOURNAL" />
-                            </Border>
-                            <TextBlock Style="{StaticResource SectionHeaderTextStyle}" Text="System Activity Journal" />
+                            <TextBlock Style="{StaticResource SectionHeaderTextStyle}" Text="Recent activity" />
                             <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="{x:Bind ViewModel.RecentActivityTitle, Mode=OneWay}" />
                             <TextBlock Style="{StaticResource PageDescriptionTextStyle}" Text="{x:Bind ViewModel.RecentActivitySummary, Mode=OneWay}" />
                         </StackPanel>
@@ -482,13 +464,10 @@
                 <Border x:Name="SafetyCard" Grid.Column="1" Style="{StaticResource DoubleBezelOuterCardStyle}">
                     <Border Style="{StaticResource DoubleBezelInnerCardStyle}">
                         <StackPanel Spacing="8">
-                            <Border Style="{StaticResource EyebrowBadgeStyle}">
-                                <TextBlock Style="{StaticResource EyebrowBadgeTextStyle}" Text="TWO-PHASE ADMISSION • FAIL-CLOSED" />
-                            </Border>
                             <TextBlock Style="{StaticResource SectionHeaderTextStyle}" Text="Review before applying" />
-                            <TextBlock Style="{StaticResource RowSecondaryTextStyle}" Text="Authoritative two-phase admission &amp; fail-closed mutation governance." />
-                            <TextBlock Style="{StaticResource PageDescriptionTextStyle}" Text="Diagnostic checks collect evidence without altering system state. Any mutating operation requires a verified preflight preview and a single-use ApprovedMutationPlan receipt before execution." />
-                            <TextBlock Style="{StaticResource RowSecondaryTextStyle}" Text="Evidence coverage provides situational context, not infallible guarantees. WinCare never runs unmonitored scripts or hidden background mutations." />
+                            <TextBlock Style="{StaticResource RowSecondaryTextStyle}" Text="Preview changes before applying them to your system." />
+                            <TextBlock Style="{StaticResource PageDescriptionTextStyle}" Text="Diagnostic checks inspect system state without making changes. Actions that modify files or settings provide a preview first so you can review what will happen before confirming." />
+                            <TextBlock Style="{StaticResource RowSecondaryTextStyle}" Text="WinCare executes only cataloged commands and logs every action to the activity journal." />
                         </StackPanel>
                     </Border>
                 </Border>
@@ -505,7 +484,7 @@
                         <Border Style="{StaticResource IslandIconBadgeStyle}">
                             <FontIcon Glyph="&#xE81C;" FontSize="14" Foreground="{ThemeResource AccentTealBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
                         </Border>
-                        <TextBlock Grid.Column="1" Text="Open Activity Journal" VerticalAlignment="Center" />
+                        <TextBlock Grid.Column="1" Text="Open Activity" VerticalAlignment="Center" />
                     </Grid>
                 </Button>
                 <Button Click="BrowseToolsButton_Click" Style="{StaticResource IslandQuietButtonStyle}" AutomationProperties.AutomationId="HomeBrowseTools" AutomationProperties.Name="Browse all tools">
@@ -517,7 +496,7 @@
                         <Border Style="{StaticResource IslandIconBadgeStyle}">
                             <FontIcon Glyph="&#xE74C;" FontSize="14" Foreground="{ThemeResource AccentTealBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
                         </Border>
-                        <TextBlock Grid.Column="1" Text="Browse Catalog (269 Tools)" VerticalAlignment="Center" />
+                        <TextBlock Grid.Column="1" Text="Browse all tools" VerticalAlignment="Center" />
                     </Grid>
                 </Button>
             </StackPanel>

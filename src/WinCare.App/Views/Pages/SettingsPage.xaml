@@ -68,7 +68,7 @@
             <Border Style="{StaticResource DashboardCardStyle}">
                 <StackPanel Spacing="8">
                     <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="Safety policy" />
-                    <TextBlock Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap" Text="Checks can run without changing Windows. Before a change, review its preview and approve it. Activity keeps the outcome and any available recovery guidance. Undo is offered only when the tool supports it." />
+                    <TextBlock Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap" Text="Diagnostic checks run safely without changing Windows. Mutating actions that modify system files or settings provide a preview first for your review before applying. Activity records outcomes and any available recovery guidance." />
                 </StackPanel>
             </Border>
         </StackPanel>

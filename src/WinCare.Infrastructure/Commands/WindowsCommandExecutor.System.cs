@@ -173,7 +173,7 @@ internal sealed partial class WindowsCommandExecutor
         FirewallProfileState[] firewallProfiles = ReadFirewallProfileStates();
         bool firewall = firewallProfiles.All(profile => profile.Enabled);
         var findings = new List<object>();
-        // F-020: thresholds come from the shared versioned assessment policy, not local literals.
+        // Thresholds come from the shared versioned assessment policy.
         findings.AddRange(drives.Where(d => d.freePercent < WinCare.Domain.Assessment.AssessmentPolicy.DiskFreePercentWarning)
             .Select(d => (object)new { area = "Storage", item = d.Name, severity = "High", message = $"Only {d.freePercent}% free." }));
         findings.Add(new { area = "Assessment policy", item = "Thresholds", severity = "Information", message = $"Assessment rules v{WinCare.Domain.Assessment.AssessmentPolicy.Version}: storage High below {WinCare.Domain.Assessment.AssessmentPolicy.DiskFreePercentWarning}% free; this overview is not a complete health verdict of installed protection." });

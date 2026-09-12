@@ -14,8 +14,7 @@ public sealed class RepairRecoveryPageViewModel : TabbedPageViewModel
     {
         0 => "repair",
         1 => "restore",
-        // F-009: the catalog has no undo command; the journal/receipt reports are where
-        // reversible-change records live, so point the Undo tab's search there.
+        // Reversible changes and execution records live under reports.
         2 => "reports",
         3 => "export backup",
         4 => "recovery reset",

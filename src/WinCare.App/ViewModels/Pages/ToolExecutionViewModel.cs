@@ -217,8 +217,7 @@ public sealed class ToolExecutionViewModel : ObservableObject
     public bool IsDestructiveTool => _selectedTool?.Definition.RiskTier == RiskTier.Destructive;
     public bool IsMutatingTool => _selectedTool?.Definition.ReadOnly == false;
     public bool RequiresApprovalSwitch => IsMutatingTool && !IsSafeTool;
-    // F-004: approval is only possible after a successful preview, for every mutating tier,
-    // so the receipt presented at execution always corresponds to reviewed resolved targets.
+    // Approval requires a successful preview before applying changes.
     public bool CanApproveReview => IsMutatingTool && !IsExecuting && _hasSuccessfulPreview;
 
     public bool IsReviewApproved
@@ -309,8 +308,7 @@ public sealed class ToolExecutionViewModel : ObservableObject
         ClearExecutionResult();
         try
         {
-            // F-004: every non-Safe mutation must carry the single-use review plan issued by
-            // the preceding preview, so applied changes always have reviewed, resolved targets.
+            // Include any issued review plan with the execution request.
             ApprovedMutationPlan? approval = (apply && !IsSafeTool) ? _lastApprovedPlan : null;
             CommandRequest request = apply
                 ? CommandRequest.Execute(selected.Id, parameters, approval)
@@ -524,8 +522,7 @@ public sealed class ToolExecutionViewModel : ObservableObject
         }
         catch (JsonException ex)
         {
-            // F-007: invalid advanced JSON is surfaced immediately instead of silently
-            // ignored; the raw editor keeps the text and execution stays blocked.
+            // Surface invalid JSON errors directly so the user can correct them.
             SetParameterError($"Advanced parameter JSON is invalid: {ex.Message} Fix the JSON before running the command.");
             return false;
         }

@@ -132,9 +132,7 @@ public sealed class ToolCatalogService
 
     private static bool Matches(CommandDefinition command, string query)
     {
-        // F-009: multi-word queries match per token (each token may match any field), so
-        // built-in category shortcuts such as "storage cleanup" or "network update" resolve
-        // to the union of their intent families instead of requiring the exact phrase.
+        // Multi-word queries match per token against any field.
         string[] tokens = query.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
         return tokens.Length == 0 || tokens.Any(token => MatchesToken(command, token));
     }

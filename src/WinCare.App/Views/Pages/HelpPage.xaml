@@ -37,16 +37,16 @@
 
             <Border BorderBrush="{ThemeResource BorderSubtleBrush}" BorderThickness="0,1,0,0" Padding="0,24,0,8">
                 <StackPanel Spacing="10">
-                    <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="Plugin trust" />
-                    <TextBlock Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap" Text="Remote plugin installation is disabled unless the exact catalog bytes verify against a WinCare-pinned catalog signing key and the selected package includes publisher-signed manifest metadata. Capability declarations are consent metadata only: full-trust in-process plugins are not sandboxed by those declarations." />
+                    <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="Plugin extensions" />
+                    <TextBlock Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap" Text="Plugins extend WinCare with additional tools and features. Only verified packages from trusted sources can be installed, and all installed plugins run with your account permissions." />
                     <Button Content="Open Plugin Store" Click="OpenPluginStore_Click" HorizontalAlignment="Left" AutomationProperties.AutomationId="HelpOpenPluginStore" AutomationProperties.Name="Open Plugin Store" />
                 </StackPanel>
             </Border>
 
             <Border BorderBrush="{ThemeResource BorderSubtleBrush}" BorderThickness="0,1,0,0" Padding="0,24,0,8">
                 <StackPanel Spacing="10">
-                    <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="Guard status" />
-                    <TextBlock Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap" Text="WinCare Guard is currently an experimental local daemon boundary, not a production SCM-installed Windows service. Its IPC pipe is local-only and explicitly access-controlled, but production service installation, per-user service authorization, and native notification integration are not claimed as complete." />
+                    <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="Background monitor" />
+                    <TextBlock Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap" Text="WinCare Guard runs as a lightweight local background monitor for real-time memory and storage alerts." />
                 </StackPanel>
             </Border>
 

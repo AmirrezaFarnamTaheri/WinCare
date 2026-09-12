@@ -8,10 +8,7 @@ using Xunit;
 namespace WinCare.Infrastructure.Tests;
 
 /// <summary>
-/// Regression tests for F-010: IO/Win32 faults during mutating commands were reported as
-/// "failed safely" and access faults as admission blocks, although earlier steps of a
-/// multi-step mutation may already have applied. Mutating faults must now return explicit
-/// state-unknown outcomes with reconciliation guidance.
+/// Regression tests for mutation failure certainty and state reconciliation.
 /// </summary>
 public sealed class MutationFailureCertaintyTests : IDisposable
 {

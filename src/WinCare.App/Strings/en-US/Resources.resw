@@ -15,7 +15,7 @@
 <data name="AboutPageTitle.Text" xml:space="preserve"><value>WinCare</value></data>
 <data name="ActivityPageTitle.Text" xml:space="preserve"><value>Activity</value></data>
 <data name="AllToolsPageTitle.Text" xml:space="preserve"><value>All tools</value></data>
-<data name="CheckupPageTitle.Text" xml:space="preserve"><value>Check the evidence</value></data>
+<data name="CheckupPageTitle.Text" xml:space="preserve"><value>Checkup</value></data>
 <data name="HelpPageTitle.Text" xml:space="preserve"><value>Help and documentation</value></data>
 <data name="HomePageTitle.Text" xml:space="preserve"><value>A clearer view of your PC.</value></data>
 <data name="RepairRecoveryPageTitle.Text" xml:space="preserve"><value>Repair &amp; recovery</value></data>

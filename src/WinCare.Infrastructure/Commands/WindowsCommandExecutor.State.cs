@@ -50,9 +50,7 @@ internal sealed partial class WindowsCommandExecutor
     }
 
     /// <summary>
-    /// F-026: cleaner schedules are persisted as configuration only. No scheduler consumer
-    /// is implemented in this build, so the saved row and its result message must state
-    /// that nothing executes at due time.
+    /// Cleaner schedules are persisted as configuration only; no scheduler consumer executes at due time.
     /// </summary>
     private async Task<CommandHandlerOutcome> SaveNonExecutingScheduleAsync(CommandParameters p, CancellationToken cancellationToken)
     {

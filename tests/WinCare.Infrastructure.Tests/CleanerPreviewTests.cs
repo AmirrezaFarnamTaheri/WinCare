@@ -5,9 +5,7 @@ using Xunit;
 namespace WinCare.Infrastructure.Tests;
 
 /// <summary>
-/// Regression tests for F-005: cleanup previews named %TEMP% and %WINDIR%\Temp while
-/// execution visited the user temp and %LOCALAPPDATA%\Temp roots. Preview and execution
-/// must now resolve the same deduplicated root plan.
+/// Regression tests for cleaner root resolution and preview parity.
 /// </summary>
 public sealed class CleanerPreviewTests
 {

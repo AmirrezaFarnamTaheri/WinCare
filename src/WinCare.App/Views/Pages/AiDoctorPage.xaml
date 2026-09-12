@@ -9,8 +9,8 @@
     <Grid RowDefinitions="Auto,*,Auto" Padding="28,28,28,32">
         <!-- Header -->
         <StackPanel Grid.Row="0" Spacing="8" Margin="0,0,0,24">
-            <TextBlock Text="Describe it. Investigate it." Style="{StaticResource PageTitleTextStyle}" />
-            <TextBlock MaxWidth="760" HorizontalAlignment="Left" Text="Diagnostic Doctor matches your symptoms on this device, then suggests checks and a plan you can review." Style="{StaticResource PageDescriptionTextStyle}" />
+            <TextBlock Text="AI Doctor" Style="{StaticResource PageTitleTextStyle}" />
+            <TextBlock MaxWidth="760" HorizontalAlignment="Left" Text="Describe an issue to diagnose symptoms, find matching checks, and review proposed solutions." Style="{StaticResource PageDescriptionTextStyle}" />
         </StackPanel>
 
         <!-- Chat Conversation Area -->

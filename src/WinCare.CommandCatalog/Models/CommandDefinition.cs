@@ -131,10 +131,7 @@ public sealed record CommandDefinition(
             return RiskTier.Safe;
         }
 
-        // F-004: cleaner commands are no longer downgraded from Moderate to Safe by their
-        // identifier. Mutation admission is derived from the declared risk, so cleanup
-        // actions receive preview/review/receipt handling like any other Moderate mutation.
-
+        // Mutation admission is derived from the declared risk level.
         return RiskTier.Moderate;
     }
 }
