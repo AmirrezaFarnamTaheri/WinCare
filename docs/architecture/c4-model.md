@@ -54,7 +54,7 @@ C4Container
         Container(app, "WinCare.App (Presentation)", "WinUI 3 / XAML, .NET 8 (Trimmed)", "Provides Tactile Telemetry UI, curated action cards, and diagnostics view.")
         Container(application, "WinCare.Application (Service Layer)", "C# / .NET 8", "Implements Command Dispatcher, Risk-Tiered Admission, and Parallel Diagnostic Runner.")
         Container(domain, "WinCare.Domain (Domain Core)", "C# / .NET 8", "Defines typed command contracts, RiskTier enum, and Activity records.")
-        Container(catalog, "WinCare.CommandCatalog", "C# / .NET 8 (Embedded JSON)", "Provides frozen 259-command definitions and typed parameter schemas.")
+        Container(catalog, "WinCare.CommandCatalog", "C# / .NET 8 (Embedded JSON)", "Provides 263 command definitions, including the 259 frozen legacy IDs, and typed parameter schemas.")
         Container(infrastructure, "WinCare.Infrastructure (OS Adapters)", "C# / .NET 8, P/Invoke", "Executes Windows maintenance actions, manages journal persistence, and bridges Rust ABI.")
         Container(rust_core, "wincare_core (Native Core)", "Rust 2024 (C-ABI dll)", "Low-latency memory scanning, cryptographic digests, and high-performance system probing.")
     }
@@ -89,7 +89,7 @@ C4Component
         Component(parallel_runner, "ParallelCommandProbeRunner", "C# Class", "Executes independent diagnostic probes concurrently via Task.WhenAll.")
         Component(admission_policy, "RiskTierAdmissionPolicy", "C# Policy Logic", "Admits Safe commands directly; gates Destructive commands behind ApprovedMutationPlan.")
         Component(journal_service, "ActivityJournalService", "C# Service", "Logs begin, complete, cancel, and failure lifecycle events.")
-        Component(catalog_service, "CommandCatalogService", "C# Service", "Indexes and queries the 259 cataloged commands.")
+        Component(catalog_service, "CommandCatalogService", "C# Service", "Indexes and queries the 263 cataloged commands.")
     }
 
     Container(infra_exec, "WindowsCommandExecutor", "WinCare.Infrastructure", "Executes native Windows actions.")

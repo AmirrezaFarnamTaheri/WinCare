@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -30,17 +31,7 @@ namespace WinCare.Application.Diagnostics
                         break;
 
                     case "intent.network.flush":
-                        evidence.Add(new TelemetryEvidence(
-                            HasMeasuredEvidence: true,
-                            MetricName: "DNS Resolver Cache",
-                            MeasuredValue: "Active Socket Table and DNS Entries Present",
-                            IndicatesPressure: false,
-                            Severity: DiagnosticSeverity.Information,
-                            Source: "Windows Network Stack Telemetry",
-                            CommandId: "wincare.utilities.dnstools",
-                            Collector: "NetworkDiagnosticsCollector",
-                            CommandVersion: "1.0.0"
-                        ));
+                        evidence.AddRange(ProbeNetworkAdapters());
                         break;
 
                     default:
@@ -67,6 +58,61 @@ namespace WinCare.Application.Diagnostics
             return Task.FromResult<IReadOnlyList<TelemetryEvidence>>(evidence);
         }
 
+        private static List<TelemetryEvidence> ProbeNetworkAdapters()
+        {
+            // Measure observable adapter presence and status; when unmeasurable,
+            // report evidence as unavailable instead of fabricated.
+            try
+            {
+                var interfaces = System.Net.NetworkInformation.NetworkInterface.GetAllNetworkInterfaces();
+                var operational = interfaces.Where(nic =>
+                    nic.NetworkInterfaceType != System.Net.NetworkInformation.NetworkInterfaceType.Loopback &&
+                    nic.NetworkInterfaceType != System.Net.NetworkInformation.NetworkInterfaceType.Tunnel).ToList();
+                int upCount = operational.Count(nic => nic.OperationalStatus == System.Net.NetworkInformation.OperationalStatus.Up);
+                return NetworkEvidenceFromSnapshot(operational.Count, upCount);
+            }
+            catch
+            {
+                return [NetworkEvidenceUnavailable("Network Probe", "Network adapter metrics unavailable")];
+            }
+        }
+
+        internal static List<TelemetryEvidence> NetworkEvidenceFromSnapshot(int operationalCount, int upCount)
+        {
+            if (operationalCount == 0)
+            {
+                return [NetworkEvidenceUnavailable("Network Adapter State", "No non-loopback network adapters reported")];
+            }
+
+            bool disconnected = upCount == 0;
+            return
+            [
+                new TelemetryEvidence(
+                    HasMeasuredEvidence: true,
+                    MetricName: "Network Adapter State",
+                    MeasuredValue: $"{upCount} of {operationalCount} non-loopback adapters operational",
+                    IndicatesPressure: disconnected,
+                    Severity: disconnected ? DiagnosticSeverity.Warning : DiagnosticSeverity.Healthy,
+                    Source: "Windows Network Adapter Telemetry",
+                    CommandId: "wincare.utilities.dnstools",
+                    Collector: "NetworkDiagnosticsCollector",
+                    CommandVersion: "1.1.0"
+                ),
+            ];
+        }
+
+        private static TelemetryEvidence NetworkEvidenceUnavailable(string metricName, string measuredValue) => new(
+            HasMeasuredEvidence: false,
+            MetricName: metricName,
+            MeasuredValue: measuredValue,
+            IndicatesPressure: false,
+            Severity: DiagnosticSeverity.Information,
+            Source: "Windows Network Adapter Telemetry",
+            CommandId: "wincare.utilities.dnstools",
+            Collector: "NetworkDiagnosticsCollector",
+            CommandVersion: "1.1.0"
+        );
+
         private static List<TelemetryEvidence> ProbeStorageDrives()
         {
             var results = new List<TelemetryEvidence>();
@@ -80,7 +126,8 @@ namespace WinCare.Application.Diagnostics
                         var totalGb = drive.TotalSize / (1024.0 * 1024 * 1024);
                         var freeGb = drive.AvailableFreeSpace / (1024.0 * 1024 * 1024);
                         var freePercent = totalGb > 0 ? (freeGb / totalGb) * 100.0 : 100.0;
-                        var isLow = freeGb < 15.0 || freePercent < 10.0;
+                        var isLow = freeGb < WinCare.Domain.Assessment.AssessmentPolicy.DiskFreeDoctorGb ||
+                            freePercent < WinCare.Domain.Assessment.AssessmentPolicy.DiskFreePercentWarning;
 
                         results.Add(new TelemetryEvidence(
                             HasMeasuredEvidence: true,
@@ -125,18 +172,36 @@ namespace WinCare.Application.Diagnostics
                     ? (double)gcInfo.MemoryLoadBytes / totalBytes * 100.0
                     : 0.0;
 
-                var isHighMemory = memoryLoadPercent > 85.0;
+                // GC bookkeeping describes the WinCare process, not machine-wide
+                // memory pressure; when the runtime reports no usable figures, mark unavailable.
+                if (totalBytes <= 0)
+                {
+                    results.Add(new TelemetryEvidence(
+                        HasMeasuredEvidence: false,
+                        MetricName: "Process Memory (WinCare)",
+                        MeasuredValue: "Memory metrics unavailable from the runtime",
+                        IndicatesPressure: false,
+                        Severity: DiagnosticSeverity.Information,
+                        Source: "WinCare Process Runtime",
+                        CommandId: "wincare.systemcare.ramoptimizer",
+                        Collector: "MemoryDiagnosticsCollector",
+                        CommandVersion: "1.2.0"
+                    ));
+                    return results;
+                }
+
+                var isHighMemory = memoryLoadPercent > WinCare.Domain.Assessment.AssessmentPolicy.MemoryHighLoadPercent;
 
                 results.Add(new TelemetryEvidence(
                     HasMeasuredEvidence: true,
-                    MetricName: "System Memory Load",
-                    MeasuredValue: totalBytes > 0 ? $"{memoryLoadPercent:F0}% utilized ({gcInfo.MemoryLoadBytes / (1024 * 1024):N0} MB in use)" : "Memory metrics measured",
+                    MetricName: "Process Memory (WinCare)",
+                    MeasuredValue: $"{memoryLoadPercent:F0}% utilized ({gcInfo.MemoryLoadBytes / (1024 * 1024):N0} MB in use by the WinCare process, not the whole machine)",
                     IndicatesPressure: isHighMemory,
                     Severity: isHighMemory ? DiagnosticSeverity.Warning : DiagnosticSeverity.Healthy,
-                    Source: "Windows Memory Subsystem Telemetry",
+                    Source: "WinCare Process Runtime",
                     CommandId: "wincare.systemcare.ramoptimizer",
                     Collector: "MemoryDiagnosticsCollector",
-                    CommandVersion: "1.1.0"
+                    CommandVersion: "1.2.0"
                 ));
             }
             catch
@@ -147,10 +212,10 @@ namespace WinCare.Application.Diagnostics
                     MeasuredValue: "Memory load metrics unavailable",
                     IndicatesPressure: false,
                     Severity: DiagnosticSeverity.Information,
-                    Source: "Windows Memory Diagnostic",
+                    Source: "WinCare Process Runtime",
                     CommandId: "wincare.systemcare.ramoptimizer",
                     Collector: "MemoryDiagnosticsCollector",
-                    CommandVersion: "1.1.0"
+                    CommandVersion: "1.2.0"
                 ));
             }
 

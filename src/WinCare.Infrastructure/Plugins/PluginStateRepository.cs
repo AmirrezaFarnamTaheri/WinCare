@@ -23,6 +23,9 @@ public sealed class PluginStateRepository : IPluginStateRepository
 {
     private readonly string _stateFilePath;
 
+    /// <inheritdoc />
+    public string? LastError { get; private set; }
+
     /// <summary>
     /// Initializes a new instance of <see cref="PluginStateRepository"/>.
     /// </summary>
@@ -46,6 +49,10 @@ public sealed class PluginStateRepository : IPluginStateRepository
     {
         if (!File.Exists(_stateFilePath))
         {
+            // A missing file indicates a fresh install, not an error; damaged or unreadable
+            // data is reported distinctly through LastError instead of silently returning
+            // an empty set.
+            LastError = null;
             return new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         }
 
@@ -53,10 +60,14 @@ public sealed class PluginStateRepository : IPluginStateRepository
         {
             var json = File.ReadAllText(_stateFilePath);
             var model = JsonSerializer.Deserialize<PluginStateFileModel>(json);
+            LastError = null;
             return new HashSet<string>(model?.EnabledPluginIds ?? new(), StringComparer.OrdinalIgnoreCase);
         }
-        catch
+        catch (Exception ex)
         {
+            LastError = $"Plugin state file '{_stateFilePath}' could not be read: {ex.Message} " +
+                "The last known good file is left untouched on disk; plugin enablement falls back to disabled until it is repaired.";
+            System.Diagnostics.Debug.WriteLine($"[PluginStateRepository] {LastError}");
             return new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         }
     }
@@ -81,10 +92,16 @@ public sealed class PluginStateRepository : IPluginStateRepository
             var tempFilePath = _stateFilePath + ".tmp." + Guid.NewGuid().ToString("N");
             File.WriteAllText(tempFilePath, json);
             File.Move(tempFilePath, _stateFilePath, overwrite: true);
+            LastError = null;
         }
-        catch
+        catch (Exception ex)
         {
-            // Ignore storage write errors to prevent host crash
+            // Do not crash the host, but report that the save failed — the
+            // write failure leaves the previous state file intact and the error is
+            // recorded so callers can inform the user.
+            LastError = $"Plugin state could not be saved to '{_stateFilePath}': {ex.Message} " +
+                "The last known good state was retained; changes will be lost on restart.";
+            System.Diagnostics.Debug.WriteLine($"[PluginStateRepository] {LastError}");
         }
     }
 }

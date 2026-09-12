@@ -73,16 +73,45 @@ fn raise_critical_alert(snapshot: &monitors::SystemHealthSnapshot) {
         if let Ok(_created) = std::fs::create_dir_all(&directory) {
             let path = directory.join(format!("guard-alert-{}.xml", unix_millis()));
             let _ = std::fs::write(&path, &xml);
+            prune_alert_queue(&directory, MAX_QUEUED_ALERTS);
         }
     }
 
     eprintln!("{xml}");
 }
 
-/// Resolves the per-user notification queue directory.
+/// The on-disk alert queue is bounded and namespaced. Retention is enforced
+/// at the producer to prevent unbounded disk usage.
+#[cfg(target_os = "windows")]
+const MAX_QUEUED_ALERTS: usize = 32;
+
+/// Deletes the oldest queued alert XML files beyond the bounded queue cap.
+#[cfg(target_os = "windows")]
+fn prune_alert_queue(directory: &std::path::Path, max_files: usize) {
+    let mut entries: Vec<std::path::PathBuf> = std::fs::read_dir(directory)
+        .into_iter()
+        .flatten()
+        .filter_map(|entry| entry.ok().map(|e| e.path()))
+        .filter(|path| path.is_file() && path.extension().map(|ext| ext == "xml").unwrap_or(false))
+        .collect();
+    if entries.len() <= max_files {
+        return;
+    }
+    entries.sort();
+    let excess = entries.len() - max_files;
+    for path in entries.into_iter().take(excess) {
+        let _ = std::fs::remove_file(path);
+    }
+}
+
+/// Resolves the namespaced per-user notification queue directory.
 #[cfg(target_os = "windows")]
 fn notifications_directory() -> Option<std::path::PathBuf> {
-    std::env::var_os("LOCALAPPDATA").map(std::path::PathBuf::from)
+    std::env::var_os("LOCALAPPDATA").map(|base| {
+        std::path::PathBuf::from(base)
+            .join("WinCare")
+            .join("GuardAlerts")
+    })
 }
 
 /// Returns a coarse epoch-millis timestamp used for unique queue filenames.

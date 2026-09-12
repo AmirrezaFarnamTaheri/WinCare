@@ -41,6 +41,11 @@ internal sealed partial class WindowsCommandExecutor : ICommandOperationExecutor
 
     internal Func<string, Task>? OnIntentPersistedAsync { get; set; }
     internal Func<RemediationRule, CancellationToken, Task<CommandHandlerOutcome>>? RuleExecutorSeam { get; set; }
+    // Test seam for AppX package-manager invocations. Production always uses the bounded
+    // runner; keeping this seam local prevents package-operation tests from invoking DISM.
+    internal Func<string, IReadOnlyList<string>, CancellationToken, TimeSpan, Task<ProcessExecutionResult>>? AppxProcessRunnerSeam { get; set; }
+    internal Func<string, CancellationToken, Task<AppxRegisteredRemovalResult>>? AppxRegisteredRemovalSeam { get; set; }
+    internal Func<string, string?>? ExecutableFinderSeam { get; set; }
 
     /// <summary>
     /// Initializes a new instance of <see cref="WindowsCommandExecutor"/> bound to a custom state store root path.
@@ -125,7 +130,17 @@ internal sealed partial class WindowsCommandExecutor : ICommandOperationExecutor
         }
         catch (UnauthorizedAccessException ex)
         {
-            return CommandHandlerOutcome.Blocked("command.access_denied", ex.Message);
+            if (definition.ReadOnly)
+            {
+                return CommandHandlerOutcome.Blocked("command.access_denied", ex.Message);
+            }
+
+            // An access failure during a mutating command may follow partially applied steps;
+            // report explicit failure so the user knows to verify affected resources.
+            return CommandHandlerOutcome.Failed(
+                "command.failed_state_unknown",
+                $"{definition.Title} lost access while mutating the host: {ex.Message} " +
+                "Steps already applied may remain in effect; inspect Activity and verify the affected system state before retrying.");
         }
         catch (OperationCanceledException)
         {
@@ -137,9 +152,18 @@ internal sealed partial class WindowsCommandExecutor : ICommandOperationExecutor
         }
         catch (Exception ex) when (ex is IOException or InvalidDataException or JsonException or System.ComponentModel.Win32Exception)
         {
+            if (definition.ReadOnly)
+            {
+                return CommandHandlerOutcome.Failed(
+                    "command.native_failure",
+                    $"{definition.Title} failed without changing host state: {ex.Message}");
+            }
+
+            // Report partial mutation state if a multi-step operation faults mid-way.
             return CommandHandlerOutcome.Failed(
-                "command.native_failure",
-                $"{definition.Title} failed safely: {ex.Message}");
+                "command.failed_state_unknown",
+                $"{definition.Title} failed while mutating the host: {ex.Message} " +
+                "Effects already applied may remain; inspect Activity and verify the affected system state before retrying.");
         }
     }
 
@@ -166,6 +190,9 @@ internal sealed partial class WindowsCommandExecutor : ICommandOperationExecutor
             "system" => await SystemOverviewAsync(cancellationToken).ConfigureAwait(false),
             "applications" => Applications(),
             "cleanup-targets" => await CleanupTargetsAsync(cancellationToken).ConfigureAwait(false),
+            "installer-cache-analysis" => await InstallerCacheAnalysisAsync(p, cancellationToken).ConfigureAwait(false),
+            "storage-report" => await StorageReportAsync(p, cancellationToken).ConfigureAwait(false),
+            "app-residual-discovery" => await AppResidualDiscoveryAsync(p, cancellationToken).ConfigureAwait(false),
             "storage" => StorageOverview(),
             "startup" => StartupItems(),
             "health" => HealthOverview(),
@@ -277,6 +304,9 @@ internal sealed partial class WindowsCommandExecutor : ICommandOperationExecutor
             "explorer-session-records" => await ReadStateAsync("explorer-sessions", cancellationToken).ConfigureAwait(false),
             "ui-automation-snapshot" => UiAutomationSnapshot(p),
             "appx-runtime" => AppxRuntime(),
+            "appx-installed-inventory" => AppxInstalledInventory(),
+            "appx-provisioned-inventory" => await AppxProvisionedInventoryAsync(cancellationToken).ConfigureAwait(false),
+            "winget-upgrade-inventory" => await WingetUpgradeInventoryAsync(cancellationToken).ConfigureAwait(false),
             "appx-launch-targets" => AppxLaunchTargets(p),
             "archive-inspect" => ArchiveInspect(p),
             "servicing-media" => await NativeToolQueryAsync("servicing-media", "dism.exe", ["/English", "/Get-MountedImageInfo"], cancellationToken, administratorOptional: true).ConfigureAwait(false),
@@ -329,12 +359,15 @@ internal sealed partial class WindowsCommandExecutor : ICommandOperationExecutor
         ValidateCommandParameters(definition, p);
         if (!request.Apply)
         {
-            return MutationPreview(definition, p);
+            return definition.Id == "remediation-restore"
+                ? await RemediationRestorePreviewAsync(p, cancellationToken).ConfigureAwait(false)
+                : MutationPreview(definition, p);
         }
 
         return definition.Id switch
         {
             "preset" => await ApplyPresetAsync(p, cancellationToken).ConfigureAwait(false),
+            "remediation-restore" => await ApplyRemediationRestoreAsync(p, request.Approval?.ExecutionDigest, cancellationToken).ConfigureAwait(false),
             "pagefile-set" => PagefileSet(p, cancellationToken),
             "security-control-reduce" => await SecurityControlReduceAsync(p, cancellationToken).ConfigureAwait(false),
             "security-control-restore" => await SecurityControlRestoreAsync(p, cancellationToken).ConfigureAwait(false),
@@ -420,7 +453,8 @@ internal sealed partial class WindowsCommandExecutor : ICommandOperationExecutor
             "appx-launch" => AppxLaunch(p),
             "terminal-export" => await TerminalExportAsync(p, cancellationToken).ConfigureAwait(false),
             "cleaner-disk-pressure" => CleanerDiskPressure(p, cancellationToken),
-            "cleaner-disk-pressure-schedule" => await UpsertStateItemAsync("cleaner-schedules", p, cancellationToken).ConfigureAwait(false),
+            // Scheduler consumer is not yet active in this build; saved as configuration only.
+            "cleaner-disk-pressure-schedule" => await SaveNonExecutingScheduleAsync(p, cancellationToken).ConfigureAwait(false),
             "cleaner-winapp2-run" => CleanerWinapp2Run(p, cancellationToken),
             "cleaner-relocation" => await CleanerRelocationAsync(p, cancellationToken).ConfigureAwait(false),
             "file-preview-export" => await FilePreviewExportAsync(p, cancellationToken).ConfigureAwait(false),
@@ -429,8 +463,11 @@ internal sealed partial class WindowsCommandExecutor : ICommandOperationExecutor
             "peer-task-save" => await UpsertStateItemAsync("peer-taskboard", p, cancellationToken).ConfigureAwait(false),
             "explorer-quick" => ExplorerQuick(p),
             "deep-clean" => DeepClean(p, cancellationToken),
-            "appx-selection" => await AppxSelectionAsync(p, online: true, cancellationToken).ConfigureAwait(false),
-            "offline-appx-selection" => await AppxSelectionAsync(p, online: false, cancellationToken).ConfigureAwait(false),
+            "appx-selection" => await AppxSelectionAsync(p, AppxPackageTarget.InstalledWinGet, "appx-selection", cancellationToken).ConfigureAwait(false),
+            "appx-installed-remove" => await AppxSelectionAsync(p, AppxPackageTarget.InstalledWinGet, "appx-installed-remove", cancellationToken).ConfigureAwait(false),
+            "appx-registered-remove" => await AppxRegisteredRemovalAsync(p, cancellationToken).ConfigureAwait(false),
+            "appx-provisioned-remove" => await AppxSelectionAsync(p, AppxPackageTarget.ProvisionedOnline, "appx-provisioned-remove", cancellationToken).ConfigureAwait(false),
+            "offline-appx-selection" => await AppxSelectionAsync(p, AppxPackageTarget.ProvisionedOffline, "offline-appx-selection", cancellationToken).ConfigureAwait(false),
             "legacy-unsafe" => await LegacyUnsafeAsync(p, cancellationToken).ConfigureAwait(false),
             "vbs-harden" => await VbsHardenAsync(p, cancellationToken).ConfigureAwait(false),
             "sandbox-config" => await SandboxConfigAsync(p, cancellationToken).ConfigureAwait(false),
@@ -534,6 +571,7 @@ internal sealed partial class WindowsCommandExecutor : ICommandOperationExecutor
                 ValidateCommandPlanSteps(steps);
                 break;
             }
+            case "remediation-restore": RequireStrings(p, "ExecutionId"); break;
             case "cancel-operation": RequireStrings(p, "OperationId"); break;
             case "maintenance-create": RequireStrings(p, "Name"); break;
             case "maintenance-transition": RequireStrings(p, "Id", "State"); break;
@@ -636,6 +674,9 @@ internal sealed partial class WindowsCommandExecutor : ICommandOperationExecutor
                 break;
             }
             case "appx-selection": RequireIds(p, "PackageNames"); break;
+            case "appx-installed-remove": RequireIds(p, "PackageNames"); break;
+            case "appx-registered-remove": RequireIds(p, "PackageNames"); break;
+            case "appx-provisioned-remove": RequireIds(p, "PackageNames"); break;
             case "offline-appx-selection": RequireStrings(p, "ImagePath"); RequireIds(p, "PackageNames"); break;
             case "legacy-unsafe": RequireStrings(p, "Action"); break;
             case "sandbox-config": RequireStrings(p, "Path"); break;
@@ -684,7 +725,7 @@ internal sealed partial class WindowsCommandExecutor : ICommandOperationExecutor
     private static bool IsCommandReversible(string commandId) =>
         commandId is "pagefile-set" or "experience-power-apply" or "security-control-restore" or "security-control-reduce";
 
-    private static object GetAffectedResourcesForPreview(string commandId, CommandParameters p)
+    internal static object GetAffectedResourcesForPreview(string commandId, CommandParameters p)
     {
         bool isReversible = IsCommandReversible(commandId);
         return commandId switch
@@ -693,15 +734,27 @@ internal sealed partial class WindowsCommandExecutor : ICommandOperationExecutor
             "experience-power-apply" => new[] { new { resourceType = "PowerScheme", path = @"PowerCfg", target = "ActiveScheme", proposedValue = p.String("ProfileId", "balanced"), reversible = true } },
             "security-control-reduce" => new[] { new { resourceType = "SecurityControl", path = p.String("Control", "DefenderRealtime"), target = "State", proposedValue = "Disabled", durationMinutes = p.Int32("DurationMinutes", 15, 5, 1440), reversible = true } },
             "security-control-restore" => new[] { new { resourceType = "SecurityControl", path = p.String("RecordId", "all"), target = "State", proposedValue = "Restored", reversible = true } },
-            "cleaner-disk-pressure" => new[] { new { resourceType = "FileSystem", path = @"%TEMP%, %WINDIR%\Temp", target = "Cleanup", olderThanDays = p.Int32("OlderThanDays", 7, 0, 3650), proposedValue = "PurgeExpiredFiles", reversible = false } },
-            "deep-clean" => new[] { new { resourceType = "FileSystem", path = @"C:\Windows\Temp", target = "DeepClean", profile = p.String("ProfileId", "temp"), proposedValue = "Purge", reversible = false } },
-            "preset" => new[] { new { resourceType = "RemediationPreset", path = p.String("PresetId", ""), target = "PresetExecution", proposedValue = "ApplyAllRules", reversible = false } },
+            // Cleanup previews are derived from the same root plan as execution.
+            "cleaner-disk-pressure" => CleanupAffectedResources(p.Int32("OlderThanDays", 7, 0, 3650)),
+            "deep-clean" => DeepCleanAffectedResources(p),
+            "preset" => PresetAffectedResources(p.RequiredString("PresetId")),
             _ => new[] { new { resourceType = "SystemState", path = commandId, target = "HostMutation", proposedValue = "Apply", reversible = isReversible } }
         };
     }
 
     private static CommandHandlerOutcome MutationPreview(CommandDefinition definition, CommandParameters p)
     {
+        string? executionDigest = null;
+        if (definition.Id.Equals("preset", StringComparison.OrdinalIgnoreCase))
+        {
+            RemediationPresetPlan plan = CreatePresetPlan(p.RequiredString("PresetId"));
+            if (!plan.IsExecutable)
+            {
+                return Block(definition.Id, string.Join(" ", plan.PreflightFailures));
+            }
+            executionDigest = plan.Digest;
+        }
+
         var affectedResources = GetAffectedResourcesForPreview(definition.Id, p);
         bool isReversible = IsCommandReversible(definition.Id);
         JsonElement data = JsonSerializer.SerializeToElement(new
@@ -715,12 +768,39 @@ internal sealed partial class WindowsCommandExecutor : ICommandOperationExecutor
             reversibilityStatus = isReversible ? "Supported" : "Unsupported",
             reversible = isReversible,
             affectedResources,
+            executionDigest,
             parameters = "Validated. Review the concrete affected resources payload before approval.",
         }, JsonOptions);
         return CommandHandlerOutcome.Succeeded(
             definition.Id + ".preview",
             $"Preview ready for '{definition.Title}'. No host state was changed.",
             data);
+    }
+
+    private static object[] PresetAffectedResources(string presetId)
+    {
+        RemediationPresetPlan plan = CreatePresetPlan(presetId);
+        return plan.Rules.Select(rule => (object)new
+        {
+            resourceType = "RemediationRule",
+            path = rule.Id,
+            target = rule.Title,
+            proposedValue = rule.Description,
+            risk = rule.Risk,
+            administratorAccess = rule.RequiresAdmin,
+            restartPossible = rule.RestartPossible,
+            reversible = false,
+            recovery = rule.Recovery,
+            changes = rule.Changes.Select(change => new
+            {
+                change.Type,
+                parameters = change.Parameters,
+                change.Verification,
+                compensatorDeclared = change.Compensator.HasValue,
+            }).ToArray(),
+            planDigest = plan.Digest,
+            preflightFailures = plan.PreflightFailures,
+        }).ToArray();
     }
 
     private static bool IsAdministrator()
@@ -760,6 +840,11 @@ internal sealed partial class WindowsCommandExecutor : ICommandOperationExecutor
             CommandDefinition? definition = WinCare.CommandCatalog.CommandCatalog.Find(id);
             if (definition is null)
                 throw new CommandParameterException("Steps", $"Unknown command '{id}' in command plan step.");
+            // A nested executor call cannot carry the dispatcher's parameter-bound,
+            // single-use approval plan. Keep command plans useful for evidence collection,
+            // and route every mutation back through the ordinary preview/approval flow.
+            if (!definition.ReadOnly)
+                throw new CommandParameterException("Steps", $"Mutating command '{id}' cannot run inside a command plan. Open it separately, preview the current targets, and approve that exact plan.");
 
             JsonElement parameters = step.TryGetProperty("parameters", out JsonElement paramEl) && paramEl.ValueKind == JsonValueKind.Object
                 ? paramEl.Clone()

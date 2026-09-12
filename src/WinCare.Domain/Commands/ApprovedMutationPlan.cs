@@ -13,12 +13,14 @@ namespace WinCare.Domain.Commands;
 /// <param name="ParametersDigest">SHA256 digest of canonical parameter payload.</param>
 /// <param name="ApprovedAtUtc">Timestamp when approval was recorded.</param>
 /// <param name="CorrelationId">Correlation ID of preview request.</param>
+/// <param name="ExecutionDigest">Optional digest of an expanded execution plan resolved during preview.</param>
 public sealed record ApprovedMutationPlan(
     string PlanId,
     string CommandId,
     string ParametersDigest,
     DateTimeOffset ApprovedAtUtc,
-    Guid CorrelationId)
+    Guid CorrelationId,
+    string? ExecutionDigest = null)
 {
     /// <summary>
     /// Creates an approved mutation plan with a canonical parameter digest and a new correlation ID.
@@ -104,13 +106,13 @@ public sealed record ApprovedMutationPlan(
             case JsonValueKind.Object:
                 var sortedProps = element.EnumerateObject()
                     .OrderBy(p => p.Name, StringComparer.Ordinal)
-                    .Select(p => $"{JsonSerializer.Serialize(p.Name)}:{CanonicalizeJson(p.Value)}");
+                    .Select(p => $"{SerializeJsonString(p.Name)}:{CanonicalizeJson(p.Value)}");
                 return "{" + string.Join(",", sortedProps) + "}";
             case JsonValueKind.Array:
                 var items = element.EnumerateArray().Select(CanonicalizeJson);
                 return "[" + string.Join(",", items) + "]";
             case JsonValueKind.String:
-                return JsonSerializer.Serialize(element.GetString());
+                return SerializeJsonString(element.GetString());
             case JsonValueKind.Number:
                 return element.GetRawText();
             case JsonValueKind.True:
@@ -124,4 +126,10 @@ public sealed record ApprovedMutationPlan(
                 return "{}";
         }
     }
+
+    /// <summary>
+    /// Serializes a string as a JSON string literal without reflection-based serialization.
+    /// </summary>
+    private static string SerializeJsonString(string? value) =>
+        System.Text.Json.Nodes.JsonValue.Create(value)?.ToJsonString() ?? "null";
 }

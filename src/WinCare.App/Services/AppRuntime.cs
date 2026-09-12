@@ -6,6 +6,8 @@ using WinCare.Domain.Telemetry;
 using WinCare.Infrastructure.Commands;
 using WinCare.Infrastructure.Native;
 using WinCare.Infrastructure.Plugins;
+using WinCare.Infrastructure.Storage;
+using WinCare.Application.Storage;
 
 namespace WinCare.App.Services;
 
@@ -22,6 +24,7 @@ public sealed class AppRuntime
     {
         Journal = new ActivityJournalService();
         NativeCore = new NativeCoreService();
+        StorageReports = new StorageReportService();
         SystemProbe = new NativeSystemProbeRepository();
         CommandExecutor = new WindowsCommandExecutor(NativeCore);
         Dispatcher = CommandRuntime.CreateDefault(CommandExecutor, NativeCore, Journal);
@@ -51,6 +54,11 @@ public sealed class AppRuntime
     /// Gets the native core service instance.
     /// </summary>
     public NativeCoreService NativeCore { get; }
+
+    /// <summary>
+    /// Gets the bounded, read-only storage report service used by storage discovery views.
+    /// </summary>
+    public IStorageReportService StorageReports { get; }
 
     /// <summary>
     /// Gets the native system probe repository instance.
@@ -94,6 +102,51 @@ public sealed class AppRuntime
     /// Gets the plugin installer service instance.
     /// </summary>
     public IPluginInstallerService InstallerService { get; }
+
+    /// <summary>
+    /// Bounded application shutdown sequence. Stops accepting new plugin
+    /// discovery work, waits for in-flight work to settle, flushes the
+    /// activity journal, and disposes the command executor.
+    /// </summary>
+    public async Task ShutdownAsync(TimeSpan budget)
+    {
+        using CancellationTokenSource timeout = new(budget);
+        CancellationToken token = timeout.Token;
+        try
+        {
+            Task? initialization;
+            lock (_pluginInitializationLock)
+            {
+                initialization = _pluginInitializationTask;
+            }
+            if (initialization is { IsCompleted: false })
+            {
+                await initialization.WaitAsync(token).ConfigureAwait(false);
+            }
+
+            await Journal.FlushAsync(token).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            // The shutdown budget expired; remaining work is abandoned deliberately so the
+            // close completes. The journal writes that did land remain durable.
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[AppRuntime] Shutdown error: {ex}");
+        }
+        finally
+        {
+            try
+            {
+                CommandExecutor.Dispose();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[AppRuntime] Executor dispose failed: {ex}");
+            }
+        }
+    }
 
     /// <summary>
     /// Discovers and initializes plugins asynchronously on application startup.

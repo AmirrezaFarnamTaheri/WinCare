@@ -3,6 +3,7 @@
     <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
   </PropertyGroup>

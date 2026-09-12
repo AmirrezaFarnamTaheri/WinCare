@@ -5,6 +5,7 @@ using CommunityToolkit.Mvvm.Input;
 using WinCare.Application.Commands;
 using WinCare.Domain.Activity;
 using WinCare.Domain.Commands;
+using WinCare.CommandCatalog.Models;
 using WinCare.Domain.Telemetry;
 
 namespace WinCare.App.ViewModels.Pages;
@@ -56,8 +57,44 @@ public sealed class HomePageViewModel : ObservableObject
     // Curated Action 1: Quick Clean (cleaner-disk-pressure)
     private bool _isCleaning;
     private string _cleanStatusText = "Ready";
+    private ApprovedMutationPlan? _pendingCleanPlan;
     private string _cleanDetailText = "Purge temporary files & free space";
     private string _cleanActionText = "Clean Now";
+
+    // Anti-slop item 1: the risk badge on each curated card is derived from the live
+    // catalog definition, so a card can never claim "SAFE" for a command whose admission
+    // contract is preview + confirm (DESIGN.md principle 1: product truth outranks decoration).
+    public string CleanRiskBadge { get; } = RiskBadgeFor("cleaner-disk-pressure");
+    public string CleanRiskBadgeBrushKey { get; } = RiskBadgeBrushKeyFor("cleaner-disk-pressure");
+    public string StartupRiskBadge { get; } = RiskBadgeFor("startup");
+    public string StartupRiskBadgeBrushKey { get; } = RiskBadgeBrushKeyFor("startup");
+    public string NetworkRiskBadge { get; } = RiskBadgeFor("network");
+    public string NetworkRiskBadgeBrushKey { get; } = RiskBadgeBrushKeyFor("network");
+
+    private static string RiskBadgeFor(string commandId)
+    {
+        CommandDefinition? definition = WinCare.CommandCatalog.CommandCatalog.Find(commandId);
+        if (definition is null) return "Cataloged";
+        if (definition.ReadOnly) return "Read-only";
+        return definition.RiskTier switch
+        {
+            RiskTier.Safe => "1-click change",
+            RiskTier.Moderate => "Moderate · preview + confirm",
+            _ => "High-impact · preview + confirm",
+        };
+    }
+
+    private static string RiskBadgeBrushKeyFor(string commandId)
+    {
+        CommandDefinition? definition = WinCare.CommandCatalog.CommandCatalog.Find(commandId);
+        if (definition is null || definition.ReadOnly) return "PillReadOnlyBgBrush";
+        return definition.RiskTier switch
+        {
+            RiskTier.Safe => "PillNotReadyBgBrush",
+            RiskTier.Moderate => "PillElevatedBgBrush",
+            _ => "PillMutatingBgBrush",
+        };
+    }
 
     // Curated Action 2: Startup Boost (startup)
     private bool _isAuditingStartup;
@@ -131,25 +168,56 @@ public sealed class HomePageViewModel : ObservableObject
     private async Task QuickCleanAsync(CancellationToken cancellationToken)
     {
         if (IsCleaning) return;
-        IsCleaning = true;
-        CleanStatusText = "Cleaning…";
-        CleanDetailText = "Purging expired temporary files…";
 
+        // Quick clean collects cleanup targets for review, then confirms with the user before applying.
+        CommandDispatcher dispatcher = GetDispatcher();
+        IsCleaning = true;
         try
         {
-            CommandDispatcher dispatcher = GetDispatcher();
-            using JsonDocument doc = JsonDocument.Parse("{}");
+            if (_pendingCleanPlan is not { } plan)
+            {
+                CleanStatusText = "Reviewing…";
+                CleanDetailText = "Collecting cleanup targets for review…";
+                using JsonDocument doc = JsonDocument.Parse("{}");
+                CommandResult preview = await dispatcher.ExecuteAsync(
+                    CommandRequest.Preview("cleaner-disk-pressure", doc.RootElement),
+                    CommandExecutionOptions.Default,
+                    cancellationToken);
+
+                if (preview.Status != CommandResultStatus.Succeeded || preview.ReviewPlan is null)
+                {
+                    CleanStatusText = "Failed";
+                    CleanDetailText = string.IsNullOrWhiteSpace(preview.Message)
+                        ? "Cleanup preview could not be completed."
+                        : preview.Message;
+                    CleanActionText = "Try Again";
+                    return;
+                }
+
+                _pendingCleanPlan = preview.ReviewPlan;
+                CleanStatusText = "Review required";
+                CleanDetailText = string.IsNullOrWhiteSpace(preview.Message)
+                    ? "Review the resolved cleanup targets, then confirm to apply."
+                    : preview.Message;
+                CleanActionText = "Confirm Clean";
+                return;
+            }
+
+            CleanStatusText = "Cleaning…";
+            CleanDetailText = "Purging expired temporary files…";
             CommandResult result = await dispatcher.ExecuteAsync(
-                CommandRequest.Execute("cleaner-disk-pressure", doc.RootElement),
-                new CommandExecutionOptions(ReviewApproved: false),
+                CommandRequest.Execute("cleaner-disk-pressure", JsonSerializer.SerializeToElement(new { }), plan),
+                new CommandExecutionOptions(ReviewApproved: true),
                 cancellationToken);
 
+            _pendingCleanPlan = null; // single-use receipt consumed
             CleanStatusText = result.Status == CommandResultStatus.Succeeded ? "Clean Complete" : "Failed";
             CleanDetailText = !string.IsNullOrWhiteSpace(result.Message) ? result.Message : "Cleanup operation finished.";
             CleanActionText = "Clean Again";
         }
         catch (Exception ex)
         {
+            _pendingCleanPlan = null;
             CleanStatusText = "Error";
             CleanDetailText = ex.Message;
         }
@@ -174,8 +242,25 @@ public sealed class HomePageViewModel : ObservableObject
                 CommandExecutionOptions.Default,
                 cancellationToken);
 
-            StartupStatusText = result.Status == CommandResultStatus.Succeeded ? "Audit Complete" : "Failed";
-            StartupDetailText = !string.IsNullOrWhiteSpace(result.Message) ? result.Message : "Startup analysis completed.";
+            // Display inspected startup entries without changing system state.
+            if (result.Status == CommandResultStatus.Succeeded && result.Data?.ValueKind == JsonValueKind.Array)
+            {
+                var entries = result.Data.Value.EnumerateArray().ToList();
+                var names = entries
+                    .Select(entry => entry.TryGetProperty("name", out JsonElement name) ? name.GetString() : null)
+                    .Where(name => !string.IsNullOrWhiteSpace(name))
+                    .Take(3)
+                    .ToList();
+                string preview = names.Count > 0 ? $": {string.Join(", ", names)}{(entries.Count > 3 ? ", …" : string.Empty)}" : string.Empty;
+                StartupStatusText = $"{entries.Count} startup entries inspected";
+                StartupDetailText = $"Read-only inspection of Run keys and Startup folders{preview}. No entries were changed.";
+            }
+            else
+            {
+                StartupStatusText = result.Status == CommandResultStatus.Succeeded ? "Startup inspection complete" : "Failed";
+                StartupDetailText = !string.IsNullOrWhiteSpace(result.Message) ? result.Message : "Startup analysis completed.";
+            }
+
             StartupActionText = "Re-analyze";
         }
         catch (Exception ex)
@@ -204,8 +289,22 @@ public sealed class HomePageViewModel : ObservableObject
                 CommandExecutionOptions.Default,
                 cancellationToken);
 
-            NetworkStatusText = result.Status == CommandResultStatus.Succeeded ? "Connected" : "Failed";
-            NetworkDetailText = !string.IsNullOrWhiteSpace(result.Message) ? result.Message : "Network query completed.";
+            // Display observed adapter states.
+            if (result.Status == CommandResultStatus.Succeeded && result.Data?.ValueKind == JsonValueKind.Array)
+            {
+                var adapters = result.Data.Value.EnumerateArray().ToList();
+                int operational = adapters.Count(adapter =>
+                    adapter.TryGetProperty("status", out JsonElement status) &&
+                    string.Equals(status.GetString(), "Up", StringComparison.OrdinalIgnoreCase));
+                NetworkStatusText = $"{adapters.Count} network interfaces inspected · {operational} operational";
+                NetworkDetailText = "Read-only inspection of adapters, routes, and DNS configuration. Use the network tools for connectivity checks.";
+            }
+            else
+            {
+                NetworkStatusText = result.Status == CommandResultStatus.Succeeded ? "Network inspection complete" : "Failed";
+                NetworkDetailText = !string.IsNullOrWhiteSpace(result.Message) ? result.Message : "Network query completed.";
+            }
+
             NetworkActionText = "Check Again";
         }
         catch (Exception ex)
@@ -304,18 +403,18 @@ public sealed class HomePageViewModel : ObservableObject
         if (collected == QuickCheckCommandIds.Length)
         {
             DateTimeOffset newestCheck = latestByCommand.Values.Max(record => record.StartedAt);
-            EvidenceTitle = "Latest check evidence collected";
-            EvidenceSummary = $"All four read-only probes reported an outcome. Last evidence: {newestCheck.ToLocalTime():g}. Review category details before acting.";
+            EvidenceTitle = "Your latest check is ready";
+            EvidenceSummary = $"All four safe checks finished. Last checked: {newestCheck.ToLocalTime():g}. Review the details before making changes.";
         }
         else if (latestByCommand.Count > 0)
         {
-            EvidenceTitle = needsReview > 0 ? "Check evidence needs review" : "Check evidence is incomplete";
-            EvidenceSummary = $"{collected} of {QuickCheckCommandIds.Length} read-only probes completed. This is evidence coverage, not a machine-health score.";
+            EvidenceTitle = needsReview > 0 ? "Some checks need your attention" : "Your PC snapshot is taking shape";
+            EvidenceSummary = $"{collected} of {QuickCheckCommandIds.Length} safe checks finished. Open a result to see what WinCare found.";
         }
         else
         {
-            EvidenceTitle = "No check evidence yet";
-            EvidenceSummary = "Run a read-only check to collect current evidence before WinCare recommends anything.";
+            EvidenceTitle = "Start with a fresh PC snapshot";
+            EvidenceSummary = "Run a safe check to see what is happening before WinCare suggests a next step.";
         }
     }
 
@@ -327,11 +426,22 @@ public sealed class HomePageViewModel : ObservableObject
 
     public void SetCompactLayout(bool isCompact) => IsCompactLayout = isCompact;
 
+    /// <summary>
+    /// Activity history older than this window is treated as stale.
+    /// </summary>
+    private static readonly TimeSpan EvidenceFreshnessWindow = TimeSpan.FromMinutes(30);
+
     private static string StatusFor(IReadOnlyDictionary<string, ActivityRecord> latestByCommand, string commandId)
     {
         if (!latestByCommand.TryGetValue(commandId, out ActivityRecord? record))
         {
             return "Not checked";
+        }
+
+        if (record.State == ActivityState.Completed &&
+            DateTimeOffset.UtcNow - record.StartedAt > EvidenceFreshnessWindow)
+        {
+            return $"Stale evidence ({record.StartedAt.ToLocalTime():HH:mm})";
         }
 
         return record.State switch

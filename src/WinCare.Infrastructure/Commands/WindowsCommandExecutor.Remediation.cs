@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Security.Cryptography;
 using Microsoft.Win32;
 using WinCare.CommandCatalog.Models;
 using WinCare.Domain.Commands;
@@ -9,16 +10,102 @@ namespace WinCare.Infrastructure.Commands;
 
 internal sealed partial class WindowsCommandExecutor
 {
+    private async Task<CommandHandlerOutcome> RemediationRestorePreviewAsync(CommandParameters p, CancellationToken cancellationToken)
+    {
+        string executionId = p.RequiredString("ExecutionId");
+        JsonElement history = await FindStateItemAsync("remediation-history", executionId, cancellationToken).ConfigureAwait(false);
+        RemediationRecoveryPlan plan = RemediationRecoveryPlanner.Create(history);
+        if (!plan.IsExecutable) return Block("remediation-restore", string.Join(" ", plan.Failures));
+        return CommandHandlerOutcome.Succeeded("remediation-restore.preview",
+            $"Recovery preview ready for {plan.Steps.Count} registry value{(plan.Steps.Count == 1 ? string.Empty : "s")}. No host state was changed.",
+            Data(new
+            {
+                commandId = "remediation-restore", action = "preview", plan.ExecutionId, executionDigest = plan.Digest,
+                reversibilityStatus = "Supported", reversible = true,
+                affectedResources = plan.Steps.Select(step => new { resourceType = "RegistryValue", path = step.Path, target = step.Name, proposedValue = step.PreviousValue, removeValue = step.PreviousValue is null || step.PreviousValue.Value.ValueKind == JsonValueKind.Null, reversible = true }).ToArray()
+            }));
+    }
+
+    private async Task<CommandHandlerOutcome> ApplyRemediationRestoreAsync(CommandParameters p, string? approvedDigest, CancellationToken cancellationToken)
+    {
+        string executionId = p.RequiredString("ExecutionId");
+        JsonElement history = await FindStateItemAsync("remediation-history", executionId, cancellationToken).ConfigureAwait(false);
+        RemediationRecoveryPlan plan = RemediationRecoveryPlanner.Create(history);
+        if (!plan.IsExecutable) return Block("remediation-restore", string.Join(" ", plan.Failures));
+        if (!DigestMatches(plan.Digest, approvedDigest))
+            return Block("remediation-restore", "The recovery receipt changed after preview. Review the current recovery plan again.");
+
+        var restored = new List<object>();
+        foreach (RegistryRecoveryStep step in plan.Steps)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            (RegistryHive hive, string subKey) = ParseRegistryPath(step.Path);
+            using RegistryKey baseKey = RegistryKey.OpenBaseKey(hive, RegistryView.Default);
+            using RegistryKey key = baseKey.CreateSubKey(subKey, writable: true);
+            object expectedApplied = ConvertRegistryValue(step.AppliedValue, step.AppliedValueType);
+            object? current = key.GetValue(step.Name, null, RegistryValueOptions.DoNotExpandEnvironmentNames);
+            if (!RegistryValuesEqual(current, expectedApplied))
+            {
+                JsonElement partialReceipt = Data(new
+                {
+                    id = Guid.NewGuid().ToString("N"),
+                    sourceExecutionId = plan.ExecutionId,
+                    sourceDigest = plan.Digest,
+                    status = restored.Count == 0 ? "BlockedCurrentState" : "PartiallyRestored",
+                    stoppedAt = DateTimeOffset.UtcNow,
+                    restored,
+                    conflict = new { step.Path, step.Name }
+                });
+                await AppendStateItemAsync("remediation-recovery-history", partialReceipt, cancellationToken).ConfigureAwait(false);
+                return CommandHandlerOutcome.Failed("remediation-restore.concurrent_change",
+                    $"Recovery stopped before '{step.Path}\\{step.Name}' because its current value no longer matches the applied receipt. No later recovery steps were attempted.",
+                    partialReceipt);
+            }
+
+            if (step.PreviousValue is null || step.PreviousValue.Value.ValueKind == JsonValueKind.Null || string.IsNullOrWhiteSpace(step.PreviousValueKind))
+                key.DeleteValue(step.Name, throwOnMissingValue: false);
+            else
+            {
+                object previous = ConvertRegistryValue(step.PreviousValue.Value, step.PreviousValueKind);
+                key.SetValue(step.Name, previous, ParseRegistryKind(step.PreviousValueKind));
+            }
+            restored.Add(new { step.Path, step.Name, restoredAt = DateTimeOffset.UtcNow });
+        }
+
+        JsonElement receipt = Data(new { id = Guid.NewGuid().ToString("N"), sourceExecutionId = plan.ExecutionId, sourceDigest = plan.Digest, status = "Restored", completedAt = DateTimeOffset.UtcNow, restored });
+        await AppendStateItemAsync("remediation-recovery-history", receipt, cancellationToken).ConfigureAwait(false);
+        return Success("remediation-restore", $"Restored {restored.Count} registry value{(restored.Count == 1 ? string.Empty : "s")} from the verified remediation receipt.", receipt, undo: false);
+    }
+
+    private static bool RegistryValuesEqual(object? current, object expected) => (current, expected) switch
+    {
+        (byte[] left, byte[] right) => left.SequenceEqual(right),
+        (string[] left, string[] right) => left.SequenceEqual(right, StringComparer.Ordinal),
+        (null, _) => false,
+        _ => current.Equals(expected),
+    };
+
+    private static bool DigestMatches(string expected, string? supplied)
+    {
+        if (supplied is null || supplied.Length != expected.Length) return false;
+        try { return CryptographicOperations.FixedTimeEquals(Convert.FromHexString(expected), Convert.FromHexString(supplied)); }
+        catch (FormatException) { return false; }
+    }
+
     private async Task<CommandHandlerOutcome> ApplyPresetAsync(CommandParameters p, CancellationToken cancellationToken)
     {
         string presetId = p.RequiredString("PresetId");
-        PresetDefinition? preset = WinCare.CommandCatalog.RemediationCatalog.LoadPresets().FirstOrDefault(x => x.Id.Equals(presetId, StringComparison.OrdinalIgnoreCase));
-        if (preset is null) throw new CommandParameterException("PresetId", $"Preset '{presetId}' does not exist.");
+        RemediationPresetPlan plan = CreatePresetPlan(presetId);
+        if (!plan.IsExecutable)
+        {
+            return Block("preset", string.Join(" ", plan.PreflightFailures));
+        }
+
         IReadOnlyDictionary<string, RemediationRule> rules = WinCare.CommandCatalog.RemediationCatalog.LoadRules().ToDictionary(x => x.Id, StringComparer.OrdinalIgnoreCase);
 
         string executionId = Guid.NewGuid().ToString("N");
         var results = new List<object>();
-        JsonElement intentRecord = Data(new { id = executionId, presetId = preset.Id, preset.Title, status = "Applying", startedAt = DateTimeOffset.UtcNow, rules = results });
+        JsonElement intentRecord = Data(new { id = executionId, presetId = plan.PresetId, plan.Title, planDigest = plan.Digest, status = "Applying", startedAt = DateTimeOffset.UtcNow, rules = results });
         await AppendStateItemAsync("preset-history", intentRecord, CancellationToken.None).ConfigureAwait(false);
         if (OnIntentPersistedAsync is not null)
         {
@@ -28,47 +115,55 @@ internal sealed partial class WindowsCommandExecutor
         string currentRuleId = "";
         try
         {
-            foreach (string ruleId in preset.RuleIds)
+            foreach (ResolvedRemediationRule plannedRule in plan.Rules)
             {
-                currentRuleId = ruleId;
+                currentRuleId = plannedRule.Id;
                 cancellationToken.ThrowIfCancellationRequested();
-                if (!rules.TryGetValue(ruleId, out RemediationRule? rule))
+                if (!rules.TryGetValue(plannedRule.Id, out RemediationRule? rule))
                 {
-                    JsonElement partialPreset = Data(new { id = executionId, presetId = preset.Id, preset.Title, status = "PartiallyApplied", stoppedAtRule = ruleId, error = $"Missing rule '{ruleId}'", rules = results });
+                    JsonElement partialPreset = Data(new { id = executionId, presetId = plan.PresetId, plan.Title, planDigest = plan.Digest, status = "PartiallyApplied", stoppedAtRule = plannedRule.Id, error = $"Resolved rule '{plannedRule.Id}' is no longer available.", rules = results });
                     await TransitionStateItemAsync("preset-history", executionId, partialPreset, cancellationToken).ConfigureAwait(false);
-                    throw new InvalidDataException($"Preset '{preset.Id}' references missing rule '{ruleId}'.");
+                    throw new InvalidDataException($"Resolved rule '{plannedRule.Id}' is no longer available.");
                 }
 
                 CommandHandlerOutcome outcome = RuleExecutorSeam is not null
                     ? await RuleExecutorSeam(rule, cancellationToken).ConfigureAwait(false)
                     : await ApplyRemediationRuleAsync(rule, cancellationToken).ConfigureAwait(false);
-                results.Add(new { ruleId, status = outcome.Status.ToString(), outcome.Code, outcome.Message, outcome.Data });
+                results.Add(new { ruleId = plannedRule.Id, status = outcome.Status.ToString(), outcome.Code, outcome.Message, outcome.Data });
                 if (outcome.Status != CommandResultStatus.Succeeded)
                 {
-                    JsonElement partialPreset = Data(new { id = executionId, presetId = preset.Id, preset.Title, status = "PartiallyApplied", stoppedAtRule = ruleId, message = outcome.Message, rules = results });
+                    JsonElement partialPreset = Data(new { id = executionId, presetId = plan.PresetId, plan.Title, planDigest = plan.Digest, status = "PartiallyApplied", stoppedAtRule = plannedRule.Id, message = outcome.Message, rules = results });
                     await TransitionStateItemAsync("preset-history", executionId, partialPreset, cancellationToken).ConfigureAwait(false);
-                    return CommandHandlerOutcome.Failed("preset.partial_failure", $"Preset '{preset.Title}' stopped at rule '{ruleId}': {outcome.Message}");
+                    return CommandHandlerOutcome.Failed("preset.partial_failure", $"Preset '{plan.Title}' stopped at rule '{plannedRule.Id}': {outcome.Message}");
                 }
             }
 
-            JsonElement finalPreset = Data(new { id = executionId, presetId = preset.Id, preset.Title, status = "Applied", completedAt = DateTimeOffset.UtcNow, rules = results });
+            JsonElement finalPreset = Data(new { id = executionId, presetId = plan.PresetId, plan.Title, planDigest = plan.Digest, status = "Applied", completedAt = DateTimeOffset.UtcNow, rules = results });
             if (OnIntentPersistedAsync is not null)
             {
                 await OnIntentPersistedAsync("preset-history:Applied").ConfigureAwait(false);
             }
             using CancellationTokenSource finalCleanupCts = new(TimeSpan.FromSeconds(5));
             await TransitionStateItemAsync("preset-history", executionId, finalPreset, finalCleanupCts.Token).ConfigureAwait(false);
-            return Success("preset", $"Preset '{preset.Title}' applied through native remediation primitives.", finalPreset, undo: false);
+            return Success("preset", $"Preset '{plan.Title}' applied through the approved expanded remediation plan.", finalPreset, undo: false);
         }
         catch (Exception ex)
         {
             using CancellationTokenSource cleanupCts = new(TimeSpan.FromSeconds(5));
             string terminalStatus = ex is OperationCanceledException ? "Cancelled" : "PartiallyApplied";
-            JsonElement partialPreset = Data(new { id = executionId, presetId = preset.Id, preset.Title, status = terminalStatus, stoppedAtRule = currentRuleId, error = ex.Message, rules = results });
+            JsonElement partialPreset = Data(new { id = executionId, presetId = plan.PresetId, plan.Title, planDigest = plan.Digest, status = terminalStatus, stoppedAtRule = currentRuleId, error = ex.Message, rules = results });
             await TransitionStateItemAsync("preset-history", executionId, partialPreset, cleanupCts.Token).ConfigureAwait(false);
             throw;
         }
     }
+
+    private static RemediationPresetPlan CreatePresetPlan(string presetId) =>
+        RemediationPresetPlanner.Create(
+            presetId,
+            WinCare.CommandCatalog.RemediationCatalog.LoadPresets(),
+            WinCare.CommandCatalog.RemediationCatalog.LoadRules(),
+            Environment.OSVersion.Version.Build,
+            IsAdministrator());
 
     private async Task<CommandHandlerOutcome> ApplyRemediationRuleAsync(RemediationRule rule, CancellationToken cancellationToken)
     {
@@ -94,7 +189,9 @@ internal sealed partial class WindowsCommandExecutor
             JsonElement history = Data(new { id = executionId, ruleId = rule.Id, rule.Title, status = "Applied", completedAt = DateTimeOffset.UtcNow, changes });
             using CancellationTokenSource finalRuleCleanupCts = new(TimeSpan.FromSeconds(5));
             await TransitionStateItemAsync("remediation-history", executionId, history, finalRuleCleanupCts.Token).ConfigureAwait(false);
-            return Success("preset", $"Rule '{rule.Title}' applied.", history, undo: rule.Reversible);
+            // A catalog recovery description is not an executable compensator endpoint.
+            // Keep handler metadata truthful until a bounded restore operation exists.
+            return Success("preset", $"Rule '{rule.Title}' applied.", history, undo: false);
         }
         catch (Exception ex)
         {

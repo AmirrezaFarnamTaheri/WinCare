@@ -96,9 +96,18 @@ public class RemoteCatalogService : IRemoteCatalogService
 
         try
         {
+            // Remote catalog reads are bounded explicitly to prevent memory exhaustion.
+            const long MaxCatalogBytes = 16 * 1024 * 1024;
+            const long MaxSignatureBytes = 256 * 1024;
+
             using var response = await _httpClient.GetAsync(_catalogUrl, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
-            byte[] catalogBytes = await response.Content.ReadAsByteArrayAsync(cancellationToken).ConfigureAwait(false);
+            if (response.Content.Headers.ContentLength is long catalogLength && catalogLength > MaxCatalogBytes)
+            {
+                throw new InvalidOperationException(
+                    $"Remote catalog payload is {catalogLength} bytes, exceeding the {MaxCatalogBytes}-byte limit.");
+            }
+            byte[] catalogBytes = await ReadBoundedAsync(response.Content, MaxCatalogBytes, cancellationToken).ConfigureAwait(false);
 
             string? detachedSignature = null;
             bool trustVerified = false;
@@ -107,7 +116,13 @@ public class RemoteCatalogService : IRemoteCatalogService
             {
                 using var signatureResponse = await _httpClient.GetAsync(_catalogSignatureUrl, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
                 signatureResponse.EnsureSuccessStatusCode();
-                detachedSignature = (await signatureResponse.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false)).Trim();
+                if (signatureResponse.Content.Headers.ContentLength is long signatureLength && signatureLength > MaxSignatureBytes)
+                {
+                    throw new InvalidOperationException(
+                        $"Remote catalog signature payload is {signatureLength} bytes, exceeding the {MaxSignatureBytes}-byte limit.");
+                }
+                byte[] signatureBytes = await ReadBoundedAsync(signatureResponse.Content, MaxSignatureBytes, cancellationToken).ConfigureAwait(false);
+                detachedSignature = System.Text.Encoding.UTF8.GetString(signatureBytes).Trim();
                 trustVerified = PluginAdmissionTrustStore.VerifyManifestSignature(
                     catalogBytes,
                     detachedSignature,
@@ -158,10 +173,8 @@ public class RemoteCatalogService : IRemoteCatalogService
                 return fallbackCatalog;
             }
 
-            // Return bundled offline default catalog with illustrative (non-installable) sample metadata
-            var defaultCatalog = GetOfflineDefaultCatalog();
-            ApplyRevocationPolicy(defaultCatalog);
-            return defaultCatalog;
+            throw new InvalidOperationException(
+                "The plugin catalog is unavailable and no saved catalog could be loaded.", ex);
         }
     }
 
@@ -216,6 +229,30 @@ public class RemoteCatalogService : IRemoteCatalogService
         }
     }
 
+    /// <summary>
+    /// Reads a response body up to <paramref name="maxBytes"/>; a larger body
+    /// aborts the read instead of buffering unbounded data.
+    /// </summary>
+    private static async Task<byte[]> ReadBoundedAsync(HttpContent content, long maxBytes, CancellationToken cancellationToken)
+    {
+        await using Stream stream = await content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
+        var buffer = new MemoryStream();
+        byte[] chunk = new byte[64 * 1024];
+        long total = 0;
+        int read;
+        while ((read = await stream.ReadAsync(chunk, cancellationToken).ConfigureAwait(false)) > 0)
+        {
+            total += read;
+            if (total > maxBytes)
+            {
+                throw new InvalidOperationException(
+                    $"Remote payload exceeded the {maxBytes}-byte read limit.");
+            }
+            buffer.Write(chunk, 0, read);
+        }
+        return buffer.ToArray();
+    }
+
     private static void NormalizeCatalog(RemotePluginCatalog catalog)
     {
         catalog.Plugins ??= new List<RemotePluginItem>();
@@ -232,50 +269,6 @@ public class RemoteCatalogService : IRemoteCatalogService
             plugin.CommandsProvided ??= new List<string>();
             plugin.Permissions ??= new List<string>();
         }
-    }
-
-    private static RemotePluginCatalog GetOfflineDefaultCatalog()
-    {
-        // Offline fallback entries are illustrative sample metadata only. They are not
-        // installable: PackageUrl and Sha256 are intentionally empty so the offline catalog
-        // never fabricates a download endpoint or an integrity digest for packages that are
-        // not actually distributable through it.
-        var catalog = new RemotePluginCatalog
-        {
-            CatalogVersion = "1.0",
-            LastUpdated = DateTime.UtcNow,
-            Plugins = new List<RemotePluginItem>
-            {
-                new()
-                {
-                    Id = "org.wincare.diskcleaner",
-                    Name = "Enhanced Disk Cleaner",
-                    Author = "WinCare Community",
-                    Version = "1.0.0",
-                    Description = "Deep cleaner for Windows temp files, browser caches, and delivery optimization files. (Offline sample — not installable.)",
-                    Category = "System Care",
-                    Sha256 = string.Empty,
-                    PackageUrl = string.Empty,
-                    Permissions = new List<string> { "filesystem.read", "filesystem.write" },
-                    CommandsProvided = new List<string> { "org.wincare.diskcleaner.run" }
-                },
-                new()
-                {
-                    Id = "org.wincare.dnstools",
-                    Name = "Network DNS Diagnostic Kit",
-                    Author = "WinCare Network Group",
-                    Version = "1.1.0",
-                    Description = "Flush DNS cache, test DNS latency across multiple providers, and reset Winsock. (Offline sample — not installable.)",
-                    Category = "Utilities",
-                    Sha256 = string.Empty,
-                    PackageUrl = string.Empty,
-                    Permissions = new List<string> { "network.query", "process.spawn" },
-                    CommandsProvided = new List<string> { "org.wincare.dnstools.flush", "org.wincare.dnstools.bench" }
-                }
-            }
-        };
-        SetTrustState(catalog, false, "Offline sample catalog. Remote installation is unavailable.");
-        return catalog;
     }
 
     private async Task<RemotePluginCatalog?> TryLoadFromCacheAsync(CancellationToken cancellationToken)

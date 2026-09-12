@@ -6,14 +6,14 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     mc:Ignorable="d"
     Title="Review plugin"
-    PrimaryButtonText="Trust and install"
+    PrimaryButtonText="Install"
     CloseButtonText="Cancel"
     DefaultButton="Close"
     CornerRadius="{StaticResource RadiusControl}"
     Style="{ThemeResource DefaultContentDialogStyle}">
 
     <ScrollViewer MaxHeight="620" VerticalScrollBarVisibility="Auto">
-        <StackPanel MaxWidth="460" Spacing="16">
+        <StackPanel MaxWidth="460" Spacing="24">
         <!-- Header & Metadata -->
         <Grid ColumnDefinitions="Auto,*">
             <Border Width="64" Height="64" CornerRadius="{StaticResource RadiusControl}" Background="{ThemeResource AccentTealSubtleBrush}" BorderBrush="{ThemeResource AccentTealBrush}" BorderThickness="1" Margin="0,0,16,0">
@@ -35,11 +35,11 @@
 
         <!-- Trust Boundary Warning Banner -->
         <Border BorderThickness="1" BorderBrush="{ThemeResource WarningBrush}" CornerRadius="{StaticResource RadiusControl}" Padding="10" Background="{ThemeResource SurfaceSecondaryBrush}">
-            <StackPanel Orientation="Horizontal" Spacing="10">
+            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
                 <FontIcon Glyph="&#xE7BA;" FontSize="16" Foreground="{ThemeResource WarningBrush}" VerticalAlignment="Top" Margin="0,2,0,0"/>
-                <TextBlock Text="Full-Trust In-Process Execution: Installed plugins execute locally with your user privileges and system access. Only install packages from authors you trust."
+                <TextBlock Grid.Column="1" Text="Plugins run on your PC with your account’s permissions and system access. Install only from authors you trust."
                            TextWrapping="Wrap" FontSize="12" Foreground="{ThemeResource TextPrimaryBrush}"/>
-            </StackPanel>
+            </Grid>
         </Border>
 
         <!-- Category & Published Date -->
@@ -71,7 +71,7 @@
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
-                <TextBlock Text="Capability declarations are consent metadata only. Full-trust in-process plugins are not sandboxed or technically constrained by these declarations."
+                <TextBlock Text="Plugins run with the permissions of your Windows account."
                            TextWrapping="Wrap" FontSize="11" Foreground="{ThemeResource TextSecondaryBrush}" />
             </StackPanel>
         </Border>
@@ -89,13 +89,13 @@
 
         <!-- Revocation Advisory Banner (Visible only when revoked) -->
         <Border x:Name="RevocationBanner" Visibility="Collapsed" BorderThickness="1" BorderBrush="{ThemeResource DangerBrush}" CornerRadius="{StaticResource RadiusControl}" Padding="10" Background="{ThemeResource SurfaceSecondaryBrush}">
-            <StackPanel Orientation="Horizontal" Spacing="10">
+            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
                 <FontIcon Glyph="&#xEB90;" FontSize="16" Foreground="{ThemeResource DangerBrush}" VerticalAlignment="Top" Margin="0,2,0,0"/>
-                <TextBlock x:Name="RevocationReasonText" Text="This package was revoked by security policy."
+                <TextBlock Grid.Column="1" x:Name="RevocationReasonText" Text="This package was revoked by security policy."
                            TextWrapping="Wrap" FontSize="12" Foreground="{ThemeResource DangerBrush}"/>
-            </StackPanel>
+            </Grid>
         </Border>
-        <TextBlock Text="Remote installation is enabled only when the exact catalog bytes verify against a WinCare-pinned signing key and the selected package also has publisher-signed manifest metadata. Otherwise this catalog is browse-only."
+        <TextBlock Text="Verified packages from trusted sources can be installed directly. Other packages are browse-only."
                    TextWrapping="Wrap" FontSize="12" Foreground="{ThemeResource TextSecondaryBrush}" />
 
         <!-- Commands Provided -->

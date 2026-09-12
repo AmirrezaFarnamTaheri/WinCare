@@ -26,6 +26,8 @@ public sealed class PluginRegistryService : IPluginRegistry
     private readonly ConcurrentDictionary<string, (IWinCarePlugin Plugin, PluginLoadContext? LoadContext)> _instantiatedPlugins = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, HashSet<string>> _registeredCommandIdsByPlugin = new(StringComparer.OrdinalIgnoreCase);
     private readonly IPluginStateRepository? _stateRepository;
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<string, string> _widgetErrors =
+        new(StringComparer.OrdinalIgnoreCase);
     private readonly HashSet<string> _enabledIds;
     private readonly ScriptCommandHandlerFactory? _scriptHandlerFactory;
     private readonly SemaphoreSlim _gate = new(1, 1);
@@ -136,19 +138,25 @@ public sealed class PluginRegistryService : IPluginRegistry
                     {
                         widgets.AddRange(pluginWidgets);
                     }
+                    _widgetErrors.TryRemove(kvp.Key, out _);
                 }
                 catch (Exception ex)
                 {
-                    _entries[kvp.Key] = entry with
-                    {
-                        State = PluginState.Error,
-                        ErrorMessage = $"Widget retrieval failed: {ex.Message}"
-                    };
+                    // A widget-surface failure is kept distinct from whole-plugin
+                    // lifecycle state. The plugin stays Enabled so the registry, catalog and
+                    // dispatcher remain consistent; the failure is recorded separately.
+                    _widgetErrors[kvp.Key] = $"Widget retrieval failed: {ex.Message}";
                 }
             }
         }
         return widgets;
     }
+
+    /// <summary>
+    /// Last widget-surface failure per plugin id. Empty when every enabled plugin's
+    /// widget surface is healthy; registry state itself is unaffected.
+    /// </summary>
+    public IReadOnlyDictionary<string, string> WidgetErrors => _widgetErrors;
 
     /// <inheritdoc />
     public async Task EnablePluginAsync(string pluginId, IPluginHost host, CancellationToken ct = default)
@@ -483,8 +491,10 @@ public sealed class PluginRegistryService : IPluginRegistry
         return commandId.ToLowerInvariant() switch
         {
             "cleaner.system_temp" => "cleaner-disk-pressure",
-            "cleaner.recycle_bin" => "cleaner-disk-pressure",
-            "security.defender_status" => "security-defender-audit",
+            // The broad security collector is the supported native surface for Defender
+            // state. Do not delegate to a synthetic command id that the core catalog does
+            // not expose: that would register a plugin card which always fails at runtime.
+            "security.defender_status" => "security",
             _ => null
         };
     }
@@ -524,9 +534,9 @@ public sealed class PluginRegistryService : IPluginRegistry
                 }
             }
         }
-        catch
+        catch (Exception ex)
         {
-            // Built-in embedded discovery best-effort
+            System.Diagnostics.Debug.WriteLine($"[PluginRegistry] Built-in plugin discovery failed: {ex.GetType().Name} - {ex.Message}");
         }
     }
 
@@ -558,9 +568,9 @@ public sealed class PluginRegistryService : IPluginRegistry
                     ErrorMessage: loadResult.ErrorMessage);
             }
         }
-        catch
+        catch (Exception ex)
         {
-            // Best effort file load
+            System.Diagnostics.Debug.WriteLine($"[PluginRegistry] Failed loading plugin JSON '{jsonFilePath}': {ex.GetType().Name} - {ex.Message}");
         }
     }
 }

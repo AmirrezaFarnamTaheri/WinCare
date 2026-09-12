@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Verifies all Cyber-Operate brush tokens are declared in Dark, Light, and HighContrast."""
+"""Verifies shared WinCare brush tokens in Dark, Light, and HighContrast."""
 import sys
 try:
     import defusedxml.ElementTree as ET

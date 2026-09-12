@@ -19,6 +19,17 @@ public sealed partial class ShellPage : Page
 
     public ShellViewModel ViewModel { get; }
 
+    private void Shell_SizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        // Keep the workspace rail visible when labels fit; collapse progressively
+        // without replacing native keyboard, focus, or accessibility behavior.
+        PrimaryNavigation.PaneDisplayMode = e.NewSize.Width >= 920
+            ? NavigationViewPaneDisplayMode.Left
+            : e.NewSize.Width >= 680
+                ? NavigationViewPaneDisplayMode.LeftCompact
+                : NavigationViewPaneDisplayMode.LeftMinimal;
+    }
+
     public void OpenGlobalSearch(string? query)
     {
         string normalized = query?.Trim() ?? string.Empty;

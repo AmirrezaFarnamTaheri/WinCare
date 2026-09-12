@@ -30,13 +30,6 @@ public sealed class DelegatingCommandHandler : ICommandHandler
         CommandRequest request,
         CancellationToken cancellationToken)
     {
-        if (!CommandRequestCompatibility.TryNormalize(request, out CommandRequest normalized, out string? error))
-        {
-            return Task.FromResult(CommandHandlerOutcome.Blocked(
-                "command.parameters_invalid",
-                error ?? "Command parameters are invalid."));
-        }
-
-        return _executor.ExecuteAsync(_definition, normalized, cancellationToken);
+        return _executor.ExecuteAsync(_definition, request, cancellationToken);
     }
 }

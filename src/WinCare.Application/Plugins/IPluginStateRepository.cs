@@ -16,4 +16,11 @@ public interface IPluginStateRepository
     /// Saves the set of enabled plugin IDs to persistent storage.
     /// </summary>
     void SaveEnabledPluginIds(IEnumerable<string> enabledPluginIds);
+
+    /// <summary>
+    /// Describes the failure of the last persistence operation, or is null when the
+    /// last load/save succeeded (a missing file is not an error). Callers should surface this
+    /// instead of treating empty results as healthy persistence success.
+    /// </summary>
+    string? LastError { get; }
 }

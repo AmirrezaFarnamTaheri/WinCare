@@ -11,6 +11,9 @@ internal struct NativeSysSnapshot
     public ulong DiskFreeBytes;
     public ulong DiskTotalBytes;
     public byte NetActive;
+    // Per-metric validity and probed-volume identity from native snapshot.
+    public uint ValidMask;
+    public uint DiskVolume;
 }
 
 [StructLayout(LayoutKind.Sequential)]
@@ -20,6 +23,9 @@ internal struct NativeCleanResult
     public uint FilesRemoved;
     public int ErrorCode;
 }
+
+/// <summary>Native cleaner call boundary, injectable only for adapter tests.</summary>
+internal unsafe delegate int CleanTempFilesNativeCall(byte dryRun, NativeCleanResult* outResult);
 
 internal static class WinCareCoreNative
 {

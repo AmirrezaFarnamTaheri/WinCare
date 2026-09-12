@@ -3,26 +3,26 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     <ResourceDictionary.ThemeDictionaries>
         <ResourceDictionary x:Key="Light">
-            <SolidColorBrush x:Key="PageBackgroundBrush" Color="#F3F3F3" />
-            <SolidColorBrush x:Key="TitleBarBackgroundBrush" Color="#00FFFFFF" />
+            <SolidColorBrush x:Key="PageBackgroundBrush" Color="#EDF2F5" />
+            <SolidColorBrush x:Key="TitleBarBackgroundBrush" Color="#E4ECF1" />
             <SolidColorBrush x:Key="SurfaceBrush" Color="#FFFFFF" />
-            <SolidColorBrush x:Key="SurfaceSecondaryBrush" Color="#F8F8F8" />
-            <SolidColorBrush x:Key="SurfaceHoverBrush" Color="#F0F0F0" />
-            <SolidColorBrush x:Key="BorderSubtleBrush" Color="#1F000000" />
-            <SolidColorBrush x:Key="TextPrimaryBrush" Color="#1A1A1A" />
-            <SolidColorBrush x:Key="TextSecondaryBrush" Color="#5D5D5D" />
+            <SolidColorBrush x:Key="SurfaceSecondaryBrush" Color="#F2F6F8" />
+            <SolidColorBrush x:Key="SurfaceHoverBrush" Color="#E0EBF0" />
+            <SolidColorBrush x:Key="BorderSubtleBrush" Color="#CBD8E0" />
+            <SolidColorBrush x:Key="TextPrimaryBrush" Color="#172D3B" />
+            <SolidColorBrush x:Key="TextSecondaryBrush" Color="#435C6B" />
             <SolidColorBrush x:Key="TextOnAccentBrush" Color="#FFFFFF" />
             <SolidColorBrush x:Key="SuccessBrush" Color="#0F7B0F" />
             <SolidColorBrush x:Key="WarningBrush" Color="#8A5700" />
             <SolidColorBrush x:Key="DangerBrush" Color="#C42B1C" />
-            <SolidColorBrush x:Key="AccentTealBrush" Color="#006F87" />
-            <SolidColorBrush x:Key="AccentTealSubtleBrush" Color="#1A006F87" />
+            <SolidColorBrush x:Key="AccentTealBrush" Color="#006B80" />
+            <SolidColorBrush x:Key="AccentTealSubtleBrush" Color="#DCEFF2" />
             <SolidColorBrush x:Key="CardSurfaceBrush" Color="#FFFFFF" />
-            <SolidColorBrush x:Key="TelemetryFrameBrush" Color="#E2E8F0" />
-            <SolidColorBrush x:Key="NavigationRailBrush" Color="#F8F8F8" />
-            <SolidColorBrush x:Key="CardBorderBrush" Color="#1F000000" />
-            <SolidColorBrush x:Key="HeroBackgroundBrush" Color="#F8F8F8" />
-            <SolidColorBrush x:Key="AccentGradientBrush" Color="#006F87" />
+            <SolidColorBrush x:Key="TelemetryFrameBrush" Color="#E6EFF3" />
+            <SolidColorBrush x:Key="NavigationRailBrush" Color="#E4ECF1" />
+            <SolidColorBrush x:Key="CardBorderBrush" Color="#CBD8E0" />
+            <SolidColorBrush x:Key="HeroBackgroundBrush" Color="#E5EFF4" />
+            <SolidColorBrush x:Key="AccentBrush" Color="#006B80" />
             <SolidColorBrush x:Key="PillReadOnlyBgBrush" Color="#047857" />
             <SolidColorBrush x:Key="PillMutatingBgBrush" Color="#DC2626" />
             <SolidColorBrush x:Key="PillElevatedBgBrush" Color="#D97706" />
@@ -30,28 +30,43 @@
             <SolidColorBrush x:Key="PillNotReadyBgBrush" Color="#E2E8F0" />
             <SolidColorBrush x:Key="PillTextBrush" Color="#FFFFFF" />
             <SolidColorBrush x:Key="PillAltTextBrush" Color="#1A1A1A" />
+            <!-- Precision Hardware & Double-Bezel Enclosure Brushes -->
+            <SolidColorBrush x:Key="DoubleBezelOuterBrush" Color="#E2EAF0" />
+            <SolidColorBrush x:Key="DoubleBezelOuterBorderBrush" Color="#B8CCD8" />
+            <SolidColorBrush x:Key="DoubleBezelInnerBrush" Color="#FFFFFF" />
+            <SolidColorBrush x:Key="DoubleBezelInnerBorderBrush" Color="#D9E4EC" />
+            <SolidColorBrush x:Key="HudChassisBrush" Color="#DCE6ED" />
+            <SolidColorBrush x:Key="HudChassisBorderBrush" Color="#B0C5D3" />
+            <SolidColorBrush x:Key="HudCoreBackgroundBrush" Color="#F4F8FA" />
+            <SolidColorBrush x:Key="AccentBadgeSubtleBrush" Color="#D2E8ED" />
+            <SolidColorBrush x:Key="AccentBadgeBorderBrush" Color="#006B80" />
+            <SolidColorBrush x:Key="LuminousGlowBrush" Color="#15006B80" />
+            <SolidColorBrush x:Key="IslandIconBgBrush" Color="#1A006B80" />
+            <SolidColorBrush x:Key="IslandIconFgBrush" Color="#006B80" />
+            <SolidColorBrush x:Key="TelemetrySensorBoxBrush" Color="#EBF2F6" />
+            <SolidColorBrush x:Key="TelemetrySensorBoxBorderBrush" Color="#CDDCE4" />
         </ResourceDictionary>
         <ResourceDictionary x:Key="Dark">
-            <SolidColorBrush x:Key="PageBackgroundBrush" Color="#09131D" />
-            <SolidColorBrush x:Key="TitleBarBackgroundBrush" Color="#00000000" />
-            <SolidColorBrush x:Key="SurfaceBrush" Color="#15222D" />
-            <SolidColorBrush x:Key="SurfaceSecondaryBrush" Color="#1B2A36" />
-            <SolidColorBrush x:Key="SurfaceHoverBrush" Color="#263946" />
-            <SolidColorBrush x:Key="BorderSubtleBrush" Color="#3AFFFFFF" />
-            <SolidColorBrush x:Key="TextPrimaryBrush" Color="#F5F8FB" />
-            <SolidColorBrush x:Key="TextSecondaryBrush" Color="#B7C2CC" />
+            <SolidColorBrush x:Key="PageBackgroundBrush" Color="#101B24" />
+            <SolidColorBrush x:Key="TitleBarBackgroundBrush" Color="#101B24" />
+            <SolidColorBrush x:Key="SurfaceBrush" Color="#182A35" />
+            <SolidColorBrush x:Key="SurfaceSecondaryBrush" Color="#203542" />
+            <SolidColorBrush x:Key="SurfaceHoverBrush" Color="#2B4655" />
+            <SolidColorBrush x:Key="BorderSubtleBrush" Color="#36505E" />
+            <SolidColorBrush x:Key="TextPrimaryBrush" Color="#EEF5F7" />
+            <SolidColorBrush x:Key="TextSecondaryBrush" Color="#B0C4CE" />
             <SolidColorBrush x:Key="TextOnAccentBrush" Color="#06151C" />
             <SolidColorBrush x:Key="SuccessBrush" Color="#75D36B" />
             <SolidColorBrush x:Key="WarningBrush" Color="#FFCB45" />
             <SolidColorBrush x:Key="DangerBrush" Color="#FF99A4" />
-            <SolidColorBrush x:Key="AccentTealBrush" Color="#27D6CE" />
-            <SolidColorBrush x:Key="AccentTealSubtleBrush" Color="#2527D6CE" />
-            <SolidColorBrush x:Key="CardSurfaceBrush" Color="#172531" />
-            <SolidColorBrush x:Key="TelemetryFrameBrush" Color="#2C4656" />
-            <SolidColorBrush x:Key="NavigationRailBrush" Color="#0F1B25" />
-            <SolidColorBrush x:Key="CardBorderBrush" Color="#45FFFFFF" />
-            <SolidColorBrush x:Key="HeroBackgroundBrush" Color="#192A38" />
-            <SolidColorBrush x:Key="AccentGradientBrush" Color="#27D6CE" />
+            <SolidColorBrush x:Key="AccentTealBrush" Color="#70D6DF" />
+            <SolidColorBrush x:Key="AccentTealSubtleBrush" Color="#203F4A" />
+            <SolidColorBrush x:Key="CardSurfaceBrush" Color="#182A35" />
+            <SolidColorBrush x:Key="TelemetryFrameBrush" Color="#14232D" />
+            <SolidColorBrush x:Key="NavigationRailBrush" Color="#14232D" />
+            <SolidColorBrush x:Key="CardBorderBrush" Color="#36505E" />
+            <SolidColorBrush x:Key="HeroBackgroundBrush" Color="#14232D" />
+            <SolidColorBrush x:Key="AccentBrush" Color="#70D6DF" />
             <SolidColorBrush x:Key="PillReadOnlyBgBrush" Color="#047857" />
             <SolidColorBrush x:Key="PillMutatingBgBrush" Color="#C41A1A" />
             <SolidColorBrush x:Key="PillElevatedBgBrush" Color="#F59E0B" />
@@ -59,6 +74,21 @@
             <SolidColorBrush x:Key="PillNotReadyBgBrush" Color="#1F2937" />
             <SolidColorBrush x:Key="PillTextBrush" Color="#FFFFFF" />
             <SolidColorBrush x:Key="PillAltTextBrush" Color="#1A1A1A" />
+            <!-- Precision Hardware & Double-Bezel Enclosure Brushes -->
+            <SolidColorBrush x:Key="DoubleBezelOuterBrush" Color="#132029" />
+            <SolidColorBrush x:Key="DoubleBezelOuterBorderBrush" Color="#253D4D" />
+            <SolidColorBrush x:Key="DoubleBezelInnerBrush" Color="#182A35" />
+            <SolidColorBrush x:Key="DoubleBezelInnerBorderBrush" Color="#2D4859" />
+            <SolidColorBrush x:Key="HudChassisBrush" Color="#0D161D" />
+            <SolidColorBrush x:Key="HudChassisBorderBrush" Color="#1F3442" />
+            <SolidColorBrush x:Key="HudCoreBackgroundBrush" Color="#111D25" />
+            <SolidColorBrush x:Key="AccentBadgeSubtleBrush" Color="#1C3843" />
+            <SolidColorBrush x:Key="AccentBadgeBorderBrush" Color="#70D6DF" />
+            <SolidColorBrush x:Key="LuminousGlowBrush" Color="#2270D6DF" />
+            <SolidColorBrush x:Key="IslandIconBgBrush" Color="#2670D6DF" />
+            <SolidColorBrush x:Key="IslandIconFgBrush" Color="#70D6DF" />
+            <SolidColorBrush x:Key="TelemetrySensorBoxBrush" Color="#16252F" />
+            <SolidColorBrush x:Key="TelemetrySensorBoxBorderBrush" Color="#283F4E" />
         </ResourceDictionary>
         <ResourceDictionary x:Key="HighContrast">
             <SolidColorBrush x:Key="PageBackgroundBrush" Color="{ThemeResource SystemColorWindowColor}" />
@@ -80,7 +110,7 @@
             <SolidColorBrush x:Key="NavigationRailBrush" Color="{ThemeResource SystemColorWindowColor}" />
             <SolidColorBrush x:Key="CardBorderBrush" Color="{ThemeResource SystemColorWindowTextColor}" />
             <SolidColorBrush x:Key="HeroBackgroundBrush" Color="{ThemeResource SystemColorWindowColor}" />
-            <SolidColorBrush x:Key="AccentGradientBrush" Color="{ThemeResource SystemColorHighlightColor}" />
+            <SolidColorBrush x:Key="AccentBrush" Color="{ThemeResource SystemColorHighlightColor}" />
             <SolidColorBrush x:Key="PillReadOnlyBgBrush" Color="{ThemeResource SystemColorHighlightColor}" />
             <SolidColorBrush x:Key="PillMutatingBgBrush" Color="{ThemeResource SystemColorHighlightColor}" />
             <SolidColorBrush x:Key="PillElevatedBgBrush" Color="{ThemeResource SystemColorHighlightColor}" />
@@ -88,6 +118,21 @@
             <SolidColorBrush x:Key="PillNotReadyBgBrush" Color="{ThemeResource SystemColorHighlightColor}" />
             <SolidColorBrush x:Key="PillTextBrush" Color="{ThemeResource SystemColorHighlightTextColor}" />
             <SolidColorBrush x:Key="PillAltTextBrush" Color="{ThemeResource SystemColorHighlightTextColor}" />
+            <!-- Precision Hardware & Double-Bezel Enclosure Brushes -->
+            <SolidColorBrush x:Key="DoubleBezelOuterBrush" Color="{ThemeResource SystemColorWindowColor}" />
+            <SolidColorBrush x:Key="DoubleBezelOuterBorderBrush" Color="{ThemeResource SystemColorWindowTextColor}" />
+            <SolidColorBrush x:Key="DoubleBezelInnerBrush" Color="{ThemeResource SystemColorWindowColor}" />
+            <SolidColorBrush x:Key="DoubleBezelInnerBorderBrush" Color="{ThemeResource SystemColorWindowTextColor}" />
+            <SolidColorBrush x:Key="HudChassisBrush" Color="{ThemeResource SystemColorWindowColor}" />
+            <SolidColorBrush x:Key="HudChassisBorderBrush" Color="{ThemeResource SystemColorWindowTextColor}" />
+            <SolidColorBrush x:Key="HudCoreBackgroundBrush" Color="{ThemeResource SystemColorWindowColor}" />
+            <SolidColorBrush x:Key="AccentBadgeSubtleBrush" Color="{ThemeResource SystemColorHighlightColor}" />
+            <SolidColorBrush x:Key="AccentBadgeBorderBrush" Color="{ThemeResource SystemColorWindowTextColor}" />
+            <SolidColorBrush x:Key="LuminousGlowBrush" Color="{ThemeResource SystemColorHighlightColor}" />
+            <SolidColorBrush x:Key="IslandIconBgBrush" Color="{ThemeResource SystemColorHighlightColor}" />
+            <SolidColorBrush x:Key="IslandIconFgBrush" Color="{ThemeResource SystemColorHighlightTextColor}" />
+            <SolidColorBrush x:Key="TelemetrySensorBoxBrush" Color="{ThemeResource SystemColorWindowColor}" />
+            <SolidColorBrush x:Key="TelemetrySensorBoxBorderBrush" Color="{ThemeResource SystemColorWindowTextColor}" />
         </ResourceDictionary>
     </ResourceDictionary.ThemeDictionaries>
 </ResourceDictionary>

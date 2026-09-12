@@ -174,7 +174,6 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
                 maxConcurrency: 3,
                 cancellationToken: CancellationToken.None);
 
-            _resultRows.Clear();
             var fastDict = new Dictionary<string, CommandResult>(StringComparer.OrdinalIgnoreCase);
 
             for (int index = 0; index < FastCheckCommands.Length; index++)
@@ -190,28 +189,12 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
                     row.Detail = result.Message;
                     row.StatusBrushKey = result.Status == CommandResultStatus.Succeeded ? "SuccessBrush" : "WarningBrush";
                 }
-
-                _resultRows.Add(new PageRow(
-                    rowTitle,
-                    commandId,
-                    result.Status == CommandResultStatus.Succeeded ? "Collected" : "Needs review",
-                    result.Message)
-                {
-                    StatusBrushKey = result.Status == CommandResultStatus.Succeeded ? "SuccessBrush" : "WarningBrush"
-                });
             }
 
-            _resultRows.Add(new PageRow(
-                WuaRowTitle,
-                WuaCommandId,
-                "Checking in background…",
-                "Searching Windows Update readiness in background…")
-            {
-                StatusBrushKey = "AccentTealBrush"
-            });
-
+            // Findings are evaluated from the quick-check rows, keeping the results tab synchronized.
             _hasResults = true;
             EvaluateFindings(fastDict, null);
+            RebuildResultRowsFromQuickChecks();
 
             if (SelectedIndex == ResultsSectionIndex)
             {
@@ -219,7 +202,8 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
                 SelectSection(ResultsSectionIndex);
             }
 
-            _ = wuaTask.ContinueWith(t =>
+            // Keep the check active until the background Windows Update search completes.
+            Task wuaCompletion = wuaTask.ContinueWith(t =>
             {
                 CommandResult wuaResult = (t.IsFaulted || t.IsCanceled)
                     ? new CommandResult(
@@ -242,6 +226,8 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
                     }
                 });
             }, CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
+
+            await wuaCompletion;
         }
         finally
         {
@@ -249,6 +235,25 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
             {
                 IsRunning = false;
             }
+        }
+    }
+
+    /// <summary>
+    /// Rebuilds the Results rows from evaluated quick-check rows.
+    /// </summary>
+    private void RebuildResultRowsFromQuickChecks()
+    {
+        _resultRows.Clear();
+        foreach (PageRow quickRow in Sections[0].Rows)
+        {
+            string description = FastCheckCommands.FirstOrDefault(item => item.RowTitle == quickRow.Title).CommandId
+                ?? (quickRow.Title == WuaRowTitle ? WuaCommandId : quickRow.Description);
+            _resultRows.Add(new PageRow(quickRow.Title, description, quickRow.State, quickRow.Detail)
+            {
+                StatusBrushKey = quickRow.StatusBrushKey,
+                ActionText = quickRow.ActionText,
+                ActionCommand = quickRow.ActionCommand,
+            });
         }
     }
 
@@ -283,7 +288,7 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
             row.StatusBrushKey = brushKey;
             row.ActionText = brushKey == "WarningBrush" ? "Windows Update" : null;
             row.ActionCommand = brushKey == "WarningBrush"
-                ? new RelayCommand(() => LaunchProtocol("ms-settings:windowsupdate"))
+                ? new AsyncRelayCommand(() => LaunchProtocolAsync("ms-settings:windowsupdate", row))
                 : null;
         }
 
@@ -337,7 +342,7 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
                         long freeBytes = freeElem.GetInt64();
                         double freeGb = freeBytes / (1024.0 * 1024.0 * 1024.0);
                         string driveName = drive.TryGetProperty("name", out JsonElement nameElem) ? nameElem.GetString() ?? "Drive" : "Drive";
-                        if (freeGb < 10.0)
+                        if (freeGb < WinCare.Domain.Assessment.AssessmentPolicy.DiskFreeCriticalGb)
                         {
                             hasCritical = true;
                             findings.Add($"Low space on {driveName} ({freeGb:0.0} GB free)");
@@ -349,7 +354,7 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
                                 storageRow.ActionCommand = new AsyncRelayCommand(RunQuickCleanAsync);
                             }
                         }
-                        else if (freeGb < 20.0)
+                        else if (freeGb < WinCare.Domain.Assessment.AssessmentPolicy.DiskFreeWarningGb)
                         {
                             hasWarning = true;
                             findings.Add($"Moderate space on {driveName} ({freeGb:0.0} GB free)");
@@ -380,7 +385,7 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
                         secRow.State = "Defender stopped";
                         secRow.StatusBrushKey = "DangerBrush";
                         secRow.ActionText = "Windows Security";
-                        secRow.ActionCommand = new RelayCommand(() => LaunchProtocol("windowsdefender:"));
+                        secRow.ActionCommand = new AsyncRelayCommand(() => LaunchProtocolAsync("windowsdefender:", secRow));
                     }
                 }
                 if (secResult.Data.Value.TryGetProperty("firewallEnabled", out JsonElement fwElem) && !fwElem.GetBoolean())
@@ -449,13 +454,31 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
         PageRow? storageRow = Sections[0].Rows.FirstOrDefault(candidate => candidate.Title == "Storage");
         try
         {
-            CommandResult result = await _dispatcher.ExecuteAsync(
-                CommandRequest.Execute("cleaner-disk-pressure", JsonSerializer.SerializeToElement(new { })),
-                new CommandExecutionOptions(ReviewApproved: false, Deadline: DateTimeOffset.UtcNow + TimeSpan.FromMinutes(2)),
+            if (storageRow is not null)
+            {
+                storageRow.State = "Cleaning…";
+                storageRow.ActionText = null;
+                storageRow.ActionCommand = null;
+            }
+
+            CommandResult preview = await _dispatcher.ExecuteAsync(
+                CommandRequest.Preview("cleaner-disk-pressure", JsonSerializer.SerializeToElement(new { })),
+                CommandExecutionOptions.Default,
                 CancellationToken.None);
 
-            if (result.Status != CommandResultStatus.Succeeded)
+            if (preview.Status == CommandResultStatus.Succeeded && preview.ReviewPlan is { } plan)
             {
+                CommandResult result = await _dispatcher.ExecuteAsync(
+                    CommandRequest.Execute("cleaner-disk-pressure", JsonSerializer.SerializeToElement(new { }), plan),
+                    new CommandExecutionOptions(ReviewApproved: true, Deadline: DateTimeOffset.UtcNow + TimeSpan.FromMinutes(2)),
+                    CancellationToken.None);
+
+                if (result.Status == CommandResultStatus.Succeeded)
+                {
+                    await RunQuickCheckAsync();
+                    return;
+                }
+
                 if (storageRow is not null)
                 {
                     storageRow.State = "Cleanup failed";
@@ -465,7 +488,12 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
                 return;
             }
 
-            await RunQuickCheckAsync();
+            if (storageRow is not null)
+            {
+                storageRow.State = "Cleanup failed";
+                storageRow.Detail = preview.Message;
+                storageRow.StatusBrushKey = "WarningBrush";
+            }
         }
         catch (Exception ex)
         {
@@ -478,16 +506,42 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
         }
     }
 
-    private static void LaunchProtocol(string uriString)
+    private async Task LaunchProtocolAsync(string uriString, PageRow? row = null)
     {
         try
         {
-            _ = Windows.System.Launcher.LaunchUriAsync(new Uri(uriString));
+            if (Uri.TryCreate(uriString, UriKind.Absolute, out Uri? uri))
+            {
+                bool success = await Windows.System.Launcher.LaunchUriAsync(uri);
+                if (!success)
+                {
+                    SurfaceLaunchFailure(row, uriString, "No application is registered to handle this protocol.");
+                }
+            }
+            else
+            {
+                SurfaceLaunchFailure(row, uriString, "Invalid protocol URI.");
+            }
         }
-        catch
+        catch (Exception ex)
         {
-            // Protocol launch fallback
+            SurfaceLaunchFailure(row, uriString, ex.Message);
         }
+    }
+
+    private void SurfaceLaunchFailure(PageRow? row, string uriString, string errorMessage)
+    {
+        System.Diagnostics.Debug.WriteLine($"[CheckupPage] Protocol launch failed for '{uriString}': {errorMessage}");
+        DispatchToUi(() =>
+        {
+            if (row is not null)
+            {
+                row.State = "Launch failed";
+                row.Detail = errorMessage;
+                row.StatusBrushKey = "WarningBrush";
+            }
+            RunSummary = $"Unable to open '{uriString}': {errorMessage}";
+        });
     }
 
     private void DispatchToUi(Action action)

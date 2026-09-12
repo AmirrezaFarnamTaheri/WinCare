@@ -23,9 +23,17 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\WinCare.Application\WinCare.Application.csproj" />
     <Compile Include="..\..\src\WinCare.App\ViewModels\Pages\ToolExecutionViewModel.cs" Link="ViewModels\ToolExecutionViewModel.cs" />
+    <Compile Include="..\..\src\WinCare.App\ViewModels\Pages\PackageInventoryPresentation.cs" Link="ViewModels\PackageInventoryPresentation.cs" />
+    <Compile Include="..\..\src\WinCare.App\ViewModels\Pages\PluginStorePageViewModel.cs" Link="ViewModels\PluginStorePageViewModel.cs" />
+    <Compile Include="..\..\src\WinCare.App\ViewModels\Pages\PluginCardViewModel.cs" Link="ViewModels\PluginCardViewModel.cs" />
     <Compile Include="..\..\src\WinCare.App\ViewModels\Pages\ToolParameterFieldViewModel.cs" Link="ViewModels\ToolParameterFieldViewModel.cs" />
     <Compile Include="..\..\src\WinCare.App\ViewModels\Pages\ToolRowViewModel.cs" Link="ViewModels\ToolRowViewModel.cs" />
+    <Compile Include="..\..\src\WinCare.App\ViewModels\Pages\TabbedPageViewModel.cs" Link="ViewModels\TabbedPageViewModel.cs" />
+    <Compile Include="..\..\src\WinCare.App\ViewModels\Pages\PageRow.cs" Link="ViewModels\PageRow.cs" />
+    <Compile Include="..\..\src\WinCare.App\ViewModels\Pages\PageSection.cs" Link="ViewModels\PageSection.cs" />
     <Compile Include="..\..\src\WinCare.App\ViewModels\Pages\HomePageViewModel.cs" Link="ViewModels\HomePageViewModel.cs" />
+    <Compile Include="..\..\src\WinCare.App\ViewModels\Pages\SystemCarePageViewModel.cs" Link="ViewModels\SystemCarePageViewModel.cs" />
+    <Compile Include="..\..\src\WinCare.App\ViewModels\Pages\RepairRecoveryPageViewModel.cs" Link="ViewModels\RepairRecoveryPageViewModel.cs" />
     <Compile Include="..\..\src\WinCare.App\Services\AppPreferences.cs" Link="Services\AppPreferences.cs" />
   </ItemGroup>
 </Project>

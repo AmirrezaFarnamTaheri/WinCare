@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 
 namespace WinCare.Infrastructure.Commands;
@@ -11,6 +13,12 @@ public sealed class CommandStateStore
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
     private readonly string _root;
     private readonly SemaphoreSlim _gate = new(1, 1);
+    private readonly Semaphore _crossProcessGate;
+
+    /// <summary>
+    /// Bounded wait for the cross-process state lock.
+    /// </summary>
+    private static readonly TimeSpan CrossProcessLockTimeout = TimeSpan.FromSeconds(5);
 
     /// <summary>
     /// Initializes a new instance of <see cref="CommandStateStore"/>.
@@ -23,6 +31,17 @@ public sealed class CommandStateStore
             "WinCare",
             "state"));
         Directory.CreateDirectory(_root);
+
+        // One OS-wide lock name per data root: every store instance (in this process or
+        // another) pointed at the same root shares the same write lock. A named Semaphore
+        // is used because writer continuations may resume on any thread; semaphores have
+        // no thread affinity and their count is restored by the OS if a holder dies.
+        string rootHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(_root)))[..16];
+        _crossProcessGate = new Semaphore(initialCount: 0, maximumCount: 1, @"Local\WinCare.StateStore." + rootHash, out bool createdNew);
+        if (createdNew)
+        {
+            _crossProcessGate.Release();
+        }
     }
 
     /// <summary>
@@ -61,6 +80,15 @@ public sealed class CommandStateStore
     }
 
     /// <summary>
+    /// Acquires the OS-wide write lock for this data root with a bounded wait.
+    /// </summary>
+    /// <returns>True when the lock was acquired; the caller must release it in finally.</returns>
+    private bool TryAcquireCrossProcessGate()
+    {
+        return _crossProcessGate.WaitOne(CrossProcessLockTimeout);
+    }
+
+    /// <summary>
     /// Writes a state element by key.
     /// </summary>
     public async Task WriteAsync(string key, JsonElement value, CancellationToken cancellationToken)
@@ -68,8 +96,15 @@ public sealed class CommandStateStore
         string path = PathFor(key);
         string temp = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
         await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        bool crossProcessLockHeld = TryAcquireCrossProcessGate();
         try
         {
+            if (!crossProcessLockHeld)
+            {
+                throw new TimeoutException(
+                    $"WinCare state '{key}' is busy: another process holds the state write lock.");
+            }
+
             Directory.CreateDirectory(_root);
             await using (FileStream stream = new(temp, FileMode.CreateNew, FileAccess.Write, FileShare.None, 64 * 1024, useAsync: true))
             {
@@ -81,6 +116,10 @@ public sealed class CommandStateStore
         finally
         {
             TryDelete(temp);
+            if (crossProcessLockHeld)
+            {
+                _crossProcessGate.Release();
+            }
             _gate.Release();
         }
     }
@@ -97,8 +136,15 @@ public sealed class CommandStateStore
         string path = PathFor(key);
         string temp = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
         await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        bool crossProcessLockHeld = TryAcquireCrossProcessGate();
         try
         {
+            if (!crossProcessLockHeld)
+            {
+                throw new TimeoutException(
+                    $"WinCare state '{key}' is busy: another process holds the state write lock.");
+            }
+
             JsonElement current = fallback.Clone();
             if (File.Exists(path))
             {
@@ -128,6 +174,10 @@ public sealed class CommandStateStore
         finally
         {
             TryDelete(temp);
+            if (crossProcessLockHeld)
+            {
+                _crossProcessGate.Release();
+            }
             _gate.Release();
         }
     }

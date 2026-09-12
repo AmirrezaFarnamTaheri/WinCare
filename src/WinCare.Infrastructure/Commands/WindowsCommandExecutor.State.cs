@@ -49,6 +49,17 @@ internal sealed partial class WindowsCommandExecutor
         }, cancellationToken).ConfigureAwait(false);
     }
 
+    /// <summary>
+    /// Cleaner schedules are persisted as configuration only; no scheduler consumer executes at due time.
+    /// </summary>
+    private async Task<CommandHandlerOutcome> SaveNonExecutingScheduleAsync(CommandParameters p, CancellationToken cancellationToken)
+    {
+        CommandHandlerOutcome outcome = await UpsertStateItemAsync("cleaner-schedules", p, cancellationToken).ConfigureAwait(false);
+        string message = outcome.Message +
+            " Note: this build saves the schedule as configuration only; no scheduler consumer executes it at due time.";
+        return CommandHandlerOutcome.Succeeded(outcome.Code, message, outcome.Data);
+    }
+
     private async Task<CommandHandlerOutcome> UpsertStateItemAsync(string key, CommandParameters p, CancellationToken cancellationToken)
     {
         string id = p.String("Id").Trim();
@@ -129,15 +140,20 @@ internal sealed partial class WindowsCommandExecutor
         return Success(key + "-export", $"Exported WinCare state '{key}'.", new { path, count = data.ValueKind == JsonValueKind.Array ? data.GetArrayLength() : 1 });
     }
 
-    private static async Task WriteJsonExportAsync(string path, JsonElement data, CancellationToken cancellationToken)
+    internal static async Task WriteJsonExportAsync(string path, JsonElement data, CancellationToken cancellationToken)
     {
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
         string temp = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
         try
         {
-            await using FileStream stream = new(temp, FileMode.CreateNew, FileAccess.Write, FileShare.None, 64 * 1024, useAsync: true);
-            await JsonSerializer.SerializeAsync(stream, data, JsonOptions, cancellationToken).ConfigureAwait(false);
-            await stream.FlushAsync(cancellationToken).ConfigureAwait(false);
+            // Dispose the exclusive-write stream before replacing the destination:
+            // File.Move fails while the temp file is still open with FileShare.None.
+            await using (FileStream stream = new(temp, FileMode.CreateNew, FileAccess.Write, FileShare.None, 64 * 1024, useAsync: true))
+            {
+                await JsonSerializer.SerializeAsync(stream, data, JsonOptions, cancellationToken).ConfigureAwait(false);
+                await stream.FlushAsync(cancellationToken).ConfigureAwait(false);
+            }
+
             File.Move(temp, path, overwrite: true);
         }
         finally

@@ -25,7 +25,7 @@ if str(REPOSITORY_ROOT) not in sys.path:
 
 from tools.package_portable import create_portable_archive
 
-EXPECTED_COMMAND_COUNT = 259
+FROZEN_COMMAND_COUNT = 259
 VERSION_LABEL_PATTERN = re.compile(r"^[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z]+(?:[.-][0-9A-Za-z]+)*)?$")
 POWERSHELL_SUFFIXES = {".ps1", ".psm1", ".psd1"}
 SECRET_KEY_SUFFIXES = {".pfx", ".p12", ".key", ".pem", ".snk", ".secret", ".token"}
@@ -88,15 +88,6 @@ NATIVE_DOCUMENT_FILES = (
     "docs/migration/command-parity-ledger.md",
     "docs/migration/finalization-status.md",
     "docs/migration/windows-validation.md",
-    "docs/plans/2026-08-14-ai-system-doctor-plan.md",
-    "docs/plans/2026-08-14-ai-system-doctor-requirements.md",
-    "docs/plans/2026-08-14-community-plugin-sdk-plan.md",
-    "docs/plans/2026-08-14-community-plugin-sdk-requirements.md",
-    "docs/plans/2026-08-14-plugin-store-and-modular-architecture-plan.md",
-    "docs/plans/2026-08-14-plugin-store-and-modular-architecture-requirements.md",
-    "docs/plans/2026-08-14-plugin-store-components-upgrade-plan.md",
-    "docs/plans/2026-08-14-rust-background-guard-service-plan.md",
-    "docs/plans/2026-08-14-rust-background-guard-service-requirements.md",
 )
 
 NATIVE_TOOL_FILES = (
@@ -172,10 +163,11 @@ def _read_catalog(catalog_path: Path) -> list[dict[str, object]]:
     if not isinstance(commands, list):
         raise ValueError("command catalog must contain a commands array")
     ids = [command.get("id") for command in commands if isinstance(command, dict)]
-    if len(commands) != EXPECTED_COMMAND_COUNT or len(ids) != EXPECTED_COMMAND_COUNT:
-        raise ValueError(f"command catalog must contain exactly {EXPECTED_COMMAND_COUNT} commands")
-    if len(set(ids)) != EXPECTED_COMMAND_COUNT or any(not isinstance(value, str) or not value for value in ids):
-        raise ValueError("command catalog IDs must be 259 unique non-empty strings")
+    declared_count = document.get("commandCount")
+    if declared_count != len(commands) or len(ids) != len(commands) or len(commands) < FROZEN_COMMAND_COUNT:
+        raise ValueError(f"command catalog count must match its entries and retain at least {FROZEN_COMMAND_COUNT} frozen commands")
+    if len(set(ids)) != len(ids) or any(not isinstance(value, str) or not value for value in ids):
+        raise ValueError("command catalog IDs must be unique non-empty strings")
     return commands
 
 
@@ -383,7 +375,7 @@ def _write_report(path: Path, version: str, mode: ReleaseMode, readiness: Readin
                 "",
                 "## Promotion blocked",
                 "",
-                f"Production promotion is blocked until all {EXPECTED_COMMAND_COUNT} commands are behavior-verified. "
+                f"Production promotion is blocked until all {readiness.cataloged} commands are behavior-verified. "
                 f"The current catalog has {readiness.production_blockers} behavior-verification blocker(s) "
                 f"and {readiness.implementation_blockers} native implementation blocker(s).",
             ]

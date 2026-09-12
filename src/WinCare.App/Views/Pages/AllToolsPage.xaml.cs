@@ -12,12 +12,15 @@ namespace WinCare.App.Views.Pages;
 
 public sealed partial class AllToolsPage : Page
 {
+    private const double ToolTableCompactBreakpointDip = 840;
+    private const double InlineInspectorBreakpointDip = 1320;
     private Grid? _filterGrid;
     private ComboBox? _areaFilter;
     private ComboBox? _riskFilter;
     private CheckBox? _readOnlyFilter;
     private TextBlock? _resultCount;
     private Expander? _parameterExpander;
+    private Control? _inspectorReturnFocus;
 
     public AllToolsPage()
     {
@@ -26,7 +29,8 @@ public sealed partial class AllToolsPage : Page
         ToolTabs.SelectedItem = ToolTabs.Items[0] as SelectorBarItem;
         ViewModel.PropertyChanged += ViewModel_PropertyChanged;
         CaptureResponsiveControls();
-        ReplaceRawParameterEditor();
+        // Mount the editor once the page is loaded so the template is materialized.
+        Loaded += (_, _) => ReplaceRawParameterEditor();
     }
 
     public AllToolsPageViewModel ViewModel { get; }
@@ -37,10 +41,13 @@ public sealed partial class AllToolsPage : Page
     protected override void OnNavigatedTo(NavigationEventArgs e)
     {
         base.OnNavigatedTo(e);
-        if (e.Parameter is string query && !string.IsNullOrWhiteSpace(query))
+        // Reset search when an explicit navigation query is provided.
+        if (e.Parameter is string query)
         {
-            ViewModel.SearchText = query;
-            (ViewModel.IsCompactLayout ? FindCompactSearchBox() : ToolSearchBox)?.Focus(FocusState.Programmatic);
+            ToolTabs.SelectedItem = ToolTabs.Items[0] as SelectorBarItem;
+            ViewModel.OpenSearch(query);
+            if (ViewModel.SelectedTool is not null) DispatcherQueue.TryEnqueue(() => InspectorCloseButton.Focus(FocusState.Programmatic));
+            else (ViewModel.IsCompactLayout ? FindCompactSearchBox() : ToolSearchBox)?.Focus(FocusState.Programmatic);
         }
     }
 
@@ -53,21 +60,62 @@ public sealed partial class AllToolsPage : Page
     private void ToolTabs_SelectionChanged(SelectorBar sender, SelectorBarSelectionChangedEventArgs args)
     {
         if (sender.SelectedItem is SelectorBarItem item)
+        {
             ViewModel.SelectTab(item.Text);
+            SearchFilterGrid.Visibility = ViewModel.IsPresetTab ? Visibility.Collapsed : Visibility.Visible;
+        }
+    }
+
+    private void ReviewPresetButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button { Tag: string presetId })
+        {
+            _inspectorReturnFocus = sender as Control;
+            ViewModel.SelectPresetForReview(presetId);
+            DispatcherQueue.TryEnqueue(() => InspectorCloseButton.Focus(FocusState.Programmatic));
+        }
+    }
+
+    private void ToolTable_ItemClick(object sender, ItemClickEventArgs e)
+    {
+        if (e.ClickedItem is not ToolRowViewModel tool) return;
+        _inspectorReturnFocus = sender as Control;
+        ViewModel.SelectedTool = tool;
+        ViewModel.IsDetailsOpen = true;
+        DispatcherQueue.TryEnqueue(() => InspectorCloseButton.Focus(FocusState.Programmatic));
+    }
+
+    private void CloseInspector_Click(object sender, RoutedEventArgs e)
+    {
+        ViewModel.IsDetailsOpen = false;
+        if (_inspectorReturnFocus?.IsLoaded == true) _inspectorReturnFocus.Focus(FocusState.Programmatic);
+        else if (ViewModel.IsPresetTab) ToolTabs.Focus(FocusState.Programmatic);
+        else ToolSearchBox.Focus(FocusState.Programmatic);
+        _inspectorReturnFocus = null;
+    }
+
+    private void Inspector_KeyDown(object sender, KeyRoutedEventArgs e)
+    {
+        if (e.Key != Windows.System.VirtualKey.Escape) return;
+        CloseInspector_Click(sender, e);
+        e.Handled = true;
     }
 
     private void FavoriteButton_Click(object sender, RoutedEventArgs e) => ViewModel.ToggleFavorite();
 
     private void Page_SizeChanged(object sender, SizeChangedEventArgs e)
     {
-        bool compact = LayoutVisibility.IsCompact(e.NewSize.Width);
+        bool compact = e.NewSize.Width < ToolTableCompactBreakpointDip;
         ViewModel.SetCompactLayout(compact);
-        DetailsSplitView.DisplayMode = compact ? SplitViewDisplayMode.Overlay : SplitViewDisplayMode.Inline;
+        DetailsSplitView.DisplayMode = e.NewSize.Width < InlineInspectorBreakpointDip
+            ? SplitViewDisplayMode.Overlay
+            : SplitViewDisplayMode.Inline;
         ApplyFilterLayout(compact);
     }
 
     private void ToolSearch_FocusAccelerator(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
     {
+        ToolTabs.SelectedItem = ToolTabs.Items[0] as SelectorBarItem;
         TextBox target = ViewModel.IsCompactLayout ? FindCompactSearchBox() ?? ToolSearchBox : ToolSearchBox;
         target.Focus(FocusState.Keyboard);
         args.Handled = true;
@@ -75,7 +123,7 @@ public sealed partial class AllToolsPage : Page
 
     private void ViewModel_PropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName == nameof(AllToolsPageViewModel.SelectedTool))
+        if (e.PropertyName is nameof(AllToolsPageViewModel.SelectedTool) or nameof(AllToolsPageViewModel.IsDetailsOpen))
             RebuildParameterEditor();
     }
 
@@ -88,7 +136,7 @@ public sealed partial class AllToolsPage : Page
         _riskFilter = _filterGrid.Children.OfType<ComboBox>().Skip(1).FirstOrDefault();
         _readOnlyFilter = _filterGrid.Children.OfType<CheckBox>().FirstOrDefault();
         _resultCount = _filterGrid.Children.OfType<TextBlock>().FirstOrDefault();
-        ApplyFilterLayout(LayoutVisibility.IsCompact(ActualWidth));
+        ApplyFilterLayout(ActualWidth < ToolTableCompactBreakpointDip);
     }
 
     private TextBox? FindCompactSearchBox()
@@ -230,17 +278,31 @@ public sealed partial class AllToolsPage : Page
         };
         root.Children.Add(rawEditor);
 
-        void ApplyMode(bool advanced)
+        advancedToggle.Toggled += (_, _) =>
         {
-            ViewModel.Execution.UseAdvancedParameterJson = advanced;
-            structuredPanel.Visibility = advanced ? Visibility.Collapsed : Visibility.Visible;
-            rawEditor.Visibility = advanced ? Visibility.Visible : Visibility.Collapsed;
-            if (advanced)
+            bool leavingAdvanced = !advancedToggle.IsOn;
+            ViewModel.Execution.UseAdvancedParameterJson = advancedToggle.IsOn;
+            if (leavingAdvanced)
+            {
+                if (ViewModel.Execution.UseAdvancedParameterJson)
+                {
+                    advancedToggle.IsOn = true;
+                    rawEditor.Focus(FocusState.Programmatic);
+                    return;
+                }
+                // Rebuild typed controls so they reflect imported raw JSON values.
+                RebuildParameterEditor();
+            }
+            else
+            {
+                structuredPanel.Visibility = Visibility.Collapsed;
+                rawEditor.Visibility = Visibility.Visible;
                 rawEditor.Text = ViewModel.Execution.ParameterJson;
-        }
+            }
+        };
 
-        advancedToggle.Toggled += (_, _) => ApplyMode(advancedToggle.IsOn);
-        ApplyMode(advancedToggle.IsOn);
+        structuredPanel.Visibility = advancedToggle.IsOn ? Visibility.Collapsed : Visibility.Visible;
+        rawEditor.Visibility = advancedToggle.IsOn ? Visibility.Visible : Visibility.Collapsed;
         _parameterExpander.Content = root;
     }
 

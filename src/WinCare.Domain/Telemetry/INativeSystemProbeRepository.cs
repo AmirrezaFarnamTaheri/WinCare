@@ -12,7 +12,13 @@ public sealed record SystemSnapshot(
     ulong RamTotalBytes,
     ulong DiskFreeBytes,
     ulong DiskTotalBytes,
-    bool NetActive);
+    bool NetActive,
+    // Per-metric validity and probed volume letter carried through FFI.
+    bool CpuMetricValid = false,
+    bool RamMetricValid = false,
+    bool DiskMetricValid = false,
+    bool NetMetricValid = false,
+    char DiskVolume = '\0');
 
 /// <summary>
 /// Outcome of native safe file cleaning or dry-run inspection.

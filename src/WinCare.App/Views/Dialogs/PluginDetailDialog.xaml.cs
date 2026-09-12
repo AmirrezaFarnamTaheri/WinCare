@@ -36,13 +36,13 @@ public sealed partial class PluginDetailDialog : ContentDialog
 
         PublisherTrustText.Text = item.IsRevoked
             ? "Revoked"
-            : verified ? "Trusted catalog / signed package"
-            : hasPublisherSignature ? "Package signed; catalog trust root not verified"
-            : "Publisher signature unavailable";
+            : verified ? "Verified package"
+            : hasPublisherSignature ? "Signed package"
+            : "Community";
         bool canInstall = allowInstall && verified && !item.IsRevoked;
         IsPrimaryButtonEnabled = canInstall;
         PrimaryButtonText = allowInstall
-            ? (canInstall ? "Trust and install" : "Installation unavailable")
+            ? (canInstall ? "Install" : "Installation unavailable")
             : string.Empty;
         CloseButtonText = allowInstall ? "Cancel" : "Close";
 

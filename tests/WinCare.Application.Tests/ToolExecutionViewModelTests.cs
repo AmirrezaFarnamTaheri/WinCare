@@ -7,6 +7,88 @@ namespace WinCare.Application.Tests;
 
 public sealed class ToolExecutionViewModelTests
 {
+    [Fact]
+    public async Task Cancellation_stays_pending_until_the_handler_finishes()
+    {
+        var definition = new CommandDefinition("test", "Test", "Test", "Test", "Test",
+            CommandRisk.Low, true, AdministratorAccess.No, RestartExpectation.No,
+            "test", MigrationStatus.Implemented, [], RiskTier.Safe);
+        var handler = new PendingHandler();
+        var vm = new ToolExecutionViewModel(new CommandDispatcher([definition], [handler]), _ => { });
+        vm.SelectTool(new ToolRowViewModel(definition));
+        Assert.False(vm.CancelSelectedToolCommand.CanExecute(null));
+        Task execution = vm.ExecuteSelectedToolCommand.ExecuteAsync(null);
+        await handler.Started.Task;
+
+        vm.CancelSelectedToolCommand.Execute(null);
+
+        Assert.True(vm.IsExecuting);
+        Assert.True(vm.IsCancellationRequested);
+        Assert.Equal("Stopping…", vm.CancelActionLabel);
+        Assert.False(vm.CancelSelectedToolCommand.CanExecute(null));
+        handler.Completion.SetResult(CommandHandlerOutcome.Succeeded("test.done", "Finished"));
+        await execution;
+        Assert.False(vm.IsExecuting);
+        Assert.False(vm.IsCancellationRequested);
+        Assert.False(vm.CancelSelectedToolCommand.CanExecute(null));
+    }
+
+    [Theory]
+    [InlineData("{broken")]
+    [InlineData("[]")]
+    [InlineData("null")]
+    public void Invalid_advanced_inputs_keep_the_raw_editor_open(string input)
+    {
+        var vm = new ToolExecutionViewModel(new CommandDispatcher([], []), _ => { });
+        vm.UseAdvancedParameterJson = true;
+        vm.ParameterJson = input;
+
+        vm.UseAdvancedParameterJson = false;
+
+        Assert.True(vm.UseAdvancedParameterJson);
+        Assert.Equal(input, vm.ParameterJson);
+        Assert.True(vm.IsExecutionError);
+        Assert.False(vm.IsReviewApproved);
+    }
+
+    [Fact]
+    public void Oversized_advanced_input_can_be_corrected_without_losing_editor_state()
+    {
+        var vm = new ToolExecutionViewModel(new CommandDispatcher([], []), _ => { });
+        vm.UseAdvancedParameterJson = true;
+        vm.ParameterJson = new string(' ', 1024 * 1024 + 1);
+        vm.UseAdvancedParameterJson = false;
+        Assert.True(vm.UseAdvancedParameterJson);
+        Assert.Contains("1 MiB", vm.ExecutionMessage);
+
+        vm.ParameterJson = "{}";
+        vm.UseAdvancedParameterJson = false;
+        Assert.False(vm.UseAdvancedParameterJson);
+        Assert.False(vm.IsReviewApproved);
+    }
+
+    [Fact]
+    public void Preset_details_follow_current_inputs_and_never_grant_approval()
+    {
+        CommandDefinition definition = WinCare.CommandCatalog.CommandCatalog.Load().Single(command => command.Id == "preset");
+        var vm = new ToolExecutionViewModel(new CommandDispatcher([definition], [new DirectHandler("preset")]), _ => { });
+        vm.SelectTool(new ToolRowViewModel(definition));
+        var field = vm.ParameterFields.Single(item => item.Name == "PresetId");
+        PresetDefinition preset = WinCare.CommandCatalog.RemediationCatalog.LoadPresets()[0];
+        field.Value = preset.Id;
+        Assert.Contains(preset.Title, vm.PresetContents);
+        foreach (string id in preset.RuleIds)
+            Assert.Contains(WinCare.CommandCatalog.RemediationCatalog.LoadRules().Single(rule => rule.Id == id).Title, vm.PresetContents);
+        Assert.False(vm.CanApproveReview);
+        vm.UseAdvancedParameterJson = true;
+        vm.ParameterJson = "{\"PresetId\":\"missing\"}";
+        Assert.Contains("not in the built-in catalog", vm.PresetContents);
+        Assert.DoesNotContain(preset.Title, vm.PresetContents);
+        vm.SelectTool(null);
+        Assert.False(vm.IsPresetTool);
+        Assert.Empty(vm.PresetContents);
+    }
+
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
@@ -59,8 +141,9 @@ public sealed class ToolExecutionViewModelTests
     }
 
     [Fact]
-    public async Task Moderate_tool_can_apply_after_lightweight_confirmation_without_preview()
+    public async Task Moderate_tool_requires_preview_before_approval_and_apply()
     {
+        // In the tools view, Moderate tools use the review and approval flow.
         var moderateDef = new CommandDefinition("moderate-change", "Moderate Change", "Moderate Change", "Area", "Section",
             CommandRisk.Moderate, false, AdministratorAccess.No, RestartExpectation.No,
             "test", MigrationStatus.Implemented, ["moderate"], RiskTier.Moderate);
@@ -71,8 +154,16 @@ public sealed class ToolExecutionViewModelTests
 
         Assert.True(viewModel.IsModerateTool);
         Assert.True(viewModel.RequiresApprovalSwitch);
+        Assert.False(viewModel.CanApproveReview);
+        Assert.Equal("Review changes", viewModel.PrimaryActionLabel);
+
+        // Phase 1: preview issues the receipt.
+        await viewModel.ExecuteSelectedToolCommand.ExecuteAsync(null);
+        Assert.True(viewModel.IsExecutionSuccess);
+        Assert.False(handler.LastWasApply);
         Assert.True(viewModel.CanApproveReview);
 
+        // Phase 2: approval then apply consumes the receipt.
         viewModel.IsReviewApproved = true;
         Assert.True(viewModel.IsReviewApproved);
         Assert.Equal("Apply changes", viewModel.PrimaryActionLabel);
@@ -80,7 +171,7 @@ public sealed class ToolExecutionViewModelTests
         await viewModel.ExecuteSelectedToolCommand.ExecuteAsync(null);
 
         Assert.True(viewModel.IsExecutionSuccess);
-        Assert.Equal(1, handler.CallCount);
+        Assert.Equal(2, handler.CallCount);
         Assert.True(handler.LastWasApply);
     }
 
@@ -99,7 +190,8 @@ public sealed class ToolExecutionViewModelTests
         Assert.True(viewModel.IsDestructiveTool);
         Assert.True(viewModel.RequiresApprovalSwitch);
         Assert.False(viewModel.CanApproveReview);
-        Assert.Equal("Preview Impact", viewModel.PrimaryActionLabel);
+        Assert.Equal("Preview impact", viewModel.PrimaryActionLabel);
+        Assert.Equal("Preview before applying", viewModel.ActionFlowTitle);
 
         await viewModel.ExecuteSelectedToolCommand.ExecuteAsync(null);
         Assert.True(viewModel.IsExecutionSuccess);
@@ -107,7 +199,8 @@ public sealed class ToolExecutionViewModelTests
         Assert.True(viewModel.CanApproveReview);
 
         viewModel.IsReviewApproved = true;
-        Assert.Equal("Execute Destructive Action", viewModel.PrimaryActionLabel);
+        Assert.Equal("Apply destructive change", viewModel.PrimaryActionLabel);
+        Assert.Equal("Reviewed and ready", viewModel.ActionFlowTitle);
 
         await viewModel.ExecuteSelectedToolCommand.ExecuteAsync(null);
         Assert.True(viewModel.IsExecutionSuccess);

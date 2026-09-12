@@ -10,6 +10,7 @@
     <Platforms>x64;ARM64</Platforms>
     <RuntimeIdentifiers>win-x64;win-arm64</RuntimeIdentifiers>
     <UseWinUI>true</UseWinUI>
+    <DefaultLanguage>en-US</DefaultLanguage>
     <EnableMsixTooling>true</EnableMsixTooling>
     <DefaultItemExcludes>$(DefaultItemExcludes);AppPackages\**</DefaultItemExcludes>
     <PublishProfile Condition="'$(WindowsPackageType)' != 'None'">Properties\PublishProfiles\win-$(Platform).pubxml</PublishProfile>
@@ -41,6 +42,9 @@
     <TrimmerRootAssembly Include="WinCare.CommandCatalog" />
     <TrimmerRootAssembly Include="WinCare.Application" />
     <TrimmerRootAssembly Include="WinCare.Infrastructure" />
+    <!-- Root the projection runtime and the WinUI projection assembly so binding marshaling survives trimming. -->
+    <TrimmerRootAssembly Include="WinRT.Runtime" />
+    <TrimmerRootAssembly Include="Microsoft.WinUI" />
   </ItemGroup>
   <PropertyGroup Condition="'$(Configuration)' == 'Release'">
     <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>

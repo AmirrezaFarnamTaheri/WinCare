@@ -48,11 +48,12 @@ class FinalizationTests(unittest.TestCase):
         source = json.loads(
             (ROOT / "src/WinCare.CommandCatalog/Data/commands.json").read_text(encoding="utf-8")
         )
+        command_count = source["commandCount"]
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             incomplete = root / "incomplete.json"
             incomplete.write_text(json.dumps(source), encoding="utf-8")
-            with self.assertRaisesRegex(ProductionBlockedError, "259 command"):
+            with self.assertRaisesRegex(ProductionBlockedError, rf"{command_count} command"):
                 evaluate_readiness(incomplete, mode="production")
 
             for command in source["commands"]:
@@ -61,11 +62,12 @@ class FinalizationTests(unittest.TestCase):
             complete.write_text(json.dumps(source), encoding="utf-8")
             readiness = evaluate_readiness(complete, mode="production")
             self.assertTrue(readiness.production_ready)
-            self.assertEqual(259, readiness.behavior_verified)
+            self.assertEqual(command_count, readiness.behavior_verified)
             self.assertEqual(0, readiness.production_blockers)
 
     def test_rc_finalization_separates_native_source_and_legacy_oracle(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
+            command_count = json.loads((ROOT / "src/WinCare.CommandCatalog/Data/commands.json").read_text(encoding="utf-8"))["commandCount"]
             output = Path(directory)
             result = finalize_release(ROOT, output, version="2.5.0-rc3", mode="rc")
 
@@ -73,11 +75,11 @@ class FinalizationTests(unittest.TestCase):
             self.assertTrue(result.oracle_archive.is_file())
             self.assertTrue(result.report_path.is_file())
             self.assertTrue(result.manifest_path.is_file())
-            self.assertEqual(259, result.readiness.cataloged)
-            self.assertEqual(259, result.readiness.implemented)
+            self.assertEqual(command_count, result.readiness.cataloged)
+            self.assertEqual(command_count, result.readiness.implemented)
             self.assertEqual(0, result.readiness.behavior_verified)
             self.assertEqual(0, result.readiness.implementation_blockers)
-            self.assertEqual(259, result.readiness.production_blockers)
+            self.assertEqual(command_count, result.readiness.production_blockers)
 
             with zipfile.ZipFile(result.native_archive) as archive:
                 names = archive.namelist()
@@ -104,7 +106,7 @@ class FinalizationTests(unittest.TestCase):
             manifest = json.loads(result.manifest_path.read_text(encoding="utf-8"))
             self.assertEqual("2.5.0-rc3", manifest["version"])
             self.assertEqual("rc", manifest["mode"])
-            self.assertEqual(259, manifest["readiness"]["cataloged"])
+            self.assertEqual(command_count, manifest["readiness"]["cataloged"])
             self.assertEqual("AmirrezaFarnamTaheri/WinCare", manifest["oracleProvenance"]["repository"])
             self.assertEqual(
                 "83567c4dbf3cf85e44217855d39604b0193623e3",

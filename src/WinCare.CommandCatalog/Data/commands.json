@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "commandCount": 259,
+  "commandCount": 269,
   "commands": [
     {
       "id": "system",
@@ -3234,6 +3234,27 @@
       ]
     },
     {
+      "id": "installer-cache-analysis",
+      "title": "Installer cache analysis",
+      "summary": "Inspect bounded Windows Installer cache entries and product or patch registration evidence without changing files.",
+      "area": "System care",
+      "section": "Maintenance",
+      "risk": "ReadOnly",
+      "readOnly": true,
+      "administratorAccess": "MayBeRequired",
+      "restart": "No",
+      "legacySource": "WinPort/InstallerClean CandidateGuard and InstallerQueryService",
+      "migrationStatus": "Implemented",
+      "keywords": [
+        "installer",
+        "msi",
+        "msp",
+        "windows installer",
+        "cache",
+        "registration evidence"
+      ]
+    },
+    {
       "id": "toolkit-msi",
       "title": "Toolkit installer",
       "summary": "View toolkit installer and the evidence available on this PC.",
@@ -4713,6 +4734,71 @@
       ]
     },
     {
+      "id": "appx-installed-inventory",
+      "title": "Installed AppX inventory",
+      "summary": "List current-user AppX registrations and their exact package full names without changing installed apps.",
+      "area": "System care",
+      "section": "Apps & startup",
+      "risk": "ReadOnly",
+      "readOnly": true,
+      "administratorAccess": "No",
+      "restart": "No",
+      "legacySource": "WinUtil functions/private/Get-WinUtilInstalledAPPX.ps1",
+      "migrationStatus": "Implemented",
+      "keywords": ["appx", "installed", "inventory", "current user", "packages"]
+    },
+    {
+      "id": "appx-provisioned-inventory",
+      "title": "Provisioned AppX inventory",
+      "summary": "List packages provisioned into the online Windows image without changing current-user app registrations.",
+      "area": "System care",
+      "section": "Apps & startup",
+      "risk": "ReadOnly",
+      "readOnly": true,
+      "administratorAccess": "No",
+      "restart": "No",
+      "legacySource": "WinUtil functions/private/Remove-WinUtilProvisionedAPPX.ps1",
+      "migrationStatus": "Implemented",
+      "keywords": ["appx", "provisioned", "inventory", "dism", "packages"]
+    },
+    {
+      "id": "appx-installed-remove",
+      "title": "Remove installed app package",
+      "summary": "Remove only exact WinGet package IDs after preview and approval; each package result is retained.",
+      "area": "System care",
+      "section": "Apps & startup",
+      "risk": "Moderate",
+      "readOnly": false,
+      "administratorAccess": "No",
+      "restart": "MayBeRequired",
+      "legacySource": "Win11Debloat Scripts/AppRemoval/Remove-SelectedApps.ps1",
+      "migrationStatus": "Implemented",
+      "keywords": ["appx", "installed", "remove", "winget", "packages"]
+    },
+    {
+      "id": "appx-registered-remove",
+      "title": "Remove registered AppX package",
+      "summary": "Remove exact current-user AppX package full names through the Windows deployment API after preview and approval.",
+      "area": "System care", "section": "Apps & startup", "risk": "High", "readOnly": false,
+      "administratorAccess": "No", "restart": "MayBeRequired",
+      "legacySource": "WinUtil functions/private/Remove-WinUtilAPPX.ps1", "migrationStatus": "Implemented",
+      "keywords": ["appx", "registered", "current user", "remove", "package full name"]
+    },
+    {
+      "id": "appx-provisioned-remove",
+      "title": "Remove provisioned app package",
+      "summary": "Remove only exact provisioned package names from the online image after preview and approval.",
+      "area": "System care",
+      "section": "Apps & startup",
+      "risk": "High",
+      "readOnly": false,
+      "administratorAccess": "Required",
+      "restart": "MayBeRequired",
+      "legacySource": "WinUtil functions/private/Remove-WinUtilProvisionedAPPX.ps1",
+      "migrationStatus": "Implemented",
+      "keywords": ["appx", "provisioned", "remove", "dism", "packages"]
+    },
+    {
       "id": "legacy-unsafe-profiles",
       "title": "Legacy high-risk profiles",
       "summary": "View legacy unsafe profiles and the evidence available on this PC.",
@@ -5214,6 +5300,83 @@
         "quic capability",
         "security",
         "status"
+      ]
+    },
+    {
+      "id": "remediation-restore",
+      "title": "Restore a reversible remediation",
+      "summary": "Restore the captured registry values from one completed remediation after verifying the current values still match its applied receipt.",
+      "area": "Repair & recovery",
+      "section": "Restore",
+      "risk": "High",
+      "readOnly": false,
+      "administratorAccess": "MayBeRequired",
+      "restart": "MayBeRequired",
+      "legacySource": "WinPort recovery convergence",
+      "migrationStatus": "Implemented",
+      "keywords": ["restore", "recovery", "remediation", "registry", "undo", "change records"]
+    },
+    {
+      "id": "storage-report",
+      "title": "Bounded storage report",
+      "summary": "Inspect a chosen local directory with entry, depth, and largest-file limits; no files are changed.",
+      "area": "System care",
+      "section": "Clean up",
+      "risk": "ReadOnly",
+      "readOnly": true,
+      "administratorAccess": "No",
+      "restart": "No",
+      "legacySource": "WinPort storage diagnostics convergence",
+      "migrationStatus": "Implemented",
+      "keywords": [
+        "storage",
+        "disk usage",
+        "largest files",
+        "directory report",
+        "clean up",
+        "read only"
+      ]
+    },
+    {
+      "id": "app-residual-discovery",
+      "title": "App residual candidates",
+      "summary": "Inspect high-confidence LocalAppData residual candidates from uninstall-registry evidence without changing any files.",
+      "area": "System care",
+      "section": "Apps & startup",
+      "risk": "ReadOnly",
+      "readOnly": true,
+      "administratorAccess": "No",
+      "restart": "No",
+      "legacySource": "WinPort application inventory convergence",
+      "migrationStatus": "Implemented",
+      "keywords": [
+        "apps",
+        "residual files",
+        "leftovers",
+        "localappdata",
+        "uninstall registry",
+        "read only"
+      ]
+    },
+    {
+      "id": "winget-upgrade-inventory",
+      "title": "Available WinGet upgrades",
+      "summary": "Inspect package upgrades reported by WinGet in structured output without installing or changing packages.",
+      "area": "System care",
+      "section": "Apps & startup",
+      "risk": "ReadOnly",
+      "readOnly": true,
+      "administratorAccess": "No",
+      "restart": "No",
+      "legacySource": "WinGet stable upgrade inventory",
+      "migrationStatus": "Implemented",
+      "keywords": [
+        "winget",
+        "updates",
+        "upgrades",
+        "packages",
+        "apps",
+        "read only"
       ]
     }
   ]

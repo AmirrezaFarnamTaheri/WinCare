@@ -56,9 +56,31 @@ public sealed class CommandSafetyTests
     }
 
     [Fact]
-    public void CommandPlanAdmission_InvalidStepParameters_FailsValidationUpfront()
+    public void CommandPlanAdmission_MutatingStep_CannotBypassDispatcherApproval()
     {
-        // Step 1 is valid, Step 2 is missing required Parameter 'Path' for sysmon-configure
+        using JsonDocument planDoc = JsonDocument.Parse("""
+            [
+                { "commandId": "preset", "parameters": { "PresetId": "balanced" } },
+                { "commandId": "cleaner-disk-pressure", "parameters": {} }
+            ]
+            """);
+
+        var recursive = Assert.Throws<CommandParameterException>(() =>
+            WindowsCommandExecutor.ValidateCommandPlanSteps(planDoc.RootElement));
+        Assert.Contains("Recursive orchestration", recursive.Message);
+
+        using JsonDocument mutatingDoc = JsonDocument.Parse("""
+            [{ "commandId": "cleaner-disk-pressure", "parameters": {} }]
+            """);
+        var mutation = Assert.Throws<CommandParameterException>(() =>
+            WindowsCommandExecutor.ValidateCommandPlanSteps(mutatingDoc.RootElement));
+        Assert.Contains("cannot run inside a command plan", mutation.Message);
+    }
+
+    [Fact]
+    public void CommandPlanAdmission_MutatingStepWithInvalidParameters_IsStillBlockedUpfront()
+    {
+        // Mutation admission is rejected before its command-specific parameters are considered.
         using JsonDocument planDoc = JsonDocument.Parse("""
             [
                 { "commandId": "system", "parameters": {} },
@@ -69,7 +91,8 @@ public sealed class CommandSafetyTests
         var ex = Assert.Throws<CommandParameterException>(() =>
             WindowsCommandExecutor.ValidateCommandPlanSteps(planDoc.RootElement));
 
-        Assert.Equal("Path", ex.ParameterName);
+        Assert.Equal("Steps", ex.ParameterName);
+        Assert.Contains("cannot run inside a command plan", ex.Message);
     }
 
     [Fact]
@@ -354,7 +377,7 @@ public sealed class CommandSafetyTests
                 Keywords: Array.Empty<string>()
             );
 
-            using JsonDocument paramsDoc = JsonDocument.Parse("""{ "PresetId": "privacy" }""");
+            using JsonDocument paramsDoc = JsonDocument.Parse("""{ "PresetId": "safe" }""");
             using CancellationTokenSource cts = new();
 
             executor.RuleExecutorSeam = (rule, ct) => Task.FromResult(CommandHandlerOutcome.Succeeded("preset", $"Rule '{rule.Title}' fake applied.", null, false));
@@ -422,7 +445,7 @@ public sealed class CommandSafetyTests
                 Keywords: Array.Empty<string>()
             );
 
-            using JsonDocument paramsDoc = JsonDocument.Parse("""{ "PresetId": "privacy" }""");
+            using JsonDocument paramsDoc = JsonDocument.Parse("""{ "PresetId": "safe" }""");
             CommandRequest request = CommandRequest.Execute("preset", paramsDoc.RootElement);
 
             CommandHandlerOutcome outcome = await executor.ExecuteAsync(presetDef, request, cts.Token);
@@ -437,6 +460,7 @@ public sealed class CommandSafetyTests
             JsonElement item = history[0];
             string? status = item.GetProperty("status").GetString();
             Assert.Equal("Applied", status);
+            Assert.Equal(64, item.GetProperty("planDigest").GetString()!.Length);
         }
         finally
         {

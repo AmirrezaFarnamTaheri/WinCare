@@ -9,14 +9,28 @@ All notable changes to WinCare are documented in this file in accordance with [K
 ### Security & Safety
 
 - Made mutating approval a dispatcher-issued, parameter-bound, expiring, single-use capability; callers such as the System Doctor can no longer synthesize their own approval without a successful preview.
+- Centralized and versioned diagnostic and storage thresholds in `AssessmentPolicy` to prevent contradictory findings across Checkup, AI Doctor, and health probes.
+- Updated native telemetry probes with per-metric `valid_mask` and dynamic Windows system volume resolution, avoiding hardcoded drive letters or zero-as-truth fallbacks.
+- Bounded and namespaced Guard alert queues under `%LOCALAPPDATA%\WinCare\GuardAlerts` with automatic queue pruning.
 - Hardened plugin catalog trust, fresh-install re-resolution, publisher revocation, signed admission records, assembly-plugin rollback, uninstall recovery, and discovery-time signature verification.
 - Made plugin upgrade rollback preserve the last known-good external admission record when trust-record restoration itself encounters an I/O or access failure, surfacing both failures instead of deleting recovery evidence.
 - Hardened Guard named-pipe access control and retained fail-closed semantics for future mutating IPC.
 - Versioned encrypted profile envelopes, retained legacy decryption compatibility, and raised PBKDF2-HMAC-SHA256 work factor to 600,000 iterations.
 - Changed mutation-handler fault reporting to state when final machine state is unknown rather than implying that no change occurred.
+- Corrected built-in plugin aliases so Defender targets the implemented security collector, temp cleanup declares its real risk and elevation needs, and an unsupported Recycle Bin shortcut is no longer presented as working.
+- Normalized online package-removal receipts across success, reboot-required, elevated user-scope skips, and partial failures while retaining per-package output.
+- Made native CPU telemetry sampling atomic across idle, kernel, and user counters so concurrent callers cannot observe a mixed Windows sample.
 
 ### UX, Accessibility & Reliability
 
+- Reimagined the complete WinCare interface as the Precision Workspace hybrid: an illustrated system atlas, evidence-led checkup language, focused maintenance cards, denser tool inspection, responsive navigation, and coordinated light, dark, and High Contrast themes.
+- Refined every capability, activity, settings, help, plugin, and AI Doctor surface around a shared type, spacing, radius, control, and status vocabulary while preserving existing commands and safety disclosures.
+- Exposed all seven validated remediation presets as reviewable plan cards with rule counts, maximum risk, administrator/restart impact, declared recovery coverage, and direct entry into the existing preview-and-approval flow.
+- Added a persistent labeled instrument rail, page-specific technical identifiers, and independent responsive thresholds for Home, command tables, and the tool inspector.
+- Connected Home curated action cards (`Quick Clean`, `Audit Startup`, `Inspect Network`) directly to live catalog risk tiers (`Safe`, `Moderate`, `Destructive`, `Critical`) and theme brushes instead of static labels.
+- Bound explicit `Visibility` on action `ProgressRing` controls across Home, Checkup, Plugin Store, and AI Doctor to prevent phantom whitespace and layout jumps.
+- Resolved WinRT collection projection crashes across Checkup, Activity, and capability pages; registered `ThemeResourceBrushConverter` and added `InverseBooleanConverter`.
+- Replaced missing runtime XAML converters in `AiDoctorPage` with compiled type-safe layout helpers.
 - Reworked Home, Activity/Reports, Help, Plugin Store, Checkup, Doctor, settings, and window-continuity behavior around truthful state, visible degraded/error modes, safer destructive actions, and evidence-driven recovery.
 - Added typed All Tools parameter editors generated from command contracts while keeping raw JSON as an explicit Advanced escape hatch.
 - Standardized compact behavior around the shared breakpoint, added real Checkup compact states, and made measurement-sensitive Checkup probes explicitly sequential without globally serializing the dispatcher.
@@ -25,9 +39,15 @@ All notable changes to WinCare are documented in this file in accordance with [K
 
 ### Build, Supply Chain & Repository Quality
 
+- Automated documentation screenshot capture and verification pipeline via headless Edge (`tools/capture_screenshots.py`), generating verified 1440x900 showcase and architecture previews.
+- Profile-driven portable single-file publication (`portable-x64.pubxml`, `portable-ARM64.pubxml`) with IL trimming, size enforcement (<70MB), and automated provenance recording.
+- Enforced strict release candidate finalization mode governance in `.github/workflows/native-winui.yml`, failing closed on unverified catalog commands for stable releases.
 - Pinned .NET SDK 8.0.416 exactly with feature-band roll-forward and prerelease SDKs disabled; Rust and GitHub Actions remain pinned as well.
 - Committed normal NuGet dependency lockfiles for all eight solution projects and RID-specific portable publish lock variants for all five source projects on `win-x64` and `win-arm64`.
 - Enabled CI locked restore plus NuGet auditing of all transitive packages at moderate-or-higher severity; audit warnings are not suppressed.
+- Removed legacy backward compatibility parameter shims (`CommandRequestCompatibility.cs`) in favor of canonical boolean contract dispatch.
+- Completely purged out-of-date historical plans, reviews, ephemeral audit probe scripts, and one-time test harness artifacts.
+- Synchronized repository architecture and user documentation with active risk tier admission policies and verified documentation screenshots.
 - Expanded Dependabot coverage to GitHub Actions, NuGet, Cargo, and npm.
 - Added CODEOWNERS and a pull-request template covering safety/trust, accessibility, supply chain, exact verification evidence, documentation truth, and residual risk.
 - Expanded finalized native-source evidence to include NuGet configuration, infrastructure security tests, repository review guardrails, all committed dependency lock graphs, complete linked documentation/assets, and the plugin developer CLI with its tests.

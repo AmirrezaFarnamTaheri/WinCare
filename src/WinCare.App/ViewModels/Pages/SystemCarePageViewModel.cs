@@ -4,24 +4,17 @@ public sealed class SystemCarePageViewModel : TabbedPageViewModel
 {
     public string ToolSearchQuery => SelectedIndex switch
     {
-        0 => "storage cleanup",
+        0 => "storage cleanup installer",
         1 => "performance",
-        2 => "startup applications",
-        3 => "network update",
+        2 => "startup applications residual winget",
+        3 => "network update winget",
         _ => "preset",
     };
 
     public SystemCarePageViewModel() : base([
-        new PageSection("Clean up", "No cleanup assessment is available.", [
-            new PageRow("Storage cleanup", "Review temporary files, caches, downloads, and bounded cleanup targets.", "Available", "Preview first"),
-            new PageRow("Duplicate analysis", "Find duplicate files by size and verified content hash.", "Available", "Read-only scan")]),
-        new PageSection("Performance", "No performance findings are available.", [
-            new PageRow("Responsiveness", "Inspect memory pressure, startup load, services, and process evidence.", "Available", "Check before changes")]),
-        new PageSection("Apps & startup", "No application inventory is available.", [
-            new PageRow("Installed applications", "Review desktop, Store, and package inventory.", "Available", "Structured inventory"),
-            new PageRow("Startup applications", "Review entries that start with Windows and their source.", "Available", "Preview first")]),
-        new PageSection("Network & updates", "No network or update assessment is available.", [
-            new PageRow("Connectivity", "Inspect adapters, routes, DNS, and bounded endpoint checks.", "Available", "Network only on demand"),
-            new PageRow("Windows Update", "Search, review, and install admitted Windows updates.", "Available", "Restart may be required")]),
-        new PageSection("Routines", "Saved routines will appear here.", [])]) { }
+        new PageSection("Clean up", "No tools are available in this section.", []),
+        new PageSection("Performance", "No tools are available in this section.", []),
+        new PageSection("Apps & startup", "No tools are available in this section.", []),
+        new PageSection("Network & updates", "No tools are available in this section.", []),
+        new PageSection("Routines", "No tools are available in this section.", [])]) { }
 }
