@@ -528,11 +528,18 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
     {
         try
         {
-            _ = Windows.System.Launcher.LaunchUriAsync(new Uri(uriString));
+            if (Uri.TryCreate(uriString, UriKind.Absolute, out Uri? uri))
+            {
+                _ = Windows.System.Launcher.LaunchUriAsync(uri);
+            }
+            else
+            {
+                System.Diagnostics.Debug.WriteLine($"[CheckupPage] Invalid protocol URI: '{uriString}'");
+            }
         }
-        catch
+        catch (Exception ex)
         {
-            // Protocol launch fallback
+            System.Diagnostics.Debug.WriteLine($"[CheckupPage] Protocol launch failed for '{uriString}': {ex.GetType().Name} - {ex.Message}");
         }
     }
 

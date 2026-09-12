@@ -534,9 +534,9 @@ public sealed class PluginRegistryService : IPluginRegistry
                 }
             }
         }
-        catch
+        catch (Exception ex)
         {
-            // Built-in embedded discovery best-effort
+            System.Diagnostics.Debug.WriteLine($"[PluginRegistry] Built-in plugin discovery failed: {ex.GetType().Name} - {ex.Message}");
         }
     }
 
@@ -568,9 +568,9 @@ public sealed class PluginRegistryService : IPluginRegistry
                     ErrorMessage: loadResult.ErrorMessage);
             }
         }
-        catch
+        catch (Exception ex)
         {
-            // Best effort file load
+            System.Diagnostics.Debug.WriteLine($"[PluginRegistry] Failed loading plugin JSON '{jsonFilePath}': {ex.GetType().Name} - {ex.Message}");
         }
     }
 }

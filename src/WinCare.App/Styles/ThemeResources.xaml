@@ -30,6 +30,21 @@
             <SolidColorBrush x:Key="PillNotReadyBgBrush" Color="#E2E8F0" />
             <SolidColorBrush x:Key="PillTextBrush" Color="#FFFFFF" />
             <SolidColorBrush x:Key="PillAltTextBrush" Color="#1A1A1A" />
+            <!-- Precision Hardware & Double-Bezel Enclosure Brushes -->
+            <SolidColorBrush x:Key="DoubleBezelOuterBrush" Color="#E2EAF0" />
+            <SolidColorBrush x:Key="DoubleBezelOuterBorderBrush" Color="#B8CCD8" />
+            <SolidColorBrush x:Key="DoubleBezelInnerBrush" Color="#FFFFFF" />
+            <SolidColorBrush x:Key="DoubleBezelInnerBorderBrush" Color="#D9E4EC" />
+            <SolidColorBrush x:Key="HudChassisBrush" Color="#DCE6ED" />
+            <SolidColorBrush x:Key="HudChassisBorderBrush" Color="#B0C5D3" />
+            <SolidColorBrush x:Key="HudCoreBackgroundBrush" Color="#F4F8FA" />
+            <SolidColorBrush x:Key="AccentBadgeSubtleBrush" Color="#D2E8ED" />
+            <SolidColorBrush x:Key="AccentBadgeBorderBrush" Color="#006B80" />
+            <SolidColorBrush x:Key="LuminousGlowBrush" Color="#15006B80" />
+            <SolidColorBrush x:Key="IslandIconBgBrush" Color="#1A006B80" />
+            <SolidColorBrush x:Key="IslandIconFgBrush" Color="#006B80" />
+            <SolidColorBrush x:Key="TelemetrySensorBoxBrush" Color="#EBF2F6" />
+            <SolidColorBrush x:Key="TelemetrySensorBoxBorderBrush" Color="#CDDCE4" />
         </ResourceDictionary>
         <ResourceDictionary x:Key="Dark">
             <SolidColorBrush x:Key="PageBackgroundBrush" Color="#101B24" />
@@ -59,6 +74,21 @@
             <SolidColorBrush x:Key="PillNotReadyBgBrush" Color="#1F2937" />
             <SolidColorBrush x:Key="PillTextBrush" Color="#FFFFFF" />
             <SolidColorBrush x:Key="PillAltTextBrush" Color="#1A1A1A" />
+            <!-- Precision Hardware & Double-Bezel Enclosure Brushes -->
+            <SolidColorBrush x:Key="DoubleBezelOuterBrush" Color="#132029" />
+            <SolidColorBrush x:Key="DoubleBezelOuterBorderBrush" Color="#253D4D" />
+            <SolidColorBrush x:Key="DoubleBezelInnerBrush" Color="#182A35" />
+            <SolidColorBrush x:Key="DoubleBezelInnerBorderBrush" Color="#2D4859" />
+            <SolidColorBrush x:Key="HudChassisBrush" Color="#0D161D" />
+            <SolidColorBrush x:Key="HudChassisBorderBrush" Color="#1F3442" />
+            <SolidColorBrush x:Key="HudCoreBackgroundBrush" Color="#111D25" />
+            <SolidColorBrush x:Key="AccentBadgeSubtleBrush" Color="#1C3843" />
+            <SolidColorBrush x:Key="AccentBadgeBorderBrush" Color="#70D6DF" />
+            <SolidColorBrush x:Key="LuminousGlowBrush" Color="#2270D6DF" />
+            <SolidColorBrush x:Key="IslandIconBgBrush" Color="#2670D6DF" />
+            <SolidColorBrush x:Key="IslandIconFgBrush" Color="#70D6DF" />
+            <SolidColorBrush x:Key="TelemetrySensorBoxBrush" Color="#16252F" />
+            <SolidColorBrush x:Key="TelemetrySensorBoxBorderBrush" Color="#283F4E" />
         </ResourceDictionary>
         <ResourceDictionary x:Key="HighContrast">
             <SolidColorBrush x:Key="PageBackgroundBrush" Color="{ThemeResource SystemColorWindowColor}" />
@@ -88,6 +118,21 @@
             <SolidColorBrush x:Key="PillNotReadyBgBrush" Color="{ThemeResource SystemColorHighlightColor}" />
             <SolidColorBrush x:Key="PillTextBrush" Color="{ThemeResource SystemColorHighlightTextColor}" />
             <SolidColorBrush x:Key="PillAltTextBrush" Color="{ThemeResource SystemColorHighlightTextColor}" />
+            <!-- Precision Hardware & Double-Bezel Enclosure Brushes -->
+            <SolidColorBrush x:Key="DoubleBezelOuterBrush" Color="{ThemeResource SystemColorWindowColor}" />
+            <SolidColorBrush x:Key="DoubleBezelOuterBorderBrush" Color="{ThemeResource SystemColorWindowTextColor}" />
+            <SolidColorBrush x:Key="DoubleBezelInnerBrush" Color="{ThemeResource SystemColorWindowColor}" />
+            <SolidColorBrush x:Key="DoubleBezelInnerBorderBrush" Color="{ThemeResource SystemColorWindowTextColor}" />
+            <SolidColorBrush x:Key="HudChassisBrush" Color="{ThemeResource SystemColorWindowColor}" />
+            <SolidColorBrush x:Key="HudChassisBorderBrush" Color="{ThemeResource SystemColorWindowTextColor}" />
+            <SolidColorBrush x:Key="HudCoreBackgroundBrush" Color="{ThemeResource SystemColorWindowColor}" />
+            <SolidColorBrush x:Key="AccentBadgeSubtleBrush" Color="{ThemeResource SystemColorHighlightColor}" />
+            <SolidColorBrush x:Key="AccentBadgeBorderBrush" Color="{ThemeResource SystemColorWindowTextColor}" />
+            <SolidColorBrush x:Key="LuminousGlowBrush" Color="{ThemeResource SystemColorHighlightColor}" />
+            <SolidColorBrush x:Key="IslandIconBgBrush" Color="{ThemeResource SystemColorHighlightColor}" />
+            <SolidColorBrush x:Key="IslandIconFgBrush" Color="{ThemeResource SystemColorHighlightTextColor}" />
+            <SolidColorBrush x:Key="TelemetrySensorBoxBrush" Color="{ThemeResource SystemColorWindowColor}" />
+            <SolidColorBrush x:Key="TelemetrySensorBoxBorderBrush" Color="{ThemeResource SystemColorWindowTextColor}" />
         </ResourceDictionary>
     </ResourceDictionary.ThemeDictionaries>
 </ResourceDictionary>

@@ -1,29 +1,29 @@
 {
   "assets": [
     {
-      "bytes": 940,
       "path": "design/BRAND.md",
-      "sha256": "84f06f65fef715810d147f8e9ff22633f1f6550298bdd21f9dc26ea4b34bc75f"
+      "sha256": "c3a64c66779b6e443fa704eea401dd5382ae514ee29fbb1bde9f5617c5a5d741",
+      "bytes": 1306
     },
     {
-      "bytes": 11223,
       "path": "design/WinCare-Logo-512.png",
-      "sha256": "4dc978af062d3b8e4e5bfe6c3e7afb6de8db76b682ceaebd0e23cc1f6704a6f9"
+      "sha256": "e66b683dffadde1371d357b7bcf9caffa832a9c69c072dda43d091ac973b9c6c",
+      "bytes": 153694
     },
     {
-      "bytes": 1028,
       "path": "design/WinCare-Logo.svg",
-      "sha256": "aa87d2ec33498c2691d0078a1104b4287c955119e5eb2f14bc8ee27dcdc9eaf7"
+      "sha256": "5542b518aebba73959733314c3371b785907ec6472b06bcec48c9cd8af2bd036",
+      "bytes": 7681
     },
     {
-      "bytes": 1205,
       "path": "design/WinCare-Wordmark.svg",
-      "sha256": "b5dde0e88ad2f6754eddf3d807eb0a6fcd82a6fe72aa1713b8343e6e9b46aa21"
+      "sha256": "86b7a92c32074193c9bf65547aa62866171516ce7ac4f4dbcb869cdee70aae13",
+      "bytes": 7160
     },
     {
-      "bytes": 15972,
       "path": "design/WinCare.ico",
-      "sha256": "5c3b130e9af0cce40175f7023c5d46cb1271d9192f0731b3e6567372b83ebd3c"
+      "sha256": "e206585c38c43333200f380583ff69524ebdcf2e927095331fecc493c6009d24",
+      "bytes": 55717
     }
   ],
   "iconSizes": [
@@ -38,11 +38,12 @@
     256
   ],
   "palette": {
-    "blue": "#2F80ED",
-    "cyan": "#34D6E9",
-    "deep_blue": "#123A72",
-    "ink": "#0B1026",
-    "mint": "#68E0B5",
+    "bezel_rim": "#0284C7",
+    "deep_obsidian": "#0E1824",
+    "keystone_teal": "#7DD3FC",
+    "recessed_bay": "#162A3E",
+    "signal_mint": "#00FFA3",
+    "telemetry_cyan": "#00E5FF",
     "white": "#FFFFFF"
   },
   "product": "WinCare",
