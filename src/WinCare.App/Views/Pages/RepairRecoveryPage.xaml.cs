@@ -1,5 +1,6 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using System.Text.Json;
 using WinCare.App.Views;
 using WinCare.App.ViewModels.Pages;
 
@@ -16,20 +17,23 @@ public sealed partial class RepairRecoveryPage : Page
 
     public RepairRecoveryPageViewModel ViewModel { get; }
 
-    private void OpenToolsButton_Click(object sender, RoutedEventArgs e) =>
-        PageNavigation.OpenTools(this, ViewModel.ToolSearchQuery);
-
     private void SectionSelector_SelectionChanged(SelectorBar sender, SelectorBarSelectionChangedEventArgs args)
     {
         ViewModel.SelectSection(sender.Items.IndexOf(sender.SelectedItem));
+        if (!ViewModel.IsPlaybookSection)
+            ViewModel.ShowTools(WinCare.App.Services.AppRuntime.Current.ToolCatalog, ViewModel.ToolSearchQuery, WinCare.App.Services.AppRuntime.Current.Journal);
     }
 
-    private void Page_SizeChanged(object sender, SizeChangedEventArgs e)
+    private void PlaybookStep_ItemClick(object sender, ItemClickEventArgs e)
     {
-        bool compact = LayoutVisibility.IsCompact(e.NewSize.Width);
-        ViewModel.SetCompactLayout(compact);
-        DescriptionHeader.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
-        StateHeader.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
-        NotesHeader.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
+        if (e.ClickedItem is PageRow { CommandId: { } id, CommandParameters: JsonElement parameters })
+            PageNavigation.OpenTool(this, id, parameters);
     }
+
+    protected override void OnNavigatedTo(Microsoft.UI.Xaml.Navigation.NavigationEventArgs e)
+    {
+        base.OnNavigatedTo(e);
+        ViewModel.ShowTools(WinCare.App.Services.AppRuntime.Current.ToolCatalog, ViewModel.ToolSearchQuery, WinCare.App.Services.AppRuntime.Current.Journal);
+    }
+
 }

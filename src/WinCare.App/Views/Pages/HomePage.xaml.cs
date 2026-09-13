@@ -9,6 +9,7 @@ namespace WinCare.App.Views.Pages;
 
 public sealed partial class HomePage : Page
 {
+    private const double HomeCompactBreakpointDip = 780;
     private bool _isVisible;
     private int _widgetRefreshVersion;
 
@@ -87,11 +88,20 @@ public sealed partial class HomePage : Page
 
     private void Page_SizeChanged(object sender, SizeChangedEventArgs e)
     {
-        bool compact = LayoutVisibility.IsCompact(e.NewSize.Width);
+        // Home's atlas/evidence pair remains useful at a narrower width than data tables.
+        // Collapse it only when each column can no longer retain a readable measure.
+        bool compact = e.NewSize.Width < HomeCompactBreakpointDip;
         ViewModel.SetCompactLayout(compact);
-        PageLayout.Padding = compact ? new Thickness(20) : new Thickness(40, 30, 40, 40);
-        HeroLayout.ColumnDefinitions[0].Width = compact ? new GridLength(1, GridUnitType.Star) : new GridLength(380);
+        PageLayout.Padding = compact ? new Thickness(20) : new Thickness(32, 24, 32, 32);
+        HeroLayout.ColumnDefinitions[0].Width = new GridLength(1, GridUnitType.Star);
         HeroLayout.ColumnDefinitions[1].Width = compact ? new GridLength(0) : new GridLength(1, GridUnitType.Star);
+        WelcomeLayout.ColumnDefinitions[1].Width = compact ? new GridLength(0) : GridLength.Auto;
+        Grid.SetColumn(StartCheckupButton, compact ? 0 : 1);
+        Grid.SetRow(StartCheckupButton, compact ? 1 : 0);
+        SystemAtlasImage.Height = compact ? 180 : 240;
+        WelcomeLayout.RowSpacing = compact ? 16 : 0;
+        HeroLayout.RowSpacing = compact ? 24 : 0;
+        SecondaryLayout.RowSpacing = compact ? 16 : 0;
         SecondaryLayout.ColumnDefinitions[1].Width = compact ? new GridLength(0) : new GridLength(1, GridUnitType.Star);
         Grid.SetColumn(StatusCard, compact ? 0 : 1);
         Grid.SetRow(StatusCard, compact ? 1 : 0);
@@ -115,9 +125,11 @@ public sealed partial class HomePage : Page
             }
         }
         ActionLayout.Orientation = compact ? Orientation.Vertical : Orientation.Horizontal;
-        int columns = compact ? 2 : 3;
-        CategoryLayout.ColumnDefinitions[2].Width = compact ? new GridLength(0) : new GridLength(1, GridUnitType.Star);
-        while (CategoryLayout.RowDefinitions.Count < 3) CategoryLayout.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        int columns = e.NewSize.Width < 600 ? 1 : 2;
+        CategoryLayout.ColumnDefinitions[1].Width = columns == 1 ? new GridLength(0) : new GridLength(1, GridUnitType.Star);
+        int rows = (CategoryLayout.Children.Count + columns - 1) / columns;
+        while (CategoryLayout.RowDefinitions.Count < rows) CategoryLayout.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        while (CategoryLayout.RowDefinitions.Count > rows) CategoryLayout.RowDefinitions.RemoveAt(CategoryLayout.RowDefinitions.Count - 1);
         for (int i = 0; i < CategoryLayout.Children.Count; i++)
         {
             Grid.SetColumn((FrameworkElement)CategoryLayout.Children[i], i % columns);

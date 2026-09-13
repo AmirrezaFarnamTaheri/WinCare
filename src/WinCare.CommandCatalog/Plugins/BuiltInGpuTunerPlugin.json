@@ -1,0 +1,47 @@
+{
+  "id": "com.wincare.builtin.gpu_tuner",
+  "name": "GPU & Display Latency Tuner",
+  "version": "2.5.0",
+  "author": "WinCare Core Team",
+  "description": "Hardware-level graphics adapter optimization for AMD, NVIDIA, and Intel GPUs. Provides Ultra-Low Power State (ULPS) disablement, dynamic P-State frequency locking, and async flip latency minimization.",
+  "category": "Performance",
+  "entryType": "Manifest",
+  "tools": [
+    {
+      "id": "gpu.amd_ulps",
+      "title": "AMD Radeon ULPS Disable",
+      "summary": "Disables Ultra-Low Power State (ULPS) in driver registry to prevent secondary card sleep lag, crossfire stutter, and wake crashes.",
+      "area": "Performance",
+      "section": "Graphics",
+      "risk": "Low",
+      "readOnly": false,
+      "administratorAccess": "Required",
+      "executorType": "Native",
+      "aliasOf": "peer-display-overrides"
+    },
+    {
+      "id": "gpu.nvidia_pstate",
+      "title": "NVIDIA Dynamic P-State Lock",
+      "summary": "Disables dynamic P-States (PowerMizer clock throttling) to lock GPU memory and core clocks during latency-critical workloads.",
+      "area": "Performance",
+      "section": "Graphics",
+      "risk": "Moderate",
+      "readOnly": false,
+      "administratorAccess": "Required",
+      "executorType": "Native",
+      "aliasOf": "peer-display-overrides"
+    },
+    {
+      "id": "gpu.intel_async_flip",
+      "title": "Intel Graphics Async Flip Optimization",
+      "summary": "Disables asynchronous flip queue throttling on Intel UHD/Iris/Arc graphics to reduce DWM frame presentation latency.",
+      "area": "Performance",
+      "section": "Graphics",
+      "risk": "Low",
+      "readOnly": false,
+      "administratorAccess": "Required",
+      "executorType": "Native",
+      "aliasOf": "peer-display-overrides"
+    }
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "id": "com.wincare.builtin.storage_deduplication",
+  "name": "Storage Deduplication & Space Reclamation Engine",
+  "version": "2.5.0",
+  "author": "WinCare Core Team",
+  "description": "Fast multi-phase duplicate file scanner utilizing size-bucketing, 4KB header hashing, and full cryptographic SHA-256 verification.",
+  "category": "System Care",
+  "entryType": "Manifest",
+  "tools": [
+    {
+      "id": "storage.duplicate_candidate_scan",
+      "title": "Duplicate File Candidate Scanner",
+      "summary": "Performs zero-allocation file size grouping and 4KB header SHA-256 hashing to identify duplicate files for reclamation.",
+      "area": "System Care",
+      "section": "Storage Optimization",
+      "risk": "ReadOnly",
+      "readOnly": true,
+      "administratorAccess": "No",
+      "restart": "No",
+      "executorType": "Native",
+      "aliasOf": "storage"
+    }
+  ]
+}

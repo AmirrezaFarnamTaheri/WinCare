@@ -11,7 +11,11 @@ namespace WinCare.Application.Activity;
 /// </summary>
 public sealed class ActivityJournalService : IActivityJournalService
 {
-    private const int MaxPersistedRecords = 200;
+    /// <summary>
+    /// Maximum number of activity records retained on disk. Older records are trimmed.
+    /// </summary>
+    public const int MaxPersistedRecords = 200;
+
     private const long MaxJournalFileBytes = 4 * 1024 * 1024;
 
     private static readonly JsonSerializerOptions PersistenceOptions = new()

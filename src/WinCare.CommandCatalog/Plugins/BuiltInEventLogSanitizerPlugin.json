@@ -1,0 +1,47 @@
+{
+  "id": "com.wincare.builtin.event_log_sanitizer",
+  "name": "Event Log Maintenance",
+  "version": "2.5.0",
+  "author": "WinCare Core Team",
+  "description": "Reviews and clears three explicitly supported Windows event-log channels after confirmation: Diagnosis-PLA, PowerShell Operational, and BITS Client Operational.",
+  "category": "Privacy",
+  "entryType": "Manifest",
+  "tools": [
+    {
+      "id": "eventlog.diagnostic",
+      "title": "Diagnosis-PLA operational log",
+      "summary": "Reviews or clears Microsoft-Windows-Diagnosis-PLA/Operational.",
+      "area": "Privacy",
+      "section": "Event Channels",
+      "risk": "Moderate",
+      "readOnly": false,
+      "administratorAccess": "Required",
+      "executorType": "Native",
+      "aliasOf": "deep-clean"
+    },
+    {
+      "id": "eventlog.powershell",
+      "title": "PowerShell operational log",
+      "summary": "Reviews or clears Microsoft-Windows-PowerShell/Operational. This does not claim to clear separate logging configuration or unrelated channels.",
+      "area": "Privacy",
+      "section": "Event Channels",
+      "risk": "Moderate",
+      "readOnly": false,
+      "administratorAccess": "Required",
+      "executorType": "Native",
+      "aliasOf": "deep-clean"
+    },
+    {
+      "id": "eventlog.bits",
+      "title": "BITS Client operational log",
+      "summary": "Reviews or clears Microsoft-Windows-Bits-Client/Operational.",
+      "area": "Privacy",
+      "section": "Event Channels",
+      "risk": "Moderate",
+      "readOnly": false,
+      "administratorAccess": "Required",
+      "executorType": "Native",
+      "aliasOf": "deep-clean"
+    }
+  ]
+}

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+import json
 import unittest
 from pathlib import Path
 
@@ -20,7 +21,8 @@ class ParameterSchemaContractTests(unittest.TestCase):
 
     def test_schema_only_references_real_catalog_commands(self) -> None:
         schema_ids = set(re.findall(r"^([a-z0-9-]+)\|", self.schema, re.MULTILINE))
-        catalog_ids = set(load_oracle_commands())
+        document = json.loads((self.root / "src/WinCare.CommandCatalog/Data/commands.json").read_text(encoding="utf-8"))
+        catalog_ids = {command["id"] for command in document["commands"]}
         self.assertTrue(schema_ids, "typed parameter schema must not be empty")
         self.assertEqual(set(), schema_ids - catalog_ids)
 

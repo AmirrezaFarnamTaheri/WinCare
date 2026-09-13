@@ -1,6 +1,6 @@
 # WinCare visual identity
 
-The WinCare mark combines a protective shield with a high-legibility `W` to communicate dependable Windows care without imitating Microsoft's Windows trademark.
+The WinCare mark is a precision instrument emblem combining a Fluent acrylic squircle chassis, a protective system health shield, an athletic dimensional `W` monogram, and a central diagnostic diamond keystone with a specular calibration spark. It communicates deterministic Windows diagnostics, authoritative mutation governance, and 64-bit native plane rigor.
 
 ## Canonical assets
 
@@ -12,11 +12,12 @@ The WinCare mark combines a protective shield with a high-legibility `W` to comm
 
 ## Palette
 
-- Ink: `#0B1026`
-- Deep blue: `#123A72`
-- Blue: `#2F80ED`
-- Cyan: `#34D6E9`
-- Mint: `#68E0B5`
-- White: `#FFFFFF`
+- Deep Obsidian (Chassis): `#0E1824` / `#080F18`
+- Titanium Rim: `#38BDF8` (specular) / `#0284C7` (bezel)
+- Shield Acrylic: `#162A3E` / `#0D1A27`
+- Telemetry Cyan: `#00E5FF` / `#7DD3FC`
+- Electric Azure: `#0284C7`
+- Signal Mint (Health Beacon): `#00FFA3`
+- Signal White (Specular Spark): `#FFFFFF`
 
-Do not stretch, recolor, rotate, add effects, or place the mark on a background that prevents the rounded tile silhouette from remaining clear. Use the icon at 16 px or larger and the wordmark at 120 px wide or larger.
+Do not stretch, distort, rotate, or blur the mark. Maintain integer coordinate sharpness and precision geometry across all icon sizes (16 px to 512 px) and the horizontal lockup at 120 px or larger.

@@ -1,0 +1,35 @@
+{
+  "id": "com.wincare.builtin.redis_cleaner",
+  "name": "Redis & In-Memory Database Cache Optimizer",
+  "version": "2.5.0",
+  "author": "WinCare Core Team",
+  "description": "Optimizer and cleaner for developer Redis snapshots, Append-Only Files (AOF), and local memory database dumps.",
+  "category": "Developer Tools",
+  "entryType": "Manifest",
+  "tools": [
+    {
+      "id": "cleaner.redis_dump_aof",
+      "title": "Redis Snapshot & Append-Only Files",
+      "summary": "Scans and purges stale dump.rdb, appendonly.aof, and temp redis crash dumps from developer project roots.",
+      "area": "Developer Tools",
+      "section": "Database Caches",
+      "risk": "Moderate",
+      "readOnly": false,
+      "administratorAccess": "MayBeRequired",
+      "executorType": "Native",
+      "aliasOf": "cleaner-disk-pressure"
+    },
+    {
+      "id": "cleaner.redis_temp_logs",
+      "title": "Redis Server Diagnostics & Logs",
+      "summary": "Purges temporary Redis server instance logs and connection trace histories.",
+      "area": "Developer Tools",
+      "section": "Database Caches",
+      "risk": "Low",
+      "readOnly": false,
+      "administratorAccess": "MayBeRequired",
+      "executorType": "Native",
+      "aliasOf": "deep-clean"
+    }
+  ]
+}

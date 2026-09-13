@@ -1,0 +1,37 @@
+{
+  "id": "com.wincare.builtin.desktop_widgets",
+  "name": "Desktop Performance HUD & Widget Grid",
+  "version": "2.5.0",
+  "author": "WinCare Core Team",
+  "description": "High-density system performance monitoring widgets providing real-time CPU, RAM, Disk I/O, and Network telemetry.",
+  "category": "Utilities",
+  "entryType": "Manifest",
+  "tools": [
+    {
+      "id": "widgets.cpu_ram_hud",
+      "title": "CPU & Memory Performance Gauge",
+      "summary": "Collects zero-allocation CPU usage percentage and physical memory working sets for HUD widgets.",
+      "area": "System Care",
+      "section": "Desktop Monitoring",
+      "risk": "ReadOnly",
+      "readOnly": true,
+      "administratorAccess": "No",
+      "restart": "No",
+      "executorType": "Native",
+      "aliasOf": "system"
+    },
+    {
+      "id": "widgets.disk_io_monitor",
+      "title": "Disk Space & Volume Health Monitor",
+      "summary": "Monitors active volume free space, seek penalties, and storage pressure thresholds.",
+      "area": "System Care",
+      "section": "Desktop Monitoring",
+      "risk": "ReadOnly",
+      "readOnly": true,
+      "administratorAccess": "No",
+      "restart": "No",
+      "executorType": "Native",
+      "aliasOf": "storage"
+    }
+  ]
+}

@@ -132,11 +132,18 @@ public sealed class ToolCatalogService
 
     private static bool Matches(CommandDefinition command, string query)
     {
-        return command.Id.Contains(query, StringComparison.OrdinalIgnoreCase) ||
-               command.Title.Contains(query, StringComparison.OrdinalIgnoreCase) ||
-               command.Summary.Contains(query, StringComparison.OrdinalIgnoreCase) ||
-               command.Area.Contains(query, StringComparison.OrdinalIgnoreCase) ||
-               command.Section.Contains(query, StringComparison.OrdinalIgnoreCase) ||
-               command.Keywords.Any(keyword => keyword.Contains(query, StringComparison.OrdinalIgnoreCase));
+        // Multi-word queries match per token against any field.
+        string[] tokens = query.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        return tokens.Length == 0 || tokens.Any(token => MatchesToken(command, token));
+    }
+
+    private static bool MatchesToken(CommandDefinition command, string token)
+    {
+        return command.Id.Contains(token, StringComparison.OrdinalIgnoreCase) ||
+               command.Title.Contains(token, StringComparison.OrdinalIgnoreCase) ||
+               command.Summary.Contains(token, StringComparison.OrdinalIgnoreCase) ||
+               command.Area.Contains(token, StringComparison.OrdinalIgnoreCase) ||
+               command.Section.Contains(token, StringComparison.OrdinalIgnoreCase) ||
+               command.Keywords.Any(keyword => keyword.Contains(token, StringComparison.OrdinalIgnoreCase));
     }
 }

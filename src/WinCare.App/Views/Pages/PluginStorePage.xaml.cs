@@ -18,7 +18,9 @@ public sealed partial class PluginStorePage : Page
 
     public PluginStorePage()
     {
-        ViewModel = new PluginStorePageViewModel();
+        var runtime = WinCare.App.Services.AppRuntime.Current;
+        ViewModel = new PluginStorePageViewModel(runtime.PluginRegistry, runtime.CatalogService,
+            runtime.InstallerService, runtime.PluginHost, runtime.InitializePluginsAsync);
         InitializeComponent();
         Loaded += async (s, e) =>
         {
@@ -44,6 +46,30 @@ public sealed partial class PluginStorePage : Page
         if (args.Reason == AutoSuggestionBoxTextChangeReason.UserInput)
         {
             ViewModel.SearchQuery = sender.Text;
+        }
+    }
+
+    private void Page_SizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        bool compact = LayoutVisibility.IsCompact(e.NewSize.Width);
+        Grid.SetRow(PluginSearchBox, compact ? 1 : 0);
+        Grid.SetColumn(PluginSearchBox, compact ? 0 : 1);
+        Grid.SetColumnSpan(PluginSearchBox, compact ? 2 : 1);
+        PluginSearchBox.Width = compact ? double.NaN : 280;
+        PluginSearchBox.HorizontalAlignment = HorizontalAlignment.Stretch;
+        Grid.SetRow(CategoryFilter, compact ? 2 : 1);
+    }
+
+    private async void RetryCatalog_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            await ViewModel.RefreshPluginsAsync(forceRemoteRefresh: true);
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception)
+        {
+            ViewModel.ErrorMessage = "The catalog could not be refreshed. Check your connection and try again.";
         }
     }
 

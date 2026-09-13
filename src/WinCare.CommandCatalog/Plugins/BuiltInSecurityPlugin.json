@@ -16,7 +16,7 @@
       "risk": "Low",
       "readOnly": true,
       "executorType": "Native",
-      "aliasOf": "security-defender-audit"
+      "aliasOf": "security"
     }
   ]
 }

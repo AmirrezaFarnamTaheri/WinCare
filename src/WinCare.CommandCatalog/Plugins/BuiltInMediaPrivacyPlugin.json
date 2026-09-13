@@ -1,0 +1,47 @@
+{
+  "id": "com.wincare.builtin.media_privacy",
+  "name": "Media & Document Privacy Cleaner",
+  "version": "2.5.0",
+  "author": "WinCare Core Team",
+  "description": "Cleans playback and document history for Windows Media Player, VLC, PotPlayer, and Microsoft Office Recent items.",
+  "category": "Privacy",
+  "entryType": "Manifest",
+  "tools": [
+    {
+      "id": "privacy.media_player",
+      "title": "Windows Media Player History",
+      "summary": "Cleans playback history from Modern Media Player and Zune database.",
+      "area": "Privacy",
+      "section": "Media History",
+      "risk": "Low",
+      "readOnly": false,
+      "administratorAccess": "MayBeRequired",
+      "executorType": "Native",
+      "aliasOf": "cleaner-disk-pressure"
+    },
+    {
+      "id": "privacy.vlc_history",
+      "title": "VLC Recent Media",
+      "summary": "Cleans recent media tracks and subtitle history from vlc-qt-interface.ini.",
+      "area": "Privacy",
+      "section": "Media History",
+      "risk": "Low",
+      "readOnly": false,
+      "administratorAccess": "MayBeRequired",
+      "executorType": "Native",
+      "aliasOf": "cleaner-disk-pressure"
+    },
+    {
+      "id": "privacy.office_mru",
+      "title": "Microsoft Office Recent Documents",
+      "summary": "Clears Word, Excel, and PowerPoint MRU and recent places lists.",
+      "area": "Privacy",
+      "section": "Documents",
+      "risk": "Low",
+      "readOnly": false,
+      "administratorAccess": "MayBeRequired",
+      "executorType": "Native",
+      "aliasOf": "cleaner-disk-pressure"
+    }
+  ]
+}

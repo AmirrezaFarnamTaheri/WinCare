@@ -1,0 +1,24 @@
+{
+  "id": "com.wincare.builtin.dynamic_tiling",
+  "name": "Dynamic Workspace Tiling & Status Widgets",
+  "version": "2.5.0",
+  "author": "WinCare Core Team",
+  "description": "Calculates dynamic tiling layouts (Master-and-Stack, Fair Grid, Spiral) and streams status widget telemetry feeds.",
+  "category": "Windows Experience",
+  "entryType": "Manifest",
+  "tools": [
+    {
+      "id": "window.dynamic_tiling_audit",
+      "title": "Dynamic Window Tiling Layout Engine",
+      "summary": "Computes optimal multi-monitor window tiling matrices across master-and-stack and fair grid algorithms with custom gap buffers.",
+      "area": "Windows Experience",
+      "section": "Workspace Tiling",
+      "risk": "ReadOnly",
+      "readOnly": true,
+      "administratorAccess": "No",
+      "restart": "No",
+      "executorType": "Native",
+      "aliasOf": "system"
+    }
+  ]
+}

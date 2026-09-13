@@ -3,21 +3,101 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     <ScrollViewer VerticalScrollBarVisibility="Auto">
-        <StackPanel Padding="32,24,32,32" MaxWidth="760" HorizontalAlignment="Left" Spacing="16">
+        <StackPanel Padding="28,28,28,32" MaxWidth="760" HorizontalAlignment="Left" Spacing="16">
             <Image Width="84" Height="84" HorizontalAlignment="Left" Source="/Assets/Square150x150Logo.png" AutomationProperties.Name="WinCare logo" />
-            <TextBlock Style="{StaticResource PageTitleTextStyle}" Text="WinCare" />
-            <TextBlock Style="{StaticResource PageDescriptionTextStyle}" TextWrapping="Wrap" Text="Native Windows care, repair, security, and recovery tools. Mutating commands require a dispatcher-issued preview receipt and explicit approval before apply." />
-            <Border Style="{StaticResource DashboardCardStyle}">
+            <TextBlock x:Uid="AboutPageTitle" Style="{StaticResource PageTitleTextStyle}" Text="WinCare" />
+            <TextBlock Style="{StaticResource PageDescriptionTextStyle}" TextWrapping="Wrap" Text="A clearer view of your PC. A considered next step. WinCare brings Windows care, repair, security, and recovery into one workspace. Diagnostic checks inspect system state without making changes, while actions that modify system files or settings provide a preview first for your review before applying." />
+            <Border BorderBrush="{ThemeResource BorderSubtleBrush}" BorderThickness="0,1,0,0" Padding="0,24,0,8">
                 <StackPanel Spacing="6">
                     <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="Version" />
                     <TextBlock Style="{StaticResource RowSecondaryTextStyle}" FontFamily="{StaticResource TelemetryFontFamily}" Text="{x:Bind VersionText}" />
                     <TextBlock Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap" Text="Build information comes from the running application assembly rather than a hard-coded release label." />
                 </StackPanel>
             </Border>
-            <Border Style="{StaticResource DashboardCardStyle}">
+            <Border BorderBrush="{ThemeResource BorderSubtleBrush}" BorderThickness="0,1,0,0" Padding="0,24,0,8">
                 <StackPanel Spacing="6">
                     <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="Safety model" />
                     <TextBlock Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap" Text="Read-only evidence is separated from mutation. Remote plugin installation remains disabled unless catalog trust is anchored to a WinCare-pinned signing key. Activity records preserve outcomes and explicitly flag uncertain final state after a mutation fault." />
+                </StackPanel>
+            </Border>
+            <Border BorderBrush="{ThemeResource BorderSubtleBrush}" BorderThickness="0,1,0,0" Padding="0,24,0,8">
+                <StackPanel Spacing="14">
+                    <StackPanel Spacing="4">
+                        <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="Support WinCare" />
+                        <TextBlock Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap" Text="Support WinCare’s maintenance and open-source development." />
+                    </StackPanel>
+
+                    <Grid ColumnSpacing="16" RowSpacing="12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <HyperlinkButton NavigateUri="https://github.com/AmirrezaFarnamTaheri/WinCare" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Padding="14,10" Background="{ThemeResource SurfaceSecondaryBrush}" BorderBrush="{ThemeResource BorderSubtleBrush}" BorderThickness="1" CornerRadius="{StaticResource RadiusControl}">
+                            <StackPanel Spacing="2">
+                                <TextBlock Text="Star on GitHub" FontWeight="SemiBold" Foreground="{ThemeResource TextPrimaryBrush}" />
+                                <TextBlock Text="Help more people find WinCare" FontSize="12" Foreground="{ThemeResource TextSecondaryBrush}" />
+                            </StackPanel>
+                        </HyperlinkButton>
+                        <HyperlinkButton Grid.Column="1" NavigateUri="https://github.com/AmirrezaFarnamTaheri/WinCare/issues" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Padding="14,10" Background="{ThemeResource SurfaceSecondaryBrush}" BorderBrush="{ThemeResource BorderSubtleBrush}" BorderThickness="1" CornerRadius="{StaticResource RadiusControl}">
+                            <StackPanel Spacing="2">
+                                <TextBlock Text="Report an issue" FontWeight="SemiBold" Foreground="{ThemeResource TextPrimaryBrush}" />
+                                <TextBlock Text="Bugs, ideas, and feedback" FontSize="12" Foreground="{ThemeResource TextSecondaryBrush}" />
+                            </StackPanel>
+                        </HyperlinkButton>
+                    </Grid>
+
+                    <StackPanel Spacing="6" Margin="0,4,0,0">
+                        <TextBlock Text="Contact maintainer" FontWeight="SemiBold" />
+                        <TextBlock Style="{StaticResource RowSecondaryTextStyle}" Text="Amirreza “Farnam” Taheri" />
+                        <HyperlinkButton Content="taherifarnam@gmail.com" NavigateUri="mailto:taherifarnam@gmail.com" Padding="0" Margin="0" HorizontalAlignment="Left" />
+                    </StackPanel>
+
+                    <StackPanel Spacing="8" Margin="0,6,0,0">
+                        <TextBlock Text="Donate" FontWeight="SemiBold" />
+                        <TextBlock Style="{StaticResource RowSecondaryTextStyle}" Text="Choose a network, then copy the wallet address." />
+
+                        <!-- Bitcoin -->
+                        <Border Background="{ThemeResource SurfaceSecondaryBrush}" BorderBrush="{ThemeResource BorderSubtleBrush}" BorderThickness="1" CornerRadius="{StaticResource RadiusControl}" Padding="16,10">
+                            <Grid ColumnSpacing="12">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="100" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="Bitcoin" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                <TextBlock Grid.Column="1" FontFamily="{StaticResource TelemetryFontFamily}" FontSize="12" Text="bc1q68g4m4denjw4smhvwmnz5fychuj3ge2vupx07w" VerticalAlignment="Center" TextWrapping="Wrap" IsTextSelectionEnabled="True" />
+                                <Button Grid.Column="2" Content="Copy" Style="{StaticResource QuietButtonStyle}" Click="CopyBtc_Click" AutomationProperties.Name="Copy Bitcoin address" />
+                            </Grid>
+                        </Border>
+
+                        <!-- Ethereum -->
+                        <Border Background="{ThemeResource SurfaceSecondaryBrush}" BorderBrush="{ThemeResource BorderSubtleBrush}" BorderThickness="1" CornerRadius="{StaticResource RadiusControl}" Padding="16,10">
+                            <Grid ColumnSpacing="12">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="100" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="Ethereum" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                <TextBlock Grid.Column="1" FontFamily="{StaticResource TelemetryFontFamily}" FontSize="12" Text="0xbd5af5d1517317111db9523d6bb42fceae887abb" VerticalAlignment="Center" TextWrapping="Wrap" IsTextSelectionEnabled="True" />
+                                <Button Grid.Column="2" Content="Copy" Style="{StaticResource QuietButtonStyle}" Click="CopyEth_Click" AutomationProperties.Name="Copy Ethereum address" />
+                            </Grid>
+                        </Border>
+
+                        <!-- TRON -->
+                        <Border Background="{ThemeResource SurfaceSecondaryBrush}" BorderBrush="{ThemeResource BorderSubtleBrush}" BorderThickness="1" CornerRadius="{StaticResource RadiusControl}" Padding="16,10">
+                            <Grid ColumnSpacing="12">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="100" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="TRON" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                <TextBlock Grid.Column="1" FontFamily="{StaticResource TelemetryFontFamily}" FontSize="12" Text="TRjFLA1Dd32Bw1i3FxjZW5dmVub5UfXFSS" VerticalAlignment="Center" TextWrapping="Wrap" IsTextSelectionEnabled="True" />
+                                <Button Grid.Column="2" Content="Copy" Style="{StaticResource QuietButtonStyle}" Click="CopyTron_Click" AutomationProperties.Name="Copy TRON address" />
+                            </Grid>
+                        </Border>
+                    </StackPanel>
                 </StackPanel>
             </Border>
         </StackPanel>

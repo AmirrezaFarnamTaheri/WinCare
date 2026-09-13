@@ -131,13 +131,7 @@ public sealed record CommandDefinition(
             return RiskTier.Safe;
         }
 
-        // Routine safe maintenance cleanups
-        if (id.StartsWith("cleaner-", StringComparison.OrdinalIgnoreCase) &&
-            !id.Contains("schedule", StringComparison.OrdinalIgnoreCase))
-        {
-            return RiskTier.Safe;
-        }
-
+        // Mutation admission is derived from the declared risk level.
         return RiskTier.Moderate;
     }
 }

@@ -25,4 +25,41 @@ public interface INativeCoreService
     /// Asynchronously retrieves a JSON string with system facts (logical CPUs, memory, OS build).
     /// </summary>
     Task<string> GetSystemInfoJsonAsync(CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Asynchronously accumulates comprehensive statistics (total bytes, file count, dir count) for a directory.
+    /// </summary>
+    Task<NativeDirectoryStats> GetDirectoryStatsAsync(string path, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Cryptographically overwrites and securely deletes a file using multi-pass patterns.
+    /// </summary>
+    Task ShredFileAsync(string path, uint passes, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Queries whether the volume underlying <paramref name="driveLetter"/> incurs a seek penalty (rotational vs SSD).
+    /// </summary>
+    bool? QuerySeekPenalty(char driveLetter);
+
+    /// <summary>
+    /// Optimizes NT system memory lists using the specified bitmask.
+    /// Returns the number of physical RAM bytes freed.
+    /// </summary>
+    ulong OptimizeMemoryLists(uint mask);
+
+    /// <summary>
+    /// Broadcasts a shell change notification to refresh Explorer caches.
+    /// </summary>
+    void BroadcastShellNotify();
+
+    /// <summary>
+    /// Queries Desktop Window Manager (DWM) whether a window handle is cloaked.
+    /// Returns true if cloaked, false if uncloaked, or null if query fails.
+    /// </summary>
+    bool? IsWindowCloaked(nint hwnd);
 }
+
+/// <summary>
+/// Aggregated directory traversal statistics returned by native inspection.
+/// </summary>
+public sealed record NativeDirectoryStats(ulong TotalBytes, ulong FileCount, ulong DirCount, bool IsComplete);

@@ -1,0 +1,37 @@
+{
+  "id": "com.wincare.builtin.environment_sanitizer",
+  "name": "Environment & PATH Sanitizer Suite",
+  "version": "2.5.0",
+  "author": "WinCare Core Team",
+  "description": "Audits System and User %PATH% variables, detects dead/nonexistent paths, identifies duplicate directories, and scans package manager caches.",
+  "category": "Developer Tools",
+  "entryType": "Manifest",
+  "tools": [
+    {
+      "id": "env.path_integrity_audit",
+      "title": "Environment %PATH% Integrity Audit",
+      "summary": "Scans System and User PATH variables for dead directories, duplicate entries, and buffer overflow risks.",
+      "area": "Developer Tools",
+      "section": "Environment Variables",
+      "risk": "ReadOnly",
+      "readOnly": true,
+      "administratorAccess": "No",
+      "restart": "No",
+      "executorType": "Native",
+      "aliasOf": "system"
+    },
+    {
+      "id": "env.package_manager_caches",
+      "title": "Package Manager Cache Auditor",
+      "summary": "Audits local staging caches for WinGet, Scoop, Chocolatey, Electric, npm, and Cargo.",
+      "area": "Developer Tools",
+      "section": "Package Management",
+      "risk": "ReadOnly",
+      "readOnly": true,
+      "administratorAccess": "No",
+      "restart": "No",
+      "executorType": "Native",
+      "aliasOf": "system"
+    }
+  ]
+}

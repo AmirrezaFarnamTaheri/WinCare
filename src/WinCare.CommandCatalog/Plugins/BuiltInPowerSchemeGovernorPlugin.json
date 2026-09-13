@@ -1,0 +1,24 @@
+{
+  "id": "com.wincare.builtin.power_scheme_governor",
+  "name": "Power Scheme Governor & Energy Profile Suite",
+  "version": "2.5.0",
+  "author": "WinCare Core Team",
+  "description": "Direct Win32 Power Scheme governor enabling zero-process-spawn enumeration, latency profile switching, and energy policy configuration.",
+  "category": "Hardware & Power",
+  "entryType": "Manifest",
+  "tools": [
+    {
+      "id": "power.scheme_governor_audit",
+      "title": "Win32 Power Scheme Governor Audit",
+      "summary": "Enumerates installed Windows power plans, queries active scheme GUID, and audits CPU AC/DC performance indices.",
+      "area": "Hardware & Power",
+      "section": "Power Management",
+      "risk": "ReadOnly",
+      "readOnly": true,
+      "administratorAccess": "No",
+      "restart": "No",
+      "executorType": "Native",
+      "aliasOf": "system"
+    }
+  ]
+}

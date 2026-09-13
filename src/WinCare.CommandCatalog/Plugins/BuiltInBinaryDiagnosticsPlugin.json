@@ -1,0 +1,37 @@
+{
+  "id": "com.wincare.builtin.binary_diagnostics",
+  "name": "Binary Architecture & Crash Dump Diagnostic Suite",
+  "version": "2.5.0",
+  "author": "WinCare Core Team",
+  "description": "Portable Executable (PE) binary header inspection, ASLR/DEP/CFG security mitigation verification, and system crash dump analyzer.",
+  "category": "Diagnostics & Security",
+  "entryType": "Manifest",
+  "tools": [
+    {
+      "id": "diag.pe_binary_security_probe",
+      "title": "PE Binary Security Mitigation Probe",
+      "summary": "Inspects executable DOS/NT headers, architecture machine flags, ASLR (DynamicBase), DEP (NXCompat), and Control Flow Guard.",
+      "area": "Diagnostics & Security",
+      "section": "Binary Diagnostics",
+      "risk": "ReadOnly",
+      "readOnly": true,
+      "administratorAccess": "No",
+      "restart": "No",
+      "executorType": "Native",
+      "aliasOf": "security"
+    },
+    {
+      "id": "diag.crash_dump_collector",
+      "title": "Crash Dump Artifact Collector",
+      "summary": "Audits user-mode and kernel minidump crash artifacts across LocalAppData and Windows Minidump directories.",
+      "area": "Diagnostics & Security",
+      "section": "Binary Diagnostics",
+      "risk": "ReadOnly",
+      "readOnly": true,
+      "administratorAccess": "No",
+      "restart": "No",
+      "executorType": "Native",
+      "aliasOf": "system"
+    }
+  ]
+}

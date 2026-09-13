@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 
 namespace WinCare.Infrastructure.Commands;
@@ -11,6 +13,12 @@ public sealed class CommandStateStore
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
     private readonly string _root;
     private readonly SemaphoreSlim _gate = new(1, 1);
+    private readonly Semaphore _crossProcessGate;
+
+    /// <summary>
+    /// Bounded wait for the cross-process state lock.
+    /// </summary>
+    private static readonly TimeSpan CrossProcessLockTimeout = TimeSpan.FromSeconds(5);
 
     /// <summary>
     /// Initializes a new instance of <see cref="CommandStateStore"/>.
@@ -23,6 +31,13 @@ public sealed class CommandStateStore
             "WinCare",
             "state"));
         Directory.CreateDirectory(_root);
+
+        // One OS-wide lock name per data root: every store instance (in this process or
+        // another) pointed at the same root shares the same write lock. A named Semaphore
+        // is used because writer continuations may resume on any thread; semaphores have
+        // no thread affinity and their count is restored by the OS if a holder dies.
+        string rootHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(_root)))[..16];
+        _crossProcessGate = new Semaphore(initialCount: 1, maximumCount: 1, @"Local\WinCare.StateStore." + rootHash);
     }
 
     /// <summary>
@@ -43,7 +58,7 @@ public sealed class CommandStateStore
             {
                 return fallback.Clone();
             }
-            await using FileStream stream = new(path, FileMode.Open, FileAccess.Read, FileShare.Read, 64 * 1024, useAsync: true);
+            await using FileStream stream = new(path, FileMode.Open, FileAccess.Read, FileShare.Read | FileShare.Delete, 64 * 1024, useAsync: true);
             JsonDocument document = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken).ConfigureAwait(false);
             using (document)
             {
@@ -61,6 +76,15 @@ public sealed class CommandStateStore
     }
 
     /// <summary>
+    /// Acquires the OS-wide write lock for this data root with a bounded wait.
+    /// </summary>
+    /// <returns>True when the lock was acquired; the caller must release it in finally.</returns>
+    private bool TryAcquireCrossProcessGate()
+    {
+        return _crossProcessGate.WaitOne(CrossProcessLockTimeout);
+    }
+
+    /// <summary>
     /// Writes a state element by key.
     /// </summary>
     public async Task WriteAsync(string key, JsonElement value, CancellationToken cancellationToken)
@@ -68,19 +92,30 @@ public sealed class CommandStateStore
         string path = PathFor(key);
         string temp = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
         await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        bool crossProcessLockHeld = TryAcquireCrossProcessGate();
         try
         {
+            if (!crossProcessLockHeld)
+            {
+                throw new TimeoutException(
+                    $"WinCare state '{key}' is busy: another process holds the state write lock.");
+            }
+
             Directory.CreateDirectory(_root);
             await using (FileStream stream = new(temp, FileMode.CreateNew, FileAccess.Write, FileShare.None, 64 * 1024, useAsync: true))
             {
                 await JsonSerializer.SerializeAsync(stream, value, JsonOptions, cancellationToken).ConfigureAwait(false);
                 await stream.FlushAsync(cancellationToken).ConfigureAwait(false);
             }
-            File.Move(temp, path, overwrite: true);
+            MoveWithRetry(temp, path);
         }
         finally
         {
             TryDelete(temp);
+            if (crossProcessLockHeld)
+            {
+                _crossProcessGate.Release();
+            }
             _gate.Release();
         }
     }
@@ -97,14 +132,21 @@ public sealed class CommandStateStore
         string path = PathFor(key);
         string temp = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
         await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        bool crossProcessLockHeld = TryAcquireCrossProcessGate();
         try
         {
+            if (!crossProcessLockHeld)
+            {
+                throw new TimeoutException(
+                    $"WinCare state '{key}' is busy: another process holds the state write lock.");
+            }
+
             JsonElement current = fallback.Clone();
             if (File.Exists(path))
             {
                 try
                 {
-                    await using FileStream readStream = new(path, FileMode.Open, FileAccess.Read, FileShare.Read, 64 * 1024, useAsync: true);
+                    await using FileStream readStream = new(path, FileMode.Open, FileAccess.Read, FileShare.Read | FileShare.Delete, 64 * 1024, useAsync: true);
                     using JsonDocument doc = await JsonDocument.ParseAsync(readStream, cancellationToken: cancellationToken).ConfigureAwait(false);
                     current = doc.RootElement.Clone();
                 }
@@ -122,12 +164,16 @@ public sealed class CommandStateStore
                 await JsonSerializer.SerializeAsync(writeStream, updated, JsonOptions, cancellationToken).ConfigureAwait(false);
                 await writeStream.FlushAsync(cancellationToken).ConfigureAwait(false);
             }
-            File.Move(temp, path, overwrite: true);
+            MoveWithRetry(temp, path);
             return updated;
         }
         finally
         {
             TryDelete(temp);
+            if (crossProcessLockHeld)
+            {
+                _crossProcessGate.Release();
+            }
             _gate.Release();
         }
     }
@@ -178,5 +224,31 @@ public sealed class CommandStateStore
         }
         catch (IOException) { }
         catch (UnauthorizedAccessException) { }
+    }
+
+    private static void MoveWithRetry(string source, string destination)
+    {
+        const int maxAttempts = 25;
+        for (int i = 1; i <= maxAttempts; i++)
+        {
+            try
+            {
+                if (i > 1 && !File.Exists(source) && File.Exists(destination))
+                {
+                    return;
+                }
+                File.Move(source, destination, overwrite: true);
+                return;
+            }
+            catch (FileNotFoundException)
+            {
+                if (File.Exists(destination)) return;
+                throw;
+            }
+            catch (Exception ex) when (i < maxAttempts && (ex is UnauthorizedAccessException or IOException))
+            {
+                Thread.Sleep(20);
+            }
+        }
     }
 }

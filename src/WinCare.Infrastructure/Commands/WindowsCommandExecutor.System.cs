@@ -173,7 +173,10 @@ internal sealed partial class WindowsCommandExecutor
         FirewallProfileState[] firewallProfiles = ReadFirewallProfileStates();
         bool firewall = firewallProfiles.All(profile => profile.Enabled);
         var findings = new List<object>();
-        findings.AddRange(drives.Where(d => d.freePercent < 10).Select(d => (object)new { area = "Storage", item = d.Name, severity = "High", message = $"Only {d.freePercent}% free." }));
+        // Thresholds come from the shared versioned assessment policy.
+        findings.AddRange(drives.Where(d => d.freePercent < WinCare.Domain.Assessment.AssessmentPolicy.DiskFreePercentWarning)
+            .Select(d => (object)new { area = "Storage", item = d.Name, severity = "High", message = $"Only {d.freePercent}% free." }));
+        findings.Add(new { area = "Assessment policy", item = "Thresholds", severity = "Information", message = $"Assessment rules v{WinCare.Domain.Assessment.AssessmentPolicy.Version}: storage High below {WinCare.Domain.Assessment.AssessmentPolicy.DiskFreePercentWarning}% free; this overview is not a complete health verdict of installed protection." });
         if (memory.MemoryLoad >= 90) findings.Add(new { area = "Memory", item = "Physical memory", severity = "Moderate", message = $"Memory load is {memory.MemoryLoad}%." });
         if (!firewall) findings.Add(new { area = "Security", item = "Windows Firewall", severity = "High", message = "One or more firewall profiles appear disabled." });
         int score = Math.Max(0, 100 - findings.Count * 15);
@@ -640,5 +643,34 @@ internal sealed partial class WindowsCommandExecutor
         if ((file.Attributes & FileAttributes.ReparsePoint) != 0) throw new InvalidDataException("Reparse-point input files are not admitted.");
         if (file.Length > maxBytes) throw new InvalidDataException($"File exceeds the {maxBytes} byte limit.");
         return path;
+    }
+
+    internal static class DiagnosticUtilityHelper
+    {
+        public sealed record DiagnosticTool(string Name, string ExeName, string Description, bool Exists, string Path);
+
+        public static IReadOnlyList<DiagnosticTool> ScanDiagnosticTools()
+        {
+            string system32 = Environment.GetFolderPath(Environment.SpecialFolder.System);
+            (string Name, string Exe, string Desc)[] tools =
+            [
+                ("Resource Monitor", "resmon.exe", "Monitors CPU, Memory, Disk, and Network usage in real-time."),
+                ("Performance Monitor", "perfmon.exe", "Advanced Windows performance counters and diagnostics."),
+                ("Disk Cleanup", "cleanmgr.exe", "Built-in Windows storage cleanup utility."),
+                ("Malicious Software Removal Tool", "mrt.exe", "Microsoft on-demand malware scanner."),
+                ("System Information", "msinfo32.exe", "Hardware and driver configuration inventory."),
+                ("Drive Defragmenter & Optimizer", "dfrgui.exe", "TRIM and drive storage optimization UI."),
+                ("DirectX Diagnostic Tool", "dxdiag.exe", "DirectX and display driver telemetry tool."),
+            ];
+
+            var list = new List<DiagnosticTool>();
+            foreach (var (name, exe, desc) in tools)
+            {
+                string path = Path.Combine(system32, exe);
+                bool exists = File.Exists(path);
+                list.Add(new DiagnosticTool(name, exe, desc, exists, path));
+            }
+            return list;
+        }
     }
 }

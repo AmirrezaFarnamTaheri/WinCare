@@ -38,6 +38,10 @@ class NativeFoundationTests(unittest.TestCase):
                     self.assertIn("LayoutVisibility.BoolToVisibility(IsCompact)", text, name)
                 continue
 
+            if name in {"SystemCarePage.xaml", "SecurityPage.xaml", "RepairRecoveryPage.xaml"}:
+                self.assertIn("controls:CareToolList", text, name)
+                continue
+
             expected_headers = (
                 ("Summary", "State", "Time")
                 if name == "ActivityPage.xaml"
@@ -49,14 +53,18 @@ class NativeFoundationTests(unittest.TestCase):
             self.assertIn("IsCompact", text, name)
             self.assertIn("SizeChanged", text, name)
 
-        shared_breakpoint_pages = (
-            "CheckupPage.xaml.cs", "SystemCarePage.xaml.cs", "SecurityPage.xaml.cs", "RepairRecoveryPage.xaml.cs",
-        )
+        shared_breakpoint_pages = ("CheckupPage.xaml.cs",)
         for name in shared_breakpoint_pages:
             code = (root / "src/WinCare.App/Views/Pages" / name).read_text(encoding="utf-8")
             self.assertIn("LayoutVisibility.IsCompact(e.NewSize.Width)", code, name)
             self.assertNotIn("< 820", code, name)
             self.assertNotIn("CompactThreshold", code, name)
+
+        care_list_xaml = (root / "src/WinCare.App/Controls/CareToolList.xaml").read_text(encoding="utf-8")
+        care_list_code = (root / "src/WinCare.App/Controls/CareToolList.xaml.cs").read_text(encoding="utf-8")
+        for required in ("ListView", "Catalog status", "Requirements", "IsCompact"):
+            self.assertIn(required, care_list_xaml)
+        self.assertIn("SetCompactLayout", care_list_code)
 
         checkup_vm = (root / "src/WinCare.App/ViewModels/Pages/CheckupPageViewModel.cs").read_text(encoding="utf-8")
         sequential_probe_runner = (root / "src/WinCare.Application/Commands/SequentialCommandProbeRunner.cs").read_text(encoding="utf-8")
@@ -72,7 +80,9 @@ class NativeFoundationTests(unittest.TestCase):
         self.assertIn("tasks[i] = RunSingleProbeAsync", parallel_probe_runner)
 
         plugin_store = (root / "src/WinCare.App/Views/Pages/PluginStorePage.xaml").read_text(encoding="utf-8")
-        self.assertIn('MinWindowWidth="920"', plugin_store)
+        self.assertIn('SizeChanged="Page_SizeChanged"', plugin_store)
+        plugin_code = (root / "src/WinCare.App/Views/Pages/PluginStorePage.xaml.cs").read_text(encoding="utf-8")
+        self.assertIn('LayoutVisibility.IsCompact(e.NewSize.Width)', plugin_code)
         self.assertIn("PluginCatalogTrustStatus", plugin_store)
         self.assertIn("CatalogStatusMessage", plugin_store)
 

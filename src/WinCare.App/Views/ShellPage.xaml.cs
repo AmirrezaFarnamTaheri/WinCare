@@ -8,7 +8,7 @@ namespace WinCare.App.Views;
 public sealed partial class ShellPage : Page
 {
     private readonly PageService _pageService = new();
-    private string? _pendingSearch;
+    private object? _pendingToolsParameter;
 
     public ShellPage()
     {
@@ -19,6 +19,17 @@ public sealed partial class ShellPage : Page
 
     public ShellViewModel ViewModel { get; }
 
+    private void Shell_SizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        // Keep the workspace rail visible when labels fit; collapse progressively
+        // without replacing native keyboard, focus, or accessibility behavior.
+        PrimaryNavigation.PaneDisplayMode = e.NewSize.Width >= 920
+            ? NavigationViewPaneDisplayMode.Left
+            : e.NewSize.Width >= 680
+                ? NavigationViewPaneDisplayMode.LeftCompact
+                : NavigationViewPaneDisplayMode.LeftMinimal;
+    }
+
     public void OpenGlobalSearch(string? query)
     {
         string normalized = query?.Trim() ?? string.Empty;
@@ -26,14 +37,30 @@ public sealed partial class ShellPage : Page
             .OfType<NavigationViewItem>()
             .Single(item => string.Equals(item.Tag as string, "all-tools", StringComparison.Ordinal));
 
-        _pendingSearch = normalized;
+        _pendingToolsParameter = normalized;
         if (ReferenceEquals(PrimaryNavigation.SelectedItem, target))
         {
             _pageService.Navigate(ContentFrame, "all-tools", normalized);
-            _pendingSearch = null;
+            _pendingToolsParameter = null;
             return;
         }
 
+        PrimaryNavigation.SelectedItem = target;
+    }
+
+    public void OpenTool(ToolNavigationRequest request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        NavigationViewItem target = PrimaryNavigation.MenuItems
+            .OfType<NavigationViewItem>()
+            .Single(item => string.Equals(item.Tag as string, "all-tools", StringComparison.Ordinal));
+        _pendingToolsParameter = request;
+        if (ReferenceEquals(PrimaryNavigation.SelectedItem, target))
+        {
+            _pageService.Navigate(ContentFrame, "all-tools", request);
+            _pendingToolsParameter = null;
+            return;
+        }
         PrimaryNavigation.SelectedItem = target;
     }
 
@@ -73,8 +100,8 @@ public sealed partial class ShellPage : Page
             return;
         }
 
-        object? parameter = string.Equals(key, "all-tools", StringComparison.Ordinal) ? _pendingSearch : null;
-        _pendingSearch = null;
+        object? parameter = string.Equals(key, "all-tools", StringComparison.Ordinal) ? _pendingToolsParameter : null;
+        _pendingToolsParameter = null;
         _pageService.Navigate(ContentFrame, key, parameter);
     }
 }

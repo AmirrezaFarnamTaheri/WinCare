@@ -1,29 +1,19 @@
-# Third-Party Software Notices & Attributions
+# Third-Party Notices
 
-WinCare is licensed under the [Apache License, Version 2.0](LICENSE).
+WinCare itself is licensed under the [Apache License 2.0](LICENSE). This file summarizes major external platform and library dependencies used to build or run the project. Each dependency remains governed by its own license and distribution terms.
 
----
-
-## 📦 Platform & Framework Dependencies
-
-The native WinCare application and toolchains rely upon separately licensed platform components and open-source libraries:
-
-| Component / Library | Publisher / Project | License |
+| Component | Project / publisher | License or terms |
 |---|---|---|
-| **Microsoft Windows APIs & WinAppSDK** | Microsoft Corporation | MIT / Proprietary Windows SDK |
-| **WinUI 3 (Windows App SDK)** | Microsoft Corporation | MIT License |
-| **.NET 8 Runtime & SDK** | .NET Foundation / Microsoft | MIT License |
-| **CommunityToolkit.Mvvm** | .NET Community Toolkit | MIT License |
-| **Rust Toolchain & Standard Library** | Rust Project Developers | Apache 2.0 / MIT License |
-| **serde / serde_json** | David Tolnay | MIT / Apache 2.0 License |
-| **sha2** | RustCrypto Project | MIT / Apache 2.0 License |
-| **tempfile (dev)** | Steven Allen | MIT / Apache 2.0 License |
-| **Python 3 Standard Library** | Python Software Foundation | PSF License |
+| Windows APIs and Windows SDK | Microsoft | Microsoft Windows SDK terms |
+| Windows App SDK / WinUI 3 | Microsoft | MIT |
+| .NET 8 runtime and SDK | .NET Foundation / Microsoft | MIT |
+| CommunityToolkit.Mvvm | .NET Community Toolkit | MIT |
+| Rust toolchain and standard library | Rust Project | Apache-2.0 / MIT |
+| serde / serde_json | serde project | Apache-2.0 / MIT |
+| sha2 | RustCrypto | Apache-2.0 / MIT |
+| tempfile | Rust project ecosystem | Apache-2.0 / MIT |
+| Python 3 | Python Software Foundation | PSF License |
 
----
+The repository does not intentionally distribute private signing keys, package caches, or development secrets. NuGet and Cargo dependencies are resolved from the checked-in manifests and lock data used by the build and release workflows.
 
-## 🛡️ Distribution Isolation & Provenance
-
-The distributable native source archive does not bundle third-party binary caches, development certificates, or signing keys. All NuGet and Cargo dependencies are resolved deterministically from declared project manifests (`WinCare.Native.sln`, `Directory.Packages.props`, and `native/Cargo.toml`).
-
-The legacy oracle archive contains historical WinCare migration reference source only and is excluded from the native execution runtime.
+For an exact release, the dependency manifests, lockfiles, packaged artifacts, and applicable third-party license files are the authoritative source for the dependency set shipped with that release.

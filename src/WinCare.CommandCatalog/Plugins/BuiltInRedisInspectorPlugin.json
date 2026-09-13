@@ -1,0 +1,24 @@
+{
+  "id": "com.wincare.builtin.redis_inspector",
+  "name": "Redis Memory & Fragmentation Inspector",
+  "version": "2.5.0",
+  "author": "WinCare Core Team",
+  "description": "Developer cache analyzer probing local Redis memory utilization, RSS consumption, and fragmentation ratios.",
+  "category": "Developer Tools",
+  "entryType": "Manifest",
+  "tools": [
+    {
+      "id": "diagnostics.redis_memory_audit",
+      "title": "Redis Cache & Memory Health Audit",
+      "summary": "Audits local Redis server instances, inspecting memory fragmentation, eviction spikes, and connection pools.",
+      "area": "Developer Tools",
+      "section": "Database & Cache Diagnostics",
+      "risk": "ReadOnly",
+      "readOnly": true,
+      "administratorAccess": "No",
+      "restart": "No",
+      "executorType": "Native",
+      "aliasOf": "system"
+    }
+  ]
+}

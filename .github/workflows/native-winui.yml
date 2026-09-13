@@ -67,7 +67,7 @@ jobs:
           toolchain: 1.97.1
           targets: ${{ matrix.target }}
           components: rustfmt, clippy
-      - uses: actions/setup-dotnet@bbbb8c9ab609f9ab643834ffe948a0f577bc4c0c # pinned upstream commit
+      - uses: actions/setup-dotnet@bbbb8c9ab609f9ab643834ffe948a0f577bc4c0c # pinned commit
         with:
           dotnet-version: "8.0.416"
           global-json-file: global.json

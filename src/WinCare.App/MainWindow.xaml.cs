@@ -22,12 +22,35 @@ public sealed partial class MainWindow : Window
     // Source: https://learn.microsoft.com/en-us/windows/windows-app-sdk/api/winrt/microsoft.ui.windowing.overlappedpresenter
     // "AppWindow provides native screen coordinates and presenter state without requiring manual Win32 P/Invoke window placement."
 
+    /// <summary>
+    /// Shell access for testing navigation routes.
+    /// </summary>
+    public Views.ShellPage ShellPage => Shell;
+    private readonly Windows.UI.ViewManagement.AccessibilitySettings _accessibilitySettings = new();
+    private bool _highContrastEventRegistered;
+    public bool IsClosed { get; private set; }
+
     [DllImport("user32.dll")]
     private static extern uint GetDpiForWindow(nint windowHandle);
 
     public MainWindow()
     {
         InitializeComponent();
+        WindowRoot.ActualThemeChanged += (_, _) => RefreshThemeResources();
+        try
+        {
+            _accessibilitySettings.HighContrastChanged += OnHighContrastChanged;
+            _highContrastEventRegistered = true;
+        }
+        catch (COMException)
+        {
+            // Some unpackaged Windows environments expose the current setting but
+            // cannot subscribe to its event. Refresh on activation in that case.
+        }
+        Activated += (_, args) =>
+        {
+            if (args.WindowActivationState != WindowActivationState.Deactivated) RefreshThemeResources();
+        };
         ApplyTheme(AppPreferences.Theme);
         ExtendsContentIntoTitleBar = true;
         SetTitleBar(AppTitleBar);
@@ -53,9 +76,28 @@ public sealed partial class MainWindow : Window
 
     private void OnWindowRootLoaded(object sender, RoutedEventArgs e)
     {
+        RefreshThemeResources();
         StartupTelemetry.Mark("FirstContentRendered");
         WindowRoot.Loaded -= OnWindowRootLoaded;
     }
+
+    private void RefreshThemeResources()
+    {
+        if (IsClosed) return;
+        Converters.ThemeResourceBrushConverter.RefreshBrushes();
+        bool dark = WindowRoot.ActualTheme == ElementTheme.Dark;
+        AppWindow.TitleBar.ButtonForegroundColor = _accessibilitySettings.HighContrast
+            ? new Windows.UI.ViewManagement.UISettings().GetColorValue(Windows.UI.ViewManagement.UIColorType.Foreground)
+            : dark ? Colors.White : Colors.Black;
+        AppWindow.TitleBar.ButtonInactiveForegroundColor = _accessibilitySettings.HighContrast
+            ? new Windows.UI.ViewManagement.UISettings().GetColorValue(Windows.UI.ViewManagement.UIColorType.Foreground)
+            : dark ? Colors.LightGray : Colors.DimGray;
+        AppWindow.TitleBar.ButtonBackgroundColor = Colors.Transparent;
+        AppWindow.TitleBar.ButtonInactiveBackgroundColor = Colors.Transparent;
+    }
+
+    private void OnHighContrastChanged(Windows.UI.ViewManagement.AccessibilitySettings sender, object args) =>
+        DispatcherQueue.TryEnqueue(RefreshThemeResources);
 
     private void OnWindowActivated(object sender, WindowActivatedEventArgs args)
     {
@@ -65,7 +107,9 @@ public sealed partial class MainWindow : Window
 
     private void OnWindowClosed(object sender, WindowEventArgs args)
     {
+        IsClosed = true;
         Closed -= OnWindowClosed;
+        if (_highContrastEventRegistered) _accessibilitySettings.HighContrastChanged -= OnHighContrastChanged;
         if (AppPreferences.RememberWindowPlacement)
         {
             PersistWindowPlacement();
@@ -77,6 +121,17 @@ public sealed partial class MainWindow : Window
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"[MainWindow] Preference flush on close failed: {ex}");
+        }
+
+        // Settle the runtime before process exit — flush the activity journal
+        // and dispose owned services with a bounded budget so recorded outcomes survive.
+        try
+        {
+            Services.AppRuntime.Current.ShutdownAsync(TimeSpan.FromSeconds(3)).GetAwaiter().GetResult();
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[MainWindow] Runtime shutdown on close failed: {ex}");
         }
     }
 
