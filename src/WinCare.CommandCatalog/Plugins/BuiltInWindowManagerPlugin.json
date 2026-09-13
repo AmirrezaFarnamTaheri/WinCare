@@ -1,0 +1,63 @@
+{
+  "id": "com.wincare.builtin.window_manager",
+  "name": "Window Manager & Desktop Workspace Suite",
+  "version": "2.5.0",
+  "author": "WinCare Core Team",
+  "description": "Audits virtual desktops, edge snap resistance, top-level window transparency styles, and workspace geometry.",
+  "category": "Windows Experience",
+  "entryType": "Manifest",
+  "tools": [
+    {
+      "id": "window.desktop_workspace_audit",
+      "title": "Virtual Desktop Workspace Audit",
+      "summary": "Audits active virtual desktop count, GUID allocations, and multi-monitor workspace boundaries.",
+      "area": "Windows Experience",
+      "section": "Window Management",
+      "risk": "ReadOnly",
+      "readOnly": true,
+      "administratorAccess": "No",
+      "restart": "No",
+      "executorType": "Native",
+      "aliasOf": "system"
+    },
+    {
+      "id": "window.edge_snap_resistance_audit",
+      "title": "Edge Snap Resistance & Arrangement Audit",
+      "summary": "Inspects Windows Snap Assist, joint resizing, and edge resistance magnetic snap configurations.",
+      "area": "Windows Experience",
+      "section": "Window Management",
+      "risk": "ReadOnly",
+      "readOnly": true,
+      "administratorAccess": "No",
+      "restart": "No",
+      "executorType": "Native",
+      "aliasOf": "system"
+    },
+    {
+      "id": "window.style_transparency_probe",
+      "title": "Window Styles & Layered Transparency Probe",
+      "summary": "Probes top-level windows for WS_EX_TOPMOST, WS_EX_LAYERED alpha transparency, and frameless window styling.",
+      "area": "Windows Experience",
+      "section": "Window Management",
+      "risk": "ReadOnly",
+      "readOnly": true,
+      "administratorAccess": "No",
+      "restart": "No",
+      "executorType": "Native",
+      "aliasOf": "system"
+    },
+    {
+      "id": "window.tiling_geometry_audit",
+      "title": "Window Tiling Geometry & Snapping Audit",
+      "summary": "Audits binary split tiling trees, cascading geometry, and magnetic snap thresholds for multi-window management.",
+      "area": "Windows Experience",
+      "section": "Window Management",
+      "risk": "ReadOnly",
+      "readOnly": true,
+      "administratorAccess": "No",
+      "restart": "No",
+      "executorType": "Native",
+      "aliasOf": "system"
+    }
+  ]
+}

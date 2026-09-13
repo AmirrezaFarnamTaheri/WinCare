@@ -1,0 +1,47 @@
+{
+  "id": "com.wincare.builtin.download_sanitizer",
+  "name": "Download Residues & Incomplete Stream Sanitizer",
+  "version": "2.5.0",
+  "author": "WinCare Core Team",
+  "description": "Detects and purges abandoned multi-part streams (.crdownload, .part, .aria2, .dap) and fragmented torrent residues.",
+  "category": "Utilities",
+  "entryType": "Manifest",
+  "tools": [
+    {
+      "id": "cleaner.downloads_incomplete_streams",
+      "title": "Incomplete Download Stream Debris",
+      "summary": "Removes stalled partial downloads (.crdownload, .part, .aria2) older than 7 days from user download directories.",
+      "area": "System Care",
+      "section": "Storage Reclamation",
+      "risk": "Low",
+      "readOnly": false,
+      "administratorAccess": "MayBeRequired",
+      "executorType": "Native",
+      "aliasOf": "cleaner-disk-pressure"
+    },
+    {
+      "id": "cleaner.downloads_torrent_debris",
+      "title": "P2P Torrent & Metadata Debris",
+      "summary": "Purges orphaned .torrent metadata fragments and incomplete fastresume cache files.",
+      "area": "System Care",
+      "section": "Storage Reclamation",
+      "risk": "Low",
+      "readOnly": false,
+      "administratorAccess": "MayBeRequired",
+      "executorType": "Native",
+      "aliasOf": "cleaner-disk-pressure"
+    },
+    {
+      "id": "cleaner.downloads_multipart_chunks",
+      "title": "Multi-Part Chunk & Archive Debris",
+      "summary": "Detects and purges stalled multi-part download chunks (.cpdm.part, .dlman.part, .abdm.part, .qdm, .gopeed, .motrix) and orphaned archive segments.",
+      "area": "System Care",
+      "section": "Storage Reclamation",
+      "risk": "Low",
+      "readOnly": false,
+      "administratorAccess": "MayBeRequired",
+      "executorType": "Native",
+      "aliasOf": "cleaner-disk-pressure"
+    }
+  ]
+}

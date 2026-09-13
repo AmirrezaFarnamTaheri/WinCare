@@ -14,5 +14,33 @@
     <EmbeddedResource Include="Data\presets.json" LogicalName="WinCare.CommandCatalog.Data.presets.json" />
     <EmbeddedResource Include="Plugins\BuiltInSecurityPlugin.json" LogicalName="WinCare.CommandCatalog.Plugins.BuiltInSecurityPlugin.json" />
     <EmbeddedResource Include="Plugins\BuiltInSystemCarePlugin.json" LogicalName="WinCare.CommandCatalog.Plugins.BuiltInSystemCarePlugin.json" />
+    <EmbeddedResource Include="Plugins\BuiltInAiModelCleanerPlugin.json" LogicalName="WinCare.CommandCatalog.Plugins.BuiltInAiModelCleanerPlugin.json" />
+    <EmbeddedResource Include="Plugins\BuiltInMediaPrivacyPlugin.json" LogicalName="WinCare.CommandCatalog.Plugins.BuiltInMediaPrivacyPlugin.json" />
+    <EmbeddedResource Include="Plugins\BuiltInGpuTunerPlugin.json" LogicalName="WinCare.CommandCatalog.Plugins.BuiltInGpuTunerPlugin.json" />
+    <EmbeddedResource Include="Plugins\BuiltInEventLogSanitizerPlugin.json" LogicalName="WinCare.CommandCatalog.Plugins.BuiltInEventLogSanitizerPlugin.json" />
+    <EmbeddedResource Include="Plugins\BuiltInAdbCleanerPlugin.json" LogicalName="WinCare.CommandCatalog.Plugins.BuiltInAdbCleanerPlugin.json" />
+    <EmbeddedResource Include="Plugins\BuiltInRedisCleanerPlugin.json" LogicalName="WinCare.CommandCatalog.Plugins.BuiltInRedisCleanerPlugin.json" />
+    <EmbeddedResource Include="Plugins\BuiltInDownloadSanitizerPlugin.json" LogicalName="WinCare.CommandCatalog.Plugins.BuiltInDownloadSanitizerPlugin.json" />
+    <EmbeddedResource Include="Plugins\BuiltInDesktopWidgetsPlugin.json" LogicalName="WinCare.CommandCatalog.Plugins.BuiltInDesktopWidgetsPlugin.json" />
+    <EmbeddedResource Include="Plugins\BuiltInHardwareTunerPlugin.json" LogicalName="WinCare.CommandCatalog.Plugins.BuiltInHardwareTunerPlugin.json" />
+    <EmbeddedResource Include="Plugins\BuiltInEnvironmentSanitizerPlugin.json" LogicalName="WinCare.CommandCatalog.Plugins.BuiltInEnvironmentSanitizerPlugin.json" />
+    <EmbeddedResource Include="Plugins\BuiltInShellExtensibilityPlugin.json" LogicalName="WinCare.CommandCatalog.Plugins.BuiltInShellExtensibilityPlugin.json" />
+    <EmbeddedResource Include="Plugins\BuiltInStorageDeduplicationPlugin.json" LogicalName="WinCare.CommandCatalog.Plugins.BuiltInStorageDeduplicationPlugin.json" />
+    <EmbeddedResource Include="Plugins\BuiltInBinaryDiagnosticsPlugin.json" LogicalName="WinCare.CommandCatalog.Plugins.BuiltInBinaryDiagnosticsPlugin.json" />
+    <EmbeddedResource Include="Plugins\BuiltInWindowManagerPlugin.json" LogicalName="WinCare.CommandCatalog.Plugins.BuiltInWindowManagerPlugin.json" />
+    <EmbeddedResource Include="Plugins\BuiltInPowerSchemeGovernorPlugin.json" LogicalName="WinCare.CommandCatalog.Plugins.BuiltInPowerSchemeGovernorPlugin.json" />
+    <EmbeddedResource Include="Plugins\BuiltInBluetoothDeviceMonitorPlugin.json" LogicalName="WinCare.CommandCatalog.Plugins.BuiltInBluetoothDeviceMonitorPlugin.json" />
+    <EmbeddedResource Include="Plugins\BuiltInLogViewerPlugin.json" LogicalName="WinCare.CommandCatalog.Plugins.BuiltInLogViewerPlugin.json" />
+    <EmbeddedResource Include="Plugins\BuiltInThemeStudioPlugin.json" LogicalName="WinCare.CommandCatalog.Plugins.BuiltInThemeStudioPlugin.json" />
+    <EmbeddedResource Include="Plugins\BuiltInDownloadSchedulerPlugin.json" LogicalName="WinCare.CommandCatalog.Plugins.BuiltInDownloadSchedulerPlugin.json" />
+    <EmbeddedResource Include="Plugins\BuiltInClipboardSecurityPlugin.json" LogicalName="WinCare.CommandCatalog.Plugins.BuiltInClipboardSecurityPlugin.json" />
+    <EmbeddedResource Include="Plugins\BuiltInPasswordGeneratorPlugin.json" LogicalName="WinCare.CommandCatalog.Plugins.BuiltInPasswordGeneratorPlugin.json" />
+    <EmbeddedResource Include="Plugins\BuiltInScoopCatalogCrawlerPlugin.json" LogicalName="WinCare.CommandCatalog.Plugins.BuiltInScoopCatalogCrawlerPlugin.json" />
+    <EmbeddedResource Include="Plugins\BuiltInDynamicTilingPlugin.json" LogicalName="WinCare.CommandCatalog.Plugins.BuiltInDynamicTilingPlugin.json" />
+    <EmbeddedResource Include="Plugins\BuiltInSegmentedDownloaderPlugin.json" LogicalName="WinCare.CommandCatalog.Plugins.BuiltInSegmentedDownloaderPlugin.json" />
+    <EmbeddedResource Include="Plugins\BuiltInEnterpriseUtilitiesPlugin.json" LogicalName="WinCare.CommandCatalog.Plugins.BuiltInEnterpriseUtilitiesPlugin.json" />
+    <EmbeddedResource Include="Plugins\BuiltInYamlStructurePlugin.json" LogicalName="WinCare.CommandCatalog.Plugins.BuiltInYamlStructurePlugin.json" />
+    <EmbeddedResource Include="Plugins\BuiltInRedisInspectorPlugin.json" LogicalName="WinCare.CommandCatalog.Plugins.BuiltInRedisInspectorPlugin.json" />
+    <EmbeddedResource Include="Plugins\BuiltInAndroidBridgePlugin.json" LogicalName="WinCare.CommandCatalog.Plugins.BuiltInAndroidBridgePlugin.json" />
   </ItemGroup>
 </Project>

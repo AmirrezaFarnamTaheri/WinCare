@@ -1,7 +1,8 @@
 <Application
     x:Class="WinCare.App.App"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:converters="using:WinCare.App.Converters">
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
@@ -9,6 +10,8 @@
                 <ResourceDictionary Source="Styles/ThemeResources.xaml" />
                 <ResourceDictionary Source="Styles/ControlStyles.xaml" />
             </ResourceDictionary.MergedDictionaries>
+            <converters:InverseBooleanConverter x:Key="InverseBooleanConverter" />
+            <converters:ThemeResourceBrushConverter x:Key="ThemeResourceBrushConverter" />
         </ResourceDictionary>
     </Application.Resources>
 </Application>

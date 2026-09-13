@@ -16,20 +16,16 @@ public sealed partial class SystemCarePage : Page
 
     public SystemCarePageViewModel ViewModel { get; }
 
-    private void OpenToolsButton_Click(object sender, RoutedEventArgs e) =>
-        PageNavigation.OpenTools(this, ViewModel.ToolSearchQuery);
-
     private void SectionSelector_SelectionChanged(SelectorBar sender, SelectorBarSelectionChangedEventArgs args)
     {
         ViewModel.SelectSection(sender.Items.IndexOf(sender.SelectedItem));
+        ViewModel.ShowTools(WinCare.App.Services.AppRuntime.Current.ToolCatalog, ViewModel.ToolSearchQuery, WinCare.App.Services.AppRuntime.Current.Journal);
     }
 
-    private void Page_SizeChanged(object sender, SizeChangedEventArgs e)
+    protected override void OnNavigatedTo(Microsoft.UI.Xaml.Navigation.NavigationEventArgs e)
     {
-        bool compact = LayoutVisibility.IsCompact(e.NewSize.Width);
-        ViewModel.SetCompactLayout(compact);
-        DescriptionHeader.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
-        StateHeader.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
-        NotesHeader.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
+        base.OnNavigatedTo(e);
+        ViewModel.ShowTools(WinCare.App.Services.AppRuntime.Current.ToolCatalog, ViewModel.ToolSearchQuery, WinCare.App.Services.AppRuntime.Current.Journal);
     }
+
 }

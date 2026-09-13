@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <strong>A safer, native Windows workspace for checkups, maintenance, recovery, and evidence-led repair.</strong>
+  <strong>A fast, native Windows workspace for system checkups, maintenance, and repair.</strong>
 </p>
 
 <p align="center">
@@ -14,124 +14,117 @@
 </p>
 
 > [!IMPORTANT]
-> WinCare is a release candidate. The 259-command native catalog is implemented, but production promotion remains gated on live Windows behavioral, accessibility, installation/upgrade, and administrator-command verification. Treat mutating operations as administrator work: read the preview, understand the impact, then approve deliberately.
+> WinCare 2.5.0-rc5 is a release candidate. The current catalog contains 269 commands. Operations that can change the system are admitted according to their declared risk and privilege requirements; review high-impact changes before applying them.
 
-## See it at a glance
-
-<p align="center">
-  <img src="docs/images/runtime-dashboard.png" alt="Historical WinCare Home capture from the installed v2.5.0-rc5 release candidate package" width="900" />
-</p>
-
-<p align="center"><em>Historical x64 runtime capture from the v2.5.0-rc5 package. Current source has since changed; see <code>docs/Screenshots.md</code> for capture provenance and recapture status.</em></p>
+## Overview
 
 <p align="center">
-  <a href="docs/showcase.html"><strong>Explore the Live Interactive Web Showcase</strong></a> &bull;
-  <a href="docs/Screenshots.md"><strong>Full Interface Screenshots & Previews</strong></a>
+  <img src="docs/images/runtime-dashboard.png" alt="WinCare dashboard" width="900" />
 </p>
 
-WinCare brings everyday Windows care into one focused desktop app. It starts with evidence, keeps read-only work separate from changes, and records what happened so technicians and power users can make informed decisions.
+WinCare brings Windows maintenance, diagnostics, recovery, and operational tooling into one native WinUI 3 application. Read-only checks remain separate from mutations, system-changing actions use explicit admission rules, and operation history is stored locally so users can see what ran and why.
 
-| When you need to… | WinCare helps you… |
+| Goal | WinCare |
 |---|---|
-| Understand a machine | Run a system checkup and review read-only evidence before acting. |
-| Make a change safely | Inspect a preflighted plan, elevation requirement, and affected resources before approval. |
-| Recover or troubleshoot | Use typed native tools with fail-closed outcomes and explicit uncertainty when final state cannot be proven. |
-| Extend the toolset | Review installed plugins and browse catalog metadata; remote installation stays disabled until a production catalog trust root is shipped. |
-| Keep an audit trail | Review privacy-conscious activity receipts, items needing attention, and aggregated daily reports. |
+| Check system health | Inspect system, storage, security, hardware, network, update, and runtime evidence. |
+| Clean up and maintain | Review bounded cleanup targets, startup state, app/package state, and maintenance workflows. |
+| Repair and recover | Use guarded repair, remediation, restore, and recovery operations with explicit outcomes. |
+| Work with advanced tools | Use the typed command catalog, diagnostics, window/workspace tools, developer utilities, native helpers, and completed download scheduling/range-transfer services. |
+| Extend the app | Install and manage locally admitted plugins through the Plugin Store and plugin tooling. |
+| Review history | Inspect activity, receipts, change records, and local operation evidence. |
 
-## Get WinCare
+Explore the [interactive showcase](docs/showcase.html) or see [interface screenshots](docs/Screenshots.md).
 
-Download the latest build from [Releases](https://github.com/AmirrezaFarnamTaheri/WinCare/releases). Each prerelease includes x64 and ARM64 options:
+## Install
 
-| Asset | Use it when… |
+Download the current build from [Releases](https://github.com/AmirrezaFarnamTaheri/WinCare/releases). Release candidates provide x64 and ARM64 artifacts:
+
+| Asset | Purpose |
 |---|---|
-| `WinCare-v<version>-x64.msix` or `...-ARM64.msix` | You want the packaged Windows app. Use the certificate with the same architecture when the release uses a development certificate. |
-| `WinCare-v<version>-x64.exe` or `...-ARM64.exe` | You want a self-contained, single-file executable. |
-| `WinCare-v<version>-x64-portable.zip` or `...-ARM64-portable.zip` | You want a portable toolkit for an offline or technician workflow. |
+| `WinCare-v<version>-x64.msix` / `...-ARM64.msix` | Packaged Windows application. |
+| `WinCare-v<version>-x64.exe` / `...-ARM64.exe` | Self-contained single-file executable. |
+| `WinCare-v<version>-x64-portable.zip` / `...-ARM64-portable.zip` | Portable/offline package. |
 
-For an MSIX release built with the runner-local development identity, download the matching `WinCare-v<version>-<arch>.cer` and use the included helper:
+Development-signed MSIX artifacts include a matching certificate and install helper. The helper validates the package signer and imports only the supplied certificate into `LocalMachine\TrustedPeople`; run it from an elevated terminal. See the [user guide](docs/User-Guide.md) for installation and safety details.
 
-```powershell
-python install_msix.py `
-  --package .\WinCare-v<version>-x64.msix `
-  --certificate .\WinCare-v<version>-x64.cer
-```
+## Safety model
 
-The helper verifies the package signature, requires the certificate to match its signer, and imports it only to `LocalMachine\TrustedPeople`. Run it from an elevated terminal. See the [installation guide](docs/User-Guide.md#2-installation--getting-started) for detail.
-
-## A deliberate safety model
-
-WinCare does not treat a listed tool as permission to run it. Mutating commands follow a bounded two-phase path:
+WinCare derives admission from each command's declared risk and behavior contract:
 
 ```text
-Observe → validate typed inputs → preview → inspect evidence → dispatcher issues one-time receipt → explicit approval → execute → record outcome
+Safe: direct execution  |  Moderate: confirmation  |  Destructive/Critical: preview and explicit approval
 ```
 
-- Unknown, unavailable, unauthorized, and unsafe operations fail closed.
-- A caller cannot manufacture a valid mutation approval. Review receipts are dispatcher-issued, parameter-bound, short-lived, and single-use.
-- Editing parameters or replaying a receipt requires a new preview.
-- If mutation has started and a handler faults before the final state is known, WinCare reports that uncertainty rather than claiming nothing changed.
-- Read-only diagnostic work is separated from mutating repair work.
-- All Tools renders typed native inputs where the executor declares parameters; raw JSON is an explicit Advanced escape hatch.
-- Activity advertises Undo only when a concrete executable compensator exists.
-- The native file-system and process boundaries reject unsafe traversal and unbounded execution paths.
+- Read-only commands do not mutate host state.
+- Mutating commands validate parameters and privilege requirements before execution.
+- Higher-impact operations require stronger review and approval.
+- Undo is exposed only when the implementation has a real recovery path and sufficient captured state.
+- Results and failures are recorded as operation evidence rather than converted into generic success messages.
 
-### Plugin trust
+### Plugins
 
-The plugin subsystem fails closed at the catalog boundary. `RemoteCatalogService` supports detached-signature verification of the exact catalog bytes against a WinCare-pinned public key, and remote installation additionally verifies package identity, SHA-256, publisher-signed manifest metadata, consent, revocation state, and installed-manifest admission records.
+Plugins run with the permissions available to the WinCare process. Local packages can be inspected and managed directly. For safety, remote plugin installation intentionally remains fail-closed unless the configured catalog trust root verifies the exact catalog and package evidence required by the plugin admission flow.
 
-**This repository does not currently ship an approved production catalog signing key or a live official signed catalog.** The app composition root therefore keeps remote plugin installation intentionally **browse-only/disabled** rather than inventing a trust root. Local/installed plugins remain manageable. A future release may enable remote installation only by shipping an explicitly reviewed pinned catalog key and signed catalog endpoint.
-
-Plugin capability declarations are informed-consent metadata. Full-trust in-process plugins are not sandboxed by those declarations.
-
-## What’s inside
+## Architecture
 
 ```text
-WinCare.App             WinUI 3 desktop shell, typed tool UI, accessibility metadata
-WinCare.Application     Dispatcher, review receipts, plugin host, activity journal
-WinCare.Domain          Typed requests, results, policies, and evidence models
-WinCare.Infrastructure  Windows integration, bounded processes, persistence, native interop
-WinCare.CommandCatalog  259 command definitions plus typed parameter schemas
-native/wincare-core     Rust bounded native primitives
-native/wincare-guard    Experimental local health daemon / IPC boundary
-tools/                  Packaging, validation, and plugin developer tooling
+WinCare.App             WinUI 3 shell, typed tool UI, accessibility and presentation
+WinCare.Application     Dispatcher, admission, operation lifecycle, plugins, activity
+WinCare.Domain          Requests, results, policies, risk and evidence models
+WinCare.Infrastructure  Windows integration, persistence, bounded process execution, native interop
+WinCare.CommandCatalog  269 command definitions, schemas, presets and remediation data
+native/wincare-core     Rust native primitives and C ABI
+native/wincare-guard    Experimental local health/IPC component
+tools/                  Validation, packaging, release and plugin tooling
 ```
 
-`wincare-guard` is **experimental** in the current candidate. Its local IPC boundary is access-controlled, but production SCM service lifecycle and complete native/app notification delivery are not claimed as finished.
+`wincare-guard` is **experimental** in this release candidate; production service lifecycle and complete app-notification delivery are not claimed as finished.
 
-The app is built with WinUI 3, .NET 8, and Rust. Read the [architecture guide](docs/Architecture.md) for boundaries and lifecycle details.
+For architecture and trust boundaries, see [docs/Architecture.md](docs/Architecture.md).
 
-## For contributors
+## Build and verify
 
-### Prerequisites
+Prerequisites:
 
 - Windows 10 version 2004 (build 19041) or later, or Windows 11
-- .NET SDK version specified in [global.json](global.json)
-- Rust toolchain and Windows target specified in [rust-toolchain.toml](rust-toolchain.toml)
+- .NET SDK pinned by [`global.json`](global.json)
+- Rust toolchain pinned by [`rust-toolchain.toml`](rust-toolchain.toml)
 - Python 3.11+ for repository validation
 
-### Verify before you change
+Core local checks:
 
 ```powershell
 python tools/verify_native_foundation.py
-python -m unittest discover -s tests/native -v
+python -m unittest discover -s tests -t . -v
+cargo fmt --manifest-path native/Cargo.toml --all -- --check
+cargo clippy --manifest-path native/Cargo.toml --all-targets --all-features -- -D warnings
 cargo test --manifest-path native/Cargo.toml
-python tests/tools/test_plugin_cli.py -v
+dotnet restore WinCare.Native.sln -p:Platform=x64 --locked-mode
+dotnet test WinCare.Native.sln -c Release -p:Platform=x64 --no-restore
 ```
 
-Follow [CONTRIBUTING.md](CONTRIBUTING.md) for environment setup, review expectations, and the release workflow.
+The `Native WinUI` GitHub Actions workflow is the automated release gate for the exact commit under test. It also builds x64/ARM64 native and managed artifacts, verifies package signing/tamper rejection, produces portable packages, and runs portable smoke execution on matching Windows architectures.
+
+Automated checks do not replace human UI/accessibility inspection. Follow [Windows validation](docs/Windows-Validation.md) for theme, scaling, keyboard, Narrator, installation, and primary-flow verification.
 
 ## Documentation
 
-| Start here | What you’ll find |
+| Document | Purpose |
 |---|---|
-| [User guide](docs/User-Guide.md) | Installation, navigation, safe-operation guidance, and troubleshooting. |
-| [Interface screenshots](docs/Screenshots.md) | Build-specific runtime captures, provenance, recapture status, and concepts. |
-| [Architecture](docs/Architecture.md) | Layer boundaries, trust model, lifecycle, native integration, and packaging. |
-| [Validation](VALIDATION.md) | Evidence model, checks, and promotion gates. |
-| [Security](SECURITY.md) | Security invariants and private vulnerability reporting. |
-| [Release finalization](docs/migration/finalization-status.md) | Current RC limitations and production promotion conditions. |
+| [User guide](docs/User-Guide.md) | Installation, navigation, safe operation, and troubleshooting. |
+| [Screenshots](docs/Screenshots.md) | Runtime captures and interface references. |
+| [Architecture](docs/Architecture.md) | System boundaries, trust model, lifecycle, native integration, and packaging. |
+| [Release readiness](docs/Release-Readiness.md) | Current automated and manual release evidence requirements. |
+| [Windows validation](docs/Windows-Validation.md) | Repeatable Windows runtime and accessibility validation. |
+| [Validation](VALIDATION.md) | Evidence model and verification categories. |
+| [Security](SECURITY.md) | Security invariants and vulnerability reporting. |
+| [Contributing](CONTRIBUTING.md) | Development and review workflow. |
+| [Third-party notices](THIRD-PARTY-NOTICES.md) | Licensing information for external dependencies. |
 
-## Security and license
+## Support
 
-Please report vulnerabilities privately through [GitHub Private Vulnerability Reporting](https://github.com/AmirrezaFarnamTaheri/WinCare/security/advisories), not public issues. WinCare is licensed under [Apache-2.0](LICENSE).
+- Report bugs and feature requests through [GitHub Issues](https://github.com/AmirrezaFarnamTaheri/WinCare/issues).
+- Report security vulnerabilities privately through [GitHub Private Vulnerability Reporting](https://github.com/AmirrezaFarnamTaheri/WinCare/security/advisories).
+- Maintainer: Amirreza “Farnam” Taheri — [taherifarnam@gmail.com](mailto:taherifarnam@gmail.com)
+
+WinCare is licensed under the [Apache License 2.0](LICENSE). See [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md) for external dependency notices.

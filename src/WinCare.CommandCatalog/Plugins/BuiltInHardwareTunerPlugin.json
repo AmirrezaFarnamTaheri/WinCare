@@ -1,0 +1,50 @@
+{
+  "id": "com.wincare.builtin.hardware_tuner",
+  "name": "Hardware, Handheld & Power Optimization Suite",
+  "version": "2.5.0",
+  "author": "WinCare Core Team",
+  "description": "Hardware telemetry, battery health analyzer, power scheme selector, and display refresh rate diagnostic suite.",
+  "category": "System Care",
+  "entryType": "Manifest",
+  "tools": [
+    {
+      "id": "hw.battery_health_probe",
+      "title": "Battery Health & AC Power State",
+      "summary": "Probes hardware battery capacity, charge percentage, charging status, and remaining runtime estimates.",
+      "area": "System Care",
+      "section": "Hardware & Power",
+      "risk": "ReadOnly",
+      "readOnly": true,
+      "administratorAccess": "No",
+      "restart": "No",
+      "executorType": "Native",
+      "aliasOf": "system"
+    },
+    {
+      "id": "hw.power_scheme_probe",
+      "title": "Windows Power Scheme & Profile Policy",
+      "summary": "Queries active Windows power scheme (Balanced, High Performance, Power Saver, Ultimate Performance).",
+      "area": "System Care",
+      "section": "Hardware & Power",
+      "risk": "ReadOnly",
+      "readOnly": true,
+      "administratorAccess": "No",
+      "restart": "No",
+      "executorType": "Native",
+      "aliasOf": "system"
+    },
+    {
+      "id": "hw.display_refresh_metrics",
+      "title": "Display Resolution & Refresh Rate Metrics",
+      "summary": "Inspects active primary display resolution, refresh rate frequency (Hz), and color bit-depth.",
+      "area": "System Care",
+      "section": "Hardware & Power",
+      "risk": "ReadOnly",
+      "readOnly": true,
+      "administratorAccess": "No",
+      "restart": "No",
+      "executorType": "Native",
+      "aliasOf": "peer-display-overrides"
+    }
+  ]
+}

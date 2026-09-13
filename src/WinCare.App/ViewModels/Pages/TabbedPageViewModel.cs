@@ -7,6 +7,9 @@ public abstract class TabbedPageViewModel : ObservableObject
 {
     private int _selectedIndex;
     private bool _isCompactLayout;
+    private WinCare.Application.Tools.ToolCatalogService? _careCatalog;
+    private string _careQuery = string.Empty;
+    private WinCare.Application.Activity.IActivityJournalService? _careJournal;
 
     protected TabbedPageViewModel(IReadOnlyList<PageSection> sections)
     {
@@ -66,5 +69,33 @@ public abstract class TabbedPageViewModel : ObservableObject
         {
             row.IsCompact = isCompact;
         }
+    }
+
+    public void ShowTools(WinCare.Application.Tools.ToolCatalogService catalog, string query,
+        WinCare.Application.Activity.IActivityJournalService? journal = null)
+    {
+        _careCatalog = catalog;
+        _careQuery = query;
+        _careJournal = journal;
+        CurrentRows.Clear();
+        var matches = WinCare.Application.Tools.CareAreaProjectionService.Project(catalog, query, journal?.GetAll() ?? []);
+        foreach (var projection in matches)
+        {
+            var tool = new ToolRowViewModel(projection.Command);
+            CurrentRows.Add(new PageRow(tool.Title, tool.Summary, tool.StatusPillLabel,
+                $"{tool.Risk} · Administrator: {tool.AdministratorAccess}\nRestart: {tool.Restart}")
+            {
+                CommandId = tool.Id,
+                IsCompact = IsCompactLayout,
+                LatestActivity = projection.LatestActivity is { } activity
+                    ? $"Last activity: {(activity.State == WinCare.Domain.Activity.ActivityState.NeedsAttention ? "Needs attention" : activity.State.ToString())} · {activity.StartedAt.ToLocalTime():g}" : string.Empty,
+            });
+        }
+        OnPropertyChanged(nameof(IsEmpty));
+    }
+
+    public void RefreshTools()
+    {
+        if (_careCatalog is not null) ShowTools(_careCatalog, _careQuery, _careJournal);
     }
 }

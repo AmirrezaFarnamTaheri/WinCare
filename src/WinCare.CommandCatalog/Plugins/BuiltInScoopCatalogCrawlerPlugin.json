@@ -1,0 +1,24 @@
+{
+  "id": "com.wincare.builtin.scoop_catalog",
+  "name": "Package Repository Dependency Graph & SemVer Engine",
+  "version": "2.5.0",
+  "author": "WinCare Core Team",
+  "description": "Resolves complex application dependencies using topological sorting and strict Semantic Versioning 2.0 precedence comparison.",
+  "category": "Package Management",
+  "entryType": "Manifest",
+  "tools": [
+    {
+      "id": "packages.dependency_graph_audit",
+      "title": "Package Dependency Graph & Precedence Audit",
+      "summary": "Audits package dependencies, detecting circular reference deadlocks and calculating deterministic installation sequences.",
+      "area": "Package Management",
+      "section": "Dependency Resolution",
+      "risk": "ReadOnly",
+      "readOnly": true,
+      "administratorAccess": "No",
+      "restart": "No",
+      "executorType": "Native",
+      "aliasOf": "system"
+    }
+  ]
+}

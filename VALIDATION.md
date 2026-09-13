@@ -23,9 +23,9 @@ WinCare separates source validation, hosted Windows CI, packaged-runtime evidenc
 ### 1. Source and structural verification
 
 - [x] **Native foundation contract** (`tools/verify_native_foundation.py`): exact 259/259 command ID parity with the frozen oracle, native-source boundaries, WinUI navigation contracts, and one fail-closed command executor boundary.
-- [x] **Native Python regression suite** (`tests/native/`): **95/95 passed** on the current `master` head. Coverage includes command admission, parameter/approval provenance, bounded process behavior, reparse-point safety, plugin admission rollback, dependency-lock determinism, portable publish contracts, finalized-source completeness, responsive UI contracts, and release behavior.
+- [x] **Native Python regression suite** (`tests/native/`): **94 tests (93 passed, 1 skipped)** in PR CI. Coverage includes command admission, parameter/approval provenance, bounded process behavior, reparse-point safety, plugin admission rollback, dependency-lock determinism, portable publish contracts, finalized-source completeness, responsive UI contracts, and release behavior.
 - [x] **Community plugin CLI suite** (`tests/tools/`): **9/9 passed**, covering scaffolding, manifest linting, SemVer validation, archive bounds, symlink/path traversal rejection, deterministic packaging, and Unicode archive paths.
-- [x] **Visual and accessibility source contracts**: theme-token consistency and status-pill WCAG 2.1 AA contrast remain covered by the repository tests and validators.
+- [x] **Visual and accessibility source contracts**: theme-token consistency (33/33 tokens) and status-pill WCAG 2.1 AA contrast (all 8 pairs) remain covered by the repository tests and validators.
 - [x] **Documentation image integrity**: checked-in PNG evidence is validated without regenerating screenshots during ordinary CI.
 
 The unified workflow runs the Python repository tests with one discovery command instead of repeating the native foundation and plugin test paths as separate workflow steps.
@@ -35,7 +35,7 @@ The unified workflow runs the Python repository tests with one discovery command
 The Windows build matrix owns both the native Rust core and the managed/package build for each architecture; there is no intermediate DLL artifact upload/download hop.
 
 - [x] **Rust x64 and ARM64**: formatting is checked once, Clippy runs for both Windows targets with `-D warnings`, x64 unit tests execute, and release builds compile for x64 and ARM64.
-- [x] **Managed x64 tests**: **180/180 passed** on the current `master` head: 18 Command Catalog, 73 Application, and 89 Infrastructure tests.
+- [x] **Managed x64 tests**: **232/232 passed**: 18 Command Catalog, 108 Application, and 106 Infrastructure tests.
 - [x] **Locked NuGet restore and audit contract**: committed dependency graphs remain the build input.
 - [x] **x64 and ARM64 MSIX builds**: both architectures compile with their directly staged Rust core.
 - [x] **Runner-local development signing**: each MSIX is signed with an ephemeral certificate, signer/publisher identity is checked, a modified package is rejected, and the private certificate is removed in the same packaging step.

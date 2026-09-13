@@ -15,7 +15,7 @@ public sealed class ToolCatalogServiceTests
     [Fact]
     public void Empty_search_returns_all_commands()
     {
-        Assert.Equal(259, _service.Search(string.Empty).Count);
+        Assert.Equal(269, _service.Search(string.Empty).Count);
     }
 
     [Theory]

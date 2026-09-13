@@ -1,0 +1,24 @@
+{
+  "id": "com.wincare.builtin.enterprise_utilities",
+  "name": "Enterprise Hosts & System Policy Hardener",
+  "version": "2.5.0",
+  "author": "WinCare Core Team",
+  "description": "Deterministic, memory-safe Windows hosts file parser and telemetry domain blocklist manager adhering to RFC 1123 standards.",
+  "category": "Security & Privacy",
+  "entryType": "Manifest",
+  "tools": [
+    {
+      "id": "security.enterprise_hosts_audit",
+      "title": "Enterprise Hosts File & Domain Policy Audit",
+      "summary": "Inspects system hosts file entries for telemetry, adware, and malicious domain overrides with syntax validation.",
+      "area": "Security & Privacy",
+      "section": "Network Hardening",
+      "risk": "ReadOnly",
+      "readOnly": true,
+      "administratorAccess": "No",
+      "restart": "No",
+      "executorType": "Native",
+      "aliasOf": "security"
+    }
+  ]
+}

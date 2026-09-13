@@ -538,11 +538,17 @@ internal sealed partial class WindowsCommandExecutor
     {
         using RegistryKey? dg = Registry.LocalMachine.OpenSubKey(@"SYSTEM\CurrentControlSet\Control\DeviceGuard");
         using RegistryKey? lsa = Registry.LocalMachine.OpenSubKey(@"SYSTEM\CurrentControlSet\Control\Lsa");
+        using RegistryKey? hvci = Registry.LocalMachine.OpenSubKey(@"SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity");
+        using RegistryKey? ci = Registry.LocalMachine.OpenSubKey(@"SYSTEM\CurrentControlSet\Control\CI\Config");
+        using RegistryKey? sac = Registry.LocalMachine.OpenSubKey(@"SYSTEM\CurrentControlSet\Control\CI\Policy");
         return Success("vbs-assurance", "VBS policy state read from Windows registry.", new
         {
             enableVirtualizationBasedSecurity = Convert.ToInt32(dg?.GetValue("EnableVirtualizationBasedSecurity", 0), CultureInfo.InvariantCulture),
             requirePlatformSecurityFeatures = Convert.ToInt32(dg?.GetValue("RequirePlatformSecurityFeatures", 0), CultureInfo.InvariantCulture),
             lsaCfgFlags = Convert.ToInt32(lsa?.GetValue("LsaCfgFlags", 0), CultureInfo.InvariantCulture),
+            hypervisorEnforcedCodeIntegrity = Convert.ToInt32(hvci?.GetValue("Enabled", 0), CultureInfo.InvariantCulture),
+            vulnerableDriverBlocklist = Convert.ToInt32(ci?.GetValue("VulnerableDriverBlocklistEnable", 0), CultureInfo.InvariantCulture),
+            smartAppControlState = Convert.ToInt32(sac?.GetValue("VerifiedAndReputablePolicyState", 0), CultureInfo.InvariantCulture),
         });
     }
 

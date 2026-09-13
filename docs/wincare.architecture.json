@@ -42,7 +42,7 @@
           "pkg_portable",
           "pkg_installer"
         ],
-        "note": "Each portable WinCare.App.exe is capped at 70,000,000 bytes as a measured regression ceiling; Inno Setup consumes the same x64 portable publish directory as its payload."
+        "note": "Each portable WinCare.App.exe is capped at 70MB; Inno Setup packages the same x64 portable publish directory."
       }
     ]
   },
@@ -317,16 +317,26 @@
       "to": "journal_store"
     },
     {
+      "id": "package-portable",
       "from": "wincare_core",
       "to": "pkg_portable",
-      "route": "orthogonal-v",
-      "variant": "dashed"
+      "variant": "dashed",
+      "fromSide": "top",
+      "toSide": "top",
+      "via": [
+        [752, 140],
+        [1070, 140],
+        [1070, 549],
+        [332, 549]
+      ]
     },
     {
+      "id": "package-installer",
       "from": "pkg_portable",
       "to": "pkg_installer",
-      "route": "orthogonal-v",
-      "variant": "dashed"
+      "variant": "dashed",
+      "fromSide": "right",
+      "toSide": "left"
     }
   ],
   "cards": [

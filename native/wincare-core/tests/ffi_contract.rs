@@ -106,3 +106,79 @@ fn test_wincare_core_sys_info() {
     let json_str = std::str::from_utf8(&buf[..written]).unwrap();
     assert!(json_str.contains("logical_cpus"));
 }
+
+#[test]
+fn test_wincare_core_dir_stats() {
+    let mut stats = NativeDirStats::default();
+    let path = b"missing_dir_for_stats";
+
+    let status_null_path = unsafe { wincare_core_dir_stats(std::ptr::null(), 0, &mut stats) };
+    assert_eq!(status_null_path, 1);
+
+    let status_null_out =
+        unsafe { wincare_core_dir_stats(path.as_ptr(), path.len(), std::ptr::null_mut()) };
+    assert_eq!(status_null_out, 1);
+
+    let status_missing = unsafe { wincare_core_dir_stats(path.as_ptr(), path.len(), &mut stats) };
+    assert_eq!(status_missing, 3);
+}
+
+#[test]
+fn test_wincare_secure_shred_file_ffi() {
+    let path = b"missing_shred_target.tmp";
+
+    let status_null = unsafe { wincare_secure_shred_file(std::ptr::null(), 0, 1) };
+    assert_eq!(status_null, 1);
+
+    let status_missing = unsafe { wincare_secure_shred_file(path.as_ptr(), path.len(), 1) };
+    assert_eq!(status_missing, 3);
+}
+
+#[test]
+fn test_wincare_core_volume_seek_penalty() {
+    let mut penalty: u8 = 0;
+
+    let status_null = unsafe { wincare_core_volume_seek_penalty(b'C', std::ptr::null_mut()) };
+    assert_eq!(status_null, 1);
+
+    let status_invalid_drive = unsafe { wincare_core_volume_seek_penalty(b'?', &mut penalty) };
+    assert_eq!(status_invalid_drive, 3);
+
+    let status_ok = unsafe { wincare_core_volume_seek_penalty(b'C', &mut penalty) };
+    assert_eq!(status_ok, 0);
+    assert!(penalty <= 1);
+}
+
+#[test]
+fn test_wincare_core_optimize_memory_lists() {
+    let mut freed: u64 = 0;
+
+    let status_null = unsafe { wincare_core_optimize_memory_lists(0x01, std::ptr::null_mut()) };
+    assert_eq!(status_null, 1);
+
+    // Call with 0 mask (probes without mutating)
+    let status_ok = unsafe { wincare_core_optimize_memory_lists(0, &mut freed) };
+    assert_eq!(status_ok, 0);
+
+    // Call with 0x20 mask (file cache flush)
+    let status_cache = unsafe { wincare_core_optimize_memory_lists(0x20, &mut freed) };
+    assert_eq!(status_cache, 0);
+}
+
+#[test]
+fn test_wincare_core_shell_notify() {
+    let status = wincare_core_shell_notify();
+    assert_eq!(status, 0);
+}
+
+#[test]
+fn test_wincare_core_is_window_cloaked() {
+    let mut cloaked: u32 = 0;
+
+    let status_null = unsafe { wincare_core_is_window_cloaked(0, std::ptr::null_mut()) };
+    assert_eq!(status_null, 1);
+
+    let status = unsafe { wincare_core_is_window_cloaked(0, &mut cloaked) };
+    assert!(status == 0 || status == 3);
+    assert_eq!(cloaked, 0);
+}

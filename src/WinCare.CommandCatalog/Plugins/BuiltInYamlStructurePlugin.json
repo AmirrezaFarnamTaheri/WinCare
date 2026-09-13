@@ -1,0 +1,24 @@
+{
+  "id": "com.wincare.builtin.yaml_structure",
+  "name": "Structured Configuration & Document Tree Inspector",
+  "version": "2.5.0",
+  "author": "WinCare Core Team",
+  "description": "Parses complex indented YAML and JSON configuration schemas into hierarchical AST nodes with dot-path querying.",
+  "category": "Developer Tools",
+  "entryType": "Manifest",
+  "tools": [
+    {
+      "id": "config.yaml_structure_audit",
+      "title": "Configuration Schema Tree Inspector",
+      "summary": "Audits application and plugin configuration files, validating indentation hierarchy and schema completeness.",
+      "area": "Developer Tools",
+      "section": "Configuration Management",
+      "risk": "ReadOnly",
+      "readOnly": true,
+      "administratorAccess": "No",
+      "restart": "No",
+      "executorType": "Native",
+      "aliasOf": "system"
+    }
+  ]
+}

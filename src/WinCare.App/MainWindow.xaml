@@ -6,7 +6,7 @@
     Title="WinCare">
     <Grid x:Name="WindowRoot" Background="{ThemeResource PageBackgroundBrush}">
         <Grid.RowDefinitions>
-            <RowDefinition Height="48" />
+            <RowDefinition Height="56" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
@@ -29,9 +29,9 @@
             <AutoSuggestBox
                 x:Name="GlobalSearchBox"
                 Grid.Column="2"
-                Height="34"
+                Height="44"
                 VerticalAlignment="Center"
-                PlaceholderText="Search tasks, tools, settings, and activity"
+                PlaceholderText="Search tools (Ctrl+K)"
                 QuerySubmitted="GlobalSearchBox_QuerySubmitted"
                 AutomationProperties.AutomationId="GlobalSearch"
                 AutomationProperties.Name="Search WinCare">

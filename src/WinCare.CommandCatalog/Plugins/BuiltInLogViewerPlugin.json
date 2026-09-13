@@ -1,0 +1,24 @@
+{
+  "id": "com.wincare.builtin.log_viewer",
+  "name": "Diagnostic Log Viewer & Trace Tailer",
+  "version": "2.5.0",
+  "author": "WinCare Core Team",
+  "description": "High-performance sliding-window log tailing engine with regex filtering, log severity categorization, and trace analysis.",
+  "category": "Diagnostics & Logs",
+  "entryType": "Manifest",
+  "tools": [
+    {
+      "id": "diagnostics.log_tailer_audit",
+      "title": "Diagnostic Log Stream Tailer",
+      "summary": "Tails and categorizes WinCare execution logs, system event journals, and diagnostic traces with regex searching.",
+      "area": "Diagnostics & Logs",
+      "section": "Log Analysis",
+      "risk": "ReadOnly",
+      "readOnly": true,
+      "administratorAccess": "No",
+      "restart": "No",
+      "executorType": "Native",
+      "aliasOf": "system"
+    }
+  ]
+}

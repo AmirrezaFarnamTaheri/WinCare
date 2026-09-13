@@ -107,7 +107,7 @@ EXPECTED_PAGE_TABS = {
     "CheckupPage.xaml": ("Quick check", "Results"),
     "SystemCarePage.xaml": ("Clean up", "Performance", "Apps & startup", "Network & updates", "Routines"),
     "SecurityPage.xaml": ("Status", "Protection", "Privacy", "Hardening"),
-    "RepairRecoveryPage.xaml": ("Repair", "Restore", "Undo", "Backup", "Reset & media"),
+    "RepairRecoveryPage.xaml": ("Repair", "Restore", "Change records", "Backup", "Reset & media"),
     "AllToolsPage.xaml": ("Commands", "Categories", "Favorites", "Recent", "Presets"),
     "ActivityPage.xaml": ("Running", "Needs attention", "Completed", "Reports"),
 }
@@ -161,26 +161,26 @@ def verify() -> list[Finding]:
             document = json.loads(CATALOG_PATH.read_text(encoding="utf-8"))
             commands = document.get("commands", [])
             ids = [item.get("id") for item in commands if isinstance(item, dict)]
-            if len(ids) != 259:
-                findings.append(Finding("catalog-count", f"expected 259 commands, found {len(ids)}"))
+            declared_count = document.get("commandCount")
+            if declared_count != len(ids) or len(ids) < len(legacy):
+                findings.append(Finding("catalog-count", f"declared {declared_count}; found {len(ids)}; frozen baseline {len(legacy)}"))
             if len(set(ids)) != len(ids):
                 findings.append(Finding("catalog-duplicates", "native command IDs are not unique"))
-            if set(ids) != set(legacy):
+            if not set(legacy).issubset(ids):
                 missing = sorted(set(legacy) - set(ids))
-                extra = sorted(set(ids) - set(legacy))
-                findings.append(Finding("catalog-parity", f"missing={missing}; extra={extra}"))
+                findings.append(Finding("catalog-parity", f"missing frozen IDs={missing}"))
             implemented_ids = {
                 item.get("id")
                 for item in commands
                 if isinstance(item, dict) and item.get("migrationStatus") in {"Implemented", "BehaviorVerified"}
             }
-            expected_ids = set(legacy)
+            expected_ids = set(ids)
             if implemented_ids != expected_ids:
                 missing = sorted(expected_ids - implemented_ids)
                 extra = sorted(implemented_ids - expected_ids)
                 findings.append(Finding(
                     "implemented-command-set",
-                    f"all 259 commands must be Implemented or BehaviorVerified; missing={missing}; extra={extra}",
+                    f"all admitted commands must be Implemented or BehaviorVerified; missing={missing}; extra={extra}",
                 ))
             for index, item in enumerate(commands):
                 if not isinstance(item, dict):
@@ -403,10 +403,10 @@ def main() -> int:
             print(f"[{finding.code}] {finding.message}")
         return 1
     print("native foundation verification passed")
-    print("catalog: 259 unique command IDs with exact frozen-oracle parity")
+    print("catalog: all frozen 259 command IDs retained; additional admitted native commands validated")
     print("native source: no PowerShell or WPF references")
     print("WinUI source: approved navigation, tabs, table contract, command execution binding, and automation metadata present")
-    print("command runtime: all 259 catalog commands route through one fail-closed native executor")
+    print("command runtime: all admitted catalog commands route through one fail-closed native executor")
     return 0
 
 

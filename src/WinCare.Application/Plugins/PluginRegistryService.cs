@@ -17,17 +17,23 @@ public delegate ICommandHandler ScriptCommandHandlerFactory(
     bool readOnly,
     IReadOnlyList<string> declaredCapabilities);
 
+public delegate ICommandHandler? BuiltInCommandHandlerFactory(CommandDefinition command);
+
 /// <summary>
 /// Core implementation of IPluginRegistry discovering, isolating, and managing plugin state.
 /// </summary>
 public sealed class PluginRegistryService : IPluginRegistry
 {
     private readonly ConcurrentDictionary<string, PluginRegistryEntry> _entries = new(StringComparer.OrdinalIgnoreCase);
+    private readonly ConcurrentDictionary<string, PluginManifest> _builtInManifests = new(StringComparer.OrdinalIgnoreCase);
     private readonly ConcurrentDictionary<string, (IWinCarePlugin Plugin, PluginLoadContext? LoadContext)> _instantiatedPlugins = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, HashSet<string>> _registeredCommandIdsByPlugin = new(StringComparer.OrdinalIgnoreCase);
     private readonly IPluginStateRepository? _stateRepository;
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<string, string> _widgetErrors =
+        new(StringComparer.OrdinalIgnoreCase);
     private readonly HashSet<string> _enabledIds;
     private readonly ScriptCommandHandlerFactory? _scriptHandlerFactory;
+    private readonly BuiltInCommandHandlerFactory? _builtInHandlerFactory;
     private readonly SemaphoreSlim _gate = new(1, 1);
 
     /// <inheritdoc />
@@ -39,11 +45,13 @@ public sealed class PluginRegistryService : IPluginRegistry
     public PluginRegistryService(
         IPluginStateRepository? stateRepository = null,
         HashSet<string>? initialEnabledPluginIds = null,
-        ScriptCommandHandlerFactory? scriptHandlerFactory = null)
+        ScriptCommandHandlerFactory? scriptHandlerFactory = null,
+        BuiltInCommandHandlerFactory? builtInHandlerFactory = null)
     {
         _stateRepository = stateRepository;
         _enabledIds = initialEnabledPluginIds ?? _stateRepository?.LoadEnabledPluginIds() ?? new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         _scriptHandlerFactory = scriptHandlerFactory;
+        _builtInHandlerFactory = builtInHandlerFactory;
     }
 
     /// <inheritdoc />
@@ -136,19 +144,25 @@ public sealed class PluginRegistryService : IPluginRegistry
                     {
                         widgets.AddRange(pluginWidgets);
                     }
+                    _widgetErrors.TryRemove(kvp.Key, out _);
                 }
                 catch (Exception ex)
                 {
-                    _entries[kvp.Key] = entry with
-                    {
-                        State = PluginState.Error,
-                        ErrorMessage = $"Widget retrieval failed: {ex.Message}"
-                    };
+                    // A widget-surface failure is kept distinct from whole-plugin
+                    // lifecycle state. The plugin stays Enabled so the registry, catalog and
+                    // dispatcher remain consistent; the failure is recorded separately.
+                    _widgetErrors[kvp.Key] = $"Widget retrieval failed: {ex.Message}";
                 }
             }
         }
         return widgets;
     }
+
+    /// <summary>
+    /// Last widget-surface failure per plugin id. Empty when every enabled plugin's
+    /// widget surface is healthy; registry state itself is unaffected.
+    /// </summary>
+    public IReadOnlyDictionary<string, string> WidgetErrors => _widgetErrors;
 
     /// <inheritdoc />
     public async Task EnablePluginAsync(string pluginId, IPluginHost host, CancellationToken ct = default)
@@ -370,6 +384,10 @@ public sealed class PluginRegistryService : IPluginRegistry
                     }
                 }
             }
+            else if (entry.IsBuiltIn && _builtInManifests.TryGetValue(pluginId, out var builtInManifest))
+            {
+                manifest = builtInManifest;
+            }
 
             var existingRegistered = host.RegisteredCommands.Select(c => c.Id).ToHashSet(StringComparer.OrdinalIgnoreCase);
             foreach (var cmd in entry.Commands)
@@ -416,8 +434,9 @@ public sealed class PluginRegistryService : IPluginRegistry
                 }
                 else if (entry.IsBuiltIn)
                 {
-                    var targetCoreId = ResolveBuiltInCoreCommandId(cmd.Id, toolDef);
-                    if (!string.IsNullOrWhiteSpace(targetCoreId))
+                    handler = _builtInHandlerFactory?.Invoke(cmd);
+                    var targetCoreId = handler is null ? ResolveBuiltInCoreCommandId(cmd.Id, toolDef) : null;
+                    if (handler is null && !string.IsNullOrWhiteSpace(targetCoreId))
                     {
                         try
                         {
@@ -483,8 +502,22 @@ public sealed class PluginRegistryService : IPluginRegistry
         return commandId.ToLowerInvariant() switch
         {
             "cleaner.system_temp" => "cleaner-disk-pressure",
-            "cleaner.recycle_bin" => "cleaner-disk-pressure",
-            "security.defender_status" => "security-defender-audit",
+            // The broad security collector is the supported native surface for Defender
+            // state. Do not delegate to a synthetic command id that the core catalog does
+            // not expose: that would register a plugin card which always fails at runtime.
+            "security.defender_status" => "security",
+            "cleaner.ai_models_huggingface" => "cleaner-disk-pressure",
+            "cleaner.ai_models_ollama" => "cleaner-disk-pressure",
+            "cleaner.ai_models_pytorch" => "cleaner-disk-pressure",
+            "privacy.media_player" => "cleaner-disk-pressure",
+            "privacy.vlc_history" => "cleaner-disk-pressure",
+            "privacy.office_mru" => "cleaner-disk-pressure",
+            "gpu.amd_ulps" => "peer-display-overrides",
+            "gpu.nvidia_pstate" => "peer-display-overrides",
+            "gpu.intel_async_flip" => "peer-display-overrides",
+            "eventlog.diagnostic" => "deep-clean",
+            "eventlog.powershell" => "deep-clean",
+            "eventlog.bits" => "deep-clean",
             _ => null
         };
     }
@@ -508,6 +541,7 @@ public sealed class PluginRegistryService : IPluginRegistry
                     if (loadResult.Success && loadResult.Manifest != null)
                     {
                         var manifest = loadResult.Manifest;
+                        _builtInManifests[manifest.Id] = manifest;
                         _entries[manifest.Id] = new PluginRegistryEntry(
                             Id: manifest.Id,
                             Name: manifest.Name,
@@ -524,9 +558,9 @@ public sealed class PluginRegistryService : IPluginRegistry
                 }
             }
         }
-        catch
+        catch (Exception ex)
         {
-            // Built-in embedded discovery best-effort
+            System.Diagnostics.Debug.WriteLine($"[PluginRegistry] Built-in plugin discovery failed: {ex.GetType().Name} - {ex.Message}");
         }
     }
 
@@ -558,9 +592,9 @@ public sealed class PluginRegistryService : IPluginRegistry
                     ErrorMessage: loadResult.ErrorMessage);
             }
         }
-        catch
+        catch (Exception ex)
         {
-            // Best effort file load
+            System.Diagnostics.Debug.WriteLine($"[PluginRegistry] Failed loading plugin JSON '{jsonFilePath}': {ex.GetType().Name} - {ex.Message}");
         }
     }
 }

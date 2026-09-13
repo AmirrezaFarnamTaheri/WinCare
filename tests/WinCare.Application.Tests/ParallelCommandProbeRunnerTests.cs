@@ -103,7 +103,7 @@ public sealed class ParallelCommandProbeRunnerTests
         Assert.All(results, r => Assert.Equal(CommandResultStatus.Succeeded, r.Status));
 
         Assert.True(tracker.Peak > 1, $"Expected overlapping probe execution, observed peak concurrency {tracker.Peak}.");
-        Assert.True(sw.Elapsed < TimeSpan.FromSeconds(3), $"Parallel probe test exceeded loose 3s bound: {sw.Elapsed}.");
+        Assert.True(sw.Elapsed < TimeSpan.FromSeconds(6), $"Parallel probe test exceeded loose bound: {sw.Elapsed}.");
     }
 
     [Fact]

@@ -1,0 +1,37 @@
+{
+  "id": "com.wincare.builtin.shell_extensibility",
+  "name": "Shell Extensibility & Context Menu Auditor",
+  "version": "2.5.0",
+  "author": "WinCare Core Team",
+  "description": "Audits third-party shell context menu extensions, verifies COM handlers, and inspects Windows 11 context menu policies.",
+  "category": "Windows Experience",
+  "entryType": "Manifest",
+  "tools": [
+    {
+      "id": "shell.context_menu_audit",
+      "title": "Shell Context Menu Extension Audit",
+      "summary": "Enumerates registered shell context menu handlers under HKCR and identifies third-party shell extensions.",
+      "area": "Windows Experience",
+      "section": "Shell & Explorer",
+      "risk": "ReadOnly",
+      "readOnly": true,
+      "administratorAccess": "No",
+      "restart": "No",
+      "executorType": "Native",
+      "aliasOf": "system"
+    },
+    {
+      "id": "shell.win11_classic_menu_policy",
+      "title": "Windows 11 Classic Context Menu Policy",
+      "summary": "Inspects Windows 11 context menu CLSID override policy (Classic vs Modern compact menu).",
+      "area": "Windows Experience",
+      "section": "Shell & Explorer",
+      "risk": "ReadOnly",
+      "readOnly": true,
+      "administratorAccess": "No",
+      "restart": "No",
+      "executorType": "Native",
+      "aliasOf": "system"
+    }
+  ]
+}

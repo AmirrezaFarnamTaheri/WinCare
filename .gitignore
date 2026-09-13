@@ -28,6 +28,7 @@ build_out.txt
 .cocoindex_code/
 .gortex/
 .serena/
+.statamcp/
 **/AppPackages/
 # AI/tooling scaffolding artifacts (not project content)
 .context/

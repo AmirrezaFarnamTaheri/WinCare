@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
+using System.Security.Principal;
 using System.Text.Json;
 using WinCare.Application.Activity;
 using WinCare.Application.Native;
@@ -218,11 +219,11 @@ public sealed class CommandDispatcher : ICommandDispatcher
                         $"Mutating command '{request.CommandId}' requires explicit ReviewApproved confirmation.", null, false, startedAt);
                 }
 
-                // If an approval plan was explicitly supplied, validate and consume it.
+                // If a review plan was supplied, validate and consume it; otherwise admit directly with user confirmation.
                 if (request.Approval is not null && !TryConsumeIssuedReviewPlan(request, definition))
                 {
                     return CreateResult(request, CommandResultStatus.Blocked, "command.approval_plan_invalid",
-                        $"The review plan supplied for '{request.CommandId}' is invalid, expired, or has already been used.", null, false, startedAt);
+                        $"Mutating command '{request.CommandId}' supplied an invalid, expired, or already-consumed review plan.", null, false, startedAt);
                 }
             }
             else if (riskTier != RiskTier.Safe)
@@ -272,7 +273,11 @@ public sealed class CommandDispatcher : ICommandDispatcher
             ApprovedMutationPlan? reviewPlan = null;
             if (!definition.ReadOnly && !request.Apply && outcome.Status == CommandResultStatus.Succeeded)
             {
-                reviewPlan = IssueReviewPlan(definition.Id, request.Parameters, request.CorrelationId);
+                reviewPlan = IssueReviewPlan(
+                    definition.Id,
+                    request.Parameters,
+                    request.CorrelationId,
+                    ExecutionDigestFromPreview(definition.Id, outcome.Data));
             }
 
             return CreateResult(
@@ -283,7 +288,8 @@ public sealed class CommandDispatcher : ICommandDispatcher
                 outcome.Data,
                 undoAvailable: false,
                 startedAt,
-                reviewPlan);
+                reviewPlan,
+                activity);
         }
         catch (OperationCanceledException) when (linkedCancellation.IsCancellationRequested)
         {
@@ -294,11 +300,21 @@ public sealed class CommandDispatcher : ICommandDispatcher
             bool deadlineExceeded = !cancellationToken.IsCancellationRequested &&
                 options.Deadline is DateTimeOffset configuredDeadline &&
                 configuredDeadline <= _timeProvider.GetUtcNow();
+            // A cancelled mutating command may have applied part of its work before cancellation;
+            // provide clear guidance to verify affected state.
+            bool mutationStateUnknown = request.Apply && !definition.ReadOnly;
+            string cancelledMessage = deadlineExceeded
+                ? "The command did not complete before its deadline."
+                : "The command was cancelled.";
+            if (mutationStateUnknown)
+            {
+                cancelledMessage += " The command may have applied part of its work before cancellation; inspect Activity and verify the affected system state before retrying.";
+            }
             return CreateResult(
                 request,
                 CommandResultStatus.Cancelled,
                 deadlineExceeded ? "command.deadline_exceeded" : "command.cancelled",
-                deadlineExceeded ? "The command did not complete before its deadline." : "The command was cancelled.",
+                cancelledMessage,
                 null,
                 false,
                 startedAt);
@@ -324,7 +340,7 @@ public sealed class CommandDispatcher : ICommandDispatcher
         }
     }
 
-    private ApprovedMutationPlan IssueReviewPlan(string commandId, JsonElement parameters, Guid correlationId)
+    private ApprovedMutationPlan IssueReviewPlan(string commandId, JsonElement parameters, Guid correlationId, string? executionDigest)
     {
         DateTimeOffset now = _timeProvider.GetUtcNow();
         foreach ((string planId, ApprovedMutationPlan plan) in _issuedReviewPlans)
@@ -340,7 +356,8 @@ public sealed class CommandDispatcher : ICommandDispatcher
             commandId,
             ApprovedMutationPlan.ComputeCanonicalDigest(parameters),
             now,
-            correlationId);
+            correlationId,
+            executionDigest);
         _issuedReviewPlans[issued.PlanId] = issued;
         return issued;
     }
@@ -364,13 +381,48 @@ public sealed class CommandDispatcher : ICommandDispatcher
             issued.CorrelationId == Guid.Empty ||
             issued.CorrelationId != request.CorrelationId ||
             !string.Equals(issued.CommandId, definition.Id, StringComparison.OrdinalIgnoreCase) ||
-            !string.Equals(issued.ParametersDigest, ApprovedMutationPlan.ComputeCanonicalDigest(request.Parameters), StringComparison.OrdinalIgnoreCase))
+            !string.Equals(issued.ParametersDigest, ApprovedMutationPlan.ComputeCanonicalDigest(request.Parameters), StringComparison.OrdinalIgnoreCase) ||
+            !string.Equals(issued.ExecutionDigest, CurrentExecutionDigest(definition.Id, request.Parameters, submitted.ExecutionDigest), StringComparison.OrdinalIgnoreCase))
         {
             _issuedReviewPlans.TryRemove(submitted.PlanId, out _);
             return false;
         }
 
         return _issuedReviewPlans.TryRemove(submitted.PlanId, out _);
+    }
+
+    private static string? ExecutionDigestFromPreview(string commandId, JsonElement? previewData)
+    {
+        if (commandId is not ("preset" or "remediation-restore") || previewData is not JsonElement data ||
+            data.ValueKind != JsonValueKind.Object || !data.TryGetProperty("executionDigest", out JsonElement digest) ||
+            digest.ValueKind != JsonValueKind.String)
+        {
+            return null;
+        }
+
+        return digest.GetString();
+    }
+
+    private static string? CurrentExecutionDigest(string commandId, JsonElement parameters, string? submittedExecutionDigest)
+    {
+        if (commandId.Equals("remediation-restore", StringComparison.OrdinalIgnoreCase))
+            return submittedExecutionDigest;
+        if (!commandId.Equals("preset", StringComparison.OrdinalIgnoreCase) ||
+            !parameters.TryGetProperty("PresetId", out JsonElement presetId) || presetId.ValueKind != JsonValueKind.String ||
+            string.IsNullOrWhiteSpace(presetId.GetString()))
+        {
+            return null;
+        }
+
+        using WindowsIdentity identity = WindowsIdentity.GetCurrent();
+        bool isAdministrator = new WindowsPrincipal(identity).IsInRole(WindowsBuiltInRole.Administrator);
+        RemediationPresetPlan plan = RemediationPresetPlanner.Create(
+            presetId.GetString()!,
+            WinCare.CommandCatalog.RemediationCatalog.LoadPresets(),
+            WinCare.CommandCatalog.RemediationCatalog.LoadRules(),
+            Environment.OSVersion.Version.Build,
+            isAdministrator);
+        return plan.IsExecutable ? plan.Digest : null;
     }
 
     private CommandResult CreateResult(
@@ -381,8 +433,19 @@ public sealed class CommandDispatcher : ICommandDispatcher
         JsonElement? data,
         bool undoAvailable,
         DateTimeOffset startedAt,
-        ApprovedMutationPlan? reviewPlan = null) =>
-        new(
+        ApprovedMutationPlan? reviewPlan = null,
+        ActivityRecord? activity = null)
+    {
+        // Admission rejections (Blocked / NotMigrated) happen before a normal activity
+        // record exists; log them so they remain visible in Activity history.
+        if (activity is null && _journal is not null &&
+            status is CommandResultStatus.Blocked or CommandResultStatus.NotMigrated)
+        {
+            ActivityRecord rejection = _journal.Begin(request.CommandId, request.CommandId);
+            _journal.Fail(rejection.Id, message);
+        }
+
+        return new(
             request.CommandId,
             request.CorrelationId,
             status,
@@ -393,4 +456,5 @@ public sealed class CommandDispatcher : ICommandDispatcher
             _timeProvider.GetUtcNow(),
             undoAvailable,
             reviewPlan);
+    }
 }

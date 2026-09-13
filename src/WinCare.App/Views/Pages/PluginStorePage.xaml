@@ -3,36 +3,19 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:local="using:WinCare.App.Views.Pages"
-    xmlns:vm="using:WinCare.App.ViewModels.Pages">
+    xmlns:vm="using:WinCare.App.ViewModels.Pages"
+    SizeChanged="Page_SizeChanged">
 
-    <Grid Padding="32,24,32,32" RowDefinitions="Auto,Auto,Auto,Auto,*" RowSpacing="14">
+    <Grid Padding="32,24,32,32" RowDefinitions="Auto,Auto,Auto,Auto,*" RowSpacing="24">
         <Grid Grid.Row="0" ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="16" RowSpacing="12">
-            <StackPanel Grid.Column="0" Spacing="4">
+            <StackPanel Grid.Column="0" Spacing="8">
                 <TextBlock Text="Plugin store" Style="{StaticResource PageTitleTextStyle}" />
-                <TextBlock MaxWidth="760" HorizontalAlignment="Left" Text="Review installed extensions and browse catalog metadata. Remote installation is available only from a catalog verified against a WinCare-pinned signing key." Style="{StaticResource PageDescriptionTextStyle}" />
+                <TextBlock MaxWidth="760" HorizontalAlignment="Left" Text="Explore extensions and manage the tools you’ve installed." Style="{StaticResource PageDescriptionTextStyle}" />
             </StackPanel>
 
             <AutoSuggestBox x:Name="PluginSearchBox" Grid.Column="1" Width="280" VerticalAlignment="Center" PlaceholderText="Search plugins or authors" QueryIcon="Find" TextChanged="SearchBox_TextChanged" AutomationProperties.AutomationId="PluginSearch" AutomationProperties.Name="Search plugins or authors"/>
             <ComboBox x:Name="CategoryFilter" Grid.Row="1" Grid.ColumnSpan="2" Width="220" HorizontalAlignment="Left" Header="Category" ItemsSource="{x:Bind ViewModel.Categories, Mode=OneWay}" SelectedItem="{x:Bind ViewModel.SelectedCategory, Mode=TwoWay}" AutomationProperties.AutomationId="PluginCategoryFilter" AutomationProperties.Name="Filter plugins by category" />
-            <VisualStateManager.VisualStateGroups>
-                <VisualStateGroup>
-                    <VisualState x:Name="NarrowHeader">
-                        <VisualState.StateTriggers><AdaptiveTrigger MinWindowWidth="0" /></VisualState.StateTriggers>
-                        <VisualState.Setters>
-                            <Setter Target="PluginSearchBox.(Grid.Row)" Value="1" />
-                            <Setter Target="PluginSearchBox.(Grid.Column)" Value="0" />
-                            <Setter Target="PluginSearchBox.(Grid.ColumnSpan)" Value="2" />
-                            <Setter Target="PluginSearchBox.Width" Value="NaN" />
-                            <Setter Target="PluginSearchBox.HorizontalAlignment" Value="Stretch" />
-                            <Setter Target="CategoryFilter.(Grid.Row)" Value="2" />
-                        </VisualState.Setters>
-                    </VisualState>
-                    <!-- This header fit follows the app-wide compact boundary. -->
-                    <VisualState x:Name="WideHeader">
-                        <VisualState.StateTriggers><AdaptiveTrigger MinWindowWidth="920" /></VisualState.StateTriggers>
-                    </VisualState>
-                </VisualStateGroup>
-            </VisualStateManager.VisualStateGroups>
+
         </Grid>
 
         <InfoBar Grid.Row="1"
@@ -51,9 +34,16 @@
                  Title="Plugin Store notice"
                  Message="{x:Bind ViewModel.ErrorMessage, Mode=OneWay}"
                  IsClosable="False"
-                 AutomationProperties.LiveSetting="Assertive" />
+                 AutomationProperties.LiveSetting="Assertive">
+            <InfoBar.ActionButton>
+                <Button Content="Retry connection" Style="{StaticResource QuietButtonStyle}" Click="RetryCatalog_Click" IsEnabled="{x:Bind ViewModel.CanRefresh, Mode=OneWay}" Visibility="{x:Bind local:PluginStorePage.BoolToVisibility(ViewModel.HasCatalogError), Mode=OneWay}" AutomationProperties.AutomationId="PluginCatalogRetry" AutomationProperties.Name="Retry plugin catalog connection" />
+            </InfoBar.ActionButton>
+        </InfoBar>
 
-        <ProgressRing Grid.Row="3" IsActive="{x:Bind ViewModel.IsLoading, Mode=OneWay}" Width="32" Height="32" HorizontalAlignment="Center" AutomationProperties.Name="Loading plugin catalog"/>
+        <StackPanel Grid.Row="3" Spacing="8" Visibility="{x:Bind local:PluginStorePage.BoolToVisibility(ViewModel.IsLoading), Mode=OneWay}" AutomationProperties.LiveSetting="Polite">
+            <TextBlock Text="Updating your plugin library…" Style="{StaticResource RowSecondaryTextStyle}" />
+            <ProgressBar IsIndeterminate="{x:Bind ViewModel.IsLoading, Mode=OneWay}" AutomationProperties.Name="Loading plugin catalog" />
+        </StackPanel>
 
         <ListView Grid.Row="4"
                   ItemsSource="{x:Bind ViewModel.Plugins, Mode=OneWay}"
@@ -70,20 +60,20 @@
                 <DataTemplate x:DataType="vm:PluginCardViewModel">
                     <Border Background="{ThemeResource CardSurfaceBrush}"
                             BorderBrush="{ThemeResource BorderSubtleBrush}"
-                            BorderThickness="1" CornerRadius="{StaticResource RadiusControl}" Padding="16">
-                        <Grid RowSpacing="8" ColumnSpacing="16">
+                            BorderThickness="1" CornerRadius="{StaticResource RadiusCardOuter}" Padding="20">
+                        <Grid RowDefinitions="Auto,Auto" RowSpacing="20" ColumnSpacing="16">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
 
-                            <StackPanel Grid.Column="0" Spacing="6">
-                                <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+                            <StackPanel Grid.Column="0" Grid.ColumnSpan="2" Spacing="8">
+                                <Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="8">
                                     <TextBlock Grid.Column="0" Text="{x:Bind Name}" FontWeight="SemiBold" FontSize="16" Foreground="{ThemeResource TextPrimaryBrush}" TextWrapping="Wrap" />
-                                    <Border Grid.Column="1" VerticalAlignment="Top" Background="{ThemeResource AccentTealSubtleBrush}" BorderBrush="{ThemeResource AccentTealBrush}" BorderThickness="1" CornerRadius="{StaticResource RadiusPill}" Padding="6,2">
+                                    <Border Grid.Row="1" HorizontalAlignment="Left" Background="{ThemeResource AccentTealSubtleBrush}" BorderBrush="{ThemeResource AccentTealBrush}" BorderThickness="1" CornerRadius="{StaticResource RadiusPill}" Padding="6,2">
                                         <TextBlock Text="{x:Bind StatusBadgeText}" FontFamily="{StaticResource TelemetryFontFamily}" FontSize="11" FontWeight="SemiBold" Foreground="{ThemeResource AccentTealBrush}" TextWrapping="Wrap" />
                                     </Border>
-                                    <Border Grid.Column="2" VerticalAlignment="Top" Background="{ThemeResource SurfaceSecondaryBrush}" BorderBrush="{ThemeResource BorderSubtleBrush}" BorderThickness="1" CornerRadius="{StaticResource RadiusPill}" Padding="6,2">
+                                    <Border Grid.Row="2" HorizontalAlignment="Left" Background="{ThemeResource SurfaceSecondaryBrush}" BorderBrush="{ThemeResource BorderSubtleBrush}" BorderThickness="1" CornerRadius="{StaticResource RadiusPill}" Padding="6,2">
                                         <TextBlock Text="{x:Bind PublisherTrustBadgeText}" FontFamily="{StaticResource TelemetryFontFamily}" FontSize="11" Foreground="{ThemeResource TextSecondaryBrush}" TextWrapping="Wrap" />
                                     </Border>
                                 </Grid>
@@ -98,8 +88,8 @@
                                 </StackPanel>
                             </StackPanel>
 
-                            <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="8" Margin="12,0,0,0">
-                                <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+                            <StackPanel Grid.Row="1" Grid.ColumnSpan="2" Spacing="8">
+                                <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Left">
                                     <Button Content="Details" Click="DetailsButton_Click" Tag="{x:Bind}" AutomationProperties.Name="View plugin details"/>
                                     <Button Content="Install" Visibility="{x:Bind local:PluginStorePage.BoolToVisibility(CanInstall), Mode=OneTime}" Click="InstallButton_Click" Tag="{x:Bind}" Style="{StaticResource AccentButtonStyle}" AutomationProperties.Name="Review and install plugin"/>
                                     <Button Content="Enable" Visibility="{x:Bind local:PluginStorePage.BoolToVisibility(CanEnable), Mode=OneTime}" Click="EnableButton_Click" Tag="{x:Bind}" Style="{StaticResource AccentButtonStyle}" AutomationProperties.Name="Enable plugin"/>

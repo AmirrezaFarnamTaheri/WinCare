@@ -154,6 +154,13 @@ public sealed class ActivityPageViewModel : TabbedPageViewModel
             int cancelled = entries.Count(record => record.State == ActivityState.Cancelled);
             string state = failed > 0 ? "Review" : "Complete";
             string description = $"{entries.Length} operations · {succeeded} completed · {failed} failed · {cancelled} cancelled";
+
+            // Note if the history window has reached the retention limit.
+            if (records.Count >= ActivityJournalService.MaxPersistedRecords)
+            {
+                description += $" · journal retains only the most recent {ActivityJournalService.MaxPersistedRecords} records";
+            }
+
             string first = entries[0].StartedAt.ToLocalTime().ToString("HH:mm");
             string last = (entries[^1].CompletedAt ?? entries[^1].StartedAt).ToLocalTime().ToString("HH:mm");
             _reportRows.Add(new PageRow(day.Key.ToString("dddd, MMM d"), description, state, $"{first}-{last}"));

@@ -174,4 +174,118 @@ public sealed class NativeCoreService : INativeCoreService
         NativeCoreStatus.Truncated => new InvalidOperationException($"Directory sizing for '{path}' was truncated after reaching the entry limit or encountering unreadable entries."),
         _ => new IOException("The native file operation failed."),
     };
+
+    /// <inheritdoc />
+    public Task<NativeDirectoryStats> GetDirectoryStatsAsync(string path, CancellationToken cancellationToken)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(path);
+        return Task.Run(() => GetDirectoryStats(path, cancellationToken), cancellationToken);
+    }
+
+    private static unsafe NativeDirectoryStats GetDirectoryStats(string path, CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        byte[] pathBytes = Encoding.UTF8.GetBytes(path);
+        NativeDirStats stats;
+        fixed (byte* p = pathBytes)
+        {
+            int code = WinCareCoreNative.WinCareCoreDirStats(p, (nuint)pathBytes.Length, &stats);
+            NativeCoreStatus status = (NativeCoreStatus)code;
+            if (status != NativeCoreStatus.Ok && status != NativeCoreStatus.Truncated)
+            {
+                throw CreateException(status, path, maxBytes: 0);
+            }
+        }
+        ct.ThrowIfCancellationRequested();
+        return new NativeDirectoryStats(stats.TotalBytes, stats.FileCount, stats.DirCount, stats.IsComplete != 0);
+    }
+
+    /// <inheritdoc />
+    public Task ShredFileAsync(string path, uint passes, CancellationToken cancellationToken)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(path);
+        return Task.Run(() => ShredFile(path, passes, cancellationToken), cancellationToken);
+    }
+
+    private static unsafe void ShredFile(string path, uint passes, CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        byte[] pathBytes = Encoding.UTF8.GetBytes(path);
+        fixed (byte* p = pathBytes)
+        {
+            int code = WinCareCoreNative.WinCareSecureShredFile(p, (nuint)pathBytes.Length, passes);
+            NativeCoreStatus status = (NativeCoreStatus)code;
+            if (status != NativeCoreStatus.Ok)
+            {
+                throw CreateException(status, path, maxBytes: 0);
+            }
+        }
+    }
+
+    /// <inheritdoc />
+    public unsafe bool? QuerySeekPenalty(char driveLetter)
+    {
+        if (!char.IsAsciiLetter(driveLetter))
+        {
+            return null;
+        }
+
+        byte letter = (byte)char.ToUpperInvariant(driveLetter);
+        byte incursPenalty = 0;
+        int code = WinCareCoreNative.WinCareCoreVolumeSeekPenalty(letter, &incursPenalty);
+        if (code != (int)NativeCoreStatus.Ok)
+        {
+            return null;
+        }
+        return incursPenalty != 0;
+    }
+
+    /// <inheritdoc />
+    public unsafe ulong OptimizeMemoryLists(uint mask)
+    {
+        ulong freed = 0;
+        int code = WinCareCoreNative.WinCareCoreOptimizeMemoryLists(mask, &freed);
+        if (code != (int)NativeCoreStatus.Ok)
+        {
+            return 0;
+        }
+        return freed;
+    }
+
+    /// <inheritdoc />
+    public void BroadcastShellNotify()
+    {
+        try
+        {
+            WinCareCoreNative.WinCareCoreShellNotify();
+        }
+        catch
+        {
+            // Fail safely if native library or entry point is unavailable
+        }
+    }
+
+    /// <inheritdoc />
+    public unsafe bool? IsWindowCloaked(nint hwnd)
+    {
+        if (hwnd == 0)
+        {
+            return null;
+        }
+
+        try
+        {
+            uint cloaked = 0;
+            int code = WinCareCoreNative.WinCareCoreIsWindowCloaked(hwnd, &cloaked);
+            if (code != (int)NativeCoreStatus.Ok)
+            {
+                return null;
+            }
+            return cloaked != 0;
+        }
+        catch
+        {
+            return null;
+        }
+    }
 }

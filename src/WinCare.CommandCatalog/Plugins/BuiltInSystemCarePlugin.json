@@ -13,19 +13,9 @@
       "summary": "Safely removes temporary files from %TEMP% and %WINDIR%\\Temp.",
       "area": "System care",
       "section": "Storage",
-      "risk": "Low",
+      "risk": "Moderate",
       "readOnly": false,
-      "executorType": "Native",
-      "aliasOf": "cleaner-disk-pressure"
-    },
-    {
-      "id": "cleaner.recycle_bin",
-      "title": "Empty Recycle Bin",
-      "summary": "Empties the Windows Recycle Bin across all drives.",
-      "area": "System care",
-      "section": "Storage",
-      "risk": "Low",
-      "readOnly": false,
+      "administratorAccess": "Required",
       "executorType": "Native",
       "aliasOf": "cleaner-disk-pressure"
     }

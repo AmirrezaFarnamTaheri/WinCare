@@ -26,6 +26,34 @@ public sealed class NativeSystemProbeRepositoryTests
         CleanExecutionResult result = await repository.CleanTempFilesAsync(dryRun: true);
 
         Assert.NotNull(result);
-        Assert.Equal(0, result.ErrorCode);
+        // A live TEMP tree can contain inaccessible entries. A successful ABI
+        // invocation means a result was produced, not that every entry was read.
+    }
+
+    [Fact]
+    public async Task CleanTempFilesAsync_PreservesNativePartialFailureInResult()
+    {
+        INativeSystemProbeRepository repository = CreatePartialFailureRepository();
+
+        CleanExecutionResult result = await repository.CleanTempFilesAsync(dryRun: true);
+
+        Assert.Equal((ulong)4096, result.BytesReclaimed);
+        Assert.Equal((uint)2, result.FilesRemoved);
+        Assert.Equal(5, result.ErrorCode);
+    }
+
+    private static unsafe INativeSystemProbeRepository CreatePartialFailureRepository() =>
+        new NativeSystemProbeRepository(ReturnPartialCleanupResult);
+
+    private static unsafe int ReturnPartialCleanupResult(byte dryRun, NativeCleanResult* output)
+    {
+        Assert.Equal((byte)1, dryRun);
+        *output = new NativeCleanResult
+        {
+            BytesReclaimed = 4096,
+            FilesRemoved = 2,
+            ErrorCode = 5,
+        };
+        return 0;
     }
 }

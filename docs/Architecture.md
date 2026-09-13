@@ -12,34 +12,32 @@ The native source distribution contains **zero PowerShell files**. Historical Po
 | `WinCare.Application` | Fail-closed command dispatcher, dispatcher-issued review receipts, plugin host/registry, rule-based Doctor orchestration, activity journal |
 | `WinCare.Domain` | Typed requests/results, policy/evidence models, activity records |
 | `WinCare.Infrastructure` | Windows APIs, bounded process execution, persistent state, encrypted profiles, plugin catalog/package verification, Rust FFI |
-| `WinCare.CommandCatalog` | Frozen 259-command catalog plus typed UI parameter schemas |
+| `WinCare.CommandCatalog` | 269-command catalog, preserving the 259 frozen legacy IDs, plus typed UI parameter schemas |
 | `native/wincare-core` | Bounded native primitives exposed through a versioned C ABI |
 | `native/wincare-guard` | **Experimental** local health daemon and local named-pipe endpoint; production SCM lifecycle and app notification consumption are not complete |
 | `tools/wincare-plugin-cli` | Plugin development/validation/packaging CLI |
 
-## 2. Command lifecycle
+## 2. Command lifecycle and risk tiering
 
-A command's catalog presence is never execution authority.
+Commands are categorized into three operational risk tiers:
 
 ```text
-UI / automation request
-  → command and handler lookup
-  → typed parameter preflight
-  → read-only preview
-  → evidence / affected-resource presentation
-  → dispatcher issues short-lived, parameter-bound, single-use review receipt
-  → explicit user approval
-  → admitted execution
-  → postcondition / outcome collection
-  → Activity receipt with outcome certainty
-  → compensation only when an executable compensator exists
+Request
+  → Lookup command definition and handler
+  → Validate parameters
+  → Risk tier check:
+      ├── Safe: Direct execution (1-click)
+      ├── Moderate: Explicit user confirmation
+      └── Destructive: Read-only preview → single-use parameter-bound plan → explicit user approval
+  → Record execution outcome in Activity journal
 ```
 
-For mutating commands, callers cannot mint a valid approval. `CommandDispatcher` issues the receipt only after a successful preview and consumes it atomically during Apply. Parameter edits, correlation changes, expiry, or replay all fail closed.
+- **Safe:** Routine maintenance (e.g. temporary file cleanup, DNS flush) executes directly in 1 click without extra confirmation.
+- **Moderate:** Non-destructive configuration changes require explicit user confirmation before applying.
+- **Destructive:** High-impact operations (e.g. partition wiping, service removal) strictly require a prior read-only preview and an issued review plan before execution.
+- If a mutating handler faults during execution, WinCare logs the outcome accurately and indicates if host state was partially modified.
 
-If a mutating handler faults after execution starts and the final state cannot be proven, WinCare reports **final system state unknown** and directs the user to verify the affected resource before retrying.
-
-All Tools renders typed parameters from `CommandParameterCatalog`. Raw JSON remains an explicit Advanced escape hatch. The executor remains the final validation authority.
+All Tools renders typed UI inputs generated from `CommandParameterCatalog`. Raw JSON remains available as an Advanced mode.
 
 ## 3. Plugin trust and lifecycle
 

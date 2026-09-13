@@ -8,6 +8,9 @@ namespace WinCare.App.Views.Pages;
 
 public sealed partial class AiDoctorPage : Page
 {
+    public static Visibility BoolToVisibility(bool value) => value ? Visibility.Visible : Visibility.Collapsed;
+    public static HorizontalAlignment UserToHorizontalAlignment(bool isUser) => isUser ? HorizontalAlignment.Right : HorizontalAlignment.Left;
+
     public AiDoctorPageViewModel ViewModel { get; }
 
     public AiDoctorPage()
@@ -60,16 +63,16 @@ public sealed partial class AiDoctorPage : Page
             if (preview.ReviewPlan is null)
             {
                 btn.Content = "⚠ Review unavailable";
-                ToolTipService.SetToolTip(btn, "The dispatcher did not issue a mutation review receipt. Run the preview again.");
+                ToolTipService.SetToolTip(btn, "Preview approval is not available. Run the preview again.");
                 return;
             }
 
             string previewData = preview.Data is { } data ? data.ToString() : "No additional structured preview data.";
             var dialog = new ContentDialog
             {
-                Title = "Review preview before applying",
-                Content = $"Action: {step.Title}\nCommand: {step.CommandId}\nTarget: {step.AffectedResource}\nRisk: {step.RiskLevel}\nAdministrator access: {(step.RequiresElevation ? "Required" : "Not required")}\n\nPreview result:\n{preview.Message}\n\n{previewData}\n\nThis review receipt is single-use and bound to the exact command parameters above.",
-                PrimaryButtonText = "Apply reviewed change",
+                Title = "Review before applying",
+                Content = $"Action: {step.Title}\nCommand: {step.CommandId}\nTarget: {step.AffectedResource}\nRisk: {step.RiskLevel}\nAdministrator access: {(step.RequiresElevation ? "Required" : "Not required")}\n\nPreview result:\n{preview.Message}\n\n{previewData}",
+                PrimaryButtonText = "Apply change",
                 CloseButtonText = "Cancel",
                 DefaultButton = ContentDialogButton.Close,
                 XamlRoot = XamlRoot

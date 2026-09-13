@@ -39,8 +39,9 @@ class CommandRuntimeTests(unittest.TestCase):
             (ROOT / "src/WinCare.CommandCatalog/Data/commands.json").read_text(encoding="utf-8")
         )
         commands = document["commands"]
-        self.assertEqual(259, len(commands))
-        self.assertEqual(259, len({command["id"] for command in commands}))
+        self.assertEqual(document["commandCount"], len(commands))
+        self.assertGreaterEqual(len(commands), 259)
+        self.assertEqual(len(commands), len({command["id"] for command in commands}))
         incomplete = {
             command["id"]: command["migrationStatus"]
             for command in commands

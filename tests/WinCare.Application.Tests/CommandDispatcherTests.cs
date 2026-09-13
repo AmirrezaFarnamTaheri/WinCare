@@ -268,6 +268,29 @@ public sealed class CommandDispatcherTests
     }
 
     [Fact]
+    public async Task Preset_approval_rejects_a_preview_digest_that_does_not_match_current_expansion()
+    {
+        CommandDefinition definition = Definition("preset", MigrationStatus.Implemented, readOnly: false);
+        PresetDigestHandler handler = new();
+        CommandDispatcher dispatcher = CreateDispatcher([definition], [handler]);
+        JsonElement parameters = JsonSerializer.SerializeToElement(new { PresetId = "safe" });
+        CommandRequest previewRequest = new("preset", parameters, Apply: false, Guid.NewGuid());
+
+        CommandResult preview = await dispatcher.ExecuteAsync(previewRequest, CommandExecutionOptions.Default, CancellationToken.None);
+        Assert.NotNull(preview.ReviewPlan);
+        Assert.Equal("not-the-current-plan", preview.ReviewPlan!.ExecutionDigest);
+
+        CommandResult apply = await dispatcher.ExecuteAsync(
+            CommandRequest.Execute("preset", parameters, preview.ReviewPlan),
+            new CommandExecutionOptions(ReviewApproved: true),
+            CancellationToken.None);
+
+        Assert.Equal(CommandResultStatus.Blocked, apply.Status);
+        Assert.Equal("command.approval_plan_invalid", apply.Code);
+        Assert.Equal(1, handler.InvocationCount);
+    }
+
+    [Fact]
     public void Duplicate_handler_ids_are_rejected()
     {
         CommandDefinition definition = Definition("read", MigrationStatus.Implemented, readOnly: true);
@@ -384,6 +407,21 @@ public sealed class CommandDispatcherTests
                 "test.succeeded",
                 "Test command succeeded.",
                 JsonSerializer.SerializeToElement(new { ok = true })));
+        }
+    }
+
+    private sealed class PresetDigestHandler : ICommandHandler
+    {
+        public string CommandId => "preset";
+        public int InvocationCount { get; private set; }
+
+        public Task<CommandHandlerOutcome> ExecuteAsync(CommandRequest request, CancellationToken cancellationToken)
+        {
+            InvocationCount++;
+            return Task.FromResult(CommandHandlerOutcome.Succeeded(
+                request.Apply ? "preset.applied" : "preset.preview",
+                "Test preset handler.",
+                JsonSerializer.SerializeToElement(new { executionDigest = "not-the-current-plan" })));
         }
     }
 }
