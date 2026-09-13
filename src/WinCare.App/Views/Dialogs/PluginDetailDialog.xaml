@@ -5,7 +5,7 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     mc:Ignorable="d"
-    Title="Review plugin"
+    Title="Review extension"
     PrimaryButtonText="Install"
     CloseButtonText="Cancel"
     DefaultButton="Close"
@@ -14,14 +14,12 @@
 
     <ScrollViewer MaxHeight="620" VerticalScrollBarVisibility="Auto">
         <StackPanel MaxWidth="460" Spacing="24">
-        <!-- Header & Metadata -->
         <Grid ColumnDefinitions="Auto,*">
             <Border Width="64" Height="64" CornerRadius="{StaticResource RadiusControl}" Background="{ThemeResource AccentTealSubtleBrush}" BorderBrush="{ThemeResource AccentTealBrush}" BorderThickness="1" Margin="0,0,16,0">
                 <FontIcon Glyph="&#xE74C;" FontSize="32" Foreground="{ThemeResource AccentTealBrush}"/>
             </Border>
-
             <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="4">
-                <TextBlock x:Name="PluginNameText" FontSize="18" FontWeight="SemiBold" Foreground="{ThemeResource TextPrimaryBrush}" Text="Plugin Name"/>
+                <TextBlock x:Name="PluginNameText" FontSize="18" FontWeight="SemiBold" Foreground="{ThemeResource TextPrimaryBrush}" Text="Extension name"/>
                 <StackPanel Orientation="Horizontal" Spacing="8">
                     <TextBlock x:Name="PluginAuthorText" FontSize="12" Foreground="{ThemeResource TextSecondaryBrush}" Text="by Author"/>
                     <TextBlock FontSize="12" Foreground="{ThemeResource TextSecondaryBrush}" Text="•"/>
@@ -30,19 +28,16 @@
             </StackPanel>
         </Grid>
 
-        <!-- Description -->
-        <TextBlock x:Name="PluginDescriptionText" TextWrapping="Wrap" FontSize="13" Foreground="{ThemeResource TextPrimaryBrush}" Text="Plugin description text goes here."/>
+        <TextBlock x:Name="PluginDescriptionText" TextWrapping="Wrap" FontSize="13" Foreground="{ThemeResource TextPrimaryBrush}" Text="Extension description."/>
 
-        <!-- Trust Boundary Warning Banner -->
         <Border BorderThickness="1" BorderBrush="{ThemeResource WarningBrush}" CornerRadius="{StaticResource RadiusControl}" Padding="10" Background="{ThemeResource SurfaceSecondaryBrush}">
             <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
                 <FontIcon Glyph="&#xE7BA;" FontSize="16" Foreground="{ThemeResource WarningBrush}" VerticalAlignment="Top" Margin="0,2,0,0"/>
-                <TextBlock Grid.Column="1" Text="Plugins run on your PC with your account’s permissions and system access. Install only from authors you trust."
+                <TextBlock Grid.Column="1" Text="Extensions run on your PC with your account’s permissions and system access. Install only from authors you trust."
                            TextWrapping="Wrap" FontSize="12" Foreground="{ThemeResource TextPrimaryBrush}"/>
             </Grid>
         </Border>
 
-        <!-- Category & Published Date -->
         <Grid ColumnDefinitions="*,*">
             <StackPanel Grid.Column="0">
                 <TextBlock Text="Category" FontSize="11" Foreground="{ThemeResource TextSecondaryBrush}"/>
@@ -54,7 +49,6 @@
             </StackPanel>
         </Grid>
 
-        <!-- Declared Capabilities Section -->
         <Border BorderThickness="1" BorderBrush="{ThemeResource BorderSubtleBrush}" CornerRadius="{StaticResource RadiusControl}" Padding="12" Background="{ThemeResource CardSurfaceBrush}">
             <StackPanel Spacing="8">
                 <StackPanel Orientation="Horizontal" Spacing="8">
@@ -71,12 +65,11 @@
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
-                <TextBlock Text="Plugins run with the permissions of your Windows account."
+                <TextBlock Text="Extensions run with the permissions of your Windows account."
                            TextWrapping="Wrap" FontSize="11" Foreground="{ThemeResource TextSecondaryBrush}" />
             </StackPanel>
         </Border>
 
-        <!-- Publisher Trust & Authenticity Section -->
         <Border BorderThickness="1" BorderBrush="{ThemeResource BorderSubtleBrush}" CornerRadius="{StaticResource RadiusControl}" Padding="10" Background="{ThemeResource CardSurfaceBrush}">
             <Grid ColumnDefinitions="Auto,*">
                 <FontIcon Glyph="&#xE8D7;" FontSize="14" Foreground="{ThemeResource AccentTealBrush}" Margin="0,0,10,0" VerticalAlignment="Center"/>
@@ -87,7 +80,6 @@
             </Grid>
         </Border>
 
-        <!-- Revocation Advisory Banner (Visible only when revoked) -->
         <Border x:Name="RevocationBanner" Visibility="Collapsed" BorderThickness="1" BorderBrush="{ThemeResource DangerBrush}" CornerRadius="{StaticResource RadiusControl}" Padding="10" Background="{ThemeResource SurfaceSecondaryBrush}">
             <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
                 <FontIcon Glyph="&#xEB90;" FontSize="16" Foreground="{ThemeResource DangerBrush}" VerticalAlignment="Top" Margin="0,2,0,0"/>
@@ -95,10 +87,9 @@
                            TextWrapping="Wrap" FontSize="12" Foreground="{ThemeResource DangerBrush}"/>
             </Grid>
         </Border>
-        <TextBlock Text="Verified packages from trusted sources can be installed directly. Other packages are browse-only."
+        <TextBlock Text="Installation is available only when the current catalog and package trust checks pass. Otherwise the package remains browse-only."
                    TextWrapping="Wrap" FontSize="12" Foreground="{ThemeResource TextSecondaryBrush}" />
 
-        <!-- Commands Provided -->
         <StackPanel Spacing="4">
             <TextBlock Text="Commands provided" FontSize="12" FontWeight="SemiBold" Foreground="{ThemeResource TextPrimaryBrush}"/>
             <TextBlock x:Name="CommandsProvidedText" FontSize="12" Foreground="{ThemeResource TextSecondaryBrush}" TextWrapping="Wrap" Text="None"/>

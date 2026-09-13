@@ -19,8 +19,10 @@
 ## Overview
 
 <p align="center">
-  <img src="docs/images/runtime-dashboard.png" alt="WinCare dashboard" width="900" />
+  <img src="docs/images/runtime-dashboard.png" alt="Historical WinCare v2.5.0-rc5 Home runtime capture" width="900" />
 </p>
+
+<p align="center"><em>Historical v2.5.0-rc5 runtime capture. The current source has a newer task-first Home; see <a href="docs/Screenshots.md">Screenshots</a> for capture status.</em></p>
 
 WinCare brings Windows maintenance, diagnostics, recovery, and operational tooling into one native WinUI 3 application. Read-only checks remain separate from mutations, system-changing actions use explicit admission rules, and operation history is stored locally so users can see what ran and why.
 
@@ -45,7 +47,6 @@ WinCare keeps common work out of the full command catalog:
 - **Power tools** exposes all 269 native commands with task search, Area + Section filters, real category browsing, Favorites, Recent, typed parameters, and Care plans.
 - **Extensions** contains optional built-in and locally admitted capabilities; **Troubleshoot** is the local rule-based diagnostic assistant.
 - **Ctrl+K** searches pages, tools, extensions, and help topics from anywhere in the app.
-
 
 ## Install
 

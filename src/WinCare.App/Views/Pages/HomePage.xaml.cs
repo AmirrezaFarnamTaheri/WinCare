@@ -84,9 +84,6 @@ public sealed partial class HomePage : Page
         bool compact = e.NewSize.Width < HomeCompactBreakpointDip;
         ViewModel.SetCompactLayout(compact);
         PageLayout.Padding = compact ? new Thickness(20, 20, 20, 28) : new Thickness(32, 28, 32, 36);
-        WelcomeLayout.ColumnDefinitions[1].Width = compact ? new GridLength(0) : GridLength.Auto;
-        Grid.SetColumn(StartCheckupButton, compact ? 0 : 1);
-        Grid.SetRow(StartCheckupButton, compact ? 1 : 0);
         HeroLayout.ColumnDefinitions[0].Width = new GridLength(1, GridUnitType.Star);
         HeroLayout.ColumnDefinitions[1].Width = compact ? new GridLength(0) : new GridLength(1, GridUnitType.Star);
         Grid.SetColumn(EvidenceSummaryCard, compact ? 0 : 1);

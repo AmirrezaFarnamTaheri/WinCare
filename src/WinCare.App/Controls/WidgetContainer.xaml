@@ -5,7 +5,7 @@
     xmlns:plugins="using:WinCare.Application.Plugins">
 
     <StackPanel Spacing="12">
-        <TextBlock Text="Plugin workspace" Style="{StaticResource SectionHeaderTextStyle}" />
+        <TextBlock Text="Extension widgets" Style="{StaticResource SectionHeaderTextStyle}" />
         <ItemsControl x:Name="WidgetsList">
             <ItemsControl.ItemTemplate>
                 <DataTemplate x:DataType="plugins:IPluginWidget">

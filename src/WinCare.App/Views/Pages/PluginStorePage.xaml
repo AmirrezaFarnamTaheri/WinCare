@@ -7,7 +7,7 @@
     SizeChanged="Page_SizeChanged">
 
     <Grid Padding="32,24,32,32" RowDefinitions="Auto,Auto,Auto,Auto,*" RowSpacing="18">
-        <Grid Grid.Row="0" ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="16" RowSpacing="12">
+        <Grid Grid.Row="0" ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto" ColumnSpacing="16" RowSpacing="12">
             <StackPanel Grid.Column="0" Spacing="8">
                 <TextBlock Text="Extensions" Style="{StaticResource PageTitleTextStyle}" />
                 <TextBlock MaxWidth="760" HorizontalAlignment="Left" Text="Add focused capabilities when you need them, and manage the extensions already available to WinCare." Style="{StaticResource PageDescriptionTextStyle}" />
@@ -59,12 +59,10 @@
                     <Border Background="{ThemeResource CardSurfaceBrush}"
                             BorderBrush="{ThemeResource BorderSubtleBrush}"
                             BorderThickness="1" CornerRadius="{StaticResource RadiusCardOuter}" Padding="20">
-                        <Grid RowDefinitions="Auto,Auto" RowSpacing="20" ColumnSpacing="16">
-                            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-
-                            <StackPanel Grid.Column="0" Grid.ColumnSpan="2" Spacing="8">
+                        <StackPanel Spacing="16">
+                            <StackPanel Spacing="8">
                                 <Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="8">
-                                    <TextBlock Grid.Column="0" Text="{x:Bind Name}" FontWeight="SemiBold" FontSize="16" Foreground="{ThemeResource TextPrimaryBrush}" TextWrapping="Wrap" />
+                                    <TextBlock Text="{x:Bind Name}" FontWeight="SemiBold" FontSize="16" Foreground="{ThemeResource TextPrimaryBrush}" TextWrapping="Wrap" />
                                     <Border Grid.Row="1" HorizontalAlignment="Left" Background="{ThemeResource AccentTealSubtleBrush}" BorderBrush="{ThemeResource AccentTealBrush}" BorderThickness="1" CornerRadius="{StaticResource RadiusPill}" Padding="6,2">
                                         <TextBlock Text="{x:Bind StatusBadgeText}" FontFamily="{StaticResource TelemetryFontFamily}" FontSize="11" FontWeight="SemiBold" Foreground="{ThemeResource AccentTealBrush}" TextWrapping="Wrap" />
                                     </Border>
@@ -80,16 +78,14 @@
                                 </StackPanel>
                             </StackPanel>
 
-                            <StackPanel Grid.Row="1" Grid.ColumnSpan="2" Spacing="8">
-                                <StackPanel Spacing="8" HorizontalAlignment="Left">
-                                    <Button Content="Review" Click="DetailsButton_Click" Tag="{x:Bind}" AutomationProperties.Name="View extension details"/>
-                                    <Button Content="Add" Visibility="{x:Bind local:PluginStorePage.BoolToVisibility(CanInstall), Mode=OneTime}" Click="InstallButton_Click" Tag="{x:Bind}" Style="{StaticResource AccentButtonStyle}" AutomationProperties.Name="Review and install extension"/>
-                                    <Button Content="Enable" Visibility="{x:Bind local:PluginStorePage.BoolToVisibility(CanEnable), Mode=OneTime}" Click="EnableButton_Click" Tag="{x:Bind}" Style="{StaticResource AccentButtonStyle}" AutomationProperties.Name="Enable extension"/>
-                                    <Button Content="Disable" Visibility="{x:Bind local:PluginStorePage.BoolToVisibility(CanDisable), Mode=OneTime}" Click="DisableButton_Click" Tag="{x:Bind}" AutomationProperties.Name="Disable extension"/>
-                                    <Button Content="Uninstall" Visibility="{x:Bind local:PluginStorePage.BoolToVisibility(CanUninstall), Mode=OneTime}" Click="UninstallButton_Click" Tag="{x:Bind}" AutomationProperties.Name="Uninstall extension"/>
-                                </StackPanel>
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <Button Content="Review" Click="DetailsButton_Click" Tag="{x:Bind}" AutomationProperties.Name="View extension details"/>
+                                <Button Content="Add" Visibility="{x:Bind local:PluginStorePage.BoolToVisibility(CanInstall), Mode=OneTime}" Click="InstallButton_Click" Tag="{x:Bind}" Style="{StaticResource AccentButtonStyle}" AutomationProperties.Name="Review and install extension"/>
+                                <Button Content="Enable" Visibility="{x:Bind local:PluginStorePage.BoolToVisibility(CanEnable), Mode=OneTime}" Click="EnableButton_Click" Tag="{x:Bind}" Style="{StaticResource AccentButtonStyle}" AutomationProperties.Name="Enable extension"/>
+                                <Button Content="Disable" Visibility="{x:Bind local:PluginStorePage.BoolToVisibility(CanDisable), Mode=OneTime}" Click="DisableButton_Click" Tag="{x:Bind}" AutomationProperties.Name="Disable extension"/>
+                                <Button Content="Uninstall" Visibility="{x:Bind local:PluginStorePage.BoolToVisibility(CanUninstall), Mode=OneTime}" Click="UninstallButton_Click" Tag="{x:Bind}" AutomationProperties.Name="Uninstall extension"/>
                             </StackPanel>
-                        </Grid>
+                        </StackPanel>
                     </Border>
                 </DataTemplate>
             </ListView.ItemTemplate>

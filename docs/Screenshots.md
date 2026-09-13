@@ -2,7 +2,7 @@
 
 The checked-in runtime images below were captured from the locally installed **v2.5.0.0 x64 MSIX** built from the `v2.5.0-rc5` source candidate. They are **historical runtime evidence for that exact package**, not a perpetual source of truth for later source changes.
 
-Recent updates include subsequent UI modernization, audit remediation, and product-hardening changes (including live Home evidence, dynamic risk tier badges, genuine compact Checkup layouts, Activity report semantics, typed All Tools parameters, Help content, accessibility color adjustments, and plugin trust copy). Until a new installed candidate is captured, the current XAML/theme resources are authoritative for those changed surfaces and these images should be treated as baseline references only.
+The current source has since moved to a task-first Home, product-wide search, structured Power tools filters, exact care Area/Section routing, a canonical Power tools execution/review surface, visible extension trust state, and a Troubleshoot handoff into that same execution path. Until a new installed candidate is captured, current XAML/theme resources are authoritative for changed surfaces and these images remain baseline references only.
 
 Concept images remain design references and are explicitly marked as concepts.
 
@@ -12,7 +12,7 @@ Concept images remain design references and are explicitly marked as concepts.
 
 ![WinCare Home screen captured from the installed v2.5.0.0 candidate package](images/runtime-dashboard.png)
 
-**Capture status:** needs recapture after the current PR is packaged. The present source now derives dashboard evidence from Activity/check results and surfaces plugin-widget failures.
+**Capture status:** needs recapture after the current PR is packaged. The current Home is recommendation-led, derives evidence coverage from shared Activity records, exposes one primary Checkup CTA, and no longer uses the older instrument-panel hierarchy.
 
 ### Original concept
 
@@ -24,7 +24,7 @@ Concept images remain design references and are explicitly marked as concepts.
 
 ![WinCare Checkup screen captured from the installed v2.5.0.0 candidate package](images/runtime-checkup.png)
 
-**Capture status:** needs recapture after the current PR is packaged. The present source uses evidence-collection coverage rather than a machine-health claim, runs measurement-sensitive probes sequentially, and has a real stacked compact layout below the shared 920-DIP breakpoint.
+**Capture status:** needs recapture after the current PR is packaged. The current source reports checked-area evidence rather than a synthetic machine-health claim. Its fast read-only probes run concurrently with bounded concurrency, while Windows Update readiness is checked in the background; compact layouts stack below the shared 920-DIP breakpoint.
 
 ### Original concept
 

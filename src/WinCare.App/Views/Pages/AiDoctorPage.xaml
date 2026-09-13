@@ -19,7 +19,7 @@
                     <ItemsControl ItemsSource="{x:Bind ActionPlan.ProposedSteps, Mode=OneTime}" Margin="0,8,0,0"><ItemsControl.ItemTemplate><DataTemplate x:DataType="diag:ProposedActionStep"><Border Margin="0,6,0,6" Padding="0,16,0,8" BorderBrush="{ThemeResource BorderSubtleBrush}" BorderThickness="0,1,0,0"><Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="7">
                         <Grid Grid.Row="0" ColumnDefinitions="*,Auto" ColumnSpacing="12"><StackPanel Grid.Column="0" Spacing="2"><TextBlock Text="{x:Bind Title}" TextWrapping="Wrap" FontWeight="SemiBold" FontSize="14" Foreground="{ThemeResource TextPrimaryBrush}"/><TextBlock Text="{x:Bind Description}" Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap"/></StackPanel><Button Grid.Column="1" Content="{x:Bind ActionButtonText}" Style="{StaticResource AccentButtonStyle}" VerticalAlignment="Center" Click="ExecuteStepButton_Click" Tag="{x:Bind}" AutomationProperties.Name="{x:Bind Title}"/></Grid>
                         <TextBlock Grid.Row="1" Text="{x:Bind ReviewContextText}" Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap" />
-                        <TextBlock Grid.Row="2" Text="This step opens in Power tools, where the normal preview, approval, execution, and activity flow applies." Style="{StaticResource RowSecondaryTextStyle}"/>
+                        <TextBlock Grid.Row="2" Text="This step opens in Power tools, where the normal risk-tier review, execution, and Activity flow applies." Style="{StaticResource RowSecondaryTextStyle}"/>
                     </Grid></Border></DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
                 </StackPanel></Border></Grid></DataTemplate></ItemsControl.ItemTemplate>
             </ItemsControl>

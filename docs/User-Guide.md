@@ -3,7 +3,7 @@
 WinCare is a fast, native Windows workspace for system maintenance, diagnostics, and recovery.
 
 > [!NOTE]
-> The screenshots in [Screenshots.md](Screenshots.md) are reference captures from recent builds. UI layouts may be updated as features evolve.
+> The runtime screenshots in [Screenshots.md](Screenshots.md) are versioned historical captures unless their documented build matches the source being reviewed. Current XAML and runtime validation remain authoritative after UI changes.
 
 ## 1. System requirements
 
@@ -39,12 +39,12 @@ On launch, WinCare restores your previous window position. You can disable this 
 WinCare organizes tools into three simple tiers:
 
 ```text
-Safe: 1-click execution  │  Moderate: confirmation dialog  │  Destructive: preview & approval
+Safe: direct execution  │  Moderate: preview + confirmation  │  Destructive: preview + explicit approval
 ```
 
-- **Safe:** Routine, low-risk tasks (like cleaning temporary files or flushing DNS caches) execute immediately in 1 click.
-- **Moderate:** Non-destructive configuration changes prompt for a quick user confirmation before applying.
-- **Destructive:** High-impact changes (like partition formatting or service removal) require a read-only preview before you can confirm and apply.
+- **Safe:** Read-only inspections and bounded low-risk actions run directly through the admitted executor and are recorded in Activity.
+- **Moderate:** Mutating actions first resolve a preview of the current targets/impact. Applying requires an explicit confirmation of that reviewed plan.
+- **Destructive:** High-impact changes require a successful preview and explicit approval before applying the issued plan.
 - **Activity Log:** All actions and their outcomes are recorded in the local Activity log so you always have a full history.
 - **Honest Status:** If an operation encounters an error mid-way, WinCare reports exactly where it stopped rather than assuming no state changed. Undo is offered only when a real rollback mechanism is available.
 
@@ -76,9 +76,9 @@ Plugin widgets appear only when active. A widget that fails to load reports a vi
 
 Checkup currently has two sections: **Quick check** and **Results**.
 
-The quick check runs four read-only evidence probes covering Windows/hardware basics, storage, security, and Windows Update search readiness. Measurement-sensitive probes run sequentially so one probe's CPU/disk activity does not contaminate the next probe's evidence.
+The quick check runs four read-only evidence probes covering Windows/hardware basics, storage, security, and Windows Update search readiness. The fast system/storage/security probes run concurrently with bounded concurrency; Windows Update readiness continues in the background so a slow update search does not block the first evidence summary.
 
-The summary reports only the checked areas: no issues found, attention needed, incomplete evidence, or an action-worthy finding. It is not a blanket machine-health score. Findings can open the relevant care page; Checkup itself never applies maintenance.
+The summary reports only the checked areas: no issues found, attention needed, incomplete evidence, or an action-worthy finding. It is not a blanket machine-health score. Findings can open the relevant named care section; Checkup itself never applies maintenance.
 
 Below the shared 920-DIP compact breakpoint, both the hero summary and evidence table become stacked layouts rather than squeezing desktop columns.
 
@@ -110,7 +110,7 @@ Commands with declared parameters render native editors derived from `CommandPar
 - boolean toggles;
 - supported-value choices;
 - string-list inputs;
-- date/time inputs;
+- date/time values;
 - structured JSON values when a nested object/array is genuinely required.
 
 Required fields are marked. Type/range/choice problems are blocked before dispatch, and the executor validates again at the Windows boundary.
@@ -119,9 +119,9 @@ Required fields are marked. Type/range/choice problems are blocked before dispat
 
 **Advanced parameter editing** exposes the raw JSON object for power users and automation-compatible edge cases. It remains size-bounded and is not a safety bypass. Switching parameter values invalidates any previously reviewed mutation plan.
 
-### Preview and Apply
+### Review and apply
 
-For a read-only command, **Run tool** executes the admitted read operation. For a mutating command, the first action is **Review changes**. Only a successful dispatcher preview enables explicit approval; the next action becomes **Apply changes** using that issued receipt.
+Read-only commands run directly. Safe bounded mutations can also run directly under the declared risk policy. Moderate and Destructive mutations first resolve the current targets/impact with a dispatcher preview; applying requires explicit confirmation/approval of that exact reviewed plan.
 
 ## 9. Troubleshoot
 
@@ -130,9 +130,9 @@ The shipped Troubleshoot experience is a **local rule-based diagnostic assistant
 1. Describe a symptom in plain language.
 2. The local rule engine maps it to supported diagnostic domains.
 3. WinCare runs read-only evidence commands.
-4. The Doctor explains the evidence and proposes an applicable next action when supported.
-5. A proposed mutation must run the real dispatcher preview.
-6. You review that preview and explicitly approve before Apply.
+4. Troubleshoot explains the evidence and proposes an applicable next action when supported.
+5. Open a proposed step in **Power tools**; Troubleshoot does not execute it itself.
+6. Power tools applies the normal risk-tier flow—direct read/low-risk execution or preview plus confirmation/approval for higher-impact mutations—and records the outcome in Activity.
 
 Troubleshoot cannot mint its own approval receipt. User-facing errors are sanitized rather than inserting raw exception text into the conversation.
 
@@ -144,7 +144,7 @@ Extensions execute full-trust **in process** with the current user's WinCare pri
 
 This repository does **not** ship an approved production plugin-catalog public key or a live official signed catalog. The current composition root therefore keeps remote installation **browse-only/disabled**. This is intentional fail-closed behavior.
 
-Catalog or network failures are surfaced when they affect browsing or installation. Bundled/offline sample metadata is not treated as installable production content.
+Catalog trust/availability is visible on the Extensions page. Catalog or network failures are surfaced when they affect browsing or installation. Bundled/offline sample metadata is not treated as installable production content.
 
 ### Requirements before remote installation can ever be enabled
 
@@ -156,9 +156,9 @@ A future configured catalog must pass all of these boundaries:
 - package ID, SHA-256, trusted publisher identity/signature, capability consent, and revocation state pass;
 - discovery re-verifies the installed manifest against an external admission record.
 
-### Installed-plugin lifecycle
+### Installed-extension lifecycle
 
-Details and Install are separate actions. Uninstall requires confirmation. If an enabled plugin must be disabled for removal but removal fails, WinCare attempts to restore its prior enabled state and reports whether restoration succeeded.
+Details and Add are separate actions. Uninstall requires confirmation. If an enabled extension must be disabled for removal but removal fails, WinCare attempts to restore its prior enabled state and reports whether restoration succeeded.
 
 ## 11. Activity and reports
 
@@ -179,7 +179,7 @@ Current settings are intentionally limited to behavior the app actually persists
 - **Window continuity** — remember/restore the last usable size, position, and maximized state; turning it off clears the stored placement.
 - **Local data** — open the WinCare data directory.
 - **Persistence warning** — visible if preferences cannot be loaded or written durably.
-- **Safety policy** — an explanation of preview receipts, outcomes, and truthful recovery claims.
+- **Safety policy** — an explanation of risk-tier execution, preview receipts, outcomes, and truthful recovery claims.
 
 Settings does not expose decorative toggles for product capabilities that are not actually wired.
 
@@ -222,7 +222,7 @@ Do not retry immediately. Open Activity, identify the command and affected resou
 
 ### Extensions shows browse-only/offline status
 
-That is expected in the current repository build because no production catalog trust root is shipped. Installed plugins remain manageable. Do not treat an offline sample entry as an installable package.
+That is expected in the current repository build because no production catalog trust root is shipped. Installed extensions remain manageable. Do not treat an offline sample entry as an installable package.
 
 ### Preferences or Activity are not durable
 
