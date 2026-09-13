@@ -76,14 +76,18 @@ class FullNativeMigrationTests(unittest.TestCase):
     def test_tool_execution_prefers_typed_parameters_with_advanced_json_escape_hatch(self) -> None:
         vm = (ROOT / "src/WinCare.App/ViewModels/Pages/ToolExecutionViewModel.cs").read_text(encoding="utf-8")
         page = (ROOT / "src/WinCare.App/Views/Pages/AllToolsPage.xaml.cs").read_text(encoding="utf-8")
+        xaml = (ROOT / "src/WinCare.App/Views/Pages/AllToolsPage.xaml").read_text(encoding="utf-8")
         catalog = (ROOT / "src/WinCare.CommandCatalog/Models/CommandParameterCatalog.cs").read_text(encoding="utf-8")
         self.assertIn("ParameterFields", vm)
         self.assertIn("CommandParameterCatalog.For", vm)
         self.assertIn("UseAdvancedParameterJson", vm)
         self.assertIn('code = "command.parameters_invalid"', vm)
-        self.assertIn("ReplaceRawParameterEditor", page)
+        self.assertIn("RebuildParameterEditor", page)
         self.assertIn("CreateParameterField", page)
         self.assertIn("AdvancedParameterEditing", page)
+        self.assertIn('x:Name="ParameterExpander"', xaml)
+        self.assertNotIn("FindVisualDescendant", page)
+        self.assertNotIn("ReplaceRawParameterEditor", page)
         self.assertIn("SchemaData", catalog)
 
     def test_parameter_catalog_covers_explicit_validation_fields(self) -> None:
@@ -202,7 +206,6 @@ class FullNativeMigrationTests(unittest.TestCase):
         self.assertIn("PublicProfile", system)
         self.assertNotIn('Contains("ON"', system)
 
-
     def test_command_input_is_strictly_typed_and_bounded(self) -> None:
         parameters = (ROOT / "src/WinCare.Infrastructure/Commands/CommandParameters.cs").read_text(encoding="utf-8")
         vm = (ROOT / "src/WinCare.App/ViewModels/Pages/ToolExecutionViewModel.cs").read_text(encoding="utf-8")
@@ -237,7 +240,6 @@ class FullNativeMigrationTests(unittest.TestCase):
         self.assertIn("ObserveReaderCompletionAsync", runner)
         self.assertIn("await ObserveReaderCompletionAsync(stdout, stderr)", runner)
 
-
     def test_viewmodels_have_no_async_void_workflows(self) -> None:
         offenders = []
         for path in (ROOT / "src/WinCare.App/ViewModels").rglob("*.cs"):
@@ -252,7 +254,6 @@ class FullNativeMigrationTests(unittest.TestCase):
         self.assertIn("rollbackResult", productivity)
         self.assertNotIn('try { await _process.RunAsync("logman.exe", ["stop", session, "-ets"], CancellationToken.None, TimeSpan.FromSeconds(15)).ConfigureAwait(false); } catch { }', security)
         self.assertNotIn('try { await _process.RunAsync(viveTool, [opposite, ids], CancellationToken.None, TimeSpan.FromMinutes(2)).ConfigureAwait(false); } catch { }', productivity)
-
 
     def test_windows_update_preflights_all_ids_before_mutating(self) -> None:
         security = (ROOT / "src/WinCare.Infrastructure/Commands/WindowsCommandExecutor.Security.cs").read_text(encoding="utf-8")
