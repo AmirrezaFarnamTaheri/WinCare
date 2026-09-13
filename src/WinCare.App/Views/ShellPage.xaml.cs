@@ -9,6 +9,7 @@ public sealed partial class ShellPage : Page
 {
     private readonly PageService _pageService = new();
     private object? _pendingToolsParameter;
+    private object? _pendingNavigationParameter;
 
     public ShellPage()
     {
@@ -64,7 +65,7 @@ public sealed partial class ShellPage : Page
         PrimaryNavigation.SelectedItem = target;
     }
 
-    public void NavigateTo(string key)
+    public void NavigateTo(string key, object? parameter = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(key);
         NavigationViewItem? target = PrimaryNavigation.MenuItems
@@ -74,15 +75,19 @@ public sealed partial class ShellPage : Page
 
         if (target is null)
         {
-            throw new KeyNotFoundException($"Unknown navigation key '{key}'.");
+            // Hidden routes such as About remain available through search/help without
+            // competing for permanent navigation space.
+            _pageService.Navigate(ContentFrame, key, parameter);
+            return;
         }
 
         if (ReferenceEquals(PrimaryNavigation.SelectedItem, target))
         {
-            _pageService.Navigate(ContentFrame, key);
+            _pageService.Navigate(ContentFrame, key, parameter);
             return;
         }
 
+        _pendingNavigationParameter = parameter;
         PrimaryNavigation.SelectedItem = target;
     }
 
@@ -100,8 +105,11 @@ public sealed partial class ShellPage : Page
             return;
         }
 
-        object? parameter = string.Equals(key, "all-tools", StringComparison.Ordinal) ? _pendingToolsParameter : null;
+        object? parameter = string.Equals(key, "all-tools", StringComparison.Ordinal)
+            ? _pendingToolsParameter
+            : _pendingNavigationParameter;
         _pendingToolsParameter = null;
+        _pendingNavigationParameter = null;
         _pageService.Navigate(ContentFrame, key, parameter);
     }
 }

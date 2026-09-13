@@ -26,7 +26,6 @@
             AutomationProperties.Name="Repair and recovery sections">
             <SelectorBarItem Text="Repair" AutomationProperties.Name="Repair" />
             <SelectorBarItem Text="Restore" AutomationProperties.Name="Restore" />
-            <SelectorBarItem Text="Change records" AutomationProperties.Name="Change records" />
             <SelectorBarItem Text="Backup" AutomationProperties.Name="Backup" />
             <SelectorBarItem Text="Reset &amp; media" AutomationProperties.Name="Reset and media" />
             <SelectorBarItem Text="Portable playbooks" AutomationProperties.Name="Portable playbooks" />

@@ -41,6 +41,16 @@ public sealed partial class PluginStorePage : Page
         };
     }
 
+    protected override void OnNavigatedTo(NavigationEventArgs e)
+    {
+        base.OnNavigatedTo(e);
+        if (e.Parameter is string query && !string.IsNullOrWhiteSpace(query))
+        {
+            PluginSearchBox.Text = query;
+            ViewModel.SearchQuery = query;
+        }
+    }
+
     private void SearchBox_TextChanged(AutoSuggestBox sender, AutoSuggestBoxTextChangedEventArgs args)
     {
         if (args.Reason == AutoSuggestionBoxTextChangeReason.UserInput)
@@ -85,7 +95,6 @@ public sealed partial class PluginStorePage : Page
     {
         if (sender is Button button && button.Tag is PluginCardViewModel card)
         {
-            // Gate installation behind the capability and trust consent dialog.
             await ShowPluginDetailsDialogAsync(card, allowInstall: true);
         }
     }
@@ -147,8 +156,6 @@ public sealed partial class PluginStorePage : Page
         var result = await dialog.ShowAsync();
         if (allowInstall && result == ContentDialogResult.Primary && card.CanInstall)
         {
-            // Primary (Trust and install) implies consent to every declared capability the
-            // dialog listed; pass them through so the installer enforces the consent gate.
             await ViewModel.InstallPluginAsync(card, card.Permissions);
         }
     }

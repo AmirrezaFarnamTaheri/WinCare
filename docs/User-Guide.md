@@ -57,14 +57,14 @@ The main navigation is task-oriented:
 - **System Care** — maintenance-oriented command groups.
 - **Security** — security/privacy command groups.
 - **Repair & Recovery** — repair and recovery command groups.
-- **All Tools** — complete 269-command catalog with search, filters, typed parameters, preview/apply, favorites, and recent commands.
-- **System Doctor** — local rule-based symptom triage and evidence-guided recommendations.
-- **Plugin Store** — installed-plugin lifecycle plus browse-only remote catalog metadata unless a production catalog trust root is configured.
+- **Power tools** — complete 269-command catalog with search, exact Area + Section filters, category browsing, typed parameters, favorites, Recent, and Care plans.
+- **Troubleshoot** — local rule-based symptom triage and evidence-guided recommendations.
+- **Extensions** — built-in and locally admitted optional capabilities plus catalog browsing when available.
 - **Activity** — running work, items needing attention, completed operations, and aggregated daily reports.
 - **Settings** — theme, window continuity, local-data access, persistence warnings, and the safety-policy summary.
 - **Help** — in-app explanations for evidence, approval, plugins, Guard status, troubleshooting, and accessibility.
 
-Use **Ctrl+K** for the global search palette. In All Tools, **Ctrl+F** focuses tool search.
+Use **Ctrl+K** to search pages, tools, extensions, and help topics. In Power tools, **Ctrl+F** focuses tool search.
 
 ## 5. Home
 
@@ -78,7 +78,7 @@ Checkup currently has two sections: **Quick check** and **Results**.
 
 The quick check runs four read-only evidence probes covering Windows/hardware basics, storage, security, and Windows Update search readiness. Measurement-sensitive probes run sequentially so one probe's CPU/disk activity does not contaminate the next probe's evidence.
 
-The percentage shown after a run is **evidence-collection completion**, not a blanket machine-health score. Review each category result before deciding whether to open a related repair or maintenance tool.
+The summary reports only the checked areas: no issues found, attention needed, incomplete evidence, or an action-worthy finding. It is not a blanket machine-health score. Findings can open the relevant care page; Checkup itself never applies maintenance.
 
 Below the shared 920-DIP compact breakpoint, both the hero summary and evidence table become stacked layouts rather than squeezing desktop columns.
 
@@ -87,19 +87,19 @@ Below the shared 920-DIP compact breakpoint, both the hero summary and evidence 
 These pages organize the native command catalog into task-focused groups. They do not bypass the catalog/dispatcher safety policy.
 
 - Read-only rows can be opened/run without mutation approval.
-- Mutating work is routed to the same preview → receipt → explicit approval path used by All Tools.
+- Mutating work is routed to the same dispatcher/review path used by Power tools.
 - Compact windows use stacked records at the shared 920-DIP boundary.
 - Repair & Recovery shows recovery-oriented tools and Activity guidance; it does not imply that every historical operation has a generic Undo command.
 - **Portable playbooks** accept a schema-versioned list of catalog command IDs and typed parameters for review. Imported steps open individually and receive a fresh live preview; the file carries no execution approval.
 - **Restore a reversible remediation** is available only for completed individual registry-value remediations with complete receipts. WinCare verifies the receipt digest and current registry value before each restore step, and records complete, partial, or conflict outcomes.
 
-## 8. All Tools
+## 8. Power tools
 
-All Tools exposes all 269 native command definitions while keeping common input safer than hand-written JSON.
+Power tools exposes all 269 native command definitions without making the full catalog the primary product navigation for common work.
 
 ### Search and filters
 
-Search by command/title/area, filter by area/risk/read-only characteristics, and use Favorites/Recent for repeated work. At compact widths the filters stack instead of forcing a desktop-width toolbar.
+Search by task/title/summary, filter by exact Area, Section, impact, and read-only characteristics, and use Favorites/Recent for repeated work. **Categories** is a real Area/Section browser rather than a sort mode. At compact widths the filters stack instead of forcing a desktop-width toolbar.
 
 ### Typed parameters
 
@@ -123,9 +123,9 @@ Required fields are marked. Type/range/choice problems are blocked before dispat
 
 For a read-only command, **Run tool** executes the admitted read operation. For a mutating command, the first action is **Review changes**. Only a successful dispatcher preview enables explicit approval; the next action becomes **Apply changes** using that issued receipt.
 
-## 9. System Doctor
+## 9. Troubleshoot
 
-The shipped Doctor is a **local rule-based diagnostic assistant**, not a general-purpose AI agent and not a cloud model.
+The shipped Troubleshoot experience is a **local rule-based diagnostic assistant**, not a general-purpose AI agent and not a cloud model.
 
 1. Describe a symptom in plain language.
 2. The local rule engine maps it to supported diagnostic domains.
@@ -134,17 +134,17 @@ The shipped Doctor is a **local rule-based diagnostic assistant**, not a general
 5. A proposed mutation must run the real dispatcher preview.
 6. You review that preview and explicitly approve before Apply.
 
-The Doctor cannot mint its own approval receipt. User-facing errors are sanitized rather than inserting raw exception text into the conversation.
+Troubleshoot cannot mint its own approval receipt. User-facing errors are sanitized rather than inserting raw exception text into the conversation.
 
-## 10. Plugin Store
+## 10. Extensions
 
-Plugins execute full-trust **in process** with the current user's WinCare privileges. Declared capabilities are informed-consent metadata; they are not a sandbox.
+Extensions execute full-trust **in process** with the current user's WinCare privileges. Declared capabilities are informed-consent metadata; they are not a sandbox.
 
 ### Current release behavior
 
 This repository does **not** ship an approved production plugin-catalog public key or a live official signed catalog. The current composition root therefore keeps remote installation **browse-only/disabled**. This is intentional fail-closed behavior.
 
-The Plugin Store shows the current catalog trust state explicitly. If network/catalog access falls back to the bundled offline examples, those entries are labeled as samples and are not installable.
+Catalog or network failures are surfaced when they affect browsing or installation. Bundled/offline sample metadata is not treated as installable production content.
 
 ### Requirements before remote installation can ever be enabled
 
@@ -220,7 +220,7 @@ Read the returned code/message. WinCare fails closed for missing prerequisites, 
 
 Do not retry immediately. Open Activity, identify the command and affected resource, verify that Windows resource directly, and only then decide whether a new preview is appropriate.
 
-### Plugin Store shows browse-only/offline status
+### Extensions shows browse-only/offline status
 
 That is expected in the current repository build because no production catalog trust root is shipped. Installed plugins remain manageable. Do not treat an offline sample entry as an installable package.
 

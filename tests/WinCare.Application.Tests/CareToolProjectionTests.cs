@@ -38,7 +38,7 @@ public sealed class CareToolProjectionTests
         {
             Assert.True(row.IsCompact);
             Assert.False(row.HasAction);
-            Assert.Contains("Administrator:", row.Detail);
+            Assert.True(row.Detail.Contains("access", StringComparison.OrdinalIgnoreCase));
         });
         page.SetCompactLayout(false);
         Assert.All(page.CurrentRows, row => Assert.False(row.IsCompact));
@@ -54,15 +54,14 @@ public sealed class CareToolProjectionTests
 
     [Theory]
     [InlineData(0, "storage-report")]
-    [InlineData(0, "installer-cache-analysis")]
     [InlineData(2, "app-residual-discovery")]
     [InlineData(2, "winget-upgrade-inventory")]
-    [InlineData(3, "winget-upgrade-inventory")]
+    [InlineData(4, "installer-cache-analysis")]
     public void System_care_surfaces_discovery_planes(int section, string commandId)
     {
         var page = new SystemCarePageViewModel();
         page.SelectSection(section);
-        page.ShowTools(new ToolCatalogService(), page.ToolSearchQuery);
+        page.ShowTools(new ToolCatalogService(), page.ToolSelection);
         Assert.Contains(page.CurrentRows, row => row.CommandId == commandId);
     }
 
@@ -75,7 +74,7 @@ public sealed class CareToolProjectionTests
     {
         var page = new SecurityPageViewModel();
         page.SelectSection(section);
-        page.ShowTools(new ToolCatalogService(), page.ToolSearchQuery);
+        page.ShowTools(new ToolCatalogService(), page.ToolSelection);
         Assert.NotEmpty(page.CurrentRows);
         Assert.False(page.IsEmpty);
     }
@@ -83,12 +82,13 @@ public sealed class CareToolProjectionTests
     [Theory]
     [InlineData(0)]
     [InlineData(1)]
+    [InlineData(2)]
     [InlineData(3)]
     public void Repair_recovery_page_surfaces_tools_in_matching_sections(int section)
     {
         var page = new RepairRecoveryPageViewModel();
         page.SelectSection(section);
-        page.ShowTools(new ToolCatalogService(), page.ToolSearchQuery);
+        page.ShowTools(new ToolCatalogService(), page.ToolSelection);
         Assert.NotEmpty(page.CurrentRows);
         Assert.False(page.IsEmpty);
     }

@@ -19,13 +19,18 @@ public sealed partial class SystemCarePage : Page
     private void SectionSelector_SelectionChanged(SelectorBar sender, SelectorBarSelectionChangedEventArgs args)
     {
         ViewModel.SelectSection(sender.Items.IndexOf(sender.SelectedItem));
-        ViewModel.ShowTools(WinCare.App.Services.AppRuntime.Current.ToolCatalog, ViewModel.ToolSearchQuery, WinCare.App.Services.AppRuntime.Current.Journal);
+        ViewModel.ShowTools(WinCare.App.Services.AppRuntime.Current.ToolCatalog, ViewModel.ToolSelection, WinCare.App.Services.AppRuntime.Current.Journal);
     }
 
     protected override void OnNavigatedTo(Microsoft.UI.Xaml.Navigation.NavigationEventArgs e)
     {
         base.OnNavigatedTo(e);
-        ViewModel.ShowTools(WinCare.App.Services.AppRuntime.Current.ToolCatalog, ViewModel.ToolSearchQuery, WinCare.App.Services.AppRuntime.Current.Journal);
+        if (e.Parameter is int sectionIndex && sectionIndex >= 0 && sectionIndex < SectionSelector.Items.Count)
+        {
+            SectionSelector.SelectedItem = SectionSelector.Items[sectionIndex] as SelectorBarItem;
+            ViewModel.SelectSection(sectionIndex);
+        }
+        ViewModel.ShowTools(WinCare.App.Services.AppRuntime.Current.ToolCatalog, ViewModel.ToolSelection, WinCare.App.Services.AppRuntime.Current.Journal);
     }
 
 }

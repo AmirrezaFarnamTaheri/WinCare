@@ -11,6 +11,8 @@ public sealed class PageRow : ObservableObject
     private string _statusBrushKey = "AccentTealBrush";
     private string? _actionText;
     private CommunityToolkit.Mvvm.Input.IRelayCommand? _actionCommand;
+    private string? _navigationKey;
+    private int? _navigationSectionIndex;
 
     public PageRow(string title, string description, string state, string detail)
     {
@@ -71,7 +73,26 @@ public sealed class PageRow : ObservableObject
         }
     }
 
-    public bool HasAction => ActionCommand is not null && !string.IsNullOrWhiteSpace(ActionText);
+    public string? NavigationKey
+    {
+        get => _navigationKey;
+        set
+        {
+            if (SetProperty(ref _navigationKey, value))
+            {
+                OnPropertyChanged(nameof(HasAction));
+            }
+        }
+    }
+
+    public int? NavigationSectionIndex
+    {
+        get => _navigationSectionIndex;
+        set => SetProperty(ref _navigationSectionIndex, value);
+    }
+
+    public bool HasAction => !string.IsNullOrWhiteSpace(ActionText) &&
+        (ActionCommand is not null || !string.IsNullOrWhiteSpace(NavigationKey));
 
     public bool IsCompact
     {

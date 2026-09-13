@@ -7,10 +7,10 @@ namespace WinCare.App.Views;
 
 public static class PageNavigation
 {
-    public static void NavigateTo(DependencyObject source, string key)
+    public static void NavigateTo(DependencyObject source, string key, object? parameter = null)
     {
         ShellPage shell = FindShell(source);
-        shell.NavigateTo(key);
+        shell.NavigateTo(key, parameter);
     }
 
     public static void OpenTools(DependencyObject source, string query)

@@ -72,6 +72,12 @@ public sealed class ToolCatalogService
                 string.Equals(command.Area, filter.Area, StringComparison.OrdinalIgnoreCase));
         }
 
+        if (!string.IsNullOrWhiteSpace(filter.Section))
+        {
+            result = result.Where(command =>
+                string.Equals(command.Section, filter.Section, StringComparison.OrdinalIgnoreCase));
+        }
+
         if (filter.Risk is not null)
         {
             result = result.Where(command => command.Risk == filter.Risk);

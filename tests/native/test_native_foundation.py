@@ -29,13 +29,18 @@ class NativeFoundationTests(unittest.TestCase):
             text = (root / "src/WinCare.App/Views/Pages" / name).read_text(encoding="utf-8")
             if name in {"HomePage.xaml", "CheckupPage.xaml"}:
                 self.assertIn("DashboardCardStyle", text, name)
-                self.assertIn("Review before applying", text, name)
                 self.assertIn("SizeChanged", text, name)
+                if name == "HomePage.xaml":
+                    self.assertIn("Recommended", text, name)
+                    self.assertIn("Explore WinCare", text, name)
+                    self.assertNotIn("Review before applying", text, name)
                 if name == "CheckupPage.xaml":
+                    self.assertIn("Read-only checkup", text, name)
                     self.assertIn("SelectorBar", text, name)
-                    self.assertIn("LayoutVisibility.BoolToVisibility(ViewModel.IsCompactLayout)", text, name)
+                    self.assertIn("ViewModel.IsCompactLayout", text, name)
                     self.assertIn("LayoutVisibility.InvertBoolToVisibility(ViewModel.IsCompactLayout)", text, name)
                     self.assertIn("LayoutVisibility.BoolToVisibility(IsCompact)", text, name)
+                    self.assertNotIn("Review before applying", text, name)
                 continue
 
             if name in {"SystemCarePage.xaml", "SecurityPage.xaml", "RepairRecoveryPage.xaml"}:
@@ -62,7 +67,7 @@ class NativeFoundationTests(unittest.TestCase):
 
         care_list_xaml = (root / "src/WinCare.App/Controls/CareToolList.xaml").read_text(encoding="utf-8")
         care_list_code = (root / "src/WinCare.App/Controls/CareToolList.xaml.cs").read_text(encoding="utf-8")
-        for required in ("ListView", "Catalog status", "Requirements", "IsCompact"):
+        for required in ("ListView", "Impact", "Requirements", "IsCompact"):
             self.assertIn(required, care_list_xaml)
         self.assertIn("SetCompactLayout", care_list_code)
 
@@ -83,8 +88,8 @@ class NativeFoundationTests(unittest.TestCase):
         self.assertIn('SizeChanged="Page_SizeChanged"', plugin_store)
         plugin_code = (root / "src/WinCare.App/Views/Pages/PluginStorePage.xaml.cs").read_text(encoding="utf-8")
         self.assertIn('LayoutVisibility.IsCompact(e.NewSize.Width)', plugin_code)
-        self.assertIn("PluginCatalogTrustStatus", plugin_store)
-        self.assertIn("CatalogStatusMessage", plugin_store)
+        self.assertIn("Extensions", plugin_store)
+        self.assertIn("Search extensions or authors", plugin_store)
 
         settings = (root / "src/WinCare.App/Views/Pages/SettingsPage.xaml").read_text(encoding="utf-8")
         self.assertIn("ThemeSelector", settings)

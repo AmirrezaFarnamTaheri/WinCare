@@ -19,6 +19,7 @@ public sealed class ToolRowViewModel : ObservableObject
     public string Summary => Definition.Summary;
     public string Area => Definition.Area;
     public string Section => Definition.Section;
+    public string CategoryText => $"{Area} · {Section}";
     public string Risk => Definition.Risk switch
     {
         CommandRisk.ReadOnly => "Read-only",

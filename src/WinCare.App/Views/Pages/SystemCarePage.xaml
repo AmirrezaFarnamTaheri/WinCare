@@ -27,7 +27,7 @@
             <SelectorBarItem Text="Performance" AutomationProperties.Name="Performance" />
             <SelectorBarItem Text="Apps &amp; startup" AutomationProperties.Name="Apps and startup" />
             <SelectorBarItem Text="Network &amp; updates" AutomationProperties.Name="Network and updates" />
-            <SelectorBarItem Text="Routines" AutomationProperties.Name="Routines" />
+            <SelectorBarItem Text="Routines &amp; maintenance" AutomationProperties.Name="Routines and maintenance" />
         </SelectorBar>
 
         <controls:CareToolList Grid.Row="2" ViewModel="{x:Bind ViewModel}" />

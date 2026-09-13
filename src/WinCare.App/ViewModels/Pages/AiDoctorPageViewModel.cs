@@ -81,7 +81,7 @@ public sealed class AiDoctorPageViewModel : INotifyPropertyChanged
         _commandDispatcher = commandDispatcher ?? AppRuntime.Current.Dispatcher;
 
         Messages.Add(new DoctorChatMessage(
-            "Diagnostic Doctor",
+            "WinCare",
             "I am WinCare’s on-device rule-based diagnostic assistant. Describe a Windows problem (for example storage pressure, high memory use, lag, or network latency) and I will collect evidence and propose reviewable diagnostic steps.",
             IsUser: false,
             DateTime.UtcNow
@@ -107,17 +107,17 @@ public sealed class AiDoctorPageViewModel : INotifyPropertyChanged
                 $"Measured probes: {plan.MeasuredEvidence.Count} live telemetry probes collected.\n" +
                 $"Investigation scope: {plan.Findings.Count} diagnostic findings identified.\n" +
                 $"Recommended steps: {plan.ProposedSteps.Count} steps available. Review measured evidence and run read-only diagnostic checks before any mutation.";
-            Messages.Add(new DoctorChatMessage("Diagnostic Doctor", responseText, IsUser: false, DateTime.UtcNow, plan));
+            Messages.Add(new DoctorChatMessage("WinCare", responseText, IsUser: false, DateTime.UtcNow, plan));
         }
         catch (OperationCanceledException)
         {
-            Messages.Add(new DoctorChatMessage("Diagnostic Doctor", "Analysis cancelled.", IsUser: false, DateTime.UtcNow));
+            Messages.Add(new DoctorChatMessage("WinCare", "Analysis cancelled.", IsUser: false, DateTime.UtcNow));
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[DiagnosticDoctor] Analysis fault: {ex}");
+            System.Diagnostics.Debug.WriteLine($"[Troubleshoot] Analysis fault: {ex}");
             Messages.Add(new DoctorChatMessage(
-                "Diagnostic Doctor",
+                "WinCare",
                 "Diagnosis could not be completed. No change was applied by this diagnostic request. Review Activity or the WinCare logs if the problem continues.",
                 IsUser: false,
                 DateTime.UtcNow

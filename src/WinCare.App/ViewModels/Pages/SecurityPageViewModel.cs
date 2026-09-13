@@ -1,19 +1,20 @@
+using WinCare.Application.Tools;
+
 namespace WinCare.App.ViewModels.Pages;
 
 public sealed class SecurityPageViewModel : TabbedPageViewModel
 {
-    public string ToolSearchQuery => SelectedIndex switch
+    public CareAreaSelection ToolSelection => SelectedIndex switch
     {
-        0 => "security",
-        // Protection controls are cataloged as security-control commands.
-        1 => "security-control",
-        2 => "privacy",
-        _ => "hardening",
+        0 => new("Security", "Status"),
+        1 => new("Security", "Protection"),
+        2 => new("Security", "Privacy"),
+        _ => new("Security", "Hardening"),
     };
 
     public SecurityPageViewModel() : base([
-        new PageSection("Status", "No tools are available in this section.", []),
-        new PageSection("Protection", "No tools are available in this section.", []),
-        new PageSection("Privacy", "No tools are available in this section.", []),
-        new PageSection("Hardening", "No tools are available in this section.", [])]) { }
+        new PageSection("Status", "No security status tools are available in this section.", []),
+        new PageSection("Protection", "No protection tools are available in this section.", []),
+        new PageSection("Privacy", "No privacy tools are available in this section.", []),
+        new PageSection("Hardening", "No hardening tools are available in this section.", [])]) { }
 }
