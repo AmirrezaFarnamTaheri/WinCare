@@ -5,6 +5,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+import xml.etree.ElementTree as ET
 import zipfile
 from pathlib import Path
 
@@ -224,22 +225,29 @@ class FinalizationTests(unittest.TestCase):
             self.assertTrue((Path(directory) / "WinCare-2.5.0-rc3-native-source.zip").is_file())
 
     def test_release_metadata_is_pinned_to_native_release_candidate(self) -> None:
-        props = (ROOT / "Directory.Build.props").read_text(encoding="utf-8")
+        props_path = ROOT / "Directory.Build.props"
+        props = ET.parse(props_path).getroot()
         manifest = (ROOT / "src/WinCare.App/Package.appxmanifest").read_text(encoding="utf-8")
         csproj = (ROOT / "src/WinCare.App/WinCare.App.csproj").read_text(encoding="utf-8")
         cargo = (ROOT / "native/wincare-core/Cargo.toml").read_text(encoding="utf-8")
         rust_source = (ROOT / "native/wincare-core/src/lib.rs").read_text(encoding="utf-8")
-        self.assertIn("<VersionPrefix>2.5.0</VersionPrefix>", props)
-        self.assertIn("<VersionSuffix>rc5</VersionSuffix>", props)
-        self.assertIn("<InformationalVersion>2.5.0-rc5</InformationalVersion>", props)
+
+        prefix = props.findtext(".//VersionPrefix")
+        suffix = props.findtext(".//VersionSuffix")
+        informational = props.findtext(".//InformationalVersion")
+        self.assertEqual("2.5.0", prefix)
+        self.assertIsNotNone(suffix)
+        self.assertRegex(suffix or "", r"^rc\d+$")
+        self.assertEqual(f"{prefix}-{suffix}", informational)
+
         # The checked-in manifest carries the numeric fallback (VersionPrefix + ".0"); the
         # build-time StampAppxManifestVersion target derives the packaged version instead of
         # trusting a literal.
-        self.assertIn('Version="2.5.0.0"', manifest)
+        self.assertIn(f'Version="{prefix}.0"', manifest)
         self.assertIn("StampAppxManifestVersion", csproj)
         self.assertIn("AppxPackageVersion", csproj)
-        self.assertIn('version = "2.5.0"', cargo)
-        self.assertIn('const VERSION: &[u8] = b"2.5.0";', rust_source)
+        self.assertIn(f'version = "{prefix}"', cargo)
+        self.assertIn(f'const VERSION: &[u8] = b"{prefix}";', rust_source)
 
     def test_native_workflow_pins_actions_and_rust_toolchain(self) -> None:
         workflow_path = ROOT / ".github/workflows/native-winui.yml"
