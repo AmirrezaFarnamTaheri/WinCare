@@ -33,15 +33,15 @@
                     <KeyboardAccelerator Modifiers="Control" Key="F" Invoked="ToolSearch_FocusAccelerator" />
                 </TextBox.KeyboardAccelerators>
             </TextBox>
-            <ComboBox Grid.Column="1" Header="Area" ItemsSource="{x:Bind ViewModel.AreaOptions, Mode=OneWay}" DisplayMemberPath="Label"
-                      SelectedItem="{x:Bind ViewModel.SelectedAreaOption, Mode=TwoWay}" AutomationProperties.AutomationId="AreaFilter" />
-            <ComboBox Grid.Column="2" Header="Section" ItemsSource="{x:Bind ViewModel.SectionOptions, Mode=OneWay}" DisplayMemberPath="Label"
-                      SelectedItem="{x:Bind ViewModel.SelectedSectionOption, Mode=TwoWay}" AutomationProperties.AutomationId="SectionFilter" />
-            <ComboBox Grid.Column="3" Header="Impact" ItemsSource="{x:Bind ViewModel.RiskOptions, Mode=OneWay}" DisplayMemberPath="Label"
-                      SelectedItem="{x:Bind ViewModel.SelectedRiskOption, Mode=TwoWay}" AutomationProperties.AutomationId="RiskFilter" />
-            <CheckBox Grid.Column="4" Margin="0,26,0,0" VerticalAlignment="Center" Content="Read-only"
-                      IsChecked="{x:Bind ViewModel.ReadOnlyOnly, Mode=TwoWay}" AutomationProperties.AutomationId="ReadOnlyFilter" />
-            <TextBlock Grid.Column="5" Margin="8,28,0,0" VerticalAlignment="Center" Style="{StaticResource RowSecondaryTextStyle}"
+            <ComboBox x:Name="AreaFilter" Grid.Column="1" Header="Area" ItemsSource="{x:Bind ViewModel.AreaOptions, Mode=OneWay}" DisplayMemberPath="Label"
+                      SelectedItem="{x:Bind ViewModel.SelectedAreaOption, Mode=TwoWay}" AutomationProperties.AutomationId="AreaFilter" AutomationProperties.Name="Filter power tools by area" />
+            <ComboBox x:Name="SectionFilter" Grid.Column="2" Header="Section" ItemsSource="{x:Bind ViewModel.SectionOptions, Mode=OneWay}" DisplayMemberPath="Label"
+                      SelectedItem="{x:Bind ViewModel.SelectedSectionOption, Mode=TwoWay}" AutomationProperties.AutomationId="SectionFilter" AutomationProperties.Name="Filter power tools by section" />
+            <ComboBox x:Name="RiskFilter" Grid.Column="3" Header="Impact" ItemsSource="{x:Bind ViewModel.RiskOptions, Mode=OneWay}" DisplayMemberPath="Label"
+                      SelectedItem="{x:Bind ViewModel.SelectedRiskOption, Mode=TwoWay}" AutomationProperties.AutomationId="RiskFilter" AutomationProperties.Name="Filter power tools by impact" />
+            <CheckBox x:Name="ReadOnlyFilter" Grid.Column="4" Margin="0,26,0,0" VerticalAlignment="Center" Content="Read-only"
+                      IsChecked="{x:Bind ViewModel.ReadOnlyOnly, Mode=TwoWay}" AutomationProperties.AutomationId="ReadOnlyFilter" AutomationProperties.Name="Show only read-only power tools" />
+            <TextBlock x:Name="ResultCountText" Grid.Column="5" Margin="8,28,0,0" VerticalAlignment="Center" Style="{StaticResource RowSecondaryTextStyle}"
                        Text="{x:Bind ViewModel.ResultCountText, Mode=OneWay}" />
         </Grid>
 
@@ -81,23 +81,22 @@
                             <ToggleSwitch Header="Approve this change" OffContent="Preview only" OnContent="Review approved"
                                           IsEnabled="{x:Bind ViewModel.Execution.CanApproveReview, Mode=OneWay}"
                                           IsOn="{x:Bind ViewModel.Execution.IsReviewApproved, Mode=TwoWay}"
-                                          Visibility="{x:Bind local:AllToolsPage.BoolToVisibility(ViewModel.Execution.RequiresApprovalSwitch), Mode=OneWay}" />
+                                          Visibility="{x:Bind local:AllToolsPage.BoolToVisibility(ViewModel.Execution.RequiresApprovalSwitch), Mode=OneWay}"
+                                          AutomationProperties.Name="Approve the reviewed tool change" />
                             <Expander Header="Included changes and recovery" IsExpanded="True"
-                                      Visibility="{x:Bind local:AllToolsPage.BoolToVisibility(ViewModel.Execution.IsPresetTool), Mode=OneWay}">
+                                      Visibility="{x:Bind local:AllToolsPage.BoolToVisibility(ViewModel.Execution.IsPresetTool), Mode=OneWay}"
+                                      AutomationProperties.Name="Included care plan changes and recovery">
                                 <TextBlock Style="{StaticResource PageDescriptionTextStyle}" IsTextSelectionEnabled="True"
                                            Text="{x:Bind ViewModel.Execution.PresetContents, Mode=OneWay}" />
                             </Expander>
-                            <Expander Header="Advanced Parameters (JSON)" IsExpanded="False" HorizontalAlignment="Stretch"
-                                      HorizontalContentAlignment="Stretch" AutomationProperties.Name="Command parameters JSON">
-                                <TextBox MinHeight="120" AcceptsReturn="True" FontFamily="{StaticResource TelemetryFontFamily}" FontSize="12"
-                                         Text="{x:Bind ViewModel.Execution.ParameterJson, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                         AutomationProperties.AutomationId="CommandParameterJson" />
-                            </Expander>
+                            <Expander x:Name="ParameterExpander" Header="Command parameters" IsExpanded="True" HorizontalAlignment="Stretch"
+                                      HorizontalContentAlignment="Stretch" AutomationProperties.AutomationId="CommandParameters" AutomationProperties.Name="Command parameters" />
                             <StackPanel Orientation="Horizontal" Spacing="8">
                                 <Button Style="{StaticResource PrimaryActionButtonStyle}" Command="{x:Bind ViewModel.Execution.ExecuteSelectedToolCommand}"
-                                        Content="{x:Bind ViewModel.Execution.PrimaryActionLabel, Mode=OneWay}" AutomationProperties.Name="Run or review selected tool" />
+                                        Content="{x:Bind ViewModel.Execution.PrimaryActionLabel, Mode=OneWay}"
+                                        AutomationProperties.AutomationId="ExecuteSelectedTool" AutomationProperties.Name="Run or review selected tool" />
                                 <Button Style="{StaticResource QuietButtonStyle}" Command="{x:Bind ViewModel.Execution.CancelSelectedToolCommand}"
-                                        Content="{x:Bind ViewModel.Execution.CancelActionLabel, Mode=OneWay}" />
+                                        Content="{x:Bind ViewModel.Execution.CancelActionLabel, Mode=OneWay}" AutomationProperties.Name="Cancel selected tool operation" />
                             </StackPanel>
                             <Button HorizontalAlignment="Left" Style="{StaticResource QuietButtonStyle}" Click="FavoriteButton_Click"
                                     Content="Add/remove favorite" AutomationProperties.Name="Toggle selected tool favorite" />
@@ -106,8 +105,9 @@
                                      Message="{x:Bind ViewModel.Execution.ExecutionMessage, Mode=OneWay}" />
                             <TextBlock Visibility="{x:Bind local:AllToolsPage.BoolToVisibility(ViewModel.Execution.HasExecutionResult), Mode=OneWay}"
                                        Style="{StaticResource TelemetryTextStyle}" IsTextSelectionEnabled="True"
-                                       Text="{x:Bind ViewModel.Execution.ExecutionResultText, Mode=OneWay}" />
-                            <Expander Header="Advanced details" IsExpanded="False">
+                                       Text="{x:Bind ViewModel.Execution.ExecutionResultText, Mode=OneWay}"
+                                       AutomationProperties.AutomationId="CommandResultDetails" />
+                            <Expander Header="Advanced details" IsExpanded="False" AutomationProperties.Name="Advanced tool details">
                                 <TextBlock Style="{StaticResource TelemetryTextStyle}" IsTextSelectionEnabled="True"
                                            Text="{x:Bind ViewModel.SelectedToolTechnicalDetails, Mode=OneWay}" />
                             </Expander>
@@ -130,7 +130,7 @@
                     </Grid>
                     <ListView Grid.Row="1" ItemsSource="{x:Bind ViewModel.VisibleTools, Mode=OneWay}"
                               SelectedItem="{x:Bind ViewModel.SelectedTool, Mode=TwoWay}" SelectionMode="Single"
-                              IsItemClickEnabled="True" ItemClick="ToolTable_ItemClick" AutomationProperties.AutomationId="AllToolsTable">
+                              IsItemClickEnabled="True" ItemClick="ToolTable_ItemClick" AutomationProperties.AutomationId="AllToolsTable" AutomationProperties.Name="Power tools results">
                         <ListView.ItemContainerStyle><Style TargetType="ListViewItem"><Setter Property="HorizontalContentAlignment" Value="Stretch" /><Setter Property="AutomationProperties.Name" Value="{Binding ToolAccessibleName}" /></Style></ListView.ItemContainerStyle>
                         <ListView.ItemTemplate>
                             <DataTemplate x:DataType="vm:ToolRowViewModel">

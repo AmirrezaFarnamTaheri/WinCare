@@ -1,6 +1,7 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using WinCare.App.ViewModels.Pages;
+using WinCare.App.Views;
 
 namespace WinCare.App.Views.Pages;
 
@@ -22,10 +23,12 @@ public sealed partial class CheckupPage : Page
 
     private void FindingAction_Click(object sender, RoutedEventArgs e)
     {
-        if (sender is Button { DataContext: PageRow row } && !string.IsNullOrWhiteSpace(row.NavigationKey))
-        {
+        if (sender is not Button { DataContext: PageRow row } || string.IsNullOrWhiteSpace(row.NavigationKey)) return;
+
+        if (!string.IsNullOrWhiteSpace(row.NavigationSectionTitle))
+            PageNavigation.NavigateToSection(this, row.NavigationKey, row.NavigationSectionTitle);
+        else
             PageNavigation.NavigateTo(this, row.NavigationKey, row.NavigationSectionIndex);
-        }
     }
 
     private void Page_SizeChanged(object sender, SizeChangedEventArgs e)

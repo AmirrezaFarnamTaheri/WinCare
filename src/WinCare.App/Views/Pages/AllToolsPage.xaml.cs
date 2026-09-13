@@ -14,13 +14,6 @@ public sealed partial class AllToolsPage : Page
 {
     private const double ToolTableCompactBreakpointDip = 840;
     private const double InlineInspectorBreakpointDip = 1320;
-    private Grid? _filterGrid;
-    private ComboBox? _areaFilter;
-    private ComboBox? _sectionFilter;
-    private ComboBox? _riskFilter;
-    private CheckBox? _readOnlyFilter;
-    private TextBlock? _resultCount;
-    private Expander? _parameterExpander;
     private Control? _inspectorReturnFocus;
 
     public AllToolsPage()
@@ -29,8 +22,8 @@ public sealed partial class AllToolsPage : Page
         InitializeComponent();
         ToolTabs.SelectedItem = ToolTabs.Items[0] as SelectorBarItem;
         ViewModel.PropertyChanged += ViewModel_PropertyChanged;
-        CaptureResponsiveControls();
-        Loaded += (_, _) => ReplaceRawParameterEditor();
+        ApplyFilterLayout(ActualWidth < ToolTableCompactBreakpointDip);
+        RebuildParameterEditor();
     }
 
     public AllToolsPageViewModel ViewModel { get; }
@@ -54,19 +47,15 @@ public sealed partial class AllToolsPage : Page
             if (ViewModel.SelectedTool is not null)
                 DispatcherQueue.TryEnqueue(() => InspectorCloseButton.Focus(FocusState.Programmatic));
             else
-                (ViewModel.IsCompactLayout ? FindCompactSearchBox() : ToolSearchBox)?.Focus(FocusState.Programmatic);
+                ToolSearchBox.Focus(FocusState.Programmatic);
         }
     }
 
-    protected override void OnNavigatedFrom(NavigationEventArgs e) => base.OnNavigatedFrom(e);
-
     private void ToolTabs_SelectionChanged(SelectorBar sender, SelectorBarSelectionChangedEventArgs args)
     {
-        if (sender.SelectedItem is SelectorBarItem item)
-        {
-            ViewModel.SelectTab(item.Text);
-            SearchFilterGrid.Visibility = ViewModel.IsCatalogTab ? Visibility.Visible : Visibility.Collapsed;
-        }
+        if (sender.SelectedItem is not SelectorBarItem item) return;
+        ViewModel.SelectTab(item.Text);
+        SearchFilterGrid.Visibility = ViewModel.IsCatalogTab ? Visibility.Visible : Visibility.Collapsed;
     }
 
     private void CategoryCard_Click(object sender, RoutedEventArgs e)
@@ -81,12 +70,10 @@ public sealed partial class AllToolsPage : Page
 
     private void ReviewPresetButton_Click(object sender, RoutedEventArgs e)
     {
-        if (sender is Button { Tag: string presetId })
-        {
-            _inspectorReturnFocus = sender as Control;
-            ViewModel.SelectPresetForReview(presetId);
-            DispatcherQueue.TryEnqueue(() => InspectorCloseButton.Focus(FocusState.Programmatic));
-        }
+        if (sender is not Button { Tag: string presetId }) return;
+        _inspectorReturnFocus = sender as Control;
+        ViewModel.SelectPresetForReview(presetId);
+        DispatcherQueue.TryEnqueue(() => InspectorCloseButton.Focus(FocusState.Programmatic));
     }
 
     private void ToolTable_ItemClick(object sender, ItemClickEventArgs e)
@@ -129,8 +116,7 @@ public sealed partial class AllToolsPage : Page
     private void ToolSearch_FocusAccelerator(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
     {
         ToolTabs.SelectedItem = ToolTabs.Items[0] as SelectorBarItem;
-        TextBox target = ViewModel.IsCompactLayout ? FindCompactSearchBox() ?? ToolSearchBox : ToolSearchBox;
-        target.Focus(FocusState.Keyboard);
+        ToolSearchBox.Focus(FocusState.Keyboard);
         args.Handled = true;
     }
 
@@ -140,108 +126,94 @@ public sealed partial class AllToolsPage : Page
             RebuildParameterEditor();
     }
 
-    private void CaptureResponsiveControls()
-    {
-        _filterGrid = ToolSearchBox.Parent as Grid;
-        if (_filterGrid is null) return;
-        _areaFilter = _filterGrid.Children.OfType<ComboBox>().FirstOrDefault();
-        _sectionFilter = _filterGrid.Children.OfType<ComboBox>().Skip(1).FirstOrDefault();
-        _riskFilter = _filterGrid.Children.OfType<ComboBox>().Skip(2).FirstOrDefault();
-        _readOnlyFilter = _filterGrid.Children.OfType<CheckBox>().FirstOrDefault();
-        _resultCount = _filterGrid.Children.OfType<TextBlock>().FirstOrDefault();
-        ApplyFilterLayout(ActualWidth < ToolTableCompactBreakpointDip);
-    }
-
-    private TextBox? FindCompactSearchBox()
-    {
-        if (_filterGrid is null || !ViewModel.IsCompactLayout) return null;
-        return ToolSearchBox;
-    }
-
     private void ApplyFilterLayout(bool compact)
     {
-        if (_filterGrid is null || _areaFilter is null || _sectionFilter is null || _riskFilter is null || _readOnlyFilter is null || _resultCount is null)
-            return;
-
-        _filterGrid.ColumnDefinitions.Clear();
-        _filterGrid.RowDefinitions.Clear();
+        SearchFilterGrid.ColumnDefinitions.Clear();
+        SearchFilterGrid.RowDefinitions.Clear();
 
         if (compact)
         {
-            _filterGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-            _filterGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-            _filterGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-            _filterGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-            _filterGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-            _filterGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-            _filterGrid.RowSpacing = 8;
-            _filterGrid.ColumnSpacing = 10;
+            SearchFilterGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            SearchFilterGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            SearchFilterGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            SearchFilterGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            SearchFilterGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            SearchFilterGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            SearchFilterGrid.RowSpacing = 8;
+            SearchFilterGrid.ColumnSpacing = 10;
             Grid.SetRow(ToolSearchBox, 0); Grid.SetColumn(ToolSearchBox, 0); Grid.SetColumnSpan(ToolSearchBox, 2);
-            Grid.SetRow(_areaFilter, 1); Grid.SetColumn(_areaFilter, 0);
-            Grid.SetRow(_sectionFilter, 1); Grid.SetColumn(_sectionFilter, 1);
-            Grid.SetRow(_riskFilter, 2); Grid.SetColumn(_riskFilter, 0);
-            Grid.SetRow(_readOnlyFilter, 2); Grid.SetColumn(_readOnlyFilter, 1);
-            Grid.SetRow(_resultCount, 3); Grid.SetColumn(_resultCount, 1);
-            _readOnlyFilter.Margin = new Thickness(0, 4, 0, 0);
-            _resultCount.Margin = new Thickness(0, 6, 0, 0);
-            _resultCount.HorizontalAlignment = HorizontalAlignment.Right;
+            Grid.SetRow(AreaFilter, 1); Grid.SetColumn(AreaFilter, 0);
+            Grid.SetRow(SectionFilter, 1); Grid.SetColumn(SectionFilter, 1);
+            Grid.SetRow(RiskFilter, 2); Grid.SetColumn(RiskFilter, 0);
+            Grid.SetRow(ReadOnlyFilter, 2); Grid.SetColumn(ReadOnlyFilter, 1);
+            Grid.SetRow(ResultCountText, 3); Grid.SetColumn(ResultCountText, 1);
+            ReadOnlyFilter.Margin = new Thickness(0, 4, 0, 0);
+            ResultCountText.Margin = new Thickness(0, 6, 0, 0);
+            ResultCountText.HorizontalAlignment = HorizontalAlignment.Right;
         }
         else
         {
             foreach (GridLength width in new[] { new GridLength(2, GridUnitType.Star), new GridLength(190), new GridLength(190), new GridLength(160), GridLength.Auto, GridLength.Auto })
-                _filterGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = width });
-            _filterGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-            _filterGrid.RowSpacing = 0; _filterGrid.ColumnSpacing = 12;
+                SearchFilterGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = width });
+            SearchFilterGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            SearchFilterGrid.RowSpacing = 0;
+            SearchFilterGrid.ColumnSpacing = 12;
             Grid.SetRow(ToolSearchBox, 0); Grid.SetColumn(ToolSearchBox, 0); Grid.SetColumnSpan(ToolSearchBox, 1);
-            Grid.SetRow(_areaFilter, 0); Grid.SetColumn(_areaFilter, 1);
-            Grid.SetRow(_sectionFilter, 0); Grid.SetColumn(_sectionFilter, 2);
-            Grid.SetRow(_riskFilter, 0); Grid.SetColumn(_riskFilter, 3);
-            Grid.SetRow(_readOnlyFilter, 0); Grid.SetColumn(_readOnlyFilter, 4);
-            Grid.SetRow(_resultCount, 0); Grid.SetColumn(_resultCount, 5);
-            _readOnlyFilter.Margin = new Thickness(0, 26, 0, 0);
-            _resultCount.Margin = new Thickness(8, 28, 0, 0);
-            _resultCount.HorizontalAlignment = HorizontalAlignment.Left;
+            Grid.SetRow(AreaFilter, 0); Grid.SetColumn(AreaFilter, 1);
+            Grid.SetRow(SectionFilter, 0); Grid.SetColumn(SectionFilter, 2);
+            Grid.SetRow(RiskFilter, 0); Grid.SetColumn(RiskFilter, 3);
+            Grid.SetRow(ReadOnlyFilter, 0); Grid.SetColumn(ReadOnlyFilter, 4);
+            Grid.SetRow(ResultCountText, 0); Grid.SetColumn(ResultCountText, 5);
+            ReadOnlyFilter.Margin = new Thickness(0, 26, 0, 0);
+            ResultCountText.Margin = new Thickness(8, 28, 0, 0);
+            ResultCountText.HorizontalAlignment = HorizontalAlignment.Left;
         }
-    }
-
-    private void ReplaceRawParameterEditor()
-    {
-        if (_parameterExpander is not null) { RebuildParameterEditor(); return; }
-        _parameterExpander = FindVisualDescendant<Expander>(this, expander =>
-            string.Equals(AutomationProperties.GetName(expander), "Command parameters JSON", StringComparison.Ordinal));
-        if (_parameterExpander is null) return;
-        _parameterExpander.Header = "Command parameters";
-        AutomationProperties.SetName(_parameterExpander, "Command parameters");
-        _parameterExpander.IsExpanded = true;
-        RebuildParameterEditor();
     }
 
     private void RebuildParameterEditor()
     {
-        if (_parameterExpander is null) return;
         var root = new StackPanel { Spacing = 12 };
-        root.Children.Add(new TextBlock { Text = ViewModel.Execution.ParameterEditorSummary, TextWrapping = TextWrapping.Wrap, Opacity = 0.78 });
+        root.Children.Add(new TextBlock
+        {
+            Text = ViewModel.Execution.ParameterEditorSummary,
+            TextWrapping = TextWrapping.Wrap,
+            Opacity = 0.78
+        });
+
         var structuredPanel = new StackPanel { Spacing = 12 };
         foreach (ToolParameterFieldViewModel field in ViewModel.Execution.ParameterFields)
             structuredPanel.Children.Add(CreateParameterField(field));
         root.Children.Add(structuredPanel);
 
-        var advancedToggle = new ToggleSwitch { Header = "Advanced parameter editing", OffContent = "Typed inputs", OnContent = "Raw JSON", IsOn = ViewModel.Execution.UseAdvancedParameterJson };
+        var advancedToggle = new ToggleSwitch
+        {
+            Header = "Advanced parameter editing",
+            OffContent = "Typed inputs",
+            OnContent = "Raw JSON",
+            IsOn = ViewModel.Execution.UseAdvancedParameterJson
+        };
         AutomationProperties.SetAutomationId(advancedToggle, "AdvancedParameterEditing");
         AutomationProperties.SetName(advancedToggle, "Use raw JSON command parameters");
         root.Children.Add(advancedToggle);
 
         var rawEditor = new TextBox
         {
-            MinHeight = 120, AcceptsReturn = true, TextWrapping = TextWrapping.NoWrap,
-            Text = ViewModel.Execution.ParameterJson, PlaceholderText = "{}",
+            MinHeight = 120,
+            AcceptsReturn = true,
+            TextWrapping = TextWrapping.NoWrap,
+            Text = ViewModel.Execution.ParameterJson,
+            PlaceholderText = "{}",
             FontFamily = (Microsoft.UI.Xaml.Media.FontFamily)Microsoft.UI.Xaml.Application.Current.Resources["TelemetryFontFamily"],
-            FontSize = 12, Visibility = advancedToggle.IsOn ? Visibility.Visible : Visibility.Collapsed,
+            FontSize = 12,
+            Visibility = advancedToggle.IsOn ? Visibility.Visible : Visibility.Collapsed,
         };
         ScrollViewer.SetHorizontalScrollBarVisibility(rawEditor, ScrollBarVisibility.Auto);
         AutomationProperties.SetAutomationId(rawEditor, "CommandParameterJson");
         AutomationProperties.SetName(rawEditor, "Advanced command parameters as JSON");
-        rawEditor.TextChanged += (_, _) => { if (ViewModel.Execution.UseAdvancedParameterJson) ViewModel.Execution.ParameterJson = rawEditor.Text; };
+        rawEditor.TextChanged += (_, _) =>
+        {
+            if (ViewModel.Execution.UseAdvancedParameterJson) ViewModel.Execution.ParameterJson = rawEditor.Text;
+        };
         root.Children.Add(rawEditor);
 
         advancedToggle.Toggled += (_, _) =>
@@ -250,7 +222,12 @@ public sealed partial class AllToolsPage : Page
             ViewModel.Execution.UseAdvancedParameterJson = advancedToggle.IsOn;
             if (leavingAdvanced)
             {
-                if (ViewModel.Execution.UseAdvancedParameterJson) { advancedToggle.IsOn = true; rawEditor.Focus(FocusState.Programmatic); return; }
+                if (ViewModel.Execution.UseAdvancedParameterJson)
+                {
+                    advancedToggle.IsOn = true;
+                    rawEditor.Focus(FocusState.Programmatic);
+                    return;
+                }
                 RebuildParameterEditor();
             }
             else
@@ -260,15 +237,22 @@ public sealed partial class AllToolsPage : Page
                 rawEditor.Text = ViewModel.Execution.ParameterJson;
             }
         };
+
         structuredPanel.Visibility = advancedToggle.IsOn ? Visibility.Collapsed : Visibility.Visible;
         rawEditor.Visibility = advancedToggle.IsOn ? Visibility.Visible : Visibility.Collapsed;
-        _parameterExpander.Content = root;
+        ParameterExpander.Content = root;
     }
 
     private FrameworkElement CreateParameterField(ToolParameterFieldViewModel field)
     {
         var container = new StackPanel { Spacing = 5 };
-        container.Children.Add(new TextBlock { Text = field.Label, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold, TextWrapping = TextWrapping.Wrap });
+        container.Children.Add(new TextBlock
+        {
+            Text = field.Label,
+            FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
+            TextWrapping = TextWrapping.Wrap
+        });
+
         FrameworkElement editor;
         if (field.HasOptions)
         {
@@ -279,44 +263,57 @@ public sealed partial class AllToolsPage : Page
         }
         else if (field.Kind == CommandParameterKind.Boolean)
         {
-            var toggle = new ToggleSwitch { OffContent = "False", OnContent = "True", IsOn = bool.TryParse(field.Value, out bool initial) && initial };
+            var toggle = new ToggleSwitch
+            {
+                OffContent = "False",
+                OnContent = "True",
+                IsOn = bool.TryParse(field.Value, out bool initial) && initial
+            };
             toggle.Toggled += (_, _) => field.Value = toggle.IsOn ? "true" : "false";
             editor = toggle;
         }
         else if (field.Kind is CommandParameterKind.Integer or CommandParameterKind.Number)
         {
-            var number = new NumberBox { SpinButtonPlacementMode = NumberBoxSpinButtonPlacementMode.Compact, HorizontalAlignment = HorizontalAlignment.Stretch };
+            var number = new NumberBox
+            {
+                SpinButtonPlacementMode = NumberBoxSpinButtonPlacementMode.Compact,
+                HorizontalAlignment = HorizontalAlignment.Stretch
+            };
             if (double.TryParse(field.Definition.Minimum, NumberStyles.Float, CultureInfo.InvariantCulture, out double min)) number.Minimum = min;
             if (double.TryParse(field.Definition.Maximum, NumberStyles.Float, CultureInfo.InvariantCulture, out double max)) number.Maximum = max;
             if (double.TryParse(field.Value, NumberStyles.Float, CultureInfo.InvariantCulture, out double initial)) number.Value = initial;
-            number.ValueChanged += (_, args) => field.Value = double.IsNaN(args.NewValue) ? string.Empty : field.Kind == CommandParameterKind.Integer
-                ? Math.Round(args.NewValue).ToString(CultureInfo.InvariantCulture) : args.NewValue.ToString("R", CultureInfo.InvariantCulture);
+            number.ValueChanged += (_, args) => field.Value = double.IsNaN(args.NewValue)
+                ? string.Empty
+                : field.Kind == CommandParameterKind.Integer
+                    ? Math.Round(args.NewValue).ToString(CultureInfo.InvariantCulture)
+                    : args.NewValue.ToString("R", CultureInfo.InvariantCulture);
             editor = number;
         }
         else
         {
             bool multiline = field.Kind is CommandParameterKind.StringList or CommandParameterKind.Json;
-            var text = new TextBox { Text = field.Value, AcceptsReturn = multiline, MinHeight = multiline ? 88 : 0, TextWrapping = multiline ? TextWrapping.Wrap : TextWrapping.NoWrap, HorizontalAlignment = HorizontalAlignment.Stretch };
+            var text = new TextBox
+            {
+                Text = field.Value,
+                AcceptsReturn = multiline,
+                MinHeight = multiline ? 88 : 0,
+                TextWrapping = multiline ? TextWrapping.Wrap : TextWrapping.NoWrap,
+                HorizontalAlignment = HorizontalAlignment.Stretch
+            };
             text.TextChanged += (_, _) => field.Value = text.Text;
             editor = text;
         }
+
         AutomationProperties.SetAutomationId(editor, "CommandParameter_" + field.Name);
         AutomationProperties.SetName(editor, field.Label);
         container.Children.Add(editor);
-        container.Children.Add(new TextBlock { Text = field.Hint, FontSize = 11, Opacity = 0.72, TextWrapping = TextWrapping.Wrap });
-        return container;
-    }
-
-    private static T? FindVisualDescendant<T>(DependencyObject root, Func<T, bool> predicate) where T : DependencyObject
-    {
-        int count = Microsoft.UI.Xaml.Media.VisualTreeHelper.GetChildrenCount(root);
-        for (int i = 0; i < count; i++)
+        container.Children.Add(new TextBlock
         {
-            DependencyObject child = Microsoft.UI.Xaml.Media.VisualTreeHelper.GetChild(root, i);
-            if (child is T candidate && predicate(candidate)) return candidate;
-            T? nested = FindVisualDescendant(child, predicate);
-            if (nested is not null) return nested;
-        }
-        return null;
+            Text = field.Hint,
+            FontSize = 11,
+            Opacity = 0.72,
+            TextWrapping = TextWrapping.Wrap
+        });
+        return container;
     }
 }

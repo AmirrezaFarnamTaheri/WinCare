@@ -13,6 +13,30 @@ public static class PageNavigation
         shell.NavigateTo(key, parameter);
     }
 
+    public static void NavigateToSection(DependencyObject source, string key, string sectionTitle)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(sectionTitle);
+        NavigateTo(source, key, new SectionNavigationRequest(sectionTitle));
+    }
+
+    public static int ResolveSectionIndex(SelectorBar selector, object? parameter)
+    {
+        ArgumentNullException.ThrowIfNull(selector);
+        if (parameter is int legacyIndex)
+            return legacyIndex >= 0 && legacyIndex < selector.Items.Count ? legacyIndex : -1;
+
+        if (parameter is not SectionNavigationRequest request) return -1;
+        for (int index = 0; index < selector.Items.Count; index++)
+        {
+            if (selector.Items[index] is SelectorBarItem item &&
+                string.Equals(item.Text, request.SectionTitle, StringComparison.OrdinalIgnoreCase))
+            {
+                return index;
+            }
+        }
+        return -1;
+    }
+
     public static void OpenTools(DependencyObject source, string query)
     {
         ShellPage shell = FindShell(source);
@@ -39,3 +63,4 @@ public static class PageNavigation
 }
 
 public sealed record ToolNavigationRequest(string CommandId, JsonElement Parameters);
+public sealed record SectionNavigationRequest(string SectionTitle);

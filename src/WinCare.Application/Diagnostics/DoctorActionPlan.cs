@@ -34,9 +34,10 @@ namespace WinCare.Application.Diagnostics
     )
     {
         public bool IsReadOnly => RiskLevel == CommandRisk.ReadOnly;
-        public string RiskBadgeText => IsReadOnly ? "SAFE / READ-ONLY" : $"{RiskLevel.ToString().ToUpperInvariant()} RISK";
-        public string ElevationBadgeText => RequiresElevation ? "ADMIN REQUIRED" : "STANDARD USER";
-        public string ActionButtonText => IsReadOnly ? "Run Diagnostic Check" : "Review & Apply Fix";
+        public string RiskBadgeText => IsReadOnly ? "READ-ONLY" : $"{RiskLevel.ToString().ToUpperInvariant()} IMPACT";
+        public string ElevationBadgeText => RequiresElevation ? "ADMINISTRATOR REQUIRED" : "STANDARD ACCESS";
+        public string ReviewContextText => $"{RiskBadgeText} · {ElevationBadgeText} · {AffectedResource}";
+        public string ActionButtonText => IsReadOnly ? "Open check" : "Review in Power tools";
     }
 
     public sealed record TelemetryEvidence(
@@ -55,11 +56,6 @@ namespace WinCare.Application.Diagnostics
         public DateTime TimestampUtc { get; init; } =
             CapturedAtUtc.HasValue ? NormalizeToUtc(CapturedAtUtc.Value) : DateTime.UtcNow;
 
-        /// <summary>
-        /// True when the evidence is older than <paramref name="maxAge"/>. Both operands are
-        /// normalized to UTC so an unspecified- or local-kind <see cref="CapturedAtUtc"/> can
-        /// never skew the age calculation.
-        /// </summary>
         public bool IsStale(TimeSpan maxAge) => (DateTime.UtcNow - TimestampUtc.ToUniversalTime()) > maxAge;
 
         private static DateTime NormalizeToUtc(DateTime value) => value.Kind switch
@@ -68,6 +64,7 @@ namespace WinCare.Application.Diagnostics
             DateTimeKind.Local => value.ToUniversalTime(),
             _ => DateTime.SpecifyKind(value, DateTimeKind.Utc),
         };
+
         public string ProvenanceSummary => $"Source: {Source} | Collector: {Collector} | Command: {CommandId ?? "system.core"}@{CommandVersion} | Captured: {TimestampUtc:yyyy-MM-dd HH:mm:ss} UTC";
     };
 

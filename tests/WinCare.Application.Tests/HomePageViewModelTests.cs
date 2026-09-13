@@ -1,191 +1,67 @@
 using WinCare.App.ViewModels.Pages;
-using WinCare.Application.Commands;
 using WinCare.Domain.Activity;
-using WinCare.Domain.Commands;
-using WinCare.Domain.Telemetry;
 
 namespace WinCare.Application.Tests;
 
 public sealed class HomePageViewModelTests
 {
     [Fact]
-    public void Dashboard_shows_latest_activity_and_restores_empty_state()
+    public void Home_shows_latest_activity_and_restores_empty_state()
     {
         var vm = new HomePageViewModel();
         var old = new ActivityRecord(Guid.NewGuid(), "old", "Old check", ActivityState.Completed,
             DateTimeOffset.UtcNow.AddHours(-1), DateTimeOffset.UtcNow, "Old result", false);
-        var recent = old with { Id = Guid.NewGuid(), Title = "Latest check", StartedAt = DateTimeOffset.UtcNow, Result = "Evidence collected" };
+        var recent = old with
+        {
+            Id = Guid.NewGuid(),
+            Title = "Latest check",
+            StartedAt = DateTimeOffset.UtcNow,
+            Result = "Evidence collected"
+        };
+
         vm.RefreshActivity([recent, old]);
+
         Assert.Equal("Latest check", vm.RecentActivityTitle);
         Assert.Contains("Evidence collected", vm.RecentActivitySummary);
+        Assert.Equal("2 records", vm.ActivityStatus);
+
         vm.RefreshActivity([]);
+
         Assert.Equal("No activity recorded", vm.RecentActivityTitle);
+        Assert.Equal("No activity yet", vm.ActivityStatus);
     }
 
     [Fact]
-    public async Task Curated_quick_clean_previews_then_applies_with_receipt()
+    public void Home_projects_checkup_coverage_without_owning_command_execution()
     {
-        // Quick clean workflow: first click previews and issues review plan, confirming click applies.
-        var cleanDef = new WinCare.CommandCatalog.Models.CommandDefinition(
-            "cleaner-disk-pressure", "Disk Cleanup", "Clean temp files", "System care", "Clean up",
-            WinCare.CommandCatalog.Models.CommandRisk.Moderate, false,
-            WinCare.CommandCatalog.Models.AdministratorAccess.No,
-            WinCare.CommandCatalog.Models.RestartExpectation.No,
-            "test", WinCare.CommandCatalog.Models.MigrationStatus.Implemented,
-            ["cleaner"], WinCare.Domain.Commands.RiskTier.Moderate);
+        DateTimeOffset now = DateTimeOffset.UtcNow;
+        var vm = new HomePageViewModel();
+        vm.RefreshActivity([
+            Completed("system", "System", now),
+            Completed("storage", "Storage", now),
+            Completed("security", "Security", now),
+            Completed("wua-search", "Updates", now),
+        ]);
 
-        var handler = new TestHandler("cleaner-disk-pressure", "Cleaned 1.2 GB");
-        var dispatcher = new CommandDispatcher([cleanDef], [handler]);
-        var vm = new HomePageViewModel(dispatcher);
-
-        Assert.Equal("Ready", vm.CleanStatusText);
-        Assert.False(vm.IsCleaning);
-
-        await vm.QuickCleanCommand.ExecuteAsync(null);
-
-        Assert.Equal("Review required", vm.CleanStatusText);
-        Assert.False(vm.IsCleaning);
-        Assert.Equal(1, handler.CallCount);
-
-        await vm.QuickCleanCommand.ExecuteAsync(null);
-
-        Assert.Equal("Clean Complete", vm.CleanStatusText);
-        Assert.Equal("Cleaned 1.2 GB", vm.CleanDetailText);
-        Assert.Equal("Clean Again", vm.CleanActionText);
-        Assert.False(vm.IsCleaning);
-        Assert.Equal(2, handler.CallCount);
+        Assert.Equal("4/4", vm.EvidenceScoreText);
+        Assert.Equal("Your latest check is ready", vm.EvidenceTitle);
+        Assert.Equal("Evidence collected", vm.SystemStatus);
+        Assert.Equal("Evidence collected", vm.PerformanceStatus);
+        Assert.Equal("Evidence collected", vm.StorageStatus);
+        Assert.Equal("Evidence collected", vm.SecurityStatus);
+        Assert.Equal("Evidence collected", vm.UpdatesStatus);
     }
 
     [Fact]
-    public async Task Curated_startup_boost_and_network_refresh_execute_successfully()
-    {
-        var startupDef = new WinCare.CommandCatalog.Models.CommandDefinition(
-            "startup", "Startup", "Analyze startup", "System care", "Performance",
-            WinCare.CommandCatalog.Models.CommandRisk.ReadOnly, true,
-            WinCare.CommandCatalog.Models.AdministratorAccess.No,
-            WinCare.CommandCatalog.Models.RestartExpectation.No,
-            "test", WinCare.CommandCatalog.Models.MigrationStatus.Implemented,
-            ["startup"], WinCare.Domain.Commands.RiskTier.Safe);
-
-        var networkDef = new WinCare.CommandCatalog.Models.CommandDefinition(
-            "network", "Network", "Network summary", "System care", "Network",
-            WinCare.CommandCatalog.Models.CommandRisk.ReadOnly, true,
-            WinCare.CommandCatalog.Models.AdministratorAccess.No,
-            WinCare.CommandCatalog.Models.RestartExpectation.No,
-            "test", WinCare.CommandCatalog.Models.MigrationStatus.Implemented,
-            ["network"], WinCare.Domain.Commands.RiskTier.Safe);
-
-        var startupHandler = new TestHandler("startup", "12 startup items");
-        var networkHandler = new TestHandler("network", "2 interfaces active");
-        var dispatcher = new CommandDispatcher([startupDef, networkDef], [startupHandler, networkHandler]);
-        var vm = new HomePageViewModel(dispatcher);
-
-        await vm.StartupBoostCommand.ExecuteAsync(null);
-        // Inspection outcomes report inspection status directly.
-        Assert.Equal("Startup inspection complete", vm.StartupStatusText);
-        Assert.Equal("12 startup items", vm.StartupDetailText);
-        Assert.Equal(1, startupHandler.CallCount);
-
-        await vm.NetworkRefreshCommand.ExecuteAsync(null);
-        Assert.Equal("Network inspection complete", vm.NetworkStatusText);
-        Assert.Equal("2 interfaces active", vm.NetworkDetailText);
-        Assert.Equal(1, networkHandler.CallCount);
-    }
-
-    [Fact]
-    public async Task Progressive_disclosure_inspector_toggles_and_populates_telemetry()
+    public void Home_marks_old_completed_evidence_as_stale()
     {
         var vm = new HomePageViewModel();
-        Assert.False(vm.IsInspectorExpanded);
-        Assert.Null(vm.TelemetryMetrics);
+        vm.RefreshActivity([Completed("system", "System", DateTimeOffset.UtcNow.AddHours(-2))]);
 
-        await vm.ToggleInspectorCommand.ExecuteAsync(null);
-
-        Assert.True(vm.IsInspectorExpanded);
-        Assert.NotNull(vm.TelemetryMetrics);
-        Assert.True(vm.TelemetryMetrics.LatencyMicroseconds >= 0);
-        Assert.False(string.IsNullOrWhiteSpace(vm.TelemetryMetrics.TargetPathsSummary));
-        Assert.Equal("N/A", vm.TelemetryMetrics.CpuFormatted);
-
-        await vm.ToggleInspectorCommand.ExecuteAsync(null);
-        Assert.False(vm.IsInspectorExpanded);
+        Assert.StartsWith("Stale evidence", vm.SystemStatus);
+        Assert.Equal("1/4", vm.EvidenceScoreText);
     }
 
-    [Fact]
-    public async Task Inspector_marks_cpu_unavailable_when_native_probe_fails()
-    {
-        var vm = new HomePageViewModel(probeRepository: new TestProbeRepository(failure: new InvalidOperationException("probe failed")));
-
-        await vm.ToggleInspectorCommand.ExecuteAsync(null);
-
-        Assert.NotNull(vm.TelemetryMetrics);
-        Assert.False(vm.TelemetryMetrics.CpuAvailable);
-        Assert.Equal("N/A", vm.TelemetryMetrics.CpuFormatted);
-    }
-
-    [Fact]
-    public async Task Inspector_formats_cpu_when_native_probe_succeeds()
-    {
-        var snapshot = new SystemSnapshot(8.7f, 4, 8, 16, 32, true);
-        var vm = new HomePageViewModel(probeRepository: new TestProbeRepository(snapshot));
-
-        await vm.ToggleInspectorCommand.ExecuteAsync(null);
-
-        Assert.NotNull(vm.TelemetryMetrics);
-        Assert.True(vm.TelemetryMetrics.CpuAvailable);
-        Assert.Equal("8.7%", vm.TelemetryMetrics.CpuFormatted);
-    }
-
-    [Fact]
-    public void Curated_cards_derive_risk_badges_from_catalog_contracts()
-    {
-        var vm = new HomePageViewModel();
-
-        // DESIGN.md: Product truth outranks decoration.
-        // cleaner-disk-pressure is Moderate risk (mutating with preview + confirm)
-        Assert.Equal("Moderate · preview + confirm", vm.CleanRiskBadge);
-        Assert.Equal("PillElevatedBgBrush", vm.CleanRiskBadgeBrushKey);
-
-        // startup and network commands are read-only inspections
-        Assert.Equal("Read-only", vm.StartupRiskBadge);
-        Assert.Equal("PillReadOnlyBgBrush", vm.StartupRiskBadgeBrushKey);
-
-        Assert.Equal("Read-only", vm.NetworkRiskBadge);
-        Assert.Equal("PillReadOnlyBgBrush", vm.NetworkRiskBadgeBrushKey);
-    }
-
-    private sealed class TestHandler(string id, string message) : ICommandHandler
-    {
-        public string CommandId { get; } = id;
-        public int CallCount { get; private set; }
-
-        public Task<CommandHandlerOutcome> ExecuteAsync(CommandRequest request, CancellationToken cancellationToken)
-        {
-            CallCount++;
-            return Task.FromResult(CommandHandlerOutcome.Succeeded(
-                $"{CommandId}.ok",
-                message,
-                System.Text.Json.JsonSerializer.SerializeToElement(new { success = true })));
-        }
-    }
-
-    private sealed class TestProbeRepository : INativeSystemProbeRepository
-    {
-        private readonly SystemSnapshot? _snapshot;
-        private readonly Exception? _failure;
-
-        public TestProbeRepository(SystemSnapshot? snapshot = null, Exception? failure = null)
-        {
-            _snapshot = snapshot;
-            _failure = failure;
-        }
-
-        public ValueTask<SystemSnapshot> GetSystemSnapshotAsync(CancellationToken ct = default) =>
-            _failure is not null
-                ? ValueTask.FromException<SystemSnapshot>(_failure)
-                : ValueTask.FromResult(_snapshot ?? new SystemSnapshot(0, 0, 0, 0, 0, false));
-
-        public ValueTask<CleanExecutionResult> CleanTempFilesAsync(bool dryRun, CancellationToken ct = default) =>
-            ValueTask.FromResult(new CleanExecutionResult(0, 0, 0));
-    }
+    private static ActivityRecord Completed(string commandId, string title, DateTimeOffset startedAt) =>
+        new(Guid.NewGuid(), commandId, title, ActivityState.Completed, startedAt, startedAt.AddSeconds(1), "Evidence collected", false);
 }

@@ -13,6 +13,7 @@ public sealed class PageRow : ObservableObject
     private CommunityToolkit.Mvvm.Input.IRelayCommand? _actionCommand;
     private string? _navigationKey;
     private int? _navigationSectionIndex;
+    private string? _navigationSectionTitle;
 
     public PageRow(string title, string description, string state, string detail)
     {
@@ -54,10 +55,7 @@ public sealed class PageRow : ObservableObject
         get => _actionText;
         set
         {
-            if (SetProperty(ref _actionText, value))
-            {
-                OnPropertyChanged(nameof(HasAction));
-            }
+            if (SetProperty(ref _actionText, value)) OnPropertyChanged(nameof(HasAction));
         }
     }
 
@@ -66,10 +64,7 @@ public sealed class PageRow : ObservableObject
         get => _actionCommand;
         set
         {
-            if (SetProperty(ref _actionCommand, value))
-            {
-                OnPropertyChanged(nameof(HasAction));
-            }
+            if (SetProperty(ref _actionCommand, value)) OnPropertyChanged(nameof(HasAction));
         }
     }
 
@@ -78,17 +73,22 @@ public sealed class PageRow : ObservableObject
         get => _navigationKey;
         set
         {
-            if (SetProperty(ref _navigationKey, value))
-            {
-                OnPropertyChanged(nameof(HasAction));
-            }
+            if (SetProperty(ref _navigationKey, value)) OnPropertyChanged(nameof(HasAction));
         }
     }
 
+    /// <summary>Legacy positional navigation retained for compatibility with existing callers.</summary>
     public int? NavigationSectionIndex
     {
         get => _navigationSectionIndex;
         set => SetProperty(ref _navigationSectionIndex, value);
+    }
+
+    /// <summary>Preferred stable destination section label for product navigation.</summary>
+    public string? NavigationSectionTitle
+    {
+        get => _navigationSectionTitle;
+        set => SetProperty(ref _navigationSectionTitle, value);
     }
 
     public bool HasAction => !string.IsNullOrWhiteSpace(ActionText) &&

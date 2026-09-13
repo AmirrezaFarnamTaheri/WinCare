@@ -6,7 +6,7 @@
     xmlns:vm="using:WinCare.App.ViewModels.Pages"
     SizeChanged="Page_SizeChanged">
 
-    <Grid Padding="32,24,32,32" RowDefinitions="Auto,Auto,Auto,*" RowSpacing="24">
+    <Grid Padding="32,24,32,32" RowDefinitions="Auto,Auto,Auto,Auto,*" RowSpacing="18">
         <Grid Grid.Row="0" ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="16" RowSpacing="12">
             <StackPanel Grid.Column="0" Spacing="8">
                 <TextBlock Text="Extensions" Style="{StaticResource PageTitleTextStyle}" />
@@ -14,11 +14,19 @@
             </StackPanel>
 
             <AutoSuggestBox x:Name="PluginSearchBox" Grid.Column="1" Width="280" VerticalAlignment="Center" PlaceholderText="Search extensions or authors" QueryIcon="Find" TextChanged="SearchBox_TextChanged" AutomationProperties.AutomationId="PluginSearch" AutomationProperties.Name="Search extensions or authors"/>
-            <ComboBox x:Name="CategoryFilter" Grid.Row="1" Grid.ColumnSpan="2" Width="220" HorizontalAlignment="Left" Header="Category" ItemsSource="{x:Bind ViewModel.Categories, Mode=OneWay}" SelectedItem="{x:Bind ViewModel.SelectedCategory, Mode=TwoWay}" AutomationProperties.AutomationId="PluginCategoryFilter" AutomationProperties.Name="Filter plugins by category" />
-
+            <ComboBox x:Name="CategoryFilter" Grid.Row="1" Grid.ColumnSpan="2" Width="220" HorizontalAlignment="Left" Header="Category" ItemsSource="{x:Bind ViewModel.Categories, Mode=OneWay}" SelectedItem="{x:Bind ViewModel.SelectedCategory, Mode=TwoWay}" AutomationProperties.AutomationId="PluginCategoryFilter" AutomationProperties.Name="Filter extensions by category" />
         </Grid>
 
         <InfoBar Grid.Row="1"
+                 IsOpen="{x:Bind ViewModel.HasCatalogStatus, Mode=OneWay}"
+                 Severity="Informational"
+                 Title="Catalog trust and availability"
+                 Message="{x:Bind ViewModel.CatalogStatusMessage, Mode=OneWay}"
+                 IsClosable="False"
+                 AutomationProperties.AutomationId="PluginCatalogStatus"
+                 AutomationProperties.Name="Extension catalog trust and availability" />
+
+        <InfoBar Grid.Row="2"
                  IsOpen="{x:Bind ViewModel.HasError, Mode=OneWay}"
                  Severity="Error"
                  Title="Extensions notice"
@@ -26,16 +34,16 @@
                  IsClosable="False"
                  AutomationProperties.LiveSetting="Assertive">
             <InfoBar.ActionButton>
-                <Button Content="Retry connection" Style="{StaticResource QuietButtonStyle}" Click="RetryCatalog_Click" IsEnabled="{x:Bind ViewModel.CanRefresh, Mode=OneWay}" Visibility="{x:Bind local:PluginStorePage.BoolToVisibility(ViewModel.HasCatalogError), Mode=OneWay}" AutomationProperties.AutomationId="PluginCatalogRetry" AutomationProperties.Name="Retry plugin catalog connection" />
+                <Button Content="Retry connection" Style="{StaticResource QuietButtonStyle}" Click="RetryCatalog_Click" IsEnabled="{x:Bind ViewModel.CanRefresh, Mode=OneWay}" Visibility="{x:Bind local:PluginStorePage.BoolToVisibility(ViewModel.HasCatalogError), Mode=OneWay}" AutomationProperties.AutomationId="PluginCatalogRetry" AutomationProperties.Name="Retry extension catalog connection" />
             </InfoBar.ActionButton>
         </InfoBar>
 
-        <StackPanel Grid.Row="2" Spacing="8" Visibility="{x:Bind local:PluginStorePage.BoolToVisibility(ViewModel.IsLoading), Mode=OneWay}" AutomationProperties.LiveSetting="Polite">
-            <TextBlock Text="Updating your plugin library…" Style="{StaticResource RowSecondaryTextStyle}" />
-            <ProgressBar IsIndeterminate="{x:Bind ViewModel.IsLoading, Mode=OneWay}" AutomationProperties.Name="Loading plugin catalog" />
+        <StackPanel Grid.Row="3" Spacing="8" Visibility="{x:Bind local:PluginStorePage.BoolToVisibility(ViewModel.IsLoading), Mode=OneWay}" AutomationProperties.LiveSetting="Polite">
+            <TextBlock Text="Updating your extension library…" Style="{StaticResource RowSecondaryTextStyle}" />
+            <ProgressBar IsIndeterminate="{x:Bind ViewModel.IsLoading, Mode=OneWay}" AutomationProperties.Name="Loading extension catalog" />
         </StackPanel>
 
-        <ListView Grid.Row="3"
+        <ListView Grid.Row="4"
                   ItemsSource="{x:Bind ViewModel.Plugins, Mode=OneWay}"
                   SelectionMode="None"
                   AutomationProperties.AutomationId="PluginCatalog"
@@ -52,10 +60,7 @@
                             BorderBrush="{ThemeResource BorderSubtleBrush}"
                             BorderThickness="1" CornerRadius="{StaticResource RadiusCardOuter}" Padding="20">
                         <Grid RowDefinitions="Auto,Auto" RowSpacing="20" ColumnSpacing="16">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
 
                             <StackPanel Grid.Column="0" Grid.ColumnSpan="2" Spacing="8">
                                 <Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="8">
@@ -68,23 +73,20 @@
                                     </Border>
                                 </Grid>
                                 <TextBlock Text="{x:Bind Description}" Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap" />
-
-                                <StackPanel Orientation="Horizontal" Spacing="12" Margin="0,4,0,0">
+                                <StackPanel Spacing="3" Margin="0,4,0,0">
                                     <TextBlock Text="{x:Bind Category}" FontSize="12" Foreground="{ThemeResource TextSecondaryBrush}" TextWrapping="Wrap" />
-                                    <TextBlock Text="•" FontSize="12" Foreground="{ThemeResource TextSecondaryBrush}" />
                                     <TextBlock Text="{x:Bind Author}" FontSize="12" Foreground="{ThemeResource TextSecondaryBrush}" TextWrapping="Wrap" />
-                                    <TextBlock Text="•" FontSize="12" Foreground="{ThemeResource TextSecondaryBrush}" />
                                     <TextBlock Text="{x:Bind Version}" FontSize="12" FontFamily="{StaticResource TelemetryFontFamily}" Foreground="{ThemeResource TextSecondaryBrush}" TextWrapping="Wrap" />
                                 </StackPanel>
                             </StackPanel>
 
                             <StackPanel Grid.Row="1" Grid.ColumnSpan="2" Spacing="8">
-                                <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Left">
-                                    <Button Content="Review" Click="DetailsButton_Click" Tag="{x:Bind}" AutomationProperties.Name="View plugin details"/>
-                                    <Button Content="Add" Visibility="{x:Bind local:PluginStorePage.BoolToVisibility(CanInstall), Mode=OneTime}" Click="InstallButton_Click" Tag="{x:Bind}" Style="{StaticResource AccentButtonStyle}" AutomationProperties.Name="Review and install plugin"/>
-                                    <Button Content="Enable" Visibility="{x:Bind local:PluginStorePage.BoolToVisibility(CanEnable), Mode=OneTime}" Click="EnableButton_Click" Tag="{x:Bind}" Style="{StaticResource AccentButtonStyle}" AutomationProperties.Name="Enable plugin"/>
-                                    <Button Content="Disable" Visibility="{x:Bind local:PluginStorePage.BoolToVisibility(CanDisable), Mode=OneTime}" Click="DisableButton_Click" Tag="{x:Bind}" AutomationProperties.Name="Disable plugin"/>
-                                    <Button Content="Uninstall" Visibility="{x:Bind local:PluginStorePage.BoolToVisibility(CanUninstall), Mode=OneTime}" Click="UninstallButton_Click" Tag="{x:Bind}" AutomationProperties.Name="Uninstall plugin"/>
+                                <StackPanel Spacing="8" HorizontalAlignment="Left">
+                                    <Button Content="Review" Click="DetailsButton_Click" Tag="{x:Bind}" AutomationProperties.Name="View extension details"/>
+                                    <Button Content="Add" Visibility="{x:Bind local:PluginStorePage.BoolToVisibility(CanInstall), Mode=OneTime}" Click="InstallButton_Click" Tag="{x:Bind}" Style="{StaticResource AccentButtonStyle}" AutomationProperties.Name="Review and install extension"/>
+                                    <Button Content="Enable" Visibility="{x:Bind local:PluginStorePage.BoolToVisibility(CanEnable), Mode=OneTime}" Click="EnableButton_Click" Tag="{x:Bind}" Style="{StaticResource AccentButtonStyle}" AutomationProperties.Name="Enable extension"/>
+                                    <Button Content="Disable" Visibility="{x:Bind local:PluginStorePage.BoolToVisibility(CanDisable), Mode=OneTime}" Click="DisableButton_Click" Tag="{x:Bind}" AutomationProperties.Name="Disable extension"/>
+                                    <Button Content="Uninstall" Visibility="{x:Bind local:PluginStorePage.BoolToVisibility(CanUninstall), Mode=OneTime}" Click="UninstallButton_Click" Tag="{x:Bind}" AutomationProperties.Name="Uninstall extension"/>
                                 </StackPanel>
                             </StackPanel>
                         </Grid>
@@ -93,6 +95,6 @@
             </ListView.ItemTemplate>
         </ListView>
 
-        <InfoBar Grid.Row="3" Margin="12" VerticalAlignment="Top" IsOpen="{x:Bind ViewModel.IsEmpty, Mode=OneWay}" IsClosable="False" Severity="Informational" Title="No extensions found" Message="Try a different search or category. Installed extensions remain available even when the online catalog cannot be reached." AutomationProperties.LiveSetting="Polite" />
+        <InfoBar Grid.Row="4" Margin="12" VerticalAlignment="Top" IsOpen="{x:Bind ViewModel.IsEmpty, Mode=OneWay}" IsClosable="False" Severity="Informational" Title="No extensions found" Message="Try a different search or category. Installed extensions remain available even when the online catalog cannot be reached." AutomationProperties.LiveSetting="Polite" />
     </Grid>
 </Page>

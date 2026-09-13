@@ -1,54 +1,18 @@
-using System.Diagnostics;
-using System.Text.Json;
 using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
-using WinCare.Application.Commands;
 using WinCare.Domain.Activity;
-using WinCare.Domain.Commands;
-using WinCare.CommandCatalog.Models;
-using WinCare.Domain.Telemetry;
 
 namespace WinCare.App.ViewModels.Pages;
 
-public sealed record TelemetryInspectorMetrics(
-    long LatencyMicroseconds,
-    string TargetPathsSummary,
-    float CpuUsagePct = 0f,
-    ulong RamUsedBytes = 0,
-    ulong RamTotalBytes = 0,
-    ulong DiskFreeBytes = 0,
-    ulong DiskTotalBytes = 0,
-    bool NetActive = false,
-    bool CpuAvailable = false,
-    byte BatteryPercent = 255,
-    bool IsCharging = false,
-    bool HasBattery = false,
-    string PowerPlan = "Balanced",
-    string DisplayResolution = "Primary Display")
-{
-    public string LatencyFormatted => $"{LatencyMicroseconds} µs";
-    public string CpuFormatted => CpuAvailable ? $"{CpuUsagePct:F1}%" : "N/A";
-    public string RamFormatted => RamTotalBytes > 0
-        ? $"{RamUsedBytes / (1024.0 * 1024 * 1024):F1} GB / {RamTotalBytes / (1024.0 * 1024 * 1024):F1} GB"
-        : "N/A";
-    public string DiskFormatted => DiskTotalBytes > 0
-        ? $"{DiskFreeBytes / (1024.0 * 1024 * 1024):F1} GB free"
-        : "N/A";
-    public string NetFormatted => NetActive ? "Connected" : "Disconnected";
-    public string BatteryFormatted => HasBattery ? $"{BatteryPercent}% {(IsCharging ? "⚡" : string.Empty)}".Trim() : "AC Powered";
-    public string PowerAndBatterySummary => HasBattery ? $"{PowerPlan} · {BatteryFormatted}" : $"{PowerPlan} · AC Powered";
-}
-
+/// <summary>
+/// Presentation-only projection for the Home surface. Home summarizes existing evidence
+/// and routes users to dedicated workflows; it does not execute system commands itself.
+/// </summary>
 public sealed class HomePageViewModel : ObservableObject
 {
     private static readonly string[] QuickCheckCommandIds = ["system", "storage", "security", "wua-search"];
+    private static readonly TimeSpan EvidenceFreshnessWindow = TimeSpan.FromMinutes(30);
 
-    private readonly CommandDispatcher? _dispatcher;
-    private readonly Func<CommandDispatcher>? _dispatcherResolver;
-    private readonly INativeSystemProbeRepository? _probeRepository;
     private bool _isCompactLayout;
-    private bool _isInspectorExpanded;
-    private TelemetryInspectorMetrics? _telemetryMetrics;
     private string _recentActivityTitle = "No activity recorded";
     private string _recentActivitySummary = "Checks and reviewed changes will appear here.";
     private string _evidenceScoreText = "0/4";
@@ -60,104 +24,6 @@ public sealed class HomePageViewModel : ObservableObject
     private string _storageStatus = "Not checked";
     private string _updatesStatus = "Not checked";
     private string _activityStatus = "No activity yet";
-
-    // Curated Action 1: Quick Clean (cleaner-disk-pressure)
-    private bool _isCleaning;
-    private string _cleanStatusText = "Ready";
-    private ApprovedMutationPlan? _pendingCleanPlan;
-    private string _cleanDetailText = "Purge temporary files & free space";
-    private string _cleanActionText = "Clean Now";
-
-    // The risk badge on each curated card is derived dynamically from the live
-    // catalog definition to guarantee alignment with admission and preview contracts.
-    public string CleanRiskBadge { get; } = RiskBadgeFor("cleaner-disk-pressure");
-    public string CleanRiskBadgeBrushKey { get; } = RiskBadgeBrushKeyFor("cleaner-disk-pressure");
-    public string StartupRiskBadge { get; } = RiskBadgeFor("startup");
-    public string StartupRiskBadgeBrushKey { get; } = RiskBadgeBrushKeyFor("startup");
-    public string NetworkRiskBadge { get; } = RiskBadgeFor("network");
-    public string NetworkRiskBadgeBrushKey { get; } = RiskBadgeBrushKeyFor("network");
-
-    private static string RiskBadgeFor(string commandId)
-    {
-        CommandDefinition? definition = WinCare.CommandCatalog.CommandCatalog.Find(commandId);
-        if (definition is null) return "Cataloged";
-        if (definition.ReadOnly) return "Read-only";
-        return definition.RiskTier switch
-        {
-            RiskTier.Safe => "1-click change",
-            RiskTier.Moderate => "Moderate · preview + confirm",
-            _ => "High-impact · preview + confirm",
-        };
-    }
-
-    private static string RiskBadgeBrushKeyFor(string commandId)
-    {
-        CommandDefinition? definition = WinCare.CommandCatalog.CommandCatalog.Find(commandId);
-        if (definition is null || definition.ReadOnly) return "PillReadOnlyBgBrush";
-        return definition.RiskTier switch
-        {
-            RiskTier.Safe => "PillNotReadyBgBrush",
-            RiskTier.Moderate => "PillElevatedBgBrush",
-            _ => "PillMutatingBgBrush",
-        };
-    }
-
-    // Curated Action 2: Startup Boost (startup)
-    private bool _isAuditingStartup;
-    private string _startupStatusText = "Ready";
-    private string _startupDetailText = "Audit high-impact startup apps";
-    private string _startupActionText = "Analyze Startup";
-
-    // Curated Action 3: Network Refresh (network)
-    private bool _isRefreshingNetwork;
-    private string _networkStatusText = "Ready";
-    private string _networkDetailText = "Inspect adapters & network status";
-    private string _networkActionText = "Check Network";
-
-    // Dependency injection constructor accepting direct instances or factory resolvers.
-    public HomePageViewModel(
-        CommandDispatcher? dispatcher = null,
-        Func<CommandDispatcher>? dispatcherResolver = null,
-        INativeSystemProbeRepository? probeRepository = null)
-    {
-        _dispatcher = dispatcher;
-        _dispatcherResolver = dispatcherResolver;
-        _probeRepository = probeRepository;
-        QuickCleanCommand = new AsyncRelayCommand(QuickCleanAsync);
-        StartupBoostCommand = new AsyncRelayCommand(StartupBoostAsync);
-        NetworkRefreshCommand = new AsyncRelayCommand(NetworkRefreshAsync);
-        ToggleInspectorCommand = new AsyncRelayCommand(ToggleInspectorAsync);
-    }
-
-    private CommandDispatcher GetDispatcher()
-    {
-        if (_dispatcher is not null) return _dispatcher;
-        if (_dispatcherResolver is not null) return _dispatcherResolver();
-        throw new InvalidOperationException("CommandDispatcher was not provided to HomePageViewModel.");
-    }
-
-    public IAsyncRelayCommand QuickCleanCommand { get; }
-    public IAsyncRelayCommand StartupBoostCommand { get; }
-    public IAsyncRelayCommand NetworkRefreshCommand { get; }
-    public IAsyncRelayCommand ToggleInspectorCommand { get; }
-
-    public bool IsInspectorExpanded { get => _isInspectorExpanded; private set => SetProperty(ref _isInspectorExpanded, value); }
-    public TelemetryInspectorMetrics? TelemetryMetrics { get => _telemetryMetrics; private set => SetProperty(ref _telemetryMetrics, value); }
-
-    public bool IsCleaning { get => _isCleaning; private set => SetProperty(ref _isCleaning, value); }
-    public string CleanStatusText { get => _cleanStatusText; private set => SetProperty(ref _cleanStatusText, value); }
-    public string CleanDetailText { get => _cleanDetailText; private set => SetProperty(ref _cleanDetailText, value); }
-    public string CleanActionText { get => _cleanActionText; private set => SetProperty(ref _cleanActionText, value); }
-
-    public bool IsAuditingStartup { get => _isAuditingStartup; private set => SetProperty(ref _isAuditingStartup, value); }
-    public string StartupStatusText { get => _startupStatusText; private set => SetProperty(ref _startupStatusText, value); }
-    public string StartupDetailText { get => _startupDetailText; private set => SetProperty(ref _startupDetailText, value); }
-    public string StartupActionText { get => _startupActionText; private set => SetProperty(ref _startupActionText, value); }
-
-    public bool IsRefreshingNetwork { get => _isRefreshingNetwork; private set => SetProperty(ref _isRefreshingNetwork, value); }
-    public string NetworkStatusText { get => _networkStatusText; private set => SetProperty(ref _networkStatusText, value); }
-    public string NetworkDetailText { get => _networkDetailText; private set => SetProperty(ref _networkDetailText, value); }
-    public string NetworkActionText { get => _networkActionText; private set => SetProperty(ref _networkActionText, value); }
 
     public string RecentActivityTitle { get => _recentActivityTitle; private set => SetProperty(ref _recentActivityTitle, value); }
     public string RecentActivitySummary { get => _recentActivitySummary; private set => SetProperty(ref _recentActivitySummary, value); }
@@ -171,222 +37,13 @@ public sealed class HomePageViewModel : ObservableObject
     public string UpdatesStatus { get => _updatesStatus; private set => SetProperty(ref _updatesStatus, value); }
     public string ActivityStatus { get => _activityStatus; private set => SetProperty(ref _activityStatus, value); }
 
-    private async Task QuickCleanAsync(CancellationToken cancellationToken)
+    public bool IsCompactLayout
     {
-        if (IsCleaning) return;
-
-        // Quick clean collects cleanup targets for review, then confirms with the user before applying.
-        CommandDispatcher dispatcher = GetDispatcher();
-        IsCleaning = true;
-        try
-        {
-            if (_pendingCleanPlan is not { } plan)
-            {
-                CleanStatusText = "Reviewing…";
-                CleanDetailText = "Collecting cleanup targets for review…";
-                using JsonDocument doc = JsonDocument.Parse("{}");
-                CommandResult preview = await dispatcher.ExecuteAsync(
-                    CommandRequest.Preview("cleaner-disk-pressure", doc.RootElement),
-                    CommandExecutionOptions.Default,
-                    cancellationToken);
-
-                if (preview.Status != CommandResultStatus.Succeeded || preview.ReviewPlan is null)
-                {
-                    CleanStatusText = "Failed";
-                    CleanDetailText = string.IsNullOrWhiteSpace(preview.Message)
-                        ? "Cleanup preview could not be completed."
-                        : preview.Message;
-                    CleanActionText = "Try Again";
-                    return;
-                }
-
-                _pendingCleanPlan = preview.ReviewPlan;
-                CleanStatusText = "Review required";
-                CleanDetailText = string.IsNullOrWhiteSpace(preview.Message)
-                    ? "Review the resolved cleanup targets, then confirm to apply."
-                    : preview.Message;
-                CleanActionText = "Confirm Clean";
-                return;
-            }
-
-            CleanStatusText = "Cleaning…";
-            CleanDetailText = "Purging expired temporary files…";
-            CommandResult result = await dispatcher.ExecuteAsync(
-                CommandRequest.Execute("cleaner-disk-pressure", JsonSerializer.SerializeToElement(new { }), plan),
-                new CommandExecutionOptions(ReviewApproved: true),
-                cancellationToken);
-
-            _pendingCleanPlan = null; // single-use receipt consumed
-            CleanStatusText = result.Status == CommandResultStatus.Succeeded ? "Clean Complete" : "Failed";
-            CleanDetailText = !string.IsNullOrWhiteSpace(result.Message) ? result.Message : "Cleanup operation finished.";
-            CleanActionText = "Clean Again";
-        }
-        catch (Exception ex)
-        {
-            _pendingCleanPlan = null;
-            CleanStatusText = "Error";
-            CleanDetailText = ex.Message;
-        }
-        finally
-        {
-            IsCleaning = false;
-        }
+        get => _isCompactLayout;
+        private set => SetProperty(ref _isCompactLayout, value);
     }
 
-    private async Task StartupBoostAsync(CancellationToken cancellationToken)
-    {
-        if (IsAuditingStartup) return;
-        IsAuditingStartup = true;
-        StartupStatusText = "Analyzing…";
-        StartupDetailText = "Inspecting startup items…";
-
-        try
-        {
-            CommandDispatcher dispatcher = GetDispatcher();
-            CommandResult result = await dispatcher.ExecuteAsync(
-                CommandRequest.Preview("startup"),
-                CommandExecutionOptions.Default,
-                cancellationToken);
-
-            // Display inspected startup entries without changing system state.
-            if (result.Status == CommandResultStatus.Succeeded && result.Data?.ValueKind == JsonValueKind.Array)
-            {
-                var entries = result.Data.Value.EnumerateArray().ToList();
-                var names = entries
-                    .Select(entry => entry.TryGetProperty("name", out JsonElement name) ? name.GetString() : null)
-                    .Where(name => !string.IsNullOrWhiteSpace(name))
-                    .Take(3)
-                    .ToList();
-                string preview = names.Count > 0 ? $": {string.Join(", ", names)}{(entries.Count > 3 ? ", …" : string.Empty)}" : string.Empty;
-                StartupStatusText = $"{entries.Count} startup entries inspected";
-                StartupDetailText = $"Read-only inspection of Run keys and Startup folders{preview}. No entries were changed.";
-            }
-            else
-            {
-                StartupStatusText = result.Status == CommandResultStatus.Succeeded ? "Startup inspection complete" : "Failed";
-                StartupDetailText = !string.IsNullOrWhiteSpace(result.Message) ? result.Message : "Startup analysis completed.";
-            }
-
-            StartupActionText = "Re-analyze";
-        }
-        catch (Exception ex)
-        {
-            StartupStatusText = "Error";
-            StartupDetailText = ex.Message;
-        }
-        finally
-        {
-            IsAuditingStartup = false;
-        }
-    }
-
-    private async Task NetworkRefreshAsync(CancellationToken cancellationToken)
-    {
-        if (IsRefreshingNetwork) return;
-        IsRefreshingNetwork = true;
-        NetworkStatusText = "Checking…";
-        NetworkDetailText = "Querying network interfaces…";
-
-        try
-        {
-            CommandDispatcher dispatcher = GetDispatcher();
-            CommandResult result = await dispatcher.ExecuteAsync(
-                CommandRequest.Preview("network"),
-                CommandExecutionOptions.Default,
-                cancellationToken);
-
-            // Display observed adapter states.
-            if (result.Status == CommandResultStatus.Succeeded && result.Data?.ValueKind == JsonValueKind.Array)
-            {
-                var adapters = result.Data.Value.EnumerateArray().ToList();
-                int operational = adapters.Count(adapter =>
-                    adapter.TryGetProperty("status", out JsonElement status) &&
-                    string.Equals(status.GetString(), "Up", StringComparison.OrdinalIgnoreCase));
-                NetworkStatusText = $"{adapters.Count} network interfaces inspected · {operational} operational";
-                NetworkDetailText = "Read-only inspection of adapters, routes, and DNS configuration. Use the network tools for connectivity checks.";
-            }
-            else
-            {
-                NetworkStatusText = result.Status == CommandResultStatus.Succeeded ? "Network inspection complete" : "Failed";
-                NetworkDetailText = !string.IsNullOrWhiteSpace(result.Message) ? result.Message : "Network query completed.";
-            }
-
-            NetworkActionText = "Check Again";
-        }
-        catch (Exception ex)
-        {
-            NetworkStatusText = "Error";
-            NetworkDetailText = ex.Message;
-        }
-        finally
-        {
-            IsRefreshingNetwork = false;
-        }
-    }
-
-    private async Task ToggleInspectorAsync(CancellationToken cancellationToken)
-    {
-        if (IsInspectorExpanded)
-        {
-            IsInspectorExpanded = false;
-            return;
-        }
-
-        IsInspectorExpanded = true;
-
-        float cpu = 0f;
-        bool cpuAvailable = false;
-        ulong ramUsed = 0, ramTotal = 0, diskFree = 0, diskTotal = 0;
-        bool netActive = false;
-
-        byte batteryPct = 255;
-        bool isCharging = false;
-        bool hasBattery = false;
-        string powerPlan = "Balanced";
-        string displayRes = "Primary Display";
-
-        long start = Stopwatch.GetTimestamp();
-        if (_probeRepository is not null)
-        {
-            try
-            {
-                SystemSnapshot snapshot = await _probeRepository.GetSystemSnapshotAsync(cancellationToken);
-                cpu = snapshot.CpuUsagePct;
-                cpuAvailable = true;
-                ramUsed = snapshot.RamUsedBytes;
-                ramTotal = snapshot.RamTotalBytes;
-                diskFree = snapshot.DiskFreeBytes;
-                diskTotal = snapshot.DiskTotalBytes;
-                netActive = snapshot.NetActive;
-                batteryPct = snapshot.BatteryPercent;
-                isCharging = snapshot.IsCharging;
-                hasBattery = snapshot.HasBattery;
-                powerPlan = snapshot.PowerPlan;
-                displayRes = snapshot.DisplayResolution;
-            }
-            catch
-            {
-                // Keep metrics unavailable on probe fault rather than inventing live values.
-            }
-        }
-        long latencyUs = (long)Stopwatch.GetElapsedTime(start).TotalMicroseconds;
-
-        TelemetryMetrics = new TelemetryInspectorMetrics(
-            LatencyMicroseconds: latencyUs,
-            TargetPathsSummary: "%TEMP% / LocalAppData\\Temp (expired files)",
-            CpuUsagePct: cpu,
-            RamUsedBytes: ramUsed,
-            RamTotalBytes: ramTotal,
-            DiskFreeBytes: diskFree,
-            DiskTotalBytes: diskTotal,
-            NetActive: netActive,
-            CpuAvailable: cpuAvailable,
-            BatteryPercent: batteryPct,
-            IsCharging: isCharging,
-            HasBattery: hasBattery,
-            PowerPlan: powerPlan,
-            DisplayResolution: displayRes);
-    }
+    public void SetCompactLayout(bool isCompact) => IsCompactLayout = isCompact;
 
     public void RefreshActivity(IReadOnlyList<ActivityRecord> records)
     {
@@ -410,8 +67,7 @@ public sealed class HomePageViewModel : ObservableObject
         StorageStatus = StatusFor(latestByCommand, "storage");
         SecurityStatus = StatusFor(latestByCommand, "security");
         UpdatesStatus = StatusFor(latestByCommand, "wua-search");
-        // The current quick check's Windows/hardware probe includes processor and memory evidence.
-        // Label this as evidence collection rather than a performance-health diagnosis.
+        // The system probe contains the processor and memory evidence surfaced in the quick check.
         PerformanceStatus = StatusFor(latestByCommand, "system");
 
         int collected = QuickCheckCommandIds.Count(commandId =>
@@ -426,32 +82,19 @@ public sealed class HomePageViewModel : ObservableObject
         {
             DateTimeOffset newestCheck = latestByCommand.Values.Max(record => record.StartedAt);
             EvidenceTitle = "Your latest check is ready";
-            EvidenceSummary = $"All four safe checks finished. Last checked: {newestCheck.ToLocalTime():g}. Review the details before making changes.";
+            EvidenceSummary = $"All four read-only checks finished. Last checked: {newestCheck.ToLocalTime():g}. Review the details before making changes.";
         }
         else if (latestByCommand.Count > 0)
         {
             EvidenceTitle = needsReview > 0 ? "Some checks need your attention" : "Your PC snapshot is taking shape";
-            EvidenceSummary = $"{collected} of {QuickCheckCommandIds.Length} safe checks finished. Open a result to see what WinCare found.";
+            EvidenceSummary = $"{collected} of {QuickCheckCommandIds.Length} read-only checks finished. Open a result to see what WinCare found.";
         }
         else
         {
             EvidenceTitle = "Start with a fresh PC snapshot";
-            EvidenceSummary = "Run a safe check to see what is happening before WinCare suggests a next step.";
+            EvidenceSummary = "Run a read-only check to see what is happening before WinCare suggests a next step.";
         }
     }
-
-    public bool IsCompactLayout
-    {
-        get => _isCompactLayout;
-        private set => SetProperty(ref _isCompactLayout, value);
-    }
-
-    public void SetCompactLayout(bool isCompact) => IsCompactLayout = isCompact;
-
-    /// <summary>
-    /// Activity history older than this window is treated as stale.
-    /// </summary>
-    private static readonly TimeSpan EvidenceFreshnessWindow = TimeSpan.FromMinutes(30);
 
     private static string StatusFor(IReadOnlyDictionary<string, ActivityRecord> latestByCommand, string commandId)
     {
@@ -460,8 +103,7 @@ public sealed class HomePageViewModel : ObservableObject
             return "Not checked";
         }
 
-        if (record.State == ActivityState.Completed &&
-            DateTimeOffset.UtcNow - record.StartedAt > EvidenceFreshnessWindow)
+        if (record.State == ActivityState.Completed && DateTimeOffset.UtcNow - record.StartedAt > EvidenceFreshnessWindow)
         {
             return $"Stale evidence ({record.StartedAt.ToLocalTime():HH:mm})";
         }

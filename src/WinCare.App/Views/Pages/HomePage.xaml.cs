@@ -15,7 +15,7 @@ public sealed partial class HomePage : Page
 
     public HomePage()
     {
-        ViewModel = new HomePageViewModel(dispatcherResolver: () => AppRuntime.Current.Dispatcher, probeRepository: AppRuntime.Current.SystemProbe);
+        ViewModel = new HomePageViewModel();
         InitializeComponent();
     }
 
@@ -69,14 +69,14 @@ public sealed partial class HomePage : Page
     private void BrowseToolsButton_Click(object sender, RoutedEventArgs e) => NavigateTo("all-tools");
     private void OpenExtensions_Click(object sender, RoutedEventArgs e) => NavigateTo("plugin-store");
     private void OpenTroubleshoot_Click(object sender, RoutedEventArgs e) => NavigateTo("ai-doctor");
-    private void OpenCleanup_Click(object sender, RoutedEventArgs e) => PageNavigation.NavigateTo(this, "system-care", 0);
-    private void OpenStartup_Click(object sender, RoutedEventArgs e) => PageNavigation.NavigateTo(this, "system-care", 2);
-    private void OpenNetwork_Click(object sender, RoutedEventArgs e) => PageNavigation.NavigateTo(this, "system-care", 3);
+    private void OpenCleanup_Click(object sender, RoutedEventArgs e) => PageNavigation.NavigateToSection(this, "system-care", "Clean up");
+    private void OpenStartup_Click(object sender, RoutedEventArgs e) => PageNavigation.NavigateToSection(this, "system-care", "Apps & startup");
+    private void OpenNetwork_Click(object sender, RoutedEventArgs e) => PageNavigation.NavigateToSection(this, "system-care", "Network & updates");
     private void NavCategory_System_Click(object sender, RoutedEventArgs e) => NavigateTo("checkup");
-    private void NavCategory_Security_Click(object sender, RoutedEventArgs e) => PageNavigation.NavigateTo(this, "security", 0);
-    private void NavCategory_Performance_Click(object sender, RoutedEventArgs e) => PageNavigation.NavigateTo(this, "system-care", 1);
-    private void NavCategory_Storage_Click(object sender, RoutedEventArgs e) => PageNavigation.NavigateTo(this, "system-care", 0);
-    private void NavCategory_Updates_Click(object sender, RoutedEventArgs e) => PageNavigation.NavigateTo(this, "system-care", 3);
+    private void NavCategory_Security_Click(object sender, RoutedEventArgs e) => PageNavigation.NavigateToSection(this, "security", "Status");
+    private void NavCategory_Performance_Click(object sender, RoutedEventArgs e) => PageNavigation.NavigateToSection(this, "system-care", "Performance");
+    private void NavCategory_Storage_Click(object sender, RoutedEventArgs e) => PageNavigation.NavigateToSection(this, "system-care", "Clean up");
+    private void NavCategory_Updates_Click(object sender, RoutedEventArgs e) => PageNavigation.NavigateToSection(this, "system-care", "Network & updates");
     private void NavigateTo(string key) => PageNavigation.NavigateTo(this, key);
 
     private void Page_SizeChanged(object sender, SizeChangedEventArgs e)

@@ -1,16 +1,10 @@
 namespace WinCare.App.ViewModels.Pages;
 
-using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
-using System.Threading;
-using System.Threading.Tasks;
 using WinCare.App.Services;
-using WinCare.Application.Commands;
 using WinCare.Application.Diagnostics;
-using WinCare.Application.Tools;
-using WinCare.Domain.Commands;
 
 public sealed record DoctorChatMessage(
     string Sender,
@@ -20,10 +14,13 @@ public sealed record DoctorChatMessage(
     DoctorActionPlan? ActionPlan = null
 );
 
+/// <summary>
+/// Owns local diagnostic conversation state only. Suggested actions are handed to the
+/// canonical Power tools inspector, which owns preview, approval, execution, and receipts.
+/// </summary>
 public sealed class AiDoctorPageViewModel : INotifyPropertyChanged
 {
     private readonly IIntentTranslator _intentTranslator;
-    private readonly ICommandDispatcher _commandDispatcher;
     private string _userPrompt = string.Empty;
     private bool _isAnalyzing;
     private DoctorActionPlan? _currentPlan;
@@ -37,11 +34,9 @@ public sealed class AiDoctorPageViewModel : INotifyPropertyChanged
         get => _userPrompt;
         set
         {
-            if (_userPrompt != value)
-            {
-                _userPrompt = value;
-                OnPropertyChanged();
-            }
+            if (_userPrompt == value) return;
+            _userPrompt = value;
+            OnPropertyChanged();
         }
     }
 
@@ -50,11 +45,9 @@ public sealed class AiDoctorPageViewModel : INotifyPropertyChanged
         get => _isAnalyzing;
         private set
         {
-            if (_isAnalyzing != value)
-            {
-                _isAnalyzing = value;
-                OnPropertyChanged();
-            }
+            if (_isAnalyzing == value) return;
+            _isAnalyzing = value;
+            OnPropertyChanged();
         }
     }
 
@@ -63,50 +56,43 @@ public sealed class AiDoctorPageViewModel : INotifyPropertyChanged
         get => _currentPlan;
         private set
         {
-            if (_currentPlan != value)
-            {
-                _currentPlan = value;
-                OnPropertyChanged();
-            }
+            if (_currentPlan == value) return;
+            _currentPlan = value;
+            OnPropertyChanged();
         }
     }
 
-    public AiDoctorPageViewModel(
-        IIntentTranslator? intentTranslator = null,
-        ICommandDispatcher? commandDispatcher = null)
+    public AiDoctorPageViewModel(IIntentTranslator? intentTranslator = null)
     {
         var inferenceEngine = new RuleBasedIntentInferenceEngine();
-
         _intentTranslator = intentTranslator ?? new IntentTranslator(inferenceEngine, AppRuntime.Current.ToolCatalog);
-        _commandDispatcher = commandDispatcher ?? AppRuntime.Current.Dispatcher;
 
         Messages.Add(new DoctorChatMessage(
             "WinCare",
-            "I am WinCare’s on-device rule-based diagnostic assistant. Describe a Windows problem (for example storage pressure, high memory use, lag, or network latency) and I will collect evidence and propose reviewable diagnostic steps.",
+            "Describe a Windows problem such as storage pressure, high memory use, lag, or network trouble. WinCare uses local rules and measured evidence to suggest relevant checks and reviewable next steps.",
             IsUser: false,
-            DateTime.UtcNow
-        ));
+            DateTime.UtcNow));
     }
 
     public async Task SubmitPromptAsync(CancellationToken cancellationToken = default)
     {
-        var prompt = UserPrompt?.Trim();
-        if (string.IsNullOrWhiteSpace(prompt) || IsAnalyzing) return;
+        string prompt = UserPrompt?.Trim() ?? string.Empty;
+        if (prompt.Length == 0 || IsAnalyzing) return;
 
         UserPrompt = string.Empty;
-        Messages.Add(new DoctorChatMessage("User", prompt, IsUser: true, DateTime.UtcNow));
+        Messages.Add(new DoctorChatMessage("You", prompt, IsUser: true, DateTime.UtcNow));
 
         IsAnalyzing = true;
         CurrentPlan = null;
         try
         {
-            var plan = await _intentTranslator.TranslateAsync(prompt, cancellationToken);
+            DoctorActionPlan plan = await _intentTranslator.TranslateAsync(prompt, cancellationToken);
             CurrentPlan = plan;
 
-            var responseText = $"Telemetry-assisted diagnostic plan\n{plan.DiagnosisSummary}\n\n" +
-                $"Measured probes: {plan.MeasuredEvidence.Count} live telemetry probes collected.\n" +
-                $"Investigation scope: {plan.Findings.Count} diagnostic findings identified.\n" +
-                $"Recommended steps: {plan.ProposedSteps.Count} steps available. Review measured evidence and run read-only diagnostic checks before any mutation.";
+            string responseText = $"{plan.DiagnosisSummary}\n\n" +
+                $"Evidence collected: {plan.MeasuredEvidence.Count} measured probe{(plan.MeasuredEvidence.Count == 1 ? string.Empty : "s")}.\n" +
+                $"Findings: {plan.Findings.Count}. Suggested next steps: {plan.ProposedSteps.Count}.\n" +
+                "Open a suggested step to review it in Power tools before anything can change Windows.";
             Messages.Add(new DoctorChatMessage("WinCare", responseText, IsUser: false, DateTime.UtcNow, plan));
         }
         catch (OperationCanceledException)
@@ -118,10 +104,9 @@ public sealed class AiDoctorPageViewModel : INotifyPropertyChanged
             System.Diagnostics.Debug.WriteLine($"[Troubleshoot] Analysis fault: {ex}");
             Messages.Add(new DoctorChatMessage(
                 "WinCare",
-                "Diagnosis could not be completed. No change was applied by this diagnostic request. Review Activity or the WinCare logs if the problem continues.",
+                "Diagnosis could not be completed. No change was applied. Review Activity or the WinCare logs if the problem continues.",
                 IsUser: false,
-                DateTime.UtcNow
-            ));
+                DateTime.UtcNow));
         }
         finally
         {
@@ -129,42 +114,6 @@ public sealed class AiDoctorPageViewModel : INotifyPropertyChanged
         }
     }
 
-    public Task<CommandResult> PreviewStepAsync(ProposedActionStep step, CancellationToken cancellationToken = default)
-    {
-        ArgumentNullException.ThrowIfNull(step);
-        var parameters = SerializeStepParameters(step);
-        return _commandDispatcher.ExecuteAsync(
-            CommandRequest.Preview(step.CommandId, parameters),
-            CommandExecutionOptions.Default,
-            cancellationToken);
-    }
-
-    public Task<CommandResult> ApplyPreviewedStepAsync(
-        ProposedActionStep step,
-        ApprovedMutationPlan reviewPlan,
-        CancellationToken cancellationToken = default)
-    {
-        ArgumentNullException.ThrowIfNull(step);
-        ArgumentNullException.ThrowIfNull(reviewPlan);
-        if (step.IsReadOnly)
-        {
-            throw new InvalidOperationException("Read-only diagnostic steps do not require an apply phase.");
-        }
-
-        var parameters = SerializeStepParameters(step);
-        return _commandDispatcher.ExecuteAsync(
-            CommandRequest.Execute(step.CommandId, parameters, reviewPlan),
-            new CommandExecutionOptions(ReviewApproved: true),
-            cancellationToken);
-    }
-
-    private static System.Text.Json.JsonElement SerializeStepParameters(ProposedActionStep step) =>
-        step.Parameters is { Count: > 0 }
-            ? System.Text.Json.JsonSerializer.SerializeToElement(step.Parameters)
-            : System.Text.Json.JsonSerializer.SerializeToElement(new { });
-
-    private void OnPropertyChanged([CallerMemberName] string? propertyName = null)
-    {
+    private void OnPropertyChanged([CallerMemberName] string? propertyName = null) =>
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-    }
 }

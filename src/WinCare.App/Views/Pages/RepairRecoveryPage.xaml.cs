@@ -33,7 +33,8 @@ public sealed partial class RepairRecoveryPage : Page
     protected override void OnNavigatedTo(Microsoft.UI.Xaml.Navigation.NavigationEventArgs e)
     {
         base.OnNavigatedTo(e);
-        if (e.Parameter is int sectionIndex && sectionIndex >= 0 && sectionIndex < SectionSelector.Items.Count)
+        int sectionIndex = PageNavigation.ResolveSectionIndex(SectionSelector, e.Parameter);
+        if (sectionIndex >= 0)
         {
             SectionSelector.SelectedItem = SectionSelector.Items[sectionIndex] as SelectorBarItem;
             ViewModel.SelectSection(sectionIndex);
@@ -41,5 +42,4 @@ public sealed partial class RepairRecoveryPage : Page
         if (!ViewModel.IsPlaybookSection)
             ViewModel.ShowTools(WinCare.App.Services.AppRuntime.Current.ToolCatalog, ViewModel.ToolSelection, WinCare.App.Services.AppRuntime.Current.Journal);
     }
-
 }
