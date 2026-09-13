@@ -1,23 +1,47 @@
 # Final validation — product / UX finalization
 
-This artifact contains the completed product-level WinCare restructuring and UI/UX implementation pass described in `docs/PRODUCT-UX-FINALIZATION.md`.
+This branch contains the task-first WinCare product restructuring plus a second deeper pass across visual hierarchy, frontend behavior, backend/frontend parity, design-system debt, navigation architecture, documentation truth, and regression coverage. See `docs/PRODUCT-UX-FINALIZATION.md` for the implementation summary.
 
-## Validation results
+## Automated validation contract
 
-- Native repository test suite: **98 / 98 passed** via `python3 -m unittest discover -s tests/native -p 'test_*.py'`.
-- Native foundation gate: **passed** via `python3 tools/verify_native_foundation.py`.
-- Theme/token verification: **passed** via `python3 tools/verify_visual_tokens.py`.
-- Status-pill contrast verification: **8 / 8 pairs pass WCAG 2.1 AA (4.5:1)** via `python3 tools/verify_pill_contrast.py`.
-- Structured-file parse: **32 XML/XAML/RESW/project/manifest files** and **64 JSON files** parsed successfully.
+The authoritative merge evidence is the GitHub Actions **Native WinUI** workflow for the exact PR head. It gates the source with repository tests and then builds the Windows/native deliverables for the supported architectures.
+
+The final source is expected to pass these repository-level gates on every head update:
+
+- native/Python repository regression suite;
+- `tools/verify_native_foundation.py`;
+- visual-token verification;
+- status-pill WCAG 2.1 AA contrast verification;
+- XML/XAML/RESW/project/manifest and JSON parsing checks;
+- command-catalog uniqueness and migration/finalization checks;
+- XAML/code-behind event-wiring checks;
+- x64 and ARM64 native/managed build and packaging jobs.
+
+Hard-coded historical test counts are intentionally not used here because the second pass adds regression tests as the product contract evolves. The workflow result for the exact commit is the source of truth.
+
+## Second-pass regression coverage
+
+The deeper pass adds explicit checks for:
+
+- Home remaining presentation-only and exposing one primary Checkup CTA;
+- Home evidence rows matching the four actual Checkup evidence sources rather than duplicating system evidence as “Performance”;
+- Troubleshoot handing suggested commands to the canonical Power tools execution/review surface;
+- Power tools using named controls instead of visual-tree/order probing;
+- Power tools exposing Safe / Moderate / Destructive product tiers instead of raw backend risk values;
+- extension catalog trust/availability being visible in the frontend;
+- Checkup preserving follow-up actions in both Quick check and Results projections;
+- named care-section navigation and shell/PageService/navigation-catalog route parity;
+- removal of abandoned instrument-panel styles/resources;
+- documentation identifying stale runtime screenshots as historical rather than current UI evidence.
+
+## Product/data invariants retained
+
 - Command catalog: **269 commands / 269 unique IDs**.
-- Exact care taxonomy validated against `src/WinCare.CommandCatalog/Data/commands.json`:
-  - System care: 117 — Clean up 11, Performance 59, Apps & startup 12, Network & updates 26, Routines 8, Maintenance 1.
-  - Security: 34 — Status 20, Protection 2, Privacy 2, Hardening 10.
-  - Repair & recovery: 25 — Repair 18, Restore 1, Backup 2, Reset & media 4.
-- XAML/code-behind event wiring: **65 handlers checked, all resolved**.
-- Modified C# structural sanity: **31 changed/new C# files** checked for balanced delimiters/comments/strings.
-- Checkup mutation guard: no approved/apply command path remains in Checkup; findings hand off to the relevant care surface.
+- Care pages continue to derive from exact command-catalog Area/Section taxonomy.
+- Checkup remains read-only and routes findings to care surfaces.
+- Raw catalog risk and command IDs remain available as advanced technical detail without defining the normal product taxonomy.
+- The dispatcher remains authoritative for admission, preview/approval semantics, execution, results, and Activity evidence.
 
-## Environment limitation
+## Live Windows visual-validation limitation
 
-This container does not provide the .NET SDK, MSBuild, C# compiler, Windows App SDK runtime, or a Windows desktop session. Therefore a local WinUI compile, launch, and final rendered Windows visual pass could not be executed here. The source-level/native contract tests and static validation above are green; `docs/Windows-Validation.md` remains the repository's Windows runtime validation procedure.
+The interactive agent environment used for this review does not provide a Windows desktop session, so it cannot truthfully certify the final rendered UI, Narrator output, keyboard focus order, High Contrast appearance, text/display scaling, or new runtime screenshots. GitHub Actions can validate Windows compilation/build/package behavior, but a fresh installed-candidate visual/accessibility pass is still required. Follow `docs/Windows-Validation.md` and recapture the runtime screenshots after the current PR is packaged.

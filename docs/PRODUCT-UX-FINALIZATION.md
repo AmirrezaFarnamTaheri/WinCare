@@ -1,52 +1,87 @@
 # Product / UX finalization
 
-This pass converts the product-level audit into implementation changes while preserving WinCare's existing dispatcher, command contracts, and platform integrations.
+This document records the task-first product restructuring and the deeper second product/UI/UX/frontend-parity pass applied to WinCare. The work preserves the dispatcher, command contracts, Windows integration, and risk/admission semantics while removing duplicated product logic and presentation debt.
 
 ## Product architecture
 
 - Primary navigation is organized around user jobs: Home, Checkup, System care, Security, Repair & recovery, Power tools, and Activity.
-- Extensions, Troubleshoot, Settings, and Help are secondary routes. About remains reachable from Help and global search without occupying permanent navigation.
-- Home is recommendation-led rather than telemetry-led. It offers Checkup, common care entry points, recent activity, system-area status, and explicit paths to advanced capabilities.
-- “AI Doctor” is presented as **Troubleshoot**, accurately reflecting the shipped local rule-based inference engine.
-- “All Tools” is presented as **Power tools**, an advanced surface rather than the app's de facto information architecture.
+- Extensions, Troubleshoot, Settings, and Help are secondary routes. About remains reachable without occupying permanent navigation.
+- Home is a presentation-only evidence and routing surface. It no longer owns command dispatch, native probing, cleanup, startup, or network mutation workflows.
+- Troubleshoot owns local symptom-to-evidence conversation state only. Suggested commands open in the canonical Power tools inspector; Troubleshoot no longer maintains a second preview/apply pipeline.
+- Power tools remains the single advanced review/execution surface for typed command parameters, risk-tier flow, result evidence, and advanced technical details.
+- Care-page deep links use stable section names rather than positional tab numbers. Integer section parameters remain only as a compatibility path for older callers.
+- A regression contract keeps `NavigationCatalog`, `PageService`, and the visible shell route set aligned.
 
 ## Capability discoverability
 
 - Ctrl+K searches routes, all 269 native tools, discovered extensions, and help topics.
-- Power tools has exact Area and Section filters.
+- Power tools has exact Area and Section filters, plus a product-facing safety-tier filter.
+- The safety-tier filter exposes **Safe / Moderate / Destructive**, matching the domain admission model. Raw catalog values such as Low/High/Critical remain implementation/advanced-detail data rather than primary UX taxonomy.
 - Categories is a real Area/Section browser rather than a different sort of the same table.
 - Favorites, Recent, and Care plans are distinct modes.
-- Normal tool rows show user-relevant task, category, impact, administrator requirement, and restart expectation. Command IDs and migration metadata are confined to Advanced details.
+- Normal tool rows show user-relevant task, category, admission tier, administrator requirement, and restart expectation. Command IDs, raw catalog risk, and migration metadata are confined to Advanced details.
 - Extensions can be reached from the shell, Home, Help, and global search.
 
-## Correct care taxonomy
+## Correct care and evidence taxonomy
 
-System care, Security, and Repair & recovery no longer use fuzzy text searches to define product tabs. Each tab projects the command catalog through exact `Area` + `Section` values. This prevents commands from unrelated areas from leaking into a tab simply because their title or summary shares a word.
+System care, Security, and Repair & recovery project the command catalog through exact `Area` + `Section` values rather than fuzzy text matches. This prevents unrelated commands from leaking into a tab because their title or summary happens to share a word.
 
-System care combines the catalog's `Routines` and `Maintenance` sections intentionally under **Routines & maintenance**. Repair & recovery removes the misleading empty **Change records** tab and keeps **Portable playbooks** as its own workflow.
+System care intentionally combines the catalog's `Routines` and `Maintenance` sections under **Routines & maintenance**. Repair & recovery keeps **Portable playbooks** as its own workflow and does not present an empty generic change-records tab.
+
+Home now mirrors the four read-only Checkup evidence sources one-to-one: Windows & hardware, Storage, Security, and Windows Update. It no longer invents a separate “Performance” status from the generic system-information probe.
 
 ## Checkup boundary
 
-Checkup is now a read-only diagnostic surface end to end. Storage, update, and security findings hand the user to the relevant care section; Checkup no longer performs cleanup behind a preview internally. Its UI reports the status of checked areas rather than a synthetic machine-health score.
+Checkup is read-only end to end. System/storage/security probes run concurrently with bounded concurrency; Windows Update readiness continues in the background so it cannot block the first evidence summary. Findings hand off to named care sections instead of applying maintenance inside Checkup.
+
+The Results projection preserves the same follow-up actions as the quick-check rows, including background Windows Update findings and security findings. The UI reports checked-area status rather than a synthetic whole-machine health score.
+
+## Extension trust parity
+
+The Extensions view now exposes the catalog trust/availability state already modeled by the backend. The detail dialog explains that installation is available only when current catalog and package trust checks pass; otherwise the package remains browse-only. User-facing copy consistently says “extension,” while internal plugin type names remain implementation details.
 
 ## Safety presentation
 
-The dispatcher and risk/admission protections are unchanged. The interface no longer repeats the safety architecture as the product's primary message. Normal pages explain only the information needed for the current action; detailed review, approval, evidence, JSON parameters, and technical identifiers remain available where they are relevant.
+The dispatcher and risk/admission protections are unchanged. Product copy is aligned with the actual domain policy:
 
-## Visual hierarchy
+- **Safe** — direct read-only or bounded low-risk execution.
+- **Moderate** — reviewed/confirmed mutation flow.
+- **Destructive** — preview plus explicit approval of the exact plan.
 
-- Home and Help use flatter, task-oriented sections with fewer nested enclosures.
+The UI no longer claims that every mutation necessarily uses the destructive two-phase flow. Technical catalog risk remains visible in Advanced details for engineering/diagnostic use.
+
+## Visual hierarchy and de-slop pass
+
+- Home has one primary Checkup call to action, not competing duplicate CTAs.
+- Home compact layout uses real grid rows instead of moving controls into undefined rows.
+- Home/Help use flatter task-oriented sections with fewer nested enclosures.
 - Checkup uses a simple read-only hero, tabs before content, and direct findings.
-- Power tools removes migration/status decoration from everyday rows and reserves technical detail for the inspector.
-- Typography and theme resources remain native WinUI/Fluent; semantic state colors keep their existing meaning.
+- Power tools uses named controls and declarative parameter placement rather than visual-tree/order discovery.
+- Extension cards are less vertically bloated and make trust/availability visible before action.
+- The abandoned instrument-panel resource family (DoubleBezel/HUD/Island/Glow styles and brushes) has been removed from the active design system.
+- Typography, semantic status colors, native focus behavior, high-contrast resources, and shared Fluent/WinUI controls remain intact.
 
-## Validation performed in this artifact
+## Documentation and screenshot truth
 
-- The native repository suite passes **98 / 98 tests**, and `python3 tools/verify_native_foundation.py` passes after the product contract was updated for the new labels/tabs/columns.
-- Visual token verification passes, and all 8 status-pill foreground/background pairs meet WCAG 2.1 AA contrast.
-- All XML/XAML/RESW/project/manifest files are parsed during final static validation.
-- The command catalog remains 269 unique native commands and retains the frozen 259-command legacy baseline required by migration verification.
-- Care-area mappings are validated directly against `commands.json`.
-- Modified C# files receive delimiter/symbol sanity checks.
+The checked-in `runtime-dashboard.png` and `runtime-checkup.png` are explicitly versioned as historical v2.5.0-rc5 runtime evidence. They are not presented as current-source screenshots after this redesign. Current source/XAML is authoritative until a new installed candidate is captured and visually reviewed.
 
-A .NET SDK is not installed in the artifact environment, so the final ZIP cannot claim a local Windows/WinUI compile or runtime visual pass. `docs/Windows-Validation.md` remains the authoritative Windows runtime validation procedure.
+## Validation contract
+
+The PR is gated by the repository's native verification job plus x64/ARM64 Windows build/package jobs. The second pass adds source-level regression checks for:
+
+- canonical Troubleshoot → Power tools execution handoff;
+- no Home command ownership;
+- stable named care-section routing;
+- Power tools accessibility IDs and removal of visual-tree-order discovery;
+- visible extension trust state;
+- product-facing safety-tier filtering;
+- shell/PageService/navigation-catalog route parity;
+- Checkup follow-up action parity;
+- removal of legacy instrument-panel resources;
+- documentation/screenshot truthfulness.
+
+Visual-token and status-pill contrast verification remain part of repository validation, and the command catalog remains 269 unique native commands.
+
+## Remaining live-Windows evidence
+
+Automated Windows builds can establish compile/package correctness, but they do not replace a rendered human/accessibility pass. A final installed-candidate review should still cover Narrator, keyboard traversal, High Contrast, narrow-window behavior, 100–225% text/display scaling, dialogs, and fresh runtime screenshots. `docs/Windows-Validation.md` remains the authoritative procedure.

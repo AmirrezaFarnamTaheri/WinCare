@@ -32,7 +32,7 @@ public sealed class HomePageViewModelTests
     }
 
     [Fact]
-    public void Home_projects_checkup_coverage_without_owning_command_execution()
+    public void Home_projects_exact_checkup_coverage_without_duplicate_status_signals()
     {
         DateTimeOffset now = DateTimeOffset.UtcNow;
         var vm = new HomePageViewModel();
@@ -46,7 +46,6 @@ public sealed class HomePageViewModelTests
         Assert.Equal("4/4", vm.EvidenceScoreText);
         Assert.Equal("Your latest check is ready", vm.EvidenceTitle);
         Assert.Equal("Evidence collected", vm.SystemStatus);
-        Assert.Equal("Evidence collected", vm.PerformanceStatus);
         Assert.Equal("Evidence collected", vm.StorageStatus);
         Assert.Equal("Evidence collected", vm.SecurityStatus);
         Assert.Equal("Evidence collected", vm.UpdatesStatus);

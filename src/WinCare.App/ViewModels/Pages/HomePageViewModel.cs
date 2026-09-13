@@ -20,7 +20,6 @@ public sealed class HomePageViewModel : ObservableObject
     private string _evidenceSummary = "Run a read-only check to collect current evidence.";
     private string _systemStatus = "Not checked";
     private string _securityStatus = "Not checked";
-    private string _performanceStatus = "Not checked";
     private string _storageStatus = "Not checked";
     private string _updatesStatus = "Not checked";
     private string _activityStatus = "No activity yet";
@@ -32,7 +31,6 @@ public sealed class HomePageViewModel : ObservableObject
     public string EvidenceSummary { get => _evidenceSummary; private set => SetProperty(ref _evidenceSummary, value); }
     public string SystemStatus { get => _systemStatus; private set => SetProperty(ref _systemStatus, value); }
     public string SecurityStatus { get => _securityStatus; private set => SetProperty(ref _securityStatus, value); }
-    public string PerformanceStatus { get => _performanceStatus; private set => SetProperty(ref _performanceStatus, value); }
     public string StorageStatus { get => _storageStatus; private set => SetProperty(ref _storageStatus, value); }
     public string UpdatesStatus { get => _updatesStatus; private set => SetProperty(ref _updatesStatus, value); }
     public string ActivityStatus { get => _activityStatus; private set => SetProperty(ref _activityStatus, value); }
@@ -67,8 +65,6 @@ public sealed class HomePageViewModel : ObservableObject
         StorageStatus = StatusFor(latestByCommand, "storage");
         SecurityStatus = StatusFor(latestByCommand, "security");
         UpdatesStatus = StatusFor(latestByCommand, "wua-search");
-        // The system probe contains the processor and memory evidence surfaced in the quick check.
-        PerformanceStatus = StatusFor(latestByCommand, "system");
 
         int collected = QuickCheckCommandIds.Count(commandId =>
             latestByCommand.TryGetValue(commandId, out ActivityRecord? record) &&
@@ -99,14 +95,10 @@ public sealed class HomePageViewModel : ObservableObject
     private static string StatusFor(IReadOnlyDictionary<string, ActivityRecord> latestByCommand, string commandId)
     {
         if (!latestByCommand.TryGetValue(commandId, out ActivityRecord? record))
-        {
             return "Not checked";
-        }
 
         if (record.State == ActivityState.Completed && DateTimeOffset.UtcNow - record.StartedAt > EvidenceFreshnessWindow)
-        {
             return $"Stale evidence ({record.StartedAt.ToLocalTime():HH:mm})";
-        }
 
         return record.State switch
         {
