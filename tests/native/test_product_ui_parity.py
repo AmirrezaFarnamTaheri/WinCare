@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 import unittest
 from pathlib import Path
 
@@ -55,16 +56,32 @@ class ProductUiParityTests(unittest.TestCase):
         self.assertNotIn("OfType<ComboBox>", code_behind)
         self.assertNotIn("ToolSearchBox.Parent as Grid", code_behind)
 
+    def test_power_tools_uses_product_safety_tiers_instead_of_raw_catalog_risk(self) -> None:
+        options = self.read("src/WinCare.App/ViewModels/Pages/FilterOption.cs")
+        view_model = self.read("src/WinCare.App/ViewModels/Pages/AllToolsPageViewModel.cs")
+        row = self.read("src/WinCare.App/ViewModels/Pages/ToolRowViewModel.cs")
+
+        self.assertIn("RiskTier? Value", options)
+        for label, tier in (("Safe", "Safe"), ("Moderate", "Moderate"), ("Destructive", "Destructive")):
+            self.assertIn(f'new RiskFilterOption("{label}", RiskTier.{tier})', view_model)
+        for leaked in ("CommandRisk.ReadOnly", "CommandRisk.Low", "CommandRisk.High", "CommandRisk.Critical"):
+            self.assertNotIn(leaked, view_model)
+        self.assertIn("command.RiskTier == tier", view_model)
+        self.assertIn("Definition.RiskTier", row)
+        self.assertIn('RiskTier.Safe when Definition.ReadOnly => "Safe · read-only"', row)
+
     def test_extension_catalog_trust_state_is_visible(self) -> None:
         view_model = self.read("src/WinCare.App/ViewModels/Pages/PluginStorePageViewModel.cs")
         xaml = self.read("src/WinCare.App/Views/Pages/PluginStorePage.xaml")
         dialog = self.read("src/WinCare.App/Views/Dialogs/PluginDetailDialog.xaml")
+        code_behind = self.read("src/WinCare.App/Views/Pages/PluginStorePage.xaml.cs")
 
         self.assertIn("CatalogStatusMessage", view_model)
         self.assertIn("IsCatalogTrustVerified", view_model)
         self.assertIn("ViewModel.CatalogStatusMessage", xaml)
         self.assertIn('AutomationProperties.AutomationId="PluginCatalogStatus"', xaml)
         self.assertIn("current catalog and package trust checks pass", dialog)
+        self.assertNotIn("plugin package and its registered commands", code_behind)
 
     def test_checkup_keeps_follow_up_actions_and_uses_stable_section_names(self) -> None:
         view_model = self.read("src/WinCare.App/ViewModels/Pages/CheckupPageViewModel.cs")
@@ -76,6 +93,17 @@ class ProductUiParityTests(unittest.TestCase):
         self.assertGreaterEqual(view_model.count('SetNavigationAction(securityRow, "Review security", "security", "Status")'), 2)
         self.assertIn("NavigationSectionTitle", view_model)
         self.assertIn("PageNavigation.NavigateToSection", page)
+
+    def test_shell_page_service_and_navigation_catalog_share_one_route_set(self) -> None:
+        catalog = self.read("src/WinCare.Application/Navigation/NavigationCatalog.cs")
+        page_service = self.read("src/WinCare.App/Services/PageService.cs")
+        shell = self.read("src/WinCare.App/Views/ShellPage.xaml")
+
+        catalog_ids = set(re.findall(r'new\("([^"]+)"', catalog))
+        page_ids = set(re.findall(r'\["([^"]+)"\]\s*=\s*typeof', page_service))
+        shell_ids = set(re.findall(r'Tag="([^"]+)"', shell))
+        self.assertEqual(catalog_ids, page_ids)
+        self.assertEqual(catalog_ids - {"about"}, shell_ids)
 
     def test_legacy_instrument_panel_styles_are_removed(self) -> None:
         controls = self.read("src/WinCare.App/Styles/ControlStyles.xaml")

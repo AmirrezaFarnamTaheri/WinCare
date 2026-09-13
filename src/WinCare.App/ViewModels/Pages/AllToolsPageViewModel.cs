@@ -6,6 +6,7 @@ using WinCare.Application.Tools;
 using WinCare.App.Services;
 using WinCare.CommandCatalog;
 using WinCare.CommandCatalog.Models;
+using WinCare.Domain.Commands;
 
 namespace WinCare.App.ViewModels.Pages;
 
@@ -38,7 +39,12 @@ public sealed class AllToolsPageViewModel : ObservableObject, IDisposable
         SectionOptions = [new SectionFilterOption("All sections", null)];
         _selectedSectionOption = SectionOptions[0];
         CategoryCards = BuildCategoryCards();
-        RiskOptions = [new RiskFilterOption("All risk levels", null), new RiskFilterOption("Read-only", CommandRisk.ReadOnly), new RiskFilterOption("Low", CommandRisk.Low), new RiskFilterOption("Moderate", CommandRisk.Moderate), new RiskFilterOption("High", CommandRisk.High), new RiskFilterOption("Critical", CommandRisk.Critical)];
+        RiskOptions = [
+            new RiskFilterOption("All safety tiers", null),
+            new RiskFilterOption("Safe", RiskTier.Safe),
+            new RiskFilterOption("Moderate", RiskTier.Moderate),
+            new RiskFilterOption("Destructive", RiskTier.Destructive),
+        ];
         _selectedAreaOption = AreaOptions[0];
         _selectedRiskOption = RiskOptions[0];
         Execution = new ToolExecutionViewModel(dispatcher, RecordRecent);
@@ -127,8 +133,8 @@ public sealed class AllToolsPageViewModel : ObservableObject, IDisposable
     public string EmptyMessage => _selectedTab switch { "Favorites" => "No favorites yet. Select a tool and add it to Favorites.", "Recent" => "Tools you run will appear here.", "Care plans" => "No care plans are available.", "Categories" => "No categories are available.", _ => "No tools match the current search and filters." };
     public string SelectedToolTitle => SelectedTool?.Title ?? "Select a tool";
     public string SelectedToolSummary => SelectedTool?.Summary ?? "Choose a task to understand what it does, what it needs, and what will happen before anything runs.";
-    public string SelectedToolMetadata => SelectedTool is null ? string.Empty : $"{SelectedTool.Area} · {SelectedTool.Section} · {SelectedTool.Risk} impact";
-    public string SelectedToolTechnicalDetails => SelectedTool is null ? string.Empty : $"Command ID: {SelectedTool.Id}\nAdministrator access: {SelectedTool.AdministratorAccess}\nRestart: {SelectedTool.Restart}\nMigration: {SelectedTool.MigrationState}\nLegacy source: {SelectedTool.Definition.LegacySource}";
+    public string SelectedToolMetadata => SelectedTool is null ? string.Empty : $"{SelectedTool.Area} · {SelectedTool.Section} · {SelectedTool.Risk} tier";
+    public string SelectedToolTechnicalDetails => SelectedTool is null ? string.Empty : $"Command ID: {SelectedTool.Id}\nCatalog risk: {SelectedTool.Definition.Risk}\nAdmission tier: {SelectedTool.Risk}\nAdministrator access: {SelectedTool.AdministratorAccess}\nRestart: {SelectedTool.Restart}\nMigration: {SelectedTool.MigrationState}\nLegacy source: {SelectedTool.Definition.LegacySource}";
     public bool IsSelectedToolFavorite => SelectedTool is not null && _favoriteIds.Contains(SelectedTool.Id);
 
     public void SelectTab(string tab)
@@ -207,9 +213,11 @@ public sealed class AllToolsPageViewModel : ObservableObject, IDisposable
         {
             VisibleTools.Clear(); SelectedTool = null; OnPropertyChanged(nameof(ResultCountText)); OnPropertyChanged(nameof(IsEmpty)); OnPropertyChanged(nameof(EmptyMessage)); return;
         }
-        ToolFilter filter = new(Area: SelectedAreaOption.Value, Section: SelectedSectionOption.Value, Risk: SelectedRiskOption.Value, ReadOnly: ReadOnlyOnly ? true : null);
+        ToolFilter filter = new(Area: SelectedAreaOption.Value, Section: SelectedSectionOption.Value, ReadOnly: ReadOnlyOnly ? true : null);
         IEnumerable<CommandDefinition> commands = _catalog.Search(SearchText, filter);
-        commands = _selectedTab switch { "Favorites" => commands.Where(command => _favoriteIds.Contains(command.Id)), "Recent" => commands.Where(command => _recentIds.Contains(command.Id)).OrderBy(command => _recentIds.IndexOf(command.Id)), "Care plans" => commands.Where(command => command.Id == "presets"), _ => commands };
+        if (SelectedRiskOption.Value is RiskTier tier)
+            commands = commands.Where(command => command.RiskTier == tier);
+        commands = _selectedTab switch { "Favorites" => commands.Where(command => _favoriteIds.Contains(command.Id)), "Recent" => commands.Where(command => _recentIds.Contains(command.Id)).OrderBy(command => _recentIds.IndexOf(command.Id)), _ => commands };
         string? previousSelectedId = SelectedTool?.Id; VisibleTools.Clear(); ToolRowViewModel? newSelectedTool = null;
         foreach (CommandDefinition command in commands)
         {
