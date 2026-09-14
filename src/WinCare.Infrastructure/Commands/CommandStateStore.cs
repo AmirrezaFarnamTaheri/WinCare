@@ -291,16 +291,14 @@ public sealed class CommandStateStore
         {
             try
             {
-                if (i > 1 && !File.Exists(source) && File.Exists(destination))
-                {
-                    return;
-                }
                 File.Move(source, destination, overwrite: true);
                 return;
             }
             catch (FileNotFoundException)
             {
-                if (File.Exists(destination)) return;
+                // The destination may already contain an older valid state file, so its mere
+                // existence cannot prove this commit succeeded. Rebuild the complete temp file
+                // in CommitAsync and retry the intended value instead of accepting stale state.
                 throw;
             }
             catch (Exception ex) when (i < maxAttempts && (ex is UnauthorizedAccessException or IOException))
