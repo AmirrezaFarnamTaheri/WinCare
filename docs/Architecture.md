@@ -132,6 +132,8 @@ Activity is the durable operation ledger. It exposes Running, Needs attention, C
 
 Journal updates are event-driven rather than UI-polled. In-memory state is updated under synchronization, but serialization/disk work is queued outside state locks. Preference writes follow the same non-blocking pattern. Persistence degradation is visible in the UI rather than silently masquerading as durable success.
 
+Infrastructure JSON state uses `CommandStateStore` as a transactional persistence boundary. Same-root write and read-transform-write operations serialize first through a process-wide per-root gate and then through an OS-wide named semaphore so independent store instances and processes cannot overwrite one another concurrently. Each commit writes and flushes the complete intended JSON value to a unique temporary file before replacing the logical state file. Replacement I/O failures are retried by reconstructing that complete temporary value; the store never treats the mere existence of an older destination file as proof that the current commit succeeded.
+
 `UndoAvailable` is false unless a concrete executable compensator is implemented. WinCare does not advertise a generic Undo action for operations that cannot safely reverse themselves.
 
 ## 8. Native core and Guard
