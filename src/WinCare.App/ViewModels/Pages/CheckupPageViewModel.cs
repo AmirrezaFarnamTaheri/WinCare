@@ -30,6 +30,7 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
 
     public CheckupPageViewModel() : this(AppRuntime.Current.Dispatcher) { }
 
+    /// <summary>Initializes a new instance of <see cref="CheckupPageViewModel"/>.</summary>
     internal CheckupPageViewModel(CommandDispatcher dispatcher)
         : base([
             new PageSection("Quick check", "Run Checkup to see the latest results.", [
@@ -64,12 +65,14 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
     public string HealthScoreDetail { get => _healthScoreDetail; private set => SetProperty(ref _healthScoreDetail, value); }
     public string HealthScoreBrushKey { get => _healthScoreBrushKey; private set => SetProperty(ref _healthScoreBrushKey, value); }
 
+    /// <summary>Selects section.</summary>
     public override void SelectSection(int index)
     {
         base.SelectSection(index);
         if (index == ResultsSectionIndex) ShowResultRows();
     }
 
+    /// <summary>Runs quick check.</summary>
     private async Task RunQuickCheckAsync()
     {
         IsRunning = true;
@@ -124,6 +127,7 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
         }
     }
 
+    /// <summary>Runs update check.</summary>
     private async Task<CommandResult> RunUpdateCheckAsync()
     {
         try
@@ -149,6 +153,7 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
         }
     }
 
+    /// <summary>Resets row for check.</summary>
     private static void ResetRowForCheck(PageRow row, string state, string detail)
     {
         row.State = state;
@@ -157,6 +162,7 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
         ClearNavigationAction(row);
     }
 
+    /// <summary>Rebuilds result rows from quick checks.</summary>
     private void RebuildResultRowsFromQuickChecks()
     {
         _resultRows.Clear();
@@ -174,6 +180,7 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
         ShowResultRows();
     }
 
+    /// <summary>Shows result rows.</summary>
     private void ShowResultRows()
     {
         if (SelectedIndex != ResultsSectionIndex) return;
@@ -188,6 +195,7 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
         OnPropertyChanged(nameof(EmptyMessage));
     }
 
+    /// <summary>Applies wua result.</summary>
     private void ApplyWuaResult(CommandResult wuaResult, Dictionary<string, CommandResult> fastDict)
     {
         PageRow? row = Sections[0].Rows.FirstOrDefault(candidate => candidate.Title == WuaRowTitle);
@@ -208,6 +216,7 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
         ShowResultRows();
     }
 
+    /// <summary>Applies update outcome.</summary>
     private static void ApplyUpdateOutcome(PageRow? row, string state, string detail, string brushKey)
     {
         if (row is null) return;
@@ -218,6 +227,7 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
         else ClearNavigationAction(row);
     }
 
+    /// <summary>Evaluates findings.</summary>
     private void EvaluateFindings(Dictionary<string, CommandResult> fastDict, CommandResult? wuaResult)
     {
         bool hasCritical = false;
@@ -348,6 +358,7 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
         }
     }
 
+    /// <summary>Sets navigation action.</summary>
     private static void SetNavigationAction(PageRow row, string actionText, string navigationKey, string sectionTitle)
     {
         row.ActionText = actionText;
@@ -356,6 +367,7 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
         row.NavigationSectionTitle = sectionTitle;
     }
 
+    /// <summary>Clears navigation action.</summary>
     private static void ClearNavigationAction(PageRow row)
     {
         row.ActionText = null;

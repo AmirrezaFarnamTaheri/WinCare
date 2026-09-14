@@ -30,10 +30,13 @@ public sealed partial class ShellPage : Page
                 : NavigationViewPaneDisplayMode.LeftMinimal;
     }
 
+    /// <summary>Opens global search.</summary>
     public void OpenGlobalSearch(string? query) => OpenNavigationItem("all-tools", query?.Trim() ?? string.Empty);
 
+    /// <summary>Opens tool.</summary>
     public void OpenTool(ToolNavigationRequest request) => OpenNavigationItem("all-tools", request);
 
+    /// <summary>Navigates to the requested product page.</summary>
     public void NavigateTo(string key, object? parameter = null)
     {
         NavigationViewItem? target = FindNavigationItem(key);
@@ -48,6 +51,7 @@ public sealed partial class ShellPage : Page
         OpenNavigationItem(target, key, parameter);
     }
 
+    /// <summary>Shows tour.</summary>
     public async Task ShowTourAsync()
     {
         var dialog = new FirstRunTourDialog { XamlRoot = XamlRoot };
@@ -55,6 +59,7 @@ public sealed partial class ShellPage : Page
         AppPreferences.MarkFirstRunTourSeen();
     }
 
+    /// <summary>Handles the page loaded event.</summary>
     private async void OnLoaded(object sender, RoutedEventArgs e)
     {
         if (_initialized) return;
@@ -68,6 +73,7 @@ public sealed partial class ShellPage : Page
             await ShowTourAsync();
     }
 
+    /// <summary>Handles the primary navigation selection changed event.</summary>
     private void PrimaryNavigation_SelectionChanged(NavigationView sender, NavigationViewSelectionChangedEventArgs args)
     {
         if (args.SelectedItemContainer?.Tag is not string key) return;
@@ -77,6 +83,7 @@ public sealed partial class ShellPage : Page
         _pageService.Navigate(ContentFrame, key, parameter);
     }
 
+    /// <summary>Opens navigation item.</summary>
     private void OpenNavigationItem(string key, object? parameter)
     {
         NavigationViewItem target = FindNavigationItem(key)
@@ -84,6 +91,7 @@ public sealed partial class ShellPage : Page
         OpenNavigationItem(target, key, parameter);
     }
 
+    /// <summary>Opens navigation item.</summary>
     private void OpenNavigationItem(NavigationViewItem target, string key, object? parameter)
     {
         if (ReferenceEquals(PrimaryNavigation.SelectedItem, target))
@@ -96,6 +104,7 @@ public sealed partial class ShellPage : Page
         PrimaryNavigation.SelectedItem = target;
     }
 
+    /// <summary>Finds navigation item.</summary>
     private NavigationViewItem? FindNavigationItem(string key) =>
         PrimaryNavigation.MenuItems
             .Concat(PrimaryNavigation.FooterMenuItems)

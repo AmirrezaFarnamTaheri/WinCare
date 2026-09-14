@@ -19,6 +19,7 @@ namespace WinCare.Application.Diagnostics
         private readonly ToolCatalogService _catalogService;
         private readonly IDiagnosticEvidenceCollector _evidenceCollector;
 
+        /// <summary>Initializes a new instance of <see cref="IntentTranslator"/>.</summary>
         public IntentTranslator(
             IIntentInferenceEngine inferenceEngine,
             ToolCatalogService catalogService,
@@ -29,6 +30,7 @@ namespace WinCare.Application.Diagnostics
             _evidenceCollector = evidenceCollector ?? new DiagnosticEvidenceCollector();
         }
 
+        /// <summary>Translates a prompt into a catalog-backed diagnostic action plan.</summary>
         public async Task<DoctorActionPlan> TranslateAsync(string prompt, CancellationToken cancellationToken = default)
         {
             if (string.IsNullOrWhiteSpace(prompt))
@@ -156,6 +158,7 @@ namespace WinCare.Application.Diagnostics
             };
         }
 
+        /// <summary>Adds recommended steps.</summary>
         private void AddRecommendedSteps(List<ProposedActionStep> steps, params string[] commandIds)
         {
             foreach (string id in commandIds)
@@ -169,6 +172,7 @@ namespace WinCare.Application.Diagnostics
             }
         }
 
+        /// <summary>Creates step.</summary>
         private static ProposedActionStep CreateStep(CommandDefinition match) =>
             new(
                 CommandId: match.Id,

@@ -139,6 +139,7 @@ public sealed partial class MainWindow : Window
             : new DesktopAcrylicBackdrop();
     }
 
+    /// <summary>Restores window placement.</summary>
     private bool RestoreWindowPlacement()
     {
         WindowPlacementData? saved = AppPreferences.WindowPlacement;
@@ -174,6 +175,7 @@ public sealed partial class MainWindow : Window
         AppWindow.Resize(new SizeInt32((int)(widthDips * scale), (int)(heightDips * scale)));
     }
 
+    /// <summary>Handles the search keyboard accelerator invoked event.</summary>
     private void SearchKeyboardAccelerator_Invoked(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
     {
         GlobalSearchBox.Focus(FocusState.Keyboard);
@@ -181,12 +183,14 @@ public sealed partial class MainWindow : Window
         args.Handled = true;
     }
 
+    /// <summary>Handles the global search box text changed event.</summary>
     private void GlobalSearchBox_TextChanged(AutoSuggestBox sender, AutoSuggestBoxTextChangedEventArgs args)
     {
         if (args.Reason != AutoSuggestionBoxTextChangeReason.UserInput) return;
         sender.ItemsSource = BuildGlobalSuggestions(sender.Text);
     }
 
+    /// <summary>Handles the global search box query submitted event.</summary>
     private void GlobalSearchBox_QuerySubmitted(AutoSuggestBox sender, AutoSuggestBoxQuerySubmittedEventArgs args)
     {
         if (args.ChosenSuggestion is GlobalSearchSuggestion chosen)
@@ -206,6 +210,7 @@ public sealed partial class MainWindow : Window
         Shell.OpenGlobalSearch(query);
     }
 
+    /// <summary>Opens search suggestion.</summary>
     private void OpenSearchSuggestion(GlobalSearchSuggestion suggestion)
     {
         GlobalSearchBox.Text = suggestion.Title;
@@ -218,6 +223,7 @@ public sealed partial class MainWindow : Window
         Shell.NavigateTo(suggestion.Route, suggestion.Query);
     }
 
+    /// <summary>Builds global suggestions.</summary>
     private static IReadOnlyList<GlobalSearchSuggestion> BuildGlobalSuggestions(string? text)
     {
         string query = text?.Trim() ?? string.Empty;
@@ -266,6 +272,7 @@ public sealed partial class MainWindow : Window
             .Select(candidate => candidate.Item).DistinctBy(item => (item.Title, item.Route, item.Query)).Take(10).ToArray();
     }
 
+    /// <summary>Scores search.</summary>
     private static int ScoreSearch(string query, params string?[] fields)
     {
         string[] tokens = query.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
@@ -292,6 +299,7 @@ public sealed partial class MainWindow : Window
         if (Uri.TryCreate(arguments, UriKind.Absolute, out var uri)) HandleProtocolActivation(uri);
     }
 
+    /// <summary>Handles protocol activation.</summary>
     public void HandleProtocolActivation(Uri uri)
     {
         ArgumentNullException.ThrowIfNull(uri);

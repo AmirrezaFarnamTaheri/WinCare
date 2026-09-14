@@ -17,6 +17,7 @@ public sealed partial class RepairRecoveryPage : Page
 
     public RepairRecoveryPageViewModel ViewModel { get; }
 
+    /// <summary>Handles the section selector selection changed event.</summary>
     private void SectionSelector_SelectionChanged(SelectorBar sender, SelectorBarSelectionChangedEventArgs args)
     {
         ViewModel.SelectSection(sender.Items.IndexOf(sender.SelectedItem));
@@ -30,6 +31,7 @@ public sealed partial class RepairRecoveryPage : Page
             PageNavigation.OpenTool(this, id, parameters);
     }
 
+    /// <summary>Handles navigation to the page.</summary>
     protected override void OnNavigatedTo(Microsoft.UI.Xaml.Navigation.NavigationEventArgs e)
     {
         base.OnNavigatedTo(e);

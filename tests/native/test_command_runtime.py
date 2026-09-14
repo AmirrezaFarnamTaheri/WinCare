@@ -106,6 +106,7 @@ class CommandRuntimeTests(unittest.TestCase):
         ET.fromstring(xaml)
 
     def test_review_safety_contracts_are_encoded_in_sources(self) -> None:
+        """Verify that review safety contracts are encoded in sources."""
         native_interop = (ROOT / "src/WinCare.Infrastructure/Native/WinCareCoreNative.cs").read_text(
             encoding="utf-8"
         )

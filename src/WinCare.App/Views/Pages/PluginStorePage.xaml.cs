@@ -16,6 +16,7 @@ public sealed partial class PluginStorePage : Page
 
     public static Visibility BoolToVisibility(bool value) => value ? Visibility.Visible : Visibility.Collapsed;
 
+    /// <summary>Initializes a new instance of <see cref="PluginStorePage"/>.</summary>
     public PluginStorePage()
     {
         var runtime = WinCare.App.Services.AppRuntime.Current;
@@ -38,6 +39,7 @@ public sealed partial class PluginStorePage : Page
         };
     }
 
+    /// <summary>Handles navigation to the page.</summary>
     protected override void OnNavigatedTo(NavigationEventArgs e)
     {
         base.OnNavigatedTo(e);
@@ -102,6 +104,7 @@ public sealed partial class PluginStorePage : Page
             await ViewModel.DisablePluginAsync(card);
     }
 
+    /// <summary>Handles the uninstall button click event.</summary>
     private async void UninstallButton_Click(object sender, RoutedEventArgs e)
     {
         if (sender is Button button && button.Tag is PluginCardViewModel card)

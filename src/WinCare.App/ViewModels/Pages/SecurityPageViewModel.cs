@@ -12,6 +12,7 @@ public sealed class SecurityPageViewModel : TabbedPageViewModel
         _ => new("Security", "Hardening"),
     };
 
+    /// <summary>Initializes a new instance of <see cref="SecurityPageViewModel"/>.</summary>
     public SecurityPageViewModel() : base([
         new PageSection("Status", "No security status tools are available in this section.", []),
         new PageSection("Protection", "No protection tools are available in this section.", []),

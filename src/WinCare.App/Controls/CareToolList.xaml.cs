@@ -50,6 +50,7 @@ public sealed partial class CareToolList : UserControl
         ColumnHeaders.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
     }
 
+    /// <summary>Handles the tool item click event.</summary>
     private void Tool_ItemClick(object sender, ItemClickEventArgs e)
     {
         if (e.ClickedItem is not PageRow { CommandId: { } id } row) return;

@@ -10,9 +10,11 @@ ROOT = Path(__file__).resolve().parents[2]
 
 class ProductUiParityTests(unittest.TestCase):
     def read(self, relative: str) -> str:
+        """Read a repository file as UTF-8 text."""
         return (ROOT / relative).read_text(encoding="utf-8")
 
     def test_home_guides_work_without_owning_system_commands(self) -> None:
+        """Verify that home guides work without owning system commands."""
         view_model = self.read("src/WinCare.App/ViewModels/Pages/HomePageViewModel.cs")
         xaml = self.read("src/WinCare.App/Views/Pages/HomePage.xaml")
         code_behind = self.read("src/WinCare.App/Views/Pages/HomePage.xaml.cs")
@@ -36,6 +38,7 @@ class ProductUiParityTests(unittest.TestCase):
         self.assertIn("record.CompletedAt ?? record.StartedAt", view_model)
 
     def test_checkup_is_read_only_and_uses_named_destinations(self) -> None:
+        """Verify that checkup is read only and uses named destinations."""
         view_model = self.read("src/WinCare.App/ViewModels/Pages/CheckupPageViewModel.cs")
         page = self.read("src/WinCare.App/Views/Pages/CheckupPage.xaml.cs")
         row = self.read("src/WinCare.App/ViewModels/Pages/PageRow.cs")
@@ -54,6 +57,7 @@ class ProductUiParityTests(unittest.TestCase):
         self.assertIn('AutomationProperties.Name="{x:Bind ActionAccessibleName, Mode=OneWay}"', xaml)
 
     def test_troubleshoot_suggests_but_never_owns_execution_or_undo(self) -> None:
+        """Verify that troubleshoot suggests but never owns execution or undo."""
         view_model = self.read("src/WinCare.App/ViewModels/Pages/AiDoctorPageViewModel.cs")
         code_behind = self.read("src/WinCare.App/Views/Pages/AiDoctorPage.xaml.cs")
         xaml = self.read("src/WinCare.App/Views/Pages/AiDoctorPage.xaml")
@@ -76,6 +80,7 @@ class ProductUiParityTests(unittest.TestCase):
         self.assertNotIn("Investigative Hypothesis", translator)
 
     def test_care_rows_open_the_power_tools_inspector(self) -> None:
+        """Verify that care rows open the power tools inspector."""
         control = self.read("src/WinCare.App/Controls/CareToolList.xaml.cs")
         xaml = self.read("src/WinCare.App/Controls/CareToolList.xaml")
 
@@ -85,6 +90,7 @@ class ProductUiParityTests(unittest.TestCase):
         self.assertIn("open it in Power tools", xaml)
 
     def test_power_tools_uses_named_controls_and_product_safety_tiers(self) -> None:
+        """Verify that power tools uses named controls and product safety tiers."""
         xaml = self.read("src/WinCare.App/Views/Pages/AllToolsPage.xaml")
         code_behind = self.read("src/WinCare.App/Views/Pages/AllToolsPage.xaml.cs")
         view_model = self.read("src/WinCare.App/ViewModels/Pages/AllToolsPageViewModel.cs")
@@ -102,6 +108,7 @@ class ProductUiParityTests(unittest.TestCase):
         self.assertNotIn("guessing search terms", xaml)
 
     def test_extensions_show_trust_state_without_console_styling(self) -> None:
+        """Verify that extensions show trust state without console styling."""
         view_model = self.read("src/WinCare.App/ViewModels/Pages/PluginStorePageViewModel.cs")
         card = self.read("src/WinCare.App/ViewModels/Pages/PluginCardViewModel.cs")
         xaml = self.read("src/WinCare.App/Views/Pages/PluginStorePage.xaml")
@@ -124,6 +131,7 @@ class ProductUiParityTests(unittest.TestCase):
         self.assertNotIn('Text="{x:Bind StatusBadgeText}" FontFamily="{StaticResource TelemetryFontFamily}"', xaml)
 
     def test_first_run_tour_is_small_persisted_and_repeatable(self) -> None:
+        """Verify that first run tour is small persisted and repeatable."""
         preferences = self.read("src/WinCare.App/Services/AppPreferences.cs")
         shell = self.read("src/WinCare.App/Views/ShellPage.xaml.cs")
         help_xaml = self.read("src/WinCare.App/Views/Pages/HelpPage.xaml")
@@ -142,6 +150,7 @@ class ProductUiParityTests(unittest.TestCase):
         self.assertNotIn("TourService", shell)
 
     def test_pull_request_template_is_general_not_repository_subsystem_checklist(self) -> None:
+        """Verify that pull request template is general not repository subsystem checklist."""
         template = self.read(".github/pull_request_template.md")
 
         for repo_specific in ("Command dispatcher", "Plugins / catalog trust", "Guard / IPC", "Rust native core"):
@@ -150,6 +159,7 @@ class ProductUiParityTests(unittest.TestCase):
             self.assertIn(section, template)
 
     def test_shell_page_service_and_navigation_catalog_share_one_route_set(self) -> None:
+        """Verify that shell page service and navigation catalog share one route set."""
         catalog = self.read("src/WinCare.Application/Navigation/NavigationCatalog.cs")
         page_service = self.read("src/WinCare.App/Services/PageService.cs")
         shell = self.read("src/WinCare.App/Views/ShellPage.xaml")
@@ -165,6 +175,7 @@ class ProductUiParityTests(unittest.TestCase):
         self.assertNotIn("_pendingToolsParameter", shell_code)
 
     def test_activity_copy_describes_people_visible_history_not_storage_policy(self) -> None:
+        """Verify that activity copy describes people visible history not storage policy."""
         activity = self.read("src/WinCare.App/Views/Pages/ActivityPage.xaml")
         view_model = self.read("src/WinCare.App/ViewModels/Pages/ActivityPageViewModel.cs")
 
@@ -177,6 +188,7 @@ class ProductUiParityTests(unittest.TestCase):
         self.assertIn('new PageSection("History"', view_model)
 
     def test_legacy_instrument_panel_styles_are_removed(self) -> None:
+        """Verify that legacy instrument panel styles are removed."""
         controls = self.read("src/WinCare.App/Styles/ControlStyles.xaml")
         theme = self.read("src/WinCare.App/Styles/ThemeResources.xaml")
         for legacy in ("DoubleBezel", "HudChassis", "LuminousGlow", "IslandIcon", "TelemetrySensorBox", "EyebrowBadge"):
@@ -184,6 +196,7 @@ class ProductUiParityTests(unittest.TestCase):
             self.assertNotIn(legacy, theme)
 
     def test_product_docs_still_match_execution_and_responsive_contracts(self) -> None:
+        """Verify that product docs still match execution and responsive contracts."""
         guide = self.read("docs/User-Guide.md")
         architecture = self.read("docs/Architecture.md").replace("**", "")
         design = self.read("DESIGN.md")

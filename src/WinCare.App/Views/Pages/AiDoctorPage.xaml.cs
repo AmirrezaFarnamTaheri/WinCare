@@ -27,6 +27,7 @@ public sealed partial class AiDoctorPage : Page
         ChatScrollViewer?.ChangeView(null, ChatScrollViewer.ScrollableHeight, null);
     }
 
+    /// <summary>Handles the prompt text box key down event.</summary>
     private async void PromptTextBox_KeyDown(object sender, KeyRoutedEventArgs e)
     {
         if (e.Key != Windows.System.VirtualKey.Enter) return;
@@ -35,6 +36,7 @@ public sealed partial class AiDoctorPage : Page
         ChatScrollViewer?.ChangeView(null, ChatScrollViewer.ScrollableHeight, null);
     }
 
+    /// <summary>Handles the execute step button click event.</summary>
     private void ExecuteStepButton_Click(object sender, RoutedEventArgs e)
     {
         if (sender is not Button { Tag: ProposedActionStep step }) return;

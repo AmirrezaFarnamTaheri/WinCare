@@ -83,6 +83,7 @@ class Finding:
 
 
 def load_oracle_commands() -> tuple[str, ...]:
+    """Load and validate the frozen oracle command identifiers."""
     document = json.loads(ORACLE_COMMANDS_PATH.read_text(encoding="utf-8"))
     commands = tuple(document.get("commands", ()))
     if document.get("schemaVersion") != 1:
@@ -110,6 +111,7 @@ def _relative(path: Path) -> str:
 
 
 def verify() -> list[Finding]:
+    """Run the native foundation verification checks."""
     findings: list[Finding] = []
     for path in REQUIRED_FILES:
         if not path.is_file():
@@ -269,6 +271,7 @@ def verify() -> list[Finding]:
 
 
 def main() -> int:
+    """Run verification and return a process exit code."""
     findings = verify()
     if findings:
         print(f"native foundation verification failed: {len(findings)} finding(s)")

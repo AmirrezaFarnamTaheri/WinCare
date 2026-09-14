@@ -142,6 +142,7 @@ public static class AppPreferences
         QueueSave(snapshot);
     }
 
+    /// <summary>Marks first run tour seen.</summary>
     public static void MarkFirstRunTourSeen()
     {
         AppPreferenceData snapshot;
@@ -172,6 +173,7 @@ public static class AppPreferences
         RecentCommandIds = _current.RecentCommandIds.ToList(),
     };
 
+    /// <summary>Loads persisted application preferences.</summary>
     private static AppPreferenceData Load(out string? persistenceStatusMessage)
     {
         persistenceStatusMessage = null;
@@ -206,6 +208,7 @@ public static class AppPreferences
         }
     }
 
+    /// <summary>Persists application preferences.</summary>
     private static async Task SaveAsync(AppPreferenceData data)
     {
         string? temporaryPath = null;
@@ -235,6 +238,7 @@ public static class AppPreferences
         }
     }
 
+    /// <summary>Sets persistence status.</summary>
     private static void SetPersistenceStatus(string? message)
     {
         bool changed;

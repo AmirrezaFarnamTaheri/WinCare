@@ -13,6 +13,7 @@ public sealed class SystemCarePageViewModel : TabbedPageViewModel
         _ => new("System care", ["Routines", "Maintenance"]),
     };
 
+    /// <summary>Initializes a new instance of <see cref="SystemCarePageViewModel"/>.</summary>
     public SystemCarePageViewModel() : base([
         new PageSection("Clean up", "No cleanup tools are available in this section.", []),
         new PageSection("Performance", "No performance tools are available in this section.", []),

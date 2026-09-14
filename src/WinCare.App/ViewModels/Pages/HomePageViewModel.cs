@@ -38,8 +38,10 @@ public sealed class HomePageViewModel : ObservableObject
         private set => SetProperty(ref _isCompactLayout, value);
     }
 
+    /// <summary>Sets compact layout.</summary>
     public void SetCompactLayout(bool isCompact) => IsCompactLayout = isCompact;
 
+    /// <summary>Refreshes activity.</summary>
     public void RefreshActivity(IReadOnlyList<ActivityRecord> records)
     {
         ActivityRecord? latest = records.MaxBy(record => record.StartedAt);
@@ -99,6 +101,7 @@ public sealed class HomePageViewModel : ObservableObject
         }
     }
 
+    /// <summary>Gets the display status for the latest command activity.</summary>
     private static string StatusFor(IReadOnlyDictionary<string, ActivityRecord> latestByCommand, string commandId)
     {
         if (!latestByCommand.TryGetValue(commandId, out ActivityRecord? record)) return "Not checked";
@@ -117,6 +120,7 @@ public sealed class HomePageViewModel : ObservableObject
         };
     }
 
+    /// <summary>Gets the evidence timestamp for an activity record.</summary>
     private static DateTimeOffset EvidenceTimestamp(ActivityRecord record) => record.CompletedAt ?? record.StartedAt;
 
     private static string ToFriendlyState(ActivityState state) => state switch

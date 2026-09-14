@@ -17,6 +17,7 @@ public abstract class TabbedPageViewModel : ObservableObject
     private string? _careQuery;
     private IActivityJournalService? _careJournal;
 
+    /// <summary>Initializes a new instance of <see cref="TabbedPageViewModel"/>.</summary>
     protected TabbedPageViewModel(IReadOnlyList<PageSection> sections)
     {
         Sections = sections;
@@ -41,6 +42,7 @@ public abstract class TabbedPageViewModel : ObservableObject
     public bool IsEmpty => CurrentRows.Count == 0;
     public string EmptyMessage => Sections[SelectedIndex].EmptyMessage;
 
+    /// <summary>Selects section.</summary>
     public virtual void SelectSection(int index)
     {
         if (index < 0 || index >= Sections.Count || index == SelectedIndex) return;
@@ -56,6 +58,7 @@ public abstract class TabbedPageViewModel : ObservableObject
         OnPropertyChanged(nameof(EmptyMessage));
     }
 
+    /// <summary>Sets compact layout.</summary>
     public void SetCompactLayout(bool isCompact)
     {
         if (IsCompactLayout == isCompact) return;
@@ -64,6 +67,7 @@ public abstract class TabbedPageViewModel : ObservableObject
         foreach (PageRow row in CurrentRows) row.IsCompact = isCompact;
     }
 
+    /// <summary>Shows tools.</summary>
     public void ShowTools(
         ToolCatalogService catalog,
         CareAreaSelection selection,
@@ -76,6 +80,7 @@ public abstract class TabbedPageViewModel : ObservableObject
         Populate(CareAreaProjectionService.Project(catalog, selection, journal?.GetAll() ?? []));
     }
 
+    /// <summary>Shows tools.</summary>
     public void ShowTools(ToolCatalogService catalog, string query, IActivityJournalService? journal = null)
     {
         _careCatalog = catalog;
@@ -85,6 +90,7 @@ public abstract class TabbedPageViewModel : ObservableObject
         Populate(CareAreaProjectionService.Project(catalog, query, journal?.GetAll() ?? []));
     }
 
+    /// <summary>Refreshes tools.</summary>
     public void RefreshTools()
     {
         if (_careCatalog is null) return;
@@ -94,6 +100,7 @@ public abstract class TabbedPageViewModel : ObservableObject
             ShowTools(_careCatalog, _careQuery, _careJournal);
     }
 
+    /// <summary>Populates the active page section with projected care tools.</summary>
     private void Populate(IReadOnlyList<CareToolProjection> matches)
     {
         CurrentRows.Clear();

@@ -16,6 +16,7 @@ public sealed partial class AllToolsPage : Page
     private const double InlineInspectorBreakpointDip = 1320;
     private Control? _inspectorReturnFocus;
 
+    /// <summary>Initializes a new instance of <see cref="AllToolsPage"/>.</summary>
     public AllToolsPage()
     {
         ViewModel = new AllToolsPageViewModel();
@@ -31,6 +32,7 @@ public sealed partial class AllToolsPage : Page
     public static Visibility BoolToVisibility(bool value) => value ? Visibility.Visible : Visibility.Collapsed;
     public static Visibility InvertBoolToVisibility(bool value) => value ? Visibility.Collapsed : Visibility.Visible;
 
+    /// <summary>Handles navigation to the page.</summary>
     protected override void OnNavigatedTo(NavigationEventArgs e)
     {
         base.OnNavigatedTo(e);
@@ -51,6 +53,7 @@ public sealed partial class AllToolsPage : Page
         }
     }
 
+    /// <summary>Handles the tool tabs selection changed event.</summary>
     private void ToolTabs_SelectionChanged(SelectorBar sender, SelectorBarSelectionChangedEventArgs args)
     {
         if (sender.SelectedItem is not SelectorBarItem item) return;
@@ -58,6 +61,7 @@ public sealed partial class AllToolsPage : Page
         SearchFilterGrid.Visibility = ViewModel.IsCatalogTab ? Visibility.Visible : Visibility.Collapsed;
     }
 
+    /// <summary>Handles the category card click event.</summary>
     private void CategoryCard_Click(object sender, RoutedEventArgs e)
     {
         if (sender is not Button { Tag: string key }) return;
@@ -67,6 +71,7 @@ public sealed partial class AllToolsPage : Page
         ToolSearchBox.Focus(FocusState.Programmatic);
     }
 
+    /// <summary>Handles the review preset button click event.</summary>
     private void ReviewPresetButton_Click(object sender, RoutedEventArgs e)
     {
         if (sender is not Button { Tag: string presetId }) return;
@@ -84,6 +89,7 @@ public sealed partial class AllToolsPage : Page
         DispatcherQueue.TryEnqueue(() => InspectorCloseButton.Focus(FocusState.Programmatic));
     }
 
+    /// <summary>Handles the close inspector click event.</summary>
     private void CloseInspector_Click(object sender, RoutedEventArgs e)
     {
         ViewModel.IsDetailsOpen = false;
@@ -112,6 +118,7 @@ public sealed partial class AllToolsPage : Page
         ApplyFilterLayout(compact);
     }
 
+    /// <summary>Handles the tool search focus accelerator event.</summary>
     private void ToolSearch_FocusAccelerator(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
     {
         ToolTabs.SelectedItem = ToolTabs.Items[0] as SelectorBarItem;
@@ -125,6 +132,7 @@ public sealed partial class AllToolsPage : Page
             RebuildParameterEditor();
     }
 
+    /// <summary>Applies filter layout.</summary>
     private void ApplyFilterLayout(bool compact)
     {
         SearchFilterGrid.ColumnDefinitions.Clear();
@@ -169,6 +177,7 @@ public sealed partial class AllToolsPage : Page
         }
     }
 
+    /// <summary>Rebuilds parameter editor.</summary>
     private void RebuildParameterEditor()
     {
         var root = new StackPanel { Spacing = 12 };
@@ -242,6 +251,7 @@ public sealed partial class AllToolsPage : Page
         ParameterExpander.Content = root;
     }
 
+    /// <summary>Creates parameter field.</summary>
     private FrameworkElement CreateParameterField(ToolParameterFieldViewModel field)
     {
         var container = new StackPanel { Spacing = 5 };

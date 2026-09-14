@@ -284,6 +284,7 @@ public sealed class CommandStateStore
         catch (UnauthorizedAccessException) { }
     }
 
+    /// <summary>Moves a file, retrying transient sharing failures.</summary>
     private static void MoveWithRetry(string source, string destination)
     {
         const int maxAttempts = 25;

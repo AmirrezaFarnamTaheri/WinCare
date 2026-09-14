@@ -16,9 +16,11 @@ public sealed partial class CheckupPage : Page
 
     public CheckupPageViewModel ViewModel { get; }
 
+    /// <summary>Handles the section selector selection changed event.</summary>
     private void SectionSelector_SelectionChanged(SelectorBar sender, SelectorBarSelectionChangedEventArgs args) =>
         ViewModel.SelectSection(sender.Items.IndexOf(sender.SelectedItem));
 
+    /// <summary>Handles the finding action click event.</summary>
     private void FindingAction_Click(object sender, RoutedEventArgs e)
     {
         if (sender is not Button { DataContext: PageRow row } ||
@@ -28,6 +30,7 @@ public sealed partial class CheckupPage : Page
         PageNavigation.NavigateToSection(this, row.NavigationKey, row.NavigationSectionTitle);
     }
 
+    /// <summary>Handles the page size changed event.</summary>
     private void Page_SizeChanged(object sender, SizeChangedEventArgs e)
     {
         bool compact = LayoutVisibility.IsCompact(e.NewSize.Width);
