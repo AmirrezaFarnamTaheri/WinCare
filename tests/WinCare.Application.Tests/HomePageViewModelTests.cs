@@ -44,15 +44,15 @@ public sealed class HomePageViewModelTests
         ]);
 
         Assert.Equal("4 of 4 areas", vm.EvidenceScoreText);
-        Assert.Equal("Recent evidence is ready", vm.EvidenceTitle);
-        Assert.Equal("Evidence collected", vm.SystemStatus);
-        Assert.Equal("Evidence collected", vm.StorageStatus);
-        Assert.Equal("Evidence collected", vm.SecurityStatus);
-        Assert.Equal("Evidence collected", vm.UpdatesStatus);
+        Assert.Equal("Your latest checkup is ready", vm.EvidenceTitle);
+        Assert.Equal("Checked", vm.SystemStatus);
+        Assert.Equal("Checked", vm.StorageStatus);
+        Assert.Equal("Checked", vm.SecurityStatus);
+        Assert.Equal("Checked", vm.UpdatesStatus);
     }
 
     [Fact]
-    public void Home_marks_old_completed_evidence_as_stale_and_does_not_call_it_ready()
+    public void Home_marks_old_completed_checkup_results_as_out_of_date_and_does_not_call_them_ready()
     {
         DateTimeOffset old = DateTimeOffset.UtcNow.AddHours(-2);
         var vm = new HomePageViewModel();
@@ -63,14 +63,14 @@ public sealed class HomePageViewModelTests
             Completed("wua-search", "Updates", old),
         ]);
 
-        Assert.StartsWith("Stale evidence", vm.SystemStatus);
+        Assert.StartsWith("Out of date", vm.SystemStatus);
         Assert.Equal("4 of 4 areas", vm.EvidenceScoreText);
-        Assert.Equal("Some evidence is getting stale", vm.EvidenceTitle);
-        Assert.Contains("older than 30 minutes", vm.EvidenceSummary);
+        Assert.Equal("Some checkup results are getting old", vm.EvidenceTitle);
+        Assert.Contains("more than 30 minutes old", vm.EvidenceSummary);
     }
 
     [Fact]
-    public void Home_uses_completion_time_for_evidence_freshness()
+    public void Home_uses_completion_time_for_checkup_freshness()
     {
         DateTimeOffset started = DateTimeOffset.UtcNow.AddHours(-2);
         DateTimeOffset completed = DateTimeOffset.UtcNow.AddMinutes(-2);
@@ -82,8 +82,8 @@ public sealed class HomePageViewModelTests
             Completed("wua-search", "Updates", started, completed),
         ]);
 
-        Assert.Equal("Recent evidence is ready", vm.EvidenceTitle);
-        Assert.Equal("Evidence collected", vm.SystemStatus);
+        Assert.Equal("Your latest checkup is ready", vm.EvidenceTitle);
+        Assert.Equal("Checked", vm.SystemStatus);
     }
 
     private static ActivityRecord Completed(string commandId, string title, DateTimeOffset startedAt, DateTimeOffset? completedAt = null) =>
