@@ -36,7 +36,7 @@
                 IsOpen="{x:Bind ViewModel.HasPersistenceWarning, Mode=OneWay}"
                 IsClosable="False"
                 Severity="Warning"
-                Title="Activity history is not durable"
+                Title="Activity history isn't being saved"
                 Message="{x:Bind ViewModel.PersistenceWarningMessage, Mode=OneWay}"
                 AutomationProperties.AutomationId="ActivityPersistenceWarning"
                 AutomationProperties.Name="Activity history persistence warning" />
@@ -74,14 +74,14 @@
                                         <Grid.ColumnDefinitions><ColumnDefinition Width="2*" /><ColumnDefinition Width="3*" /><ColumnDefinition Width="140" /><ColumnDefinition Width="180" /></Grid.ColumnDefinitions>
                                         <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="{x:Bind Title}" TextWrapping="Wrap" />
                                         <TextBlock Grid.Column="1" Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind Description}" TextWrapping="Wrap" />
-                                        <TextBlock Grid.Column="2" Style="{StaticResource RowSecondaryTextStyle}" FontFamily="{StaticResource TelemetryFontFamily}" Text="{x:Bind State, Mode=OneWay}" TextWrapping="Wrap" />
-                                        <TextBlock Grid.Column="3" Style="{StaticResource RowSecondaryTextStyle}" FontFamily="{StaticResource TelemetryFontFamily}" Text="{x:Bind Detail, Mode=OneWay}" TextWrapping="Wrap" />
+                                        <TextBlock Grid.Column="2" Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind State, Mode=OneWay}" TextWrapping="Wrap" />
+                                        <TextBlock Grid.Column="3" Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind Detail, Mode=OneWay}" TextWrapping="Wrap" />
                                     </Grid>
                                     <StackPanel Spacing="8" Visibility="{x:Bind views:LayoutVisibility.BoolToVisibility(IsCompact), Mode=OneWay}">
                                         <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="{x:Bind Title}" TextWrapping="Wrap" />
                                         <TextBlock Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind Description}" TextWrapping="Wrap" />
-                                        <Grid ColumnSpacing="8"><Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions><TextBlock FontWeight="SemiBold" Style="{StaticResource RowSecondaryTextStyle}" Text="State" /><TextBlock Grid.Column="1" Style="{StaticResource RowSecondaryTextStyle}" FontFamily="{StaticResource TelemetryFontFamily}" Text="{x:Bind State, Mode=OneWay}" TextWrapping="Wrap" /></Grid>
-                                        <Grid ColumnSpacing="8"><Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions><TextBlock FontWeight="SemiBold" Style="{StaticResource RowSecondaryTextStyle}" Text="Time" /><TextBlock Grid.Column="1" Style="{StaticResource RowSecondaryTextStyle}" FontFamily="{StaticResource TelemetryFontFamily}" Text="{x:Bind Detail, Mode=OneWay}" TextWrapping="Wrap" /></Grid>
+                                        <Grid ColumnSpacing="8"><Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions><TextBlock FontWeight="SemiBold" Style="{StaticResource RowSecondaryTextStyle}" Text="State" /><TextBlock Grid.Column="1" Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind State, Mode=OneWay}" TextWrapping="Wrap" /></Grid>
+                                        <Grid ColumnSpacing="8"><Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions><TextBlock FontWeight="SemiBold" Style="{StaticResource RowSecondaryTextStyle}" Text="Time" /><TextBlock Grid.Column="1" Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind Detail, Mode=OneWay}" TextWrapping="Wrap" /></Grid>
                                     </StackPanel>
                                 </Grid>
                             </DataTemplate>

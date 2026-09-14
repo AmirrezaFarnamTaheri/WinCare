@@ -104,6 +104,13 @@ public sealed class PluginCardViewModel
         : RemoteItem?.IsCatalogTrustVerified != true ? "Remote installation is disabled because the catalog signature is unverified."
         : !HasPublisherSignature ? "The package entry has no publisher manifest signature."
         : "Ready to install.";
+
+    public string DetailsAccessibleName => $"Review {Name}";
+    public string InstallAccessibleName => $"Add {Name}";
+    public string EnableAccessibleName => $"Enable {Name}";
+    public string DisableAccessibleName => $"Disable {Name}";
+    public string UninstallAccessibleName => $"Uninstall {Name}";
+
     public bool CanEnable => IsInstalled && !IsBuiltIn && InstalledState == PluginState.Disabled && !IsRevoked;
     public bool CanDisable => IsInstalled && !IsBuiltIn && InstalledState == PluginState.Enabled;
     public bool CanUninstall => IsInstalled && !IsBuiltIn;

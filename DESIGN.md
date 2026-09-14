@@ -58,7 +58,7 @@ The wide shell uses a native left navigation rail grouped around Home, Checkup, 
 
 Global search is product-wide: pages, native tools, extensions, and help topics participate. Unknown free text falls back to Power tools search. Data-heavy pages preserve stacked compact records; the Power tools inspector overlays below 1320 DIP. Avoid fixed-height prose and nested decorative enclosures.
 
-`LayoutVisibility.CompactBreakpointDip = 920.0` remains the shared page-level compact boundary unless a component has a narrower measured breakpoint.
+`LayoutVisibility.CompactBreakpointDip = 920.0` remains the shared page-level compact boundary unless a component has a narrower measured breakpoint. Home's hero/evidence composition stacks below 820 DIP so the summary never competes with the primary action for horizontal space.
 
 ## Product truth and accessibility
 
@@ -69,6 +69,7 @@ Activity uses a theme-aware document illustration and a separate empty compositi
 - No blanket approval claim: risk determines direct execution, confirmation or destructive preview/receipt requirements. The dispatcher remains authoritative.
 - No false publisher verification, invented plugin availability, decorative settings or telemetry.
 - Meaningful automation names, keyboard access and visible focus; target 44-DIP controls.
+- Use body typography for ordinary state, time, labels and prose; reserve monospace for identifiers, paths, raw parameters and technical evidence.
 - Validate text, accent and status contrast in both themes. High contrast uses system brushes.
 
 ## Verification

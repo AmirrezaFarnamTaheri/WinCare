@@ -40,6 +40,8 @@ class ProductUiParityTests(unittest.TestCase):
         view_model = self.read("src/WinCare.App/ViewModels/Pages/AiDoctorPageViewModel.cs")
         code_behind = self.read("src/WinCare.App/Views/Pages/AiDoctorPage.xaml.cs")
         xaml = self.read("src/WinCare.App/Views/Pages/AiDoctorPage.xaml")
+        action_plan = self.read("src/WinCare.Application/Diagnostics/DoctorActionPlan.cs")
+        translator = self.read("src/WinCare.Application/Diagnostics/IntentTranslator.cs")
 
         self.assertNotIn("ICommandDispatcher", view_model)
         self.assertNotIn("PreviewStepAsync", view_model)
@@ -47,6 +49,15 @@ class ProductUiParityTests(unittest.TestCase):
         self.assertNotIn("ContentDialog", code_behind)
         self.assertIn("PageNavigation.OpenTool", code_behind)
         self.assertIn("normal risk-tier review, execution, and Activity flow", xaml)
+        self.assertIn('AutomationProperties.Name="{x:Bind ActionAccessibleName}"', xaml)
+        self.assertIn("AccessRequirement", action_plan)
+        self.assertIn("AdministratorAccess.MayBeRequired", action_plan)
+        self.assertIn("ActionAccessibleName", action_plan)
+        self.assertIn("HasMutatingActions => ProposedSteps.Any(step => !step.IsReadOnly)", action_plan)
+        self.assertIn("UndoAvailable: false", translator)
+        self.assertIn("ReadOnly: match.ReadOnly", translator)
+        self.assertIn("AccessRequirement: match.AdministratorAccess", translator)
+        self.assertNotIn("UndoAvailable: match.Risk", translator)
 
     def test_care_rows_preserve_parameters_and_open_the_canonical_tool_inspector(self) -> None:
         control = self.read("src/WinCare.App/Controls/CareToolList.xaml.cs")
@@ -91,6 +102,7 @@ class ProductUiParityTests(unittest.TestCase):
 
     def test_extension_catalog_trust_state_and_compact_layout_are_visible(self) -> None:
         view_model = self.read("src/WinCare.App/ViewModels/Pages/PluginStorePageViewModel.cs")
+        card = self.read("src/WinCare.App/ViewModels/Pages/PluginCardViewModel.cs")
         xaml = self.read("src/WinCare.App/Views/Pages/PluginStorePage.xaml")
         dialog = self.read("src/WinCare.App/Views/Dialogs/PluginDetailDialog.xaml")
         code_behind = self.read("src/WinCare.App/Views/Pages/PluginStorePage.xaml.cs")
@@ -105,10 +117,15 @@ class ProductUiParityTests(unittest.TestCase):
         self.assertNotIn("plugin package and its registered commands", code_behind)
         self.assertIn('ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto"', xaml)
         self.assertIn("Grid.SetRow(CategoryFilter, compact ? 2 : 1)", code_behind)
+        for property_name in ("DetailsAccessibleName", "InstallAccessibleName", "EnableAccessibleName", "DisableAccessibleName", "UninstallAccessibleName"):
+            self.assertIn(property_name, card)
+            self.assertIn(f'AutomationProperties.Name="{{x:Bind {property_name}}}"', xaml)
+        self.assertNotIn('Text="{x:Bind StatusBadgeText}" FontFamily="{StaticResource TelemetryFontFamily}"', xaml)
 
     def test_checkup_keeps_follow_up_actions_and_uses_stable_section_names(self) -> None:
         view_model = self.read("src/WinCare.App/ViewModels/Pages/CheckupPageViewModel.cs")
         page = self.read("src/WinCare.App/Views/Pages/CheckupPage.xaml.cs")
+        xaml = self.read("src/WinCare.App/Views/Pages/CheckupPage.xaml")
 
         self.assertIn("ApplyUpdateOutcome(row", view_model)
         self.assertIn("ApplyUpdateOutcome(resultRow", view_model)
@@ -118,6 +135,9 @@ class ProductUiParityTests(unittest.TestCase):
         self.assertIn("PageNavigation.NavigateToSection", page)
         self.assertIn("new PageRow(quickRow.Title, quickRow.Description", view_model)
         self.assertNotIn("Background update query failed: {ex.Message}", view_model)
+        self.assertIn('AutomationProperties.Name="{x:Bind ActionAccessibleName, Mode=OneWay}"', xaml)
+        self.assertIn('Text="Checkup status"', xaml)
+        self.assertNotIn('Text="CHECKUP STATUS"', xaml)
 
     def test_shell_page_service_and_navigation_catalog_share_one_route_set(self) -> None:
         catalog = self.read("src/WinCare.Application/Navigation/NavigationCatalog.cs")
@@ -142,6 +162,7 @@ class ProductUiParityTests(unittest.TestCase):
         self.assertNotIn('Text="Safety model"', about)
         self.assertIn('Text="Open source"', about)
         self.assertIn('"Common care"', catalog)
+        self.assertNotIn("not durable", settings.lower())
 
     def test_activity_copy_matches_terminal_history_semantics(self) -> None:
         activity = self.read("src/WinCare.App/Views/Pages/ActivityPage.xaml")
@@ -151,6 +172,9 @@ class ProductUiParityTests(unittest.TestCase):
         self.assertNotIn("pending confirmations", activity)
         self.assertNotIn("elevated confirmation", activity)
         self.assertIn("operations ended in a state that needs review or follow-up", activity)
+        self.assertIn("Recent operations leave a record here", activity)
+        self.assertNotIn("Activity history is not durable", activity)
+        self.assertNotIn('FontFamily="{StaticResource TelemetryFontFamily}"', activity)
         self.assertIn('Text="History"', activity)
         self.assertIn('new PageSection("History"', view_model)
         self.assertIn("ActivityState.Failed", view_model)
@@ -171,6 +195,8 @@ class ProductUiParityTests(unittest.TestCase):
         architecture = self.read("docs/Architecture.md")
         architecture_plain = architecture.replace("**", "")
         c4 = self.read("docs/architecture/c4-model.md")
+        design = self.read("DESIGN.md")
+        ux_contract = self.read("UX-CONTRACT.md")
 
         self.assertNotIn("confirmation dialog", guide)
         self.assertNotIn("probes run sequentially", guide)
@@ -186,6 +212,11 @@ class ProductUiParityTests(unittest.TestCase):
         self.assertIn("269 command definitions", c4)
         self.assertIn("Troubleshoot cannot mint an approval receipt", c4)
         self.assertNotIn("263 native command definitions", c4)
+        self.assertIn("Home's hero/evidence composition stacks below 820 DIP", design)
+        self.assertIn("Home's hero/evidence composition stacks below 820 DIP", ux_contract)
+        self.assertNotIn("Home channels stack below 600 DIP", ux_contract)
+        self.assertIn("installed extensions", ux_contract)
+        self.assertIn("never infers Undo", ux_contract)
 
 
 if __name__ == "__main__":

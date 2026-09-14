@@ -22,6 +22,12 @@ namespace WinCare.Application.Diagnostics
         bool IsVerifiedByTelemetry = false
     );
 
+    /// <summary>
+    /// Presentation-safe projection of a catalog command suggested by Troubleshoot. The legacy
+    /// elevation/undo fields remain for compatibility, while lossless catalog metadata is carried
+    /// separately so the UI does not turn "may require administrator" into "standard access" or
+    /// infer recovery guarantees that the dispatcher has not actually issued.
+    /// </summary>
     public sealed record ProposedActionStep(
         string CommandId,
         string Title,
@@ -30,21 +36,35 @@ namespace WinCare.Application.Diagnostics
         bool RequiresElevation,
         IReadOnlyDictionary<string, string>? Parameters = null,
         string AffectedResource = "System",
-        bool UndoAvailable = false
+        bool UndoAvailable = false,
+        bool? ReadOnly = null,
+        AdministratorAccess? AccessRequirement = null
     )
     {
-        public bool IsReadOnly => RiskLevel == CommandRisk.ReadOnly;
+        public bool IsReadOnly => ReadOnly ?? RiskLevel == CommandRisk.ReadOnly;
+
+        public AdministratorAccess EffectiveAccessRequirement => AccessRequirement ??
+            (RequiresElevation ? AdministratorAccess.Required : AdministratorAccess.No);
+
         public string RiskBadgeText => RiskLevel switch
         {
-            CommandRisk.ReadOnly => "READ-ONLY",
-            CommandRisk.Low => "SAFE",
-            CommandRisk.Moderate => "MODERATE",
-            CommandRisk.High or CommandRisk.Critical => "DESTRUCTIVE",
-            _ => "SAFE",
+            CommandRisk.ReadOnly => "Read-only",
+            CommandRisk.Low => "Safe",
+            CommandRisk.Moderate => "Moderate",
+            CommandRisk.High or CommandRisk.Critical => "Destructive",
+            _ => "Safe",
         };
-        public string ElevationBadgeText => RequiresElevation ? "ADMINISTRATOR REQUIRED" : "STANDARD ACCESS";
+
+        public string ElevationBadgeText => EffectiveAccessRequirement switch
+        {
+            AdministratorAccess.Required => "Administrator required",
+            AdministratorAccess.MayBeRequired => "Administrator may be required",
+            _ => "Standard access",
+        };
+
         public string ReviewContextText => $"{RiskBadgeText} · {ElevationBadgeText} · {AffectedResource}";
         public string ActionButtonText => IsReadOnly ? "Open check" : "Review in Power tools";
+        public string ActionAccessibleName => $"{ActionButtonText}: {Title}";
     }
 
     public sealed record TelemetryEvidence(
@@ -73,7 +93,7 @@ namespace WinCare.Application.Diagnostics
         };
 
         public string ProvenanceSummary => $"Source: {Source} | Collector: {Collector} | Command: {CommandId ?? "system.core"}@{CommandVersion} | Captured: {TimestampUtc:yyyy-MM-dd HH:mm:ss} UTC";
-    };
+    }
 
     public sealed class DoctorActionPlan
     {
@@ -84,7 +104,7 @@ namespace WinCare.Application.Diagnostics
         public required IReadOnlyList<DiagnosticFinding> Findings { get; init; }
         public required IReadOnlyList<ProposedActionStep> ProposedSteps { get; init; }
         public IReadOnlyList<TelemetryEvidence> MeasuredEvidence { get; init; } = Array.Empty<TelemetryEvidence>();
-        public bool HasMutatingActions => ProposedSteps.Any(s => s.RiskLevel != CommandRisk.ReadOnly);
+        public bool HasMutatingActions => ProposedSteps.Any(step => !step.IsReadOnly);
         public DateTime GeneratedAtUtc { get; init; } = DateTime.UtcNow;
     }
 }

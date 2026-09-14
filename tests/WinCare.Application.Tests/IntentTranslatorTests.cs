@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using WinCare.Application.Diagnostics;
 using WinCare.Application.Tools;
+using WinCare.CommandCatalog.Models;
 using Xunit;
 
 namespace WinCare.Application.Tests
@@ -48,14 +49,35 @@ namespace WinCare.Application.Tests
             Assert.NotEmpty(plan.Findings);
             Assert.NotEmpty(plan.ProposedSteps);
 
-            // Verify all recommended action step command IDs strictly exist in ToolCatalogService
+            // Recommendations must preserve the catalog metadata the frontend presents.
             foreach (var step in plan.ProposedSteps)
             {
                 var match = _catalogService.All.FirstOrDefault(c => c.Id.Equals(step.CommandId, StringComparison.OrdinalIgnoreCase));
                 Assert.NotNull(match);
                 Assert.Equal(match.Id, step.CommandId);
                 Assert.Equal(match.Risk, step.RiskLevel);
+                Assert.Equal(match.ReadOnly, step.IsReadOnly);
+                Assert.True(step.AccessRequirement.HasValue);
+                Assert.Equal(match.AdministratorAccess, step.AccessRequirement.GetValueOrDefault());
+                Assert.False(step.UndoAvailable);
             }
+        }
+
+        [Fact]
+        public void ProposedActionStep_preserves_conditional_administrator_access_in_user_copy()
+        {
+            var step = new ProposedActionStep(
+                CommandId: "conditional-admin",
+                Title: "Conditional administrator task",
+                Description: "Test recommendation",
+                RiskLevel: CommandRisk.Moderate,
+                RequiresElevation: false,
+                ReadOnly: false,
+                AccessRequirement: AdministratorAccess.MayBeRequired);
+
+            Assert.Equal("Administrator may be required", step.ElevationBadgeText);
+            Assert.Equal("Review in Power tools: Conditional administrator task", step.ActionAccessibleName);
+            Assert.False(step.UndoAvailable);
         }
 
         [Fact]
@@ -79,6 +101,7 @@ namespace WinCare.Application.Tests
             Assert.DoesNotContain(plan.Findings, f => f.Severity == DiagnosticSeverity.Healthy);
             Assert.NotEmpty(plan.ProposedSteps);
             Assert.All(plan.ProposedSteps, step => Assert.True(step.IsReadOnly));
+            Assert.False(plan.HasMutatingActions);
         }
 
         [Fact]

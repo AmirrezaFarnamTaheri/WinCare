@@ -66,7 +66,7 @@
                                 <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
                                     <TextBlock Text="{x:Bind Name}" FontWeight="SemiBold" FontSize="16" Foreground="{ThemeResource TextPrimaryBrush}" TextWrapping="Wrap" VerticalAlignment="Center" />
                                     <Border Grid.Column="1" HorizontalAlignment="Right" Background="{ThemeResource AccentTealSubtleBrush}" BorderBrush="{ThemeResource AccentTealBrush}" BorderThickness="1" CornerRadius="{StaticResource RadiusPill}" Padding="6,2" VerticalAlignment="Center">
-                                        <TextBlock Text="{x:Bind StatusBadgeText}" FontFamily="{StaticResource TelemetryFontFamily}" FontSize="11" FontWeight="SemiBold" Foreground="{ThemeResource AccentTealBrush}" TextWrapping="Wrap" />
+                                        <TextBlock Text="{x:Bind StatusBadgeText}" FontSize="11" FontWeight="SemiBold" Foreground="{ThemeResource AccentTealBrush}" TextWrapping="Wrap" />
                                     </Border>
                                 </Grid>
                                 <TextBlock Text="{x:Bind Description}" Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap" />
@@ -79,11 +79,11 @@
                             </StackPanel>
 
                             <StackPanel Orientation="Horizontal" Spacing="8">
-                                <Button Content="Review" Click="DetailsButton_Click" Tag="{x:Bind}" AutomationProperties.Name="View extension details"/>
-                                <Button Content="Add" Visibility="{x:Bind local:PluginStorePage.BoolToVisibility(CanInstall), Mode=OneTime}" Click="InstallButton_Click" Tag="{x:Bind}" Style="{StaticResource AccentButtonStyle}" AutomationProperties.Name="Review and install extension"/>
-                                <Button Content="Enable" Visibility="{x:Bind local:PluginStorePage.BoolToVisibility(CanEnable), Mode=OneTime}" Click="EnableButton_Click" Tag="{x:Bind}" Style="{StaticResource AccentButtonStyle}" AutomationProperties.Name="Enable extension"/>
-                                <Button Content="Disable" Visibility="{x:Bind local:PluginStorePage.BoolToVisibility(CanDisable), Mode=OneTime}" Click="DisableButton_Click" Tag="{x:Bind}" AutomationProperties.Name="Disable extension"/>
-                                <Button Content="Uninstall" Visibility="{x:Bind local:PluginStorePage.BoolToVisibility(CanUninstall), Mode=OneTime}" Click="UninstallButton_Click" Tag="{x:Bind}" AutomationProperties.Name="Uninstall extension"/>
+                                <Button Content="Review" Click="DetailsButton_Click" Tag="{x:Bind}" AutomationProperties.Name="{x:Bind DetailsAccessibleName}"/>
+                                <Button Content="Add" Visibility="{x:Bind local:PluginStorePage.BoolToVisibility(CanInstall), Mode=OneTime}" Click="InstallButton_Click" Tag="{x:Bind}" Style="{StaticResource AccentButtonStyle}" AutomationProperties.Name="{x:Bind InstallAccessibleName}"/>
+                                <Button Content="Enable" Visibility="{x:Bind local:PluginStorePage.BoolToVisibility(CanEnable), Mode=OneTime}" Click="EnableButton_Click" Tag="{x:Bind}" Style="{StaticResource AccentButtonStyle}" AutomationProperties.Name="{x:Bind EnableAccessibleName}"/>
+                                <Button Content="Disable" Visibility="{x:Bind local:PluginStorePage.BoolToVisibility(CanDisable), Mode=OneTime}" Click="DisableButton_Click" Tag="{x:Bind}" AutomationProperties.Name="{x:Bind DisableAccessibleName}"/>
+                                <Button Content="Uninstall" Visibility="{x:Bind local:PluginStorePage.BoolToVisibility(CanUninstall), Mode=OneTime}" Click="UninstallButton_Click" Tag="{x:Bind}" AutomationProperties.Name="{x:Bind UninstallAccessibleName}"/>
                             </StackPanel>
                         </StackPanel>
                     </Border>

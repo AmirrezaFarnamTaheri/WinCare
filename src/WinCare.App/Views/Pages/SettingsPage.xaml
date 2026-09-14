@@ -12,7 +12,7 @@
                     IsOpen="{x:Bind ViewModel.HasPersistenceWarning, Mode=OneWay}"
                     IsClosable="False"
                     Severity="Warning"
-                    Title="Preferences are not durable"
+                    Title="Preferences aren't being saved"
                     Message="{x:Bind ViewModel.PersistenceWarningMessage, Mode=OneWay}"
                     AutomationProperties.AutomationId="PreferencesPersistenceWarning"
                     AutomationProperties.Name="Preferences persistence warning" />

@@ -216,12 +216,16 @@ namespace WinCare.Application.Diagnostics
                 RequiresElevation: match.AdministratorAccess == AdministratorAccess.Required,
                 Parameters: DefaultParameters(match),
                 AffectedResource: match.Area,
-                UndoAvailable: match.Risk != CommandRisk.Critical
+                // Troubleshoot cannot infer recovery. Only the canonical execution path may
+                // surface Undo after a real compensator and sufficient receipt state exist.
+                UndoAvailable: false,
+                ReadOnly: match.ReadOnly,
+                AccessRequirement: match.AdministratorAccess
             );
 
         /// <summary>
-        /// Supplies safe, concrete parameters for the parameterized commands the Doctor may
-        /// recommend, so recommended mutating steps do not silently fail parameter validation.
+        /// Supplies safe, concrete parameters for the parameterized commands Troubleshoot may
+        /// recommend, so suggested mutating steps do not silently fail parameter validation.
         /// </summary>
         private static IReadOnlyDictionary<string, string>? DefaultParameters(CommandDefinition command) =>
             command.Id switch

@@ -32,7 +32,7 @@
                     </StackPanel>
                     <Border x:Name="CheckupStatusCard" Grid.Column="1" MinWidth="190" Padding="18" Background="{ThemeResource SurfaceSecondaryBrush}" CornerRadius="{StaticResource RadiusControl}">
                         <StackPanel Spacing="5">
-                            <TextBlock Style="{StaticResource RowSecondaryTextStyle}" Text="CHECKUP STATUS" />
+                            <TextBlock Style="{StaticResource RowSecondaryTextStyle}" Text="Checkup status" />
                             <TextBlock FontSize="22" FontWeight="SemiBold" Foreground="{x:Bind ViewModel.HealthScoreBrushKey, Mode=OneWay, Converter={StaticResource ThemeResourceBrushConverter}}" Text="{x:Bind ViewModel.HealthScoreText, Mode=OneWay}" TextWrapping="Wrap" />
                             <TextBlock Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind ViewModel.HealthScoreDetail, Mode=OneWay}" TextWrapping="Wrap" />
                         </StackPanel>
