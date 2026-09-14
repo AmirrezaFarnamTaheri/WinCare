@@ -68,7 +68,7 @@ class ProductUiParityTests(unittest.TestCase):
         self.assertIn("command.RiskTier == tier", view_model)
         self.assertIn("Definition.RiskTier", row)
 
-    def test_extension_catalog_trust_state_is_visible(self) -> None:
+    def test_extension_catalog_trust_state_and_compact_layout_are_visible(self) -> None:
         view_model = self.read("src/WinCare.App/ViewModels/Pages/PluginStorePageViewModel.cs")
         xaml = self.read("src/WinCare.App/Views/Pages/PluginStorePage.xaml")
         dialog = self.read("src/WinCare.App/Views/Dialogs/PluginDetailDialog.xaml")
@@ -80,6 +80,8 @@ class ProductUiParityTests(unittest.TestCase):
         self.assertIn('AutomationProperties.AutomationId="PluginCatalogStatus"', xaml)
         self.assertIn("current catalog and package trust checks pass", dialog)
         self.assertNotIn("plugin package and its registered commands", code_behind)
+        self.assertIn('ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto"', xaml)
+        self.assertIn("Grid.SetRow(CategoryFilter, compact ? 2 : 1)", code_behind)
 
     def test_checkup_keeps_follow_up_actions_and_uses_stable_section_names(self) -> None:
         view_model = self.read("src/WinCare.App/ViewModels/Pages/CheckupPageViewModel.cs")
