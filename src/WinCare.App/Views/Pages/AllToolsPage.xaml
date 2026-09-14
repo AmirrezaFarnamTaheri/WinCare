@@ -101,7 +101,8 @@
                                         AutomationProperties.Name="Cancel selected tool operation" />
                             </StackPanel>
                             <Button HorizontalAlignment="Left" Style="{StaticResource QuietButtonStyle}" Click="FavoriteButton_Click"
-                                    Content="Add/remove favorite" AutomationProperties.Name="Toggle selected tool favorite" />
+                                    Content="{x:Bind ViewModel.FavoriteActionLabel, Mode=OneWay}"
+                                    AutomationProperties.Name="{x:Bind ViewModel.FavoriteActionLabel, Mode=OneWay}" />
                             <InfoBar IsOpen="{x:Bind ViewModel.Execution.IsExecutionResultOpen, Mode=OneWay}" IsClosable="False"
                                      Title="{x:Bind ViewModel.Execution.ExecutionTitle, Mode=OneWay}"
                                      Message="{x:Bind ViewModel.Execution.ExecutionMessage, Mode=OneWay}" />

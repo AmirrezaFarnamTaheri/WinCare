@@ -37,8 +37,8 @@ public sealed class CategoryShortcutTests
         Assert.Equal(expectedCount, results.Count);
         Assert.All(results, item =>
         {
-            Assert.True(string.Equals(area, item.Command.Area, StringComparison.OrdinalIgnoreCase));
-            Assert.True(string.Equals(section, item.Command.Section, StringComparison.OrdinalIgnoreCase));
+            Assert.Equal(area, item.Command.Area, ignoreCase: true);
+            Assert.Equal(section, item.Command.Section, ignoreCase: true);
         });
     }
 
@@ -49,7 +49,7 @@ public sealed class CategoryShortcutTests
         var results = CareAreaProjectionService.Project(_service, selection, []);
 
         Assert.Equal(9, results.Count);
-        Assert.All(results, item => Assert.True(string.Equals("System care", item.Command.Area, StringComparison.OrdinalIgnoreCase)));
+        Assert.All(results, item => Assert.Equal("System care", item.Command.Area, ignoreCase: true));
         Assert.All(results, item => Assert.Contains(item.Command.Section, selection.Sections));
     }
 }

@@ -17,14 +17,16 @@
             <ComboBox x:Name="CategoryFilter" Grid.Row="1" Grid.ColumnSpan="2" Width="220" HorizontalAlignment="Left" Header="Category" ItemsSource="{x:Bind ViewModel.Categories, Mode=OneWay}" SelectedItem="{x:Bind ViewModel.SelectedCategory, Mode=TwoWay}" AutomationProperties.AutomationId="PluginCategoryFilter" AutomationProperties.Name="Filter extensions by category" />
         </Grid>
 
-        <InfoBar Grid.Row="1"
-                 IsOpen="{x:Bind ViewModel.HasCatalogStatus, Mode=OneWay}"
-                 Severity="Informational"
-                 Title="Catalog trust and availability"
-                 Message="{x:Bind ViewModel.CatalogStatusMessage, Mode=OneWay}"
-                 IsClosable="False"
-                 AutomationProperties.AutomationId="PluginCatalogStatus"
-                 AutomationProperties.Name="Extension catalog trust and availability" />
+        <Expander Grid.Row="1"
+                  Header="Catalog status"
+                  IsExpanded="False"
+                  Visibility="{x:Bind local:PluginStorePage.BoolToVisibility(ViewModel.HasCatalogStatus), Mode=OneWay}"
+                  AutomationProperties.AutomationId="PluginCatalogStatus"
+                  AutomationProperties.Name="Extension catalog trust and availability">
+            <TextBlock Style="{StaticResource RowSecondaryTextStyle}"
+                       Text="{x:Bind ViewModel.CatalogStatusMessage, Mode=OneWay}"
+                       TextWrapping="Wrap" />
+        </Expander>
 
         <InfoBar Grid.Row="2"
                  IsOpen="{x:Bind ViewModel.HasError, Mode=OneWay}"
@@ -61,17 +63,15 @@
                             BorderThickness="1" CornerRadius="{StaticResource RadiusCardOuter}" Padding="20">
                         <StackPanel Spacing="16">
                             <StackPanel Spacing="8">
-                                <Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="8">
-                                    <TextBlock Text="{x:Bind Name}" FontWeight="SemiBold" FontSize="16" Foreground="{ThemeResource TextPrimaryBrush}" TextWrapping="Wrap" />
-                                    <Border Grid.Row="1" HorizontalAlignment="Left" Background="{ThemeResource AccentTealSubtleBrush}" BorderBrush="{ThemeResource AccentTealBrush}" BorderThickness="1" CornerRadius="{StaticResource RadiusPill}" Padding="6,2">
+                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                                    <TextBlock Text="{x:Bind Name}" FontWeight="SemiBold" FontSize="16" Foreground="{ThemeResource TextPrimaryBrush}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                                    <Border Grid.Column="1" HorizontalAlignment="Right" Background="{ThemeResource AccentTealSubtleBrush}" BorderBrush="{ThemeResource AccentTealBrush}" BorderThickness="1" CornerRadius="{StaticResource RadiusPill}" Padding="6,2" VerticalAlignment="Center">
                                         <TextBlock Text="{x:Bind StatusBadgeText}" FontFamily="{StaticResource TelemetryFontFamily}" FontSize="11" FontWeight="SemiBold" Foreground="{ThemeResource AccentTealBrush}" TextWrapping="Wrap" />
-                                    </Border>
-                                    <Border Grid.Row="2" HorizontalAlignment="Left" Background="{ThemeResource SurfaceSecondaryBrush}" BorderBrush="{ThemeResource BorderSubtleBrush}" BorderThickness="1" CornerRadius="{StaticResource RadiusPill}" Padding="6,2">
-                                        <TextBlock Text="{x:Bind PublisherTrustBadgeText}" FontFamily="{StaticResource TelemetryFontFamily}" FontSize="11" Foreground="{ThemeResource TextSecondaryBrush}" TextWrapping="Wrap" />
                                     </Border>
                                 </Grid>
                                 <TextBlock Text="{x:Bind Description}" Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap" />
-                                <StackPanel Spacing="3" Margin="0,4,0,0">
+                                <TextBlock Text="{x:Bind PublisherTrustBadgeText}" FontSize="12" Foreground="{ThemeResource TextSecondaryBrush}" TextWrapping="Wrap" />
+                                <StackPanel Spacing="3" Margin="0,2,0,0">
                                     <TextBlock Text="{x:Bind Category}" FontSize="12" Foreground="{ThemeResource TextSecondaryBrush}" TextWrapping="Wrap" />
                                     <TextBlock Text="{x:Bind Author}" FontSize="12" Foreground="{ThemeResource TextSecondaryBrush}" TextWrapping="Wrap" />
                                     <TextBlock Text="{x:Bind Version}" FontSize="12" FontFamily="{StaticResource TelemetryFontFamily}" Foreground="{ThemeResource TextSecondaryBrush}" TextWrapping="Wrap" />

@@ -69,6 +69,23 @@ public sealed class HomePageViewModelTests
         Assert.Contains("older than 30 minutes", vm.EvidenceSummary);
     }
 
-    private static ActivityRecord Completed(string commandId, string title, DateTimeOffset startedAt) =>
-        new(Guid.NewGuid(), commandId, title, ActivityState.Completed, startedAt, startedAt.AddSeconds(1), "Evidence collected", false);
+    [Fact]
+    public void Home_uses_completion_time_for_evidence_freshness()
+    {
+        DateTimeOffset started = DateTimeOffset.UtcNow.AddHours(-2);
+        DateTimeOffset completed = DateTimeOffset.UtcNow.AddMinutes(-2);
+        var vm = new HomePageViewModel();
+        vm.RefreshActivity([
+            Completed("system", "System", started, completed),
+            Completed("storage", "Storage", started, completed),
+            Completed("security", "Security", started, completed),
+            Completed("wua-search", "Updates", started, completed),
+        ]);
+
+        Assert.Equal("Your latest check is ready", vm.EvidenceTitle);
+        Assert.Equal("Evidence collected", vm.SystemStatus);
+    }
+
+    private static ActivityRecord Completed(string commandId, string title, DateTimeOffset startedAt, DateTimeOffset? completedAt = null) =>
+        new(Guid.NewGuid(), commandId, title, ActivityState.Completed, startedAt, completedAt ?? startedAt.AddSeconds(1), "Evidence collected", false);
 }

@@ -136,6 +136,7 @@ public sealed class AllToolsPageViewModel : ObservableObject, IDisposable
     public string SelectedToolMetadata => SelectedTool is null ? string.Empty : $"{SelectedTool.Area} · {SelectedTool.Section} · {SelectedTool.Risk} tier";
     public string SelectedToolTechnicalDetails => SelectedTool is null ? string.Empty : $"Command ID: {SelectedTool.Id}\nCatalog risk: {SelectedTool.Definition.Risk}\nAdmission tier: {SelectedTool.Risk}\nAdministrator access: {SelectedTool.AdministratorAccess}\nRestart: {SelectedTool.Restart}\nMigration: {SelectedTool.MigrationState}\nLegacy source: {SelectedTool.Definition.LegacySource}";
     public bool IsSelectedToolFavorite => SelectedTool is not null && _favoriteIds.Contains(SelectedTool.Id);
+    public string FavoriteActionLabel => IsSelectedToolFavorite ? "Remove from favorites" : "Add to favorites";
 
     public void SelectTab(string tab)
     {
@@ -165,7 +166,9 @@ public sealed class AllToolsPageViewModel : ObservableObject, IDisposable
     {
         if (SelectedTool is null) return;
         if (!_favoriteIds.Add(SelectedTool.Id)) _favoriteIds.Remove(SelectedTool.Id);
-        AppPreferences.SaveFavoriteCommandIds(_favoriteIds); OnPropertyChanged(nameof(IsSelectedToolFavorite));
+        AppPreferences.SaveFavoriteCommandIds(_favoriteIds);
+        OnPropertyChanged(nameof(IsSelectedToolFavorite));
+        OnPropertyChanged(nameof(FavoriteActionLabel));
         if (string.Equals(_selectedTab, "Favorites", StringComparison.Ordinal)) Refresh();
     }
 
@@ -178,7 +181,7 @@ public sealed class AllToolsPageViewModel : ObservableObject, IDisposable
 
     private void NotifySelectedToolChanged()
     {
-        OnPropertyChanged(nameof(SelectedToolTitle)); OnPropertyChanged(nameof(SelectedToolSummary)); OnPropertyChanged(nameof(SelectedToolMetadata)); OnPropertyChanged(nameof(SelectedToolTechnicalDetails)); OnPropertyChanged(nameof(IsSelectedToolFavorite));
+        OnPropertyChanged(nameof(SelectedToolTitle)); OnPropertyChanged(nameof(SelectedToolSummary)); OnPropertyChanged(nameof(SelectedToolMetadata)); OnPropertyChanged(nameof(SelectedToolTechnicalDetails)); OnPropertyChanged(nameof(IsSelectedToolFavorite)); OnPropertyChanged(nameof(FavoriteActionLabel));
     }
 
     private void RebuildAreaOptions()
@@ -198,13 +201,48 @@ public sealed class AllToolsPageViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(SectionOptions)); OnPropertyChanged(nameof(SelectedSectionOption));
     }
 
-    private IReadOnlyList<ToolCategoryViewModel> BuildCategoryCards() => _catalog.All.GroupBy(command => new { command.Area, command.Section }).OrderBy(group => group.Key.Area, StringComparer.OrdinalIgnoreCase).ThenBy(group => group.Key.Section, StringComparer.OrdinalIgnoreCase).Select(group => new ToolCategoryViewModel(group.Key.Area, group.Key.Section, group.Count(), group.Select(command => command.Summary).FirstOrDefault() ?? string.Empty)).ToArray();
+    private IReadOnlyList<ToolCategoryViewModel> BuildCategoryCards() => _catalog.All.GroupBy(command => new { command.Area, command.Section }).OrderBy(group => group.Key.Area, StringComparer.OrdinalIgnoreCase).ThenBy(group => group.Key.Section, StringComparer.OrdinalIgnoreCase).Select(group => new ToolCategoryViewModel(group.Key.Area, group.Key.Section, group.Count(), group.OrderBy(command => command.RiskTier).ThenBy(command => command.Title, StringComparer.OrdinalIgnoreCase).Select(command => command.Summary).FirstOrDefault() ?? string.Empty)).ToArray();
 
-    public void OpenCategory(string area, string section)
+    public bool OpenCategory(string area, string section)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(area); ArgumentException.ThrowIfNullOrWhiteSpace(section); _searchCts?.Cancel(); _selectedTab = "Tools"; _searchText = string.Empty;
-        _selectedAreaOption = AreaOptions.First(option => string.Equals(option.Value, area, StringComparison.OrdinalIgnoreCase)); RebuildSectionOptions(); _selectedSectionOption = SectionOptions.First(option => string.Equals(option.Value, section, StringComparison.OrdinalIgnoreCase)); _selectedRiskOption = RiskOptions[0]; _readOnlyOnly = false;
+        ArgumentException.ThrowIfNullOrWhiteSpace(area);
+        ArgumentException.ThrowIfNullOrWhiteSpace(section);
+        _searchCts?.Cancel();
+
+        bool categoryStillExists = _catalog.All.Any(command =>
+            string.Equals(command.Area, area, StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(command.Section, section, StringComparison.OrdinalIgnoreCase));
+        if (!categoryStillExists)
+        {
+            RebuildAreaOptions();
+            Refresh();
+            return false;
+        }
+
+        AreaFilterOption? areaOption = AreaOptions.FirstOrDefault(option => string.Equals(option.Value, area, StringComparison.OrdinalIgnoreCase));
+        if (areaOption is null)
+        {
+            RebuildAreaOptions();
+            areaOption = AreaOptions.FirstOrDefault(option => string.Equals(option.Value, area, StringComparison.OrdinalIgnoreCase));
+            if (areaOption is null) return false;
+        }
+
+        _selectedTab = "Tools";
+        _searchText = string.Empty;
+        _selectedAreaOption = areaOption;
+        RebuildSectionOptions();
+        SectionFilterOption? sectionOption = SectionOptions.FirstOrDefault(option => string.Equals(option.Value, section, StringComparison.OrdinalIgnoreCase));
+        if (sectionOption is null)
+        {
+            RebuildAreaOptions();
+            Refresh();
+            return false;
+        }
+        _selectedSectionOption = sectionOption;
+        _selectedRiskOption = RiskOptions[0];
+        _readOnlyOnly = false;
         OnPropertyChanged(nameof(IsPresetTab)); OnPropertyChanged(nameof(IsCategoryTab)); OnPropertyChanged(nameof(IsCatalogTab)); OnPropertyChanged(nameof(SearchText)); OnPropertyChanged(nameof(SelectedAreaOption)); OnPropertyChanged(nameof(SelectedSectionOption)); OnPropertyChanged(nameof(SelectedRiskOption)); OnPropertyChanged(nameof(ReadOnlyOnly)); Refresh();
+        return true;
     }
 
     private void Refresh()

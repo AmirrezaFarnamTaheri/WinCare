@@ -62,8 +62,7 @@ public sealed partial class AllToolsPage : Page
     {
         if (sender is not Button { Tag: string key }) return;
         string[] parts = key.Split('\u001f', 2);
-        if (parts.Length != 2) return;
-        ViewModel.OpenCategory(parts[0], parts[1]);
+        if (parts.Length != 2 || !ViewModel.OpenCategory(parts[0], parts[1])) return;
         ToolTabs.SelectedItem = ToolTabs.Items[0] as SelectorBarItem;
         ToolSearchBox.Focus(FocusState.Programmatic);
     }

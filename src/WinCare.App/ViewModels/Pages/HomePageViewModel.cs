@@ -73,7 +73,7 @@ public sealed class HomePageViewModel : ObservableObject
         int freshCollected = QuickCheckCommandIds.Count(commandId =>
             latestByCommand.TryGetValue(commandId, out ActivityRecord? record) &&
             record.State == ActivityState.Completed &&
-            now - record.StartedAt <= EvidenceFreshnessWindow);
+            now - EvidenceTimestamp(record) <= EvidenceFreshnessWindow);
         int needsReview = QuickCheckCommandIds.Count(commandId =>
             latestByCommand.TryGetValue(commandId, out ActivityRecord? record) &&
             record.State is ActivityState.Failed or ActivityState.NeedsAttention);
@@ -81,7 +81,7 @@ public sealed class HomePageViewModel : ObservableObject
         EvidenceScoreText = $"{collected} of {QuickCheckCommandIds.Length} areas";
         if (freshCollected == QuickCheckCommandIds.Length)
         {
-            DateTimeOffset newestCheck = latestByCommand.Values.Max(record => record.StartedAt);
+            DateTimeOffset newestCheck = latestByCommand.Values.Max(EvidenceTimestamp);
             EvidenceTitle = "Your latest check is ready";
             EvidenceSummary = $"All four read-only checks finished. Last checked: {newestCheck.ToLocalTime():g}. Open an area below for its evidence and next step.";
         }
@@ -109,8 +109,8 @@ public sealed class HomePageViewModel : ObservableObject
         if (!latestByCommand.TryGetValue(commandId, out ActivityRecord? record))
             return "Not checked";
 
-        if (record.State == ActivityState.Completed && DateTimeOffset.UtcNow - record.StartedAt > EvidenceFreshnessWindow)
-            return $"Stale evidence ({record.StartedAt.ToLocalTime():HH:mm})";
+        if (record.State == ActivityState.Completed && DateTimeOffset.UtcNow - EvidenceTimestamp(record) > EvidenceFreshnessWindow)
+            return $"Stale evidence ({EvidenceTimestamp(record).ToLocalTime():HH:mm})";
 
         return record.State switch
         {
@@ -122,6 +122,8 @@ public sealed class HomePageViewModel : ObservableObject
             _ => ToFriendlyState(record.State),
         };
     }
+
+    private static DateTimeOffset EvidenceTimestamp(ActivityRecord record) => record.CompletedAt ?? record.StartedAt;
 
     private static string ToFriendlyState(ActivityState state) => state switch
     {
