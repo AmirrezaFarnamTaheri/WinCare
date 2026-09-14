@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using WinCare.App.ViewModels.Pages;
@@ -8,6 +9,7 @@ namespace WinCare.App.Controls;
 public sealed partial class CareToolList : UserControl
 {
     private bool _isLoaded;
+
     public CareToolList()
     {
         InitializeComponent();
@@ -50,6 +52,11 @@ public sealed partial class CareToolList : UserControl
 
     private void Tool_ItemClick(object sender, ItemClickEventArgs e)
     {
-        if (e.ClickedItem is PageRow { CommandId: { } id }) PageNavigation.OpenTools(this, id);
+        if (e.ClickedItem is not PageRow { CommandId: { } id } row) return;
+
+        JsonElement parameters = row.CommandParameters is JsonElement configured
+            ? configured
+            : JsonSerializer.SerializeToElement(new { });
+        PageNavigation.OpenTool(this, id, parameters);
     }
 }
