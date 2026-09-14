@@ -7,16 +7,13 @@ public sealed record WindowPlacementData(int Left, int Top, int Width, int Heigh
     public bool IsUsable => Width >= 800 && Height >= 600 && Width <= 16_384 && Height <= 16_384;
 }
 
-/// <summary>
-/// Persisted per-user preference state, including theme, command shortcuts, and optional
-/// desktop window continuity.
-/// </summary>
 public sealed record AppPreferenceData(string Theme = "System")
 {
     public List<string> FavoriteCommandIds { get; init; } = new();
     public List<string> RecentCommandIds { get; init; } = new();
     public bool RememberWindowPlacement { get; init; } = true;
     public WindowPlacementData? WindowPlacement { get; init; }
+    public bool HasSeenFirstRunTour { get; init; }
 
     public AppPreferenceData Normalize() => this with
     {
@@ -94,6 +91,11 @@ public static class AppPreferences
         get { lock (StateSync) { return _current.WindowPlacement; } }
     }
 
+    public static bool HasSeenFirstRunTour
+    {
+        get { lock (StateSync) { return _current.HasSeenFirstRunTour; } }
+    }
+
     public static bool IsPersistenceHealthy
     {
         get { lock (PersistenceSync) { return string.IsNullOrWhiteSpace(_persistenceStatusMessage); } }
@@ -106,7 +108,6 @@ public static class AppPreferences
 
     public static void SaveFavoriteCommandIds(IEnumerable<string> ids)
     {
-        ArgumentNullException.ThrowIfNull(ids);
         AppPreferenceData snapshot;
         lock (StateSync)
         {
@@ -118,7 +119,6 @@ public static class AppPreferences
 
     public static void SaveRecentCommandIds(IEnumerable<string> ids)
     {
-        ArgumentNullException.ThrowIfNull(ids);
         AppPreferenceData snapshot;
         lock (StateSync)
         {
@@ -130,7 +130,6 @@ public static class AppPreferences
 
     public static void SaveWindowPlacement(WindowPlacementData placement)
     {
-        ArgumentNullException.ThrowIfNull(placement);
         if (!placement.IsUsable) return;
 
         AppPreferenceData snapshot;
@@ -138,6 +137,18 @@ public static class AppPreferences
         {
             if (!_current.RememberWindowPlacement) return;
             _current = (_current with { WindowPlacement = placement }).Normalize();
+            snapshot = Snapshot();
+        }
+        QueueSave(snapshot);
+    }
+
+    public static void MarkFirstRunTourSeen()
+    {
+        AppPreferenceData snapshot;
+        lock (StateSync)
+        {
+            if (_current.HasSeenFirstRunTour) return;
+            _current = _current with { HasSeenFirstRunTour = true };
             snapshot = Snapshot();
         }
         QueueSave(snapshot);
@@ -169,7 +180,7 @@ public static class AppPreferences
             if (!File.Exists(FilePath)) return new();
             if (new FileInfo(FilePath).Length > 1024 * 1024)
             {
-                persistenceStatusMessage = "Saved preferences exceeded the safety limit and were not loaded. New preferences may still be used for this session.";
+                persistenceStatusMessage = "Your saved settings file is too large to read, so WinCare started with defaults.";
                 return new();
             }
 
@@ -177,7 +188,7 @@ public static class AppPreferences
         }
         catch (Exception ex) when (ex is IOException or JsonException or UnauthorizedAccessException)
         {
-            persistenceStatusMessage = "Saved preferences could not be loaded. WinCare is using session defaults until preferences can be saved again.";
+            persistenceStatusMessage = "WinCare couldn't read your saved settings, so it started with defaults.";
             System.Diagnostics.Debug.WriteLine($"[AppPreferences] Load failed: {ex}");
             return new();
         }
@@ -208,16 +219,18 @@ public static class AppPreferences
             temporaryPath = null;
             SetPersistenceStatus(null);
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            SetPersistenceStatus("WinCare is using your updated preferences in memory, but cannot save them to disk. They may be lost when the app exits.");
+            SetPersistenceStatus("WinCare couldn't save your settings. They'll keep working until you close the app.");
             System.Diagnostics.Debug.WriteLine($"[AppPreferences] Save failed: {ex}");
         }
         finally
         {
             if (!string.IsNullOrWhiteSpace(temporaryPath))
             {
-                try { File.Delete(temporaryPath); } catch { }
+                try { File.Delete(temporaryPath); }
+                catch (IOException) { }
+                catch (UnauthorizedAccessException) { }
             }
         }
     }
@@ -230,9 +243,6 @@ public static class AppPreferences
             changed = !string.Equals(_persistenceStatusMessage, message, StringComparison.Ordinal);
             _persistenceStatusMessage = message;
         }
-        if (changed)
-        {
-            try { PersistenceStatusChanged?.Invoke(null, EventArgs.Empty); } catch { }
-        }
+        if (changed) PersistenceStatusChanged?.Invoke(null, EventArgs.Empty);
     }
 }

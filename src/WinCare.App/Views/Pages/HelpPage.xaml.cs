@@ -14,4 +14,5 @@ public sealed partial class HelpPage : Page
     private void OpenTroubleshoot_Click(object sender, RoutedEventArgs e) => PageNavigation.NavigateTo(this, "ai-doctor");
     private void OpenSettings_Click(object sender, RoutedEventArgs e) => PageNavigation.NavigateTo(this, "settings");
     private void OpenAbout_Click(object sender, RoutedEventArgs e) => PageNavigation.NavigateTo(this, "about");
+    private async void ShowTour_Click(object sender, RoutedEventArgs e) => await PageNavigation.ShowTourAsync(this);
 }

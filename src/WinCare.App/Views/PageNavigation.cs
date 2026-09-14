@@ -7,24 +7,14 @@ namespace WinCare.App.Views;
 
 public static class PageNavigation
 {
-    public static void NavigateTo(DependencyObject source, string key, object? parameter = null)
-    {
-        ShellPage shell = FindShell(source);
-        shell.NavigateTo(key, parameter);
-    }
+    public static void NavigateTo(DependencyObject source, string key, object? parameter = null) =>
+        FindShell(source).NavigateTo(key, parameter);
 
-    public static void NavigateToSection(DependencyObject source, string key, string sectionTitle)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(sectionTitle);
+    public static void NavigateToSection(DependencyObject source, string key, string sectionTitle) =>
         NavigateTo(source, key, new SectionNavigationRequest(sectionTitle));
-    }
 
     public static int ResolveSectionIndex(SelectorBar selector, object? parameter)
     {
-        ArgumentNullException.ThrowIfNull(selector);
-        if (parameter is int legacyIndex)
-            return legacyIndex >= 0 && legacyIndex < selector.Items.Count ? legacyIndex : -1;
-
         if (parameter is not SectionNavigationRequest request) return -1;
         for (int index = 0; index < selector.Items.Count; index++)
         {
@@ -37,17 +27,13 @@ public static class PageNavigation
         return -1;
     }
 
-    public static void OpenTools(DependencyObject source, string query)
-    {
-        ShellPage shell = FindShell(source);
-        shell.OpenGlobalSearch(query);
-    }
+    public static void OpenTools(DependencyObject source, string query) =>
+        FindShell(source).OpenGlobalSearch(query);
 
-    public static void OpenTool(DependencyObject source, string commandId, JsonElement parameters)
-    {
-        ShellPage shell = FindShell(source);
-        shell.OpenTool(new ToolNavigationRequest(commandId, parameters.Clone()));
-    }
+    public static void OpenTool(DependencyObject source, string commandId, JsonElement parameters) =>
+        FindShell(source).OpenTool(new ToolNavigationRequest(commandId, parameters.Clone()));
+
+    public static Task ShowTourAsync(DependencyObject source) => FindShell(source).ShowTourAsync();
 
     private static ShellPage FindShell(DependencyObject source)
     {

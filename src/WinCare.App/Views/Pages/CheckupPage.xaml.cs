@@ -16,19 +16,16 @@ public sealed partial class CheckupPage : Page
 
     public CheckupPageViewModel ViewModel { get; }
 
-    private void SectionSelector_SelectionChanged(SelectorBar sender, SelectorBarSelectionChangedEventArgs args)
-    {
+    private void SectionSelector_SelectionChanged(SelectorBar sender, SelectorBarSelectionChangedEventArgs args) =>
         ViewModel.SelectSection(sender.Items.IndexOf(sender.SelectedItem));
-    }
 
     private void FindingAction_Click(object sender, RoutedEventArgs e)
     {
-        if (sender is not Button { DataContext: PageRow row } || string.IsNullOrWhiteSpace(row.NavigationKey)) return;
+        if (sender is not Button { DataContext: PageRow row } ||
+            string.IsNullOrWhiteSpace(row.NavigationKey) ||
+            string.IsNullOrWhiteSpace(row.NavigationSectionTitle)) return;
 
-        if (!string.IsNullOrWhiteSpace(row.NavigationSectionTitle))
-            PageNavigation.NavigateToSection(this, row.NavigationKey, row.NavigationSectionTitle);
-        else
-            PageNavigation.NavigateTo(this, row.NavigationKey, row.NavigationSectionIndex);
+        PageNavigation.NavigateToSection(this, row.NavigationKey, row.NavigationSectionTitle);
     }
 
     private void Page_SizeChanged(object sender, SizeChangedEventArgs e)

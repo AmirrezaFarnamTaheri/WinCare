@@ -6,27 +6,30 @@
         <StackPanel Padding="28,28,28,32" MaxWidth="920" HorizontalAlignment="Left" Spacing="24">
             <StackPanel Spacing="6">
                 <TextBlock x:Uid="HelpPageTitle" Style="{StaticResource PageTitleTextStyle}" Text="Help" />
-                <TextBlock Style="{StaticResource PageDescriptionTextStyle}" TextWrapping="Wrap" Text="WinCare is organized around a simple flow: check current evidence, open the relevant care area, and review higher-impact changes before applying them." />
+                <TextBlock Style="{StaticResource PageDescriptionTextStyle}" TextWrapping="Wrap" Text="New to WinCare? Start with Checkup, then follow the result to the right care page." />
             </StackPanel>
 
             <Border Padding="20" Background="{ThemeResource CardSurfaceBrush}" BorderBrush="{ThemeResource CardBorderBrush}" BorderThickness="1" CornerRadius="{StaticResource RadiusControl}">
                 <StackPanel Spacing="12">
                     <TextBlock Style="{StaticResource SectionHeaderTextStyle}" Text="Start here" />
-                    <TextBlock Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap" Text="Run Checkup for a read-only system snapshot. Results take you directly to the right care area when something needs attention." />
-                    <Button Content="Run Checkup" Style="{StaticResource AccentButtonStyle}" Click="OpenCheckup_Click" HorizontalAlignment="Left" AutomationProperties.AutomationId="HelpOpenCheckup" AutomationProperties.Name="Run Checkup" />
+                    <TextBlock Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap" Text="Checkup looks at a few important Windows areas without changing anything." />
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                        <Button Content="Run Checkup" Style="{StaticResource AccentButtonStyle}" Click="OpenCheckup_Click" AutomationProperties.AutomationId="HelpOpenCheckup" AutomationProperties.Name="Run Checkup" />
+                        <Button Content="Take the tour" Style="{StaticResource QuietButtonStyle}" Click="ShowTour_Click" AutomationProperties.AutomationId="HelpShowTour" AutomationProperties.Name="Take the WinCare tour" />
+                    </StackPanel>
                 </StackPanel>
             </Border>
 
             <StackPanel Spacing="12">
                 <TextBlock Style="{StaticResource SectionHeaderTextStyle}" Text="Find what you need" />
-                <TextBlock Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap" Text="Press Ctrl+K anywhere to search WinCare pages, tools, extensions, and help topics. Power tools contains the complete catalog for advanced or less common tasks." />
+                <TextBlock Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap" Text="Press Ctrl+K anywhere to find a page or tool. Power tools is where the full catalog lives." />
                 <StackPanel Orientation="Horizontal" Spacing="10"><Button Content="Open Power tools" Click="OpenPowerTools_Click" AutomationProperties.Name="Open Power tools" /><Button Content="Open Extensions" Click="OpenPluginStore_Click" AutomationProperties.Name="Open Extensions" /><Button Content="Troubleshoot" Click="OpenTroubleshoot_Click" AutomationProperties.Name="Open Troubleshoot" /></StackPanel>
             </StackPanel>
 
             <StackPanel Spacing="12">
-                <TextBlock Style="{StaticResource SectionHeaderTextStyle}" Text="When a tool changes Windows" />
-                <TextBlock Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap" Text="Safe bounded actions can run directly. Moderate changes require review and confirmation; Destructive changes require a successful preview and explicit approval of the reviewed plan. Checkup itself never changes the PC." />
-                <TextBlock Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap" Text="Activity shows running work, completed outcomes, reports, and operations whose final state needs review or follow-up." />
+                <TextBlock Style="{StaticResource SectionHeaderTextStyle}" Text="Before WinCare changes anything" />
+                <TextBlock Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap" Text="Read-only checks run without approval. Changes with more impact ask you to review or confirm them first. Checkup never changes the PC." />
+                <TextBlock Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap" Text="Activity shows what's running, what finished, and anything that needs another look." />
                 <Button Content="Open Activity" Click="OpenActivity_Click" HorizontalAlignment="Left" AutomationProperties.AutomationId="HelpOpenActivity" AutomationProperties.Name="Open Activity" />
             </StackPanel>
 

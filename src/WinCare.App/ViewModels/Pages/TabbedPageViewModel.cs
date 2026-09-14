@@ -18,11 +18,7 @@ public abstract class TabbedPageViewModel : ObservableObject
 
     protected TabbedPageViewModel(IReadOnlyList<PageSection> sections)
     {
-        Sections = sections ?? throw new ArgumentNullException(nameof(sections));
-        if (Sections.Count == 0)
-        {
-            throw new ArgumentException("At least one section is required.", nameof(sections));
-        }
+        Sections = sections;
         CurrentRows = new ObservableCollection<PageRow>(Sections[0].Rows);
     }
 
@@ -46,10 +42,7 @@ public abstract class TabbedPageViewModel : ObservableObject
 
     public virtual void SelectSection(int index)
     {
-        if (index < 0 || index >= Sections.Count || index == SelectedIndex)
-        {
-            return;
-        }
+        if (index < 0 || index >= Sections.Count || index == SelectedIndex) return;
 
         SelectedIndex = index;
         CurrentRows.Clear();
@@ -64,21 +57,12 @@ public abstract class TabbedPageViewModel : ObservableObject
 
     public void SetCompactLayout(bool isCompact)
     {
-        if (IsCompactLayout == isCompact)
-        {
-            return;
-        }
+        if (IsCompactLayout == isCompact) return;
 
         IsCompactLayout = isCompact;
-        foreach (PageRow row in CurrentRows)
-        {
-            row.IsCompact = isCompact;
-        }
+        foreach (PageRow row in CurrentRows) row.IsCompact = isCompact;
     }
 
-    /// <summary>
-    /// Shows a deterministic product section using the catalog's Area/Section taxonomy.
-    /// </summary>
     public void ShowTools(
         ToolCatalogService catalog,
         CareAreaSelection selection,
@@ -91,10 +75,6 @@ public abstract class TabbedPageViewModel : ObservableObject
         Populate(CareAreaProjectionService.Project(catalog, selection, journal?.GetAll() ?? []));
     }
 
-    /// <summary>
-    /// Command search projection retained for command-oriented surfaces and tests.
-    /// Care pages should prefer the structured overload.
-    /// </summary>
     public void ShowTools(ToolCatalogService catalog, string query, IActivityJournalService? journal = null)
     {
         _careCatalog = catalog;
@@ -108,13 +88,9 @@ public abstract class TabbedPageViewModel : ObservableObject
     {
         if (_careCatalog is null) return;
         if (_careSelection is not null)
-        {
             ShowTools(_careCatalog, _careSelection, _careJournal);
-        }
         else if (_careQuery is not null)
-        {
             ShowTools(_careCatalog, _careQuery, _careJournal);
-        }
     }
 
     private void Populate(IReadOnlyList<CareToolProjection> matches)
@@ -125,12 +101,11 @@ public abstract class TabbedPageViewModel : ObservableObject
             var tool = new ToolRowViewModel(projection.Command);
             string impact = projection.Command.ReadOnly
                 ? "Read-only"
-                : projection.Command.Risk switch
+                : projection.Command.RiskTier switch
                 {
-                    CommandRisk.Low => "Low impact",
-                    CommandRisk.Moderate => "Moderate impact",
-                    CommandRisk.High => "High impact",
-                    CommandRisk.Critical => "Critical impact",
+                    RiskTier.Safe => "Safe",
+                    RiskTier.Moderate => "Moderate",
+                    RiskTier.Destructive => "Destructive",
                     _ => "Changes Windows",
                 };
             string access = projection.Command.AdministratorAccess switch

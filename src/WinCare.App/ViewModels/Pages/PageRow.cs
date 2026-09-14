@@ -12,7 +12,6 @@ public sealed class PageRow : ObservableObject
     private string? _actionText;
     private CommunityToolkit.Mvvm.Input.IRelayCommand? _actionCommand;
     private string? _navigationKey;
-    private int? _navigationSectionIndex;
     private string? _navigationSectionTitle;
 
     public PageRow(string title, string description, string state, string detail)
@@ -82,14 +81,6 @@ public sealed class PageRow : ObservableObject
         }
     }
 
-    /// <summary>Legacy positional navigation retained for compatibility with existing callers.</summary>
-    public int? NavigationSectionIndex
-    {
-        get => _navigationSectionIndex;
-        set => SetProperty(ref _navigationSectionIndex, value);
-    }
-
-    /// <summary>Preferred stable destination section label for product navigation.</summary>
     public string? NavigationSectionTitle
     {
         get => _navigationSectionTitle;

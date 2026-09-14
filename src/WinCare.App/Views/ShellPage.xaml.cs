@@ -2,14 +2,15 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using WinCare.App.Services;
 using WinCare.App.ViewModels;
+using WinCare.App.Views.Dialogs;
 
 namespace WinCare.App.Views;
 
 public sealed partial class ShellPage : Page
 {
     private readonly PageService _pageService = new();
-    private object? _pendingToolsParameter;
-    private object? _pendingNavigationParameter;
+    private object? _pendingParameter;
+    private bool _initialized;
 
     public ShellPage()
     {
@@ -22,8 +23,6 @@ public sealed partial class ShellPage : Page
 
     private void Shell_SizeChanged(object sender, SizeChangedEventArgs e)
     {
-        // Keep the workspace rail visible when labels fit; collapse progressively
-        // without replacing native keyboard, focus, or accessibility behavior.
         PrimaryNavigation.PaneDisplayMode = e.NewSize.Width >= 920
             ? NavigationViewPaneDisplayMode.Left
             : e.NewSize.Width >= 680
@@ -31,86 +30,75 @@ public sealed partial class ShellPage : Page
                 : NavigationViewPaneDisplayMode.LeftMinimal;
     }
 
-    public void OpenGlobalSearch(string? query)
-    {
-        string normalized = query?.Trim() ?? string.Empty;
-        NavigationViewItem target = PrimaryNavigation.MenuItems
-            .OfType<NavigationViewItem>()
-            .Single(item => string.Equals(item.Tag as string, "all-tools", StringComparison.Ordinal));
+    public void OpenGlobalSearch(string? query) => OpenNavigationItem("all-tools", query?.Trim() ?? string.Empty);
 
-        _pendingToolsParameter = normalized;
-        if (ReferenceEquals(PrimaryNavigation.SelectedItem, target))
-        {
-            _pageService.Navigate(ContentFrame, "all-tools", normalized);
-            _pendingToolsParameter = null;
-            return;
-        }
-
-        PrimaryNavigation.SelectedItem = target;
-    }
-
-    public void OpenTool(ToolNavigationRequest request)
-    {
-        ArgumentNullException.ThrowIfNull(request);
-        NavigationViewItem target = PrimaryNavigation.MenuItems
-            .OfType<NavigationViewItem>()
-            .Single(item => string.Equals(item.Tag as string, "all-tools", StringComparison.Ordinal));
-        _pendingToolsParameter = request;
-        if (ReferenceEquals(PrimaryNavigation.SelectedItem, target))
-        {
-            _pageService.Navigate(ContentFrame, "all-tools", request);
-            _pendingToolsParameter = null;
-            return;
-        }
-        PrimaryNavigation.SelectedItem = target;
-    }
+    public void OpenTool(ToolNavigationRequest request) => OpenNavigationItem("all-tools", request);
 
     public void NavigateTo(string key, object? parameter = null)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(key);
-        NavigationViewItem? target = PrimaryNavigation.MenuItems
-            .Concat(PrimaryNavigation.FooterMenuItems)
-            .OfType<NavigationViewItem>()
-            .SingleOrDefault(item => string.Equals(item.Tag as string, key, StringComparison.Ordinal));
-
+        NavigationViewItem? target = FindNavigationItem(key);
         if (target is null)
         {
-            // Hidden routes such as About remain available through search/help without
-            // falsely leaving a different visible navigation item selected.
-            _pendingToolsParameter = null;
-            _pendingNavigationParameter = null;
+            _pendingParameter = null;
             PrimaryNavigation.SelectedItem = null;
             _pageService.Navigate(ContentFrame, key, parameter);
             return;
         }
 
+        OpenNavigationItem(target, key, parameter);
+    }
+
+    public async Task ShowTourAsync()
+    {
+        var dialog = new FirstRunTourDialog { XamlRoot = XamlRoot };
+        await dialog.ShowAsync();
+        AppPreferences.MarkFirstRunTourSeen();
+    }
+
+    private async void OnLoaded(object sender, RoutedEventArgs e)
+    {
+        if (_initialized) return;
+        _initialized = true;
+
+        NavigationViewItem home = PrimaryNavigation.MenuItems.OfType<NavigationViewItem>().First();
+        PrimaryNavigation.SelectedItem = home;
+        _pageService.Navigate(ContentFrame, "home");
+
+        if (!AppPreferences.HasSeenFirstRunTour)
+            await ShowTourAsync();
+    }
+
+    private void PrimaryNavigation_SelectionChanged(NavigationView sender, NavigationViewSelectionChangedEventArgs args)
+    {
+        if (args.SelectedItemContainer?.Tag is not string key) return;
+
+        object? parameter = _pendingParameter;
+        _pendingParameter = null;
+        _pageService.Navigate(ContentFrame, key, parameter);
+    }
+
+    private void OpenNavigationItem(string key, object? parameter)
+    {
+        NavigationViewItem target = FindNavigationItem(key)
+            ?? throw new KeyNotFoundException($"Navigation item '{key}' is not visible in the shell.");
+        OpenNavigationItem(target, key, parameter);
+    }
+
+    private void OpenNavigationItem(NavigationViewItem target, string key, object? parameter)
+    {
         if (ReferenceEquals(PrimaryNavigation.SelectedItem, target))
         {
             _pageService.Navigate(ContentFrame, key, parameter);
             return;
         }
 
-        _pendingNavigationParameter = parameter;
+        _pendingParameter = parameter;
         PrimaryNavigation.SelectedItem = target;
     }
 
-    private void OnLoaded(object sender, RoutedEventArgs e)
-    {
-        NavigationViewItem home = PrimaryNavigation.MenuItems.OfType<NavigationViewItem>().First();
-        PrimaryNavigation.SelectedItem = home;
-        _pageService.Navigate(ContentFrame, "home");
-    }
-
-    private void PrimaryNavigation_SelectionChanged(NavigationView sender, NavigationViewSelectionChangedEventArgs args)
-    {
-        if (args.SelectedItemContainer?.Tag is not string key)
-            return;
-
-        object? parameter = string.Equals(key, "all-tools", StringComparison.Ordinal)
-            ? _pendingToolsParameter
-            : _pendingNavigationParameter;
-        _pendingToolsParameter = null;
-        _pendingNavigationParameter = null;
-        _pageService.Navigate(ContentFrame, key, parameter);
-    }
+    private NavigationViewItem? FindNavigationItem(string key) =>
+        PrimaryNavigation.MenuItems
+            .Concat(PrimaryNavigation.FooterMenuItems)
+            .OfType<NavigationViewItem>()
+            .SingleOrDefault(item => string.Equals(item.Tag as string, key, StringComparison.Ordinal));
 }
