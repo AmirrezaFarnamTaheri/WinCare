@@ -43,6 +43,16 @@ class ProductUiParityTests(unittest.TestCase):
         self.assertIn("PageNavigation.OpenTool", code_behind)
         self.assertIn("normal risk-tier review, execution, and Activity flow", xaml)
 
+    def test_care_rows_preserve_parameters_and_open_the_canonical_tool_inspector(self) -> None:
+        control = self.read("src/WinCare.App/Controls/CareToolList.xaml.cs")
+        xaml = self.read("src/WinCare.App/Controls/CareToolList.xaml")
+
+        self.assertIn("PageNavigation.OpenTool", control)
+        self.assertNotIn("PageNavigation.OpenTools", control)
+        self.assertIn("CommandParameters is JsonElement", control)
+        self.assertNotIn("review any change before it runs", xaml)
+        self.assertIn("handle its safety tier before it runs", xaml)
+
     def test_power_tools_uses_named_controls_instead_of_visual_tree_order(self) -> None:
         xaml = self.read("src/WinCare.App/Views/Pages/AllToolsPage.xaml")
         code_behind = self.read("src/WinCare.App/Views/Pages/AllToolsPage.xaml.cs")
@@ -124,6 +134,8 @@ class ProductUiParityTests(unittest.TestCase):
         guide = self.read("docs/User-Guide.md")
         screenshots = self.read("docs/Screenshots.md")
         readme = self.read("README.md")
+        architecture = self.read("docs/Architecture.md")
+        c4 = self.read("docs/architecture/c4-model.md")
 
         self.assertNotIn("confirmation dialog", guide)
         self.assertNotIn("probes run sequentially", guide)
@@ -131,6 +143,12 @@ class ProductUiParityTests(unittest.TestCase):
         self.assertIn("Power tools applies the normal risk-tier flow", guide)
         self.assertIn("historical runtime evidence", screenshots)
         self.assertIn("Historical v2.5.0-rc5 runtime capture", readme)
+        self.assertIn("Power tools is the canonical advanced command inspector and execution surface", architecture)
+        self.assertIn("Troubleshoot does not", architecture)
+        self.assertIn("system, storage, and security probes execute concurrently", architecture)
+        self.assertIn("269 command definitions", c4)
+        self.assertIn("Troubleshoot cannot mint an approval receipt", c4)
+        self.assertNotIn("263 native command definitions", c4)
 
 
 if __name__ == "__main__":
