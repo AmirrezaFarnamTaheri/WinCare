@@ -289,6 +289,8 @@ Activity is the shared operation ledger:
 - **Completed** — terminal completed/failed/cancelled outcomes.
 - **Reports** — aggregated daily summaries.
 
+Infrastructure JSON state is committed through `CommandStateStore`. Mutations for the same root serialize through a process-wide per-root gate and an OS-wide named semaphore, so independent store instances and processes share one read-transform-write transaction boundary. A complete JSON value is flushed to a unique temporary file before replacement; if replacement fails, the intended value is rebuilt and retried rather than accepting an older destination file as a successful commit.
+
 `UndoAvailable` is exposed only when a concrete executable compensator and sufficient captured state exist. WinCare does not advertise generic undo for irreversible operations.
 
 ---
