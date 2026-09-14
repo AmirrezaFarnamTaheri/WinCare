@@ -52,6 +52,22 @@ public sealed class CareToolProjectionTests
         Assert.Empty(page.CurrentRows);
     }
 
+    [Fact]
+    public void Structured_care_projection_orders_by_product_risk_tier_then_title()
+    {
+        var catalog = new ToolCatalogService();
+        var selection = new CareAreaSelection("System care", "Clean up");
+        var projections = CareAreaProjectionService.Project(catalog, selection, []);
+
+        Assert.NotEmpty(projections);
+        string[] expected = projections
+            .OrderBy(item => item.Command.RiskTier)
+            .ThenBy(item => item.Command.Title, StringComparer.OrdinalIgnoreCase)
+            .Select(item => item.Command.Id)
+            .ToArray();
+        Assert.Equal(expected, projections.Select(item => item.Command.Id).ToArray());
+    }
+
     [Theory]
     [InlineData(0, "storage-report")]
     [InlineData(2, "app-residual-discovery")]

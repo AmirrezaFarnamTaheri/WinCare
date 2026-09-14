@@ -31,7 +31,7 @@ class NativeFoundationTests(unittest.TestCase):
                 self.assertIn("DashboardCardStyle", text, name)
                 self.assertIn("SizeChanged", text, name)
                 if name == "HomePage.xaml":
-                    self.assertIn("Recommended", text, name)
+                    self.assertIn("Common care", text, name)
                     self.assertIn("Explore WinCare", text, name)
                     self.assertNotIn("Review before applying", text, name)
                 if name == "CheckupPage.xaml":

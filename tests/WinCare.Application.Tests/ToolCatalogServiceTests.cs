@@ -28,6 +28,13 @@ public sealed class ToolCatalogServiceTests
     }
 
     [Fact]
+    public void Multi_word_search_requires_every_term()
+    {
+        Assert.Contains(_service.Search("Windows Update"), command => command.Id == "wua-search");
+        Assert.Empty(_service.Search("quic no-such-term-9c261c"));
+    }
+
+    [Fact]
     public void Read_only_filter_excludes_mutating_commands()
     {
         IReadOnlyList<CommandDefinition> commands = _service.Search(null, new ToolFilter(ReadOnly: true));

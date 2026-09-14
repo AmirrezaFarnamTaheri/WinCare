@@ -43,7 +43,7 @@ public sealed class HomePageViewModelTests
             Completed("wua-search", "Updates", now),
         ]);
 
-        Assert.Equal("4/4", vm.EvidenceScoreText);
+        Assert.Equal("4 of 4 areas", vm.EvidenceScoreText);
         Assert.Equal("Your latest check is ready", vm.EvidenceTitle);
         Assert.Equal("Evidence collected", vm.SystemStatus);
         Assert.Equal("Evidence collected", vm.StorageStatus);
@@ -52,13 +52,21 @@ public sealed class HomePageViewModelTests
     }
 
     [Fact]
-    public void Home_marks_old_completed_evidence_as_stale()
+    public void Home_marks_old_completed_evidence_as_stale_and_does_not_call_it_ready()
     {
+        DateTimeOffset old = DateTimeOffset.UtcNow.AddHours(-2);
         var vm = new HomePageViewModel();
-        vm.RefreshActivity([Completed("system", "System", DateTimeOffset.UtcNow.AddHours(-2))]);
+        vm.RefreshActivity([
+            Completed("system", "System", old),
+            Completed("storage", "Storage", old),
+            Completed("security", "Security", old),
+            Completed("wua-search", "Updates", old),
+        ]);
 
         Assert.StartsWith("Stale evidence", vm.SystemStatus);
-        Assert.Equal("1/4", vm.EvidenceScoreText);
+        Assert.Equal("4 of 4 areas", vm.EvidenceScoreText);
+        Assert.Equal("Your checkup evidence is getting stale", vm.EvidenceTitle);
+        Assert.Contains("older than 30 minutes", vm.EvidenceSummary);
     }
 
     private static ActivityRecord Completed(string commandId, string title, DateTimeOffset startedAt) =>

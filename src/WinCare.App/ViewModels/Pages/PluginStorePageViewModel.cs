@@ -217,7 +217,6 @@ public sealed class PluginStorePageViewModel : INotifyPropertyChanged, IDisposab
         {
             var installedPlugins = _registry.GetAllPlugins().ToDictionary(p => p.Id, StringComparer.OrdinalIgnoreCase);
             var cards = new List<PluginCardViewModel>();
-
             if (string.Equals(selectedCategory, "Installed", StringComparison.OrdinalIgnoreCase))
             {
                 foreach (var installed in installedPlugins.Values)
@@ -438,13 +437,14 @@ public sealed class PluginStorePageViewModel : INotifyPropertyChanged, IDisposab
     private static bool MatchesSearch(string searchQuery, string id, string name, string description, string author, string category, IEnumerable<string> commands)
     {
         if (string.IsNullOrWhiteSpace(searchQuery)) return true;
-        string q = searchQuery.Trim();
-        return id.Contains(q, StringComparison.OrdinalIgnoreCase) ||
-               name.Contains(q, StringComparison.OrdinalIgnoreCase) ||
-               description.Contains(q, StringComparison.OrdinalIgnoreCase) ||
-               author.Contains(q, StringComparison.OrdinalIgnoreCase) ||
-               category.Contains(q, StringComparison.OrdinalIgnoreCase) ||
-               commands.Any(command => command.Contains(q, StringComparison.OrdinalIgnoreCase));
+        string[] tokens = searchQuery.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        return tokens.Length == 0 || tokens.All(token =>
+            id.Contains(token, StringComparison.OrdinalIgnoreCase) ||
+            name.Contains(token, StringComparison.OrdinalIgnoreCase) ||
+            description.Contains(token, StringComparison.OrdinalIgnoreCase) ||
+            author.Contains(token, StringComparison.OrdinalIgnoreCase) ||
+            category.Contains(token, StringComparison.OrdinalIgnoreCase) ||
+            commands.Any(command => command.Contains(token, StringComparison.OrdinalIgnoreCase)));
     }
 
     private void OnPropertyChanged([CallerMemberName] string? propertyName = null) =>

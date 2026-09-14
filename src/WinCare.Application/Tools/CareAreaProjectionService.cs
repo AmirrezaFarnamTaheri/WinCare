@@ -27,7 +27,7 @@ public static class CareAreaProjectionService
 
         return catalog.All
             .Where(command => selection.Matches(command.Area, command.Section))
-            .OrderBy(command => command.Risk)
+            .OrderBy(command => command.RiskTier)
             .ThenBy(command => command.Title, StringComparer.OrdinalIgnoreCase)
             .Select(command => new CareToolProjection(command, latest.GetValueOrDefault(command.Id)))
             .ToArray();
@@ -51,7 +51,7 @@ public static class CareAreaProjectionService
         string[] terms = query.Split(' ', StringSplitOptions.RemoveEmptyEntries);
         return catalog.Search(query)
             .OrderByDescending(command => terms.Any(term => command.Title.Contains(term, StringComparison.OrdinalIgnoreCase)))
-            .ThenBy(command => command.Risk)
+            .ThenBy(command => command.RiskTier)
             .ThenBy(command => command.Title, StringComparer.OrdinalIgnoreCase)
             .Select(command => new CareToolProjection(command, latest.GetValueOrDefault(command.Id)))
             .ToArray();
