@@ -50,6 +50,12 @@
 
 ## Residual risk / unverified scenarios
 
-<!-- Be explicit about anything not tested or intentionally left for follow-up. -->
+<!-- Things that could still matter because they were not or cannot be verified here. -->
+
+- None.
+
+## Known limitations / follow-up
+
+<!-- Deferred work or known limits that are not unresolved safety risks. -->
 
 - None.
