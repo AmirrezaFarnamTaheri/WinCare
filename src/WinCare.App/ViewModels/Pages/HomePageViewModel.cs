@@ -16,8 +16,8 @@ public sealed class HomePageViewModel : ObservableObject
     private string _recentActivityTitle = "No activity recorded";
     private string _recentActivitySummary = "Checks and reviewed changes will appear here.";
     private string _evidenceScoreText = "0 of 4 areas";
-    private string _evidenceTitle = "No recent evidence yet";
-    private string _evidenceSummary = "Run a read-only check to collect current evidence.";
+    private string _evidenceTitle = "No recent checkup yet";
+    private string _evidenceSummary = "Run a read-only checkup to see the latest results.";
     private string _systemStatus = "Not checked";
     private string _securityStatus = "Not checked";
     private string _storageStatus = "Not checked";
@@ -81,26 +81,26 @@ public sealed class HomePageViewModel : ObservableObject
         EvidenceScoreText = $"{collected} of {QuickCheckCommandIds.Length} areas";
         if (freshCollected == QuickCheckCommandIds.Length)
         {
-            DateTimeOffset oldestEvidence = latestByCommand.Values.Min(EvidenceTimestamp);
-            EvidenceTitle = "Recent evidence is ready";
-            EvidenceSummary = $"All four areas have recent read-only evidence. Oldest sample: {oldestEvidence.ToLocalTime():g}. Open an area below for details and next steps.";
+            DateTimeOffset oldestResult = latestByCommand.Values.Min(EvidenceTimestamp);
+            EvidenceTitle = "Your latest checkup is ready";
+            EvidenceSummary = $"All four areas have recent results. Oldest check: {oldestResult.ToLocalTime():g}. Open an area below for details and next steps.";
         }
         else if (collected == QuickCheckCommandIds.Length)
         {
-            EvidenceTitle = "Some evidence is getting stale";
+            EvidenceTitle = "Some checkup results are getting old";
             EvidenceSummary = freshCollected == 0
-                ? "The latest completed evidence in all four areas is older than 30 minutes. Run Checkup for a current snapshot."
-                : $"{freshCollected} of {QuickCheckCommandIds.Length} areas still have fresh evidence. Run Checkup to refresh the rest.";
+                ? "The latest results in all four areas are more than 30 minutes old. Run Checkup for a current snapshot."
+                : $"{freshCollected} of {QuickCheckCommandIds.Length} areas still have recent results. Run Checkup to refresh the rest.";
         }
         else if (latestByCommand.Count > 0)
         {
             EvidenceTitle = needsReview > 0 ? "Some checks need your attention" : "Your PC snapshot is taking shape";
-            EvidenceSummary = $"{collected} of {QuickCheckCommandIds.Length} areas have completed read-only evidence. Open a result to see what WinCare found.";
+            EvidenceSummary = $"{collected} of {QuickCheckCommandIds.Length} areas have completed checks. Open a result to see what WinCare found.";
         }
         else
         {
             EvidenceTitle = "Start with a fresh PC snapshot";
-            EvidenceSummary = "Run a read-only check to see what is happening before WinCare suggests a next step.";
+            EvidenceSummary = "Run a read-only checkup to see what is happening before WinCare suggests a next step.";
         }
     }
 
@@ -110,11 +110,11 @@ public sealed class HomePageViewModel : ObservableObject
             return "Not checked";
 
         if (record.State == ActivityState.Completed && DateTimeOffset.UtcNow - EvidenceTimestamp(record) > EvidenceFreshnessWindow)
-            return $"Stale evidence ({EvidenceTimestamp(record).ToLocalTime():HH:mm})";
+            return $"Out of date ({EvidenceTimestamp(record).ToLocalTime():HH:mm})";
 
         return record.State switch
         {
-            ActivityState.Completed => "Evidence collected",
+            ActivityState.Completed => "Checked",
             ActivityState.Running => "Checking…",
             ActivityState.NeedsAttention => "Needs review",
             ActivityState.Failed => "Check failed",
