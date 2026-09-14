@@ -46,9 +46,12 @@ public sealed class CareToolProjectionTests
         page.SetCompactLayout(false);
         Assert.All(page.CurrentRows, row => Assert.False(row.IsCompact));
 
-        page.ShowTools(catalog, "storage cleanup");
-        Assert.Contains(page.CurrentRows, row =>
-            row.Title.Contains("cleanup", StringComparison.OrdinalIgnoreCase));
+        IReadOnlyList<WinCare.CommandCatalog.Models.CommandDefinition> multiWordExpected = catalog.Search("security status");
+        Assert.NotEmpty(multiWordExpected);
+        page.ShowTools(catalog, "security status");
+        Assert.Equal(
+            multiWordExpected.Select(command => command.Id).Order(),
+            page.CurrentRows.Select(row => row.CommandId).Order());
 
         page.ShowTools(catalog, "no-such-command-9c261c");
         Assert.True(page.IsEmpty);

@@ -34,7 +34,14 @@ namespace WinCare.Application.Diagnostics
     )
     {
         public bool IsReadOnly => RiskLevel == CommandRisk.ReadOnly;
-        public string RiskBadgeText => IsReadOnly ? "READ-ONLY" : $"{RiskLevel.ToString().ToUpperInvariant()} IMPACT";
+        public string RiskBadgeText => RiskLevel switch
+        {
+            CommandRisk.ReadOnly => "READ-ONLY",
+            CommandRisk.Low => "SAFE",
+            CommandRisk.Moderate => "MODERATE",
+            CommandRisk.High or CommandRisk.Critical => "DESTRUCTIVE",
+            _ => "SAFE",
+        };
         public string ElevationBadgeText => RequiresElevation ? "ADMINISTRATOR REQUIRED" : "STANDARD ACCESS";
         public string ReviewContextText => $"{RiskBadgeText} · {ElevationBadgeText} · {AffectedResource}";
         public string ActionButtonText => IsReadOnly ? "Open check" : "Review in Power tools";

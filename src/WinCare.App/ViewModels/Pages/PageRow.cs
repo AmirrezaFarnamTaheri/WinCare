@@ -30,6 +30,7 @@ public sealed class PageRow : ObservableObject
     public string LatestActivity { get; init; } = string.Empty;
     public bool HasActivity => LatestActivity.Length > 0;
     public string AccessibleName => $"{Title}. {Description}. {State}. {Detail}";
+    public string ActionAccessibleName => string.IsNullOrWhiteSpace(ActionText) ? Title : $"{ActionText}: {Title}";
     public string Description { get; }
 
     public string State
@@ -55,7 +56,11 @@ public sealed class PageRow : ObservableObject
         get => _actionText;
         set
         {
-            if (SetProperty(ref _actionText, value)) OnPropertyChanged(nameof(HasAction));
+            if (SetProperty(ref _actionText, value))
+            {
+                OnPropertyChanged(nameof(HasAction));
+                OnPropertyChanged(nameof(ActionAccessibleName));
+            }
         }
     }
 

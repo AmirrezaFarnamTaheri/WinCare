@@ -13,7 +13,7 @@
                 <StackPanel Spacing="12">
                     <TextBlock Style="{StaticResource SectionHeaderTextStyle}" Text="Start here" />
                     <TextBlock Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap" Text="Run Checkup for a read-only system snapshot. Results take you directly to the right care area when something needs attention." />
-                    <Button Content="Run Checkup" Style="{StaticResource AccentButtonStyle}" Click="OpenCheckup_Click" HorizontalAlignment="Left" AutomationProperties.AutomationId="HelpOpenCheckup" AutomationProperties.Name="Open Checkup" />
+                    <Button Content="Run Checkup" Style="{StaticResource AccentButtonStyle}" Click="OpenCheckup_Click" HorizontalAlignment="Left" AutomationProperties.AutomationId="HelpOpenCheckup" AutomationProperties.Name="Run Checkup" />
                 </StackPanel>
             </Border>
 
