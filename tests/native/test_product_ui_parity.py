@@ -51,7 +51,7 @@ class ProductUiParityTests(unittest.TestCase):
         self.assertNotIn("PageNavigation.OpenTools", control)
         self.assertIn("CommandParameters is JsonElement", control)
         self.assertNotIn("review any change before it runs", xaml)
-        self.assertIn("handle its safety tier before it runs", xaml)
+        self.assertIn("open it in Power tools", xaml)
 
     def test_power_tools_uses_named_controls_instead_of_visual_tree_order(self) -> None:
         xaml = self.read("src/WinCare.App/Views/Pages/AllToolsPage.xaml")
@@ -135,6 +135,7 @@ class ProductUiParityTests(unittest.TestCase):
         screenshots = self.read("docs/Screenshots.md")
         readme = self.read("README.md")
         architecture = self.read("docs/Architecture.md")
+        architecture_plain = architecture.replace("**", "")
         c4 = self.read("docs/architecture/c4-model.md")
 
         self.assertNotIn("confirmation dialog", guide)
@@ -143,7 +144,7 @@ class ProductUiParityTests(unittest.TestCase):
         self.assertIn("Power tools applies the normal risk-tier flow", guide)
         self.assertIn("historical runtime evidence", screenshots)
         self.assertIn("Historical v2.5.0-rc5 runtime capture", readme)
-        self.assertIn("Power tools is the canonical advanced command inspector and execution surface", architecture)
+        self.assertIn("Power tools is the canonical advanced command inspector and execution surface", architecture_plain)
         self.assertIn("Troubleshoot does not", architecture)
         self.assertIn("system, storage, and security probes execute concurrently", architecture)
         self.assertIn("269 command definitions", c4)

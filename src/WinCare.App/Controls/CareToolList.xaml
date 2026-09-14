@@ -13,7 +13,7 @@
 
         <TextBlock
             Style="{StaticResource RowSecondaryTextStyle}"
-            Text="Choose a task to see what it does and review any change before it runs." />
+            Text="Choose a task to see what it does and open it in Power tools." />
 
         <Border Grid.Row="1" Style="{StaticResource SurfaceBorderStyle}">
             <Grid>
