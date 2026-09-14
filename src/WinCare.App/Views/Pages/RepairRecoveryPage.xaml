@@ -7,64 +7,28 @@
     xmlns:controls="using:WinCare.App.Controls"
     NavigationCacheMode="Required">
     <Grid Padding="28,28,28,32" RowSpacing="20">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="*" />
-        </Grid.RowDefinitions>
-
+        <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="*" /></Grid.RowDefinitions>
         <StackPanel Spacing="6">
             <TextBlock x:Uid="RepairRecoveryPageTitle" Style="{StaticResource PageTitleTextStyle}" Text="Repair &amp; recovery" />
-            <TextBlock MaxWidth="760" HorizontalAlignment="Left" Style="{StaticResource PageDescriptionTextStyle}" Text="Diagnose faults, restore safely, and keep recovery options visible." />
+            <TextBlock MaxWidth="760" HorizontalAlignment="Left" Style="{StaticResource PageDescriptionTextStyle}" Text="Fix Windows problems, restore from trouble, and keep backup and recovery options close by." />
         </StackPanel>
-
-        <SelectorBar
-            x:Name="SectionSelector"
-            Grid.Row="1"
-            SelectionChanged="SectionSelector_SelectionChanged"
-            AutomationProperties.AutomationId="RepairRecoveryPageTabs"
-            AutomationProperties.Name="Repair and recovery sections">
+        <SelectorBar x:Name="SectionSelector" Grid.Row="1" SelectionChanged="SectionSelector_SelectionChanged" AutomationProperties.AutomationId="RepairRecoveryPageTabs" AutomationProperties.Name="Repair and recovery sections">
             <SelectorBarItem Text="Repair" AutomationProperties.Name="Repair" />
             <SelectorBarItem Text="Restore" AutomationProperties.Name="Restore" />
             <SelectorBarItem Text="Backup" AutomationProperties.Name="Backup" />
             <SelectorBarItem Text="Reset &amp; media" AutomationProperties.Name="Reset and media" />
             <SelectorBarItem Text="Portable playbooks" AutomationProperties.Name="Portable playbooks" />
         </SelectorBar>
-
-        <controls:CareToolList Grid.Row="2" ViewModel="{x:Bind ViewModel}"
-            Visibility="{x:Bind views:LayoutVisibility.InvertBoolToVisibility(ViewModel.IsPlaybookSection), Mode=OneWay}" />
-        <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto"
-            Visibility="{x:Bind views:LayoutVisibility.BoolToVisibility(ViewModel.IsPlaybookSection), Mode=OneWay}">
+        <controls:CareToolList Grid.Row="2" ViewModel="{x:Bind ViewModel}" Visibility="{x:Bind views:LayoutVisibility.InvertBoolToVisibility(ViewModel.IsPlaybookSection), Mode=OneWay}" />
+        <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" Visibility="{x:Bind views:LayoutVisibility.BoolToVisibility(ViewModel.IsPlaybookSection), Mode=OneWay}">
             <StackPanel Spacing="16" MaxWidth="900" HorizontalAlignment="Left">
                 <TextBlock Style="{StaticResource SectionHeaderTextStyle}" Text="Review a portable playbook" />
-                <TextBlock Style="{StaticResource PageDescriptionTextStyle}" MaxWidth="720"
-                    Text="Portable playbooks contain catalog command IDs and parameters. Reviewing a playbook inspects the steps without running them." />
-                <TextBox Header="Playbook JSON" PlaceholderText="Paste a schema-v1 WinCare portable playbook"
-                    MinHeight="180" AcceptsReturn="True" TextWrapping="NoWrap"
-                    FontFamily="{StaticResource TelemetryFontFamily}"
-                    Text="{x:Bind ViewModel.PortablePlaybookJson, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                    AutomationProperties.Name="Portable playbook JSON" />
-                <Button Style="{StaticResource PrimaryActionButtonStyle}" HorizontalAlignment="Left"
-                    Command="{x:Bind ViewModel.ReviewPortablePlaybookCommand}" Content="Review playbook"
-                    AutomationProperties.Name="Validate and review portable playbook" />
-                <InfoBar IsOpen="True" IsClosable="False" Severity="Informational" Title="Review status"
-                    Message="{x:Bind ViewModel.PlaybookStatus, Mode=OneWay}" />
-                <ListView ItemsSource="{x:Bind ViewModel.ImportedPlaybookSteps, Mode=OneWay}"
-                    IsItemClickEnabled="True" SelectionMode="None" ItemClick="PlaybookStep_ItemClick"
-                    AutomationProperties.Name="Reviewed portable playbook steps">
-                    <ListView.ItemTemplate>
-                        <DataTemplate x:DataType="vm:PageRow">
-                            <Grid Padding="16" ColumnSpacing="16">
-                                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                                <StackPanel Spacing="6">
-                                    <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="{x:Bind Title, Mode=OneWay}" />
-                                    <TextBlock Style="{StaticResource PageDescriptionTextStyle}" Text="{x:Bind Description, Mode=OneWay}" />
-                                    <TextBlock Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind Detail, Mode=OneWay}" />
-                                </StackPanel>
-                                <TextBlock Grid.Column="1" Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind State, Mode=OneWay}" VerticalAlignment="Center" />
-                            </Grid>
-                        </DataTemplate>
-                    </ListView.ItemTemplate>
+                <TextBlock Style="{StaticResource PageDescriptionTextStyle}" MaxWidth="720" Text="A playbook lists WinCare tasks and their options. Review shows every step without running it." />
+                <TextBox Header="Playbook JSON" PlaceholderText="Paste a WinCare portable playbook" MinHeight="180" AcceptsReturn="True" TextWrapping="NoWrap" FontFamily="{StaticResource TelemetryFontFamily}" Text="{x:Bind ViewModel.PortablePlaybookJson, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Portable playbook JSON" />
+                <Button Style="{StaticResource PrimaryActionButtonStyle}" HorizontalAlignment="Left" Command="{x:Bind ViewModel.ReviewPortablePlaybookCommand}" Content="Review playbook" AutomationProperties.Name="Validate and review portable playbook" />
+                <InfoBar IsOpen="True" IsClosable="False" Severity="Informational" Title="Review status" Message="{x:Bind ViewModel.PlaybookStatus, Mode=OneWay}" />
+                <ListView ItemsSource="{x:Bind ViewModel.ImportedPlaybookSteps, Mode=OneWay}" IsItemClickEnabled="True" SelectionMode="None" ItemClick="PlaybookStep_ItemClick" AutomationProperties.Name="Reviewed portable playbook steps">
+                    <ListView.ItemTemplate><DataTemplate x:DataType="vm:PageRow"><Grid Padding="16" ColumnSpacing="16"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><StackPanel Spacing="6"><TextBlock Style="{StaticResource RowTitleTextStyle}" Text="{x:Bind Title, Mode=OneWay}" /><TextBlock Style="{StaticResource PageDescriptionTextStyle}" Text="{x:Bind Description, Mode=OneWay}" /><TextBlock Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind Detail, Mode=OneWay}" /></StackPanel><TextBlock Grid.Column="1" Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind State, Mode=OneWay}" VerticalAlignment="Center" /></Grid></DataTemplate></ListView.ItemTemplate>
                 </ListView>
             </StackPanel>
         </ScrollViewer>

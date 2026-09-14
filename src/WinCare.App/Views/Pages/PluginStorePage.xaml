@@ -10,7 +10,7 @@
         <Grid Grid.Row="0" ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="16" RowSpacing="12">
             <StackPanel Grid.Column="0" Spacing="8">
                 <TextBlock Text="Extensions" Style="{StaticResource PageTitleTextStyle}" />
-                <TextBlock MaxWidth="760" HorizontalAlignment="Left" Text="Add focused capabilities when you need them, and manage the extensions already available to WinCare." Style="{StaticResource PageDescriptionTextStyle}" />
+                <TextBlock MaxWidth="760" HorizontalAlignment="Left" Text="Add optional features and manage what's already installed." Style="{StaticResource PageDescriptionTextStyle}" />
             </StackPanel>
 
             <AutoSuggestBox x:Name="PluginSearchBox" Grid.Column="1" Width="280" VerticalAlignment="Center" PlaceholderText="Search extensions or authors" QueryIcon="Find" TextChanged="SearchBox_TextChanged" AutomationProperties.AutomationId="PluginSearch" AutomationProperties.Name="Search extensions or authors"/>
@@ -18,7 +18,7 @@
         </Grid>
 
         <Expander Grid.Row="1"
-                  Header="Catalog status"
+                  Header="Online catalog"
                   IsExpanded="False"
                   Visibility="{x:Bind local:PluginStorePage.BoolToVisibility(ViewModel.HasCatalogStatus), Mode=OneWay}"
                   AutomationProperties.AutomationId="PluginCatalogStatus"
@@ -31,17 +31,17 @@
         <InfoBar Grid.Row="2"
                  IsOpen="{x:Bind ViewModel.HasError, Mode=OneWay}"
                  Severity="Error"
-                 Title="Extensions notice"
+                 Title="Extension problem"
                  Message="{x:Bind ViewModel.ErrorMessage, Mode=OneWay}"
                  IsClosable="False"
                  AutomationProperties.LiveSetting="Assertive">
             <InfoBar.ActionButton>
-                <Button Content="Retry connection" Style="{StaticResource QuietButtonStyle}" Click="RetryCatalog_Click" IsEnabled="{x:Bind ViewModel.CanRefresh, Mode=OneWay}" Visibility="{x:Bind local:PluginStorePage.BoolToVisibility(ViewModel.HasCatalogError), Mode=OneWay}" AutomationProperties.AutomationId="PluginCatalogRetry" AutomationProperties.Name="Retry extension catalog connection" />
+                <Button Content="Try again" Style="{StaticResource QuietButtonStyle}" Click="RetryCatalog_Click" IsEnabled="{x:Bind ViewModel.CanRefresh, Mode=OneWay}" Visibility="{x:Bind local:PluginStorePage.BoolToVisibility(ViewModel.HasCatalogError), Mode=OneWay}" AutomationProperties.AutomationId="PluginCatalogRetry" AutomationProperties.Name="Retry extension catalog connection" />
             </InfoBar.ActionButton>
         </InfoBar>
 
         <StackPanel Grid.Row="3" Spacing="8" Visibility="{x:Bind local:PluginStorePage.BoolToVisibility(ViewModel.IsLoading), Mode=OneWay}" AutomationProperties.LiveSetting="Polite">
-            <TextBlock Text="Updating your extension library…" Style="{StaticResource RowSecondaryTextStyle}" />
+            <TextBlock Text="Checking for extensions…" Style="{StaticResource RowSecondaryTextStyle}" />
             <ProgressBar IsIndeterminate="{x:Bind ViewModel.IsLoading, Mode=OneWay}" AutomationProperties.Name="Loading extension catalog" />
         </StackPanel>
 
@@ -91,6 +91,6 @@
             </ListView.ItemTemplate>
         </ListView>
 
-        <InfoBar Grid.Row="4" Margin="12" VerticalAlignment="Top" IsOpen="{x:Bind ViewModel.IsEmpty, Mode=OneWay}" IsClosable="False" Severity="Informational" Title="No extensions found" Message="Try a different search or category. Installed extensions remain available even when the online catalog cannot be reached." AutomationProperties.LiveSetting="Polite" />
+        <InfoBar Grid.Row="4" Margin="12" VerticalAlignment="Top" IsOpen="{x:Bind ViewModel.IsEmpty, Mode=OneWay}" IsClosable="False" Severity="Informational" Title="No extensions found" Message="Try a different search or category. Your installed extensions are still here if the online list is unavailable." AutomationProperties.LiveSetting="Polite" />
     </Grid>
 </Page>

@@ -14,10 +14,7 @@ public sealed record DoctorChatMessage(
     DoctorActionPlan? ActionPlan = null
 );
 
-/// <summary>
-/// Owns local diagnostic conversation state only. Suggested actions are handed to the
-/// canonical Power tools inspector, which owns preview, approval, execution, and receipts.
-/// </summary>
+/// <summary>Holds the Troubleshoot conversation and passes chosen steps to Power tools.</summary>
 public sealed class AiDoctorPageViewModel : INotifyPropertyChanged
 {
     private readonly IIntentTranslator _intentTranslator;
@@ -26,7 +23,6 @@ public sealed class AiDoctorPageViewModel : INotifyPropertyChanged
     private DoctorActionPlan? _currentPlan;
 
     public event PropertyChangedEventHandler? PropertyChanged;
-
     public ObservableCollection<DoctorChatMessage> Messages { get; } = new();
 
     public string UserPrompt
@@ -69,14 +65,14 @@ public sealed class AiDoctorPageViewModel : INotifyPropertyChanged
 
         Messages.Add(new DoctorChatMessage(
             "WinCare",
-            "Describe a Windows problem such as storage pressure, high memory use, lag, or network trouble. WinCare uses local rules and measured evidence to suggest relevant checks and reviewable next steps.",
+            "Tell me what's wrong — for example, low disk space, high memory use, lag, or network trouble. I'll check local Windows signals and suggest a few next steps.",
             IsUser: false,
             DateTime.UtcNow));
     }
 
     public async Task SubmitPromptAsync(CancellationToken cancellationToken = default)
     {
-        string prompt = UserPrompt?.Trim() ?? string.Empty;
+        string prompt = UserPrompt.Trim();
         if (prompt.Length == 0 || IsAnalyzing) return;
 
         UserPrompt = string.Empty;
@@ -89,22 +85,22 @@ public sealed class AiDoctorPageViewModel : INotifyPropertyChanged
             DoctorActionPlan plan = await _intentTranslator.TranslateAsync(prompt, cancellationToken);
             CurrentPlan = plan;
 
-            string responseText = $"{plan.DiagnosisSummary}\n\n" +
-                $"Evidence collected: {plan.MeasuredEvidence.Count} measured probe{(plan.MeasuredEvidence.Count == 1 ? string.Empty : "s")}.\n" +
-                $"Findings: {plan.Findings.Count}. Suggested next steps: {plan.ProposedSteps.Count}.\n" +
-                "Open a suggested step to review it in Power tools before anything can change Windows.";
+            string signalCount = $"{plan.MeasuredEvidence.Count} local signal{(plan.MeasuredEvidence.Count == 1 ? string.Empty : "s")}";
+            string findingCount = $"{plan.Findings.Count} item{(plan.Findings.Count == 1 ? string.Empty : "s")}";
+            string stepCount = $"{plan.ProposedSteps.Count} next step{(plan.ProposedSteps.Count == 1 ? string.Empty : "s")}";
+            string responseText = $"{plan.DiagnosisSummary}\n\nI checked {signalCount} and found {findingCount}. {stepCount} ready to review.";
             Messages.Add(new DoctorChatMessage("WinCare", responseText, IsUser: false, DateTime.UtcNow, plan));
         }
         catch (OperationCanceledException)
         {
-            Messages.Add(new DoctorChatMessage("WinCare", "Analysis cancelled.", IsUser: false, DateTime.UtcNow));
+            Messages.Add(new DoctorChatMessage("WinCare", "Check cancelled.", IsUser: false, DateTime.UtcNow));
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[Troubleshoot] Analysis fault: {ex}");
+            System.Diagnostics.Debug.WriteLine($"[Troubleshoot] Check failed: {ex}");
             Messages.Add(new DoctorChatMessage(
                 "WinCare",
-                "Diagnosis could not be completed. No change was applied. Review Activity or the WinCare logs if the problem continues.",
+                "I couldn't finish that check. Nothing was changed. Try again, or open Activity if the problem keeps happening.",
                 IsUser: false,
                 DateTime.UtcNow));
         }

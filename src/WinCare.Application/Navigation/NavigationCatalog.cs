@@ -1,10 +1,6 @@
 namespace WinCare.Application.Navigation;
 
-/// <summary>
-/// Product navigation topology. Primary items represent user jobs; secondary routes remain
-/// available without competing for permanent rail space. Search concepts mirror what each
-/// live surface actually exposes so discovery cannot advertise phantom product areas.
-/// </summary>
+/// <summary>Navigation labels and search concepts used by the app shell.</summary>
 public static class NavigationCatalog
 {
     public static IReadOnlyList<NavigationDefinition> Items { get; } =
@@ -16,10 +12,10 @@ public static class NavigationCatalog
         new("repair-recovery", "Repair & recovery", "NavRepairRecovery", ["Repair", "Restore", "Backup", "Reset & media", "Portable playbooks"]),
         new("all-tools", "Power tools", "NavAllTools", ["Tools", "Categories", "Favorites", "Recent", "Care plans"]),
         new("activity", "Activity", "NavActivity", ["Running", "Needs attention", "History", "Reports"]),
-        new("plugin-store", "Extensions", "NavPluginStore", ["Search extensions", "Categories", "Installed extensions", "Catalog status"], IsFooter: true),
-        new("ai-doctor", "Troubleshoot", "NavAiDoctor", ["Describe a problem", "Diagnostic findings", "Suggested steps"], IsFooter: true),
-        new("settings", "Settings", "NavSettings", ["App theme", "Window continuity", "Local data"], IsFooter: true),
-        new("help", "Help", "NavHelp", ["Getting started", "Finding tools", "Changes and approvals", "Keyboard"], IsFooter: true),
+        new("plugin-store", "Extensions", "NavPluginStore", ["Search extensions", "Categories", "Installed extensions", "Online catalog"], IsFooter: true),
+        new("ai-doctor", "Troubleshoot", "NavAiDoctor", ["Describe a problem", "What WinCare found", "Suggested steps"], IsFooter: true),
+        new("settings", "Settings", "NavSettings", ["App theme", "Remember window", "Local data"], IsFooter: true),
+        new("help", "Help", "NavHelp", ["Getting started", "Find a tool", "Before changes", "Keyboard"], IsFooter: true),
         new("about", "About WinCare", "NavAbout", ["Version", "Open source", "Support", "Donate"], IsHidden: true),
     ];
 }

@@ -40,44 +40,36 @@ namespace WinCare.Application.Tests
         }
 
         [Fact]
-        public async Task TranslateAsync_produces_valid_action_plan_matching_catalog()
+        public async Task TranslateAsync_preserves_catalog_facts_in_each_suggestion()
         {
             var plan = await _translator.TranslateAsync("Clean up junk and temporary files from my computer");
 
-            Assert.NotNull(plan);
             Assert.StartsWith("plan_", plan.PlanId);
             Assert.NotEmpty(plan.Findings);
             Assert.NotEmpty(plan.ProposedSteps);
 
-            // Recommendations must preserve the catalog metadata the frontend presents.
             foreach (var step in plan.ProposedSteps)
             {
-                var match = _catalogService.All.FirstOrDefault(c => c.Id.Equals(step.CommandId, StringComparison.OrdinalIgnoreCase));
-                Assert.NotNull(match);
-                Assert.Equal(match.Id, step.CommandId);
+                var match = _catalogService.All.First(command => command.Id.Equals(step.CommandId, StringComparison.OrdinalIgnoreCase));
                 Assert.Equal(match.Risk, step.RiskLevel);
                 Assert.Equal(match.ReadOnly, step.IsReadOnly);
-                Assert.True(step.AccessRequirement.HasValue);
-                Assert.Equal(match.AdministratorAccess, step.AccessRequirement.GetValueOrDefault());
-                Assert.False(step.UndoAvailable);
+                Assert.Equal(match.AdministratorAccess, step.AccessRequirement);
             }
         }
 
         [Fact]
-        public void ProposedActionStep_preserves_conditional_administrator_access_in_user_copy()
+        public void ProposedActionStep_keeps_conditional_administrator_access()
         {
             var step = new ProposedActionStep(
                 CommandId: "conditional-admin",
                 Title: "Conditional administrator task",
                 Description: "Test recommendation",
                 RiskLevel: CommandRisk.Moderate,
-                RequiresElevation: false,
-                ReadOnly: false,
+                IsReadOnly: false,
                 AccessRequirement: AdministratorAccess.MayBeRequired);
 
-            Assert.Equal("Administrator may be required", step.ElevationBadgeText);
+            Assert.Equal("Administrator may be needed", step.ElevationBadgeText);
             Assert.Equal("Review in Power tools: Conditional administrator task", step.ActionAccessibleName);
-            Assert.False(step.UndoAvailable);
         }
 
         [Fact]
@@ -85,10 +77,9 @@ namespace WinCare.Application.Tests
         {
             var plan = await _translator.TranslateAsync("Clean up junk and temporary files from my computer");
 
-            var mutatingStep = Assert.Single(plan.ProposedSteps, s => s.CommandId == "cleaner-disk-pressure");
+            var mutatingStep = Assert.Single(plan.ProposedSteps, step => step.CommandId == "cleaner-disk-pressure");
             Assert.NotNull(mutatingStep.Parameters);
-            Assert.True(mutatingStep.Parameters!.ContainsKey("OlderThanDays"));
-            Assert.Equal("7", mutatingStep.Parameters["OlderThanDays"]);
+            Assert.Equal("7", mutatingStep.Parameters!["OlderThanDays"]);
         }
 
         [Fact]
@@ -96,12 +87,21 @@ namespace WinCare.Application.Tests
         {
             var plan = await _translator.TranslateAsync("Check overall system health");
 
-            Assert.NotNull(plan);
             Assert.Equal(DiagnosticSeverity.Information, plan.OverallSeverity);
-            Assert.DoesNotContain(plan.Findings, f => f.Severity == DiagnosticSeverity.Healthy);
+            Assert.DoesNotContain(plan.Findings, finding => finding.Severity == DiagnosticSeverity.Healthy);
             Assert.NotEmpty(plan.ProposedSteps);
             Assert.All(plan.ProposedSteps, step => Assert.True(step.IsReadOnly));
             Assert.False(plan.HasMutatingActions);
+        }
+
+        [Fact]
+        public async Task Troubleshoot_copy_avoids_internal_classifier_language()
+        {
+            var plan = await _translator.TranslateAsync("My C drive is almost full");
+
+            Assert.DoesNotContain("Inferred area of interest", plan.DiagnosisSummary, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain(plan.Findings, finding => finding.Title.Contains("Hypothesis", StringComparison.OrdinalIgnoreCase));
+            Assert.DoesNotContain(plan.Findings, finding => finding.Description.Contains("Provenance", StringComparison.OrdinalIgnoreCase));
         }
 
         [Fact]
@@ -119,18 +119,16 @@ namespace WinCare.Application.Tests
         {
             var plan = await _translator.TranslateAsync("My computer memory is running slow and lagging");
 
-            Assert.NotNull(plan);
             Assert.NotEmpty(plan.MeasuredEvidence);
-            var memoryProbe = Assert.Single(plan.MeasuredEvidence, e => e.MetricName.Contains("Memory", StringComparison.OrdinalIgnoreCase));
+            var memoryProbe = Assert.Single(plan.MeasuredEvidence, evidence => evidence.MetricName.Contains("Memory", StringComparison.OrdinalIgnoreCase));
             Assert.True(memoryProbe.HasMeasuredEvidence);
             Assert.False(string.IsNullOrEmpty(memoryProbe.MeasuredValue));
         }
 
         [Fact]
-        public async Task TranslateAsync_attaches_provenance_to_findings()
+        public async Task Telemetry_keeps_technical_provenance_for_advanced_use()
         {
             var plan = await _translator.TranslateAsync("Check memory pressure");
-            Assert.NotNull(plan);
             foreach (var evidence in plan.MeasuredEvidence)
             {
                 Assert.NotNull(evidence.Collector);

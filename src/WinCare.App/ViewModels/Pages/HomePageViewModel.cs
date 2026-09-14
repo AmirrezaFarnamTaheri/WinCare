@@ -3,10 +3,7 @@ using WinCare.Domain.Activity;
 
 namespace WinCare.App.ViewModels.Pages;
 
-/// <summary>
-/// Presentation-only projection for the Home surface. Home summarizes existing evidence
-/// and routes users to dedicated workflows; it does not execute system commands itself.
-/// </summary>
+/// <summary>Summarizes recent checkup and activity state. Home never runs system commands.</summary>
 public sealed class HomePageViewModel : ObservableObject
 {
     private static readonly string[] QuickCheckCommandIds = ["system", "storage", "security", "wua-search"];
@@ -14,10 +11,10 @@ public sealed class HomePageViewModel : ObservableObject
 
     private bool _isCompactLayout;
     private string _recentActivityTitle = "No activity recorded";
-    private string _recentActivitySummary = "Checks and reviewed changes will appear here.";
+    private string _recentActivitySummary = "Your recent WinCare activity will show up here.";
     private string _evidenceScoreText = "0 of 4 areas";
     private string _evidenceTitle = "No recent checkup yet";
-    private string _evidenceSummary = "Run a read-only checkup to see the latest results.";
+    private string _evidenceSummary = "Run Checkup to see the latest results.";
     private string _systemStatus = "Not checked";
     private string _securityStatus = "Not checked";
     private string _storageStatus = "Not checked";
@@ -45,12 +42,10 @@ public sealed class HomePageViewModel : ObservableObject
 
     public void RefreshActivity(IReadOnlyList<ActivityRecord> records)
     {
-        ArgumentNullException.ThrowIfNull(records);
-
         ActivityRecord? latest = records.MaxBy(record => record.StartedAt);
         RecentActivityTitle = latest?.Title ?? "No activity recorded";
         RecentActivitySummary = latest is null
-            ? "Checks and reviewed changes will appear here."
+            ? "Your recent WinCare activity will show up here."
             : $"{ToFriendlyState(latest.State)} · {latest.StartedAt.ToLocalTime():g}\n{latest.Result}";
         ActivityStatus = records.Count == 0
             ? "No activity yet"
@@ -83,31 +78,30 @@ public sealed class HomePageViewModel : ObservableObject
         {
             DateTimeOffset oldestResult = latestByCommand.Values.Min(EvidenceTimestamp);
             EvidenceTitle = "Your latest checkup is ready";
-            EvidenceSummary = $"All four areas have recent results. Oldest check: {oldestResult.ToLocalTime():g}. Open an area below for details and next steps.";
+            EvidenceSummary = $"All four areas have fresh results. The oldest check was at {oldestResult.ToLocalTime():g}.";
         }
         else if (collected == QuickCheckCommandIds.Length)
         {
-            EvidenceTitle = "Some checkup results are getting old";
+            EvidenceTitle = "It's been a while since your last checkup";
             EvidenceSummary = freshCollected == 0
-                ? "The latest results in all four areas are more than 30 minutes old. Run Checkup for a current snapshot."
-                : $"{freshCollected} of {QuickCheckCommandIds.Length} areas still have recent results. Run Checkup to refresh the rest.";
+                ? "These results are over 30 minutes old. Run Checkup for a fresh look."
+                : $"{freshCollected} of {QuickCheckCommandIds.Length} results are still recent. Run Checkup to refresh the rest.";
         }
         else if (latestByCommand.Count > 0)
         {
-            EvidenceTitle = needsReview > 0 ? "Some checks need your attention" : "Your PC snapshot is taking shape";
-            EvidenceSummary = $"{collected} of {QuickCheckCommandIds.Length} areas have completed checks. Open a result to see what WinCare found.";
+            EvidenceTitle = needsReview > 0 ? "Some checks need your attention" : "Checkup isn't finished yet";
+            EvidenceSummary = $"{collected} of {QuickCheckCommandIds.Length} checks finished. Open a result for details.";
         }
         else
         {
-            EvidenceTitle = "Start with a fresh PC snapshot";
-            EvidenceSummary = "Run a read-only checkup to see what is happening before WinCare suggests a next step.";
+            EvidenceTitle = "Start with Checkup";
+            EvidenceSummary = "It checks a few important areas without changing anything.";
         }
     }
 
     private static string StatusFor(IReadOnlyDictionary<string, ActivityRecord> latestByCommand, string commandId)
     {
-        if (!latestByCommand.TryGetValue(commandId, out ActivityRecord? record))
-            return "Not checked";
+        if (!latestByCommand.TryGetValue(commandId, out ActivityRecord? record)) return "Not checked";
 
         if (record.State == ActivityState.Completed && DateTimeOffset.UtcNow - EvidenceTimestamp(record) > EvidenceFreshnessWindow)
             return $"Out of date ({EvidenceTimestamp(record).ToLocalTime():HH:mm})";

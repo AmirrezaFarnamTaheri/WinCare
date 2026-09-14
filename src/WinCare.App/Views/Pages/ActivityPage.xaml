@@ -16,7 +16,7 @@
 
         <StackPanel Spacing="8">
             <TextBlock x:Uid="ActivityPageTitle" Style="{StaticResource PageTitleTextStyle}" Text="Activity" />
-            <TextBlock MaxWidth="760" HorizontalAlignment="Left" Style="{StaticResource PageDescriptionTextStyle}" Text="View running operations, items that need follow-up, finished outcomes, and daily reports." />
+            <TextBlock MaxWidth="760" HorizontalAlignment="Left" Style="{StaticResource PageDescriptionTextStyle}" Text="See what's running, what finished, and anything that needs another look." />
         </StackPanel>
 
         <StackPanel Grid.Row="1" Spacing="8">
@@ -27,7 +27,7 @@
                 IsClosable="False"
                 Severity="Warning"
                 Title="Review needed"
-                Message="One or more operations ended in a state that needs review or follow-up before you retry or continue."
+                Message="One or more items need a second look before you try again."
                 AutomationProperties.AutomationId="AttentionInfoBar"
                 AutomationProperties.Name="Activity items need review" />
             <InfoBar
@@ -36,10 +36,10 @@
                 IsOpen="{x:Bind ViewModel.HasPersistenceWarning, Mode=OneWay}"
                 IsClosable="False"
                 Severity="Warning"
-                Title="Activity history isn't being saved"
+                Title="Activity history isn't saving"
                 Message="{x:Bind ViewModel.PersistenceWarningMessage, Mode=OneWay}"
                 AutomationProperties.AutomationId="ActivityPersistenceWarning"
-                AutomationProperties.Name="Activity history persistence warning" />
+                AutomationProperties.Name="Activity history save warning" />
         </StackPanel>
 
         <SelectorBar
@@ -95,7 +95,7 @@
                         <Canvas Width="64" Height="64"><Rectangle Canvas.Left="12" Canvas.Top="4" Width="40" Height="56" RadiusX="8" RadiusY="8" Fill="{ThemeResource SurfaceSecondaryBrush}" Stroke="{ThemeResource CardBorderBrush}" StrokeThickness="2" /><Path Data="M 22,20 L 42,20 M 22,28 L 38,28 M 22,40 L 28,46 L 42,34" Stroke="{ThemeResource AccentTealBrush}" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" /></Canvas>
                     </Viewbox>
                     <TextBlock Style="{StaticResource SectionHeaderTextStyle}" Text="{x:Bind ViewModel.EmptyMessage, Mode=OneWay}" />
-                    <TextBlock Style="{StaticResource PageDescriptionTextStyle}" Text="Recent operations leave a record here, so you can review what ran and what happened next." />
+                    <TextBlock Style="{StaticResource PageDescriptionTextStyle}" Text="Recent work shows up here so you can see what ran and how it ended." />
                 </StackPanel>
             </ScrollViewer>
         </Grid>

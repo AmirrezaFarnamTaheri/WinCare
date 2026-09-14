@@ -38,8 +38,7 @@ public sealed class SettingsPageViewModel : ObservableObject
 
     public string DataDirectory => AppPreferences.DataDirectory;
     public bool HasPersistenceWarning => !AppPreferences.IsPersistenceHealthy;
-    public string PersistenceWarningMessage => AppPreferences.PersistenceStatusMessage ??
-        "Preferences cannot currently be saved to disk.";
+    public string PersistenceWarningMessage => AppPreferences.PersistenceStatusMessage ?? "WinCare can't save your settings right now.";
 
     public void RefreshPersistenceState()
     {

@@ -65,8 +65,8 @@ public sealed class HomePageViewModelTests
 
         Assert.StartsWith("Out of date", vm.SystemStatus);
         Assert.Equal("4 of 4 areas", vm.EvidenceScoreText);
-        Assert.Equal("Some checkup results are getting old", vm.EvidenceTitle);
-        Assert.Contains("more than 30 minutes old", vm.EvidenceSummary);
+        Assert.Equal("It's been a while since your last checkup", vm.EvidenceTitle);
+        Assert.Contains("over 30 minutes old", vm.EvidenceSummary);
     }
 
     [Fact]

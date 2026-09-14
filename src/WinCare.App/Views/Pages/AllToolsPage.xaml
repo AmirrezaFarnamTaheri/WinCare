@@ -17,7 +17,7 @@
         <StackPanel Spacing="6">
             <TextBlock x:Uid="AllToolsPageTitle" Style="{StaticResource PageTitleTextStyle}" Text="Power tools" />
             <TextBlock MaxWidth="820" HorizontalAlignment="Left" Style="{StaticResource PageDescriptionTextStyle}"
-                       Text="Browse WinCare's complete toolkit when you need something beyond the guided care pages. Search by task, browse real categories, or return to tools you use often." />
+                       Text="Find a specific task, browse by area, or return to tools you use often." />
         </StackPanel>
 
         <Grid x:Name="SearchFilterGrid" Grid.Row="1" ColumnSpacing="12">
@@ -26,7 +26,7 @@
                 <ColumnDefinition Width="160" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
             <TextBox x:Name="ToolSearchBox" Header="Find a tool" MinHeight="44"
-                     PlaceholderText="What do you want to inspect or change?"
+                     PlaceholderText="What do you want to do?"
                      Text="{x:Bind ViewModel.SearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                      AutomationProperties.AutomationId="ToolSearch" AutomationProperties.Name="Search power tools">
                 <TextBox.KeyboardAccelerators>
@@ -77,20 +77,20 @@
                                 </StackPanel>
                             </Border>
                             <InfoBar IsOpen="{x:Bind ViewModel.Execution.IsDestructiveTool, Mode=OneWay}" IsClosable="False" Severity="Error"
-                                     Title="Permanent change" Message="This tool can make permanent changes. Review its preview carefully before applying." />
-                            <ToggleSwitch Header="Approve this change" OffContent="Preview only" OnContent="Review approved"
+                                     Title="Permanent change" Message="This can make permanent changes. Read the preview before you apply it." />
+                            <ToggleSwitch Header="I reviewed this change" OffContent="Not approved" OnContent="Approved"
                                           IsEnabled="{x:Bind ViewModel.Execution.CanApproveReview, Mode=OneWay}"
                                           IsOn="{x:Bind ViewModel.Execution.IsReviewApproved, Mode=TwoWay}"
                                           Visibility="{x:Bind local:AllToolsPage.BoolToVisibility(ViewModel.Execution.RequiresApprovalSwitch), Mode=OneWay}"
                                           AutomationProperties.Name="Approve the reviewed tool change" />
-                            <Expander Header="Included changes and recovery" IsExpanded="True"
+                            <Expander Header="Plan details and recovery" IsExpanded="True"
                                       Visibility="{x:Bind local:AllToolsPage.BoolToVisibility(ViewModel.Execution.IsPresetTool), Mode=OneWay}"
                                       AutomationProperties.Name="Included care plan changes and recovery">
                                 <TextBlock Style="{StaticResource PageDescriptionTextStyle}" IsTextSelectionEnabled="True"
                                            Text="{x:Bind ViewModel.Execution.PresetContents, Mode=OneWay}" />
                             </Expander>
-                            <Expander x:Name="ParameterExpander" Header="Command parameters" IsExpanded="True" HorizontalAlignment="Stretch"
-                                      HorizontalContentAlignment="Stretch" AutomationProperties.AutomationId="CommandParameters" AutomationProperties.Name="Command parameters" />
+                            <Expander x:Name="ParameterExpander" Header="Options" IsExpanded="True" HorizontalAlignment="Stretch"
+                                      HorizontalContentAlignment="Stretch" AutomationProperties.AutomationId="CommandParameters" AutomationProperties.Name="Tool options" />
                             <StackPanel Orientation="Horizontal" Spacing="8">
                                 <Button Style="{StaticResource PrimaryActionButtonStyle}" Command="{x:Bind ViewModel.Execution.ExecuteSelectedToolCommand}"
                                         Content="{x:Bind ViewModel.Execution.PrimaryActionLabel, Mode=OneWay}"
@@ -159,13 +159,13 @@
                         </ListView.ItemTemplate>
                     </ListView>
                     <InfoBar Grid.Row="1" Margin="12" VerticalAlignment="Top" IsOpen="{x:Bind ViewModel.IsEmpty, Mode=OneWay}"
-                             IsClosable="False" Severity="Informational" Title="Nothing to show" Message="{x:Bind ViewModel.EmptyMessage, Mode=OneWay}" />
+                             IsClosable="False" Severity="Informational" Title="No matching tools" Message="{x:Bind ViewModel.EmptyMessage, Mode=OneWay}" />
                 </Grid>
 
                 <ScrollViewer Background="{ThemeResource PageBackgroundBrush}" VerticalScrollBarVisibility="Auto"
                               Visibility="{x:Bind local:AllToolsPage.BoolToVisibility(ViewModel.IsCategoryTab), Mode=OneWay}">
                     <StackPanel Spacing="14"><TextBlock Style="{StaticResource SectionHeaderTextStyle}" Text="Browse by category" />
-                        <TextBlock Style="{StaticResource PageDescriptionTextStyle}" Text="Choose a Windows area and section instead of guessing search terms." />
+                        <TextBlock Style="{StaticResource PageDescriptionTextStyle}" Text="Choose an area to browse related tools." />
                         <ItemsControl ItemsSource="{x:Bind ViewModel.CategoryCards, Mode=OneWay}"><ItemsControl.ItemTemplate>
                             <DataTemplate x:DataType="vm:ToolCategoryViewModel">
                                 <Button Margin="0,0,0,8" Padding="18" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
@@ -183,7 +183,7 @@
                 <ScrollViewer Background="{ThemeResource PageBackgroundBrush}" VerticalScrollBarVisibility="Auto"
                               Visibility="{x:Bind local:AllToolsPage.BoolToVisibility(ViewModel.IsPresetTab), Mode=OneWay}">
                     <StackPanel Spacing="16"><TextBlock Style="{StaticResource SectionHeaderTextStyle}" Text="Care plans" />
-                        <TextBlock Style="{StaticResource PageDescriptionTextStyle}" Text="Review a curated set of changes together. You can inspect every included rule before applying anything." />
+                        <TextBlock Style="{StaticResource PageDescriptionTextStyle}" Text="Review a group of related changes together. You can see every step before applying it." />
                         <ItemsControl ItemsSource="{x:Bind ViewModel.PresetCards, Mode=OneWay}"><ItemsControl.ItemTemplate>
                             <DataTemplate x:DataType="vm:PresetCardViewModel">
                                 <Border Margin="0,0,0,12" Padding="20" Style="{StaticResource SurfaceBorderStyle}">

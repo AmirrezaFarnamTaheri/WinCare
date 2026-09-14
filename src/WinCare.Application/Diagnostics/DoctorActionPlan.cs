@@ -22,43 +22,31 @@ namespace WinCare.Application.Diagnostics
         bool IsVerifiedByTelemetry = false
     );
 
-    /// <summary>
-    /// Presentation-safe projection of a catalog command suggested by Troubleshoot. The legacy
-    /// elevation/undo fields remain for compatibility, while lossless catalog metadata is carried
-    /// separately so the UI does not turn "may require administrator" into "standard access" or
-    /// infer recovery guarantees that the dispatcher has not actually issued.
-    /// </summary>
     public sealed record ProposedActionStep(
         string CommandId,
         string Title,
         string Description,
         CommandRisk RiskLevel,
-        bool RequiresElevation,
+        bool IsReadOnly,
+        AdministratorAccess AccessRequirement,
         IReadOnlyDictionary<string, string>? Parameters = null,
-        string AffectedResource = "System",
-        bool UndoAvailable = false,
-        bool? ReadOnly = null,
-        AdministratorAccess? AccessRequirement = null
+        string AffectedResource = "System"
     )
     {
-        public bool IsReadOnly => ReadOnly ?? RiskLevel == CommandRisk.ReadOnly;
+        public string RiskBadgeText => IsReadOnly
+            ? "Read-only"
+            : RiskLevel switch
+            {
+                CommandRisk.Low => "Safe",
+                CommandRisk.Moderate => "Moderate",
+                CommandRisk.High or CommandRisk.Critical => "Destructive",
+                _ => "Safe",
+            };
 
-        public AdministratorAccess EffectiveAccessRequirement => AccessRequirement ??
-            (RequiresElevation ? AdministratorAccess.Required : AdministratorAccess.No);
-
-        public string RiskBadgeText => RiskLevel switch
-        {
-            CommandRisk.ReadOnly => "Read-only",
-            CommandRisk.Low => "Safe",
-            CommandRisk.Moderate => "Moderate",
-            CommandRisk.High or CommandRisk.Critical => "Destructive",
-            _ => "Safe",
-        };
-
-        public string ElevationBadgeText => EffectiveAccessRequirement switch
+        public string ElevationBadgeText => AccessRequirement switch
         {
             AdministratorAccess.Required => "Administrator required",
-            AdministratorAccess.MayBeRequired => "Administrator may be required",
+            AdministratorAccess.MayBeRequired => "Administrator may be needed",
             _ => "Standard access",
         };
 
@@ -73,7 +61,7 @@ namespace WinCare.Application.Diagnostics
         string MeasuredValue,
         bool IndicatesPressure,
         DiagnosticSeverity Severity,
-        string Source = "Windows System Diagnostic Telemetry",
+        string Source = "Windows system diagnostics",
         string? CommandId = null,
         DateTime? CapturedAtUtc = null,
         string Collector = "DiagnosticEvidenceCollector",
