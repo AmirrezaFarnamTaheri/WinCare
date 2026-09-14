@@ -7,7 +7,7 @@
     SizeChanged="Page_SizeChanged">
 
     <Grid Padding="32,24,32,32" RowDefinitions="Auto,Auto,Auto,Auto,*" RowSpacing="18">
-        <Grid Grid.Row="0" ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto" ColumnSpacing="16" RowSpacing="12">
+        <Grid Grid.Row="0" ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="16" RowSpacing="12">
             <StackPanel Grid.Column="0" Spacing="8">
                 <TextBlock Text="Extensions" Style="{StaticResource PageTitleTextStyle}" />
                 <TextBlock MaxWidth="760" HorizontalAlignment="Left" Text="Add focused capabilities when you need them, and manage the extensions already available to WinCare." Style="{StaticResource PageDescriptionTextStyle}" />
