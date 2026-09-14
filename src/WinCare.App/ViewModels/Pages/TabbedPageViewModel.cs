@@ -4,6 +4,7 @@ using WinCare.Application.Activity;
 using WinCare.Application.Tools;
 using WinCare.CommandCatalog.Models;
 using WinCare.Domain.Activity;
+using WinCare.Domain.Commands;
 
 namespace WinCare.App.ViewModels.Pages;
 
