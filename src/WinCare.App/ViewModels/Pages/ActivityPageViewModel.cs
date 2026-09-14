@@ -13,12 +13,12 @@ public sealed class ActivityPageViewModel : TabbedPageViewModel
 
     private readonly List<PageRow> _runningRows = [];
     private readonly List<PageRow> _attentionRows = [];
-    private readonly List<PageRow> _completedRows = [];
+    private readonly List<PageRow> _historyRows = [];
     private readonly List<PageRow> _reportRows = [];
 
     private const int RunningIndex = 0;
     private const int NeedsAttentionIndex = 1;
-    private const int CompletedIndex = 2;
+    private const int HistoryIndex = 2;
     private const int ReportsIndex = 3;
 
     public ActivityPageViewModel()
@@ -30,7 +30,7 @@ public sealed class ActivityPageViewModel : TabbedPageViewModel
         : base([
             new PageSection("Running", "No operations are running.", []),
             new PageSection("Needs attention", "No operations need attention.", []),
-            new PageSection("Completed", "Completed native operations will appear here.", []),
+            new PageSection("History", "No finished operations have been recorded yet.", []),
             new PageSection("Reports", "Run commands to build daily operation reports.", [])])
     {
         _journal = journal ?? throw new ArgumentNullException(nameof(journal));
@@ -51,9 +51,7 @@ public sealed class ActivityPageViewModel : TabbedPageViewModel
     public string PersistenceWarningMessage => _journal.PersistenceStatusMessage ??
         "Activity history cannot currently be saved to disk.";
 
-    /// <summary>
-    /// Rebuilds all section rows from the current journal state and refreshes the view.
-    /// </summary>
+    /// <summary>Rebuilds all section rows from the current journal state and refreshes the view.</summary>
     public void RefreshFromJournal()
     {
         IReadOnlyList<ActivityRecord> records = _journal.GetAll();
@@ -63,10 +61,7 @@ public sealed class ActivityPageViewModel : TabbedPageViewModel
         bool persistenceChanged = _lastPersistenceHealthy != persistenceHealthy ||
             !string.Equals(_lastPersistenceMessage, persistenceMessage, StringComparison.Ordinal);
 
-        if (!recordsChanged && !persistenceChanged)
-        {
-            return;
-        }
+        if (!recordsChanged && !persistenceChanged) return;
 
         _lastRecords = records;
         _lastPersistenceHealthy = persistenceHealthy;
@@ -76,7 +71,7 @@ public sealed class ActivityPageViewModel : TabbedPageViewModel
         {
             _runningRows.Clear();
             _attentionRows.Clear();
-            _completedRows.Clear();
+            _historyRows.Clear();
             _reportRows.Clear();
 
             foreach (ActivityRecord rec in records)
@@ -93,7 +88,7 @@ public sealed class ActivityPageViewModel : TabbedPageViewModel
                     case ActivityState.Completed:
                     case ActivityState.Failed:
                     case ActivityState.Cancelled:
-                        _completedRows.Add(row);
+                        _historyRows.Add(row);
                         break;
                 }
             }
@@ -110,7 +105,6 @@ public sealed class ActivityPageViewModel : TabbedPageViewModel
         }
     }
 
-    /// <inheritdoc />
     public override void SelectSection(int index)
     {
         base.SelectSection(index);
@@ -123,7 +117,7 @@ public sealed class ActivityPageViewModel : TabbedPageViewModel
         {
             RunningIndex => _runningRows,
             NeedsAttentionIndex => _attentionRows,
-            CompletedIndex => _completedRows,
+            HistoryIndex => _historyRows,
             ReportsIndex => _reportRows,
             _ => [],
         };
@@ -155,11 +149,8 @@ public sealed class ActivityPageViewModel : TabbedPageViewModel
             string state = failed > 0 ? "Review" : "Complete";
             string description = $"{entries.Length} operations · {succeeded} completed · {failed} failed · {cancelled} cancelled";
 
-            // Note if the history window has reached the retention limit.
             if (records.Count >= ActivityJournalService.MaxPersistedRecords)
-            {
                 description += $" · journal retains only the most recent {ActivityJournalService.MaxPersistedRecords} records";
-            }
 
             string first = entries[0].StartedAt.ToLocalTime().ToString("HH:mm");
             string last = (entries[^1].CompletedAt ?? entries[^1].StartedAt).ToLocalTime().ToString("HH:mm");

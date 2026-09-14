@@ -8,7 +8,7 @@ public sealed class RepairRecoveryPageViewModelTests
     public void Portable_playbook_review_projects_steps_without_execution_authority()
     {
         var vm = new RepairRecoveryPageViewModel();
-        vm.SelectSection(5);
+        vm.SelectSection(4);
         vm.PortablePlaybookJson = """
             {"schemaVersion":1,"name":"Storage review","steps":[{"commandId":"storage-report","parameters":{"RootPath":"C:\\Data"}}]}
             """;

@@ -38,7 +38,10 @@ public sealed class CareToolProjectionTests
         {
             Assert.True(row.IsCompact);
             Assert.False(row.HasAction);
-            Assert.True(row.Detail.Contains("access", StringComparison.OrdinalIgnoreCase));
+            Assert.True(
+                row.Detail.Contains("access", StringComparison.OrdinalIgnoreCase) ||
+                row.Detail.Contains("Administrator", StringComparison.OrdinalIgnoreCase));
+            Assert.True(row.Detail.Contains("restart", StringComparison.OrdinalIgnoreCase));
         });
         page.SetCompactLayout(false);
         Assert.All(page.CurrentRows, row => Assert.False(row.IsCompact));

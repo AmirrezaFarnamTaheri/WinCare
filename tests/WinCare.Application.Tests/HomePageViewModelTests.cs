@@ -44,7 +44,7 @@ public sealed class HomePageViewModelTests
         ]);
 
         Assert.Equal("4 of 4 areas", vm.EvidenceScoreText);
-        Assert.Equal("Your latest check is ready", vm.EvidenceTitle);
+        Assert.Equal("Recent evidence is ready", vm.EvidenceTitle);
         Assert.Equal("Evidence collected", vm.SystemStatus);
         Assert.Equal("Evidence collected", vm.StorageStatus);
         Assert.Equal("Evidence collected", vm.SecurityStatus);
@@ -65,7 +65,7 @@ public sealed class HomePageViewModelTests
 
         Assert.StartsWith("Stale evidence", vm.SystemStatus);
         Assert.Equal("4 of 4 areas", vm.EvidenceScoreText);
-        Assert.Equal("Your checkup evidence is getting stale", vm.EvidenceTitle);
+        Assert.Equal("Some evidence is getting stale", vm.EvidenceTitle);
         Assert.Contains("older than 30 minutes", vm.EvidenceSummary);
     }
 
@@ -82,7 +82,7 @@ public sealed class HomePageViewModelTests
             Completed("wua-search", "Updates", started, completed),
         ]);
 
-        Assert.Equal("Your latest check is ready", vm.EvidenceTitle);
+        Assert.Equal("Recent evidence is ready", vm.EvidenceTitle);
         Assert.Equal("Evidence collected", vm.SystemStatus);
     }
 

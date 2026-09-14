@@ -16,7 +16,7 @@
 
         <StackPanel Spacing="8">
             <TextBlock x:Uid="ActivityPageTitle" Style="{StaticResource PageTitleTextStyle}" Text="Activity" />
-            <TextBlock MaxWidth="760" HorizontalAlignment="Left" Style="{StaticResource PageDescriptionTextStyle}" Text="View running operations, items that need follow-up, completed outcomes, and daily reports." />
+            <TextBlock MaxWidth="760" HorizontalAlignment="Left" Style="{StaticResource PageDescriptionTextStyle}" Text="View running operations, items that need follow-up, finished outcomes, and daily reports." />
         </StackPanel>
 
         <StackPanel Grid.Row="1" Spacing="8">
@@ -50,7 +50,7 @@
             AutomationProperties.Name="Activity sections">
             <SelectorBarItem Text="Running" AutomationProperties.AutomationId="ActivityTab_Running" AutomationProperties.Name="Running" />
             <SelectorBarItem Text="Needs attention" AutomationProperties.AutomationId="ActivityTab_NeedsAttention" AutomationProperties.Name="Needs attention" />
-            <SelectorBarItem Text="Completed" AutomationProperties.AutomationId="ActivityTab_Completed" AutomationProperties.Name="Completed" />
+            <SelectorBarItem Text="History" AutomationProperties.AutomationId="ActivityTab_History" AutomationProperties.Name="History" />
             <SelectorBarItem Text="Reports" AutomationProperties.AutomationId="ActivityTab_Reports" AutomationProperties.Name="Reports" />
         </SelectorBar>
 

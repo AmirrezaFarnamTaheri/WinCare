@@ -60,15 +60,15 @@ The main navigation is task-oriented:
 - **Power tools** — complete 269-command catalog with search, exact Area + Section filters, category browsing, typed parameters, favorites, Recent, and Care plans.
 - **Troubleshoot** — local rule-based symptom triage and evidence-guided recommendations.
 - **Extensions** — built-in and locally admitted optional capabilities plus catalog browsing when available.
-- **Activity** — running work, items needing attention, completed operations, and aggregated daily reports.
-- **Settings** — theme, window continuity, local-data access, persistence warnings, and the safety-policy summary.
-- **Help** — in-app explanations for evidence, approval, plugins, Guard status, troubleshooting, and accessibility.
+- **Activity** — running work, items needing attention, finished operation history, and aggregated daily reports.
+- **Settings** — theme, window continuity, local-data access, and persistence warnings.
+- **Help** — in-app explanations for evidence, approval, extensions, troubleshooting, and accessibility.
 
 Use **Ctrl+K** to search pages, tools, extensions, and help topics. In Power tools, **Ctrl+F** focuses tool search.
 
 ## 5. Home
 
-Home is an evidence/status dashboard, not a synthetic health-score generator. Before a check it clearly says evidence has not been collected. After operations/checks, it derives recent activity and status summaries from the shared Activity journal.
+Home is an evidence/status dashboard, not a synthetic health-score generator. Before a check it clearly says evidence has not been collected. After operations/checks, it derives recent activity and status summaries from the shared Activity journal. Completed check evidence is considered current for a bounded window; older evidence is visibly marked stale instead of being presented as a fresh snapshot.
 
 Plugin widgets appear only when active. A widget that fails to load reports a visible error state instead of silently disappearing.
 
@@ -99,7 +99,7 @@ Power tools exposes all 269 native command definitions without making the full c
 
 ### Search and filters
 
-Search by task/title/summary, filter by exact Area, Section, impact, and read-only characteristics, and use Favorites/Recent for repeated work. **Categories** is a real Area/Section browser rather than a sort mode. At compact widths the filters stack instead of forcing a desktop-width toolbar.
+Search by task/title/summary, filter by exact Area, Section, impact, and read-only characteristics, and use Favorites/Recent for repeated work. Multi-word searches require every term to match somewhere in the tool metadata, keeping results focused and consistent with Ctrl+K. **Categories** is a real Area/Section browser rather than a sort mode. At compact widths the filters stack instead of forcing a desktop-width toolbar.
 
 ### Typed parameters
 
@@ -144,7 +144,7 @@ Extensions execute full-trust **in process** with the current user's WinCare pri
 
 This repository does **not** ship an approved production plugin-catalog public key or a live official signed catalog. The current composition root therefore keeps remote installation **browse-only/disabled**. This is intentional fail-closed behavior.
 
-Catalog trust/availability is visible on the Extensions page. Catalog or network failures are surfaced when they affect browsing or installation. Bundled/offline sample metadata is not treated as installable production content.
+Catalog trust/availability is available under **Catalog status** on the Extensions page. Catalog or network failures are surfaced prominently when they affect browsing or installation. Bundled/offline sample metadata is not treated as installable production content.
 
 ### Requirements before remote installation can ever be enabled
 
@@ -166,8 +166,8 @@ Activity is the shared operation ledger.
 
 - **Running** — operations currently executing.
 - **Needs attention** — operations whose outcome requires verification/follow-up.
-- **Completed** — terminal completed/failed/cancelled operations.
-- **Reports** — daily aggregate summaries rather than a duplicate of Completed.
+- **History** — all terminal successful, failed, and cancelled operations, preserving their real state.
+- **Reports** — daily aggregate summaries rather than a duplicate of History.
 
 Activity refreshes from journal change events rather than a polling timer. Journal persistence occurs outside the in-memory state lock. If durable storage fails, the UI displays a persistence warning so in-memory success is not confused with a durable audit trail.
 
@@ -179,9 +179,8 @@ Current settings are intentionally limited to behavior the app actually persists
 - **Window continuity** — remember/restore the last usable size, position, and maximized state; turning it off clears the stored placement.
 - **Local data** — open the WinCare data directory.
 - **Persistence warning** — visible if preferences cannot be loaded or written durably.
-- **Safety policy** — an explanation of risk-tier execution, preview receipts, outcomes, and truthful recovery claims.
 
-Settings does not expose decorative toggles for product capabilities that are not actually wired.
+Settings does not expose explanatory policy cards or decorative toggles for capabilities that are not actually configurable.
 
 ## 13. Encrypted profiles
 

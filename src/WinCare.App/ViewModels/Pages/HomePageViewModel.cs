@@ -16,7 +16,7 @@ public sealed class HomePageViewModel : ObservableObject
     private string _recentActivityTitle = "No activity recorded";
     private string _recentActivitySummary = "Checks and reviewed changes will appear here.";
     private string _evidenceScoreText = "0 of 4 areas";
-    private string _evidenceTitle = "No check evidence yet";
+    private string _evidenceTitle = "No recent evidence yet";
     private string _evidenceSummary = "Run a read-only check to collect current evidence.";
     private string _systemStatus = "Not checked";
     private string _securityStatus = "Not checked";
@@ -81,21 +81,21 @@ public sealed class HomePageViewModel : ObservableObject
         EvidenceScoreText = $"{collected} of {QuickCheckCommandIds.Length} areas";
         if (freshCollected == QuickCheckCommandIds.Length)
         {
-            DateTimeOffset newestCheck = latestByCommand.Values.Max(EvidenceTimestamp);
-            EvidenceTitle = "Your latest check is ready";
-            EvidenceSummary = $"All four read-only checks finished. Last checked: {newestCheck.ToLocalTime():g}. Open an area below for its evidence and next step.";
+            DateTimeOffset oldestEvidence = latestByCommand.Values.Min(EvidenceTimestamp);
+            EvidenceTitle = "Recent evidence is ready";
+            EvidenceSummary = $"All four areas have recent read-only evidence. Oldest sample: {oldestEvidence.ToLocalTime():g}. Open an area below for details and next steps.";
         }
         else if (collected == QuickCheckCommandIds.Length)
         {
-            EvidenceTitle = "Your checkup evidence is getting stale";
+            EvidenceTitle = "Some evidence is getting stale";
             EvidenceSummary = freshCollected == 0
-                ? "Your last completed check is older than 30 minutes. Run Checkup for a current snapshot."
+                ? "The latest completed evidence in all four areas is older than 30 minutes. Run Checkup for a current snapshot."
                 : $"{freshCollected} of {QuickCheckCommandIds.Length} areas still have fresh evidence. Run Checkup to refresh the rest.";
         }
         else if (latestByCommand.Count > 0)
         {
             EvidenceTitle = needsReview > 0 ? "Some checks need your attention" : "Your PC snapshot is taking shape";
-            EvidenceSummary = $"{collected} of {QuickCheckCommandIds.Length} read-only checks finished. Open a result to see what WinCare found.";
+            EvidenceSummary = $"{collected} of {QuickCheckCommandIds.Length} areas have completed read-only evidence. Open a result to see what WinCare found.";
         }
         else
         {

@@ -142,11 +142,19 @@ class ProductUiParityTests(unittest.TestCase):
         self.assertIn('Text="Open source"', about)
         self.assertIn('"Common care"', catalog)
 
-    def test_activity_copy_matches_needs_attention_journal_semantics(self) -> None:
+    def test_activity_copy_matches_terminal_history_semantics(self) -> None:
         activity = self.read("src/WinCare.App/Views/Pages/ActivityPage.xaml")
+        view_model = self.read("src/WinCare.App/ViewModels/Pages/ActivityPageViewModel.cs")
+        catalog = self.read("src/WinCare.Application/Navigation/NavigationCatalog.cs")
+
         self.assertNotIn("pending confirmations", activity)
         self.assertNotIn("elevated confirmation", activity)
         self.assertIn("operations ended in a state that needs review or follow-up", activity)
+        self.assertIn('Text="History"', activity)
+        self.assertIn('new PageSection("History"', view_model)
+        self.assertIn("ActivityState.Failed", view_model)
+        self.assertIn("ActivityState.Cancelled", view_model)
+        self.assertIn('["Running", "Needs attention", "History", "Reports"]', catalog)
 
     def test_legacy_instrument_panel_styles_are_removed(self) -> None:
         controls = self.read("src/WinCare.App/Styles/ControlStyles.xaml")
@@ -167,6 +175,8 @@ class ProductUiParityTests(unittest.TestCase):
         self.assertNotIn("probes run sequentially", guide)
         self.assertIn("fast system/storage/security probes run concurrently", guide)
         self.assertIn("Power tools applies the normal risk-tier flow", guide)
+        self.assertIn("**History** — all terminal successful, failed, and cancelled operations", guide)
+        self.assertNotIn("**Safety policy** —", guide)
         self.assertIn("historical runtime evidence", screenshots)
         self.assertIn("Historical v2.5.0-rc5 runtime capture", readme)
         self.assertIn("Power tools is the canonical advanced command inspector and execution surface", architecture_plain)
