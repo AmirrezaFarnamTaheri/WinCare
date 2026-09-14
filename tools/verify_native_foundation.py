@@ -72,7 +72,7 @@ EXPECTED_PAGE_TABS = {
     "SecurityPage.xaml": ("Status", "Protection", "Privacy", "Hardening"),
     "RepairRecoveryPage.xaml": ("Repair", "Restore", "Backup", "Reset & media", "Portable playbooks"),
     "AllToolsPage.xaml": ("Tools", "Categories", "Favorites", "Recent", "Care plans"),
-    "ActivityPage.xaml": ("Running", "Needs attention", "Completed", "Reports"),
+    "ActivityPage.xaml": ("Running", "Needs attention", "History", "Reports"),
 }
 
 
