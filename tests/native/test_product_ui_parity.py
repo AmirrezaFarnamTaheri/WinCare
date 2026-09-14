@@ -25,7 +25,11 @@ class ProductUiParityTests(unittest.TestCase):
         self.assertIn("Grid.SetRow(EvidenceSummaryCard", code_behind)
         self.assertIn("PageNavigation.NavigateToSection", code_behind)
         self.assertNotIn("PerformanceStatus", view_model)
-        self.assertEqual(4, xaml.count("StatusRowButtonStyle"))
+        self.assertNotIn("NavCategory_Performance_Click", xaml)
+        self.assertNotIn("NavCategory_Performance_Click", code_behind)
+        for evidence_handler in ("NavCategory_System_Click", "NavCategory_Storage_Click", "NavCategory_Security_Click", "NavCategory_Updates_Click"):
+            self.assertIn(evidence_handler, xaml)
+            self.assertIn(evidence_handler, code_behind)
 
     def test_troubleshoot_hands_actions_to_canonical_tool_inspector(self) -> None:
         view_model = self.read("src/WinCare.App/ViewModels/Pages/AiDoctorPageViewModel.cs")
