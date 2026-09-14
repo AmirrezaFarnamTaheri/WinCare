@@ -16,7 +16,7 @@
 
         <StackPanel Spacing="8">
             <TextBlock x:Uid="ActivityPageTitle" Style="{StaticResource PageTitleTextStyle}" Text="Activity" />
-            <TextBlock MaxWidth="760" HorizontalAlignment="Left" Style="{StaticResource PageDescriptionTextStyle}" Text="View running tasks, pending confirmations, completed actions, and daily reports." />
+            <TextBlock MaxWidth="760" HorizontalAlignment="Left" Style="{StaticResource PageDescriptionTextStyle}" Text="View running operations, items that need follow-up, completed outcomes, and daily reports." />
         </StackPanel>
 
         <StackPanel Grid.Row="1" Spacing="8">
@@ -26,10 +26,10 @@
                 IsOpen="{x:Bind ViewModel.HasAttentionItems, Mode=OneWay}"
                 IsClosable="False"
                 Severity="Warning"
-                Title="Attention required"
-                Message="One or more operations require user review or elevated confirmation."
+                Title="Review needed"
+                Message="One or more operations ended in a state that needs review or follow-up before you retry or continue."
                 AutomationProperties.AutomationId="AttentionInfoBar"
-                AutomationProperties.Name="Attention required" />
+                AutomationProperties.Name="Activity items need review" />
             <InfoBar
                 x:Name="PersistenceInfoBar"
                 Margin="0"
@@ -48,96 +48,40 @@
             SelectionChanged="SectionSelector_SelectionChanged"
             AutomationProperties.AutomationId="ActivityPageTabs"
             AutomationProperties.Name="Activity sections">
-            <SelectorBarItem Text="Running"
-                             AutomationProperties.AutomationId="ActivityTab_Running"
-                             AutomationProperties.Name="Running" />
-            <SelectorBarItem Text="Needs attention"
-                             AutomationProperties.AutomationId="ActivityTab_NeedsAttention"
-                             AutomationProperties.Name="Needs attention" />
-            <SelectorBarItem Text="Completed"
-                             AutomationProperties.AutomationId="ActivityTab_Completed"
-                             AutomationProperties.Name="Completed" />
-            <SelectorBarItem Text="Reports"
-                             AutomationProperties.AutomationId="ActivityTab_Reports"
-                             AutomationProperties.Name="Reports" />
+            <SelectorBarItem Text="Running" AutomationProperties.AutomationId="ActivityTab_Running" AutomationProperties.Name="Running" />
+            <SelectorBarItem Text="Needs attention" AutomationProperties.AutomationId="ActivityTab_NeedsAttention" AutomationProperties.Name="Needs attention" />
+            <SelectorBarItem Text="Completed" AutomationProperties.AutomationId="ActivityTab_Completed" AutomationProperties.Name="Completed" />
+            <SelectorBarItem Text="Reports" AutomationProperties.AutomationId="ActivityTab_Reports" AutomationProperties.Name="Reports" />
         </SelectorBar>
 
         <Grid Grid.Row="3">
-            <Border Style="{StaticResource SurfaceBorderStyle}"
-                    Visibility="{x:Bind views:LayoutVisibility.InvertBoolToVisibility(ViewModel.IsEmpty), Mode=OneWay}">
+            <Border Style="{StaticResource SurfaceBorderStyle}" Visibility="{x:Bind views:LayoutVisibility.InvertBoolToVisibility(ViewModel.IsEmpty), Mode=OneWay}">
                 <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="*" />
-                    </Grid.RowDefinitions>
-                    <Grid
-                        x:Name="TableHeader"
-                        Height="48"
-                        Padding="16,0"
-                        ColumnSpacing="16"
-                        Background="{ThemeResource SurfaceSecondaryBrush}"
-                        Visibility="{x:Bind views:LayoutVisibility.InvertBoolToVisibility(ViewModel.IsCompactLayout), Mode=OneWay}">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="2*" />
-                            <ColumnDefinition Width="3*" />
-                            <ColumnDefinition Width="140" />
-                            <ColumnDefinition Width="180" />
-                        </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="*" /></Grid.RowDefinitions>
+                    <Grid x:Name="TableHeader" Height="48" Padding="16,0" ColumnSpacing="16" Background="{ThemeResource SurfaceSecondaryBrush}" Visibility="{x:Bind views:LayoutVisibility.InvertBoolToVisibility(ViewModel.IsCompactLayout), Mode=OneWay}">
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="2*" /><ColumnDefinition Width="3*" /><ColumnDefinition Width="140" /><ColumnDefinition Width="180" /></Grid.ColumnDefinitions>
                         <TextBlock Style="{StaticResource ColumnHeaderTextStyle}" Text="Item" />
                         <TextBlock x:Name="DescriptionHeader" Grid.Column="1" Style="{StaticResource ColumnHeaderTextStyle}" Text="Summary" />
                         <TextBlock x:Name="StateHeader" Grid.Column="2" Style="{StaticResource ColumnHeaderTextStyle}" Text="State" />
                         <TextBlock x:Name="NotesHeader" Grid.Column="3" Style="{StaticResource ColumnHeaderTextStyle}" Text="Time" />
                     </Grid>
-                    <ListView
-                        Grid.Row="1"
-                        ItemsSource="{x:Bind ViewModel.CurrentRows, Mode=OneWay}"
-                        SelectionMode="None"
-                        AutomationProperties.AutomationId="ActivityPageRows"
-                        AutomationProperties.Name="Activity information">
-                        <ListView.ItemContainerStyle>
-                            <Style TargetType="ListViewItem">
-                                <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-                                <Setter Property="MinHeight" Value="76" />
-                            </Style>
-                        </ListView.ItemContainerStyle>
+                    <ListView Grid.Row="1" ItemsSource="{x:Bind ViewModel.CurrentRows, Mode=OneWay}" SelectionMode="None" AutomationProperties.AutomationId="ActivityPageRows" AutomationProperties.Name="Activity information">
+                        <ListView.ItemContainerStyle><Style TargetType="ListViewItem"><Setter Property="HorizontalContentAlignment" Value="Stretch" /><Setter Property="MinHeight" Value="76" /></Style></ListView.ItemContainerStyle>
                         <ListView.ItemTemplate>
                             <DataTemplate x:DataType="vm:PageRow">
                                 <Grid Padding="16">
-                                    <Grid
-                                        ColumnSpacing="16"
-                                        Visibility="{x:Bind views:LayoutVisibility.InvertBoolToVisibility(IsCompact), Mode=OneWay}">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="2*" />
-                                            <ColumnDefinition Width="3*" />
-                                            <ColumnDefinition Width="140" />
-                                            <ColumnDefinition Width="180" />
-                                        </Grid.ColumnDefinitions>
+                                    <Grid ColumnSpacing="16" Visibility="{x:Bind views:LayoutVisibility.InvertBoolToVisibility(IsCompact), Mode=OneWay}">
+                                        <Grid.ColumnDefinitions><ColumnDefinition Width="2*" /><ColumnDefinition Width="3*" /><ColumnDefinition Width="140" /><ColumnDefinition Width="180" /></Grid.ColumnDefinitions>
                                         <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="{x:Bind Title}" TextWrapping="Wrap" />
                                         <TextBlock Grid.Column="1" Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind Description}" TextWrapping="Wrap" />
                                         <TextBlock Grid.Column="2" Style="{StaticResource RowSecondaryTextStyle}" FontFamily="{StaticResource TelemetryFontFamily}" Text="{x:Bind State, Mode=OneWay}" TextWrapping="Wrap" />
                                         <TextBlock Grid.Column="3" Style="{StaticResource RowSecondaryTextStyle}" FontFamily="{StaticResource TelemetryFontFamily}" Text="{x:Bind Detail, Mode=OneWay}" TextWrapping="Wrap" />
                                     </Grid>
-                                    <StackPanel
-                                        Spacing="8"
-                                        Visibility="{x:Bind views:LayoutVisibility.BoolToVisibility(IsCompact), Mode=OneWay}">
+                                    <StackPanel Spacing="8" Visibility="{x:Bind views:LayoutVisibility.BoolToVisibility(IsCompact), Mode=OneWay}">
                                         <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="{x:Bind Title}" TextWrapping="Wrap" />
                                         <TextBlock Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind Description}" TextWrapping="Wrap" />
-                                        <Grid ColumnSpacing="8">
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="Auto" />
-                                                <ColumnDefinition Width="*" />
-                                            </Grid.ColumnDefinitions>
-                                            <TextBlock FontWeight="SemiBold" Style="{StaticResource RowSecondaryTextStyle}" Text="State" />
-                                            <TextBlock Grid.Column="1" Style="{StaticResource RowSecondaryTextStyle}" FontFamily="{StaticResource TelemetryFontFamily}" Text="{x:Bind State, Mode=OneWay}" TextWrapping="Wrap" />
-                                        </Grid>
-                                        <Grid ColumnSpacing="8">
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="Auto" />
-                                                <ColumnDefinition Width="*" />
-                                            </Grid.ColumnDefinitions>
-                                            <TextBlock FontWeight="SemiBold" Style="{StaticResource RowSecondaryTextStyle}" Text="Time" />
-                                            <TextBlock Grid.Column="1" Style="{StaticResource RowSecondaryTextStyle}" FontFamily="{StaticResource TelemetryFontFamily}" Text="{x:Bind Detail, Mode=OneWay}" TextWrapping="Wrap" />
-                                        </Grid>
+                                        <Grid ColumnSpacing="8"><Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions><TextBlock FontWeight="SemiBold" Style="{StaticResource RowSecondaryTextStyle}" Text="State" /><TextBlock Grid.Column="1" Style="{StaticResource RowSecondaryTextStyle}" FontFamily="{StaticResource TelemetryFontFamily}" Text="{x:Bind State, Mode=OneWay}" TextWrapping="Wrap" /></Grid>
+                                        <Grid ColumnSpacing="8"><Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions><TextBlock FontWeight="SemiBold" Style="{StaticResource RowSecondaryTextStyle}" Text="Time" /><TextBlock Grid.Column="1" Style="{StaticResource RowSecondaryTextStyle}" FontFamily="{StaticResource TelemetryFontFamily}" Text="{x:Bind Detail, Mode=OneWay}" TextWrapping="Wrap" /></Grid>
                                     </StackPanel>
                                 </Grid>
                             </DataTemplate>
@@ -145,22 +89,13 @@
                     </ListView>
                 </Grid>
             </Border>
-            <ScrollViewer VerticalScrollBarVisibility="Auto"
-                          Visibility="{x:Bind views:LayoutVisibility.BoolToVisibility(ViewModel.IsEmpty), Mode=OneWay}">
-                <StackPanel MaxWidth="440" Padding="24,48" Spacing="16" HorizontalAlignment="Center"
-                            AutomationProperties.LiveSetting="Polite">
-                    <Viewbox Width="64" Height="64" HorizontalAlignment="Left"
-                             AutomationProperties.AccessibilityView="Raw" IsHitTestVisible="False">
-                        <Canvas Width="64" Height="64">
-                            <Rectangle Canvas.Left="12" Canvas.Top="4" Width="40" Height="56" RadiusX="8" RadiusY="8"
-                                       Fill="{ThemeResource SurfaceSecondaryBrush}" Stroke="{ThemeResource CardBorderBrush}" StrokeThickness="2" />
-                            <Path Data="M 22,20 L 42,20 M 22,28 L 38,28 M 22,40 L 28,46 L 42,34"
-                                  Stroke="{ThemeResource AccentTealBrush}" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
-                        </Canvas>
+            <ScrollViewer VerticalScrollBarVisibility="Auto" Visibility="{x:Bind views:LayoutVisibility.BoolToVisibility(ViewModel.IsEmpty), Mode=OneWay}">
+                <StackPanel MaxWidth="440" Padding="24,48" Spacing="16" HorizontalAlignment="Center" AutomationProperties.LiveSetting="Polite">
+                    <Viewbox Width="64" Height="64" HorizontalAlignment="Left" AutomationProperties.AccessibilityView="Raw" IsHitTestVisible="False">
+                        <Canvas Width="64" Height="64"><Rectangle Canvas.Left="12" Canvas.Top="4" Width="40" Height="56" RadiusX="8" RadiusY="8" Fill="{ThemeResource SurfaceSecondaryBrush}" Stroke="{ThemeResource CardBorderBrush}" StrokeThickness="2" /><Path Data="M 22,20 L 42,20 M 22,28 L 38,28 M 22,40 L 28,46 L 42,34" Stroke="{ThemeResource AccentTealBrush}" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" /></Canvas>
                     </Viewbox>
                     <TextBlock Style="{StaticResource SectionHeaderTextStyle}" Text="{x:Bind ViewModel.EmptyMessage, Mode=OneWay}" />
-                    <TextBlock Style="{StaticResource PageDescriptionTextStyle}"
-                               Text="Every operation leaves a record here, so you can review what ran and what happened next." />
+                    <TextBlock Style="{StaticResource PageDescriptionTextStyle}" Text="Every operation leaves a record here, so you can review what ran and what happened next." />
                 </StackPanel>
             </ScrollViewer>
         </Grid>

@@ -23,7 +23,6 @@ public sealed class ToolRowViewModel : ObservableObject
     public string CategoryText => $"{Area} · {Section}";
     public string Risk => Definition.RiskTier switch
     {
-        RiskTier.Safe when Definition.ReadOnly => "Safe · read-only",
         RiskTier.Safe => "Safe",
         RiskTier.Moderate => "Moderate",
         RiskTier.Destructive => "Destructive",
@@ -60,7 +59,7 @@ public sealed class ToolRowViewModel : ObservableObject
         set => SetProperty(ref _isCompact, value);
     }
 
-    public string RiskPillLabel => Risk;
+    public string RiskPillLabel => Definition.ReadOnly ? "Read-only" : Risk;
 
     public string StatusPillLabel => MigrationState switch
     {
@@ -106,5 +105,7 @@ public sealed class ToolRowViewModel : ObservableObject
     /// <summary>
     /// Concise accessible name for the selectable row (title, area, and product-facing safety tier).
     /// </summary>
-    public string ToolAccessibleName => $"{Title}, {Definition.Area}, {Risk} tier";
+    public string ToolAccessibleName => Definition.ReadOnly
+        ? $"{Title}, {Definition.Area}, {Risk} tier, read-only"
+        : $"{Title}, {Definition.Area}, {Risk} tier";
 }

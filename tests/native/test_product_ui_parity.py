@@ -17,20 +17,15 @@ class ProductUiParityTests(unittest.TestCase):
         xaml = self.read("src/WinCare.App/Views/Pages/HomePage.xaml")
         code_behind = self.read("src/WinCare.App/Views/Pages/HomePage.xaml.cs")
 
-        for stale_owner in (
-            "CommandDispatcher",
-            "INativeSystemProbeRepository",
-            "QuickCleanCommand",
-            "StartupBoostCommand",
-            "NetworkRefreshCommand",
-            "ToggleInspectorCommand",
-        ):
+        for stale_owner in ("CommandDispatcher", "INativeSystemProbeRepository", "QuickCleanCommand", "StartupBoostCommand", "NetworkRefreshCommand", "ToggleInspectorCommand"):
             self.assertNotIn(stale_owner, view_model)
         self.assertIn("Presentation-only projection", view_model)
         self.assertEqual(1, xaml.count('Content="Run checkup"'))
         self.assertIn('x:Name="HeroLayout"', xaml)
         self.assertIn("Grid.SetRow(EvidenceSummaryCard", code_behind)
         self.assertIn("PageNavigation.NavigateToSection", code_behind)
+        self.assertNotIn("PerformanceStatus", view_model)
+        self.assertEqual(4, xaml.count("StatusRowButtonStyle"))
 
     def test_troubleshoot_hands_actions_to_canonical_tool_inspector(self) -> None:
         view_model = self.read("src/WinCare.App/ViewModels/Pages/AiDoctorPageViewModel.cs")
@@ -68,7 +63,6 @@ class ProductUiParityTests(unittest.TestCase):
             self.assertNotIn(leaked, view_model)
         self.assertIn("command.RiskTier == tier", view_model)
         self.assertIn("Definition.RiskTier", row)
-        self.assertIn('RiskTier.Safe when Definition.ReadOnly => "Safe · read-only"', row)
 
     def test_extension_catalog_trust_state_is_visible(self) -> None:
         view_model = self.read("src/WinCare.App/ViewModels/Pages/PluginStorePageViewModel.cs")
@@ -98,12 +92,20 @@ class ProductUiParityTests(unittest.TestCase):
         catalog = self.read("src/WinCare.Application/Navigation/NavigationCatalog.cs")
         page_service = self.read("src/WinCare.App/Services/PageService.cs")
         shell = self.read("src/WinCare.App/Views/ShellPage.xaml")
+        shell_code = self.read("src/WinCare.App/Views/ShellPage.xaml.cs")
 
         catalog_ids = set(re.findall(r'new\("([^"]+)"', catalog))
         page_ids = set(re.findall(r'\["([^"]+)"\]\s*=\s*typeof', page_service))
         shell_ids = set(re.findall(r'Tag="([^"]+)"', shell))
         self.assertEqual(catalog_ids, page_ids)
         self.assertEqual(catalog_ids - {"about"}, shell_ids)
+        self.assertIn("PrimaryNavigation.SelectedItem = null", shell_code)
+
+    def test_activity_copy_matches_needs_attention_journal_semantics(self) -> None:
+        activity = self.read("src/WinCare.App/Views/Pages/ActivityPage.xaml")
+        self.assertNotIn("pending confirmations", activity)
+        self.assertNotIn("elevated confirmation", activity)
+        self.assertIn("operations ended in a state that needs review or follow-up", activity)
 
     def test_legacy_instrument_panel_styles_are_removed(self) -> None:
         controls = self.read("src/WinCare.App/Styles/ControlStyles.xaml")

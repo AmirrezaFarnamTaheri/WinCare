@@ -6,39 +6,28 @@
         <StackPanel Padding="28,28,28,32" MaxWidth="920" HorizontalAlignment="Left" Spacing="24">
             <StackPanel Spacing="6">
                 <TextBlock x:Uid="HelpPageTitle" Style="{StaticResource PageTitleTextStyle}" Text="Help" />
-                <TextBlock Style="{StaticResource PageDescriptionTextStyle}" TextWrapping="Wrap"
-                           Text="WinCare is organized around a simple flow: check what needs attention, open the relevant care area, review the suggested action, and confirm only when you're ready." />
+                <TextBlock Style="{StaticResource PageDescriptionTextStyle}" TextWrapping="Wrap" Text="WinCare is organized around a simple flow: check current evidence, open the relevant care area, and review higher-impact changes before applying them." />
             </StackPanel>
 
             <Border Padding="20" Background="{ThemeResource CardSurfaceBrush}" BorderBrush="{ThemeResource CardBorderBrush}" BorderThickness="1" CornerRadius="{StaticResource RadiusControl}">
                 <StackPanel Spacing="12">
                     <TextBlock Style="{StaticResource SectionHeaderTextStyle}" Text="Start here" />
-                    <TextBlock Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap"
-                               Text="Run Checkup for a read-only health snapshot. Results take you directly to the right care area when something needs attention." />
-                    <Button Content="Run Checkup" Style="{StaticResource AccentButtonStyle}" Click="OpenCheckup_Click" HorizontalAlignment="Left"
-                            AutomationProperties.AutomationId="HelpOpenCheckup" AutomationProperties.Name="Open Checkup" />
+                    <TextBlock Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap" Text="Run Checkup for a read-only system snapshot. Results take you directly to the right care area when something needs attention." />
+                    <Button Content="Run Checkup" Style="{StaticResource AccentButtonStyle}" Click="OpenCheckup_Click" HorizontalAlignment="Left" AutomationProperties.AutomationId="HelpOpenCheckup" AutomationProperties.Name="Open Checkup" />
                 </StackPanel>
             </Border>
 
             <StackPanel Spacing="12">
                 <TextBlock Style="{StaticResource SectionHeaderTextStyle}" Text="Find what you need" />
-                <TextBlock Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap"
-                           Text="Press Ctrl+K anywhere to search WinCare pages, tools, extensions, and help topics. Power tools contains the complete catalog for advanced or less common tasks." />
-                <StackPanel Orientation="Horizontal" Spacing="10">
-                    <Button Content="Open Power tools" Click="OpenPowerTools_Click" AutomationProperties.Name="Open Power tools" />
-                    <Button Content="Open Extensions" Click="OpenPluginStore_Click" AutomationProperties.Name="Open Extensions" />
-                    <Button Content="Troubleshoot" Click="OpenTroubleshoot_Click" AutomationProperties.Name="Open Troubleshoot" />
-                </StackPanel>
+                <TextBlock Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap" Text="Press Ctrl+K anywhere to search WinCare pages, tools, extensions, and help topics. Power tools contains the complete catalog for advanced or less common tasks." />
+                <StackPanel Orientation="Horizontal" Spacing="10"><Button Content="Open Power tools" Click="OpenPowerTools_Click" AutomationProperties.Name="Open Power tools" /><Button Content="Open Extensions" Click="OpenPluginStore_Click" AutomationProperties.Name="Open Extensions" /><Button Content="Troubleshoot" Click="OpenTroubleshoot_Click" AutomationProperties.Name="Open Troubleshoot" /></StackPanel>
             </StackPanel>
 
             <StackPanel Spacing="12">
                 <TextBlock Style="{StaticResource SectionHeaderTextStyle}" Text="When a tool changes Windows" />
-                <TextBlock Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap"
-                           Text="WinCare shows the expected impact before a change can run. Higher-impact actions may ask for a separate review. Checkup itself never changes the PC." />
-                <TextBlock Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap"
-                           Text="Activity is the place to see running work, completed outcomes, reports, and anything that needs follow-up." />
-                <Button Content="Open Activity" Click="OpenActivity_Click" HorizontalAlignment="Left"
-                        AutomationProperties.AutomationId="HelpOpenActivity" AutomationProperties.Name="Open Activity" />
+                <TextBlock Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap" Text="Safe bounded actions can run directly. Moderate changes require review and confirmation; Destructive changes require a successful preview and explicit approval of the reviewed plan. Checkup itself never changes the PC." />
+                <TextBlock Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap" Text="Activity shows running work, completed outcomes, reports, and operations whose final state needs review or follow-up." />
+                <Button Content="Open Activity" Click="OpenActivity_Click" HorizontalAlignment="Left" AutomationProperties.AutomationId="HelpOpenActivity" AutomationProperties.Name="Open Activity" />
             </StackPanel>
 
             <StackPanel Spacing="10">
@@ -50,10 +39,7 @@
             </StackPanel>
 
             <Border BorderBrush="{ThemeResource BorderSubtleBrush}" BorderThickness="0,1,0,0" Padding="0,20,0,0">
-                <StackPanel Orientation="Horizontal" Spacing="10">
-                    <Button Content="Settings" Click="OpenSettings_Click" AutomationProperties.Name="Open Settings" />
-                    <Button Content="About WinCare" Click="OpenAbout_Click" AutomationProperties.Name="Open About WinCare" />
-                </StackPanel>
+                <StackPanel Orientation="Horizontal" Spacing="10"><Button Content="Settings" Click="OpenSettings_Click" AutomationProperties.Name="Open Settings" /><Button Content="About WinCare" Click="OpenAbout_Click" AutomationProperties.Name="Open About WinCare" /></StackPanel>
             </Border>
         </StackPanel>
     </ScrollViewer>

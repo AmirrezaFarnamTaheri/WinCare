@@ -76,7 +76,10 @@ public sealed partial class ShellPage : Page
         if (target is null)
         {
             // Hidden routes such as About remain available through search/help without
-            // competing for permanent navigation space.
+            // falsely leaving a different visible navigation item selected.
+            _pendingToolsParameter = null;
+            _pendingNavigationParameter = null;
+            PrimaryNavigation.SelectedItem = null;
             _pageService.Navigate(ContentFrame, key, parameter);
             return;
         }
@@ -101,9 +104,7 @@ public sealed partial class ShellPage : Page
     private void PrimaryNavigation_SelectionChanged(NavigationView sender, NavigationViewSelectionChangedEventArgs args)
     {
         if (args.SelectedItemContainer?.Tag is not string key)
-        {
             return;
-        }
 
         object? parameter = string.Equals(key, "all-tools", StringComparison.Ordinal)
             ? _pendingToolsParameter
