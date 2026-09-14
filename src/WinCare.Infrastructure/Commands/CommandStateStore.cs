@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -6,13 +7,18 @@ namespace WinCare.Infrastructure.Commands;
 
 /// <summary>
 /// Durable app-owned JSON state. Files are fixed by logical key; callers cannot escape the WinCare data root.
-/// Writes use replace-on-close semantics so partial writes do not corrupt state.
+/// Updates are serialized per root within the process and across processes, then committed through a temporary
+/// file so a failed write cannot expose partial JSON.
 /// </summary>
 public sealed class CommandStateStore
 {
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
+    private static readonly ConcurrentDictionary<string, SemaphoreSlim> ProcessWriteGates =
+        new(StringComparer.OrdinalIgnoreCase);
+
     private readonly string _root;
     private readonly SemaphoreSlim _gate = new(1, 1);
+    private readonly SemaphoreSlim _processWriteGate;
     private readonly Semaphore _crossProcessGate;
 
     /// <summary>
@@ -32,10 +38,18 @@ public sealed class CommandStateStore
             "state"));
         Directory.CreateDirectory(_root);
 
-        // One OS-wide lock name per data root: every store instance (in this process or
-        // another) pointed at the same root shares the same write lock. A named Semaphore
-        // is used because writer continuations may resume on any thread; semaphores have
-        // no thread affinity and their count is restored by the OS if a holder dies.
+        // Multiple CommandStateStore instances can exist in one app process. Serialize their
+        // read-transform-write transactions before entering the OS-wide lock so they cannot
+        // race each other's temporary-file replacement even if the platform's named-object
+        // implementation behaves differently across hosts/test runners.
+        _processWriteGate = ProcessWriteGates.GetOrAdd(
+            _root,
+            static _ => new SemaphoreSlim(initialCount: 1, maxCount: 1));
+
+        // One OS-wide lock name per data root: every process pointed at the same root shares
+        // the same write lock. A named Semaphore is used because async continuations can resume
+        // on any thread; semaphores have no thread affinity and the OS restores the count if a
+        // holder process exits unexpectedly.
         string rootHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(_root)))[..16];
         _crossProcessGate = new Semaphore(initialCount: 1, maximumCount: 1, @"Local\WinCare.StateStore." + rootHash);
     }
@@ -90,38 +104,38 @@ public sealed class CommandStateStore
     public async Task WriteAsync(string key, JsonElement value, CancellationToken cancellationToken)
     {
         string path = PathFor(key);
-        string temp = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
         await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
-        bool crossProcessLockHeld = TryAcquireCrossProcessGate();
+        bool processLockHeld = false;
+        bool crossProcessLockHeld = false;
         try
         {
+            await _processWriteGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+            processLockHeld = true;
+            crossProcessLockHeld = TryAcquireCrossProcessGate();
             if (!crossProcessLockHeld)
             {
                 throw new TimeoutException(
                     $"WinCare state '{key}' is busy: another process holds the state write lock.");
             }
 
-            Directory.CreateDirectory(_root);
-            await using (FileStream stream = new(temp, FileMode.CreateNew, FileAccess.Write, FileShare.None, 64 * 1024, useAsync: true))
-            {
-                await JsonSerializer.SerializeAsync(stream, value, JsonOptions, cancellationToken).ConfigureAwait(false);
-                await stream.FlushAsync(cancellationToken).ConfigureAwait(false);
-            }
-            MoveWithRetry(temp, path);
+            await CommitAsync(key, path, value, cancellationToken).ConfigureAwait(false);
         }
         finally
         {
-            TryDelete(temp);
             if (crossProcessLockHeld)
             {
                 _crossProcessGate.Release();
+            }
+            if (processLockHeld)
+            {
+                _processWriteGate.Release();
             }
             _gate.Release();
         }
     }
 
     /// <summary>
-    /// Atomically reads, transforms, and writes state within a single lock.
+    /// Atomically reads, transforms, and writes state within a single transaction lock.
     /// </summary>
     public async Task<JsonElement> UpdateAsync(
         string key,
@@ -130,11 +144,14 @@ public sealed class CommandStateStore
         CancellationToken cancellationToken)
     {
         string path = PathFor(key);
-        string temp = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
         await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
-        bool crossProcessLockHeld = TryAcquireCrossProcessGate();
+        bool processLockHeld = false;
+        bool crossProcessLockHeld = false;
         try
         {
+            await _processWriteGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+            processLockHeld = true;
+            crossProcessLockHeld = TryAcquireCrossProcessGate();
             if (!crossProcessLockHeld)
             {
                 throw new TimeoutException(
@@ -157,22 +174,18 @@ public sealed class CommandStateStore
             }
 
             JsonElement updated = transform(current);
-
-            Directory.CreateDirectory(_root);
-            await using (FileStream writeStream = new(temp, FileMode.CreateNew, FileAccess.Write, FileShare.None, 64 * 1024, useAsync: true))
-            {
-                await JsonSerializer.SerializeAsync(writeStream, updated, JsonOptions, cancellationToken).ConfigureAwait(false);
-                await writeStream.FlushAsync(cancellationToken).ConfigureAwait(false);
-            }
-            MoveWithRetry(temp, path);
+            await CommitAsync(key, path, updated, cancellationToken).ConfigureAwait(false);
             return updated;
         }
         finally
         {
-            TryDelete(temp);
             if (crossProcessLockHeld)
             {
                 _crossProcessGate.Release();
+            }
+            if (processLockHeld)
+            {
+                _processWriteGate.Release();
             }
             _gate.Release();
         }
@@ -214,6 +227,51 @@ public sealed class CommandStateStore
             throw new InvalidOperationException("Resolved state path escaped the WinCare data root.");
         }
         return path;
+    }
+
+    /// <summary>
+    /// Serializes a complete JSON value to a unique temporary file and then replaces the logical
+    /// state path. If a host/filesystem transient consumes the temporary file during replacement,
+    /// rebuild the complete temp file and retry rather than exposing or accepting partial state.
+    /// </summary>
+    private async Task CommitAsync(string key, string path, JsonElement value, CancellationToken cancellationToken)
+    {
+        const int maxCommitAttempts = 3;
+        IOException? lastIoError = null;
+
+        for (int attempt = 1; attempt <= maxCommitAttempts; attempt++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            Directory.CreateDirectory(_root);
+            string temp = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
+            try
+            {
+                await using (FileStream stream = new(temp, FileMode.CreateNew, FileAccess.Write, FileShare.None, 64 * 1024, useAsync: true))
+                {
+                    await JsonSerializer.SerializeAsync(stream, value, JsonOptions, cancellationToken).ConfigureAwait(false);
+                    await stream.FlushAsync(cancellationToken).ConfigureAwait(false);
+                }
+
+                MoveWithRetry(temp, path);
+                return;
+            }
+            catch (IOException ex)
+            {
+                lastIoError = ex;
+                if (attempt == maxCommitAttempts)
+                {
+                    break;
+                }
+            }
+            finally
+            {
+                TryDelete(temp);
+            }
+        }
+
+        throw new IOException(
+            $"WinCare state '{key}' could not be committed atomically after {maxCommitAttempts} attempts.",
+            lastIoError);
     }
 
     private static void TryDelete(string path)
