@@ -25,8 +25,8 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
     private readonly List<PageRow> _resultRows = [];
     private bool _isRunning;
     private string _runSummary = "No check has been run yet.";
-    private string _healthScoreText = "—";
-    private string _healthScoreDetail = "awaiting check";
+    private string _healthScoreText = "Not checked";
+    private string _healthScoreDetail = "Run Checkup to collect current evidence";
     private string _healthScoreBrushKey = "AccentTealBrush";
     private bool _hasResults;
     private int _runVersion;
@@ -89,8 +89,8 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
         int runVersion = ++_runVersion;
         IsRunning = true;
         RunSummary = "Collecting read-only evidence concurrently…";
-        HealthScoreText = "…";
-        HealthScoreDetail = "checking";
+        HealthScoreText = "Checking";
+        HealthScoreDetail = "collecting current evidence";
         HealthScoreBrushKey = "AccentTealBrush";
 
         try
@@ -116,7 +116,8 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
                 }
                 catch (Exception ex)
                 {
-                    return new CommandResult(WuaCommandId, Guid.NewGuid(), CommandResultStatus.Failed, "wua.query_error", $"Background update query failed: {ex.Message}", null, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, false);
+                    System.Diagnostics.Debug.WriteLine($"[CheckupPageViewModel] Background Windows Update query failed: {ex}");
+                    return new CommandResult(WuaCommandId, Guid.NewGuid(), CommandResultStatus.Failed, "wua.query_error", "Windows Update readiness could not be checked.", null, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, false);
                 }
             });
 
@@ -182,9 +183,7 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
         _resultRows.Clear();
         foreach (PageRow quickRow in Sections[0].Rows)
         {
-            string description = FastCheckCommands.FirstOrDefault(item => item.RowTitle == quickRow.Title).CommandId
-                ?? (quickRow.Title == WuaRowTitle ? WuaCommandId : quickRow.Description);
-            _resultRows.Add(new PageRow(quickRow.Title, description, quickRow.State, quickRow.Detail)
+            _resultRows.Add(new PageRow(quickRow.Title, quickRow.Description, quickRow.State, quickRow.Detail)
             {
                 StatusBrushKey = quickRow.StatusBrushKey,
                 ActionText = quickRow.ActionText,

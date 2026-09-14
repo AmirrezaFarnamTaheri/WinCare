@@ -24,6 +24,9 @@ class ProductUiParityTests(unittest.TestCase):
         self.assertIn('x:Name="HeroLayout"', xaml)
         self.assertIn("Grid.SetRow(EvidenceSummaryCard", code_behind)
         self.assertIn("PageNavigation.NavigateToSection", code_behind)
+        self.assertIn('Text="Common care"', xaml)
+        self.assertIn("Your checkup evidence is getting stale", view_model)
+        self.assertIn('EvidenceScoreText = $"{collected} of {QuickCheckCommandIds.Length} areas";', view_model)
         self.assertNotIn("PerformanceStatus", view_model)
         self.assertNotIn("NavCategory_Performance_Click", xaml)
         self.assertNotIn("NavCategory_Performance_Click", code_behind)
@@ -61,6 +64,7 @@ class ProductUiParityTests(unittest.TestCase):
             self.assertIn(f'x:Name="{name}"', xaml)
         self.assertIn('AutomationProperties.AutomationId="ExecuteSelectedTool"', xaml)
         self.assertIn('AutomationProperties.AutomationId="CommandResultDetails"', xaml)
+        self.assertIn("BoolToVisibility(ViewModel.Execution.IsExecuting)", xaml)
         self.assertNotIn("FindVisualDescendant", code_behind)
         self.assertNotIn("OfType<ComboBox>", code_behind)
         self.assertNotIn("ToolSearchBox.Parent as Grid", code_behind)
@@ -103,6 +107,8 @@ class ProductUiParityTests(unittest.TestCase):
         self.assertGreaterEqual(view_model.count('SetNavigationAction(securityRow, "Review security", "security", "Status")'), 2)
         self.assertIn("NavigationSectionTitle", view_model)
         self.assertIn("PageNavigation.NavigateToSection", page)
+        self.assertIn("new PageRow(quickRow.Title, quickRow.Description", view_model)
+        self.assertNotIn("Background update query failed: {ex.Message}", view_model)
 
     def test_shell_page_service_and_navigation_catalog_share_one_route_set(self) -> None:
         catalog = self.read("src/WinCare.Application/Navigation/NavigationCatalog.cs")
@@ -116,6 +122,17 @@ class ProductUiParityTests(unittest.TestCase):
         self.assertEqual(catalog_ids, page_ids)
         self.assertEqual(catalog_ids - {"about"}, shell_ids)
         self.assertIn("PrimaryNavigation.SelectedItem = null", shell_code)
+
+    def test_secondary_surfaces_do_not_repeat_policy_as_product_content(self) -> None:
+        settings = self.read("src/WinCare.App/Views/Pages/SettingsPage.xaml")
+        about = self.read("src/WinCare.App/Views/Pages/AboutPage.xaml")
+        catalog = self.read("src/WinCare.Application/Navigation/NavigationCatalog.cs")
+
+        self.assertNotIn('Text="Safety policy"', settings)
+        self.assertNotIn('"Safety policy"', catalog)
+        self.assertNotIn('Text="Safety model"', about)
+        self.assertIn('Text="Open source"', about)
+        self.assertIn('"Common care"', catalog)
 
     def test_activity_copy_matches_needs_attention_journal_semantics(self) -> None:
         activity = self.read("src/WinCare.App/Views/Pages/ActivityPage.xaml")
@@ -145,7 +162,7 @@ class ProductUiParityTests(unittest.TestCase):
         self.assertIn("historical runtime evidence", screenshots)
         self.assertIn("Historical v2.5.0-rc5 runtime capture", readme)
         self.assertIn("Power tools is the canonical advanced command inspector and execution surface", architecture_plain)
-        self.assertIn("Troubleshoot does not", architecture)
+        self.assertIn("Troubleshoot does not", architecture_plain)
         self.assertIn("system, storage, and security probes execute concurrently", architecture)
         self.assertIn("269 command definitions", c4)
         self.assertIn("Troubleshoot cannot mint an approval receipt", c4)

@@ -9,7 +9,7 @@ public static class NavigationCatalog
 {
     public static IReadOnlyList<NavigationDefinition> Items { get; } =
     [
-        new("home", "Home", "NavHome", ["Overview", "Recommendations", "Recent activity"]),
+        new("home", "Home", "NavHome", ["Overview", "Common care", "Recent activity"]),
         new("checkup", "Checkup", "NavCheckup", ["Quick check", "Results"]),
         new("system-care", "System care", "NavSystemCare", ["Clean up", "Performance", "Apps & startup", "Network & updates", "Routines & maintenance"]),
         new("security", "Security", "NavSecurity", ["Status", "Protection", "Privacy", "Hardening"]),
@@ -18,8 +18,8 @@ public static class NavigationCatalog
         new("activity", "Activity", "NavActivity", ["Running", "Needs attention", "Completed", "Reports"]),
         new("plugin-store", "Extensions", "NavPluginStore", ["Search extensions", "Categories", "Installed extensions", "Catalog trust"], IsFooter: true),
         new("ai-doctor", "Troubleshoot", "NavAiDoctor", ["Describe a problem", "Diagnostic findings", "Suggested steps"], IsFooter: true),
-        new("settings", "Settings", "NavSettings", ["App theme", "Window continuity", "Local data", "Safety policy"], IsFooter: true),
-        new("help", "Help", "NavHelp", ["Getting started", "Finding tools", "Safety", "Keyboard"], IsFooter: true),
-        new("about", "About WinCare", "NavAbout", ["Version", "Licenses"], IsHidden: true),
+        new("settings", "Settings", "NavSettings", ["App theme", "Window continuity", "Local data"], IsFooter: true),
+        new("help", "Help", "NavHelp", ["Getting started", "Finding tools", "Changes and approvals", "Keyboard"], IsFooter: true),
+        new("about", "About WinCare", "NavAbout", ["Version", "Open source", "Support", "Donate"], IsHidden: true),
     ];
 }

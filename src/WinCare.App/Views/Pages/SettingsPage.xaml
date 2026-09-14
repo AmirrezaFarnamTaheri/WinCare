@@ -64,13 +64,6 @@
                     <Button Grid.Row="1" HorizontalAlignment="Left" Content="Open folder" Click="OpenDataFolderButton_Click" AutomationProperties.AutomationId="OpenDataFolder" AutomationProperties.Name="Open WinCare data folder" />
                 </Grid>
             </Border>
-
-            <Border Style="{StaticResource DashboardCardStyle}">
-                <StackPanel Spacing="8">
-                    <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="Safety policy" />
-                    <TextBlock Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap" Text="Diagnostic checks are read-only. Safe, bounded actions can run directly; higher-impact mutations require confirmation or an explicit preview and approval according to their declared risk. Activity records outcomes and any available recovery guidance." />
-                </StackPanel>
-            </Border>
         </StackPanel>
     </ScrollViewer>
 </Page>

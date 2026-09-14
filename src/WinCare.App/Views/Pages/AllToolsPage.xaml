@@ -96,7 +96,9 @@
                                         Content="{x:Bind ViewModel.Execution.PrimaryActionLabel, Mode=OneWay}"
                                         AutomationProperties.AutomationId="ExecuteSelectedTool" AutomationProperties.Name="Run or review selected tool" />
                                 <Button Style="{StaticResource QuietButtonStyle}" Command="{x:Bind ViewModel.Execution.CancelSelectedToolCommand}"
-                                        Content="{x:Bind ViewModel.Execution.CancelActionLabel, Mode=OneWay}" AutomationProperties.Name="Cancel selected tool operation" />
+                                        Content="{x:Bind ViewModel.Execution.CancelActionLabel, Mode=OneWay}"
+                                        Visibility="{x:Bind local:AllToolsPage.BoolToVisibility(ViewModel.Execution.IsExecuting), Mode=OneWay}"
+                                        AutomationProperties.Name="Cancel selected tool operation" />
                             </StackPanel>
                             <Button HorizontalAlignment="Left" Style="{StaticResource QuietButtonStyle}" Click="FavoriteButton_Click"
                                     Content="Add/remove favorite" AutomationProperties.Name="Toggle selected tool favorite" />

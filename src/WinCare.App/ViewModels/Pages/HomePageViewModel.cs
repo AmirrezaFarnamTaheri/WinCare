@@ -15,7 +15,7 @@ public sealed class HomePageViewModel : ObservableObject
     private bool _isCompactLayout;
     private string _recentActivityTitle = "No activity recorded";
     private string _recentActivitySummary = "Checks and reviewed changes will appear here.";
-    private string _evidenceScoreText = "0/4";
+    private string _evidenceScoreText = "0 of 4 areas";
     private string _evidenceTitle = "No check evidence yet";
     private string _evidenceSummary = "Run a read-only check to collect current evidence.";
     private string _systemStatus = "Not checked";
@@ -66,19 +66,31 @@ public sealed class HomePageViewModel : ObservableObject
         SecurityStatus = StatusFor(latestByCommand, "security");
         UpdatesStatus = StatusFor(latestByCommand, "wua-search");
 
+        DateTimeOffset now = DateTimeOffset.UtcNow;
         int collected = QuickCheckCommandIds.Count(commandId =>
             latestByCommand.TryGetValue(commandId, out ActivityRecord? record) &&
             record.State == ActivityState.Completed);
+        int freshCollected = QuickCheckCommandIds.Count(commandId =>
+            latestByCommand.TryGetValue(commandId, out ActivityRecord? record) &&
+            record.State == ActivityState.Completed &&
+            now - record.StartedAt <= EvidenceFreshnessWindow);
         int needsReview = QuickCheckCommandIds.Count(commandId =>
             latestByCommand.TryGetValue(commandId, out ActivityRecord? record) &&
             record.State is ActivityState.Failed or ActivityState.NeedsAttention);
 
-        EvidenceScoreText = $"{collected}/{QuickCheckCommandIds.Length}";
-        if (collected == QuickCheckCommandIds.Length)
+        EvidenceScoreText = $"{collected} of {QuickCheckCommandIds.Length} areas";
+        if (freshCollected == QuickCheckCommandIds.Length)
         {
             DateTimeOffset newestCheck = latestByCommand.Values.Max(record => record.StartedAt);
             EvidenceTitle = "Your latest check is ready";
-            EvidenceSummary = $"All four read-only checks finished. Last checked: {newestCheck.ToLocalTime():g}. Review the details before making changes.";
+            EvidenceSummary = $"All four read-only checks finished. Last checked: {newestCheck.ToLocalTime():g}. Open an area below for its evidence and next step.";
+        }
+        else if (collected == QuickCheckCommandIds.Length)
+        {
+            EvidenceTitle = "Your checkup evidence is getting stale";
+            EvidenceSummary = freshCollected == 0
+                ? "Your last completed check is older than 30 minutes. Run Checkup for a current snapshot."
+                : $"{freshCollected} of {QuickCheckCommandIds.Length} areas still have fresh evidence. Run Checkup to refresh the rest.";
         }
         else if (latestByCommand.Count > 0)
         {

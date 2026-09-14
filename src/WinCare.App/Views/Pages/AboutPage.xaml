@@ -6,7 +6,7 @@
         <StackPanel Padding="28,28,28,32" MaxWidth="760" HorizontalAlignment="Left" Spacing="16">
             <Image Width="84" Height="84" HorizontalAlignment="Left" Source="/Assets/Square150x150Logo.png" AutomationProperties.Name="WinCare logo" />
             <TextBlock x:Uid="AboutPageTitle" Style="{StaticResource PageTitleTextStyle}" Text="WinCare" />
-            <TextBlock Style="{StaticResource PageDescriptionTextStyle}" TextWrapping="Wrap" Text="A clearer view of your PC. A considered next step. WinCare brings Windows care, repair, security, and recovery into one workspace. Diagnostic checks inspect system state without making changes. Safe bounded actions can run directly; higher-impact changes require confirmation or preview and approval according to risk." />
+            <TextBlock Style="{StaticResource PageDescriptionTextStyle}" TextWrapping="Wrap" Text="A clearer view of your PC and a useful next step. WinCare brings Windows care, repair, security, recovery, and advanced tools into one native workspace." />
             <Border BorderBrush="{ThemeResource BorderSubtleBrush}" BorderThickness="0,1,0,0" Padding="0,24,0,8">
                 <StackPanel Spacing="6">
                     <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="Version" />
@@ -16,8 +16,8 @@
             </Border>
             <Border BorderBrush="{ThemeResource BorderSubtleBrush}" BorderThickness="0,1,0,0" Padding="0,24,0,8">
                 <StackPanel Spacing="6">
-                    <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="Safety model" />
-                    <TextBlock Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap" Text="Read-only evidence is separated from mutation. Remote plugin installation remains disabled unless catalog trust is anchored to a WinCare-pinned signing key. Activity records preserve outcomes and explicitly flag uncertain final state after a mutation fault." />
+                    <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="Open source" />
+                    <TextBlock Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap" Text="WinCare is open-source software licensed under the Apache License 2.0. Source, issue tracking, and security reporting are available through the project repository." />
                 </StackPanel>
             </Border>
             <Border BorderBrush="{ThemeResource BorderSubtleBrush}" BorderThickness="0,1,0,0" Padding="0,24,0,8">
