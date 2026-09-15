@@ -85,14 +85,11 @@ class ToolchainDeterminismTests(unittest.TestCase):
             self.assertIn(path, owners)
 
         template = (ROOT / ".github/pull_request_template.md").read_text(encoding="utf-8")
-        for heading in (
-            "## Safety and trust review",
-            "## UX and accessibility review",
-            "## Dependency and supply-chain review",
-            "## Verification evidence",
-            "## Residual risk / unverified scenarios",
-        ):
+        for heading in ("## Summary", "## Changes", "## Risk", "## Validation"):
             self.assertIn(heading, template)
+        self.assertIn("permissions", template)
+        self.assertIn("irreversible behavior", template)
+        self.assertIn("workflow links", template)
 
     def test_no_lockfile_bootstrap_workflow_remains(self) -> None:
         self.assertFalse((ROOT / ".github/workflows/bootstrap-nuget-lockfiles.yml").exists())
