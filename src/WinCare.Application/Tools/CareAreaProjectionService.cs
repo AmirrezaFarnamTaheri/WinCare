@@ -9,7 +9,6 @@ public sealed record CareToolProjection(CommandDefinition Command, ActivityRecor
 /// <summary>Projects existing evidence without probing the machine or granting execution authority.</summary>
 public static class CareAreaProjectionService
 {
-    /// <summary>Projects catalog commands into care-page rows.</summary>
     public static IReadOnlyList<CareToolProjection> Project(
         ToolCatalogService catalog,
         CareAreaSelection selection,

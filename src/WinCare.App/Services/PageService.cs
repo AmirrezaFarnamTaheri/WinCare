@@ -21,7 +21,6 @@ public sealed class PageService
         ["about"] = typeof(AboutPage),
     };
 
-    /// <summary>Gets page type.</summary>
     public Type GetPageType(string key) => Pages.TryGetValue(key, out Type? pageType)
         ? pageType
         : throw new KeyNotFoundException($"Unknown navigation key '{key}'.");

@@ -31,7 +31,6 @@ public sealed class PluginStorePageViewModel : INotifyPropertyChanged, IDisposab
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
-    /// <summary>Initializes a new instance of <see cref="PluginStorePageViewModel"/>.</summary>
     public PluginStorePageViewModel(
         IPluginRegistry registry,
         IRemoteCatalogService catalogService,
@@ -141,7 +140,6 @@ public sealed class PluginStorePageViewModel : INotifyPropertyChanged, IDisposab
         }
     }
 
-    /// <summary>Initializes the extension catalog view.</summary>
     public async Task InitializeAsync(CancellationToken cancellationToken = default)
     {
         try
@@ -160,7 +158,6 @@ public sealed class PluginStorePageViewModel : INotifyPropertyChanged, IDisposab
         await RefreshPluginsAsync(forceRemoteRefresh: false, cancellationToken).ConfigureAwait(true);
     }
 
-    /// <summary>Triggers debounced search.</summary>
     private async Task TriggerDebouncedSearchAsync(CancellationToken token)
     {
         try
@@ -179,7 +176,6 @@ public sealed class PluginStorePageViewModel : INotifyPropertyChanged, IDisposab
         }
     }
 
-    /// <summary>Refreshes after filter change.</summary>
     private async Task RefreshAfterFilterChangeAsync()
     {
         try
@@ -193,7 +189,6 @@ public sealed class PluginStorePageViewModel : INotifyPropertyChanged, IDisposab
         }
     }
 
-    /// <summary>Refreshes plugins.</summary>
     public async Task RefreshPluginsAsync(bool forceRemoteRefresh = false, CancellationToken cancellationToken = default)
     {
         if (_disposed) return;
@@ -280,7 +275,6 @@ public sealed class PluginStorePageViewModel : INotifyPropertyChanged, IDisposab
         }
     }
 
-    /// <summary>Installs the selected extension after validating consent.</summary>
     public async Task<bool> InstallPluginAsync(PluginCardViewModel card, IReadOnlyCollection<string>? consentedCapabilities = null, CancellationToken cancellationToken = default)
     {
         if (card.IsInstalled || !card.CanInstall || card.RemoteItem is null) return false;
@@ -329,7 +323,6 @@ public sealed class PluginStorePageViewModel : INotifyPropertyChanged, IDisposab
         }
     }
 
-    /// <summary>Enables the selected extension.</summary>
     public async Task<bool> EnablePluginAsync(PluginCardViewModel card, CancellationToken cancellationToken = default)
     {
         if (!card.IsInstalled || card.IsBuiltIn) return false;
@@ -349,7 +342,6 @@ public sealed class PluginStorePageViewModel : INotifyPropertyChanged, IDisposab
         }
     }
 
-    /// <summary>Disables the selected extension.</summary>
     public async Task<bool> DisablePluginAsync(PluginCardViewModel card, CancellationToken cancellationToken = default)
     {
         if (!card.IsInstalled || card.IsBuiltIn) return false;
@@ -369,7 +361,6 @@ public sealed class PluginStorePageViewModel : INotifyPropertyChanged, IDisposab
         }
     }
 
-    /// <summary>Uninstalls the selected extension.</summary>
     public async Task<bool> UninstallPluginAsync(PluginCardViewModel card, CancellationToken cancellationToken = default)
     {
         if (!card.IsInstalled || card.IsBuiltIn) return false;
@@ -409,7 +400,6 @@ public sealed class PluginStorePageViewModel : INotifyPropertyChanged, IDisposab
         }
     }
 
-    /// <summary>Attempts to restore enabled state.</summary>
     private async Task<bool> TryRestoreEnabledStateAsync(string pluginId)
     {
         try
@@ -429,7 +419,6 @@ public sealed class PluginStorePageViewModel : INotifyPropertyChanged, IDisposab
         string.Equals(selectedCategory, "All", StringComparison.OrdinalIgnoreCase) ||
         string.Equals(category, selectedCategory, StringComparison.OrdinalIgnoreCase);
 
-    /// <summary>Determines whether es search.</summary>
     private static bool MatchesSearch(string searchQuery, string id, string name, string description, string author, string category, IEnumerable<string> commands)
     {
         if (string.IsNullOrWhiteSpace(searchQuery)) return true;

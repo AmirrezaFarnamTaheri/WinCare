@@ -71,10 +71,8 @@ namespace WinCare.Application.Diagnostics
         public DateTime TimestampUtc { get; init; } =
             CapturedAtUtc.HasValue ? NormalizeToUtc(CapturedAtUtc.Value) : DateTime.UtcNow;
 
-        /// <summary>Determines whether this evidence is older than the supplied maximum age.</summary>
         public bool IsStale(TimeSpan maxAge) => (DateTime.UtcNow - TimestampUtc.ToUniversalTime()) > maxAge;
 
-        /// <summary>Normalizes a timestamp to UTC.</summary>
         private static DateTime NormalizeToUtc(DateTime value) => value.Kind switch
         {
             DateTimeKind.Utc => value,

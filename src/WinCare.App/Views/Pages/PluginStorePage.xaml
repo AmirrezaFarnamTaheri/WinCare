@@ -22,7 +22,7 @@
                   IsExpanded="False"
                   Visibility="{x:Bind local:PluginStorePage.BoolToVisibility(ViewModel.HasCatalogStatus), Mode=OneWay}"
                   AutomationProperties.AutomationId="PluginCatalogStatus"
-                  AutomationProperties.Name="Extension catalog trust and availability">
+                  AutomationProperties.Name="Online extension catalog status">
             <TextBlock Style="{StaticResource RowSecondaryTextStyle}"
                        Text="{x:Bind ViewModel.CatalogStatusMessage, Mode=OneWay}"
                        TextWrapping="Wrap" />
@@ -31,7 +31,7 @@
         <InfoBar Grid.Row="2"
                  IsOpen="{x:Bind ViewModel.HasError, Mode=OneWay}"
                  Severity="Error"
-                 Title="Extension problem"
+                 Title="Couldn't load extensions"
                  Message="{x:Bind ViewModel.ErrorMessage, Mode=OneWay}"
                  IsClosable="False"
                  AutomationProperties.LiveSetting="Assertive">
@@ -79,7 +79,7 @@
                             </StackPanel>
 
                             <StackPanel Orientation="Horizontal" Spacing="8">
-                                <Button Content="Review" Click="DetailsButton_Click" Tag="{x:Bind}" AutomationProperties.Name="{x:Bind DetailsAccessibleName}"/>
+                                <Button Content="Details" Click="DetailsButton_Click" Tag="{x:Bind}" AutomationProperties.Name="{x:Bind DetailsAccessibleName}"/>
                                 <Button Content="Add" Visibility="{x:Bind local:PluginStorePage.BoolToVisibility(CanInstall), Mode=OneTime}" Click="InstallButton_Click" Tag="{x:Bind}" Style="{StaticResource AccentButtonStyle}" AutomationProperties.Name="{x:Bind InstallAccessibleName}"/>
                                 <Button Content="Enable" Visibility="{x:Bind local:PluginStorePage.BoolToVisibility(CanEnable), Mode=OneTime}" Click="EnableButton_Click" Tag="{x:Bind}" Style="{StaticResource AccentButtonStyle}" AutomationProperties.Name="{x:Bind EnableAccessibleName}"/>
                                 <Button Content="Disable" Visibility="{x:Bind local:PluginStorePage.BoolToVisibility(CanDisable), Mode=OneTime}" Click="DisableButton_Click" Tag="{x:Bind}" AutomationProperties.Name="{x:Bind DisableAccessibleName}"/>
@@ -91,6 +91,6 @@
             </ListView.ItemTemplate>
         </ListView>
 
-        <InfoBar Grid.Row="4" Margin="12" VerticalAlignment="Top" IsOpen="{x:Bind ViewModel.IsEmpty, Mode=OneWay}" IsClosable="False" Severity="Informational" Title="No extensions found" Message="Try a different search or category. Your installed extensions are still here if the online list is unavailable." AutomationProperties.LiveSetting="Polite" />
+        <InfoBar Grid.Row="4" Margin="12" VerticalAlignment="Top" IsOpen="{x:Bind ViewModel.IsEmpty, Mode=OneWay}" IsClosable="False" Severity="Informational" Title="No extensions found" Message="Try another search or category. Installed extensions stay available even when the online list is offline." AutomationProperties.LiveSetting="Polite" />
     </Grid>
 </Page>

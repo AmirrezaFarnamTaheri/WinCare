@@ -74,7 +74,6 @@ class FullNativeMigrationTests(unittest.TestCase):
         self.assertEqual([], offenders)
 
     def test_tool_execution_prefers_typed_parameters_with_advanced_json_escape_hatch(self) -> None:
-        """Verify that tool execution prefers typed parameters with advanced json escape hatch."""
         vm = (ROOT / "src/WinCare.App/ViewModels/Pages/ToolExecutionViewModel.cs").read_text(encoding="utf-8")
         page = (ROOT / "src/WinCare.App/Views/Pages/AllToolsPage.xaml.cs").read_text(encoding="utf-8")
         xaml = (ROOT / "src/WinCare.App/Views/Pages/AllToolsPage.xaml").read_text(encoding="utf-8")

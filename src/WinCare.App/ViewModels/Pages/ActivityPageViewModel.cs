@@ -21,10 +21,8 @@ public sealed class ActivityPageViewModel : TabbedPageViewModel
     private const int HistoryIndex = 2;
     private const int ReportsIndex = 3;
 
-    /// <summary>Initializes a new instance of <see cref="ActivityPageViewModel"/>.</summary>
     public ActivityPageViewModel() : this(AppRuntime.Current.Journal) { }
 
-    /// <summary>Initializes a new instance of <see cref="ActivityPageViewModel"/>.</summary>
     public ActivityPageViewModel(ActivityJournalService journal)
         : base([
             new PageSection("Running", "Nothing is running right now.", []),
@@ -46,7 +44,6 @@ public sealed class ActivityPageViewModel : TabbedPageViewModel
     public bool HasPersistenceWarning => !_journal.IsPersistenceHealthy;
     public string PersistenceWarningMessage => _journal.PersistenceStatusMessage ?? "WinCare can't save activity history right now.";
 
-    /// <summary>Refreshes from journal.</summary>
     public void RefreshFromJournal()
     {
         IReadOnlyList<ActivityRecord> records = _journal.GetAll();
@@ -106,7 +103,6 @@ public sealed class ActivityPageViewModel : TabbedPageViewModel
         RefreshCurrentRows();
     }
 
-    /// <summary>Refreshes current rows.</summary>
     private void RefreshCurrentRows()
     {
         IReadOnlyList<PageRow> rows = SelectedIndex switch
@@ -129,7 +125,6 @@ public sealed class ActivityPageViewModel : TabbedPageViewModel
         OnPropertyChanged(nameof(EmptyMessage));
     }
 
-    /// <summary>Builds daily reports.</summary>
     private void BuildDailyReports(IReadOnlyList<ActivityRecord> records)
     {
         var terminal = records

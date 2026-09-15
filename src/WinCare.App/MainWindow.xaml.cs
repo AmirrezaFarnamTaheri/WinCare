@@ -17,16 +17,6 @@ namespace WinCare.App;
 
 public sealed partial class MainWindow : Window
 {
-    // Source-Driven Development Citation:
-    // Pattern: Windows App SDK AppWindow screen-coordinate positioning and DisplayArea bounds validation
-    // Source: https://learn.microsoft.com/en-us/windows/windows-app-sdk/api/winrt/microsoft.ui.windowing.appwindow
-    // Source: https://learn.microsoft.com/en-us/windows/windows-app-sdk/api/winrt/microsoft.ui.windowing.displayarea
-    // Source: https://learn.microsoft.com/en-us/windows/windows-app-sdk/api/winrt/microsoft.ui.windowing.overlappedpresenter
-    // "AppWindow provides native screen coordinates and presenter state without requiring manual Win32 P/Invoke window placement."
-
-    /// <summary>
-    /// Shell access for testing navigation routes.
-    /// </summary>
     public Views.ShellPage ShellPage => Shell;
     private readonly Windows.UI.ViewManagement.AccessibilitySettings _accessibilitySettings = new();
     private bool _highContrastEventRegistered;
@@ -110,10 +100,8 @@ public sealed partial class MainWindow : Window
         IsClosed = true;
         Closed -= OnWindowClosed;
         if (_highContrastEventRegistered) _accessibilitySettings.HighContrastChanged -= OnHighContrastChanged;
-        if (AppPreferences.RememberWindowPlacement)
-        {
-            PersistWindowPlacement();
-        }
+        if (AppPreferences.RememberWindowPlacement) PersistWindowPlacement();
+
         try
         {
             AppPreferences.FlushAsync().GetAwaiter().GetResult();
@@ -122,6 +110,7 @@ public sealed partial class MainWindow : Window
         {
             System.Diagnostics.Debug.WriteLine($"[MainWindow] Preference flush on close failed: {ex}");
         }
+
         try
         {
             Services.AppRuntime.Current.ShutdownAsync(TimeSpan.FromSeconds(3)).GetAwaiter().GetResult();
@@ -139,7 +128,6 @@ public sealed partial class MainWindow : Window
             : new DesktopAcrylicBackdrop();
     }
 
-    /// <summary>Restores window placement.</summary>
     private bool RestoreWindowPlacement()
     {
         WindowPlacementData? saved = AppPreferences.WindowPlacement;
@@ -175,7 +163,6 @@ public sealed partial class MainWindow : Window
         AppWindow.Resize(new SizeInt32((int)(widthDips * scale), (int)(heightDips * scale)));
     }
 
-    /// <summary>Handles the search keyboard accelerator invoked event.</summary>
     private void SearchKeyboardAccelerator_Invoked(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
     {
         GlobalSearchBox.Focus(FocusState.Keyboard);
@@ -183,14 +170,12 @@ public sealed partial class MainWindow : Window
         args.Handled = true;
     }
 
-    /// <summary>Handles the global search box text changed event.</summary>
     private void GlobalSearchBox_TextChanged(AutoSuggestBox sender, AutoSuggestBoxTextChangedEventArgs args)
     {
         if (args.Reason != AutoSuggestionBoxTextChangeReason.UserInput) return;
         sender.ItemsSource = BuildGlobalSuggestions(sender.Text);
     }
 
-    /// <summary>Handles the global search box query submitted event.</summary>
     private void GlobalSearchBox_QuerySubmitted(AutoSuggestBox sender, AutoSuggestBoxQuerySubmittedEventArgs args)
     {
         if (args.ChosenSuggestion is GlobalSearchSuggestion chosen)
@@ -198,6 +183,7 @@ public sealed partial class MainWindow : Window
             OpenSearchSuggestion(chosen);
             return;
         }
+
         string query = args.QueryText?.Trim() ?? string.Empty;
         if (query.Length == 0) return;
         GlobalSearchSuggestion? best = BuildGlobalSuggestions(query)
@@ -207,10 +193,10 @@ public sealed partial class MainWindow : Window
             OpenSearchSuggestion(best);
             return;
         }
+
         Shell.OpenGlobalSearch(query);
     }
 
-    /// <summary>Opens search suggestion.</summary>
     private void OpenSearchSuggestion(GlobalSearchSuggestion suggestion)
     {
         GlobalSearchBox.Text = suggestion.Title;
@@ -220,14 +206,15 @@ public sealed partial class MainWindow : Window
             Shell.OpenGlobalSearch(suggestion.Query ?? suggestion.Title);
             return;
         }
+
         Shell.NavigateTo(suggestion.Route, suggestion.Query);
     }
 
-    /// <summary>Builds global suggestions.</summary>
     private static IReadOnlyList<GlobalSearchSuggestion> BuildGlobalSuggestions(string? text)
     {
         string query = text?.Trim() ?? string.Empty;
         if (query.Length == 0) return [];
+
         var candidates = new List<(GlobalSearchSuggestion Item, int Score)>();
         foreach (NavigationDefinition route in NavigationCatalog.Items)
         {
@@ -237,28 +224,27 @@ public sealed partial class MainWindow : Window
                 candidates.Add((new GlobalSearchSuggestion(route.Label, route.IsHidden ? "WinCare information" : "Open this area", route.Id, null, GlobalSearchSuggestionKind.Page), score + 30));
             }
         }
+
         foreach (var tool in AppRuntime.Current.ToolCatalog.All)
         {
             int score = ScoreSearch(query, tool.Title, tool.Summary, tool.Area, tool.Section, tool.Id, string.Join(' ', tool.Keywords));
             if (score <= 0) continue;
             candidates.Add((new GlobalSearchSuggestion(tool.Title, $"{tool.Area} · {tool.Section}", "all-tools", tool.Id, GlobalSearchSuggestionKind.Tool), score));
         }
-        try
+
+        foreach (var extension in AppRuntime.Current.PluginRegistry.GetAllPlugins())
         {
-            foreach (var extension in AppRuntime.Current.PluginRegistry.GetAllPlugins())
-            {
-                int score = ScoreSearch(query, extension.Name, extension.Description, extension.Category, extension.Author, extension.Id);
-                if (score <= 0) continue;
-                candidates.Add((new GlobalSearchSuggestion(extension.Name, $"Extension · {extension.Category}", "plugin-store", extension.Name, GlobalSearchSuggestionKind.Extension), score + 10));
-            }
+            int score = ScoreSearch(query, extension.Name, extension.Description, extension.Category, extension.Author, extension.Id);
+            if (score <= 0) continue;
+            candidates.Add((new GlobalSearchSuggestion(extension.Name, $"Extension · {extension.Category}", "plugin-store", extension.Name, GlobalSearchSuggestionKind.Extension), score + 10));
         }
-        catch { }
+
         (string Title, string Terms, string Route)[] helpTopics =
         [
-            ("How reviews and approvals work", "review approval safety preview change risk", "help"),
+            ("How changes work", "changes confirmation preview risk destructive", "help"),
             ("Keyboard shortcuts", "keyboard shortcut ctrl k ctrl f search", "help"),
             ("Find a tool", "find discover tool category power tools", "help"),
-            ("Recent changes and results", "history evidence receipt report recent changes", "activity"),
+            ("Recent activity and results", "history report recent activity results", "activity"),
             ("About WinCare", "about version license credits", "about"),
         ];
         foreach ((string title, string terms, string route) in helpTopics)
@@ -267,16 +253,20 @@ public sealed partial class MainWindow : Window
             if (score <= 0) continue;
             candidates.Add((new GlobalSearchSuggestion(title, "Help topic", route, null, GlobalSearchSuggestionKind.Help), score + 5));
         }
+
         return candidates.OrderByDescending(candidate => candidate.Score)
             .ThenBy(candidate => candidate.Item.Title, StringComparer.OrdinalIgnoreCase)
-            .Select(candidate => candidate.Item).DistinctBy(item => (item.Title, item.Route, item.Query)).Take(10).ToArray();
+            .Select(candidate => candidate.Item)
+            .DistinctBy(item => (item.Title, item.Route, item.Query))
+            .Take(10)
+            .ToArray();
     }
 
-    /// <summary>Scores search.</summary>
     private static int ScoreSearch(string query, params string?[] fields)
     {
         string[] tokens = query.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
         if (tokens.Length == 0) return 0;
+
         int score = 0;
         foreach (string token in tokens)
         {
@@ -299,7 +289,6 @@ public sealed partial class MainWindow : Window
         if (Uri.TryCreate(arguments, UriKind.Absolute, out var uri)) HandleProtocolActivation(uri);
     }
 
-    /// <summary>Handles protocol activation.</summary>
     public void HandleProtocolActivation(Uri uri)
     {
         ArgumentNullException.ThrowIfNull(uri);

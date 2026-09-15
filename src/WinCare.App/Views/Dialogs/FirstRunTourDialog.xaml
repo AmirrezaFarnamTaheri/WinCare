@@ -3,64 +3,40 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     Title="Welcome to WinCare"
-    CloseButtonText="Got it"
-    DefaultButton="Close"
+    PrimaryButtonText="Next"
+    SecondaryButtonText="Skip tour"
+    DefaultButton="Primary"
+    PrimaryButtonClick="NextButton_Click"
     CornerRadius="{StaticResource RadiusControl}"
     Style="{ThemeResource DefaultContentDialogStyle}"
     AutomationProperties.Name="WinCare first-run tour">
-    <ScrollViewer MaxHeight="620" VerticalScrollBarVisibility="Auto">
-        <StackPanel MaxWidth="520" Spacing="20">
-            <TextBlock
-                Style="{StaticResource PageDescriptionTextStyle}"
-                Text="You don't need to learn every tool. Start with a quick check, follow the result, and open Power tools only when you want something more specific." />
+    <StackPanel Width="460" MinHeight="270" Spacing="20">
+        <TextBlock
+            x:Name="StepCounter"
+            Style="{StaticResource RowSecondaryTextStyle}"
+            Text="1 of 3" />
 
-            <StackPanel Spacing="12">
-                <Border Style="{StaticResource SurfaceBorderStyle}" Padding="16">
-                    <Grid ColumnSpacing="14">
-                        <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-                        <Border Width="32" Height="32" CornerRadius="16" Background="{ThemeResource AccentTealSubtleBrush}" VerticalAlignment="Top">
-                            <TextBlock Text="1" HorizontalAlignment="Center" VerticalAlignment="Center" FontWeight="SemiBold" Foreground="{ThemeResource AccentTealBrush}" />
-                        </Border>
-                        <StackPanel Grid.Column="1" Spacing="4">
-                            <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="Start with Checkup" />
-                            <TextBlock Style="{StaticResource RowSecondaryTextStyle}" Text="Checkup looks at a few important Windows areas without changing anything." />
-                        </StackPanel>
-                    </Grid>
-                </Border>
-
-                <Border Style="{StaticResource SurfaceBorderStyle}" Padding="16">
-                    <Grid ColumnSpacing="14">
-                        <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-                        <Border Width="32" Height="32" CornerRadius="16" Background="{ThemeResource AccentTealSubtleBrush}" VerticalAlignment="Top">
-                            <TextBlock Text="2" HorizontalAlignment="Center" VerticalAlignment="Center" FontWeight="SemiBold" Foreground="{ThemeResource AccentTealBrush}" />
-                        </Border>
-                        <StackPanel Grid.Column="1" Spacing="4">
-                            <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="Follow the result" />
-                            <TextBlock Style="{StaticResource RowSecondaryTextStyle}" Text="If something needs attention, open the suggested care page to see the relevant tasks." />
-                        </StackPanel>
-                    </Grid>
-                </Border>
-
-                <Border Style="{StaticResource SurfaceBorderStyle}" Padding="16">
-                    <Grid ColumnSpacing="14">
-                        <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-                        <Border Width="32" Height="32" CornerRadius="16" Background="{ThemeResource AccentTealSubtleBrush}" VerticalAlignment="Top">
-                            <TextBlock Text="3" HorizontalAlignment="Center" VerticalAlignment="Center" FontWeight="SemiBold" Foreground="{ThemeResource AccentTealBrush}" />
-                        </Border>
-                        <StackPanel Grid.Column="1" Spacing="4">
-                            <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="Use Power tools when you need them" />
-                            <TextBlock Style="{StaticResource RowSecondaryTextStyle}" Text="Search the full tool list, review the details, and see any important requirements before a change runs." />
-                        </StackPanel>
-                    </Grid>
-                </Border>
+        <Grid MinHeight="190">
+            <StackPanel x:Name="CheckupStep" Spacing="12">
+                <FontIcon Glyph="&#xE9D9;" FontSize="32" Foreground="{ThemeResource AccentTealBrush}" HorizontalAlignment="Left" />
+                <TextBlock Style="{StaticResource SectionHeaderTextStyle}" Text="Start with a checkup" />
+                <TextBlock Style="{StaticResource PageDescriptionTextStyle}" TextWrapping="Wrap" Text="Get a quick picture of Windows, storage, security, and updates. Checkup only reads system information." />
+                <TextBlock Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap" Text="If something needs attention, WinCare points you to the right place." />
             </StackPanel>
 
-            <Border Padding="14" Background="{ThemeResource SurfaceSecondaryBrush}" CornerRadius="{StaticResource RadiusControl}">
-                <StackPanel Spacing="4">
-                    <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="Tip" />
-                    <TextBlock Style="{StaticResource RowSecondaryTextStyle}" Text="Press Ctrl+K anywhere to find a page or tool. You can reopen this tour from Help." />
-                </StackPanel>
-            </Border>
-        </StackPanel>
-    </ScrollViewer>
+            <StackPanel x:Name="CareStep" Spacing="12" Visibility="Collapsed">
+                <FontIcon Glyph="&#xE90F;" FontSize="32" Foreground="{ThemeResource AccentTealBrush}" HorizontalAlignment="Left" />
+                <TextBlock Style="{StaticResource SectionHeaderTextStyle}" Text="Use the care pages" />
+                <TextBlock Style="{StaticResource PageDescriptionTextStyle}" TextWrapping="Wrap" Text="System care, Security, and Repair &amp; recovery keep everyday tasks grouped by what you're trying to do." />
+                <TextBlock Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap" Text="You can always come back to Home when you're not sure where to start." />
+            </StackPanel>
+
+            <StackPanel x:Name="FindStep" Spacing="12" Visibility="Collapsed">
+                <FontIcon Glyph="&#xE721;" FontSize="32" Foreground="{ThemeResource AccentTealBrush}" HorizontalAlignment="Left" />
+                <TextBlock Style="{StaticResource SectionHeaderTextStyle}" Text="Find anything fast" />
+                <TextBlock Style="{StaticResource PageDescriptionTextStyle}" TextWrapping="Wrap" Text="Power tools has the full catalog. Press Ctrl+K from anywhere to search pages, tools, extensions, and help." />
+                <TextBlock Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap" Text="You can take this tour again later from Help." />
+            </StackPanel>
+        </Grid>
+    </StackPanel>
 </ContentDialog>

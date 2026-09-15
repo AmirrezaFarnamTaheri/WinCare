@@ -27,12 +27,9 @@ public sealed class AllToolsPageViewModel : ObservableObject, IDisposable
     private bool _isDetailsOpen;
     private bool _isCompactLayout;
 
-    /// <summary>Initializes a new instance of <see cref="AllToolsPageViewModel"/>.</summary>
     public AllToolsPageViewModel() : this(AppRuntime.Current.ToolCatalog, AppRuntime.Current.Dispatcher) { }
-    /// <summary>Initializes a new instance of <see cref="AllToolsPageViewModel"/>.</summary>
     public AllToolsPageViewModel(ToolCatalogService catalog) : this(catalog, AppRuntime.Current.Dispatcher) { }
 
-    /// <summary>Initializes a new instance of <see cref="AllToolsPageViewModel"/>.</summary>
     public AllToolsPageViewModel(ToolCatalogService catalog, CommandDispatcher dispatcher)
     {
         _catalog = catalog ?? throw new ArgumentNullException(nameof(catalog));
@@ -69,7 +66,6 @@ public sealed class AllToolsPageViewModel : ObservableObject, IDisposable
     public bool IsCatalogTab => !IsPresetTab && !IsCategoryTab;
     private CancellationTokenSource? _searchCts;
 
-    /// <summary>Opens search.</summary>
     public void OpenSearch(string query)
     {
         _searchCts?.Cancel();
@@ -86,7 +82,6 @@ public sealed class AllToolsPageViewModel : ObservableObject, IDisposable
         SelectedTool = VisibleTools.FirstOrDefault(tool => string.Equals(tool.Id, query, StringComparison.OrdinalIgnoreCase));
     }
 
-    /// <summary>Opens tool.</summary>
     public void OpenTool(string commandId, System.Text.Json.JsonElement parameters)
     {
         OpenSearch(commandId);
@@ -99,13 +94,11 @@ public sealed class AllToolsPageViewModel : ObservableObject, IDisposable
         set { if (SetProperty(ref _searchText, value ?? string.Empty)) DebounceSearch(); }
     }
 
-    /// <summary>Debounces search.</summary>
     private void DebounceSearch()
     {
         _searchCts?.Cancel(); _searchCts?.Dispose(); _searchCts = new CancellationTokenSource(); _ = DebounceSearchAsync(_searchCts.Token);
     }
 
-    /// <summary>Debounces search.</summary>
     private async Task DebounceSearchAsync(CancellationToken token)
     {
         try { await Task.Delay(250, token); Refresh(); }
@@ -145,7 +138,6 @@ public sealed class AllToolsPageViewModel : ObservableObject, IDisposable
     public bool IsSelectedToolFavorite => SelectedTool is not null && _favoriteIds.Contains(SelectedTool.Id);
     public string FavoriteActionLabel => IsSelectedToolFavorite ? "Remove from favorites" : "Add to favorites";
 
-    /// <summary>Selects tab.</summary>
     public void SelectTab(string tab)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(tab);
@@ -153,7 +145,6 @@ public sealed class AllToolsPageViewModel : ObservableObject, IDisposable
         _selectedTab = tab; _searchCts?.Cancel(); OnPropertyChanged(nameof(IsPresetTab)); OnPropertyChanged(nameof(IsCategoryTab)); OnPropertyChanged(nameof(IsCatalogTab)); Refresh();
     }
 
-    /// <summary>Selects preset for review.</summary>
     public void SelectPresetForReview(string presetId)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(presetId);
@@ -165,14 +156,12 @@ public sealed class AllToolsPageViewModel : ObservableObject, IDisposable
         field.Value = presetId; OnPropertyChanged(nameof(SelectedTool));
     }
 
-    /// <summary>Sets compact layout.</summary>
     public void SetCompactLayout(bool isCompact)
     {
         if (IsCompactLayout == isCompact) return;
         IsCompactLayout = isCompact; foreach (ToolRowViewModel row in VisibleTools) row.IsCompact = isCompact;
     }
 
-    /// <summary>Toggles favorite.</summary>
     public void ToggleFavorite()
     {
         if (SelectedTool is null) return;
@@ -183,7 +172,6 @@ public sealed class AllToolsPageViewModel : ObservableObject, IDisposable
         if (string.Equals(_selectedTab, "Favorites", StringComparison.Ordinal)) Refresh();
     }
 
-    /// <summary>Records recent.</summary>
     private void RecordRecent(string commandId)
     {
         _recentIds.Remove(commandId); _recentIds.Insert(0, commandId);
@@ -191,13 +179,11 @@ public sealed class AllToolsPageViewModel : ObservableObject, IDisposable
         AppPreferences.SaveRecentCommandIds(_recentIds);
     }
 
-    /// <summary>Notifies selected tool changed.</summary>
     private void NotifySelectedToolChanged()
     {
         OnPropertyChanged(nameof(SelectedToolTitle)); OnPropertyChanged(nameof(SelectedToolSummary)); OnPropertyChanged(nameof(SelectedToolMetadata)); OnPropertyChanged(nameof(SelectedToolTechnicalDetails)); OnPropertyChanged(nameof(IsSelectedToolFavorite)); OnPropertyChanged(nameof(FavoriteActionLabel));
     }
 
-    /// <summary>Rebuilds area options.</summary>
     private void RebuildAreaOptions()
     {
         var currentSelectedArea = SelectedAreaOption?.Value;
@@ -206,7 +192,6 @@ public sealed class AllToolsPageViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(AreaOptions)); OnPropertyChanged(nameof(SelectedAreaOption)); RebuildSectionOptions(); CategoryCards = BuildCategoryCards(); OnPropertyChanged(nameof(CategoryCards));
     }
 
-    /// <summary>Rebuilds section options.</summary>
     private void RebuildSectionOptions()
     {
         string? area = _selectedAreaOption?.Value; string? current = _selectedSectionOption?.Value;
@@ -216,10 +201,8 @@ public sealed class AllToolsPageViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(SectionOptions)); OnPropertyChanged(nameof(SelectedSectionOption));
     }
 
-    /// <summary>Builds category cards.</summary>
     private IReadOnlyList<ToolCategoryViewModel> BuildCategoryCards() => _catalog.All.GroupBy(command => new { command.Area, command.Section }).OrderBy(group => group.Key.Area, StringComparer.OrdinalIgnoreCase).ThenBy(group => group.Key.Section, StringComparer.OrdinalIgnoreCase).Select(group => new ToolCategoryViewModel(group.Key.Area, group.Key.Section, group.Count(), group.OrderBy(command => command.RiskTier).ThenBy(command => command.Title, StringComparer.OrdinalIgnoreCase).Select(command => command.Summary).FirstOrDefault() ?? string.Empty)).ToArray();
 
-    /// <summary>Opens category.</summary>
     public bool OpenCategory(string area, string section)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(area);
@@ -262,7 +245,6 @@ public sealed class AllToolsPageViewModel : ObservableObject, IDisposable
         return true;
     }
 
-    /// <summary>Refreshes the visible tools using the active tab, search, and filters.</summary>
     private void Refresh()
     {
         if (IsPresetTab || IsCategoryTab)
@@ -283,7 +265,6 @@ public sealed class AllToolsPageViewModel : ObservableObject, IDisposable
         SelectedTool = newSelectedTool; OnPropertyChanged(nameof(ResultCountText)); OnPropertyChanged(nameof(IsEmpty)); OnPropertyChanged(nameof(EmptyMessage));
     }
 
-    /// <summary>Handles a command catalog change.</summary>
     private void OnCatalogChanged(object? sender, EventArgs e)
     {
         if (_isDisposed) return;
@@ -291,7 +272,6 @@ public sealed class AllToolsPageViewModel : ObservableObject, IDisposable
         else { RebuildAreaOptions(); Refresh(); }
     }
 
-    /// <summary>Releases resources held by this instance.</summary>
     public void Dispose()
     {
         if (_isDisposed) return; _isDisposed = true; _catalog.CatalogChanged -= OnCatalogChanged; _searchCts?.Cancel(); _searchCts?.Dispose(); _searchCts = null;
@@ -308,7 +288,6 @@ public sealed record ToolCategoryViewModel(string Area, string Section, int Tool
 public sealed record PresetCardViewModel(string Id, string Title, string Description, string RuleCountText, string ImpactText, string RecoveryText)
 {
     public string InspectAccessibleName => $"Inspect {Title} plan";
-    /// <summary>Creates a display card from a remediation preset and its rules.</summary>
     public static PresetCardViewModel Create(PresetDefinition preset, IReadOnlyDictionary<string, RemediationRule> ruleCatalog)
     {
         RemediationRule[] rules = preset.RuleIds.Select(id => ruleCatalog[id]).ToArray(); RemediationRisk highestRisk = rules.Max(rule => rule.Risk);

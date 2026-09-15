@@ -7,14 +7,14 @@ namespace WinCare.App.ViewModels.Pages;
 public sealed class HomePageViewModel : ObservableObject
 {
     private static readonly string[] QuickCheckCommandIds = ["system", "storage", "security", "wua-search"];
-    private static readonly TimeSpan EvidenceFreshnessWindow = TimeSpan.FromMinutes(30);
+    private static readonly TimeSpan CheckupFreshnessWindow = TimeSpan.FromMinutes(30);
 
     private bool _isCompactLayout;
     private string _recentActivityTitle = "No activity recorded";
     private string _recentActivitySummary = "Your recent WinCare activity will show up here.";
-    private string _evidenceScoreText = "0 of 4 areas";
-    private string _evidenceTitle = "No recent checkup yet";
-    private string _evidenceSummary = "Run Checkup to see the latest results.";
+    private string _checkupCoverageText = "0 of 4 areas";
+    private string _checkupTitle = "No recent checkup yet";
+    private string _checkupSummary = "Run Checkup to see the latest results.";
     private string _systemStatus = "Not checked";
     private string _securityStatus = "Not checked";
     private string _storageStatus = "Not checked";
@@ -23,9 +23,9 @@ public sealed class HomePageViewModel : ObservableObject
 
     public string RecentActivityTitle { get => _recentActivityTitle; private set => SetProperty(ref _recentActivityTitle, value); }
     public string RecentActivitySummary { get => _recentActivitySummary; private set => SetProperty(ref _recentActivitySummary, value); }
-    public string EvidenceScoreText { get => _evidenceScoreText; private set => SetProperty(ref _evidenceScoreText, value); }
-    public string EvidenceTitle { get => _evidenceTitle; private set => SetProperty(ref _evidenceTitle, value); }
-    public string EvidenceSummary { get => _evidenceSummary; private set => SetProperty(ref _evidenceSummary, value); }
+    public string CheckupCoverageText { get => _checkupCoverageText; private set => SetProperty(ref _checkupCoverageText, value); }
+    public string CheckupTitle { get => _checkupTitle; private set => SetProperty(ref _checkupTitle, value); }
+    public string CheckupSummary { get => _checkupSummary; private set => SetProperty(ref _checkupSummary, value); }
     public string SystemStatus { get => _systemStatus; private set => SetProperty(ref _systemStatus, value); }
     public string SecurityStatus { get => _securityStatus; private set => SetProperty(ref _securityStatus, value); }
     public string StorageStatus { get => _storageStatus; private set => SetProperty(ref _storageStatus, value); }
@@ -38,10 +38,8 @@ public sealed class HomePageViewModel : ObservableObject
         private set => SetProperty(ref _isCompactLayout, value);
     }
 
-    /// <summary>Sets compact layout.</summary>
     public void SetCompactLayout(bool isCompact) => IsCompactLayout = isCompact;
 
-    /// <summary>Refreshes activity.</summary>
     public void RefreshActivity(IReadOnlyList<ActivityRecord> records)
     {
         ActivityRecord? latest = records.MaxBy(record => record.StartedAt);
@@ -64,64 +62,62 @@ public sealed class HomePageViewModel : ObservableObject
         UpdatesStatus = StatusFor(latestByCommand, "wua-search");
 
         DateTimeOffset now = DateTimeOffset.UtcNow;
-        int collected = QuickCheckCommandIds.Count(commandId =>
+        int completed = QuickCheckCommandIds.Count(commandId =>
             latestByCommand.TryGetValue(commandId, out ActivityRecord? record) &&
             record.State == ActivityState.Completed);
-        int freshCollected = QuickCheckCommandIds.Count(commandId =>
+        int recent = QuickCheckCommandIds.Count(commandId =>
             latestByCommand.TryGetValue(commandId, out ActivityRecord? record) &&
             record.State == ActivityState.Completed &&
-            now - EvidenceTimestamp(record) <= EvidenceFreshnessWindow);
-        int needsReview = QuickCheckCommandIds.Count(commandId =>
+            now - CheckupTimestamp(record) <= CheckupFreshnessWindow);
+        int needsAttention = QuickCheckCommandIds.Count(commandId =>
             latestByCommand.TryGetValue(commandId, out ActivityRecord? record) &&
             record.State is ActivityState.Failed or ActivityState.NeedsAttention);
 
-        EvidenceScoreText = $"{collected} of {QuickCheckCommandIds.Length} areas";
-        if (freshCollected == QuickCheckCommandIds.Length)
+        CheckupCoverageText = $"{completed} of {QuickCheckCommandIds.Length} areas";
+        if (recent == QuickCheckCommandIds.Length)
         {
-            DateTimeOffset oldestResult = latestByCommand.Values.Min(EvidenceTimestamp);
-            EvidenceTitle = "Your latest checkup is ready";
-            EvidenceSummary = $"All four areas have fresh results. The oldest check was at {oldestResult.ToLocalTime():g}.";
+            DateTimeOffset oldestResult = latestByCommand.Values.Min(CheckupTimestamp);
+            CheckupTitle = "Your latest checkup is ready";
+            CheckupSummary = $"All four areas are up to date. Oldest result: {oldestResult.ToLocalTime():g}.";
         }
-        else if (collected == QuickCheckCommandIds.Length)
+        else if (completed == QuickCheckCommandIds.Length)
         {
-            EvidenceTitle = "It's been a while since your last checkup";
-            EvidenceSummary = freshCollected == 0
+            CheckupTitle = "Your checkup is getting old";
+            CheckupSummary = recent == 0
                 ? "These results are over 30 minutes old. Run Checkup for a fresh look."
-                : $"{freshCollected} of {QuickCheckCommandIds.Length} results are still recent. Run Checkup to refresh the rest.";
+                : $"{recent} of {QuickCheckCommandIds.Length} results are still recent. Run Checkup to refresh the rest.";
         }
         else if (latestByCommand.Count > 0)
         {
-            EvidenceTitle = needsReview > 0 ? "Some checks need your attention" : "Checkup isn't finished yet";
-            EvidenceSummary = $"{collected} of {QuickCheckCommandIds.Length} checks finished. Open a result for details.";
+            CheckupTitle = needsAttention > 0 ? "A few checks need attention" : "Checkup is still in progress";
+            CheckupSummary = $"{completed} of {QuickCheckCommandIds.Length} checks finished. Open a result for details.";
         }
         else
         {
-            EvidenceTitle = "Start with Checkup";
-            EvidenceSummary = "It checks a few important areas without changing anything.";
+            CheckupTitle = "Start with a checkup";
+            CheckupSummary = "It checks a few important areas without changing anything.";
         }
     }
 
-    /// <summary>Gets the display status for the latest command activity.</summary>
     private static string StatusFor(IReadOnlyDictionary<string, ActivityRecord> latestByCommand, string commandId)
     {
         if (!latestByCommand.TryGetValue(commandId, out ActivityRecord? record)) return "Not checked";
 
-        if (record.State == ActivityState.Completed && DateTimeOffset.UtcNow - EvidenceTimestamp(record) > EvidenceFreshnessWindow)
-            return $"Out of date ({EvidenceTimestamp(record).ToLocalTime():HH:mm})";
+        if (record.State == ActivityState.Completed && DateTimeOffset.UtcNow - CheckupTimestamp(record) > CheckupFreshnessWindow)
+            return $"Out of date ({CheckupTimestamp(record).ToLocalTime():HH:mm})";
 
         return record.State switch
         {
             ActivityState.Completed => "Checked",
             ActivityState.Running => "Checking…",
-            ActivityState.NeedsAttention => "Needs review",
+            ActivityState.NeedsAttention => "Needs attention",
             ActivityState.Failed => "Check failed",
             ActivityState.Cancelled => "Check cancelled",
             _ => ToFriendlyState(record.State),
         };
     }
 
-    /// <summary>Gets the evidence timestamp for an activity record.</summary>
-    private static DateTimeOffset EvidenceTimestamp(ActivityRecord record) => record.CompletedAt ?? record.StartedAt;
+    private static DateTimeOffset CheckupTimestamp(ActivityRecord record) => record.CompletedAt ?? record.StartedAt;
 
     private static string ToFriendlyState(ActivityState state) => state switch
     {

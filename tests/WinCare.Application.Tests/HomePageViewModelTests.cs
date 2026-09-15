@@ -16,13 +16,13 @@ public sealed class HomePageViewModelTests
             Id = Guid.NewGuid(),
             Title = "Latest check",
             StartedAt = DateTimeOffset.UtcNow,
-            Result = "Evidence collected"
+            Result = "Check completed"
         };
 
         vm.RefreshActivity([recent, old]);
 
         Assert.Equal("Latest check", vm.RecentActivityTitle);
-        Assert.Contains("Evidence collected", vm.RecentActivitySummary);
+        Assert.Contains("Check completed", vm.RecentActivitySummary);
         Assert.Equal("2 records", vm.ActivityStatus);
 
         vm.RefreshActivity([]);
@@ -43,8 +43,8 @@ public sealed class HomePageViewModelTests
             Completed("wua-search", "Updates", now),
         ]);
 
-        Assert.Equal("4 of 4 areas", vm.EvidenceScoreText);
-        Assert.Equal("Your latest checkup is ready", vm.EvidenceTitle);
+        Assert.Equal("4 of 4 areas", vm.CheckupCoverageText);
+        Assert.Equal("Your latest checkup is ready", vm.CheckupTitle);
         Assert.Equal("Checked", vm.SystemStatus);
         Assert.Equal("Checked", vm.StorageStatus);
         Assert.Equal("Checked", vm.SecurityStatus);
@@ -64,9 +64,9 @@ public sealed class HomePageViewModelTests
         ]);
 
         Assert.StartsWith("Out of date", vm.SystemStatus);
-        Assert.Equal("4 of 4 areas", vm.EvidenceScoreText);
-        Assert.Equal("It's been a while since your last checkup", vm.EvidenceTitle);
-        Assert.Contains("over 30 minutes old", vm.EvidenceSummary);
+        Assert.Equal("4 of 4 areas", vm.CheckupCoverageText);
+        Assert.Equal("Your checkup is getting old", vm.CheckupTitle);
+        Assert.Contains("over 30 minutes old", vm.CheckupSummary);
     }
 
     [Fact]
@@ -82,10 +82,10 @@ public sealed class HomePageViewModelTests
             Completed("wua-search", "Updates", started, completed),
         ]);
 
-        Assert.Equal("Your latest checkup is ready", vm.EvidenceTitle);
+        Assert.Equal("Your latest checkup is ready", vm.CheckupTitle);
         Assert.Equal("Checked", vm.SystemStatus);
     }
 
     private static ActivityRecord Completed(string commandId, string title, DateTimeOffset startedAt, DateTimeOffset? completedAt = null) =>
-        new(Guid.NewGuid(), commandId, title, ActivityState.Completed, startedAt, completedAt ?? startedAt.AddSeconds(1), "Evidence collected", false);
+        new(Guid.NewGuid(), commandId, title, ActivityState.Completed, startedAt, completedAt ?? startedAt.AddSeconds(1), "Check completed", false);
 }

@@ -10,7 +10,7 @@
     <Grid RowDefinitions="Auto,*,Auto" Padding="28,28,28,32">
         <StackPanel Grid.Row="0" Spacing="8" Margin="0,0,0,24">
             <TextBlock Text="Troubleshoot" Style="{StaticResource PageTitleTextStyle}" />
-            <TextBlock MaxWidth="760" HorizontalAlignment="Left" Text="Tell WinCare what's going wrong. It checks local Windows signals and suggests a few things you can review." Style="{StaticResource PageDescriptionTextStyle}" />
+            <TextBlock MaxWidth="760" HorizontalAlignment="Left" Text="Tell WinCare what's happening. It will suggest a few relevant tools to try." Style="{StaticResource PageDescriptionTextStyle}" />
         </StackPanel>
         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" x:Name="ChatScrollViewer" Margin="0,0,0,16">
             <ItemsControl ItemsSource="{x:Bind ViewModel.Messages, Mode=OneWay}">
@@ -19,7 +19,7 @@
                     <ItemsControl ItemsSource="{x:Bind ActionPlan.ProposedSteps, Mode=OneTime}" Margin="0,8,0,0"><ItemsControl.ItemTemplate><DataTemplate x:DataType="diag:ProposedActionStep"><Border Margin="0,6,0,6" Padding="0,16,0,8" BorderBrush="{ThemeResource BorderSubtleBrush}" BorderThickness="0,1,0,0"><Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="7">
                         <Grid Grid.Row="0" ColumnDefinitions="*,Auto" ColumnSpacing="12"><StackPanel Grid.Column="0" Spacing="2"><TextBlock Text="{x:Bind Title}" TextWrapping="Wrap" FontWeight="SemiBold" FontSize="14" Foreground="{ThemeResource TextPrimaryBrush}"/><TextBlock Text="{x:Bind Description}" Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap"/></StackPanel><Button Grid.Column="1" Content="{x:Bind ActionButtonText}" Style="{StaticResource AccentButtonStyle}" VerticalAlignment="Center" Click="ExecuteStepButton_Click" Tag="{x:Bind}" AutomationProperties.Name="{x:Bind ActionAccessibleName}"/></Grid>
                         <TextBlock Grid.Row="1" Text="{x:Bind ReviewContextText}" Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap" />
-                        <TextBlock Grid.Row="2" Text="This opens in Power tools so you can see the details before anything runs." Style="{StaticResource RowSecondaryTextStyle}"/>
+                        <TextBlock Grid.Row="2" Text="Open it in Power tools for details and options." Style="{StaticResource RowSecondaryTextStyle}"/>
                     </Grid></Border></DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
                 </StackPanel></Border></Grid></DataTemplate></ItemsControl.ItemTemplate>
             </ItemsControl>

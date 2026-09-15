@@ -17,7 +17,6 @@ class NativeFoundationTests(unittest.TestCase):
         self.assertEqual([], findings, "\n" + "\n".join(f"[{item.code}] {item.message}" for item in findings))
 
     def test_native_pages_use_supported_backdrop_and_responsive_tables(self) -> None:
-        """Verify that native pages use supported backdrop and responsive tables."""
         root = __import__("pathlib").Path(__file__).resolve().parents[2]
         window = (root / "src/WinCare.App/MainWindow.xaml.cs").read_text(encoding="utf-8")
         self.assertIn("MicaController.IsSupported", window)

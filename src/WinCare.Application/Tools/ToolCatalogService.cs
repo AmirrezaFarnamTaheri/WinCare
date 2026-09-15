@@ -99,7 +99,6 @@ public sealed class ToolCatalogService
             .ToArray();
     }
 
-    /// <summary>Gets merged commands.</summary>
     private IReadOnlyList<CommandDefinition> GetMergedCommands()
     {
         if (_pluginRegistry == null)
@@ -137,7 +136,6 @@ public sealed class ToolCatalogService
         }
     }
 
-    /// <summary>Determines whether the supplied area and section match this selection.</summary>
     private static bool Matches(CommandDefinition command, string query)
     {
         // Multi-word task searches require every term to match at least one searchable field.

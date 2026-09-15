@@ -26,7 +26,6 @@ public sealed class RepairRecoveryPageViewModel : TabbedPageViewModel
     public string PlaybookStatus { get => _playbookStatus; private set => SetProperty(ref _playbookStatus, value); }
     public bool HasImportedPlaybook => ImportedPlaybookSteps.Count > 0;
 
-    /// <summary>Initializes a new instance of <see cref="RepairRecoveryPageViewModel"/>.</summary>
     public RepairRecoveryPageViewModel() : base([
         new PageSection("Repair", "No repair tools are available in this section.", []),
         new PageSection("Restore", "No restore tools are available in this section.", []),

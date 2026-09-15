@@ -58,7 +58,6 @@ public sealed class AiDoctorPageViewModel : INotifyPropertyChanged
         }
     }
 
-    /// <summary>Initializes a new instance of <see cref="AiDoctorPageViewModel"/>.</summary>
     public AiDoctorPageViewModel(IIntentTranslator? intentTranslator = null)
     {
         var inferenceEngine = new RuleBasedIntentInferenceEngine();
@@ -71,7 +70,6 @@ public sealed class AiDoctorPageViewModel : INotifyPropertyChanged
             DateTime.UtcNow));
     }
 
-    /// <summary>Builds a diagnostic plan for the current prompt.</summary>
     public async Task SubmitPromptAsync(CancellationToken cancellationToken = default)
     {
         string prompt = UserPrompt.Trim();
@@ -112,7 +110,6 @@ public sealed class AiDoctorPageViewModel : INotifyPropertyChanged
         }
     }
 
-    /// <summary>Raises a property-change notification.</summary>
     private void OnPropertyChanged([CallerMemberName] string? propertyName = null) =>
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 }

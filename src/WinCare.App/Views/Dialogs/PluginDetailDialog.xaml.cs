@@ -7,7 +7,6 @@ public sealed partial class PluginDetailDialog : ContentDialog
 {
     public RemotePluginItem PluginItem { get; }
 
-    /// <summary>Initializes a new instance of <see cref="PluginDetailDialog"/>.</summary>
     public PluginDetailDialog(RemotePluginItem item, bool allowInstall = false)
     {
         InitializeComponent();

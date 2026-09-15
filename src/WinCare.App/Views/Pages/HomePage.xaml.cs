@@ -13,7 +13,6 @@ public sealed partial class HomePage : Page
     private bool _isVisible;
     private int _widgetRefreshVersion;
 
-    /// <summary>Initializes a new instance of <see cref="HomePage"/>.</summary>
     public HomePage()
     {
         ViewModel = new HomePageViewModel();
@@ -41,12 +40,9 @@ public sealed partial class HomePage : Page
         base.OnNavigatedFrom(e);
     }
 
-    /// <summary>Handles activity journal changes.</summary>
     private void JournalChanged(object? sender, EventArgs e) => DispatcherQueue.TryEnqueue(() => { if (_isVisible) ViewModel.RefreshActivity(AppRuntime.Current.Journal.GetAll()); });
-    /// <summary>Handles extension registry changes.</summary>
     private void RegistryChanged(object? sender, EventArgs e) => DispatcherQueue.TryEnqueue(() => { if (_isVisible) _ = RefreshWidgetsAsync(); });
 
-    /// <summary>Refreshes widgets.</summary>
     private async Task RefreshWidgetsAsync()
     {
         int version = ++_widgetRefreshVersion;
@@ -62,7 +58,7 @@ public sealed partial class HomePage : Page
         {
             if (!_isVisible || version != _widgetRefreshVersion) return;
             PluginWidgets.Visibility = Visibility.Collapsed;
-            PluginWidgetError.Message = "One or more extension widgets could not be loaded. Open Extensions to review their current state.";
+            PluginWidgetError.Message = "Open Extensions to see which widget had a problem.";
             PluginWidgetError.IsOpen = true;
             System.Diagnostics.Debug.WriteLine($"[HomePage] Widget refresh failed: {ex}");
         }
@@ -71,27 +67,17 @@ public sealed partial class HomePage : Page
     private void RunCheckupButton_Click(object sender, RoutedEventArgs e) => NavigateTo("checkup");
     private void ViewActivityButton_Click(object sender, RoutedEventArgs e) => NavigateTo("activity");
     private void BrowseToolsButton_Click(object sender, RoutedEventArgs e) => NavigateTo("all-tools");
-    /// <summary>Handles the open extensions click event.</summary>
     private void OpenExtensions_Click(object sender, RoutedEventArgs e) => NavigateTo("plugin-store");
-    /// <summary>Handles the open troubleshoot click event.</summary>
     private void OpenTroubleshoot_Click(object sender, RoutedEventArgs e) => NavigateTo("ai-doctor");
-    /// <summary>Handles the open cleanup click event.</summary>
     private void OpenCleanup_Click(object sender, RoutedEventArgs e) => PageNavigation.NavigateToSection(this, "system-care", "Clean up");
-    /// <summary>Handles the open startup click event.</summary>
     private void OpenStartup_Click(object sender, RoutedEventArgs e) => PageNavigation.NavigateToSection(this, "system-care", "Apps & startup");
-    /// <summary>Handles the open network click event.</summary>
     private void OpenNetwork_Click(object sender, RoutedEventArgs e) => PageNavigation.NavigateToSection(this, "system-care", "Network & updates");
-    /// <summary>Handles the nav category system click event.</summary>
     private void NavCategory_System_Click(object sender, RoutedEventArgs e) => NavigateTo("checkup");
-    /// <summary>Handles the nav category security click event.</summary>
     private void NavCategory_Security_Click(object sender, RoutedEventArgs e) => PageNavigation.NavigateToSection(this, "security", "Status");
-    /// <summary>Handles the nav category storage click event.</summary>
     private void NavCategory_Storage_Click(object sender, RoutedEventArgs e) => PageNavigation.NavigateToSection(this, "system-care", "Clean up");
-    /// <summary>Handles the nav category updates click event.</summary>
     private void NavCategory_Updates_Click(object sender, RoutedEventArgs e) => PageNavigation.NavigateToSection(this, "system-care", "Network & updates");
     private void NavigateTo(string key) => PageNavigation.NavigateTo(this, key);
 
-    /// <summary>Handles the page size changed event.</summary>
     private void Page_SizeChanged(object sender, SizeChangedEventArgs e)
     {
         bool compact = e.NewSize.Width < HomeCompactBreakpointDip;
@@ -99,8 +85,8 @@ public sealed partial class HomePage : Page
         PageLayout.Padding = compact ? new Thickness(20, 20, 20, 28) : new Thickness(32, 28, 32, 36);
         HeroLayout.ColumnDefinitions[0].Width = new GridLength(1, GridUnitType.Star);
         HeroLayout.ColumnDefinitions[1].Width = compact ? new GridLength(0) : new GridLength(1, GridUnitType.Star);
-        Grid.SetColumn(EvidenceSummaryCard, compact ? 0 : 1);
-        Grid.SetRow(EvidenceSummaryCard, compact ? 1 : 0);
+        Grid.SetColumn(CheckupSummaryCard, compact ? 0 : 1);
+        Grid.SetRow(CheckupSummaryCard, compact ? 1 : 0);
         RecommendationsGrid.ColumnDefinitions[0].Width = new GridLength(1, GridUnitType.Star);
         RecommendationsGrid.ColumnDefinitions[1].Width = compact ? new GridLength(0) : new GridLength(1, GridUnitType.Star);
         RecommendationsGrid.ColumnDefinitions[2].Width = compact ? new GridLength(0) : new GridLength(1, GridUnitType.Star);

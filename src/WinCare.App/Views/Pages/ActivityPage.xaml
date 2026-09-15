@@ -16,7 +16,7 @@
 
         <StackPanel Spacing="8">
             <TextBlock x:Uid="ActivityPageTitle" Style="{StaticResource PageTitleTextStyle}" Text="Activity" />
-            <TextBlock MaxWidth="760" HorizontalAlignment="Left" Style="{StaticResource PageDescriptionTextStyle}" Text="See what's running, what finished, and anything that needs another look." />
+            <TextBlock MaxWidth="760" HorizontalAlignment="Left" Style="{StaticResource PageDescriptionTextStyle}" Text="See what's running, what finished, and what needs attention." />
         </StackPanel>
 
         <StackPanel Grid.Row="1" Spacing="8">
@@ -26,10 +26,10 @@
                 IsOpen="{x:Bind ViewModel.HasAttentionItems, Mode=OneWay}"
                 IsClosable="False"
                 Severity="Warning"
-                Title="Review needed"
-                Message="One or more items need a second look before you try again."
+                Title="Needs attention"
+                Message="Open an item to see what happened and what you can do next."
                 AutomationProperties.AutomationId="AttentionInfoBar"
-                AutomationProperties.Name="Activity items need review" />
+                AutomationProperties.Name="Activity items need attention" />
             <InfoBar
                 x:Name="PersistenceInfoBar"
                 Margin="0"
