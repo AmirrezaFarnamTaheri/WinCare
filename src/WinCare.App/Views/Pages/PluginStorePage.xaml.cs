@@ -24,10 +24,7 @@ public sealed partial class PluginStorePage : Page
         InitializeComponent();
         Loaded += async (s, e) =>
         {
-            if (_initialized)
-            {
-                return;
-            }
+            if (_initialized) return;
 
             _initialized = true;
             try
@@ -41,12 +38,20 @@ public sealed partial class PluginStorePage : Page
         };
     }
 
+    protected override void OnNavigatedTo(NavigationEventArgs e)
+    {
+        base.OnNavigatedTo(e);
+        if (e.Parameter is string query && !string.IsNullOrWhiteSpace(query))
+        {
+            PluginSearchBox.Text = query;
+            ViewModel.SearchQuery = query;
+        }
+    }
+
     private void SearchBox_TextChanged(AutoSuggestBox sender, AutoSuggestBoxTextChangedEventArgs args)
     {
         if (args.Reason == AutoSuggestionBoxTextChangeReason.UserInput)
-        {
             ViewModel.SearchQuery = sender.Text;
-        }
     }
 
     private void Page_SizeChanged(object sender, SizeChangedEventArgs e)
@@ -76,34 +81,25 @@ public sealed partial class PluginStorePage : Page
     private async void DetailsButton_Click(object sender, RoutedEventArgs e)
     {
         if (sender is Button button && button.Tag is PluginCardViewModel card)
-        {
             await ShowPluginDetailsDialogAsync(card, allowInstall: false);
-        }
     }
 
     private async void InstallButton_Click(object sender, RoutedEventArgs e)
     {
         if (sender is Button button && button.Tag is PluginCardViewModel card)
-        {
-            // Gate installation behind the capability and trust consent dialog.
             await ShowPluginDetailsDialogAsync(card, allowInstall: true);
-        }
     }
 
     private async void EnableButton_Click(object sender, RoutedEventArgs e)
     {
         if (sender is Button button && button.Tag is PluginCardViewModel card)
-        {
             await ViewModel.EnablePluginAsync(card);
-        }
     }
 
     private async void DisableButton_Click(object sender, RoutedEventArgs e)
     {
         if (sender is Button button && button.Tag is PluginCardViewModel card)
-        {
             await ViewModel.DisablePluginAsync(card);
-        }
     }
 
     private async void UninstallButton_Click(object sender, RoutedEventArgs e)
@@ -113,16 +109,14 @@ public sealed partial class PluginStorePage : Page
             var dialog = new ContentDialog
             {
                 Title = $"Uninstall {card.Name}?",
-                Content = "This removes the plugin package and its registered commands. WinCare will disable an enabled plugin first and restore it if removal fails.",
+                Content = "This removes the extension package and its registered commands. WinCare will disable an enabled extension first and restore it if removal fails.",
                 PrimaryButtonText = "Uninstall",
                 CloseButtonText = "Cancel",
                 DefaultButton = ContentDialogButton.Close,
                 XamlRoot = XamlRoot
             };
             if (await dialog.ShowAsync() == ContentDialogResult.Primary)
-            {
                 await ViewModel.UninstallPluginAsync(card);
-            }
         }
     }
 
@@ -146,11 +140,7 @@ public sealed partial class PluginStorePage : Page
 
         var result = await dialog.ShowAsync();
         if (allowInstall && result == ContentDialogResult.Primary && card.CanInstall)
-        {
-            // Primary (Trust and install) implies consent to every declared capability the
-            // dialog listed; pass them through so the installer enforces the consent gate.
             await ViewModel.InstallPluginAsync(card, card.Permissions);
-        }
     }
 
     protected override void OnNavigatedFrom(NavigationEventArgs e)

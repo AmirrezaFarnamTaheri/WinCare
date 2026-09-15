@@ -32,84 +32,47 @@ NATIVE_ROOTS = (
 )
 
 REQUIRED_FILES = (
-    ORACLE_COMMANDS_PATH,
-    ORACLE_RULES_PATH,
-    ORACLE_PRESETS_PATH,
-    ORACLE_PROVENANCE_PATH,
-    ROOT / "Directory.Build.props",
-    ROOT / "Directory.Packages.props",
-    ROOT / "WinCare.Native.sln",
-    ROOT / "rust-toolchain.toml",
-    ROOT / "src/WinCare.App/WinCare.App.csproj",
-    ROOT / "src/WinCare.App/App.xaml",
-    ROOT / "src/WinCare.App/MainWindow.xaml",
-    ROOT / "src/WinCare.App/Package.appxmanifest",
-    ROOT / "src/WinCare.App/Views/ShellPage.xaml",
-    ROOT / "src/WinCare.App/Views/Pages/AllToolsPage.xaml",
+    ORACLE_COMMANDS_PATH, ORACLE_RULES_PATH, ORACLE_PRESETS_PATH, ORACLE_PROVENANCE_PATH,
+    ROOT / "Directory.Build.props", ROOT / "Directory.Packages.props", ROOT / "WinCare.Native.sln",
+    ROOT / "rust-toolchain.toml", ROOT / "src/WinCare.App/WinCare.App.csproj", ROOT / "src/WinCare.App/App.xaml",
+    ROOT / "src/WinCare.App/MainWindow.xaml", ROOT / "src/WinCare.App/Package.appxmanifest",
+    ROOT / "src/WinCare.App/Views/ShellPage.xaml", ROOT / "src/WinCare.App/Views/Pages/AllToolsPage.xaml",
     ROOT / "src/WinCare.Infrastructure/Observability/StartupTelemetry.cs",
-    ROOT / "src/WinCare.CommandCatalog/WinCare.CommandCatalog.csproj",
-    CATALOG_PATH,
-    NATIVE_RULES_PATH,
-    NATIVE_PRESETS_PATH,
-    ROOT / "src/WinCare.CommandCatalog/RemediationCatalog.cs",
-    ROOT / "src/WinCare.CommandCatalog/RemediationCatalogJsonContext.cs",
-    ROOT / "src/WinCare.CommandCatalog/EmbeddedJsonResource.cs",
-    ROOT / "src/WinCare.CommandCatalog/RemediationCatalogValidator.cs",
-    ROOT / "src/WinCare.Application/Commands/CommandDispatcher.cs",
-    ROOT / "src/WinCare.Application/Commands/CommandRuntime.cs",
-    ROOT / "src/WinCare.Application/Commands/ICommandOperationExecutor.cs",
-    ROOT / "src/WinCare.Application/Commands/DelegatingCommandHandler.cs",
-    ROOT / "src/WinCare.Application/Activity/IActivityJournalService.cs",
-    ROOT / "src/WinCare.Application/Activity/ActivityJournalService.cs",
-    ROOT / "src/WinCare.App/Services/AppRuntime.cs",
-    ROOT / "src/WinCare.Infrastructure/Commands/WindowsCommandExecutor.cs",
-    ROOT / "src/WinCare.Infrastructure/Commands/WindowsCommandExecutor.System.cs",
-    ROOT / "src/WinCare.Infrastructure/Commands/WindowsCommandExecutor.Security.cs",
-    ROOT / "src/WinCare.Infrastructure/Commands/WindowsCommandExecutor.Desktop.cs",
-    ROOT / "src/WinCare.Infrastructure/Commands/WindowsCommandExecutor.Productivity.cs",
-    ROOT / "src/WinCare.Infrastructure/Commands/WindowsCommandExecutor.Experience.cs",
-    ROOT / "src/WinCare.Infrastructure/Commands/WindowsCommandExecutor.State.cs",
-    ROOT / "src/WinCare.Infrastructure/Commands/WindowsCommandExecutor.Remediation.cs",
-    ROOT / "src/WinCare.Infrastructure/Commands/CommandParameters.cs",
-    ROOT / "src/WinCare.Infrastructure/Commands/BoundedProcessRunner.cs",
-    ROOT / "src/WinCare.Infrastructure/Commands/CommandStateStore.cs",
-    ROOT / "native/Cargo.toml",
-    ROOT / "native/wincare-core/Cargo.toml",
-    ROOT / "native/wincare-core/src/lib.rs",
-    ROOT / ".github/workflows/native-winui.yml",
-    ROOT / "tools/finalize_native_release.py",
-    ROOT / "tools/verify_visual_tokens.py",
-    ROOT / "tools/verify_pill_contrast.py",
-    ROOT / "docs/migration/finalization-status.md",
+    ROOT / "src/WinCare.CommandCatalog/WinCare.CommandCatalog.csproj", CATALOG_PATH, NATIVE_RULES_PATH, NATIVE_PRESETS_PATH,
+    ROOT / "src/WinCare.CommandCatalog/RemediationCatalog.cs", ROOT / "src/WinCare.CommandCatalog/RemediationCatalogJsonContext.cs",
+    ROOT / "src/WinCare.CommandCatalog/EmbeddedJsonResource.cs", ROOT / "src/WinCare.CommandCatalog/RemediationCatalogValidator.cs",
+    ROOT / "src/WinCare.Application/Commands/CommandDispatcher.cs", ROOT / "src/WinCare.Application/Commands/CommandRuntime.cs",
+    ROOT / "src/WinCare.Application/Commands/ICommandOperationExecutor.cs", ROOT / "src/WinCare.Application/Commands/DelegatingCommandHandler.cs",
+    ROOT / "src/WinCare.Application/Activity/IActivityJournalService.cs", ROOT / "src/WinCare.Application/Activity/ActivityJournalService.cs",
+    ROOT / "src/WinCare.App/Services/AppRuntime.cs", ROOT / "src/WinCare.Infrastructure/Commands/WindowsCommandExecutor.cs",
+    ROOT / "src/WinCare.Infrastructure/Commands/WindowsCommandExecutor.System.cs", ROOT / "src/WinCare.Infrastructure/Commands/WindowsCommandExecutor.Security.cs",
+    ROOT / "src/WinCare.Infrastructure/Commands/WindowsCommandExecutor.Desktop.cs", ROOT / "src/WinCare.Infrastructure/Commands/WindowsCommandExecutor.Productivity.cs",
+    ROOT / "src/WinCare.Infrastructure/Commands/WindowsCommandExecutor.Experience.cs", ROOT / "src/WinCare.Infrastructure/Commands/WindowsCommandExecutor.State.cs",
+    ROOT / "src/WinCare.Infrastructure/Commands/WindowsCommandExecutor.Remediation.cs", ROOT / "src/WinCare.Infrastructure/Commands/CommandParameters.cs",
+    ROOT / "src/WinCare.Infrastructure/Commands/BoundedProcessRunner.cs", ROOT / "src/WinCare.Infrastructure/Commands/CommandStateStore.cs",
+    ROOT / "native/Cargo.toml", ROOT / "native/wincare-core/Cargo.toml", ROOT / "native/wincare-core/src/lib.rs",
+    ROOT / ".github/workflows/native-winui.yml", ROOT / "tools/finalize_native_release.py", ROOT / "tools/verify_visual_tokens.py",
+    ROOT / "tools/verify_pill_contrast.py", ROOT / "docs/migration/finalization-status.md",
 )
 
 BANNED_NATIVE_PATTERNS = (
-    "Microsoft.PowerShell.SDK",
-    "System.Management.Automation",
-    "PresentationCore",
-    "PresentationFramework",
-    "System.Windows.",
-    "<UseWPF>true</UseWPF>",
+    "Microsoft.PowerShell.SDK", "System.Management.Automation", "PresentationCore", "PresentationFramework",
+    "System.Windows.", "<UseWPF>true</UseWPF>",
 )
 
 EXPECTED_NAVIGATION = {
-    "NavHome": "Home",
-    "NavCheckup": "Checkup",
-    "NavSystemCare": "System care",
-    "NavSecurity": "Security",
-    "NavRepairRecovery": "Repair & recovery",
-    "NavAllTools": "All tools",
-    "NavActivity": "Activity",
-    "NavSettings": "Settings",
+    "NavHome": "Home", "NavCheckup": "Checkup", "NavSystemCare": "System care", "NavSecurity": "Security",
+    "NavRepairRecovery": "Repair & recovery", "NavAllTools": "Power tools", "NavActivity": "Activity",
+    "NavPluginStore": "Extensions", "NavAiDoctor": "Troubleshoot", "NavSettings": "Settings", "NavHelp": "Help",
 }
 
 EXPECTED_PAGE_TABS = {
     "CheckupPage.xaml": ("Quick check", "Results"),
-    "SystemCarePage.xaml": ("Clean up", "Performance", "Apps & startup", "Network & updates", "Routines"),
+    "SystemCarePage.xaml": ("Clean up", "Performance", "Apps & startup", "Network & updates", "Routines & maintenance"),
     "SecurityPage.xaml": ("Status", "Protection", "Privacy", "Hardening"),
-    "RepairRecoveryPage.xaml": ("Repair", "Restore", "Change records", "Backup", "Reset & media"),
-    "AllToolsPage.xaml": ("Commands", "Categories", "Favorites", "Recent", "Presets"),
-    "ActivityPage.xaml": ("Running", "Needs attention", "Completed", "Reports"),
+    "RepairRecoveryPage.xaml": ("Repair", "Restore", "Backup", "Reset & media", "Portable playbooks"),
+    "AllToolsPage.xaml": ("Tools", "Categories", "Favorites", "Recent", "Care plans"),
+    "ActivityPage.xaml": ("Running", "Needs attention", "History", "Reports"),
 }
 
 
@@ -125,9 +88,7 @@ def load_oracle_commands() -> tuple[str, ...]:
     if document.get("schemaVersion") != 1:
         raise ValueError("unsupported oracle command schema")
     if document.get("commandCount") != 259 or len(commands) != 259 or len(set(commands)) != 259:
-        raise ValueError(
-            f"oracle command set is not exactly 259 unique IDs: {len(commands)} / {len(set(commands))}"
-        )
+        raise ValueError(f"oracle command set is not exactly 259 unique IDs: {len(commands)} / {len(set(commands))}")
     if not all(isinstance(command, str) and command for command in commands):
         raise ValueError("oracle command IDs must be non-empty strings")
     return commands
@@ -150,7 +111,6 @@ def _relative(path: Path) -> str:
 
 def verify() -> list[Finding]:
     findings: list[Finding] = []
-
     for path in REQUIRED_FILES:
         if not path.is_file():
             findings.append(Finding("missing-file", _relative(path)))
@@ -164,226 +124,140 @@ def verify() -> list[Finding]:
             declared_count = document.get("commandCount")
             if declared_count != len(ids) or len(ids) < len(legacy):
                 findings.append(Finding("catalog-count", f"declared {declared_count}; found {len(ids)}; frozen baseline {len(legacy)}"))
-            if len(set(ids)) != len(ids):
-                findings.append(Finding("catalog-duplicates", "native command IDs are not unique"))
-            if not set(legacy).issubset(ids):
-                missing = sorted(set(legacy) - set(ids))
-                findings.append(Finding("catalog-parity", f"missing frozen IDs={missing}"))
-            implemented_ids = {
-                item.get("id")
-                for item in commands
-                if isinstance(item, dict) and item.get("migrationStatus") in {"Implemented", "BehaviorVerified"}
-            }
+            if len(set(ids)) != len(ids): findings.append(Finding("catalog-duplicates", "native command IDs are not unique"))
+            if not set(legacy).issubset(ids): findings.append(Finding("catalog-parity", f"missing frozen IDs={sorted(set(legacy) - set(ids))}"))
+            implemented_ids = {item.get("id") for item in commands if isinstance(item, dict) and item.get("migrationStatus") in {"Implemented", "BehaviorVerified"}}
             expected_ids = set(ids)
             if implemented_ids != expected_ids:
-                missing = sorted(expected_ids - implemented_ids)
-                extra = sorted(implemented_ids - expected_ids)
-                findings.append(Finding(
-                    "implemented-command-set",
-                    f"all admitted commands must be Implemented or BehaviorVerified; missing={missing}; extra={extra}",
-                ))
+                findings.append(Finding("implemented-command-set", f"all admitted commands must be Implemented or BehaviorVerified; missing={sorted(expected_ids - implemented_ids)}; extra={sorted(implemented_ids - expected_ids)}"))
             for index, item in enumerate(commands):
                 if not isinstance(item, dict):
-                    findings.append(Finding("catalog-shape", f"commands[{index}] is not an object"))
-                    continue
+                    findings.append(Finding("catalog-shape", f"commands[{index}] is not an object")); continue
                 for key in ("id", "title", "summary", "area", "section", "risk", "readOnly", "legacySource", "migrationStatus"):
-                    if key not in item or item[key] in (None, ""):
-                        findings.append(Finding("catalog-field", f"commands[{index}] missing {key}"))
-                title = str(item.get("title", ""))
-                summary = str(item.get("summary", ""))
-                if title == item.get("id") or "Advanced headless capability" in summary:
+                    if key not in item or item[key] in (None, ""): findings.append(Finding("catalog-field", f"commands[{index}] missing {key}"))
+                if str(item.get("title", "")) == item.get("id") or "Advanced headless capability" in str(item.get("summary", "")):
                     findings.append(Finding("catalog-copy", f"technical fallback copy remains for {item.get('id')}"))
         except (OSError, json.JSONDecodeError) as exc:
             findings.append(Finding("catalog-json", str(exc)))
 
     for legacy_path, native_path, collection_key, expected_count in (
-        (ORACLE_RULES_PATH, NATIVE_RULES_PATH, "rules", 69),
-        (ORACLE_PRESETS_PATH, NATIVE_PRESETS_PATH, "presets", 7),
+        (ORACLE_RULES_PATH, NATIVE_RULES_PATH, "rules", 69), (ORACLE_PRESETS_PATH, NATIVE_PRESETS_PATH, "presets", 7),
     ):
-        if not legacy_path.is_file() or not native_path.is_file():
-            continue
+        if not legacy_path.is_file() or not native_path.is_file(): continue
         try:
-            legacy_document = json.loads(legacy_path.read_text(encoding="utf-8-sig"))
-            native_document = json.loads(native_path.read_text(encoding="utf-8"))
-            if native_document != legacy_document:
-                findings.append(Finding("embedded-data-parity", _relative(native_path)))
+            legacy_document = json.loads(legacy_path.read_text(encoding="utf-8-sig")); native_document = json.loads(native_path.read_text(encoding="utf-8"))
+            if native_document != legacy_document: findings.append(Finding("embedded-data-parity", _relative(native_path)))
             items = native_document.get(collection_key, [])
-            if len(items) != expected_count:
-                findings.append(Finding(
-                    "embedded-data-count",
-                    f"{_relative(native_path)} expected {expected_count}, found {len(items)}",
-                ))
+            if len(items) != expected_count: findings.append(Finding("embedded-data-count", f"{_relative(native_path)} expected {expected_count}, found {len(items)}"))
         except (OSError, json.JSONDecodeError) as exc:
             findings.append(Finding("embedded-data-json", f"{_relative(native_path)}: {exc}"))
 
     dispatcher_path = ROOT / "src/WinCare.Application/Commands/CommandDispatcher.cs"
     if dispatcher_path.is_file():
         dispatcher = dispatcher_path.read_text(encoding="utf-8")
-        for token in (
-            "command.not_found", "command.not_migrated", "command.readonly_mutation_denied",
-            "command.review_required", "command.deadline_exceeded",
-            "request.CorrelationId", "CancellationTokenSource.CreateLinkedTokenSource",
-            "OperationCanceledException",
-        ):
-            if token not in dispatcher:
-                findings.append(Finding("dispatcher-contract", f"missing {token}"))
+        for token in ("command.not_found", "command.not_migrated", "command.readonly_mutation_denied", "command.review_required", "command.deadline_exceeded", "request.CorrelationId", "CancellationTokenSource.CreateLinkedTokenSource", "OperationCanceledException"):
+            if token not in dispatcher: findings.append(Finding("dispatcher-contract", f"missing {token}"))
 
     execution_view_model_path = ROOT / "src/WinCare.App/ViewModels/Pages/ToolExecutionViewModel.cs"
     if execution_view_model_path.is_file():
         execution_view_model = execution_view_model_path.read_text(encoding="utf-8")
-        for token in (
-            "correlationId = result.CorrelationId",
-            "status = result.Status",
-            "code = result.Code",
-            "durationMilliseconds = result.Duration.TotalMilliseconds",
-            "undoAvailable = result.UndoAvailable",
-            "data = result.Data",
-        ):
-            if token not in execution_view_model:
-                findings.append(Finding("execution-result-envelope", f"missing {token}"))
+        for token in ("correlationId = result.CorrelationId", "status = result.Status", "code = result.Code", "durationMilliseconds = result.Duration.TotalMilliseconds", "undoAvailable = result.UndoAvailable", "data = result.Data"):
+            if token not in execution_view_model: findings.append(Finding("execution-result-envelope", f"missing {token}"))
 
     handlers_root = ROOT / "src/WinCare.Application/Commands/Handlers"
-    if handlers_root.exists():
-        findings.append(Finding(
-            "handler-sprawl",
-            "copy-pasted command handler directory must remain removed; commands route through ICommandOperationExecutor",
-        ))
+    if handlers_root.exists(): findings.append(Finding("handler-sprawl", "copy-pasted command handler directory must remain removed; commands route through ICommandOperationExecutor"))
 
     runtime_path = ROOT / "src/WinCare.Application/Commands/CommandRuntime.cs"
     if runtime_path.is_file():
         runtime = runtime_path.read_text(encoding="utf-8")
         for token in ("ICommandOperationExecutor", "DelegatingCommandHandler", "ActivityJournalService"):
-            if token not in runtime:
-                findings.append(Finding("executor-composition", f"CommandRuntime missing {token}"))
-        if "LastJournal" in runtime:
-            findings.append(Finding("activity-lifetime", "CommandRuntime must not expose LastJournal service-locator state"))
+            if token not in runtime: findings.append(Finding("executor-composition", f"CommandRuntime missing {token}"))
+        if "LastJournal" in runtime: findings.append(Finding("activity-lifetime", "CommandRuntime must not expose LastJournal service-locator state"))
 
     executor_files = sorted((ROOT / "src/WinCare.Infrastructure/Commands").glob("WindowsCommandExecutor*.cs"))
     executor_text = "\n".join(path.read_text(encoding="utf-8") for path in executor_files)
     route_ids = set(re.findall(r'"([a-z0-9-]+)"\s*=>', executor_text)) | {"catalog", "presets"}
     missing_routes = sorted(set(legacy) - route_ids)
-    if missing_routes:
-        findings.append(Finding("executor-route-coverage", f"missing command routes: {missing_routes}"))
+    if missing_routes: findings.append(Finding("executor-route-coverage", f"missing command routes: {missing_routes}"))
 
     if CATALOG_PATH.is_file():
         try:
             command_document = json.loads(CATALOG_PATH.read_text(encoding="utf-8"))
-            mutating_ids = {
-                item["id"] for item in command_document.get("commands", [])
-                if isinstance(item, dict) and item.get("readOnly") is False
-            }
+            mutating_ids = {item["id"] for item in command_document.get("commands", []) if isinstance(item, dict) and item.get("readOnly") is False}
             main_executor = ROOT / "src/WinCare.Infrastructure/Commands/WindowsCommandExecutor.cs"
             text = main_executor.read_text(encoding="utf-8") if main_executor.is_file() else ""
-            marker = "static void ValidateCommandParameters"
-            validation_text = text[text.find(marker):] if marker in text else ""
-            validation_ids = set(re.findall(r'case\s+"([a-z0-9-]+)"', validation_text))
-            missing_validation = sorted(mutating_ids - validation_ids)
-            if missing_validation:
-                findings.append(Finding(
-                    "mutation-preview-validation",
-                    f"mutating commands without explicit preview validation: {missing_validation}",
-                ))
+            marker = "static void ValidateCommandParameters"; validation_text = text[text.find(marker):] if marker in text else ""
+            validation_ids = set(re.findall(r'case\s+"([a-z0-9-]+)"', validation_text)); missing_validation = sorted(mutating_ids - validation_ids)
+            if missing_validation: findings.append(Finding("mutation-preview-validation", f"mutating commands without explicit preview validation: {missing_validation}"))
         except (OSError, json.JSONDecodeError, KeyError) as exc:
             findings.append(Finding("mutation-validation-json", str(exc)))
 
     for path in _iter_text_files(NATIVE_ROOTS):
         text = path.read_text(encoding="utf-8", errors="replace")
         for pattern in BANNED_NATIVE_PATTERNS:
-            if pattern in text:
-                findings.append(Finding("banned-reference", f"{_relative(path)} contains {pattern}"))
-        if path.suffix.lower() in {".ps1", ".psm1", ".psd1"}:
-            findings.append(Finding("native-powershell", _relative(path)))
+            if pattern in text: findings.append(Finding("banned-reference", f"{_relative(path)} contains {pattern}"))
+        if path.suffix.lower() in {".ps1", ".psm1", ".psd1"}: findings.append(Finding("native-powershell", _relative(path)))
 
-    xml_paths = [
-        path
-        for path in _iter_text_files(NATIVE_ROOTS)
-        if path.suffix.lower() in {".xaml", ".csproj", ".props", ".targets", ".xml"}
-    ]
+    xml_paths = [path for path in _iter_text_files(NATIVE_ROOTS) if path.suffix.lower() in {".xaml", ".csproj", ".props", ".targets", ".xml"}]
     manifest = ROOT / "src/WinCare.App/Package.appxmanifest"
-    if manifest.is_file():
-        xml_paths.append(manifest)
-    interactive_controls = {
-        "AutoSuggestBox", "Button", "CheckBox", "ComboBox", "Expander",
-        "ListView", "NavigationView", "NavigationViewItem", "SelectorBar",
-        "SelectorBarItem", "TextBox",
-    }
+    if manifest.is_file(): xml_paths.append(manifest)
+    interactive_controls = {"AutoSuggestBox", "Button", "CheckBox", "ComboBox", "Expander", "ListView", "NavigationView", "NavigationViewItem", "SelectorBar", "SelectorBarItem", "TextBox"}
     for path in sorted(set(xml_paths)):
         try:
             tree = ET.parse(path)
             if path.suffix.lower() == ".xaml":
-                data_templates = 0
-                typed_templates = 0
+                data_templates = typed_templates = 0
                 for element in tree.getroot().iter():
                     local_name = element.tag.rsplit("}", 1)[-1]
                     if local_name == "DataTemplate":
                         data_templates += 1
-                        if any(key.endswith("}DataType") or key == "x:DataType" for key in element.attrib):
-                            typed_templates += 1
+                        if any(key.endswith("}DataType") or key == "x:DataType" for key in element.attrib): typed_templates += 1
                     if local_name in interactive_controls and "AutomationProperties.Name" not in element.attrib:
                         findings.append(Finding("automation-name", f"{_relative(path)}: {local_name}"))
-                if data_templates != typed_templates:
-                    findings.append(Finding("untyped-template", f"{_relative(path)}: {typed_templates}/{data_templates} typed"))
+                if data_templates != typed_templates: findings.append(Finding("untyped-template", f"{_relative(path)}: {typed_templates}/{data_templates} typed"))
         except ET.ParseError as exc:
             findings.append(Finding("xml-parse", f"{_relative(path)}: {exc}"))
 
     shell = ROOT / "src/WinCare.App/Views/ShellPage.xaml"
     if shell.is_file():
         text = html.unescape(shell.read_text(encoding="utf-8"))
-        if "NavigationView" not in text:
-            findings.append(Finding("shell-navigation", "ShellPage does not use NavigationView"))
+        if "NavigationView" not in text: findings.append(Finding("shell-navigation", "ShellPage does not use NavigationView"))
         for automation_id, label in EXPECTED_NAVIGATION.items():
-            if automation_id not in text or label not in text:
-                findings.append(Finding("shell-item", f"missing {automation_id} / {label}"))
+            if automation_id not in text or label not in text: findings.append(Finding("shell-item", f"missing {automation_id} / {label}"))
         for obsolete in (">Overview<", ">Action catalog<", ">Profiles<", ">Assurance<"):
-            if obsolete in text:
-                findings.append(Finding("obsolete-navigation", obsolete))
+            if obsolete in text: findings.append(Finding("obsolete-navigation", obsolete))
 
     page_root = ROOT / "src/WinCare.App/Views/Pages"
     for filename, tabs in EXPECTED_PAGE_TABS.items():
         path = page_root / filename
-        if not path.is_file():
-            findings.append(Finding("missing-page", _relative(path)))
-            continue
+        if not path.is_file(): findings.append(Finding("missing-page", _relative(path))); continue
         text = html.unescape(path.read_text(encoding="utf-8"))
-        if "SelectorBar" not in text:
-            findings.append(Finding("missing-selectorbar", _relative(path)))
+        if "SelectorBar" not in text: findings.append(Finding("missing-selectorbar", _relative(path)))
         for tab in tabs:
-            if tab not in text:
-                findings.append(Finding("missing-tab", f"{filename}: {tab}"))
+            if tab not in text: findings.append(Finding("missing-tab", f"{filename}: {tab}"))
 
     all_tools = page_root / "AllToolsPage.xaml"
     if all_tools.is_file():
         text = all_tools.read_text(encoding="utf-8")
-        for token in (
-            "ListView", "x:DataType", "x:Bind", "AutomationProperties.AutomationId",
-            "AutomationProperties.Name", "ExecuteSelectedToolCommand", "ExecutionResultText",
-            'AutomationProperties.AutomationId="ExecuteSelectedTool"',
-        ):
-            if token not in text:
-                findings.append(Finding("all-tools-contract", f"missing {token}"))
-        for column in ("Command", "Category", "Risk", "Administrator access", "Restart"):
-            if column not in text:
-                findings.append(Finding("all-tools-column", column))
+        for token in ("ListView", "x:DataType", "x:Bind", "AutomationProperties.AutomationId", "AutomationProperties.Name", "ExecuteSelectedToolCommand", "ExecutionResultText"):
+            if token not in text: findings.append(Finding("all-tools-contract", f"missing {token}"))
+        for column in ("Task", "Category", "Impact", "Administrator access", "Restart"):
+            if column not in text: findings.append(Finding("all-tools-column", column))
 
     profile_root = ROOT / "src/WinCare.App/Properties/PublishProfiles"
     profiles = sorted(profile_root.glob("*.pubxml")) if profile_root.is_dir() else []
-    if len(profiles) not in (4, 6):
-        findings.append(Finding("publish-profiles", f"expected 4 or 6 publish profiles, found {len(profiles)}"))
+    if len(profiles) not in (4, 6): findings.append(Finding("publish-profiles", f"expected 4 or 6 publish profiles, found {len(profiles)}"))
     for profile in profiles:
         profile_text = profile.read_text(encoding="utf-8", errors="replace")
         invalid = [character for character in profile_text if ord(character) < 32 and character not in "\n\r\t"]
-        if invalid:
-            findings.append(Finding("publish-profile-control", f"{_relative(profile)} contains control characters"))
-        if profile.name.startswith("portable-") and "artifacts" not in profile_text:
-            findings.append(Finding("portable-output", f"{_relative(profile)} has no artifacts output path"))
+        if invalid: findings.append(Finding("publish-profile-control", f"{_relative(profile)} contains control characters"))
+        if profile.name.startswith("portable-") and "artifacts" not in profile_text: findings.append(Finding("portable-output", f"{_relative(profile)} has no artifacts output path"))
 
     app_project = ROOT / "src/WinCare.App/WinCare.App.csproj"
     if app_project.is_file():
         project_text = app_project.read_text(encoding="utf-8")
-        if "Native\\$(Platform)\\wincare_core.dll" not in project_text:
-            findings.append(Finding("native-stage", "WinCare.App does not stage the platform Rust DLL"))
-        if "CopyToPublishDirectory" not in project_text:
-            findings.append(Finding("native-publish", "WinCare.App does not copy the Rust DLL to portable output"))
+        if "Native\\$(Platform)\\wincare_core.dll" not in project_text: findings.append(Finding("native-stage", "WinCare.App does not stage the platform Rust DLL"))
+        if "CopyToPublishDirectory" not in project_text: findings.append(Finding("native-publish", "WinCare.App does not copy the Rust DLL to portable output"))
 
     secret_suffixes = {".pfx", ".p12", ".key", ".pem", ".snk", ".secret", ".token"}
     for root_dir in NATIVE_ROOTS:
@@ -391,7 +265,6 @@ def verify() -> list[Finding]:
             for path in root_dir.rglob("*"):
                 if path.is_file() and path.suffix.lower() in secret_suffixes:
                     findings.append(Finding("secret-key-present", f"Secret signing key file committed to native root: {_relative(path)}"))
-
     return findings
 
 
@@ -399,8 +272,7 @@ def main() -> int:
     findings = verify()
     if findings:
         print(f"native foundation verification failed: {len(findings)} finding(s)")
-        for finding in findings:
-            print(f"[{finding.code}] {finding.message}")
+        for finding in findings: print(f"[{finding.code}] {finding.message}")
         return 1
     print("native foundation verification passed")
     print("catalog: all frozen 259 command IDs retained; additional admitted native commands validated")

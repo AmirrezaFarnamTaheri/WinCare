@@ -27,16 +27,32 @@ namespace WinCare.Application.Diagnostics
         string Title,
         string Description,
         CommandRisk RiskLevel,
-        bool RequiresElevation,
+        bool IsReadOnly,
+        AdministratorAccess AccessRequirement,
         IReadOnlyDictionary<string, string>? Parameters = null,
-        string AffectedResource = "System",
-        bool UndoAvailable = false
+        string AffectedResource = "System"
     )
     {
-        public bool IsReadOnly => RiskLevel == CommandRisk.ReadOnly;
-        public string RiskBadgeText => IsReadOnly ? "SAFE / READ-ONLY" : $"{RiskLevel.ToString().ToUpperInvariant()} RISK";
-        public string ElevationBadgeText => RequiresElevation ? "ADMIN REQUIRED" : "STANDARD USER";
-        public string ActionButtonText => IsReadOnly ? "Run Diagnostic Check" : "Review & Apply Fix";
+        public string RiskBadgeText => IsReadOnly
+            ? "Read-only"
+            : RiskLevel switch
+            {
+                CommandRisk.Low => "Safe",
+                CommandRisk.Moderate => "Moderate",
+                CommandRisk.High or CommandRisk.Critical => "Destructive",
+                _ => "Safe",
+            };
+
+        public string ElevationBadgeText => AccessRequirement switch
+        {
+            AdministratorAccess.Required => "Administrator required",
+            AdministratorAccess.MayBeRequired => "Administrator may be needed",
+            _ => "Standard access",
+        };
+
+        public string ReviewContextText => $"{RiskBadgeText} · {ElevationBadgeText} · {AffectedResource}";
+        public string ActionButtonText => IsReadOnly ? "Open check" : "Review in Power tools";
+        public string ActionAccessibleName => $"{ActionButtonText}: {Title}";
     }
 
     public sealed record TelemetryEvidence(
@@ -45,7 +61,7 @@ namespace WinCare.Application.Diagnostics
         string MeasuredValue,
         bool IndicatesPressure,
         DiagnosticSeverity Severity,
-        string Source = "Windows System Diagnostic Telemetry",
+        string Source = "Windows system diagnostics",
         string? CommandId = null,
         DateTime? CapturedAtUtc = null,
         string Collector = "DiagnosticEvidenceCollector",
@@ -55,11 +71,6 @@ namespace WinCare.Application.Diagnostics
         public DateTime TimestampUtc { get; init; } =
             CapturedAtUtc.HasValue ? NormalizeToUtc(CapturedAtUtc.Value) : DateTime.UtcNow;
 
-        /// <summary>
-        /// True when the evidence is older than <paramref name="maxAge"/>. Both operands are
-        /// normalized to UTC so an unspecified- or local-kind <see cref="CapturedAtUtc"/> can
-        /// never skew the age calculation.
-        /// </summary>
         public bool IsStale(TimeSpan maxAge) => (DateTime.UtcNow - TimestampUtc.ToUniversalTime()) > maxAge;
 
         private static DateTime NormalizeToUtc(DateTime value) => value.Kind switch
@@ -68,8 +79,9 @@ namespace WinCare.Application.Diagnostics
             DateTimeKind.Local => value.ToUniversalTime(),
             _ => DateTime.SpecifyKind(value, DateTimeKind.Utc),
         };
+
         public string ProvenanceSummary => $"Source: {Source} | Collector: {Collector} | Command: {CommandId ?? "system.core"}@{CommandVersion} | Captured: {TimestampUtc:yyyy-MM-dd HH:mm:ss} UTC";
-    };
+    }
 
     public sealed class DoctorActionPlan
     {
@@ -80,7 +92,7 @@ namespace WinCare.Application.Diagnostics
         public required IReadOnlyList<DiagnosticFinding> Findings { get; init; }
         public required IReadOnlyList<ProposedActionStep> ProposedSteps { get; init; }
         public IReadOnlyList<TelemetryEvidence> MeasuredEvidence { get; init; } = Array.Empty<TelemetryEvidence>();
-        public bool HasMutatingActions => ProposedSteps.Any(s => s.RiskLevel != CommandRisk.ReadOnly);
+        public bool HasMutatingActions => ProposedSteps.Any(step => !step.IsReadOnly);
         public DateTime GeneratedAtUtc { get; init; } = DateTime.UtcNow;
     }
 }

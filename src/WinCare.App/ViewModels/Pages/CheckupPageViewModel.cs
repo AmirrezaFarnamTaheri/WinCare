@@ -21,28 +21,25 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
     private const string WuaRowTitle = "Updates";
 
     private readonly CommandDispatcher _dispatcher;
-    private readonly Microsoft.UI.Dispatching.DispatcherQueue? _dispatcherQueue = Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread();
     private readonly List<PageRow> _resultRows = [];
     private bool _isRunning;
-    private string _runSummary = "No check has been run yet.";
-    private string _healthScoreText = "—";
-    private string _healthScoreDetail = "awaiting check";
+    private string _runSummary = "Run Checkup to see how things look.";
+    private string _healthScoreText = "Not checked";
+    private string _healthScoreDetail = "Run Checkup to see the latest results";
     private string _healthScoreBrushKey = "AccentTealBrush";
-    private bool _hasResults;
-    private int _runVersion;
 
     public CheckupPageViewModel() : this(AppRuntime.Current.Dispatcher) { }
 
     internal CheckupPageViewModel(CommandDispatcher dispatcher)
         : base([
-            new PageSection("Quick check", "No quick check results are available.", [
-                new PageRow("Windows and hardware", "Build, uptime, memory, processor, and device basics.", "Ready", "Read-only"),
-                new PageRow("Storage", "Free space, volume state, and pressure thresholds.", "Ready", "Read-only"),
+            new PageSection("Quick check", "Run Checkup to see the latest results.", [
+                new PageRow("Windows and hardware", "Windows version, uptime, memory, processor, and device basics.", "Ready", "Read-only"),
+                new PageRow("Storage", "Free space and drive status.", "Ready", "Read-only"),
                 new PageRow("Security", "Windows Security, firewall, updates, and restart state.", "Ready", "Read-only"),
-                new PageRow("Updates", "Search Windows Update readiness without installing anything.", "Ready", "Read-only")]),
-            new PageSection("Results", "Completed check results will be listed here.", [])])
+                new PageRow("Updates", "Check Windows Update without installing anything.", "Ready", "Read-only")]),
+            new PageSection("Results", "Run Checkup to see results here.", [])])
     {
-        _dispatcher = dispatcher ?? throw new ArgumentNullException(nameof(dispatcher));
+        _dispatcher = dispatcher;
         RunQuickCheckCommand = new AsyncRelayCommand(RunQuickCheckAsync, () => !IsRunning);
     }
 
@@ -61,61 +58,24 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
         }
     }
 
-    public string RunActionText => IsRunning ? "Checking your PC…" : "Run a read-only check";
-
-    public string RunSummary
-    {
-        get => _runSummary;
-        private set => SetProperty(ref _runSummary, value);
-    }
-
-    public string HealthScoreText
-    {
-        get => _healthScoreText;
-        private set => SetProperty(ref _healthScoreText, value);
-    }
-
-    public string HealthScoreDetail
-    {
-        get => _healthScoreDetail;
-        private set => SetProperty(ref _healthScoreDetail, value);
-    }
-
-    public string HealthScoreBrushKey
-    {
-        get => _healthScoreBrushKey;
-        private set => SetProperty(ref _healthScoreBrushKey, value);
-    }
+    public string RunActionText => IsRunning ? "Checking your PC…" : "Run checkup";
+    public string RunSummary { get => _runSummary; private set => SetProperty(ref _runSummary, value); }
+    public string HealthScoreText { get => _healthScoreText; private set => SetProperty(ref _healthScoreText, value); }
+    public string HealthScoreDetail { get => _healthScoreDetail; private set => SetProperty(ref _healthScoreDetail, value); }
+    public string HealthScoreBrushKey { get => _healthScoreBrushKey; private set => SetProperty(ref _healthScoreBrushKey, value); }
 
     public override void SelectSection(int index)
     {
         base.SelectSection(index);
-        if (index != ResultsSectionIndex)
-        {
-            return;
-        }
-
-        CurrentRows.Clear();
-        if (_hasResults)
-        {
-            foreach (PageRow row in _resultRows)
-            {
-                row.IsCompact = IsCompactLayout;
-                CurrentRows.Add(row);
-            }
-        }
-
-        OnPropertyChanged(nameof(IsEmpty));
-        OnPropertyChanged(nameof(EmptyMessage));
+        if (index == ResultsSectionIndex) ShowResultRows();
     }
 
     private async Task RunQuickCheckAsync()
     {
-        int runVersion = ++_runVersion;
         IsRunning = true;
-        RunSummary = "Collecting read-only evidence concurrently…";
-        HealthScoreText = "…";
-        HealthScoreDetail = "checking";
+        RunSummary = "Checking a few important parts of Windows. Nothing will be changed.";
+        HealthScoreText = "Checking";
+        HealthScoreDetail = "checking now";
         HealthScoreBrushKey = "AccentTealBrush";
 
         try
@@ -123,57 +83,20 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
             foreach ((_, string rowTitle) in FastCheckCommands)
             {
                 PageRow? row = Sections[0].Rows.FirstOrDefault(candidate => candidate.Title == rowTitle);
-                if (row is not null)
-                {
-                    row.State = "Checking";
-                    row.Detail = "Read-only";
-                    row.StatusBrushKey = "AccentTealBrush";
-                    row.ActionText = null;
-                    row.ActionCommand = null;
-                }
+                if (row is not null) ResetRowForCheck(row, "Checking", "Read-only");
             }
 
             PageRow? wuaRow = Sections[0].Rows.FirstOrDefault(candidate => candidate.Title == WuaRowTitle);
             if (wuaRow is not null)
-            {
-                wuaRow.State = "Checking in background…";
-                wuaRow.Detail = "Searching Windows Update readiness in background…";
-                wuaRow.StatusBrushKey = "AccentTealBrush";
-                wuaRow.ActionText = null;
-                wuaRow.ActionCommand = null;
-            }
+                ResetRowForCheck(wuaRow, "Checking…", "Checking Windows Update…");
 
-            Task<CommandResult> wuaTask = Task.Run(async () =>
-            {
-                try
-                {
-                    return await _dispatcher.ExecuteAsync(
-                        CommandRequest.Preview(WuaCommandId),
-                        new CommandExecutionOptions(ReviewApproved: false, Deadline: DateTimeOffset.UtcNow + TimeSpan.FromSeconds(25)),
-                        CancellationToken.None).ConfigureAwait(false);
-                }
-                catch (Exception ex)
-                {
-                    return new CommandResult(
-                        WuaCommandId,
-                        Guid.NewGuid(),
-                        CommandResultStatus.Failed,
-                        "wua.query_error",
-                        $"Background update query failed: {ex.Message}",
-                        null,
-                        DateTimeOffset.UtcNow,
-                        DateTimeOffset.UtcNow,
-                        false);
-                }
-            });
-
+            Task<CommandResult> updateTask = RunUpdateCheckAsync();
             IReadOnlyList<CommandResult> fastResults = await ParallelCommandProbeRunner.RunPreviewsAsync(
                 _dispatcher,
                 FastCheckCommands.Select(item => item.CommandId).ToArray(),
                 TimeSpan.FromSeconds(3),
                 maxConcurrency: 3,
                 cancellationToken: CancellationToken.None);
-
             var fastDict = new Dictionary<string, CommandResult>(StringComparer.OrdinalIgnoreCase);
 
             for (int index = 0; index < FastCheckCommands.Length; index++)
@@ -181,131 +104,118 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
                 (string commandId, string rowTitle) = FastCheckCommands[index];
                 CommandResult result = fastResults[index];
                 fastDict[commandId] = result;
-
                 PageRow? row = Sections[0].Rows.FirstOrDefault(candidate => candidate.Title == rowTitle);
-                if (row is not null)
-                {
-                    row.State = result.Status == CommandResultStatus.Succeeded ? "Checked" : "Needs review";
-                    row.Detail = result.Message;
-                    row.StatusBrushKey = result.Status == CommandResultStatus.Succeeded ? "SuccessBrush" : "WarningBrush";
-                }
+                if (row is null) continue;
+
+                row.State = result.Status == CommandResultStatus.Succeeded ? "Checked" : "Needs review";
+                row.Detail = result.Message;
+                row.StatusBrushKey = result.Status == CommandResultStatus.Succeeded ? "SuccessBrush" : "WarningBrush";
             }
 
-            // Findings are evaluated from the quick-check rows, keeping the results tab synchronized.
-            _hasResults = true;
             EvaluateFindings(fastDict, null);
             RebuildResultRowsFromQuickChecks();
 
-            if (SelectedIndex == ResultsSectionIndex)
-            {
-                SelectSection(0);
-                SelectSection(ResultsSectionIndex);
-            }
-
-            // Keep the check active until the background Windows Update search completes.
-            Task wuaCompletion = wuaTask.ContinueWith(t =>
-            {
-                CommandResult wuaResult = (t.IsFaulted || t.IsCanceled)
-                    ? new CommandResult(
-                        WuaCommandId,
-                        Guid.NewGuid(),
-                        CommandResultStatus.Failed,
-                        "wua.background_fault",
-                        "Windows Update query was interrupted.",
-                        null,
-                        DateTimeOffset.UtcNow,
-                        DateTimeOffset.UtcNow,
-                        false)
-                    : t.Result;
-
-                DispatchToUi(() =>
-                {
-                    if (runVersion == _runVersion)
-                    {
-                        ApplyWuaResult(wuaResult, fastDict);
-                    }
-                });
-            }, CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
-
-            await wuaCompletion;
+            CommandResult updateResult = await updateTask;
+            ApplyWuaResult(updateResult, fastDict);
         }
         finally
         {
-            if (runVersion == _runVersion)
-            {
-                IsRunning = false;
-            }
+            IsRunning = false;
         }
     }
 
-    /// <summary>
-    /// Rebuilds the Results rows from evaluated quick-check rows.
-    /// </summary>
+    private async Task<CommandResult> RunUpdateCheckAsync()
+    {
+        try
+        {
+            return await _dispatcher.ExecuteAsync(
+                CommandRequest.Preview(WuaCommandId),
+                new CommandExecutionOptions(ReviewApproved: false, Deadline: DateTimeOffset.UtcNow + TimeSpan.FromSeconds(25)),
+                CancellationToken.None);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[CheckupPageViewModel] Windows Update check failed: {ex}");
+            return new CommandResult(
+                WuaCommandId,
+                Guid.NewGuid(),
+                CommandResultStatus.Failed,
+                "wua.query_error",
+                "Windows Update couldn't be checked.",
+                null,
+                DateTimeOffset.UtcNow,
+                DateTimeOffset.UtcNow,
+                false);
+        }
+    }
+
+    private static void ResetRowForCheck(PageRow row, string state, string detail)
+    {
+        row.State = state;
+        row.Detail = detail;
+        row.StatusBrushKey = "AccentTealBrush";
+        ClearNavigationAction(row);
+    }
+
     private void RebuildResultRowsFromQuickChecks()
     {
         _resultRows.Clear();
         foreach (PageRow quickRow in Sections[0].Rows)
         {
-            string description = FastCheckCommands.FirstOrDefault(item => item.RowTitle == quickRow.Title).CommandId
-                ?? (quickRow.Title == WuaRowTitle ? WuaCommandId : quickRow.Description);
-            _resultRows.Add(new PageRow(quickRow.Title, description, quickRow.State, quickRow.Detail)
+            _resultRows.Add(new PageRow(quickRow.Title, quickRow.Description, quickRow.State, quickRow.Detail)
             {
                 StatusBrushKey = quickRow.StatusBrushKey,
                 ActionText = quickRow.ActionText,
                 ActionCommand = quickRow.ActionCommand,
+                NavigationKey = quickRow.NavigationKey,
+                NavigationSectionTitle = quickRow.NavigationSectionTitle,
             });
         }
+        ShowResultRows();
+    }
+
+    private void ShowResultRows()
+    {
+        if (SelectedIndex != ResultsSectionIndex) return;
+
+        CurrentRows.Clear();
+        foreach (PageRow row in _resultRows)
+        {
+            row.IsCompact = IsCompactLayout;
+            CurrentRows.Add(row);
+        }
+        OnPropertyChanged(nameof(IsEmpty));
+        OnPropertyChanged(nameof(EmptyMessage));
     }
 
     private void ApplyWuaResult(CommandResult wuaResult, Dictionary<string, CommandResult> fastDict)
     {
         PageRow? row = Sections[0].Rows.FirstOrDefault(candidate => candidate.Title == WuaRowTitle);
-        PageRow? resRow = _resultRows.FirstOrDefault(candidate => candidate.Title == WuaRowTitle);
-
+        PageRow? resultRow = _resultRows.FirstOrDefault(candidate => candidate.Title == WuaRowTitle);
         string state = wuaResult.Status == CommandResultStatus.Succeeded ? "Checked" : "Needs review";
         string brushKey = wuaResult.Status == CommandResultStatus.Succeeded ? "SuccessBrush" : "WarningBrush";
         string detail = wuaResult.Message;
-
         if (wuaResult.Status == CommandResultStatus.Succeeded && wuaResult.Data?.ValueKind == JsonValueKind.Array)
         {
             int count = wuaResult.Data.Value.GetArrayLength();
-            if (count > 0)
-            {
-                state = $"{count} updates found";
-                brushKey = "WarningBrush";
-            }
-            else
-            {
-                state = "Up to date";
-                brushKey = "SuccessBrush";
-            }
+            if (count > 0) { state = $"{count} updates found"; brushKey = "WarningBrush"; }
+            else { state = "Up to date"; brushKey = "SuccessBrush"; }
         }
 
-        if (row is not null)
-        {
-            row.State = state;
-            row.Detail = detail;
-            row.StatusBrushKey = brushKey;
-            row.ActionText = brushKey == "WarningBrush" ? "Windows Update" : null;
-            row.ActionCommand = brushKey == "WarningBrush"
-                ? new AsyncRelayCommand(() => LaunchProtocolAsync("ms-settings:windowsupdate", row))
-                : null;
-        }
-
-        if (resRow is not null)
-        {
-            resRow.State = state;
-            resRow.Detail = detail;
-            resRow.StatusBrushKey = brushKey;
-        }
-
+        ApplyUpdateOutcome(row, state, detail, brushKey);
+        ApplyUpdateOutcome(resultRow, state, detail, brushKey);
         EvaluateFindings(fastDict, wuaResult);
+        ShowResultRows();
+    }
 
-        if (SelectedIndex == ResultsSectionIndex)
-        {
-            SelectSection(0);
-            SelectSection(ResultsSectionIndex);
-        }
+    private static void ApplyUpdateOutcome(PageRow? row, string state, string detail, string brushKey)
+    {
+        if (row is null) return;
+        row.State = state;
+        row.Detail = detail;
+        row.StatusBrushKey = brushKey;
+        if (brushKey == "WarningBrush") SetNavigationAction(row, "Review updates", "system-care", "Network & updates");
+        else ClearNavigationAction(row);
     }
 
     private void EvaluateFindings(Dictionary<string, CommandResult> fastDict, CommandResult? wuaResult)
@@ -320,239 +230,137 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
         foreach ((string commandId, string rowTitle) in FastCheckCommands)
         {
             if (fastDict.TryGetValue(commandId, out CommandResult? result) && result.Status != CommandResultStatus.Succeeded)
-            {
-                findings.Add($"{rowTitle} check did not complete");
-            }
+                findings.Add($"{rowTitle} check didn't finish");
         }
         if (wuaResult is not null && wuaResult.Status != CommandResultStatus.Succeeded)
-        {
-            findings.Add("Windows Update check did not complete");
-        }
+            findings.Add("Windows Update check didn't finish");
 
         if (fastDict.TryGetValue("storage", out CommandResult? storageResult) && storageResult.Status == CommandResultStatus.Succeeded)
         {
-            PageRow? storageRow = Sections[0].Rows.FirstOrDefault(c => c.Title == "Storage");
+            PageRow? storageRow = Sections[0].Rows.FirstOrDefault(candidate => candidate.Title == "Storage");
             if (storageResult.Data?.ValueKind == JsonValueKind.Array)
             {
                 foreach (JsonElement drive in storageResult.Data.Value.EnumerateArray())
                 {
-                    if (drive.TryGetProperty("ready", out JsonElement ready) && ready.GetBoolean() &&
-                        drive.TryGetProperty("freeBytes", out JsonElement freeElem))
+                    if (!drive.TryGetProperty("ready", out JsonElement ready) || !ready.GetBoolean() || !drive.TryGetProperty("freeBytes", out JsonElement freeElem))
+                        continue;
+
+                    long freeBytes = freeElem.GetInt64();
+                    double freeGb = freeBytes / (1024.0 * 1024.0 * 1024.0);
+                    string driveName = drive.TryGetProperty("name", out JsonElement nameElem) ? nameElem.GetString() ?? "Drive" : "Drive";
+                    if (freeGb < WinCare.Domain.Assessment.AssessmentPolicy.DiskFreeCriticalGb)
                     {
-                        long freeBytes = freeElem.GetInt64();
-                        double freeGb = freeBytes / (1024.0 * 1024.0 * 1024.0);
-                        string driveName = drive.TryGetProperty("name", out JsonElement nameElem) ? nameElem.GetString() ?? "Drive" : "Drive";
-                        if (freeGb < WinCare.Domain.Assessment.AssessmentPolicy.DiskFreeCriticalGb)
+                        hasCritical = true;
+                        findings.Add($"Low space on {driveName} ({freeGb:0.0} GB free)");
+                        if (storageRow is not null)
                         {
-                            hasCritical = true;
-                            findings.Add($"Low space on {driveName} ({freeGb:0.0} GB free)");
-                            if (storageRow is not null)
-                            {
-                                storageRow.State = "Critical space";
-                                storageRow.StatusBrushKey = "DangerBrush";
-                                storageRow.ActionText = "Clean Temp";
-                                storageRow.ActionCommand = new AsyncRelayCommand(RunQuickCleanAsync);
-                            }
+                            storageRow.State = "Very low space";
+                            storageRow.StatusBrushKey = "DangerBrush";
+                            SetNavigationAction(storageRow, "Review cleanup", "system-care", "Clean up");
                         }
-                        else if (freeGb < WinCare.Domain.Assessment.AssessmentPolicy.DiskFreeWarningGb)
+                    }
+                    else if (freeGb < WinCare.Domain.Assessment.AssessmentPolicy.DiskFreeWarningGb)
+                    {
+                        hasWarning = true;
+                        findings.Add($"Low space on {driveName} ({freeGb:0.0} GB free)");
+                        if (storageRow is not null && storageRow.StatusBrushKey != "DangerBrush")
                         {
-                            hasWarning = true;
-                            findings.Add($"Moderate space on {driveName} ({freeGb:0.0} GB free)");
-                            if (storageRow is not null && storageRow.StatusBrushKey != "DangerBrush")
-                            {
-                                storageRow.State = "Space attention";
-                                storageRow.StatusBrushKey = "WarningBrush";
-                                storageRow.ActionText = "Clean Temp";
-                                storageRow.ActionCommand = new AsyncRelayCommand(RunQuickCleanAsync);
-                            }
+                            storageRow.State = "Low space";
+                            storageRow.StatusBrushKey = "WarningBrush";
+                            SetNavigationAction(storageRow, "Review cleanup", "system-care", "Clean up");
                         }
                     }
                 }
             }
         }
 
-        if (fastDict.TryGetValue("security", out CommandResult? secResult) && secResult.Status == CommandResultStatus.Succeeded)
+        if (fastDict.TryGetValue("security", out CommandResult? securityResult) && securityResult.Status == CommandResultStatus.Succeeded)
         {
-            PageRow? secRow = Sections[0].Rows.FirstOrDefault(c => c.Title == "Security");
-            if (secResult.Data?.ValueKind == JsonValueKind.Object)
+            PageRow? securityRow = Sections[0].Rows.FirstOrDefault(candidate => candidate.Title == "Security");
+            if (securityResult.Data?.ValueKind == JsonValueKind.Object)
             {
-                if (secResult.Data.Value.TryGetProperty("defenderServiceRunning", out JsonElement defElem) && !defElem.GetBoolean())
+                if (securityResult.Data.Value.TryGetProperty("defenderServiceRunning", out JsonElement defenderElement) && !defenderElement.GetBoolean())
                 {
                     hasCritical = true;
-                    findings.Add("Windows Defender not running");
-                    if (secRow is not null)
+                    findings.Add("Windows Defender isn't running");
+                    if (securityRow is not null)
                     {
-                        secRow.State = "Defender stopped";
-                        secRow.StatusBrushKey = "DangerBrush";
-                        secRow.ActionText = "Windows Security";
-                        secRow.ActionCommand = new AsyncRelayCommand(() => LaunchProtocolAsync("windowsdefender:", secRow));
+                        securityRow.State = "Defender stopped";
+                        securityRow.StatusBrushKey = "DangerBrush";
+                        SetNavigationAction(securityRow, "Review security", "security", "Status");
                     }
                 }
-                if (secResult.Data.Value.TryGetProperty("firewallEnabled", out JsonElement fwElem) && !fwElem.GetBoolean())
+
+                if (securityResult.Data.Value.TryGetProperty("firewallEnabled", out JsonElement firewallElement) && !firewallElement.GetBoolean())
                 {
                     hasCritical = true;
-                    findings.Add("Firewall disabled");
-                    if (secRow is not null)
+                    findings.Add("Firewall is turned off");
+                    if (securityRow is not null)
                     {
-                        secRow.State = "Firewall disabled";
-                        secRow.StatusBrushKey = "DangerBrush";
+                        securityRow.State = "Firewall off";
+                        securityRow.StatusBrushKey = "DangerBrush";
+                        SetNavigationAction(securityRow, "Review security", "security", "Status");
                     }
                 }
             }
         }
 
-        if (wuaResult is not null && wuaResult.Status == CommandResultStatus.Succeeded &&
-            wuaResult.Data?.ValueKind == JsonValueKind.Array)
+        if (wuaResult is not null && wuaResult.Status == CommandResultStatus.Succeeded && wuaResult.Data?.ValueKind == JsonValueKind.Array)
         {
             int count = wuaResult.Data.Value.GetArrayLength();
-            if (count > 0)
-            {
-                hasWarning = true;
-                findings.Add($"{count} updates waiting");
-            }
+            if (count > 0) { hasWarning = true; findings.Add($"{count} updates waiting"); }
         }
 
         if (hasCritical)
         {
-            HealthScoreText = "Action";
-            HealthScoreDetail = "issues require action";
+            HealthScoreText = "Action needed";
+            HealthScoreDetail = "something needs your attention";
             HealthScoreBrushKey = "DangerBrush";
-            RunSummary = $"Action recommended: {string.Join("; ", findings)}. Review category details below.";
+            RunSummary = $"WinCare found something that needs attention: {string.Join("; ", findings)}.";
         }
         else if (hasWarning)
         {
-            HealthScoreText = "Attention";
-            HealthScoreDetail = "items need attention";
+            HealthScoreText = "Worth a look";
+            HealthScoreDetail = "a few things are worth checking";
             HealthScoreBrushKey = "WarningBrush";
-            RunSummary = $"Needs attention: {string.Join("; ", findings)}. Review category details below.";
+            RunSummary = $"A few things are worth a look: {string.Join("; ", findings)}.";
         }
         else if (hasIncompleteProbe)
         {
-            HealthScoreText = "Review";
-            HealthScoreDetail = "some checks incomplete";
+            HealthScoreText = "Incomplete";
+            HealthScoreDetail = "some checks didn't finish";
             HealthScoreBrushKey = "WarningBrush";
-            RunSummary = $"Some diagnostics did not complete: {string.Join("; ", findings)}.";
+            RunSummary = $"Some checks didn't finish: {string.Join("; ", findings)}.";
         }
         else if (updatesPending)
         {
             HealthScoreText = "Checking";
-            HealthScoreDetail = "Windows Update still checking";
+            HealthScoreDetail = "Windows Update is still checking";
             HealthScoreBrushKey = "AccentTealBrush";
-            RunSummary = "Fast diagnostics completed. Windows Update readiness is still being checked in the background.";
+            RunSummary = "The main checks are done. Windows Update is still checking.";
         }
         else
         {
-            HealthScoreText = "Healthy";
-            HealthScoreDetail = "checked areas look healthy";
+            HealthScoreText = "Looks good";
+            HealthScoreDetail = "nothing stood out in these checks";
             HealthScoreBrushKey = "SuccessBrush";
-            RunSummary = "Completed diagnostics found no critical warnings, update backlog, or disk pressure.";
+            RunSummary = "Everything checked looks okay.";
         }
     }
 
-    private async Task RunQuickCleanAsync()
+    private static void SetNavigationAction(PageRow row, string actionText, string navigationKey, string sectionTitle)
     {
-        PageRow? storageRow = Sections[0].Rows.FirstOrDefault(candidate => candidate.Title == "Storage");
-        try
-        {
-            if (storageRow is not null)
-            {
-                storageRow.State = "Cleaning…";
-                storageRow.ActionText = null;
-                storageRow.ActionCommand = null;
-            }
-
-            CommandResult preview = await _dispatcher.ExecuteAsync(
-                CommandRequest.Preview("cleaner-disk-pressure", JsonSerializer.SerializeToElement(new { })),
-                CommandExecutionOptions.Default,
-                CancellationToken.None);
-
-            if (preview.Status == CommandResultStatus.Succeeded && preview.ReviewPlan is { } plan)
-            {
-                CommandResult result = await _dispatcher.ExecuteAsync(
-                    CommandRequest.Execute("cleaner-disk-pressure", JsonSerializer.SerializeToElement(new { }), plan),
-                    new CommandExecutionOptions(ReviewApproved: true, Deadline: DateTimeOffset.UtcNow + TimeSpan.FromMinutes(2)),
-                    CancellationToken.None);
-
-                if (result.Status == CommandResultStatus.Succeeded)
-                {
-                    await RunQuickCheckAsync();
-                    return;
-                }
-
-                if (storageRow is not null)
-                {
-                    storageRow.State = "Cleanup failed";
-                    storageRow.Detail = result.Message;
-                    storageRow.StatusBrushKey = "WarningBrush";
-                }
-                return;
-            }
-
-            if (storageRow is not null)
-            {
-                storageRow.State = "Cleanup failed";
-                storageRow.Detail = preview.Message;
-                storageRow.StatusBrushKey = "WarningBrush";
-            }
-        }
-        catch (Exception ex)
-        {
-            if (storageRow is not null)
-            {
-                storageRow.State = "Cleanup failed";
-                storageRow.Detail = ex.Message;
-                storageRow.StatusBrushKey = "WarningBrush";
-            }
-        }
+        row.ActionText = actionText;
+        row.ActionCommand = null;
+        row.NavigationKey = navigationKey;
+        row.NavigationSectionTitle = sectionTitle;
     }
 
-    private async Task LaunchProtocolAsync(string uriString, PageRow? row = null)
+    private static void ClearNavigationAction(PageRow row)
     {
-        try
-        {
-            if (Uri.TryCreate(uriString, UriKind.Absolute, out Uri? uri))
-            {
-                bool success = await Windows.System.Launcher.LaunchUriAsync(uri);
-                if (!success)
-                {
-                    SurfaceLaunchFailure(row, uriString, "No application is registered to handle this protocol.");
-                }
-            }
-            else
-            {
-                SurfaceLaunchFailure(row, uriString, "Invalid protocol URI.");
-            }
-        }
-        catch (Exception ex)
-        {
-            SurfaceLaunchFailure(row, uriString, ex.Message);
-        }
-    }
-
-    private void SurfaceLaunchFailure(PageRow? row, string uriString, string errorMessage)
-    {
-        System.Diagnostics.Debug.WriteLine($"[CheckupPage] Protocol launch failed for '{uriString}': {errorMessage}");
-        DispatchToUi(() =>
-        {
-            if (row is not null)
-            {
-                row.State = "Launch failed";
-                row.Detail = errorMessage;
-                row.StatusBrushKey = "WarningBrush";
-            }
-            RunSummary = $"Unable to open '{uriString}': {errorMessage}";
-        });
-    }
-
-    private void DispatchToUi(Action action)
-    {
-        if (_dispatcherQueue is not null && !_dispatcherQueue.HasThreadAccess)
-        {
-            _dispatcherQueue.TryEnqueue(() => action());
-        }
-        else
-        {
-            action();
-        }
+        row.ActionText = null;
+        row.ActionCommand = null;
+        row.NavigationKey = null;
+        row.NavigationSectionTitle = null;
     }
 }

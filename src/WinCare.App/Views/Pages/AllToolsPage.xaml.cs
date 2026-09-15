@@ -14,12 +14,6 @@ public sealed partial class AllToolsPage : Page
 {
     private const double ToolTableCompactBreakpointDip = 840;
     private const double InlineInspectorBreakpointDip = 1320;
-    private Grid? _filterGrid;
-    private ComboBox? _areaFilter;
-    private ComboBox? _riskFilter;
-    private CheckBox? _readOnlyFilter;
-    private TextBlock? _resultCount;
-    private Expander? _parameterExpander;
     private Control? _inspectorReturnFocus;
 
     public AllToolsPage()
@@ -28,9 +22,8 @@ public sealed partial class AllToolsPage : Page
         InitializeComponent();
         ToolTabs.SelectedItem = ToolTabs.Items[0] as SelectorBarItem;
         ViewModel.PropertyChanged += ViewModel_PropertyChanged;
-        CaptureResponsiveControls();
-        // Mount the editor once the page is loaded so the template is materialized.
-        Loaded += (_, _) => ReplaceRawParameterEditor();
+        ApplyFilterLayout(ActualWidth < ToolTableCompactBreakpointDip);
+        RebuildParameterEditor();
     }
 
     public AllToolsPageViewModel ViewModel { get; }
@@ -41,7 +34,6 @@ public sealed partial class AllToolsPage : Page
     protected override void OnNavigatedTo(NavigationEventArgs e)
     {
         base.OnNavigatedTo(e);
-        // Reset search when an explicit navigation query is provided.
         if (e.Parameter is ToolNavigationRequest request)
         {
             ToolTabs.SelectedItem = ToolTabs.Items[0] as SelectorBarItem;
@@ -52,34 +44,35 @@ public sealed partial class AllToolsPage : Page
         {
             ToolTabs.SelectedItem = ToolTabs.Items[0] as SelectorBarItem;
             ViewModel.OpenSearch(query);
-            if (ViewModel.SelectedTool is not null) DispatcherQueue.TryEnqueue(() => InspectorCloseButton.Focus(FocusState.Programmatic));
-            else (ViewModel.IsCompactLayout ? FindCompactSearchBox() : ToolSearchBox)?.Focus(FocusState.Programmatic);
+            if (ViewModel.SelectedTool is not null)
+                DispatcherQueue.TryEnqueue(() => InspectorCloseButton.Focus(FocusState.Programmatic));
+            else
+                ToolSearchBox.Focus(FocusState.Programmatic);
         }
-    }
-
-    protected override void OnNavigatedFrom(NavigationEventArgs e)
-    {
-        // This page is cached: its view model must remain subscribed when navigating back.
-        base.OnNavigatedFrom(e);
     }
 
     private void ToolTabs_SelectionChanged(SelectorBar sender, SelectorBarSelectionChangedEventArgs args)
     {
-        if (sender.SelectedItem is SelectorBarItem item)
-        {
-            ViewModel.SelectTab(item.Text);
-            SearchFilterGrid.Visibility = ViewModel.IsPresetTab ? Visibility.Collapsed : Visibility.Visible;
-        }
+        if (sender.SelectedItem is not SelectorBarItem item) return;
+        ViewModel.SelectTab(item.Text);
+        SearchFilterGrid.Visibility = ViewModel.IsCatalogTab ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    private void CategoryCard_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { Tag: string key }) return;
+        string[] parts = key.Split('\u001f', 2);
+        if (parts.Length != 2 || !ViewModel.OpenCategory(parts[0], parts[1])) return;
+        ToolTabs.SelectedItem = ToolTabs.Items[0] as SelectorBarItem;
+        ToolSearchBox.Focus(FocusState.Programmatic);
     }
 
     private void ReviewPresetButton_Click(object sender, RoutedEventArgs e)
     {
-        if (sender is Button { Tag: string presetId })
-        {
-            _inspectorReturnFocus = sender as Control;
-            ViewModel.SelectPresetForReview(presetId);
-            DispatcherQueue.TryEnqueue(() => InspectorCloseButton.Focus(FocusState.Programmatic));
-        }
+        if (sender is not Button { Tag: string presetId }) return;
+        _inspectorReturnFocus = sender as Control;
+        ViewModel.SelectPresetForReview(presetId);
+        DispatcherQueue.TryEnqueue(() => InspectorCloseButton.Focus(FocusState.Programmatic));
     }
 
     private void ToolTable_ItemClick(object sender, ItemClickEventArgs e)
@@ -95,7 +88,7 @@ public sealed partial class AllToolsPage : Page
     {
         ViewModel.IsDetailsOpen = false;
         if (_inspectorReturnFocus?.IsLoaded == true) _inspectorReturnFocus.Focus(FocusState.Programmatic);
-        else if (ViewModel.IsPresetTab) ToolTabs.Focus(FocusState.Programmatic);
+        else if (!ViewModel.IsCatalogTab) ToolTabs.Focus(FocusState.Programmatic);
         else ToolSearchBox.Focus(FocusState.Programmatic);
         _inspectorReturnFocus = null;
     }
@@ -122,8 +115,7 @@ public sealed partial class AllToolsPage : Page
     private void ToolSearch_FocusAccelerator(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
     {
         ToolTabs.SelectedItem = ToolTabs.Items[0] as SelectorBarItem;
-        TextBox target = ViewModel.IsCompactLayout ? FindCompactSearchBox() ?? ToolSearchBox : ToolSearchBox;
-        target.Focus(FocusState.Keyboard);
+        ToolSearchBox.Focus(FocusState.Keyboard);
         args.Handled = true;
     }
 
@@ -133,123 +125,58 @@ public sealed partial class AllToolsPage : Page
             RebuildParameterEditor();
     }
 
-    private void CaptureResponsiveControls()
-    {
-        _filterGrid = ToolSearchBox.Parent as Grid;
-        if (_filterGrid is null) return;
-
-        _areaFilter = _filterGrid.Children.OfType<ComboBox>().FirstOrDefault();
-        _riskFilter = _filterGrid.Children.OfType<ComboBox>().Skip(1).FirstOrDefault();
-        _readOnlyFilter = _filterGrid.Children.OfType<CheckBox>().FirstOrDefault();
-        _resultCount = _filterGrid.Children.OfType<TextBlock>().FirstOrDefault();
-        ApplyFilterLayout(ActualWidth < ToolTableCompactBreakpointDip);
-    }
-
-    private TextBox? FindCompactSearchBox()
-    {
-        if (_filterGrid is null || !ViewModel.IsCompactLayout) return null;
-        return ToolSearchBox;
-    }
-
     private void ApplyFilterLayout(bool compact)
     {
-        if (_filterGrid is null || _areaFilter is null || _riskFilter is null || _readOnlyFilter is null || _resultCount is null)
-            return;
-
-        _filterGrid.ColumnDefinitions.Clear();
-        _filterGrid.RowDefinitions.Clear();
+        SearchFilterGrid.ColumnDefinitions.Clear();
+        SearchFilterGrid.RowDefinitions.Clear();
 
         if (compact)
         {
-            _filterGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-            _filterGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-            _filterGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-            _filterGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-            _filterGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-            _filterGrid.RowSpacing = 8;
-            _filterGrid.ColumnSpacing = 10;
-
-            Grid.SetRow(ToolSearchBox, 0);
-            Grid.SetColumn(ToolSearchBox, 0);
-            Grid.SetColumnSpan(ToolSearchBox, 2);
-
-            Grid.SetRow(_areaFilter, 1);
-            Grid.SetColumn(_areaFilter, 0);
-            Grid.SetColumnSpan(_areaFilter, 1);
-            Grid.SetRow(_riskFilter, 1);
-            Grid.SetColumn(_riskFilter, 1);
-            Grid.SetColumnSpan(_riskFilter, 1);
-
-            Grid.SetRow(_readOnlyFilter, 2);
-            Grid.SetColumn(_readOnlyFilter, 0);
-            Grid.SetRow(_resultCount, 2);
-            Grid.SetColumn(_resultCount, 1);
-
-            _readOnlyFilter.Margin = new Thickness(0, 4, 0, 0);
-            _resultCount.Margin = new Thickness(0, 6, 0, 0);
-            _resultCount.HorizontalAlignment = HorizontalAlignment.Right;
+            SearchFilterGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            SearchFilterGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            SearchFilterGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            SearchFilterGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            SearchFilterGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            SearchFilterGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            SearchFilterGrid.RowSpacing = 8;
+            SearchFilterGrid.ColumnSpacing = 10;
+            Grid.SetRow(ToolSearchBox, 0); Grid.SetColumn(ToolSearchBox, 0); Grid.SetColumnSpan(ToolSearchBox, 2);
+            Grid.SetRow(AreaFilter, 1); Grid.SetColumn(AreaFilter, 0);
+            Grid.SetRow(SectionFilter, 1); Grid.SetColumn(SectionFilter, 1);
+            Grid.SetRow(RiskFilter, 2); Grid.SetColumn(RiskFilter, 0);
+            Grid.SetRow(ReadOnlyFilter, 2); Grid.SetColumn(ReadOnlyFilter, 1);
+            Grid.SetRow(ResultCountText, 3); Grid.SetColumn(ResultCountText, 1);
+            ReadOnlyFilter.Margin = new Thickness(0, 4, 0, 0);
+            ResultCountText.Margin = new Thickness(0, 6, 0, 0);
+            ResultCountText.HorizontalAlignment = HorizontalAlignment.Right;
         }
         else
         {
-            foreach (GridLength width in new[]
-            {
-                new GridLength(2, GridUnitType.Star),
-                new GridLength(220),
-                new GridLength(190),
-                GridLength.Auto,
-                GridLength.Auto,
-            })
-                _filterGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = width });
-
-            _filterGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-            _filterGrid.RowSpacing = 0;
-            _filterGrid.ColumnSpacing = 12;
-
-            Grid.SetRow(ToolSearchBox, 0);
-            Grid.SetColumn(ToolSearchBox, 0);
-            Grid.SetColumnSpan(ToolSearchBox, 1);
-            Grid.SetRow(_areaFilter, 0);
-            Grid.SetColumn(_areaFilter, 1);
-            Grid.SetRow(_riskFilter, 0);
-            Grid.SetColumn(_riskFilter, 2);
-            Grid.SetRow(_readOnlyFilter, 0);
-            Grid.SetColumn(_readOnlyFilter, 3);
-            Grid.SetRow(_resultCount, 0);
-            Grid.SetColumn(_resultCount, 4);
-
-            _readOnlyFilter.Margin = new Thickness(0, 26, 0, 0);
-            _resultCount.Margin = new Thickness(8, 28, 0, 0);
-            _resultCount.HorizontalAlignment = HorizontalAlignment.Left;
+            foreach (GridLength width in new[] { new GridLength(2, GridUnitType.Star), new GridLength(190), new GridLength(190), new GridLength(160), GridLength.Auto, GridLength.Auto })
+                SearchFilterGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = width });
+            SearchFilterGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            SearchFilterGrid.RowSpacing = 0;
+            SearchFilterGrid.ColumnSpacing = 12;
+            Grid.SetRow(ToolSearchBox, 0); Grid.SetColumn(ToolSearchBox, 0); Grid.SetColumnSpan(ToolSearchBox, 1);
+            Grid.SetRow(AreaFilter, 0); Grid.SetColumn(AreaFilter, 1);
+            Grid.SetRow(SectionFilter, 0); Grid.SetColumn(SectionFilter, 2);
+            Grid.SetRow(RiskFilter, 0); Grid.SetColumn(RiskFilter, 3);
+            Grid.SetRow(ReadOnlyFilter, 0); Grid.SetColumn(ReadOnlyFilter, 4);
+            Grid.SetRow(ResultCountText, 0); Grid.SetColumn(ResultCountText, 5);
+            ReadOnlyFilter.Margin = new Thickness(0, 26, 0, 0);
+            ResultCountText.Margin = new Thickness(8, 28, 0, 0);
+            ResultCountText.HorizontalAlignment = HorizontalAlignment.Left;
         }
-    }
-
-    private void ReplaceRawParameterEditor()
-    {
-        if (_parameterExpander is not null)
-        {
-            RebuildParameterEditor();
-            return;
-        }
-        _parameterExpander = FindVisualDescendant<Expander>(this, expander =>
-            string.Equals(AutomationProperties.GetName(expander), "Command parameters JSON", StringComparison.Ordinal));
-        if (_parameterExpander is null) return;
-
-        _parameterExpander.Header = "Command parameters";
-        AutomationProperties.SetName(_parameterExpander, "Command parameters");
-        _parameterExpander.IsExpanded = true;
-        RebuildParameterEditor();
     }
 
     private void RebuildParameterEditor()
     {
-        if (_parameterExpander is null) return;
-
         var root = new StackPanel { Spacing = 12 };
         root.Children.Add(new TextBlock
         {
             Text = ViewModel.Execution.ParameterEditorSummary,
             TextWrapping = TextWrapping.Wrap,
-            Opacity = 0.78,
+            Opacity = 0.78
         });
 
         var structuredPanel = new StackPanel { Spacing = 12 };
@@ -262,7 +189,7 @@ public sealed partial class AllToolsPage : Page
             Header = "Advanced parameter editing",
             OffContent = "Typed inputs",
             OnContent = "Raw JSON",
-            IsOn = ViewModel.Execution.UseAdvancedParameterJson,
+            IsOn = ViewModel.Execution.UseAdvancedParameterJson
         };
         AutomationProperties.SetAutomationId(advancedToggle, "AdvancedParameterEditing");
         AutomationProperties.SetName(advancedToggle, "Use raw JSON command parameters");
@@ -284,8 +211,7 @@ public sealed partial class AllToolsPage : Page
         AutomationProperties.SetName(rawEditor, "Advanced command parameters as JSON");
         rawEditor.TextChanged += (_, _) =>
         {
-            if (ViewModel.Execution.UseAdvancedParameterJson)
-                ViewModel.Execution.ParameterJson = rawEditor.Text;
+            if (ViewModel.Execution.UseAdvancedParameterJson) ViewModel.Execution.ParameterJson = rawEditor.Text;
         };
         root.Children.Add(rawEditor);
 
@@ -301,7 +227,6 @@ public sealed partial class AllToolsPage : Page
                     rawEditor.Focus(FocusState.Programmatic);
                     return;
                 }
-                // Rebuild typed controls so they reflect imported raw JSON values.
                 RebuildParameterEditor();
             }
             else
@@ -314,7 +239,7 @@ public sealed partial class AllToolsPage : Page
 
         structuredPanel.Visibility = advancedToggle.IsOn ? Visibility.Collapsed : Visibility.Visible;
         rawEditor.Visibility = advancedToggle.IsOn ? Visibility.Visible : Visibility.Collapsed;
-        _parameterExpander.Content = root;
+        ParameterExpander.Content = root;
     }
 
     private FrameworkElement CreateParameterField(ToolParameterFieldViewModel field)
@@ -324,7 +249,7 @@ public sealed partial class AllToolsPage : Page
         {
             Text = field.Label,
             FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
-            TextWrapping = TextWrapping.Wrap,
+            TextWrapping = TextWrapping.Wrap
         });
 
         FrameworkElement editor;
@@ -341,7 +266,7 @@ public sealed partial class AllToolsPage : Page
             {
                 OffContent = "False",
                 OnContent = "True",
-                IsOn = bool.TryParse(field.Value, out bool initial) && initial,
+                IsOn = bool.TryParse(field.Value, out bool initial) && initial
             };
             toggle.Toggled += (_, _) => field.Value = toggle.IsOn ? "true" : "false";
             editor = toggle;
@@ -351,7 +276,7 @@ public sealed partial class AllToolsPage : Page
             var number = new NumberBox
             {
                 SpinButtonPlacementMode = NumberBoxSpinButtonPlacementMode.Compact,
-                HorizontalAlignment = HorizontalAlignment.Stretch,
+                HorizontalAlignment = HorizontalAlignment.Stretch
             };
             if (double.TryParse(field.Definition.Minimum, NumberStyles.Float, CultureInfo.InvariantCulture, out double min)) number.Minimum = min;
             if (double.TryParse(field.Definition.Maximum, NumberStyles.Float, CultureInfo.InvariantCulture, out double max)) number.Maximum = max;
@@ -372,7 +297,7 @@ public sealed partial class AllToolsPage : Page
                 AcceptsReturn = multiline,
                 MinHeight = multiline ? 88 : 0,
                 TextWrapping = multiline ? TextWrapping.Wrap : TextWrapping.NoWrap,
-                HorizontalAlignment = HorizontalAlignment.Stretch,
+                HorizontalAlignment = HorizontalAlignment.Stretch
             };
             text.TextChanged += (_, _) => field.Value = text.Text;
             editor = text;
@@ -386,21 +311,8 @@ public sealed partial class AllToolsPage : Page
             Text = field.Hint,
             FontSize = 11,
             Opacity = 0.72,
-            TextWrapping = TextWrapping.Wrap,
+            TextWrapping = TextWrapping.Wrap
         });
         return container;
-    }
-
-    private static T? FindVisualDescendant<T>(DependencyObject root, Func<T, bool> predicate) where T : DependencyObject
-    {
-        int count = Microsoft.UI.Xaml.Media.VisualTreeHelper.GetChildrenCount(root);
-        for (int i = 0; i < count; i++)
-        {
-            DependencyObject child = Microsoft.UI.Xaml.Media.VisualTreeHelper.GetChild(root, i);
-            if (child is T candidate && predicate(candidate)) return candidate;
-            T? nested = FindVisualDescendant(child, predicate);
-            if (nested is not null) return nested;
-        }
-        return null;
     }
 }

@@ -19,8 +19,10 @@
 ## Overview
 
 <p align="center">
-  <img src="docs/images/runtime-dashboard.png" alt="WinCare dashboard" width="900" />
+  <img src="docs/images/runtime-dashboard.png" alt="Historical WinCare v2.5.0-rc5 Home runtime capture" width="900" />
 </p>
+
+<p align="center"><em>Historical v2.5.0-rc5 runtime capture. The current source has a newer task-first Home; see <a href="docs/Screenshots.md">Screenshots</a> for capture status.</em></p>
 
 WinCare brings Windows maintenance, diagnostics, recovery, and operational tooling into one native WinUI 3 application. Read-only checks remain separate from mutations, system-changing actions use explicit admission rules, and operation history is stored locally so users can see what ran and why.
 
@@ -29,11 +31,22 @@ WinCare brings Windows maintenance, diagnostics, recovery, and operational tooli
 | Check system health | Inspect system, storage, security, hardware, network, update, and runtime evidence. |
 | Clean up and maintain | Review bounded cleanup targets, startup state, app/package state, and maintenance workflows. |
 | Repair and recover | Use guarded repair, remediation, restore, and recovery operations with explicit outcomes. |
-| Work with advanced tools | Use the typed command catalog, diagnostics, window/workspace tools, developer utilities, native helpers, and completed download scheduling/range-transfer services. |
-| Extend the app | Install and manage locally admitted plugins through the Plugin Store and plugin tooling. |
+| Work with advanced tools | Use Power tools for the complete typed catalog, including diagnostics, automation, window/workspace tools, developer utilities, native helpers, and download tooling. |
+| Extend the app | Add and manage locally admitted capabilities through Extensions. |
 | Review history | Inspect activity, receipts, change records, and local operation evidence. |
 
 Explore the [interactive showcase](docs/showcase.html) or see [interface screenshots](docs/Screenshots.md).
+
+### Where capabilities live
+
+WinCare keeps common work out of the full command catalog:
+
+- **Home** surfaces the next useful action, common care tasks, recent activity, and links to advanced areas.
+- **Checkup** is read-only and hands findings off to the relevant care page instead of changing Windows itself.
+- **System care**, **Security**, and **Repair & recovery** use the catalog's exact Area/Section taxonomy so tools do not leak into unrelated tabs.
+- **Power tools** exposes all 269 native commands with task search, Area + Section filters, real category browsing, Favorites, Recent, typed parameters, and Care plans.
+- **Extensions** contains optional built-in and locally admitted capabilities; **Troubleshoot** is the local rule-based diagnostic assistant.
+- **Ctrl+K** searches pages, tools, extensions, and help topics from anywhere in the app.
 
 ## Install
 

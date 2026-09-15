@@ -6,29 +6,17 @@
     xmlns:controls="using:WinCare.App.Controls"
     NavigationCacheMode="Required">
     <Grid Padding="28,28,28,32" RowSpacing="20">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="*" />
-        </Grid.RowDefinitions>
-
+        <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="*" /></Grid.RowDefinitions>
         <StackPanel Spacing="6">
             <TextBlock x:Uid="SecurityPageTitle" Style="{StaticResource PageTitleTextStyle}" Text="Security" />
-            <TextBlock MaxWidth="760" HorizontalAlignment="Left" Style="{StaticResource PageDescriptionTextStyle}" Text="Understand protection state and review security changes before applying them." />
+            <TextBlock MaxWidth="760" HorizontalAlignment="Left" Style="{StaticResource PageDescriptionTextStyle}" Text="See how Windows is protected and review security changes before you apply them." />
         </StackPanel>
-
-        <SelectorBar
-            x:Name="SectionSelector"
-            Grid.Row="1"
-            SelectionChanged="SectionSelector_SelectionChanged"
-            AutomationProperties.AutomationId="SecurityPageTabs"
-            AutomationProperties.Name="Security sections">
+        <SelectorBar x:Name="SectionSelector" Grid.Row="1" SelectionChanged="SectionSelector_SelectionChanged" AutomationProperties.AutomationId="SecurityPageTabs" AutomationProperties.Name="Security sections">
             <SelectorBarItem Text="Status" AutomationProperties.Name="Status" />
             <SelectorBarItem Text="Protection" AutomationProperties.Name="Protection" />
             <SelectorBarItem Text="Privacy" AutomationProperties.Name="Privacy" />
             <SelectorBarItem Text="Hardening" AutomationProperties.Name="Hardening" />
         </SelectorBar>
-
         <controls:CareToolList Grid.Row="2" ViewModel="{x:Bind ViewModel}" />
     </Grid>
 </Page>

@@ -72,6 +72,12 @@ public sealed class ToolCatalogService
                 string.Equals(command.Area, filter.Area, StringComparison.OrdinalIgnoreCase));
         }
 
+        if (!string.IsNullOrWhiteSpace(filter.Section))
+        {
+            result = result.Where(command =>
+                string.Equals(command.Section, filter.Section, StringComparison.OrdinalIgnoreCase));
+        }
+
         if (filter.Risk is not null)
         {
             result = result.Where(command => command.Risk == filter.Risk);
@@ -110,13 +116,13 @@ public sealed class ToolCatalogService
             IReadOnlyList<CommandDefinition> activePluginCommands = _pluginRegistry.GetActivePluginCommands();
             Dictionary<string, CommandDefinition> merged = new(StringComparer.OrdinalIgnoreCase);
 
-            // Built-in core commands take absolute precedence
+            // Built-in core commands take absolute precedence.
             foreach (CommandDefinition cmd in _baseCommands)
             {
                 merged[cmd.Id] = cmd;
             }
 
-            // Finding 5: Reserve core namespaces; do not overwrite core command definitions with plugin commands
+            // Reserve core namespaces; plugin commands can extend but never replace core definitions.
             foreach (CommandDefinition cmd in activePluginCommands)
             {
                 if (!merged.ContainsKey(cmd.Id))
@@ -132,9 +138,10 @@ public sealed class ToolCatalogService
 
     private static bool Matches(CommandDefinition command, string query)
     {
-        // Multi-word queries match per token against any field.
+        // Multi-word task searches require every term to match at least one searchable field.
+        // This keeps Power tools consistent with Ctrl+K and avoids noisy OR-style overmatching.
         string[] tokens = query.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        return tokens.Length == 0 || tokens.Any(token => MatchesToken(command, token));
+        return tokens.Length == 0 || tokens.All(token => MatchesToken(command, token));
     }
 
     private static bool MatchesToken(CommandDefinition command, string token)

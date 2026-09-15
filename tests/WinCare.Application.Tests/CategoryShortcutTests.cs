@@ -1,82 +1,55 @@
-using System.Collections.Generic;
-using System.Linq;
 using WinCare.Application.Tools;
 using Xunit;
 
 namespace WinCare.Application.Tests;
 
 /// <summary>
-/// Regression tests for built-in category shortcuts resolving to nonempty command sets.
+/// Regression coverage for the user-facing care taxonomy. Product tabs must project exact
+/// catalog sections instead of fuzzy shortcut queries.
 /// </summary>
 public sealed class CategoryShortcutTests
 {
-    /// <summary>
-    /// Mirror of the ToolSearchQuery values in SystemCarePageViewModel, SecurityPageViewModel
-    /// and RepairRecoveryPageViewModel (WinCare.App is not referenced from test code).
-    /// </summary>
-    public static TheoryData<string> BuiltInShortcutQueries => new()
-    {
-        // System care tabs
-        "storage cleanup", "performance", "startup applications", "network update", "preset",
-        // Security tabs
-        "security", "security-control", "privacy", "hardening",
-        // Repair & recovery tabs
-        "repair", "restore", "reports", "export backup", "recovery reset",
-    };
-
     private readonly ToolCatalogService _service = new();
 
+    public static TheoryData<string, string, int> CareSections => new()
+    {
+        { "System care", "Clean up", 11 },
+        { "System care", "Performance", 59 },
+        { "System care", "Apps & startup", 12 },
+        { "System care", "Network & updates", 26 },
+        { "System care", "Routines", 8 },
+        { "Security", "Status", 20 },
+        { "Security", "Protection", 2 },
+        { "Security", "Privacy", 2 },
+        { "Security", "Hardening", 10 },
+        { "Repair & recovery", "Repair", 18 },
+        { "Repair & recovery", "Restore", 1 },
+        { "Repair & recovery", "Backup", 2 },
+        { "Repair & recovery", "Reset & media", 4 },
+    };
+
     [Theory]
-    [MemberData(nameof(BuiltInShortcutQueries))]
-    public void Every_built_in_category_shortcut_resolves_to_a_nonempty_command_set(string query)
+    [MemberData(nameof(CareSections))]
+    public void Care_taxonomy_projects_only_the_exact_area_and_section(string area, string section, int expectedCount)
     {
-        IReadOnlyList<CommandCatalog.Models.CommandDefinition> results = _service.Search(query);
+        var results = CareAreaProjectionService.Project(_service, new CareAreaSelection(area, section), []);
 
-        Assert.NotEmpty(results);
+        Assert.Equal(expectedCount, results.Count);
+        Assert.All(results, item =>
+        {
+            Assert.Equal(area, item.Command.Area, ignoreCase: true);
+            Assert.Equal(section, item.Command.Section, ignoreCase: true);
+        });
     }
 
     [Fact]
-    public void Storage_cleanup_shortcut_resolves_the_cleanup_family()
+    public void Routines_and_maintenance_can_be_combined_without_cross_area_leakage()
     {
-        var ids = _service.Search("storage cleanup").Select(command => command.Id).ToHashSet();
+        var selection = new CareAreaSelection("System care", ["Routines", "Maintenance"]);
+        var results = CareAreaProjectionService.Project(_service, selection, []);
 
-        Assert.Contains("cleanup-targets", ids);
-        Assert.Contains("cleaner-disk-pressure", ids);
-    }
-
-    [Fact]
-    public void Network_update_shortcut_resolves_the_network_and_update_families()
-    {
-        var ids = _service.Search("network update").Select(command => command.Id).ToHashSet();
-
-        Assert.Contains("network", ids);
-        Assert.Contains("wua-search", ids);
-    }
-
-    [Fact]
-    public void Previously_fabricated_defender_firewall_shortcut_is_gone()
-    {
-        // The catalog has never had Defender/firewall commands; the Security protection tab
-        // must target the security-control family instead.
-        Assert.DoesNotContain(_service.Search("defender firewall"), command => command.Id.Contains("defender", StringComparison.Ordinal));
-        Assert.Contains(_service.Search("security-control"), command => command.Id == "security-control-reduce");
-    }
-
-    [Fact]
-    public void Export_backup_shortcut_resolves_export_and_backup_families()
-    {
-        var ids = _service.Search("export backup").Select(command => command.Id).ToHashSet();
-
-        Assert.Contains("bcd-export", ids);
-        Assert.Contains("steam-backup", ids);
-    }
-
-    [Fact]
-    public void Recovery_reset_shortcut_resolves_recovery_and_reset_families()
-    {
-        var ids = _service.Search("recovery reset").Select(command => command.Id).ToHashSet();
-
-        Assert.Contains("bcd-export", ids);
-        Assert.Contains("deep-clean", ids);
+        Assert.Equal(9, results.Count);
+        Assert.All(results, item => Assert.Equal("System care", item.Command.Area, ignoreCase: true));
+        Assert.All(results, item => Assert.Contains(item.Command.Section, selection.Sections));
     }
 }

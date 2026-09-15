@@ -1,5 +1,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using WinCare.CommandCatalog.Models;
+using WinCare.Domain.Commands;
 
 namespace WinCare.App.ViewModels.Pages;
 
@@ -19,14 +20,13 @@ public sealed class ToolRowViewModel : ObservableObject
     public string Summary => Definition.Summary;
     public string Area => Definition.Area;
     public string Section => Definition.Section;
-    public string Risk => Definition.Risk switch
+    public string CategoryText => $"{Area} · {Section}";
+    public string Risk => Definition.RiskTier switch
     {
-        CommandRisk.ReadOnly => "Read-only",
-        CommandRisk.Low => "Low",
-        CommandRisk.Moderate => "Moderate",
-        CommandRisk.High => "High",
-        CommandRisk.Critical => "Critical",
-        _ => Definition.Risk.ToString(),
+        RiskTier.Safe => "Safe",
+        RiskTier.Moderate => "Moderate",
+        RiskTier.Destructive => "Destructive",
+        _ => "Unknown",
     };
     public string AdministratorAccess => Definition.AdministratorAccess switch
     {
@@ -59,15 +59,7 @@ public sealed class ToolRowViewModel : ObservableObject
         set => SetProperty(ref _isCompact, value);
     }
 
-    public string RiskPillLabel => Risk switch
-    {
-        "Read-only" => "Read-only",
-        "Low" => "Low",
-        "Moderate" => "Moderate",
-        "High" => "High risk",
-        "Critical" => "Critical",
-        _ => Risk ?? "Unknown",
-    };
+    public string RiskPillLabel => Definition.ReadOnly ? "Read-only" : Risk;
 
     public string StatusPillLabel => MigrationState switch
     {
@@ -81,15 +73,14 @@ public sealed class ToolRowViewModel : ObservableObject
         get
         {
             if (MigrationState is not "Behavior verified" and not "Implemented")
-            {
                 return "PillNotReadyBgBrush";
-            }
+            if (Definition.ReadOnly)
+                return "PillReadOnlyBgBrush";
 
-            return Risk switch
+            return Definition.RiskTier switch
             {
-                "Read-only" => "PillReadOnlyBgBrush",
-                "Low" or "Moderate" => "PillElevatedBgBrush",
-                "High" or "Critical" => "PillMutatingBgBrush",
+                RiskTier.Safe or RiskTier.Moderate => "PillElevatedBgBrush",
+                RiskTier.Destructive => "PillMutatingBgBrush",
                 _ => "PillMutatingBgBrush",
             };
         }
@@ -100,21 +91,21 @@ public sealed class ToolRowViewModel : ObservableObject
         get
         {
             if (MigrationState is not "Behavior verified" and not "Implemented")
-            {
                 return "PillAltTextBrush";
-            }
 
-            return Risk switch
+            return Definition.RiskTier switch
             {
-                "Low" or "Moderate" => "PillAltTextBrush",
+                RiskTier.Safe when !Definition.ReadOnly => "PillAltTextBrush",
+                RiskTier.Moderate => "PillAltTextBrush",
                 _ => "PillTextBrush",
             };
         }
     }
 
     /// <summary>
-    /// Concise accessible name for the selectable row (title, area, and risk).
+    /// Concise accessible name for the selectable row (title, area, and product-facing safety tier).
     /// </summary>
-    public string ToolAccessibleName => $"{Title}, {Definition.Area}, risk {Risk}";
-
+    public string ToolAccessibleName => Definition.ReadOnly
+        ? $"{Title}, {Definition.Area}, {Risk} tier, read-only"
+        : $"{Title}, {Definition.Area}, {Risk} tier";
 }

@@ -1,10 +1,10 @@
-# WinCare — Precision Workspace
+# WinCare — Task-first Fluent Workspace
 
-The user selected a hybrid of Instrument Bench (A), System Atlas (C), Focus (D), and Care Board (E) in September 2026. This replaces the former Cyber-Operate visual specification. The app remains native WinUI 3.
+The September 2026 product finalization moves WinCare from an instrument-panel metaphor to a calmer task-first native WinUI 3 workspace. Earlier concepts remain reference studies only.
 
 ## Design intent
 
-Give people a clear starting point, an understandable view of their PC, and a reliable place to maintain it. Character comes from the custom exploded-system illustration, precise diagnostic channels, generous action hierarchy, and the sequence **Understand → Maintain → Review**.
+Give people a clear starting point, make the next useful action obvious, and keep advanced capability available without forcing everyone through a 269-command catalog. The product sequence is **Check → Understand → Act → Review**.
 
 Studies in `design/redesign-2026-09/precision-character/` are concept art, not runtime evidence. The implementation combines their strongest ideas rather than duplicating one screenshot.
 
@@ -46,19 +46,19 @@ Status colors retain semantic meaning. Brand color is not a health result. High 
 
 ## Composition
 
-Home begins with its checkup action. The atlas and live category buttons share a diagnostic workspace. Maintenance follows with catalog-derived risk badges, busy feedback and expandable evidence. Activity and review guidance close the page. The atlas is an illustration, never a detected hardware inventory.
+Home is recommendation-led: one checkup action, three common care entry points, a compact evidence summary, recent activity, and secondary links to Power tools, Extensions, and Troubleshoot. Decorative hardware atlases and telemetry HUDs are not part of the runtime Home hierarchy.
 
-Checkup uses a rectangular findings readout rather than a health gauge. All Tools puts search and filters first, retaining typed parameters, its inspector and execution feedback. Settings and documentation favor flowing sections.
+Checkup is explicitly read-only. Its selector appears before the findings list, and findings deep-link to the relevant care surface instead of performing maintenance in place. The summary is a checked-area status, not a synthetic health score.
 
-Wide navigation uses an open left instrument rail. Below 920 DIP it becomes compact; below 680 DIP it becomes an overlay menu. All routes remain available, grouped as overview, care areas, and workspace tools.
+System care, Security, and Repair & recovery share `CareToolList` and project commands through exact catalog Area/Section values. Descriptions sit under task names; impact and requirements are supporting metadata. Portable playbooks remain a dedicated Repair & recovery section.
 
-Home preserves its atlas-and-evidence split down to 780 DIP because its channels use short labels. Data-heavy pages continue to use the shared 920 DIP compact boundary.
+Power tools is the advanced catalog surface. Search, Area, Section, impact and read-only filters lead; Categories browses the real taxonomy; Favorites and Recent support repetition; Care plans remains separate. Normal rows omit command IDs and migration state. Those details stay behind **Advanced details** in the inspector.
 
-All Tools uses its own measured thresholds: the data table compacts below 840 DIP, while the 390-DIP inspector overlays below 1320 DIP so selecting a command never crushes the table.
+The wide shell uses a native left navigation rail grouped around Home, Checkup, Care, Power tools, and Activity. Extensions, Troubleshoot, Settings, and Help are secondary/footer routes. About is reachable from Help and global search without permanent rail space. Below 920 DIP the rail compacts, then becomes minimal below 680 DIP.
 
-System care, Security and Repair share `CareToolList`: descriptions sit under tool names, catalog status and requirements form supporting columns, and records stack below 760 DIP of available list width. Selecting a record opens its exact command in the inspector; these lists do not claim to be live machine assessments.
+Global search is product-wide: pages, native tools, extensions, and help topics participate. Unknown free text falls back to Power tools search. Data-heavy pages preserve stacked compact records; the Power tools inspector overlays below 1320 DIP. Avoid fixed-height prose and nested decorative enclosures.
 
-`LayoutVisibility.CompactBreakpointDip = 920.0` remains the page-level boundary. Home stacks the illustration/evidence and maintenance sections; below 600 DIP channels form a single column. Data pages preserve stacked records and All Tools retains its overlay inspector. Avoid fixed-height prose.
+`LayoutVisibility.CompactBreakpointDip = 920.0` remains the shared page-level compact boundary unless a component has a narrower measured breakpoint. Home's hero/evidence composition stacks below 820 DIP so the summary never competes with the primary action for horizontal space.
 
 ## Product truth and accessibility
 
@@ -69,8 +69,8 @@ Activity uses a theme-aware document illustration and a separate empty compositi
 - No blanket approval claim: risk determines direct execution, confirmation or destructive preview/receipt requirements. The dispatcher remains authoritative.
 - No false publisher verification, invented plugin availability, decorative settings or telemetry.
 - Meaningful automation names, keyboard access and visible focus; target 44-DIP controls.
+- Use body typography for ordinary state, time, labels and prose; reserve monospace for identifiers, paths, raw parameters and technical evidence.
 - Validate text, accent and status contrast in both themes. High contrast uses system brushes.
-- The decorative atlas is excluded from the accessibility tree; adjacent text explains its role.
 
 ## Verification
 

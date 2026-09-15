@@ -1,5 +1,10 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
+using WinCare.Application.Activity;
+using WinCare.Application.Tools;
+using WinCare.CommandCatalog.Models;
+using WinCare.Domain.Activity;
+using WinCare.Domain.Commands;
 
 namespace WinCare.App.ViewModels.Pages;
 
@@ -7,17 +12,14 @@ public abstract class TabbedPageViewModel : ObservableObject
 {
     private int _selectedIndex;
     private bool _isCompactLayout;
-    private WinCare.Application.Tools.ToolCatalogService? _careCatalog;
-    private string _careQuery = string.Empty;
-    private WinCare.Application.Activity.IActivityJournalService? _careJournal;
+    private ToolCatalogService? _careCatalog;
+    private CareAreaSelection? _careSelection;
+    private string? _careQuery;
+    private IActivityJournalService? _careJournal;
 
     protected TabbedPageViewModel(IReadOnlyList<PageSection> sections)
     {
-        Sections = sections ?? throw new ArgumentNullException(nameof(sections));
-        if (Sections.Count == 0)
-        {
-            throw new ArgumentException("At least one section is required.", nameof(sections));
-        }
+        Sections = sections;
         CurrentRows = new ObservableCollection<PageRow>(Sections[0].Rows);
     }
 
@@ -41,10 +43,7 @@ public abstract class TabbedPageViewModel : ObservableObject
 
     public virtual void SelectSection(int index)
     {
-        if (index < 0 || index >= Sections.Count || index == SelectedIndex)
-        {
-            return;
-        }
+        if (index < 0 || index >= Sections.Count || index == SelectedIndex) return;
 
         SelectedIndex = index;
         CurrentRows.Clear();
@@ -59,43 +58,81 @@ public abstract class TabbedPageViewModel : ObservableObject
 
     public void SetCompactLayout(bool isCompact)
     {
-        if (IsCompactLayout == isCompact)
-        {
-            return;
-        }
+        if (IsCompactLayout == isCompact) return;
 
         IsCompactLayout = isCompact;
-        foreach (PageRow row in CurrentRows)
-        {
-            row.IsCompact = isCompact;
-        }
+        foreach (PageRow row in CurrentRows) row.IsCompact = isCompact;
     }
 
-    public void ShowTools(WinCare.Application.Tools.ToolCatalogService catalog, string query,
-        WinCare.Application.Activity.IActivityJournalService? journal = null)
+    public void ShowTools(
+        ToolCatalogService catalog,
+        CareAreaSelection selection,
+        IActivityJournalService? journal = null)
     {
         _careCatalog = catalog;
+        _careSelection = selection;
+        _careQuery = null;
+        _careJournal = journal;
+        Populate(CareAreaProjectionService.Project(catalog, selection, journal?.GetAll() ?? []));
+    }
+
+    public void ShowTools(ToolCatalogService catalog, string query, IActivityJournalService? journal = null)
+    {
+        _careCatalog = catalog;
+        _careSelection = null;
         _careQuery = query;
         _careJournal = journal;
-        CurrentRows.Clear();
-        var matches = WinCare.Application.Tools.CareAreaProjectionService.Project(catalog, query, journal?.GetAll() ?? []);
-        foreach (var projection in matches)
-        {
-            var tool = new ToolRowViewModel(projection.Command);
-            CurrentRows.Add(new PageRow(tool.Title, tool.Summary, tool.StatusPillLabel,
-                $"{tool.Risk} · Administrator: {tool.AdministratorAccess}\nRestart: {tool.Restart}")
-            {
-                CommandId = tool.Id,
-                IsCompact = IsCompactLayout,
-                LatestActivity = projection.LatestActivity is { } activity
-                    ? $"Last activity: {(activity.State == WinCare.Domain.Activity.ActivityState.NeedsAttention ? "Needs attention" : activity.State.ToString())} · {activity.StartedAt.ToLocalTime():g}" : string.Empty,
-            });
-        }
-        OnPropertyChanged(nameof(IsEmpty));
+        Populate(CareAreaProjectionService.Project(catalog, query, journal?.GetAll() ?? []));
     }
 
     public void RefreshTools()
     {
-        if (_careCatalog is not null) ShowTools(_careCatalog, _careQuery, _careJournal);
+        if (_careCatalog is null) return;
+        if (_careSelection is not null)
+            ShowTools(_careCatalog, _careSelection, _careJournal);
+        else if (_careQuery is not null)
+            ShowTools(_careCatalog, _careQuery, _careJournal);
+    }
+
+    private void Populate(IReadOnlyList<CareToolProjection> matches)
+    {
+        CurrentRows.Clear();
+        foreach (CareToolProjection projection in matches)
+        {
+            var tool = new ToolRowViewModel(projection.Command);
+            string impact = projection.Command.ReadOnly
+                ? "Read-only"
+                : projection.Command.RiskTier switch
+                {
+                    RiskTier.Safe => "Safe",
+                    RiskTier.Moderate => "Moderate",
+                    RiskTier.Destructive => "Destructive",
+                    _ => "Changes Windows",
+                };
+            string access = projection.Command.AdministratorAccess switch
+            {
+                AdministratorAccess.No => "Standard access",
+                AdministratorAccess.MayBeRequired => "Administrator may be needed",
+                AdministratorAccess.Required => "Administrator required",
+                _ => "Access varies",
+            };
+            string restart = projection.Command.Restart switch
+            {
+                RestartExpectation.No => "No restart expected",
+                RestartExpectation.MayBeRequired => "Restart may be needed",
+                RestartExpectation.Required => "Restart required",
+                _ => "Restart varies",
+            };
+
+            CurrentRows.Add(new PageRow(tool.Title, tool.Summary, impact, $"{access} · {restart}")
+            {
+                CommandId = tool.Id,
+                IsCompact = IsCompactLayout,
+                LatestActivity = projection.LatestActivity is { } activity
+                    ? $"Last activity: {(activity.State == ActivityState.NeedsAttention ? "Needs attention" : activity.State.ToString())} · {activity.StartedAt.ToLocalTime():g}"
+                    : string.Empty,
+            });
+        }
+        OnPropertyChanged(nameof(IsEmpty));
     }
 }

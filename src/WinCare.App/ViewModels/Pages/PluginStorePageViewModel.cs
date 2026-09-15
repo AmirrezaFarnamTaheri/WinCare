@@ -10,9 +10,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using WinCare.Application.Plugins;
 
-/// <summary>
-/// ViewModel managing the Plugin Store catalog, search filtering, trust status, and package installation.
-/// </summary>
 public sealed class PluginStorePageViewModel : INotifyPropertyChanged, IDisposable
 {
     private readonly IPluginRegistry _registry;
@@ -25,7 +22,7 @@ public sealed class PluginStorePageViewModel : INotifyPropertyChanged, IDisposab
     private string _selectedCategory = "All";
     private bool _isLoading;
     private string? _errorMessage;
-    private string _catalogStatusMessage = "Catalog status has not been evaluated yet.";
+    private string _catalogStatusMessage = "The online catalog hasn't been checked yet.";
     private bool _isCatalogTrustVerified;
     private CancellationTokenSource? _searchCts;
     private long _refreshVersion;
@@ -42,10 +39,10 @@ public sealed class PluginStorePageViewModel : INotifyPropertyChanged, IDisposab
         Func<CancellationToken, Task>? initializePlugins = null)
     {
         _initializePlugins = initializePlugins;
-        _host = host ?? throw new ArgumentNullException(nameof(host));
-        _registry = registry ?? throw new ArgumentNullException(nameof(registry));
-        _catalogService = catalogService ?? throw new ArgumentNullException(nameof(catalogService));
-        _installerService = installerService ?? throw new ArgumentNullException(nameof(installerService));
+        _host = host;
+        _registry = registry;
+        _catalogService = catalogService;
+        _installerService = installerService;
 
         Plugins = new ObservableCollection<PluginCardViewModel>();
         Categories = new ObservableCollection<string> { "All", "System Care", "Security", "Performance", "Privacy", "Developer Tools", "Utilities", "Installed" };
@@ -100,7 +97,6 @@ public sealed class PluginStorePageViewModel : INotifyPropertyChanged, IDisposab
     public bool HasError => !string.IsNullOrWhiteSpace(_errorMessage);
     public bool HasCatalogError => _catalogErrorMessage is not null && ErrorMessage == _catalogErrorMessage;
 
-    /// <summary>Runtime trust/freshness description for the currently displayed catalog.</summary>
     public string CatalogStatusMessage
     {
         get => _catalogStatusMessage;
@@ -115,11 +111,6 @@ public sealed class PluginStorePageViewModel : INotifyPropertyChanged, IDisposab
 
     public bool HasCatalogStatus => !string.IsNullOrWhiteSpace(CatalogStatusMessage);
 
-    /// <summary>
-    /// True only when the exact remote catalog bytes verified against a configured WinCare-pinned
-    /// catalog key. The current repository build intentionally remains browse-only when no approved
-    /// production catalog root is shipped.
-    /// </summary>
     public bool IsCatalogTrustVerified
     {
         get => _isCatalogTrustVerified;
@@ -154,17 +145,13 @@ public sealed class PluginStorePageViewModel : INotifyPropertyChanged, IDisposab
         try
         {
             if (_initializePlugins is not null)
-            {
                 await _initializePlugins(cancellationToken).ConfigureAwait(true);
-            }
             else
-            {
                 await _registry.DiscoverAndInitializeAsync(_host, cancellationToken).ConfigureAwait(true);
-            }
         }
         catch (Exception ex)
         {
-            ErrorMessage = "Plugin discovery did not complete. Installed plugin state may be incomplete until discovery succeeds.";
+            ErrorMessage = "Some installed extensions couldn't be loaded. Try again to refresh their status.";
             System.Diagnostics.Debug.WriteLine($"[PluginStorePageViewModel] Initial discovery error: {ex}");
         }
 
@@ -181,11 +168,10 @@ public sealed class PluginStorePageViewModel : INotifyPropertyChanged, IDisposab
         }
         catch (OperationCanceledException)
         {
-            // Keystroke debounce.
         }
         catch (Exception ex)
         {
-            ErrorMessage = "Plugin search could not be refreshed. Installed plugins remain available.";
+            ErrorMessage = "Search couldn't be refreshed. Your installed extensions are still available.";
             System.Diagnostics.Debug.WriteLine($"[PluginStorePageViewModel] Search refresh error: {ex}");
         }
     }
@@ -198,7 +184,7 @@ public sealed class PluginStorePageViewModel : INotifyPropertyChanged, IDisposab
         }
         catch (Exception ex)
         {
-            ErrorMessage = "The online plugin catalog could not be refreshed. Installed plugins remain available.";
+            ErrorMessage = "The online extension list couldn't be refreshed. Your installed extensions are still available.";
             System.Diagnostics.Debug.WriteLine($"[PluginStorePageViewModel] Filter refresh error: {ex}");
         }
     }
@@ -210,14 +196,13 @@ public sealed class PluginStorePageViewModel : INotifyPropertyChanged, IDisposab
         string selectedCategory = _selectedCategory;
         string searchQuery = _searchQuery;
         IsLoading = true;
-        string statusMessage = "Showing locally installed plugins.";
+        string statusMessage = "Showing installed extensions.";
         bool trustVerified = false;
         string? catalogError = null;
         try
         {
-            var installedPlugins = _registry.GetAllPlugins().ToDictionary(p => p.Id, StringComparer.OrdinalIgnoreCase);
+            var installedPlugins = _registry.GetAllPlugins().ToDictionary(plugin => plugin.Id, StringComparer.OrdinalIgnoreCase);
             var cards = new List<PluginCardViewModel>();
-
             if (string.Equals(selectedCategory, "Installed", StringComparison.OrdinalIgnoreCase))
             {
                 foreach (var installed in installedPlugins.Values)
@@ -243,10 +228,10 @@ public sealed class PluginStorePageViewModel : INotifyPropertyChanged, IDisposab
                 {
                     catalog = new RemotePluginCatalog
                     {
-                        TrustStatusMessage = "The online plugin catalog is currently unavailable. Installed plugins are still shown."
+                        TrustStatusMessage = "The online extension list is unavailable. Installed extensions are still shown."
                     };
                     statusMessage = catalog.TrustStatusMessage;
-                    catalogError = "The online plugin catalog could not be loaded. Check your connection and retry, or choose Installed.";
+                    catalogError = "Couldn't load the online extension list. Check your connection and try again, or choose Installed.";
                     System.Diagnostics.Debug.WriteLine($"[PluginStorePageViewModel] Catalog refresh error: {ex}");
                 }
 
@@ -273,7 +258,6 @@ public sealed class PluginStorePageViewModel : INotifyPropertyChanged, IDisposab
             cancellationToken.ThrowIfCancellationRequested();
             if (_disposed || refreshVersion != Volatile.Read(ref _refreshVersion)) return;
 
-            // Publish the cards and their trust/error state as one request generation.
             CatalogStatusMessage = statusMessage;
             IsCatalogTrustVerified = trustVerified;
             if (ErrorMessage == _catalogErrorMessage || catalogError is not null)
@@ -293,7 +277,7 @@ public sealed class PluginStorePageViewModel : INotifyPropertyChanged, IDisposab
 
     public async Task<bool> InstallPluginAsync(PluginCardViewModel card, IReadOnlyCollection<string>? consentedCapabilities = null, CancellationToken cancellationToken = default)
     {
-        if (card == null || card.IsInstalled || !card.CanInstall || card.RemoteItem is null) return false;
+        if (card.IsInstalled || !card.CanInstall || card.RemoteItem is null) return false;
 
         ErrorMessage = null;
         try
@@ -332,8 +316,8 @@ public sealed class PluginStorePageViewModel : INotifyPropertyChanged, IDisposab
         catch (Exception ex)
         {
             ErrorMessage = ex is OperationCanceledException
-                ? "Plugin installation was cancelled."
-                : "Plugin installation was blocked or failed. Review the catalog trust status and package details before retrying.";
+                ? "Installation was cancelled."
+                : "Couldn't install this extension. Check its publisher and package details, then try again.";
             System.Diagnostics.Debug.WriteLine($"[PluginStorePageViewModel] Install error: {ex}");
             return false;
         }
@@ -341,7 +325,7 @@ public sealed class PluginStorePageViewModel : INotifyPropertyChanged, IDisposab
 
     public async Task<bool> EnablePluginAsync(PluginCardViewModel card, CancellationToken cancellationToken = default)
     {
-        if (card == null || !card.IsInstalled || card.IsBuiltIn) return false;
+        if (!card.IsInstalled || card.IsBuiltIn) return false;
 
         ErrorMessage = null;
         try
@@ -352,7 +336,7 @@ public sealed class PluginStorePageViewModel : INotifyPropertyChanged, IDisposab
         }
         catch (Exception ex)
         {
-            ErrorMessage = "The plugin could not be enabled. Review its current state before retrying.";
+            ErrorMessage = "Couldn't enable this extension. Check its current state and try again.";
             System.Diagnostics.Debug.WriteLine($"[PluginStorePageViewModel] Enable error: {ex}");
             return false;
         }
@@ -360,7 +344,7 @@ public sealed class PluginStorePageViewModel : INotifyPropertyChanged, IDisposab
 
     public async Task<bool> DisablePluginAsync(PluginCardViewModel card, CancellationToken cancellationToken = default)
     {
-        if (card == null || !card.IsInstalled || card.IsBuiltIn) return false;
+        if (!card.IsInstalled || card.IsBuiltIn) return false;
 
         ErrorMessage = null;
         try
@@ -371,7 +355,7 @@ public sealed class PluginStorePageViewModel : INotifyPropertyChanged, IDisposab
         }
         catch (Exception ex)
         {
-            ErrorMessage = "The plugin could not be disabled. Review its current state before retrying.";
+            ErrorMessage = "Couldn't disable this extension. Check its current state and try again.";
             System.Diagnostics.Debug.WriteLine($"[PluginStorePageViewModel] Disable error: {ex}");
             return false;
         }
@@ -379,7 +363,7 @@ public sealed class PluginStorePageViewModel : INotifyPropertyChanged, IDisposab
 
     public async Task<bool> UninstallPluginAsync(PluginCardViewModel card, CancellationToken cancellationToken = default)
     {
-        if (card == null || !card.IsInstalled || card.IsBuiltIn) return false;
+        if (!card.IsInstalled || card.IsBuiltIn) return false;
 
         ErrorMessage = null;
         bool wasEnabled = card.InstalledState == PluginState.Enabled;
@@ -393,7 +377,7 @@ public sealed class PluginStorePageViewModel : INotifyPropertyChanged, IDisposab
             }
 
             bool removed = await _installerService.UninstallPluginAsync(card.Id, cancellationToken).ConfigureAwait(true);
-            if (!removed) throw new InvalidOperationException("The plugin package could not be removed.");
+            if (!removed) throw new InvalidOperationException("The extension package could not be removed.");
 
             await _registry.DiscoverAndInitializeAsync(_host, cancellationToken).ConfigureAwait(true);
             await RefreshPluginsAsync(forceRemoteRefresh: false, cancellationToken).ConfigureAwait(true);
@@ -408,8 +392,8 @@ public sealed class PluginStorePageViewModel : INotifyPropertyChanged, IDisposab
         {
             bool restored = !disabledForUninstall || await TryRestoreEnabledStateAsync(card.Id).ConfigureAwait(true);
             ErrorMessage = restored
-                ? "Plugin uninstall failed. The plugin was restored to its previous enabled state."
-                : "Plugin uninstall failed after the plugin was disabled, and its previous enabled state could not be restored. Review the plugin state before continuing.";
+                ? "Couldn't uninstall this extension, so WinCare restored its previous state."
+                : "Couldn't uninstall this extension or restore its previous state. Check it before continuing.";
             System.Diagnostics.Debug.WriteLine($"[PluginStorePageViewModel] Uninstall error: {ex}");
             await RefreshPluginsAsync(forceRemoteRefresh: false, CancellationToken.None).ConfigureAwait(true);
             return false;
@@ -426,7 +410,7 @@ public sealed class PluginStorePageViewModel : INotifyPropertyChanged, IDisposab
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[PluginStorePageViewModel] Failed to restore plugin '{pluginId}' after uninstall failure: {ex}");
+            System.Diagnostics.Debug.WriteLine($"[PluginStorePageViewModel] Failed to restore extension '{pluginId}' after uninstall failure: {ex}");
             return false;
         }
     }
@@ -438,13 +422,14 @@ public sealed class PluginStorePageViewModel : INotifyPropertyChanged, IDisposab
     private static bool MatchesSearch(string searchQuery, string id, string name, string description, string author, string category, IEnumerable<string> commands)
     {
         if (string.IsNullOrWhiteSpace(searchQuery)) return true;
-        string q = searchQuery.Trim();
-        return id.Contains(q, StringComparison.OrdinalIgnoreCase) ||
-               name.Contains(q, StringComparison.OrdinalIgnoreCase) ||
-               description.Contains(q, StringComparison.OrdinalIgnoreCase) ||
-               author.Contains(q, StringComparison.OrdinalIgnoreCase) ||
-               category.Contains(q, StringComparison.OrdinalIgnoreCase) ||
-               commands.Any(command => command.Contains(q, StringComparison.OrdinalIgnoreCase));
+        string[] tokens = searchQuery.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        return tokens.Length == 0 || tokens.All(token =>
+            id.Contains(token, StringComparison.OrdinalIgnoreCase) ||
+            name.Contains(token, StringComparison.OrdinalIgnoreCase) ||
+            description.Contains(token, StringComparison.OrdinalIgnoreCase) ||
+            author.Contains(token, StringComparison.OrdinalIgnoreCase) ||
+            category.Contains(token, StringComparison.OrdinalIgnoreCase) ||
+            commands.Any(command => command.Contains(token, StringComparison.OrdinalIgnoreCase)));
     }
 
     private void OnPropertyChanged([CallerMemberName] string? propertyName = null) =>

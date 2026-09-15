@@ -28,6 +28,13 @@ public sealed class ToolCatalogServiceTests
     }
 
     [Fact]
+    public void Multi_word_search_requires_every_term()
+    {
+        Assert.Contains(_service.Search("Windows Update"), command => command.Id == "wua-search");
+        Assert.Empty(_service.Search("quic no-such-term-9c261c"));
+    }
+
+    [Fact]
     public void Read_only_filter_excludes_mutating_commands()
     {
         IReadOnlyList<CommandDefinition> commands = _service.Search(null, new ToolFilter(ReadOnly: true));
@@ -48,12 +55,10 @@ public sealed class ToolCatalogServiceTests
         var dynamicService = new ToolCatalogService(mockRegistry);
         var allTools = dynamicService.All;
 
-        // Custom plugin tool is present
         var custom = allTools.FirstOrDefault(c => c.Id == "plugin.custom_scan");
         Assert.NotNull(custom);
         Assert.Equal("Custom Scan", custom.Title);
 
-        // Core tool is preserved and was NOT overwritten by the plugin
         var wua = allTools.FirstOrDefault(c => c.Id == "wua-search");
         Assert.NotNull(wua);
         Assert.NotEqual("Malicious Override", wua.Title);
@@ -65,16 +70,13 @@ public sealed class ToolCatalogServiceTests
         var fakeRegistry = new MutableFakePluginRegistry();
         var service = new ToolCatalogService(fakeRegistry);
 
-        // Initially no plugin commands
         Assert.DoesNotContain(service.All, c => c.Id == "dynamic.tool");
         Assert.DoesNotContain(service.Search("dynamic"), c => c.Id == "dynamic.tool");
 
-        // Add a new command and fire event
         fakeRegistry.SetCommands([
             new CommandDefinition("dynamic.tool", "Dynamic Tool", "Dynamic Summary", "Utilities", "General", CommandRisk.Low, true, AdministratorAccess.No, RestartExpectation.No, "plugin", MigrationStatus.BehaviorVerified, ["dynamic"])
         ]);
 
-        // Cache must be invalidated and return the new tool in All and Search
         Assert.Contains(service.All, c => c.Id == "dynamic.tool");
         Assert.Contains(service.Search("dynamic"), c => c.Id == "dynamic.tool");
     }
@@ -85,10 +87,11 @@ public sealed class ToolCatalogServiceTests
         string[] labels = NavigationCatalog.Items.Select(item => item.Label).ToArray();
 
         Assert.Equal(
-            ["Home", "Checkup", "System care", "Security", "Repair & recovery", "All tools", "Activity", "Settings"],
+            ["Home", "Checkup", "System care", "Security", "Repair & recovery", "Power tools", "Activity", "Extensions", "Troubleshoot", "Settings", "Help", "About WinCare"],
             labels);
-        Assert.Equal(["Commands", "Categories", "Favorites", "Recent", "Presets"],
+        Assert.Equal(["Tools", "Categories", "Favorites", "Recent", "Care plans"],
             NavigationCatalog.Items.Single(item => item.Id == "all-tools").Tabs);
+        Assert.True(NavigationCatalog.Items.Single(item => item.Id == "about").IsHidden);
     }
 
     private sealed class MutableFakePluginRegistry : IPluginRegistry

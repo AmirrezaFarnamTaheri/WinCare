@@ -130,8 +130,9 @@ class CommandRuntimeTests(unittest.TestCase):
         tool_row = (ROOT / "src/WinCare.App/ViewModels/Pages/ToolRowViewModel.cs").read_text(
             encoding="utf-8"
         )
-        self.assertIn('"Read-only" => "PillReadOnlyBgBrush"', tool_row)
-        self.assertIn('_ => "PillMutatingBgBrush"', tool_row)
+        self.assertIn("if (Definition.ReadOnly)", tool_row)
+        self.assertIn('return "PillReadOnlyBgBrush";', tool_row)
+        self.assertIn('RiskTier.Destructive => "PillMutatingBgBrush"', tool_row)
 
         release_checklist = (ROOT / "tools/release_checklist.py").read_text(encoding="utf-8")
         self.assertIn("PYTHON = sys.executable", release_checklist)

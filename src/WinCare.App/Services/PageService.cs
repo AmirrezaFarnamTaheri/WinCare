@@ -21,17 +21,12 @@ public sealed class PageService
         ["about"] = typeof(AboutPage),
     };
 
-    public Type GetPageType(string key)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(key);
-        return Pages.TryGetValue(key, out Type? pageType)
-            ? pageType
-            : throw new KeyNotFoundException($"Unknown navigation key '{key}'.");
-    }
+    public Type GetPageType(string key) => Pages.TryGetValue(key, out Type? pageType)
+        ? pageType
+        : throw new KeyNotFoundException($"Unknown navigation key '{key}'.");
 
     public bool Navigate(Frame frame, string key, object? parameter = null)
     {
-        ArgumentNullException.ThrowIfNull(frame);
         Type pageType = GetPageType(key);
         return frame.CurrentSourcePageType == pageType && parameter is null
             ? false

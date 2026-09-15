@@ -1,9 +1,9 @@
 # WinCare User Guide
 
-WinCare is a fast, native Windows workspace for system maintenance, diagnostics, and recovery.
+WinCare is a native Windows app for maintenance, diagnostics, and recovery.
 
 > [!NOTE]
-> The screenshots in [Screenshots.md](Screenshots.md) are reference captures from recent builds. UI layouts may be updated as features evolve.
+> The runtime screenshots in [Screenshots.md](Screenshots.md) are versioned historical captures unless their documented build matches the source being reviewed. Current XAML and runtime validation remain authoritative after UI changes.
 
 ## 1. System requirements
 
@@ -30,76 +30,78 @@ Run the helper from an elevated terminal only when the certificate is not alread
 
 ### Standalone and portable builds
 
-The self-contained `.exe` runs directly without installation. The portable ZIP can be extracted to any folder, which is ideal for USB technician toolkits.
+The self-contained `.exe` runs directly without installation. The portable ZIP can be extracted to any folder, which is useful for USB technician toolkits.
 
-On launch, WinCare restores your previous window position. You can disable this under **Settings → Window continuity** if you prefer a standard default size.
+The first time WinCare opens, a short tour explains Checkup, the care pages, Power tools, and Ctrl+K search. You can reopen the tour later from **Help**.
+
+WinCare can also restore the last usable window size and position. Turn this off under **Settings → Remember this window** if you prefer a fresh window each time.
 
 ## 3. Safety tiers
 
-WinCare organizes tools into three simple tiers:
+WinCare groups tools into three simple tiers:
 
 ```text
-Safe: 1-click execution  │  Moderate: confirmation dialog  │  Destructive: preview & approval
+Safe: direct execution  │  Moderate: preview + confirmation  │  Destructive: preview + explicit approval
 ```
 
-- **Safe:** Routine, low-risk tasks (like cleaning temporary files or flushing DNS caches) execute immediately in 1 click.
-- **Moderate:** Non-destructive configuration changes prompt for a quick user confirmation before applying.
-- **Destructive:** High-impact changes (like partition formatting or service removal) require a read-only preview before you can confirm and apply.
-- **Activity Log:** All actions and their outcomes are recorded in the local Activity log so you always have a full history.
-- **Honest Status:** If an operation encounters an error mid-way, WinCare reports exactly where it stopped rather than assuming no state changed. Undo is offered only when a real rollback mechanism is available.
+- **Safe:** Read-only checks and low-risk actions can run directly and are recorded in Activity.
+- **Moderate:** WinCare previews what will change first. Applying the change requires confirmation of that reviewed preview.
+- **Destructive:** High-impact changes require a successful preview and explicit approval before they can run.
+- **Activity:** Actions and their outcomes are recorded locally so you can see what happened.
+- **Honest status:** If an operation stops part-way through, WinCare reports where it stopped instead of pretending nothing changed. Undo is shown only when a real recovery path exists.
 
 ## 4. Navigation
 
 The main navigation is task-oriented:
 
-- **Home** — recent evidence and activity at a glance.
-- **Checkup** — read-only evidence collection.
-- **System Care** — maintenance-oriented command groups.
-- **Security** — security/privacy command groups.
-- **Repair & Recovery** — repair and recovery command groups.
-- **All Tools** — complete 269-command catalog with search, filters, typed parameters, preview/apply, favorites, and recent commands.
-- **System Doctor** — local rule-based symptom triage and evidence-guided recommendations.
-- **Plugin Store** — installed-plugin lifecycle plus browse-only remote catalog metadata unless a production catalog trust root is configured.
-- **Activity** — running work, items needing attention, completed operations, and aggregated daily reports.
-- **Settings** — theme, window continuity, local-data access, persistence warnings, and the safety-policy summary.
-- **Help** — in-app explanations for evidence, approval, plugins, Guard status, troubleshooting, and accessibility.
+- **Home** — latest checkup results, recent activity, and common care shortcuts.
+- **Checkup** — a read-only look at a few important Windows areas.
+- **System care** — cleanup, performance, apps, startup, networking, updates, and maintenance.
+- **Security** — protection, privacy, and hardening tasks.
+- **Repair & recovery** — repair, restore, backup, reset, and recovery tasks.
+- **Power tools** — the complete command catalog with search, filters, categories, favorites, Recent, and Care plans.
+- **Troubleshoot** — describe a symptom and get local checks plus suggested next steps.
+- **Extensions** — manage installed optional features and browse the online list when it is available.
+- **Activity** — running work, items needing attention, finished work, and reports.
+- **Settings** — theme, window placement, and local-data access.
+- **Help** — getting started, the first-run tour, keyboard shortcuts, and common explanations.
 
-Use **Ctrl+K** for the global search palette. In All Tools, **Ctrl+F** focuses tool search.
+Use **Ctrl+K** to search pages and tools. In Power tools, **Ctrl+F** focuses tool search.
 
 ## 5. Home
 
-Home is an evidence/status dashboard, not a synthetic health-score generator. Before a check it clearly says evidence has not been collected. After operations/checks, it derives recent activity and status summaries from the shared Activity journal.
+Home gives you a quick view of the latest Checkup results and recent WinCare activity. Before a check, it simply asks you to start with Checkup. Older results are shown as out of date rather than presented as current.
 
-Plugin widgets appear only when active. A widget that fails to load reports a visible error state instead of silently disappearing.
+Extension widgets appear only when active. If a widget fails to load, WinCare shows a visible error instead of silently hiding it.
 
 ## 6. System Checkup
 
-Checkup currently has two sections: **Quick check** and **Results**.
+Checkup has two sections: **Quick check** and **Results**.
 
-The quick check runs four read-only evidence probes covering Windows/hardware basics, storage, security, and Windows Update search readiness. Measurement-sensitive probes run sequentially so one probe's CPU/disk activity does not contaminate the next probe's evidence.
+The quick check looks at Windows/hardware basics, storage, security, and Windows Update without changing the PC. The fast system/storage/security probes run concurrently with bounded concurrency; Windows Update continues alongside them so a slow update search does not hold up the first results.
 
-The percentage shown after a run is **evidence-collection completion**, not a blanket machine-health score. Review each category result before deciding whether to open a related repair or maintenance tool.
+The summary only describes what these checks found: things look okay, something is worth a look, a check did not finish, or something needs attention. It is not a blanket health score. A finding can open the relevant care section; Checkup itself never applies maintenance.
 
-Below the shared 920-DIP compact breakpoint, both the hero summary and evidence table become stacked layouts rather than squeezing desktop columns.
+Below the shared 920-DIP compact breakpoint, the hero and result table stack rather than squeezing desktop columns.
 
-## 7. System Care, Security, and Repair & Recovery
+## 7. System care, Security, and Repair & recovery
 
-These pages organize the native command catalog into task-focused groups. They do not bypass the catalog/dispatcher safety policy.
+These pages group the command catalog around common jobs. They all hand actual execution to the same reviewed Power tools path.
 
-- Read-only rows can be opened/run without mutation approval.
-- Mutating work is routed to the same preview → receipt → explicit approval path used by All Tools.
-- Compact windows use stacked records at the shared 920-DIP boundary.
-- Repair & Recovery shows recovery-oriented tools and Activity guidance; it does not imply that every historical operation has a generic Undo command.
-- **Portable playbooks** accept a schema-versioned list of catalog command IDs and typed parameters for review. Imported steps open individually and receive a fresh live preview; the file carries no execution approval.
+- Read-only rows can be opened without mutation approval.
+- Changes use the same review and execution path as Power tools.
+- Compact windows use stacked rows at the shared 920-DIP boundary.
+- Repair & recovery does not pretend every historical operation has a generic Undo button.
+- **Portable playbooks** contain catalog command IDs and typed parameters for review. Imported steps open individually and receive a fresh live preview; the file itself carries no execution approval.
 - **Restore a reversible remediation** is available only for completed individual registry-value remediations with complete receipts. WinCare verifies the receipt digest and current registry value before each restore step, and records complete, partial, or conflict outcomes.
 
-## 8. All Tools
+## 8. Power tools
 
-All Tools exposes all 269 native command definitions while keeping common input safer than hand-written JSON.
+Power tools exposes all 269 native command definitions without forcing the full catalog into the main navigation for everyday work.
 
 ### Search and filters
 
-Search by command/title/area, filter by area/risk/read-only characteristics, and use Favorites/Recent for repeated work. At compact widths the filters stack instead of forcing a desktop-width toolbar.
+Search by task, title, or summary; filter by exact Area, Section, impact, and read-only status; and use Favorites or Recent for repeated work. Multi-word searches require every term to match somewhere in the tool metadata, keeping results focused and consistent with Ctrl+K. **Categories** is an Area/Section browser. At compact widths the filters stack instead of forcing a desktop-width toolbar.
 
 ### Typed parameters
 
@@ -110,78 +112,75 @@ Commands with declared parameters render native editors derived from `CommandPar
 - boolean toggles;
 - supported-value choices;
 - string-list inputs;
-- date/time inputs;
-- structured JSON values when a nested object/array is genuinely required.
+- date/time values;
+- structured JSON values when a nested object or array is genuinely required.
 
-Required fields are marked. Type/range/choice problems are blocked before dispatch, and the executor validates again at the Windows boundary.
+Required fields are marked. Type, range, and choice errors are blocked before dispatch, and the executor validates again at the Windows boundary.
 
 ### Advanced JSON
 
-**Advanced parameter editing** exposes the raw JSON object for power users and automation-compatible edge cases. It remains size-bounded and is not a safety bypass. Switching parameter values invalidates any previously reviewed mutation plan.
+**Advanced parameter editing** exposes the raw JSON object for power users and automation-compatible edge cases. It remains size-bounded and is not a safety bypass. Changing parameter values invalidates a previously reviewed mutation plan.
 
-### Preview and Apply
+### Review and apply
 
-For a read-only command, **Run tool** executes the admitted read operation. For a mutating command, the first action is **Review changes**. Only a successful dispatcher preview enables explicit approval; the next action becomes **Apply changes** using that issued receipt.
+Read-only commands run directly. Safe low-risk changes can also run directly under the declared risk policy. Moderate and Destructive changes first resolve the current targets and impact with a preview; applying requires explicit confirmation or approval of that exact reviewed plan.
 
-## 9. System Doctor
+## 9. Troubleshoot
 
-The shipped Doctor is a **local rule-based diagnostic assistant**, not a general-purpose AI agent and not a cloud model.
+Troubleshoot uses a local rule-based diagnostic engine. It is not a cloud chat model and it does not execute suggested changes itself.
 
-1. Describe a symptom in plain language.
-2. The local rule engine maps it to supported diagnostic domains.
-3. WinCare runs read-only evidence commands.
-4. The Doctor explains the evidence and proposes an applicable next action when supported.
-5. A proposed mutation must run the real dispatcher preview.
-6. You review that preview and explicitly approve before Apply.
+1. Describe the problem in plain language.
+2. WinCare maps it to a supported diagnostic area.
+3. It runs relevant read-only checks.
+4. It explains what it found and suggests supported next steps.
+5. Open a suggested step in **Power tools** to review it.
+6. Power tools applies the normal risk-tier flow—direct read/low-risk execution or preview plus confirmation/approval for higher-impact mutations—and records the outcome in Activity.
 
-The Doctor cannot mint its own approval receipt. User-facing errors are sanitized rather than inserting raw exception text into the conversation.
+Troubleshoot cannot create its own execution approval. Errors shown in the conversation are kept readable instead of dumping raw exception text into the UI.
 
-## 10. Plugin Store
+## 10. Extensions
 
-Plugins execute full-trust **in process** with the current user's WinCare privileges. Declared capabilities are informed-consent metadata; they are not a sandbox.
+Extensions run in process with the current user's WinCare permissions. Their declared capabilities tell you what they expect to use; they are not a sandbox.
 
 ### Current release behavior
 
-This repository does **not** ship an approved production plugin-catalog public key or a live official signed catalog. The current composition root therefore keeps remote installation **browse-only/disabled**. This is intentional fail-closed behavior.
+This repository does **not** ship an approved production extension-catalog public key or a live official signed catalog. Remote installation therefore remains browse-only/disabled until a trusted production catalog is configured.
 
-The Plugin Store shows the current catalog trust state explicitly. If network/catalog access falls back to the bundled offline examples, those entries are labeled as samples and are not installable.
+Trust and availability details are available under **Online catalog** on the Extensions page. Network or catalog failures are shown when they affect browsing or installation. Bundled/offline sample metadata is not treated as installable production content.
 
-### Requirements before remote installation can ever be enabled
+### Requirements before remote installation can be enabled
 
-A future configured catalog must pass all of these boundaries:
+A configured catalog must pass all of these checks:
 
-- detached signature over the exact catalog bytes verifies against a WinCare-pinned key;
-- installation performs a fresh security catalog fetch instead of stale-cache fallback;
-- the reviewed card is re-resolved from that fresh catalog;
-- package ID, SHA-256, trusted publisher identity/signature, capability consent, and revocation state pass;
-- discovery re-verifies the installed manifest against an external admission record.
+- the detached signature over the exact catalog bytes verifies against a WinCare-pinned key;
+- installation performs a fresh security catalog fetch instead of relying on stale cache data;
+- the reviewed entry is resolved again from that fresh catalog;
+- package ID, SHA-256, publisher identity/signature, capability consent, and revocation state pass;
+- discovery re-verifies the installed manifest against its admission record.
 
-### Installed-plugin lifecycle
+### Installed-extension lifecycle
 
-Details and Install are separate actions. Uninstall requires confirmation. If an enabled plugin must be disabled for removal but removal fails, WinCare attempts to restore its prior enabled state and reports whether restoration succeeded.
+Review and Add are separate actions. Uninstall requires confirmation. If an enabled extension must be disabled for removal but removal fails, WinCare attempts to restore its previous enabled state and tells you whether that worked.
 
 ## 11. Activity and reports
 
-Activity is the shared operation ledger.
+Activity shows what WinCare is doing and what it did recently.
 
-- **Running** — operations currently executing.
-- **Needs attention** — operations whose outcome requires verification/follow-up.
-- **Completed** — terminal completed/failed/cancelled operations.
-- **Reports** — daily aggregate summaries rather than a duplicate of Completed.
+- **Running** — work currently in progress.
+- **Needs attention** — work that needs another look.
+- **History** — finished, failed, and cancelled operations with their real state preserved.
+- **Reports** — daily summaries rather than a duplicate of History.
 
-Activity refreshes from journal change events rather than a polling timer. Journal persistence occurs outside the in-memory state lock. If durable storage fails, the UI displays a persistence warning so in-memory success is not confused with a durable audit trail.
+Activity updates when the journal changes instead of polling on a timer. If the history file cannot be saved, the app shows a warning; the current in-memory activity may still be visible until WinCare closes.
 
 ## 12. Settings
 
-Current settings are intentionally limited to behavior the app actually persists:
+Settings is intentionally small and only exposes behavior the app actually saves:
 
 - **App theme** — System, Light, or Dark.
-- **Window continuity** — remember/restore the last usable size, position, and maximized state; turning it off clears the stored placement.
+- **Remember this window** — restore the last usable size, position, and maximized state; turning it off clears the stored placement.
 - **Local data** — open the WinCare data directory.
-- **Persistence warning** — visible if preferences cannot be loaded or written durably.
-- **Safety policy** — an explanation of preview receipts, outcomes, and truthful recovery claims.
-
-Settings does not expose decorative toggles for product capabilities that are not actually wired.
+- A warning appears if settings cannot be loaded or saved.
 
 ## 13. Encrypted profiles
 
@@ -208,29 +207,29 @@ Important release checks still require a live Windows environment:
 - High Contrast rendering;
 - dialog focus and error announcements.
 
-If a layout clips at a particular display/text scale, include the screen name and exact scale in the bug report.
+If a layout clips at a particular display or text scale, include the screen name and exact scale in the bug report.
 
 ## 16. Troubleshooting
 
 ### A command is Blocked or Not available
 
-Read the returned code/message. WinCare fails closed for missing prerequisites, invalid input, unverified trust state, insufficient authority, unsupported state, or commands that are not admitted on the current machine.
+Read the returned message. WinCare blocks work when a required prerequisite, permission, trust check, supported state, or command implementation is missing.
 
-### A mutation says final state unknown
+### A change says the final state is unknown
 
-Do not retry immediately. Open Activity, identify the command and affected resource, verify that Windows resource directly, and only then decide whether a new preview is appropriate.
+Do not retry immediately. Open Activity, identify the task and affected resource, verify that Windows resource directly, and then decide whether a fresh preview is appropriate.
 
-### Plugin Store shows browse-only/offline status
+### Extensions is browse-only or offline
 
-That is expected in the current repository build because no production catalog trust root is shipped. Installed plugins remain manageable. Do not treat an offline sample entry as an installable package.
+That is expected in the current repository build because no production catalog trust root is shipped. Installed extensions remain manageable. Do not treat an offline sample entry as an installable package.
 
-### Preferences or Activity are not durable
+### Settings or Activity is not saving
 
-The app shows an InfoBar when it cannot persist those records. Open **Settings → Local data** and verify that the current account can access/write the WinCare data directory. In-memory state may be lost at exit while the warning remains active.
+The app shows a warning when it cannot save those records. Open **Settings → Local data** and verify that the current account can access and write the WinCare data directory. Unsaved in-memory state may be lost when the app closes.
 
-### The app terminates after an unexpected UI fault
+### The app closes after an unexpected UI fault
 
-Unknown UI faults are no longer universally swallowed. WinCare writes diagnostic context and exits rather than continuing with potentially invalid process state. Review the local diagnostics and restart.
+Unknown UI faults are not silently ignored. WinCare writes diagnostic context and exits rather than continuing with potentially invalid process state. Review the local diagnostics and restart.
 
 ### Report a security issue
 

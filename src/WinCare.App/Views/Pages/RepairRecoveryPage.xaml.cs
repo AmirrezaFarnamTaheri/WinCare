@@ -21,7 +21,7 @@ public sealed partial class RepairRecoveryPage : Page
     {
         ViewModel.SelectSection(sender.Items.IndexOf(sender.SelectedItem));
         if (!ViewModel.IsPlaybookSection)
-            ViewModel.ShowTools(WinCare.App.Services.AppRuntime.Current.ToolCatalog, ViewModel.ToolSearchQuery, WinCare.App.Services.AppRuntime.Current.Journal);
+            ViewModel.ShowTools(WinCare.App.Services.AppRuntime.Current.ToolCatalog, ViewModel.ToolSelection, WinCare.App.Services.AppRuntime.Current.Journal);
     }
 
     private void PlaybookStep_ItemClick(object sender, ItemClickEventArgs e)
@@ -33,7 +33,13 @@ public sealed partial class RepairRecoveryPage : Page
     protected override void OnNavigatedTo(Microsoft.UI.Xaml.Navigation.NavigationEventArgs e)
     {
         base.OnNavigatedTo(e);
-        ViewModel.ShowTools(WinCare.App.Services.AppRuntime.Current.ToolCatalog, ViewModel.ToolSearchQuery, WinCare.App.Services.AppRuntime.Current.Journal);
+        int sectionIndex = PageNavigation.ResolveSectionIndex(SectionSelector, e.Parameter);
+        if (sectionIndex >= 0)
+        {
+            SectionSelector.SelectedItem = SectionSelector.Items[sectionIndex] as SelectorBarItem;
+            ViewModel.SelectSection(sectionIndex);
+        }
+        if (!ViewModel.IsPlaybookSection)
+            ViewModel.ShowTools(WinCare.App.Services.AppRuntime.Current.ToolCatalog, ViewModel.ToolSelection, WinCare.App.Services.AppRuntime.Current.Journal);
     }
-
 }

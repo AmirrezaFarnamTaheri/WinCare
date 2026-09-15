@@ -9,15 +9,13 @@ namespace WinCare.App.Views.Pages;
 
 public sealed partial class HomePage : Page
 {
-    private const double HomeCompactBreakpointDip = 780;
+    private const double HomeCompactBreakpointDip = 820;
     private bool _isVisible;
     private int _widgetRefreshVersion;
 
     public HomePage()
     {
-        ViewModel = new HomePageViewModel(
-            dispatcherResolver: () => AppRuntime.Current.Dispatcher,
-            probeRepository: AppRuntime.Current.SystemProbe);
+        ViewModel = new HomePageViewModel();
         InitializeComponent();
     }
 
@@ -42,17 +40,8 @@ public sealed partial class HomePage : Page
         base.OnNavigatedFrom(e);
     }
 
-    private void JournalChanged(object? sender, EventArgs e) =>
-        DispatcherQueue.TryEnqueue(() =>
-        {
-            if (_isVisible)
-            {
-                ViewModel.RefreshActivity(AppRuntime.Current.Journal.GetAll());
-            }
-        });
-
-    private void RegistryChanged(object? sender, EventArgs e) =>
-        DispatcherQueue.TryEnqueue(() => { if (_isVisible) _ = RefreshWidgetsAsync(); });
+    private void JournalChanged(object? sender, EventArgs e) => DispatcherQueue.TryEnqueue(() => { if (_isVisible) ViewModel.RefreshActivity(AppRuntime.Current.Journal.GetAll()); });
+    private void RegistryChanged(object? sender, EventArgs e) => DispatcherQueue.TryEnqueue(() => { if (_isVisible) _ = RefreshWidgetsAsync(); });
 
     private async Task RefreshWidgetsAsync()
     {
@@ -69,7 +58,7 @@ public sealed partial class HomePage : Page
         {
             if (!_isVisible || version != _widgetRefreshVersion) return;
             PluginWidgets.Visibility = Visibility.Collapsed;
-            PluginWidgetError.Message = "One or more plugin widgets could not be loaded. The plugin is not being shown here; review the Plugin Store for its current state.";
+            PluginWidgetError.Message = "Open Extensions to see which widget had a problem.";
             PluginWidgetError.IsOpen = true;
             System.Diagnostics.Debug.WriteLine($"[HomePage] Widget refresh failed: {ex}");
         }
@@ -78,62 +67,35 @@ public sealed partial class HomePage : Page
     private void RunCheckupButton_Click(object sender, RoutedEventArgs e) => NavigateTo("checkup");
     private void ViewActivityButton_Click(object sender, RoutedEventArgs e) => NavigateTo("activity");
     private void BrowseToolsButton_Click(object sender, RoutedEventArgs e) => NavigateTo("all-tools");
-    private void NavCategory_System_Click(object sender, RoutedEventArgs e) => NavigateTo("system-care");
-    private void NavCategory_Security_Click(object sender, RoutedEventArgs e) => NavigateTo("security");
-    private void NavCategory_Performance_Click(object sender, RoutedEventArgs e) => NavigateTo("checkup");
-    private void NavCategory_Storage_Click(object sender, RoutedEventArgs e) => NavigateTo("system-care");
-    private void NavCategory_Updates_Click(object sender, RoutedEventArgs e) => NavigateTo("repair-recovery");
-    private void NavCategory_Activity_Click(object sender, RoutedEventArgs e) => NavigateTo("activity");
+    private void OpenExtensions_Click(object sender, RoutedEventArgs e) => NavigateTo("plugin-store");
+    private void OpenTroubleshoot_Click(object sender, RoutedEventArgs e) => NavigateTo("ai-doctor");
+    private void OpenCleanup_Click(object sender, RoutedEventArgs e) => PageNavigation.NavigateToSection(this, "system-care", "Clean up");
+    private void OpenStartup_Click(object sender, RoutedEventArgs e) => PageNavigation.NavigateToSection(this, "system-care", "Apps & startup");
+    private void OpenNetwork_Click(object sender, RoutedEventArgs e) => PageNavigation.NavigateToSection(this, "system-care", "Network & updates");
+    private void NavCategory_System_Click(object sender, RoutedEventArgs e) => NavigateTo("checkup");
+    private void NavCategory_Security_Click(object sender, RoutedEventArgs e) => PageNavigation.NavigateToSection(this, "security", "Status");
+    private void NavCategory_Storage_Click(object sender, RoutedEventArgs e) => PageNavigation.NavigateToSection(this, "system-care", "Clean up");
+    private void NavCategory_Updates_Click(object sender, RoutedEventArgs e) => PageNavigation.NavigateToSection(this, "system-care", "Network & updates");
     private void NavigateTo(string key) => PageNavigation.NavigateTo(this, key);
 
     private void Page_SizeChanged(object sender, SizeChangedEventArgs e)
     {
-        // Home's atlas/evidence pair remains useful at a narrower width than data tables.
-        // Collapse it only when each column can no longer retain a readable measure.
         bool compact = e.NewSize.Width < HomeCompactBreakpointDip;
         ViewModel.SetCompactLayout(compact);
-        PageLayout.Padding = compact ? new Thickness(20) : new Thickness(32, 24, 32, 32);
+        PageLayout.Padding = compact ? new Thickness(20, 20, 20, 28) : new Thickness(32, 28, 32, 36);
         HeroLayout.ColumnDefinitions[0].Width = new GridLength(1, GridUnitType.Star);
         HeroLayout.ColumnDefinitions[1].Width = compact ? new GridLength(0) : new GridLength(1, GridUnitType.Star);
-        WelcomeLayout.ColumnDefinitions[1].Width = compact ? new GridLength(0) : GridLength.Auto;
-        Grid.SetColumn(StartCheckupButton, compact ? 0 : 1);
-        Grid.SetRow(StartCheckupButton, compact ? 1 : 0);
-        SystemAtlasImage.Height = compact ? 180 : 240;
-        WelcomeLayout.RowSpacing = compact ? 16 : 0;
-        HeroLayout.RowSpacing = compact ? 24 : 0;
-        SecondaryLayout.RowSpacing = compact ? 16 : 0;
-        SecondaryLayout.ColumnDefinitions[1].Width = compact ? new GridLength(0) : new GridLength(1, GridUnitType.Star);
-        Grid.SetColumn(StatusCard, compact ? 0 : 1);
-        Grid.SetRow(StatusCard, compact ? 1 : 0);
-        Grid.SetColumn(SafetyCard, compact ? 0 : 1);
-        Grid.SetRow(SafetyCard, compact ? 1 : 0);
-        if (CuratedActionsLayout != null)
-        {
-            CuratedActionsLayout.ColumnDefinitions[0].Width = new GridLength(1, GridUnitType.Star);
-            CuratedActionsLayout.ColumnDefinitions[1].Width = compact ? new GridLength(0) : new GridLength(1, GridUnitType.Star);
-            CuratedActionsLayout.ColumnDefinitions[2].Width = compact ? new GridLength(0) : new GridLength(1, GridUnitType.Star);
-            Grid.SetColumn(QuickCleanCard, 0);
-            Grid.SetRow(QuickCleanCard, 0);
-            Grid.SetColumn(StartupBoostCard, compact ? 0 : 1);
-            Grid.SetRow(StartupBoostCard, compact ? 1 : 0);
-            Grid.SetColumn(NetworkRefreshCard, compact ? 0 : 2);
-            Grid.SetRow(NetworkRefreshCard, compact ? 2 : 0);
-            if (TelemetryBayCard != null)
-            {
-                Grid.SetColumn(TelemetryBayCard, 0);
-                Grid.SetRow(TelemetryBayCard, compact ? 3 : 1);
-            }
-        }
-        ActionLayout.Orientation = compact ? Orientation.Vertical : Orientation.Horizontal;
-        int columns = e.NewSize.Width < 600 ? 1 : 2;
-        CategoryLayout.ColumnDefinitions[1].Width = columns == 1 ? new GridLength(0) : new GridLength(1, GridUnitType.Star);
-        int rows = (CategoryLayout.Children.Count + columns - 1) / columns;
-        while (CategoryLayout.RowDefinitions.Count < rows) CategoryLayout.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-        while (CategoryLayout.RowDefinitions.Count > rows) CategoryLayout.RowDefinitions.RemoveAt(CategoryLayout.RowDefinitions.Count - 1);
-        for (int i = 0; i < CategoryLayout.Children.Count; i++)
-        {
-            Grid.SetColumn((FrameworkElement)CategoryLayout.Children[i], i % columns);
-            Grid.SetRow((FrameworkElement)CategoryLayout.Children[i], i / columns);
-        }
+        Grid.SetColumn(CheckupSummaryCard, compact ? 0 : 1);
+        Grid.SetRow(CheckupSummaryCard, compact ? 1 : 0);
+        RecommendationsGrid.ColumnDefinitions[0].Width = new GridLength(1, GridUnitType.Star);
+        RecommendationsGrid.ColumnDefinitions[1].Width = compact ? new GridLength(0) : new GridLength(1, GridUnitType.Star);
+        RecommendationsGrid.ColumnDefinitions[2].Width = compact ? new GridLength(0) : new GridLength(1, GridUnitType.Star);
+        Grid.SetColumn(CleanupRecommendation, 0); Grid.SetRow(CleanupRecommendation, 0);
+        Grid.SetColumn(StartupRecommendation, compact ? 0 : 1); Grid.SetRow(StartupRecommendation, compact ? 1 : 0);
+        Grid.SetColumn(NetworkRecommendation, compact ? 0 : 2); Grid.SetRow(NetworkRecommendation, compact ? 2 : 0);
+        OverviewGrid.ColumnDefinitions[0].Width = new GridLength(1, GridUnitType.Star);
+        OverviewGrid.ColumnDefinitions[1].Width = compact ? new GridLength(0) : new GridLength(1, GridUnitType.Star);
+        Grid.SetColumn(RecentActivityCard, compact ? 0 : 1); Grid.SetRow(RecentActivityCard, compact ? 1 : 0);
+        ExploreActions.Orientation = compact ? Orientation.Vertical : Orientation.Horizontal;
     }
 }

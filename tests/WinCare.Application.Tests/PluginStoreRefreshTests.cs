@@ -75,6 +75,23 @@ public sealed class PluginStoreRefreshTests
         Assert.False(vm.IsCatalogTrustVerified);
     }
 
+    [Fact]
+    public void Extension_search_requires_every_term_but_allows_terms_across_fields()
+    {
+        MethodInfo matcher = typeof(PluginStorePageViewModel).GetMethod("MatchesSearch", BindingFlags.NonPublic | BindingFlags.Static)!;
+        object?[] matchingArgs =
+        {
+            "visual tools", "visual-extension", "Visual helper", "Adds focused utilities", "Publisher", "Developer Tools", new[] { "capture-screen" }
+        };
+        object?[] missingArgs =
+        {
+            "visual impossible-term", "visual-extension", "Visual helper", "Adds focused utilities", "Publisher", "Developer Tools", new[] { "capture-screen" }
+        };
+
+        Assert.True((bool)matcher.Invoke(null, matchingArgs)!);
+        Assert.False((bool)matcher.Invoke(null, missingArgs)!);
+    }
+
     private static RemotePluginCatalog Catalog(string id, bool trusted) => new()
     {
         TrustStatusMessage = id, IsTrustVerified = trusted,

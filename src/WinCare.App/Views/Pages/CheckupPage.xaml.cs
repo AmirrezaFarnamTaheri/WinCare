@@ -1,6 +1,7 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using WinCare.App.ViewModels.Pages;
+using WinCare.App.Views;
 
 namespace WinCare.App.Views.Pages;
 
@@ -15,13 +16,33 @@ public sealed partial class CheckupPage : Page
 
     public CheckupPageViewModel ViewModel { get; }
 
-    private void SectionSelector_SelectionChanged(SelectorBar sender, SelectorBarSelectionChangedEventArgs args)
-    {
+    private void SectionSelector_SelectionChanged(SelectorBar sender, SelectorBarSelectionChangedEventArgs args) =>
         ViewModel.SelectSection(sender.Items.IndexOf(sender.SelectedItem));
+
+    private void FindingAction_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { DataContext: PageRow row } ||
+            string.IsNullOrWhiteSpace(row.NavigationKey) ||
+            string.IsNullOrWhiteSpace(row.NavigationSectionTitle)) return;
+
+        PageNavigation.NavigateToSection(this, row.NavigationKey, row.NavigationSectionTitle);
     }
 
     private void Page_SizeChanged(object sender, SizeChangedEventArgs e)
     {
-        ViewModel.SetCompactLayout(LayoutVisibility.IsCompact(e.NewSize.Width));
+        bool compact = LayoutVisibility.IsCompact(e.NewSize.Width);
+        ViewModel.SetCompactLayout(compact);
+        if (compact)
+        {
+            CheckupHero.ColumnDefinitions[0].Width = new GridLength(1, GridUnitType.Star);
+            CheckupHero.ColumnDefinitions[1].Width = new GridLength(0);
+            CheckupStatusCard.Visibility = Visibility.Collapsed;
+        }
+        else
+        {
+            CheckupHero.ColumnDefinitions[0].Width = new GridLength(1, GridUnitType.Star);
+            CheckupHero.ColumnDefinitions[1].Width = GridLength.Auto;
+            CheckupStatusCard.Visibility = Visibility.Visible;
+        }
     }
 }

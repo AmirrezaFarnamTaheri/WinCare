@@ -11,6 +11,8 @@ public sealed class PageRow : ObservableObject
     private string _statusBrushKey = "AccentTealBrush";
     private string? _actionText;
     private CommunityToolkit.Mvvm.Input.IRelayCommand? _actionCommand;
+    private string? _navigationKey;
+    private string? _navigationSectionTitle;
 
     public PageRow(string title, string description, string state, string detail)
     {
@@ -27,6 +29,7 @@ public sealed class PageRow : ObservableObject
     public string LatestActivity { get; init; } = string.Empty;
     public bool HasActivity => LatestActivity.Length > 0;
     public string AccessibleName => $"{Title}. {Description}. {State}. {Detail}";
+    public string ActionAccessibleName => string.IsNullOrWhiteSpace(ActionText) ? Title : $"{ActionText}: {Title}";
     public string Description { get; }
 
     public string State
@@ -55,6 +58,7 @@ public sealed class PageRow : ObservableObject
             if (SetProperty(ref _actionText, value))
             {
                 OnPropertyChanged(nameof(HasAction));
+                OnPropertyChanged(nameof(ActionAccessibleName));
             }
         }
     }
@@ -64,14 +68,27 @@ public sealed class PageRow : ObservableObject
         get => _actionCommand;
         set
         {
-            if (SetProperty(ref _actionCommand, value))
-            {
-                OnPropertyChanged(nameof(HasAction));
-            }
+            if (SetProperty(ref _actionCommand, value)) OnPropertyChanged(nameof(HasAction));
         }
     }
 
-    public bool HasAction => ActionCommand is not null && !string.IsNullOrWhiteSpace(ActionText);
+    public string? NavigationKey
+    {
+        get => _navigationKey;
+        set
+        {
+            if (SetProperty(ref _navigationKey, value)) OnPropertyChanged(nameof(HasAction));
+        }
+    }
+
+    public string? NavigationSectionTitle
+    {
+        get => _navigationSectionTitle;
+        set => SetProperty(ref _navigationSectionTitle, value);
+    }
+
+    public bool HasAction => !string.IsNullOrWhiteSpace(ActionText) &&
+        (ActionCommand is not null || !string.IsNullOrWhiteSpace(NavigationKey));
 
     public bool IsCompact
     {
