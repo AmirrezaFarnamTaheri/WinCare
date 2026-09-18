@@ -4,8 +4,8 @@ using System.Security.Principal;
 using System.Text.Json;
 using WinCare.Application.Activity;
 using WinCare.Application.Native;
-using WinCare.CommandCatalog.Models;
 using WinCare.CommandCatalog;
+using WinCare.CommandCatalog.Models;
 using WinCare.Domain.Activity;
 using WinCare.Domain.Commands;
 

@@ -33,7 +33,7 @@ public static class JsonPluginLoader
     /// This overload performs no admission gate and is preserved for trusted locations (the
     /// application install directory) and for direct test fixtures. Directories a user can write
     /// to must be loaded with the two-argument overload passing <c>requireAdmissionRecord</c>
-    /// <c>true</c>, otherwise a package with no trust evidence would be parsed and registered.
+    /// as <c>true</c>, otherwise a package with no trust evidence would be parsed and registered.
     /// </remarks>
     public static PluginLoadResult LoadFromDirectory(string pluginDirectoryPath)
         => LoadFromDirectory(pluginDirectoryPath, requireAdmissionRecord: false);

@@ -291,7 +291,8 @@ public sealed class PluginSecurityRegressionTests
             """;
 
             CompilePlugin(source, Path.Combine(pluginDir, "PluginAssembly.dll"));
-            File.WriteAllText(Path.Combine(pluginDir, "wincare-plugin.json"), """
+            var manifestPath = Path.Combine(pluginDir, "wincare-plugin.json");
+            File.WriteAllText(manifestPath, """
             {
               "id": "com.wincare.rollbackassembly",
               "name": "Rollback Assembly",
@@ -314,11 +315,9 @@ public sealed class PluginSecurityRegressionTests
               ]
             }
             """);
-
             // Discovery now requires an external admission record for user-writable plugin
             // directories; bind the compiled assembly too so the enable failure under test is the
             // assembly's own fault, not a missing trust anchor.
-            string manifestPath = Path.Combine(pluginDir, "wincare-plugin.json");
             byte[] manifestBytes = File.ReadAllBytes(manifestPath);
             byte[] assemblyBytes = File.ReadAllBytes(Path.Combine(pluginDir, "PluginAssembly.dll"));
             string admissionPath = PluginAdmissionTrustStore.GetUserScopedRecordPath(pluginDir);
