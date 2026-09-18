@@ -4,7 +4,7 @@ This document defines the maintained release-readiness contract for WinCare. It 
 
 ## Current candidate
 
-- Product version: **2.5.0-rc5** (`Directory.Build.props`).
+- Product version: **2.5.0-rc6** (`Directory.Build.props`).
 - Command catalog: **269 commands** (`src/WinCare.CommandCatalog/Data/commands.json`).
 - Supported packaged architectures: **x64** and **ARM64**.
 - Desktop runtime: **WinUI 3 on .NET 8**, with the Rust native core built for the matching Windows MSVC target.
