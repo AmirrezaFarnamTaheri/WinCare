@@ -2,11 +2,13 @@ using System;
 using System.Runtime.InteropServices;
 using Microsoft.UI;
 using Microsoft.UI.Composition.SystemBackdrops;
+using Microsoft.UI.Dispatching;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
+using Windows.Foundation;
 using Windows.Graphics;
 using WinCare.Infrastructure.Observability;
 using WinCare.App.Services;
@@ -117,7 +119,6 @@ public sealed partial class MainWindow : Window
         Activated -= OnActivatedRefreshTheme;
         if (_highContrastEventRegistered) _accessibilitySettings.HighContrastChanged -= OnHighContrastChanged;
         if (AppPreferences.RememberWindowPlacement) PersistWindowPlacement();
-
         // Window.Closed has no deferral API. Finish persistence before the final window
         // closes; neither helper requires the UI thread and runtime shutdown is bounded.
         FlushPreferencesAsync().GetAwaiter().GetResult();

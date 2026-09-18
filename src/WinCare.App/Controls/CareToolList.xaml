@@ -49,7 +49,6 @@
                     </ListView.ItemTemplate>
                 </ListView>
 
-
             </Grid>
         </Border>
 <InfoBar Grid.Row="1" Margin="0" VerticalAlignment="Top" IsOpen="{x:Bind ViewModel.IsEmpty, Mode=OneWay}" IsClosable="False" Title="No tasks here" Message="{x:Bind ViewModel.EmptyMessage, Mode=OneWay}" Severity="Informational" />
