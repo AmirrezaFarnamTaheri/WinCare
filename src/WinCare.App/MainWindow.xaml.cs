@@ -22,13 +22,21 @@ public sealed partial class MainWindow : Window
     private bool _highContrastEventRegistered;
     public bool IsClosed { get; private set; }
 
+    // Global-search suggestions carry route keys that must match the routing table; resolve them
+    // once so a catalog rename fails at startup instead of producing suggestions to nowhere.
+    private static readonly string AllToolsRoute = NavigationCatalog.Items.Single(item => item.Id == "all-tools").Id;
+    private static readonly string PluginStoreRoute = NavigationCatalog.Items.Single(item => item.Id == "plugin-store").Id;
+    private static readonly string HelpRoute = NavigationCatalog.Items.Single(item => item.Id == "help").Id;
+    private static readonly string ActivityRoute = NavigationCatalog.Items.Single(item => item.Id == "activity").Id;
+    private static readonly string AboutRoute = NavigationCatalog.Items.Single(item => item.Id == "about").Id;
+
     [DllImport("user32.dll")]
     private static extern uint GetDpiForWindow(nint windowHandle);
 
     public MainWindow()
     {
         InitializeComponent();
-        WindowRoot.ActualThemeChanged += (_, _) => RefreshThemeResources();
+        WindowRoot.ActualThemeChanged += OnWindowRootThemeChanged;
         try
         {
             _accessibilitySettings.HighContrastChanged += OnHighContrastChanged;
@@ -37,10 +45,7 @@ public sealed partial class MainWindow : Window
         catch (COMException)
         {
         }
-        Activated += (_, args) =>
-        {
-            if (args.WindowActivationState != WindowActivationState.Deactivated) RefreshThemeResources();
-        };
+        Activated += OnActivatedRefreshTheme;
         ApplyTheme(AppPreferences.Theme);
         ExtendsContentIntoTitleBar = true;
         SetTitleBar(AppTitleBar);
@@ -71,6 +76,15 @@ public sealed partial class MainWindow : Window
         WindowRoot.Loaded -= OnWindowRootLoaded;
     }
 
+    // Named so OnWindowClosed can unsubscribe: the discarded lambdas kept the closed window
+    // alive on its own events and left RefreshThemeResources attached after close.
+    private void OnWindowRootThemeChanged(FrameworkElement sender, object args) => RefreshThemeResources();
+
+    private void OnActivatedRefreshTheme(object sender, WindowActivatedEventArgs args)
+    {
+        if (args.WindowActivationState != WindowActivationState.Deactivated) RefreshThemeResources();
+    }
+
     private void RefreshThemeResources()
     {
         if (IsClosed) return;
@@ -99,21 +113,34 @@ public sealed partial class MainWindow : Window
     {
         IsClosed = true;
         Closed -= OnWindowClosed;
+        WindowRoot.ActualThemeChanged -= OnWindowRootThemeChanged;
+        Activated -= OnActivatedRefreshTheme;
         if (_highContrastEventRegistered) _accessibilitySettings.HighContrastChanged -= OnHighContrastChanged;
         if (AppPreferences.RememberWindowPlacement) PersistWindowPlacement();
 
+        // Window.Closed has no deferral API. Finish persistence before the final window
+        // closes; neither helper requires the UI thread and runtime shutdown is bounded.
+        FlushPreferencesAsync().GetAwaiter().GetResult();
+        ShutdownRuntimeAsync().GetAwaiter().GetResult();
+    }
+
+    private static async Task FlushPreferencesAsync()
+    {
         try
         {
-            AppPreferences.FlushAsync().GetAwaiter().GetResult();
+            await AppPreferences.FlushAsync().ConfigureAwait(false);
         }
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"[MainWindow] Preference flush on close failed: {ex}");
         }
+    }
 
+    private static async Task ShutdownRuntimeAsync()
+    {
         try
         {
-            Services.AppRuntime.Current.ShutdownAsync(TimeSpan.FromSeconds(3)).GetAwaiter().GetResult();
+            await Services.AppRuntime.Current.ShutdownAsync(TimeSpan.FromSeconds(3)).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -229,23 +256,23 @@ public sealed partial class MainWindow : Window
         {
             int score = ScoreSearch(query, tool.Title, tool.Summary, tool.Area, tool.Section, tool.Id, string.Join(' ', tool.Keywords));
             if (score <= 0) continue;
-            candidates.Add((new GlobalSearchSuggestion(tool.Title, $"{tool.Area} · {tool.Section}", "all-tools", tool.Id, GlobalSearchSuggestionKind.Tool), score));
+            candidates.Add((new GlobalSearchSuggestion(tool.Title, $"{tool.Area} · {tool.Section}", AllToolsRoute, tool.Id, GlobalSearchSuggestionKind.Tool), score));
         }
 
         foreach (var extension in AppRuntime.Current.PluginRegistry.GetAllPlugins())
         {
             int score = ScoreSearch(query, extension.Name, extension.Description, extension.Category, extension.Author, extension.Id);
             if (score <= 0) continue;
-            candidates.Add((new GlobalSearchSuggestion(extension.Name, $"Extension · {extension.Category}", "plugin-store", extension.Name, GlobalSearchSuggestionKind.Extension), score + 10));
+            candidates.Add((new GlobalSearchSuggestion(extension.Name, $"Extension · {extension.Category}", PluginStoreRoute, extension.Name, GlobalSearchSuggestionKind.Extension), score + 10));
         }
 
         (string Title, string Terms, string Route)[] helpTopics =
         [
-            ("How changes work", "changes confirmation preview risk destructive", "help"),
-            ("Keyboard shortcuts", "keyboard shortcut ctrl k ctrl f search", "help"),
-            ("Find a tool", "find discover tool category power tools", "help"),
-            ("Recent activity and results", "history report recent activity results", "activity"),
-            ("About WinCare", "about version license credits", "about"),
+            ("How changes work", "changes confirmation preview risk destructive", HelpRoute),
+            ("Keyboard shortcuts", "keyboard shortcut ctrl k ctrl f search", HelpRoute),
+            ("Find a tool", "find discover tool category power tools", HelpRoute),
+            ("Recent activity and results", "history report recent activity results", ActivityRoute),
+            ("About WinCare", "about version license credits", AboutRoute),
         ];
         foreach ((string title, string terms, string route) in helpTopics)
         {

@@ -23,9 +23,9 @@ WinCare separates source validation, hosted Windows CI, packaged-runtime evidenc
 ### 1. Source and structural verification
 
 - [x] **Native foundation contract** (`tools/verify_native_foundation.py`): exact 259/259 command ID parity with the frozen oracle, native-source boundaries, WinUI navigation contracts, and one fail-closed command executor boundary.
-- [x] **Native Python regression suite** (`tests/native/`): **94 tests (93 passed, 1 skipped)** in PR CI. Coverage includes command admission, parameter/approval provenance, bounded process behavior, reparse-point safety, plugin admission rollback, dependency-lock determinism, portable publish contracts, finalized-source completeness, responsive UI contracts, and release behavior.
-- [x] **Community plugin CLI suite** (`tests/tools/`): **9/9 passed**, covering scaffolding, manifest linting, SemVer validation, archive bounds, symlink/path traversal rejection, deterministic packaging, and Unicode archive paths.
-- [x] **Visual and accessibility source contracts**: theme-token consistency (33/33 tokens) and status-pill WCAG 2.1 AA contrast (all 8 pairs) remain covered by the repository tests and validators.
+- [x] **Native Python regression suite** (`tests/native/`): passes in PR CI. Coverage includes command admission, parameter/approval provenance, bounded process behavior, reparse-point safety, plugin admission rollback, dependency-lock determinism, portable publish contracts, finalized-source completeness, responsive UI contracts, and release behavior.
+- [x] **Community plugin CLI suite** (`tests/tools/`): passes in PR CI. Coverage includes scaffolding, manifest linting, SemVer validation, archive bounds, symlink/path traversal rejection, deterministic packaging, and Unicode archive paths.
+- [x] **Visual and accessibility source contracts**: theme-token consistency and status-pill WCAG 2.1 AA contrast remain covered by the repository tests and validators; see the workflow result for the exact commit for current token and pair counts.
 - [x] **Documentation image integrity**: checked-in PNG evidence is validated without regenerating screenshots during ordinary CI.
 
 The unified workflow runs the Python repository tests with one discovery command instead of repeating the native foundation and plugin test paths as separate workflow steps.
@@ -35,7 +35,7 @@ The unified workflow runs the Python repository tests with one discovery command
 The Windows build matrix owns both the native Rust core and the managed/package build for each architecture; there is no intermediate DLL artifact upload/download hop.
 
 - [x] **Rust x64 and ARM64**: formatting is checked once, Clippy runs for both Windows targets with `-D warnings`, x64 unit tests execute, and release builds compile for x64 and ARM64.
-- [x] **Managed x64 tests**: **232/232 passed**: 18 Command Catalog, 108 Application, and 106 Infrastructure tests.
+- [x] **Managed x64 tests**: all managed test suites pass in PR CI; see the workflow result for the exact commit for current counts.
 - [x] **Locked NuGet restore and audit contract**: committed dependency graphs remain the build input.
 - [x] **x64 and ARM64 MSIX builds**: both architectures compile with their directly staged Rust core.
 - [x] **Runner-local development signing**: each MSIX is signed with an ephemeral certificate, signer/publisher identity is checked, a modified package is rejected, and the private certificate is removed in the same packaging step.
@@ -50,14 +50,14 @@ The workflow downloads the actual versioned portable artifact and executes `--sm
 - [x] **x64 portable runtime** on `windows-latest`.
 - [x] **ARM64 portable runtime** on `windows-11-vs2026-arm`.
 
-The smoke crosses WinUI startup/window activation, native Rust ABI loading, plugin/runtime initialization, and a read-only `system` dispatcher path before exiting successfully. This is meaningful packaged-runtime evidence, but it does not prove every WUA/COM path, arbitrary third-party plugin behavior, accessibility behavior, or all 259 command implementations.
+The smoke crosses WinUI startup/window activation, native Rust ABI loading, plugin/runtime initialization, and a read-only `system` dispatcher path before exiting successfully. This is meaningful packaged-runtime evidence, but it does not prove every WUA/COM path, arbitrary third-party plugin behavior, accessibility behavior, or all 269 command implementations.
 
 ### 4. Interactive / deployment / command evidence still required
 
 - [ ] **Narrator, keyboard-only navigation, High Contrast rendering, and 100–225% text scaling** on the release candidate.
 - [ ] **Production-certificate MSIX install, repair, upgrade, and uninstall cycles**.
 - [ ] **Broader ARM64 Windows integration behavior** beyond the hosted portable startup/core-flow smoke.
-- [ ] **Command-by-command Windows behavior comparison against the historical oracle**. Production promotion remains blocked until all 259 commands reach `BehaviorVerified`.
+- [ ] **Command-by-command Windows behavior comparison against the historical oracle**. Production promotion remains blocked until all 269 commands reach `BehaviorVerified`.
 
 ---
 
@@ -119,7 +119,7 @@ The finalizer produces:
 
 The structural regression suite exercises finalization. Ordinary PR/branch CI therefore does **not** create and upload another source-finalization bundle on every run.
 
-Production mode still exits non-zero until all 259 commands are `BehaviorVerified`. That contract is intentionally retained; CI no longer exposes an independent manual mode switch that can incorrectly ask an RC version to finalize as production.
+Production mode still exits non-zero until all 269 commands are `BehaviorVerified`. That contract is intentionally retained; CI no longer exposes an independent manual mode switch that can incorrectly ask an RC version to finalize as production.
 
 ---
 

@@ -309,6 +309,22 @@ public sealed class PluginSecurityRegressionTests
             }
             """);
 
+            // Discovery now requires an external admission record for user-writable plugin
+            // directories; bind the compiled assembly too so the enable failure under test is the
+            // assembly's own fault, not a missing trust anchor.
+            string manifestPath = Path.Combine(pluginDir, "wincare-plugin.json");
+            byte[] manifestBytes = File.ReadAllBytes(manifestPath);
+            byte[] assemblyBytes = File.ReadAllBytes(Path.Combine(pluginDir, "PluginAssembly.dll"));
+            string admissionPath = PluginAdmissionTrustStore.GetRecordPath(pluginDir);
+            Directory.CreateDirectory(Path.GetDirectoryName(admissionPath)!);
+            File.WriteAllText(admissionPath, JsonSerializer.Serialize(new PluginAdmissionRecord
+            {
+                SchemaVersion = 1,
+                PluginId = "com.wincare.rollbackassembly",
+                ManifestSha256 = Convert.ToHexString(SHA256.HashData(manifestBytes)).ToLowerInvariant(),
+                AssemblySha256 = Convert.ToHexString(SHA256.HashData(assemblyBytes)).ToLowerInvariant()
+            }));
+
             var dispatcher = new CommandDispatcher(Array.Empty<CommandDefinition>(), Array.Empty<ICommandHandler>());
             var host = new DefaultPluginHost(dispatcher, pluginsUserDirectory: root);
             var registry = new PluginRegistryService(
@@ -322,6 +338,95 @@ public sealed class PluginSecurityRegressionTests
             Assert.DoesNotContain(host.RegisteredCommands, command => command.Id == "com.wincare.rollbackassembly.declared");
             Assert.True(File.Exists(markerBase + ".shutdown"));
             Assert.True(File.Exists(markerBase + ".dispose"));
+        }
+        finally
+        {
+            try { Directory.Delete(root, recursive: true); } catch { }
+        }
+    }
+
+    [Fact]
+    public async Task AssemblyPlugin_WithSwappedAssemblyBytes_IsRefusedDespiteValidManifest()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "WinCareAssemblyTamper_" + Guid.NewGuid().ToString("N"));
+        var pluginDir = Path.Combine(root, "com.wincare.tamperprobe");
+        Directory.CreateDirectory(pluginDir);
+
+        try
+        {
+            string source = """
+            using System;
+            using System.Collections.Generic;
+            using System.Runtime.Versioning;
+            using System.Threading;
+            using System.Threading.Tasks;
+            using WinCare.Application.Plugins;
+            using WinCare.CommandCatalog.Models;
+
+            [assembly: TargetFramework(".NETCoreApp,Version=v8.0")]
+            [assembly: SupportedOSPlatform("windows10.0.19041.0")]
+
+            namespace Community.TamperProbe
+            {
+                public sealed class Probe : IWinCarePlugin
+                {
+                    public string Id => "com.wincare.tamperprobe";
+                    public string Name => "Tamper Probe";
+                    public string Version => "1.0.0";
+                    public string Author => "Regression Test";
+                    public string Description => "Initializes cleanly so a hash mismatch is the only failure path.";
+
+                    public Task InitializeAsync(IPluginHost host, CancellationToken ct = default) => Task.CompletedTask;
+                    public Task ShutdownAsync(CancellationToken ct = default) => Task.CompletedTask;
+                    public ValueTask DisposeAsync() => ValueTask.CompletedTask;
+                    public IReadOnlyList<CommandDefinition> GetCommands() => Array.Empty<CommandDefinition>();
+                    public IReadOnlyList<IPluginWidget> GetWidgets() => Array.Empty<IPluginWidget>();
+                }
+            }
+            """;
+
+            CompilePlugin(source, Path.Combine(pluginDir, "PluginAssembly.dll"));
+
+            string manifestJson = """
+            {
+              "id": "com.wincare.tamperprobe",
+              "name": "Tamper Probe",
+              "version": "1.0.0",
+              "author": "Regression Test",
+              "entryType": "Assembly",
+              "targetFramework": "net8.0-windows10.0.19041.0",
+              "assemblyFileName": "PluginAssembly.dll",
+              "pluginClassName": "Community.TamperProbe.Probe",
+              "tools": []
+            }
+            """;
+            string manifestPath = Path.Combine(pluginDir, "wincare-plugin.json");
+            File.WriteAllText(manifestPath, manifestJson);
+
+            // Record valid manifest trust, but bind a digest that does not match the assembly on
+            // disk: this is exactly the post-install assembly swap the binding must detect.
+            byte[] manifestBytes = File.ReadAllBytes(manifestPath);
+            string manifestDigest = Convert.ToHexString(SHA256.HashData(manifestBytes)).ToLowerInvariant();
+            string recordPath = PluginAdmissionTrustStore.GetRecordPath(pluginDir);
+            Directory.CreateDirectory(Path.GetDirectoryName(recordPath)!);
+            File.WriteAllText(recordPath, JsonSerializer.Serialize(new PluginAdmissionRecord
+            {
+                SchemaVersion = 1,
+                PluginId = "com.wincare.tamperprobe",
+                ManifestSha256 = manifestDigest,
+                AssemblySha256 = new string('f', 64)
+            }));
+
+            var host = new DummyPluginHost { PluginsUserDirectory = root };
+            var registry = new PluginRegistryService(
+                initialEnabledPluginIds: new HashSet<string> { "com.wincare.tamperprobe" });
+
+            await registry.DiscoverAndInitializeAsync(host);
+
+            var plugin = Assert.Single(registry.GetAllPlugins(), item => item.Id == "com.wincare.tamperprobe");
+            Assert.Equal(PluginState.Error, plugin.State);
+            Assert.Contains("assembly", plugin.ErrorMessage, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("admitted", plugin.ErrorMessage, StringComparison.OrdinalIgnoreCase);
         }
         finally
         {

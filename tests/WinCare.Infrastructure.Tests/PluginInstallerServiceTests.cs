@@ -380,7 +380,10 @@ public class PluginInstallerServiceTests
             var installer = new PluginInstallerService(pluginsBaseDirectory: tempPluginsDir);
             var fileUri = new Uri(tempZipPath).AbsoluteUri;
 
-            var installedPath = await installer.InstallPluginFromPackageAsync(fileUri, "com.wincare.fileuri.test");
+            // Local file:// packages must present an expected digest: an unsigned local package
+            // is not an install path WinCare admits without an integrity check.
+            string digest = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(tempZipPath))).ToLowerInvariant();
+            var installedPath = await installer.InstallPluginFromPackageAsync(fileUri, "com.wincare.fileuri.test", digest);
 
             Assert.True(Directory.Exists(installedPath));
             Assert.True(File.Exists(Path.Combine(installedPath, "wincare-plugin.json")));

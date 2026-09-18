@@ -42,6 +42,10 @@ NATIVE_TOP_LEVEL_FILES = (
     "Directory.Build.props",
     "Directory.Packages.props",
     "LICENSE",
+    "PRODUCT.md",
+    "UX-CONTRACT.md",
+    "FINAL-VALIDATION.md",
+    "tests/__init__.py",
     "NuGet.Config",
     "README.md",
     "SECURITY.md",
@@ -99,10 +103,10 @@ NATIVE_TOOL_FILES = (
     "tools/package_portable.py",
     "tools/release_checklist.py",
     "tools/stage_release_assets.py",
-    "tools/installer/wincare_setup.iss",
     "tools/verify_native_foundation.py",
     "tools/verify_visual_tokens.py",
     "tools/verify_pill_contrast.py",
+    "tools/verify_palette_contrast.py",
 )
 
 NATIVE_WORKFLOW_FILES = (
@@ -322,8 +326,23 @@ def stage_legacy_oracle(root: Path, destination: Path) -> Path:
     _copy_matching_files(root, destination, "tools", POWERSHELL_SUFFIXES)
     _copy_matching_files(root, destination, "tests", POWERSHELL_SUFFIXES | {".json", ".xml", ".xaml"})
 
-    if not (destination / "migration/oracle/provenance.json").is_file():
+    provenance_path = destination / "migration/oracle/provenance.json"
+    if not provenance_path.is_file():
         raise ValueError("legacy oracle staging requires migration/oracle/provenance.json")
+
+    # Validate the shape of the file that is actually shipped, not only the copy in the source
+    # tree: finalize_release indexes these three keys directly and a malformed file deserves a
+    # controlled error rather than a KeyError traceback.
+    required_keys = ("sourceRepository", "sourceCommit", "capturedAt")
+    try:
+        provenance = json.loads(provenance_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"legacy oracle provenance is not valid JSON: {exc}") from exc
+    if not isinstance(provenance, dict):
+        raise ValueError(f"legacy oracle provenance must be a JSON object, got {type(provenance).__name__}")
+    missing = [key for key in required_keys if not provenance.get(key)]
+    if missing:
+        raise ValueError(f"legacy oracle provenance is missing required keys: {', '.join(missing)}")
     return destination
 
 
@@ -361,7 +380,7 @@ def _write_report(path: Path, version: str, mode: ReleaseMode, readiness: Readin
         "## Artifact separation",
         "",
         "- The native source archive contains no `.ps1`, `.psm1`, or `.psd1` files.",
-        "- The legacy implementation is preserved only in the separate oracle archive.",
+        "- The separate oracle archive contains available frozen reference fixtures and tooling, not a complete historical runtime snapshot.",
         "- Native runtime projects do not invoke or embed PowerShell.",
         "",
         "## Verification boundary",

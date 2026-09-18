@@ -106,9 +106,18 @@ public static class DiagnosticLogTailerService
         {
             try
             {
-                filterRegex = new Regex(searchPattern, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+                // A user-supplied pattern is matched against every tail line; bound it so an
+                // adversarial pattern (catastrophic backtracking) cannot pin a thread for minutes.
+                filterRegex = new Regex(
+                    searchPattern,
+                    RegexOptions.IgnoreCase | RegexOptions.CultureInvariant,
+                    TimeSpan.FromSeconds(2));
             }
-            catch
+            catch (ArgumentOutOfRangeException)
+            {
+                // A pattern the runtime will not accept falls back to literal matching below.
+            }
+            catch (ArgumentException)
             {
                 // Fallback to literal search if regex is invalid
             }
@@ -118,11 +127,27 @@ public static class DiagnosticLogTailerService
         await using var fs = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
         using var reader = new StreamReader(fs, Encoding.UTF8);
 
-        var rawLines = new List<string>();
+        // Stream forward through the whole file but keep only a bounded window of the most recent
+        // lines: peer-log-tail is user-pointable at an arbitrarily large file, and buffering every
+        // line first would load the entire log into managed memory instead of tailing it.
+        int windowCapacity = Math.Max(maxLines, 1) * 2;
+        string[] window = new string[windowCapacity];
+        int totalLines = 0;
+        int writeSlot = 0;
         string? line;
         while ((line = await reader.ReadLineAsync(ct).ConfigureAwait(false)) != null)
         {
-            rawLines.Add(line);
+            window[writeSlot] = line;
+            writeSlot = (writeSlot + 1) % windowCapacity;
+            totalLines++;
+        }
+
+        int liveCount = Math.Min(totalLines, windowCapacity);
+        var rawLines = new List<string>(liveCount);
+        int firstSlot = ((writeSlot - liveCount) % windowCapacity + windowCapacity) % windowCapacity;
+        for (int i = 0; i < liveCount; i++)
+        {
+            rawLines.Add(window[(firstSlot + i) % windowCapacity]);
         }
 
         int startIndex = Math.Max(0, rawLines.Count - (maxLines * 2));
@@ -134,11 +159,25 @@ public static class DiagnosticLogTailerService
                 continue;
             }
 
-            if (filterRegex != null && !filterRegex.IsMatch(parsed.RawText))
+            if (filterRegex != null)
             {
-                continue;
+                bool matched;
+                try
+                {
+                    matched = filterRegex.IsMatch(parsed.RawText);
+                }
+                catch (RegexMatchTimeoutException)
+                {
+                    // The pattern exceeded its match budget; treat it as a non-match rather than
+                    // letting a hostile pattern abort the whole read.
+                    matched = false;
+                }
+                if (!matched)
+                {
+                    continue;
+                }
             }
-            else if (filterRegex == null && !string.IsNullOrWhiteSpace(searchPattern) && !parsed.RawText.Contains(searchPattern, StringComparison.OrdinalIgnoreCase))
+            else if (!string.IsNullOrWhiteSpace(searchPattern) && !parsed.RawText.Contains(searchPattern, StringComparison.OrdinalIgnoreCase))
             {
                 continue;
             }

@@ -6,7 +6,7 @@
     xmlns:vm="using:WinCare.App.ViewModels.Pages"
     NavigationCacheMode="Required"
     SizeChanged="Page_SizeChanged">
-    <Grid Padding="28,28,28,32" RowSpacing="18">
+    <Grid Padding="28,28,28,32" RowSpacing="18" KeyDown="Inspector_KeyDown">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
@@ -25,7 +25,7 @@
                 <ColumnDefinition Width="2*" /><ColumnDefinition Width="190" /><ColumnDefinition Width="190" />
                 <ColumnDefinition Width="160" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
-            <TextBox x:Name="ToolSearchBox" Header="Find a tool" MinHeight="44"
+            <TextBox x:Name="ToolSearchBox" Header="Find a tool" MinHeight="44" TabIndex="1"
                      PlaceholderText="What do you want to do?"
                      Text="{x:Bind ViewModel.SearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                      AutomationProperties.AutomationId="ToolSearch" AutomationProperties.Name="Search power tools">
@@ -33,15 +33,15 @@
                     <KeyboardAccelerator Modifiers="Control" Key="F" Invoked="ToolSearch_FocusAccelerator" />
                 </TextBox.KeyboardAccelerators>
             </TextBox>
-            <ComboBox x:Name="AreaFilter" Grid.Column="1" Header="Area" ItemsSource="{x:Bind ViewModel.AreaOptions, Mode=OneWay}" DisplayMemberPath="Label"
+            <ComboBox x:Name="AreaFilter" Grid.Column="1" Header="Area" TabIndex="2" ItemsSource="{x:Bind ViewModel.AreaOptions, Mode=OneWay}" DisplayMemberPath="Label"
                       SelectedItem="{x:Bind ViewModel.SelectedAreaOption, Mode=TwoWay}" AutomationProperties.AutomationId="AreaFilter" AutomationProperties.Name="Filter power tools by area" />
-            <ComboBox x:Name="SectionFilter" Grid.Column="2" Header="Section" ItemsSource="{x:Bind ViewModel.SectionOptions, Mode=OneWay}" DisplayMemberPath="Label"
+            <ComboBox x:Name="SectionFilter" Grid.Column="2" Header="Section" TabIndex="3" ItemsSource="{x:Bind ViewModel.SectionOptions, Mode=OneWay}" DisplayMemberPath="Label"
                       SelectedItem="{x:Bind ViewModel.SelectedSectionOption, Mode=TwoWay}" AutomationProperties.AutomationId="SectionFilter" AutomationProperties.Name="Filter power tools by section" />
-            <ComboBox x:Name="RiskFilter" Grid.Column="3" Header="Impact" ItemsSource="{x:Bind ViewModel.RiskOptions, Mode=OneWay}" DisplayMemberPath="Label"
+            <ComboBox x:Name="RiskFilter" Grid.Column="3" Header="Impact" TabIndex="4" AutomationProperties.HelpText="Impact describes how much a tool can change this PC: read-only, moderate, or permanent" ItemsSource="{x:Bind ViewModel.RiskOptions, Mode=OneWay}" DisplayMemberPath="Label"
                       SelectedItem="{x:Bind ViewModel.SelectedRiskOption, Mode=TwoWay}" AutomationProperties.AutomationId="RiskFilter" AutomationProperties.Name="Filter power tools by impact" />
-            <CheckBox x:Name="ReadOnlyFilter" Grid.Column="4" Margin="0,26,0,0" VerticalAlignment="Center" Content="Read-only"
+            <CheckBox x:Name="ReadOnlyFilter" Grid.Column="4" Margin="0,26,0,0" VerticalAlignment="Center" Content="Read-only" TabIndex="5"
                       IsChecked="{x:Bind ViewModel.ReadOnlyOnly, Mode=TwoWay}" AutomationProperties.AutomationId="ReadOnlyFilter" AutomationProperties.Name="Show only read-only power tools" />
-            <TextBlock x:Name="ResultCountText" Grid.Column="5" Margin="8,28,0,0" VerticalAlignment="Center" Style="{StaticResource RowSecondaryTextStyle}"
+            <TextBlock x:Name="ResultCountText" Grid.Column="5" Margin="8,28,0,0" VerticalAlignment="Center" Style="{StaticResource RowSecondaryTextStyle}" TabIndex="6"
                        Text="{x:Bind ViewModel.ResultCountText, Mode=OneWay}" />
         </Grid>
 
@@ -57,13 +57,13 @@
         <SplitView x:Name="DetailsSplitView" Grid.Row="3" DisplayMode="Inline" PanePlacement="Right" OpenPaneLength="420"
                    CompactPaneLength="0" IsPaneOpen="{x:Bind ViewModel.IsDetailsOpen, Mode=TwoWay}">
             <SplitView.Pane>
-                <Border KeyDown="Inspector_KeyDown" Margin="16,0,0,0" Padding="20" Background="{ThemeResource CardSurfaceBrush}"
+                <Border Margin="16,0,0,0" Padding="20" Background="{ThemeResource CardSurfaceBrush}"
                         BorderBrush="{ThemeResource CardBorderBrush}" BorderThickness="1" CornerRadius="{StaticResource RadiusControl}">
                     <ScrollViewer VerticalScrollBarVisibility="Auto">
                         <StackPanel Spacing="16">
                             <Button x:Name="InspectorCloseButton" HorizontalAlignment="Right" Style="{StaticResource QuietButtonStyle}"
                                     Click="CloseInspector_Click" AutomationProperties.Name="Close tool details">
-                                <FontIcon Glyph="&#xE711;" FontSize="14" />
+                                <FontIcon Glyph="&#xE711;" FontSize="14" AutomationProperties.AccessibilityView="Raw" />
                             </Button>
                             <StackPanel Spacing="6">
                                 <TextBlock Style="{StaticResource SectionHeaderTextStyle}" Text="{x:Bind ViewModel.SelectedToolTitle, Mode=OneWay}" />
@@ -78,7 +78,7 @@
                             </Border>
                             <InfoBar IsOpen="{x:Bind ViewModel.Execution.IsDestructiveTool, Mode=OneWay}" IsClosable="False" Severity="Error"
                                      Title="Permanent change" Message="This can make permanent changes. Read the preview before you apply it." />
-                            <ToggleSwitch Header="I reviewed this change" OffContent="Not approved" OnContent="Approved"
+                            <ToggleSwitch Header="I reviewed this change" OffContent="Not approved" OnContent="Approved" AutomationProperties.HelpText="Approval is required before a tool that makes permanent changes can run"
                                           IsEnabled="{x:Bind ViewModel.Execution.CanApproveReview, Mode=OneWay}"
                                           IsOn="{x:Bind ViewModel.Execution.IsReviewApproved, Mode=TwoWay}"
                                           Visibility="{x:Bind local:AllToolsPage.BoolToVisibility(ViewModel.Execution.RequiresApprovalSwitch), Mode=OneWay}"
@@ -93,7 +93,7 @@
                                       HorizontalContentAlignment="Stretch" AutomationProperties.AutomationId="CommandParameters" AutomationProperties.Name="Tool options" />
                             <StackPanel Orientation="Horizontal" Spacing="8">
                                 <Button Style="{StaticResource PrimaryActionButtonStyle}" Command="{x:Bind ViewModel.Execution.ExecuteSelectedToolCommand}"
-                                        Content="{x:Bind ViewModel.Execution.PrimaryActionLabel, Mode=OneWay}"
+                                        Content="{x:Bind ViewModel.Execution.PrimaryActionLabel, Mode=OneWay}" AccessKey="E"
                                         AutomationProperties.AutomationId="ExecuteSelectedTool" AutomationProperties.Name="Run or review selected tool" />
                                 <Button Style="{StaticResource QuietButtonStyle}" Command="{x:Bind ViewModel.Execution.CancelSelectedToolCommand}"
                                         Content="{x:Bind ViewModel.Execution.CancelActionLabel, Mode=OneWay}"
@@ -106,6 +106,10 @@
                             <InfoBar IsOpen="{x:Bind ViewModel.Execution.IsExecutionResultOpen, Mode=OneWay}" IsClosable="False"
                                      Title="{x:Bind ViewModel.Execution.ExecutionTitle, Mode=OneWay}"
                                      Message="{x:Bind ViewModel.Execution.ExecutionMessage, Mode=OneWay}" />
+                            <TextBlock Visibility="{x:Bind local:AllToolsPage.BoolToVisibility(ViewModel.Execution.HasPackageInventory), Mode=OneWay}"
+                                       Style="{StaticResource PageDescriptionTextStyle}" IsTextSelectionEnabled="True"
+                                       Text="{x:Bind ViewModel.Execution.PackageInventoryText, Mode=OneWay}"
+                                       AutomationProperties.AutomationId="CommandPackageInventory" />
                             <TextBlock Visibility="{x:Bind local:AllToolsPage.BoolToVisibility(ViewModel.Execution.HasExecutionResult), Mode=OneWay}"
                                        Style="{StaticResource TelemetryTextStyle}" IsTextSelectionEnabled="True"
                                        Text="{x:Bind ViewModel.Execution.ExecutionResultText, Mode=OneWay}"
@@ -140,7 +144,7 @@
                                 <Grid Padding="16,14" ColumnSpacing="12">
                                     <Grid Visibility="{x:Bind local:AllToolsPage.InvertBoolToVisibility(IsCompact), Mode=OneWay}">
                                         <Grid.ColumnDefinitions><ColumnDefinition Width="2.5*" /><ColumnDefinition Width="1.5*" /><ColumnDefinition Width="110" /><ColumnDefinition Width="150" /><ColumnDefinition Width="130" /></Grid.ColumnDefinitions>
-                                        <StackPanel Spacing="3"><TextBlock Style="{StaticResource RowTitleTextStyle}" Text="{x:Bind Title}" /><TextBlock Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind Summary}" /></StackPanel>
+                                        <StackPanel Spacing="4"><TextBlock Style="{StaticResource RowTitleTextStyle}" Text="{x:Bind Title}" /><TextBlock Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind Summary}" /></StackPanel>
                                         <TextBlock Grid.Column="1" Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind CategoryText}" />
                                         <TextBlock Grid.Column="2" Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind Risk}" />
                                         <TextBlock Grid.Column="3" Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind AdministratorAccess}" />

@@ -17,6 +17,10 @@ public sealed record DoctorChatMessage(
 /// <summary>Holds the Troubleshoot conversation and passes chosen steps to Power tools.</summary>
 public sealed class AiDoctorPageViewModel : INotifyPropertyChanged
 {
+    /// <summary>The Troubleshoot page is cached for the session, so the conversation is capped;
+    /// plan steps stay re-derivable from <see cref="CurrentPlan"/>.</summary>
+    private const int MaxKeptMessages = 100;
+
     private readonly IIntentTranslator _intentTranslator;
     private string _userPrompt = string.Empty;
     private bool _isAnalyzing;
@@ -24,6 +28,12 @@ public sealed class AiDoctorPageViewModel : INotifyPropertyChanged
 
     public event PropertyChangedEventHandler? PropertyChanged;
     public ObservableCollection<DoctorChatMessage> Messages { get; } = new();
+
+    private void AddMessage(DoctorChatMessage message)
+    {
+        Messages.Add(message);
+        while (Messages.Count > MaxKeptMessages) Messages.RemoveAt(0);
+    }
 
     public string UserPrompt
     {
@@ -63,7 +73,7 @@ public sealed class AiDoctorPageViewModel : INotifyPropertyChanged
         var inferenceEngine = new RuleBasedIntentInferenceEngine();
         _intentTranslator = intentTranslator ?? new IntentTranslator(inferenceEngine, AppRuntime.Current.ToolCatalog);
 
-        Messages.Add(new DoctorChatMessage(
+        AddMessage(new DoctorChatMessage(
             "WinCare",
             "Tell me what's wrong — for example, low disk space, high memory use, lag, or network trouble. I'll check local Windows signals and suggest a few next steps.",
             IsUser: false,
@@ -76,7 +86,7 @@ public sealed class AiDoctorPageViewModel : INotifyPropertyChanged
         if (prompt.Length == 0 || IsAnalyzing) return;
 
         UserPrompt = string.Empty;
-        Messages.Add(new DoctorChatMessage("You", prompt, IsUser: true, DateTime.UtcNow));
+        AddMessage(new DoctorChatMessage("You", prompt, IsUser: true, DateTime.UtcNow));
 
         IsAnalyzing = true;
         CurrentPlan = null;
@@ -89,16 +99,16 @@ public sealed class AiDoctorPageViewModel : INotifyPropertyChanged
             string findingCount = $"{plan.Findings.Count} item{(plan.Findings.Count == 1 ? string.Empty : "s")}";
             string stepCount = $"{plan.ProposedSteps.Count} next step{(plan.ProposedSteps.Count == 1 ? string.Empty : "s")}";
             string responseText = $"{plan.DiagnosisSummary}\n\nI checked {signalCount} and found {findingCount}. {stepCount} ready to review.";
-            Messages.Add(new DoctorChatMessage("WinCare", responseText, IsUser: false, DateTime.UtcNow, plan));
+            AddMessage(new DoctorChatMessage("WinCare", responseText, IsUser: false, DateTime.UtcNow, plan));
         }
         catch (OperationCanceledException)
         {
-            Messages.Add(new DoctorChatMessage("WinCare", "Check cancelled.", IsUser: false, DateTime.UtcNow));
+            AddMessage(new DoctorChatMessage("WinCare", "Check cancelled.", IsUser: false, DateTime.UtcNow));
         }
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"[Troubleshoot] Check failed: {ex}");
-            Messages.Add(new DoctorChatMessage(
+            AddMessage(new DoctorChatMessage(
                 "WinCare",
                 "I couldn't finish that check. Nothing was changed. Try again, or open Activity if the problem keeps happening.",
                 IsUser: false,

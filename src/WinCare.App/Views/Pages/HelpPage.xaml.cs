@@ -14,5 +14,18 @@ public sealed partial class HelpPage : Page
     private void OpenTroubleshoot_Click(object sender, RoutedEventArgs e) => PageNavigation.NavigateTo(this, "ai-doctor");
     private void OpenSettings_Click(object sender, RoutedEventArgs e) => PageNavigation.NavigateTo(this, "settings");
     private void OpenAbout_Click(object sender, RoutedEventArgs e) => PageNavigation.NavigateTo(this, "about");
-    private async void ShowTour_Click(object sender, RoutedEventArgs e) => await PageNavigation.ShowTourAsync(this);
+    private async void ShowTour_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            TourError.IsOpen = false;
+            await PageNavigation.ShowTourAsync(this);
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[HelpPage] Tour failed: {ex}");
+            TourError.IsOpen = true;
+        }
+    }
 }

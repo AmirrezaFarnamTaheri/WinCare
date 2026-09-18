@@ -89,6 +89,10 @@
   <!-- Prune unused DirectML, ONNX runtime, Widgets, WebView2, and Windows.AI projections from unpackaged portable single-file bundle -->
   <Target Name="PruneUnusedHeavyweightProjections" BeforeTargets="_ComputeFilesToBundle" Condition="'$(PublishSingleFile)' == 'true'">
     <ItemGroup>
+      <!-- The Rust core is staged under Native\$(Platform)\ and must survive this target: its
+           Content entry carries Link="wincare_core.dll", so its RelativeDir is empty and it is
+           never matched here. The prefix below is the full staged directory rather than a bare
+           'Native' so an unrelated directory merely starting with 'Native' is never pruned. -->
       <_PruneFiles Include="@(ResolvedFileToPublish)" Condition="
         $([System.String]::Copy('%(Filename)').Contains('DirectML')) or
         $([System.String]::Copy('%(Filename)').Contains('onnxruntime')) or
@@ -101,7 +105,7 @@
         $([System.String]::Copy('%(Filename)').StartsWith('workloads.')) or
         $([System.String]::Copy('%(Filename)').StartsWith('packages.')) or
         $([System.String]::Copy('%(Filename)').EndsWith('.lock')) or
-        $([System.String]::Copy('%(RelativeDir)').StartsWith('Native')) or
+        $([System.String]::Copy('%(RelativeDir)').StartsWith('Native\$(Platform)\')) or
         ('%(Extension)' == '.mui' and !$([System.String]::Copy('%(RelativeDir)').ToLower().Contains('en-us')) and !$([System.String]::Copy('%(RelativeDir)').ToLower().Contains('en-gb')))" />
       <ResolvedFileToPublish Remove="@(_PruneFiles)" />
     </ItemGroup>

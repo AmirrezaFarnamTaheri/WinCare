@@ -9,11 +9,11 @@ WinCare merges policy in this order, with later sources taking precedence:
 
 Each file is a complete schema-v1 policy object. Unknown fields, invalid signer thumbprints, malformed maintenance windows, invalid limits and unsupported schemas fail closed. Machine/organization policy should be deployed read-only to ordinary users through the organization’s existing configuration-management system.
 
-The example is intentionally restrictive. Review every allowed/denied action and catalog rule against the organization’s change, recovery and maintenance-window policy before deployment.
+The example is intentionally narrow on the named expert-operation gates, but it is denylist-default for action types: `AllowedActionTypes: ["*"]` admits every action type that the five-entry `DeniedActionTypes` list does not name. Narrow `AllowedActionTypes` to the explicit action types the organization grants before deployment, and review every allowed/denied action and catalog rule against the organization’s change, recovery and maintenance-window policy before deployment.
 
 ## Expert-operation gates
 
-The example policy keeps page-file disabling, security reduction, network experiments, experimental TCP settings, and interception-surface remediation disabled. Process instrumentation remains read-only/diagnostic unless a modifying ETW capture is explicitly approved. Organizations enabling an expert gate should also set strict duration limits, retain exact preview requirements, preserve recovery action types in the allowlist, and test automatic restoration in a disposable Windows environment before deployment.
+The example policy keeps page-file disabling, security reduction, network experiments, experimental TCP settings, and interception-surface remediation disabled. Process instrumentation remains read-only/diagnostic unless a modifying ETW capture is explicitly approved; `AllowProcessInstrumentation` is a single boolean and cannot itself express that distinction, so keep it false unless a modifying capture has been separately approved and bounded. Organizations enabling an expert gate should also set strict duration limits, retain exact preview requirements, preserve recovery action types in the allowlist, and test automatic restoration in a disposable Windows environment before deployment.
 
 `MaximumSecurityMaintenanceMinutes` is bounded to 5..1440 minutes. `MaximumNetworkExperimentMinutes` is bounded to 1..25 minutes and is evaluated against the declared target/sample/timeout worst case before mutation.
 

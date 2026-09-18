@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Globalization;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
@@ -42,6 +43,16 @@ public sealed class ToolExecutionViewModel : ObservableObject
 
     private CancellationTokenSource? _activeCts;
     private bool _isCancellationRequested;
+    private bool _isParameterError;
+    private string _presetContents = string.Empty;
+
+    /// <summary>
+    /// Raised when parameter field values are set programmatically (deep links, preset
+    /// selection, importing the raw JSON editor). The generated parameter controls are
+    /// one-shot snapshots, so views must rebuild on this signal to keep the values on
+    /// screen identical to the values that will execute.
+    /// </summary>
+    public event EventHandler? ParameterValuesChanged;
 
     public ToolExecutionViewModel(CommandDispatcher dispatcher, Action<string> recordRecent)
     {
@@ -128,28 +139,62 @@ public sealed class ToolExecutionViewModel : ObservableObject
     public string ExecutionMessage => _executionMessage;
     public string ExecutionResultText => _executionResultText;
     public bool IsPresetTool => _selectedTool?.Id == "preset";
+
+    /// <summary>
+    /// Description of the selected care plan. Cached per selection: the binding engine reads
+    /// this on every availability change, and the getter previously re-loaded both catalogs
+    /// and could throw from a property getter if a preset referenced an unknown rule.
+    /// </summary>
     public string PresetContents
     {
-        get
-        {
-            if (!IsPresetTool) return string.Empty;
-            if (!TryBuildExecutionParameters(out JsonElement parameters, out _) ||
-                !parameters.TryGetProperty("PresetId", out JsonElement id) || id.ValueKind != JsonValueKind.String)
-                return "Choose a preset to see its included changes.";
-            PresetDefinition? preset = WinCare.CommandCatalog.RemediationCatalog.LoadPresets()
-                .FirstOrDefault(item => string.Equals(item.Id, id.GetString(), StringComparison.OrdinalIgnoreCase));
-            if (preset is null) return "This preset is not in the built-in catalog. Choose a listed plan.";
-            var rules = WinCare.CommandCatalog.RemediationCatalog.LoadRules().ToDictionary(rule => rule.Id);
-            return preset.Title + "\n\n" + string.Join("\n\n", preset.RuleIds.Select(ruleId =>
-            {
-                RemediationRule rule = rules[ruleId];
-                string builds = rule.Compatibility.MaxBuild is int maximum
-                    ? $"Windows builds {rule.Compatibility.MinBuild}–{maximum}"
-                    : $"Windows build {rule.Compatibility.MinBuild} or later";
-                return $"{rule.Title}\n{rule.Description}\n{rule.Risk} risk · {builds}\nRecovery: {rule.Recovery}";
-            })) + "\n\nCompatibility and current targets are checked during preview. Recovery guidance does not guarantee one-click Undo.";
-        }
+        get => _presetContents;
+        private set => SetProperty(ref _presetContents, value);
     }
+
+    private void RefreshPresetContents()
+    {
+        if (!IsPresetTool)
+        {
+            PresetContents = string.Empty;
+            return;
+        }
+
+        if (!TryBuildExecutionParameters(out JsonElement parameters, out _) ||
+            !parameters.TryGetProperty("PresetId", out JsonElement id) || id.ValueKind != JsonValueKind.String)
+        {
+            PresetContents = "Choose a preset to see its included changes.";
+            return;
+        }
+
+        PresetDefinition? preset = WinCare.CommandCatalog.RemediationCatalog.LoadPresets()
+            .FirstOrDefault(item => string.Equals(item.Id, id.GetString(), StringComparison.OrdinalIgnoreCase));
+        if (preset is null)
+        {
+            PresetContents = "This preset is not in the built-in catalog. Choose a listed plan.";
+            return;
+        }
+
+        IReadOnlyDictionary<string, RemediationRule> rules = WinCare.CommandCatalog.RemediationCatalog.LoadRules()
+            .ToDictionary(rule => rule.Id, StringComparer.OrdinalIgnoreCase);
+        var builder = new StringBuilder(preset.Title).Append("\n\n");
+        foreach (string ruleId in preset.RuleIds)
+        {
+            // A preset naming a rule absent from the rule catalog skips that line instead of
+            // throwing out of this property.
+            if (!rules.TryGetValue(ruleId, out RemediationRule? rule)) continue;
+            string builds = rule.Compatibility.MaxBuild is int maximum
+                ? $"Windows builds {rule.Compatibility.MinBuild}–{maximum}"
+                : $"Windows build {rule.Compatibility.MinBuild} or later";
+            builder.Append(rule.Title).Append('\n')
+                .Append(rule.Description).Append('\n')
+                .Append($"{rule.Risk} risk · {builds}\n")
+                .Append("Recovery: ").Append(rule.Recovery).Append("\n\n");
+        }
+
+        builder.Append("Compatibility and current targets are checked during preview. Recovery guidance does not guarantee one-click Undo.");
+        PresetContents = builder.ToString();
+    }
+
     public string ActionFlowTitle => IsSafeTool
         ? (IsMutatingTool ? "Direct, low-risk change" : "Read-only inspection")
         : IsReviewApproved
@@ -171,7 +216,12 @@ public sealed class ToolExecutionViewModel : ObservableObject
         set
         {
             if (SetProperty(ref _parameterJson, value ?? "{}"))
+            {
+                // Advanced-JSON edits change the preset identity too; keep its description
+                // in sync exactly like typed-field edits do.
+                RefreshPresetContents();
                 ResetReviewState();
+            }
         }
     }
 
@@ -243,6 +293,7 @@ public sealed class ToolExecutionViewModel : ObservableObject
         ConfigureParameterFields(tool);
         ResetReviewState();
         ClearExecutionResult();
+        RefreshPresetContents();
         NotifyAvailabilityChanged();
     }
 
@@ -262,11 +313,18 @@ public sealed class ToolExecutionViewModel : ObservableObject
                 JsonValueKind.True => "true",
                 JsonValueKind.False => "false",
                 JsonValueKind.Number => value.GetRawText(),
+                JsonValueKind.Array when field.Kind == CommandParameterKind.StringList =>
+                    string.Join(Environment.NewLine, value.EnumerateArray().Where(item => item.ValueKind == JsonValueKind.String).Select(item => item.GetString())),
                 JsonValueKind.Array => value.GetRawText(),
                 _ => string.Empty,
             };
         }
+
+        RefreshPresetContents();
+        NotifyParameterValuesChanged();
     }
+
+    private void NotifyParameterValuesChanged() => ParameterValuesChanged?.Invoke(this, EventArgs.Empty);
 
     private void ConfigureParameterFields(ToolRowViewModel? tool)
     {
@@ -306,6 +364,7 @@ public sealed class ToolExecutionViewModel : ObservableObject
             _parameterJson = JsonSerializer.Serialize(structured);
             OnPropertyChanged(nameof(ParameterJson));
         }
+        RefreshPresetContents();
         ResetReviewState();
     }
 
@@ -326,6 +385,10 @@ public sealed class ToolExecutionViewModel : ObservableObject
             return;
         }
 
+        // Assign the cancel source before signalling execution: a cancel click in that
+        // window must find a live source instead of silently no-oping while the run proceeds.
+        using CancellationTokenSource linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        _activeCts = linkedCts;
         IsExecuting = true;
         ClearExecutionResult();
         try
@@ -335,8 +398,6 @@ public sealed class ToolExecutionViewModel : ObservableObject
             CommandRequest request = apply
                 ? CommandRequest.Execute(selected.Id, parameters, approval)
                 : CommandRequest.Preview(selected.Id, parameters);
-            using CancellationTokenSource linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            _activeCts = linkedCts;
             CommandResult result;
             try
             {
@@ -371,6 +432,20 @@ public sealed class ToolExecutionViewModel : ObservableObject
                     }
                 }
             }
+        }
+        catch (OperationCanceledException)
+        {
+            // Cancellation is a user action, not a failure: the dispatcher reports cancelled
+            // runs as results, and nothing outside the command boundary needs to fault.
+        }
+        catch (Exception ex)
+        {
+            // This command body is the owning boundary: CommandDispatcher converts handler
+            // faults into results, but anything outside it must not escape to the
+            // unhandled-exception handler and terminate the process.
+            System.Diagnostics.Debug.WriteLine($"[ToolExecutionViewModel] Execution failed: {ex}");
+            SetExecutionFailure(CommandResultStatus.Failed, "command.execution_failed",
+                "This tool couldn't finish. Nothing was changed. Try again, and check Activity if it keeps happening.");
         }
         finally
         {
@@ -540,6 +615,7 @@ public sealed class ToolExecutionViewModel : ObservableObject
                     _ => value.GetRawText(),
                 };
             }
+            NotifyParameterValuesChanged();
             return true;
         }
         catch (JsonException ex)
@@ -563,13 +639,25 @@ public sealed class ToolExecutionViewModel : ObservableObject
 
     private void SetParameterError(string message)
     {
+        SetExecutionFailure(CommandResultStatus.Blocked, "command.parameters_invalid", message);
+        _isParameterError = true;
+        NotifyParameterValuesChanged();
+    }
+
+    /// <summary>
+    /// Writes an execution outcome into the view's error/result surface. Parameter-validation
+    /// failures additionally set <see cref="_isParameterError"/> so a later input change can
+    /// clear the message instead of leaving it on screen until the next run attempt.
+    /// </summary>
+    private void SetExecutionFailure(CommandResultStatus status, string code, string message)
+    {
         _packageInventoryText = string.Empty;
-        _executionStatus = CommandResultStatus.Blocked;
+        _executionStatus = status;
         _executionMessage = message;
         _executionResultText = JsonSerializer.Serialize(new
         {
-            status = CommandResultStatus.Blocked,
-            code = "command.parameters_invalid",
+            status,
+            code,
             message,
         }, ResultJsonOptions);
         IsExecutionResultOpen = true;
@@ -578,6 +666,7 @@ public sealed class ToolExecutionViewModel : ObservableObject
 
     private void ApplyExecutionResult(CommandResult result)
     {
+        _isParameterError = false;
         _packageInventoryText = PackageInventoryPresentation.Format(result.CommandId, result.Data);
         _executionStatus = result.Status;
         _executionMessage = result.Message;
@@ -603,12 +692,13 @@ public sealed class ToolExecutionViewModel : ObservableObject
         {
             _executionResultText = result.Message;
         }
-        IsExecutionResultOpen = !HasPackageInventory;
+        IsExecutionResultOpen = true;
         NotifyExecutionResultChanged();
     }
 
     private void ClearExecutionResult()
     {
+        _isParameterError = false;
         _packageInventoryText = string.Empty;
         _executionStatus = null;
         _executionMessage = string.Empty;
@@ -634,6 +724,9 @@ public sealed class ToolExecutionViewModel : ObservableObject
         _reviewVersion++;
         _lastApprovedPlan = null;
         _hasSuccessfulPreview = false;
+        // A stale parameter-validation message has no reason to outlive the input that
+        // caused it: once any field changes, the error is no longer describing this input.
+        if (_isParameterError) ClearExecutionResult();
         if (_isReviewApproved)
         {
             _isReviewApproved = false;

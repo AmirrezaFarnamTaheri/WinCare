@@ -98,7 +98,11 @@ namespace WinCare.Infrastructure.Plugins
 
                 if (ext == ".ps1")
                 {
-                    executable = string.Concat("power", "shell.exe");
+                    // Third-party .ps1 plugin tools run through powershell.exe. The interpreter
+                    // name is written as a plain literal so that source-level audits and policy
+                    // checks that grep for PowerShell invocations see it; hiding it would make
+                    // any "PowerShell-free" claim silently false.
+                    executable = "powershell.exe";
                     arguments.Add("-NoProfile");
                     arguments.Add("-NonInteractive");
                     arguments.Add("-ExecutionPolicy");
@@ -213,8 +217,8 @@ namespace WinCare.Infrastructure.Plugins
         {
             return Path.GetExtension(_scriptFullPath).ToLowerInvariant() switch
             {
-                // Concatenated to keep the native-root PowerShell-free invariant checks green.
-                ".ps1" => string.Concat("power", "shell.exe", " -NoProfile -NonInteractive -ExecutionPolicy Bypass -File"),
+                // Written as a plain literal: a PowerShell invocation must be visible to audits.
+                ".ps1" => "powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File",
                 ".cmd" or ".bat" => "cmd.exe /c",
                 _ => "direct executable launch",
             };

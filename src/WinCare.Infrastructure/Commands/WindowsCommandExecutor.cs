@@ -22,7 +22,12 @@ namespace WinCare.Infrastructure.Commands;
 
 /// <summary>
 /// Native Windows implementation for the complete stable WinCare command catalog.
-/// Uses BCL/Win32 APIs and bounded native child processes only; PowerShell is never invoked.
+/// Uses BCL/Win32 APIs and bounded native child processes only; the catalog itself never
+/// spawns a shell and passes all host data as separate argument-list entries. Plugin-declared
+/// script tools are the one exception: <see cref="WinCare.Infrastructure.Plugins.PluginScriptCommandHandler"/>
+/// may launch a third-party <c>.ps1</c>/<c>.cmd</c>/<c>.bat</c> file through <c>powershell.exe</c>
+/// or <c>cmd.exe</c> on behalf of an admitted plugin, so "PowerShell is never invoked" holds for
+/// the built-in catalog but not for the plugin layer.
 /// </summary>
 internal sealed partial class WindowsCommandExecutor : ICommandOperationExecutor, IDisposable
 {
@@ -36,6 +41,7 @@ internal sealed partial class WindowsCommandExecutor : ICommandOperationExecutor
     private readonly BoundedProcessRunner _process;
     private readonly CommandStateStore _state;
     private readonly HttpClient _httpClient;
+    private readonly bool _ownsHttpClient;
     private readonly ConcurrentDictionary<string, CancellationTokenSource> _operations = new(StringComparer.Ordinal);
     private bool _disposed;
 
@@ -67,6 +73,7 @@ internal sealed partial class WindowsCommandExecutor : ICommandOperationExecutor
         _nativeCore = nativeCore;
         _process = process ?? new BoundedProcessRunner();
         _state = state ?? new CommandStateStore();
+        _ownsHttpClient = httpClient is null;
         _httpClient = httpClient ?? new HttpClient(new SocketsHttpHandler
         {
             AllowAutoRedirect = true,
@@ -868,6 +875,10 @@ internal sealed partial class WindowsCommandExecutor : ICommandOperationExecutor
             source.Dispose();
         }
         _operations.Clear();
-        _httpClient.Dispose();
+        // Injected clients remain owned by their caller.
+        if (_ownsHttpClient)
+        {
+            _httpClient.Dispose();
+        }
     }
 }

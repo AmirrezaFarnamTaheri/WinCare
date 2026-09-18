@@ -13,7 +13,7 @@ public sealed class RemediationRecoveryPlannerTests
             id = "run-1", status = "Applied", changes = new object[]
             {
                 new { Type = "SetRegistryValue", detail = new { path = @"HKCU:\A", name = "One", previous = 1, previousKind = "DWord", value = 0, valueType = "DWord" } },
-                new { Type = "SetRegistryValue", detail = new { path = @"HKCU:\B", name = "Two", previous = (object?)null, previousKind = (string?)null, value = "new", valueType = "String" } },
+                new { Type = "SetRegistryValue", detail = new { path = @"HKCU:\B", name = "Two", previous = "old", previousKind = "String", value = "new", valueType = "String" } },
             }
         });
         RemediationRecoveryPlan plan = RemediationRecoveryPlanner.Create(history);
@@ -21,6 +21,24 @@ public sealed class RemediationRecoveryPlannerTests
         Assert.Equal("run-1", plan.ExecutionId);
         Assert.Equal(["Two", "One"], plan.Steps.Select(step => step.Name));
         Assert.Equal(64, plan.Digest.Length);
+    }
+
+    [Fact]
+    public void Applied_change_without_previous_evidence_is_not_reported_as_executable()
+    {
+        // A compensator that has no recorded previous value has nothing to restore to. It must not
+        // be reported as an executable undo, even when every other field of the change is present.
+        JsonElement history = JsonSerializer.SerializeToElement(new
+        {
+            id = "run-5", status = "Applied", changes = new object[]
+            {
+                new { Type = "SetRegistryValue", detail = new { path = @"HKCU:\A", name = "One", previous = (object?)null, previousKind = (string?)null, value = 0, valueType = "DWord" } },
+            }
+        });
+        RemediationRecoveryPlan plan = RemediationRecoveryPlanner.Create(history);
+        Assert.False(plan.IsExecutable);
+        Assert.Empty(plan.Steps);
+        Assert.Single(plan.Failures);
     }
 
     [Fact]

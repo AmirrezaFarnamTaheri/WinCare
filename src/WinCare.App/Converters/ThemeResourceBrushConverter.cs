@@ -14,6 +14,11 @@ namespace WinCare.App.Converters;
 public sealed class ThemeResourceBrushConverter : IValueConverter
 {
     private static readonly Dictionary<string, SolidColorBrush> LiveBrushes = new(StringComparer.Ordinal);
+    // ResolveColor runs per binding evaluation (Checkup hits it ~15 times per refresh), so the
+    // theme lookup is memoized per (theme, key): the theme string is recomputed every call, so a
+    // theme switch keys into a fresh entry instead of reading a stale color.
+    private static readonly Dictionary<(string Theme, string Key), Windows.UI.Color> ResolvedColors = new();
+    private static readonly AccessibilitySettings Accessibility = new();
 
     /// <inheritdoc />
     public object Convert(object value, Type targetType, object parameter, string language)
@@ -36,6 +41,8 @@ public sealed class ThemeResourceBrushConverter : IValueConverter
     // Keep stable brush instances and update their colors for cached pages too.
     public static void RefreshBrushes()
     {
+        // High-contrast schemes may change without changing the theme name.
+        ResolvedColors.Clear();
         foreach (var (key, brush) in LiveBrushes)
         {
             brush.Color = ResolveColor(key);
@@ -46,10 +53,14 @@ public sealed class ThemeResourceBrushConverter : IValueConverter
     {
         MainWindow? window = (Microsoft.UI.Xaml.Application.Current as App)?.MainWindow;
         FrameworkElement? root = window is { IsClosed: false } ? window.Content as FrameworkElement : null;
-        string theme = new AccessibilitySettings().HighContrast ? "HighContrast"
+        string theme = Accessibility.HighContrast ? "HighContrast"
             : root?.ActualTheme.ToString() ?? (AppPreferences.Theme == "System"
                 ? Microsoft.UI.Xaml.Application.Current.RequestedTheme.ToString() : AppPreferences.Theme);
-        return FindBrush(Microsoft.UI.Xaml.Application.Current.Resources, theme, key)?.Color ?? Colors.Transparent;
+        if (ResolvedColors.TryGetValue((theme, key), out Windows.UI.Color cached)) return cached;
+
+        Windows.UI.Color resolved = FindBrush(Microsoft.UI.Xaml.Application.Current.Resources, theme, key)?.Color ?? Colors.Transparent;
+        ResolvedColors[(theme, key)] = resolved;
+        return resolved;
     }
 
     private static SolidColorBrush? FindBrush(ResourceDictionary resources, string theme, string key)

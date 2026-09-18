@@ -15,7 +15,6 @@ All notable changes to WinCare are documented in this file in accordance with [K
 - Hardened plugin catalog trust, fresh-install re-resolution, publisher revocation, signed admission records, assembly-plugin rollback, uninstall recovery, and discovery-time signature verification.
 - Made plugin upgrade rollback preserve the last known-good external admission record when trust-record restoration itself encounters an I/O or access failure, surfacing both failures instead of deleting recovery evidence.
 - Hardened Guard named-pipe access control and retained fail-closed semantics for future mutating IPC.
-- Versioned encrypted profile envelopes, retained legacy decryption compatibility, and raised PBKDF2-HMAC-SHA256 work factor to 600,000 iterations.
 - Changed mutation-handler fault reporting to state when final machine state is unknown rather than implying that no change occurred.
 - Corrected built-in plugin aliases so Defender targets the implemented security collector, temp cleanup declares its real risk and elevation needs, and an unsupported Recycle Bin shortcut is no longer presented as working.
 - Normalized online package-removal receipts across success, reboot-required, elevated user-scope skips, and partial failures while retaining per-package output.

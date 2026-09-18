@@ -9,12 +9,18 @@ public static class RemediationRecoveryPlanner
     public const int SchemaVersion = 1;
     public const int MaximumSteps = 100;
 
+    /// <summary>Change kind this planner knows how to compensate.</summary>
+    public const string RegistryChangeKind = "SetRegistryValue";
+
+    /// <summary>Status of a remediation whose applied changes can be restored.</summary>
+    public const string AppliedStatus = "Applied";
+
     public static RemediationRecoveryPlan Create(JsonElement history)
     {
         if (history.ValueKind != JsonValueKind.Object) return Failed("Recovery history must be an object.");
         string executionId = ReadString(history, "id");
         if (executionId.Length == 0) return Failed("Recovery history has no execution ID.");
-        if (!string.Equals(ReadString(history, "status"), "Applied", StringComparison.Ordinal))
+        if (!string.Equals(ReadString(history, "status"), AppliedStatus, StringComparison.Ordinal))
             return Failed("Only a completed applied remediation can be restored.");
         if (!history.TryGetProperty("changes", out JsonElement changes) || changes.ValueKind != JsonValueKind.Array || changes.GetArrayLength() is < 1 or > MaximumSteps)
             return Failed($"Recovery history must contain 1 to {MaximumSteps} applied changes.");
@@ -22,7 +28,7 @@ public static class RemediationRecoveryPlanner
         var steps = new List<RegistryRecoveryStep>();
         foreach (JsonElement change in changes.EnumerateArray().Reverse())
         {
-            if (!string.Equals(ReadString(change, "Type"), "SetRegistryValue", StringComparison.Ordinal) ||
+            if (!string.Equals(ReadString(change, "Type"), RegistryChangeKind, StringComparison.Ordinal) ||
                 !change.TryGetProperty("detail", out JsonElement detail) || detail.ValueKind != JsonValueKind.Object)
                 return Failed("This remediation contains a change type without a complete executable compensator.");
             string path = ReadString(detail, "path");
@@ -32,6 +38,13 @@ public static class RemediationRecoveryPlanner
                 return Failed("An applied registry change is missing recovery evidence.");
             JsonElement? previous = detail.TryGetProperty("previous", out JsonElement previousValue) ? previousValue.Clone() : null;
             string? previousKind = detail.TryGetProperty("previousKind", out JsonElement kind) && kind.ValueKind == JsonValueKind.String ? kind.GetString() : null;
+            // JSON null counts as "no recorded previous value": a change that overwrote
+            // nothing has nothing to restore to. Reporting it as an executable compensator
+            // would promise an undo this plan cannot perform.
+            if (previous is null || (previous.Value.ValueKind is JsonValueKind.Null or JsonValueKind.Undefined) && string.IsNullOrEmpty(previousKind))
+            {
+                return Failed($"Applied registry change '{name}' has no previous-value evidence, so no compensator can be built for it.");
+            }
             steps.Add(new RegistryRecoveryStep(path, name, appliedValue.Clone(), appliedValueType, previous, previousKind));
         }
         string digest = ApprovedMutationPlan.ComputeCanonicalDigest(history).ToLowerInvariant();

@@ -11,9 +11,9 @@
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <TextBlock Style="{StaticResource RowSecondaryTextStyle}" Text="Pick a task to read the details or open it in Power tools." />
+        <TextBlock Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap" Text="Choosing a task opens its details in Power tools. It does not run it." />
 
-        <Border Grid.Row="1" Style="{StaticResource SurfaceBorderStyle}">
+        <Border Grid.Row="1" Style="{StaticResource SurfaceBorderStyle}" Visibility="{x:Bind views:LayoutVisibility.InvertBoolToVisibility(ViewModel.IsEmpty), Mode=OneWay}">
             <Grid>
                 <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="*" /></Grid.RowDefinitions>
 
@@ -32,11 +32,11 @@
                                 <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
                                 <Grid ColumnSpacing="24" Visibility="{x:Bind views:LayoutVisibility.InvertBoolToVisibility(IsCompact), Mode=OneWay}">
                                     <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="130" /><ColumnDefinition Width="220" /></Grid.ColumnDefinitions>
-                                    <StackPanel Spacing="5"><TextBlock Style="{StaticResource RowTitleTextStyle}" Text="{x:Bind Title}" /><TextBlock Style="{StaticResource PageDescriptionTextStyle}" Text="{x:Bind Description}" /><TextBlock Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind LatestActivity}" Visibility="{x:Bind views:LayoutVisibility.BoolToVisibility(HasActivity)}" /></StackPanel>
+                                    <StackPanel Spacing="4"><TextBlock Style="{StaticResource RowTitleTextStyle}" Text="{x:Bind Title}" /><TextBlock Style="{StaticResource PageDescriptionTextStyle}" Text="{x:Bind Description}" /><TextBlock Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind LatestActivity}" Visibility="{x:Bind views:LayoutVisibility.BoolToVisibility(HasActivity)}" /></StackPanel>
                                     <TextBlock Grid.Column="1" VerticalAlignment="Center" Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind State, Mode=OneWay}" />
                                     <TextBlock Grid.Column="2" VerticalAlignment="Center" Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind Detail, Mode=OneWay}" />
                                 </Grid>
-                                <StackPanel Spacing="7" Visibility="{x:Bind views:LayoutVisibility.BoolToVisibility(IsCompact), Mode=OneWay}">
+                                <StackPanel Spacing="8" Visibility="{x:Bind views:LayoutVisibility.BoolToVisibility(IsCompact), Mode=OneWay}">
                                     <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="{x:Bind Title}" />
                                     <TextBlock Style="{StaticResource PageDescriptionTextStyle}" Text="{x:Bind Description}" />
                                     <TextBlock Style="{StaticResource RowSecondaryTextStyle}" FontWeight="SemiBold" Text="{x:Bind State, Mode=OneWay}" />
@@ -49,8 +49,9 @@
                     </ListView.ItemTemplate>
                 </ListView>
 
-                <InfoBar Grid.Row="1" VerticalAlignment="Top" IsOpen="{x:Bind ViewModel.IsEmpty, Mode=OneWay}" IsClosable="False" Title="No tasks here" Message="{x:Bind ViewModel.EmptyMessage, Mode=OneWay}" Severity="Informational" />
+
             </Grid>
         </Border>
+<InfoBar Grid.Row="1" Margin="0" VerticalAlignment="Top" IsOpen="{x:Bind ViewModel.IsEmpty, Mode=OneWay}" IsClosable="False" Title="No tasks here" Message="{x:Bind ViewModel.EmptyMessage, Mode=OneWay}" Severity="Informational" />
     </Grid>
 </UserControl>

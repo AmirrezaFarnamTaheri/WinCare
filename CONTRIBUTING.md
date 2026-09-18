@@ -70,7 +70,7 @@ To maintain clean separation of concerns and avoid duplicated logic:
    # 7. .NET C# tests
    dotnet test WinCare.Native.sln -c Release -p:Platform=x64 --no-restore
    ```
-7. **Windows Runtime Validation**: If touching UI or Windows integration, execute the Windows build and validation steps in [docs/migration/windows-validation.md](docs/migration/windows-validation.md).
+7. **Windows Runtime Validation**: If touching UI or Windows integration, execute the Windows build and validation steps in [docs/Windows-Validation.md](docs/Windows-Validation.md).
 8. **Document Changes**: Update relevant documentation and [CHANGELOG.md](CHANGELOG.md) within the same pull request.
 
 ---

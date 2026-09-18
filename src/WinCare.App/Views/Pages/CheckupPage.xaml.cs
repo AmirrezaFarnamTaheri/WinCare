@@ -1,5 +1,6 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Navigation;
 using WinCare.App.ViewModels.Pages;
 using WinCare.App.Views;
 
@@ -15,6 +16,14 @@ public sealed partial class CheckupPage : Page
     }
 
     public CheckupPageViewModel ViewModel { get; }
+
+    protected override void OnNavigatedFrom(NavigationEventArgs e)
+    {
+        // The page is cached: without this the awaited probe results land on a live object
+        // graph and rewrite rows the user is no longer looking at.
+        ViewModel.CancelRunningCheck();
+        base.OnNavigatedFrom(e);
+    }
 
     private void SectionSelector_SelectionChanged(SelectorBar sender, SelectorBarSelectionChangedEventArgs args) =>
         ViewModel.SelectSection(sender.Items.IndexOf(sender.SelectedItem));
@@ -32,17 +41,10 @@ public sealed partial class CheckupPage : Page
     {
         bool compact = LayoutVisibility.IsCompact(e.NewSize.Width);
         ViewModel.SetCompactLayout(compact);
-        if (compact)
-        {
-            CheckupHero.ColumnDefinitions[0].Width = new GridLength(1, GridUnitType.Star);
-            CheckupHero.ColumnDefinitions[1].Width = new GridLength(0);
-            CheckupStatusCard.Visibility = Visibility.Collapsed;
-        }
-        else
-        {
-            CheckupHero.ColumnDefinitions[0].Width = new GridLength(1, GridUnitType.Star);
-            CheckupHero.ColumnDefinitions[1].Width = GridLength.Auto;
-            CheckupStatusCard.Visibility = Visibility.Visible;
-        }
+        CheckupHero.ColumnDefinitions[0].Width = new GridLength(1, GridUnitType.Star);
+        CheckupHero.ColumnDefinitions[1].Width = compact ? new GridLength(0) : GridLength.Auto;
+        Grid.SetRow(CheckupStatusCard, compact ? 1 : 0);
+        Grid.SetColumn(CheckupStatusCard, compact ? 0 : 1);
+        CheckupStatusCard.HorizontalAlignment = compact ? HorizontalAlignment.Stretch : HorizontalAlignment.Right;
     }
 }

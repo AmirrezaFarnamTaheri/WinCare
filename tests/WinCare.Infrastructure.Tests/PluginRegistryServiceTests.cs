@@ -4,6 +4,8 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using WinCare.Application.Commands;
@@ -37,6 +39,29 @@ public sealed class DummyPluginHost : IPluginHost
 
 public sealed class PluginRegistryServiceTests
 {
+    /// <summary>
+    /// Writes a plugin manifest and the external admission record discovery now requires for a
+    /// user-writable plugin directory. Packages without a record fail closed; these tests exercise
+    /// discovery behavior, not the missing-trust rejection, so they install a package the way the
+    /// plugin store does.
+    /// </summary>
+    private static void WritePluginWithAdmission(string pluginDir, string manifestJson)
+    {
+        string manifestPath = Path.Combine(pluginDir, "wincare-plugin.json");
+        File.WriteAllText(manifestPath, manifestJson);
+
+        byte[] manifestBytes = File.ReadAllBytes(manifestPath);
+        string manifestDigest = Convert.ToHexString(SHA256.HashData(manifestBytes)).ToLowerInvariant();
+        string recordPath = PluginAdmissionTrustStore.GetRecordPath(pluginDir);
+        Directory.CreateDirectory(Path.GetDirectoryName(recordPath)!);
+        File.WriteAllText(recordPath, JsonSerializer.Serialize(new PluginAdmissionRecord
+        {
+            SchemaVersion = 1,
+            PluginId = JsonDocument.Parse(manifestJson).RootElement.GetProperty("id").GetString()!,
+            ManifestSha256 = manifestDigest
+        }));
+    }
+
     [Fact]
     public async Task PluginRegistryService_Discovers_And_Enables_Plugins_And_Fires_RegistryChanged()
     {
@@ -61,7 +86,7 @@ public sealed class PluginRegistryServiceTests
           ]
         }
         """;
-        File.WriteAllText(Path.Combine(pluginDir, "wincare-plugin.json"), manifestJson);
+        WritePluginWithAdmission(pluginDir, manifestJson);
 
         var host = new DummyPluginHost { PluginsUserDirectory = tempUserPluginsDir };
         var enabledIds = new HashSet<string> { "com.wincare.sample" };
@@ -139,7 +164,7 @@ public sealed class PluginRegistryServiceTests
           ]
         }
         """;
-        File.WriteAllText(Path.Combine(pluginDir, "wincare-plugin.json"), manifestJson);
+        WritePluginWithAdmission(pluginDir, manifestJson);
 
         var host = new DummyPluginHost { PluginsUserDirectory = tempUserPluginsDir };
         var service = new PluginRegistryService();
@@ -193,7 +218,7 @@ public sealed class PluginRegistryServiceTests
           ]
         }
         """;
-        File.WriteAllText(Path.Combine(pluginDir, "wincare-plugin.json"), manifestJson);
+        WritePluginWithAdmission(pluginDir, manifestJson);
 
         var dispatcher = new CommandDispatcher(Array.Empty<CommandDefinition>(), Array.Empty<ICommandHandler>());
         var host = new DefaultPluginHost(dispatcher, pluginsUserDirectory: tempUserPluginsDir);
@@ -254,7 +279,7 @@ public sealed class PluginRegistryServiceTests
           ]
         }
         """;
-        File.WriteAllText(Path.Combine(pluginDir, "wincare-plugin.json"), manifestJson);
+        WritePluginWithAdmission(pluginDir, manifestJson);
 
         var dispatcher = new CommandDispatcher(Array.Empty<CommandDefinition>(), Array.Empty<ICommandHandler>());
         var host = new DefaultPluginHost(dispatcher, pluginsUserDirectory: tempUserPluginsDir);
@@ -314,7 +339,7 @@ public sealed class PluginRegistryServiceTests
           ]
         }
         """;
-        File.WriteAllText(Path.Combine(pluginDir, "wincare-plugin.json"), manifestJson);
+        WritePluginWithAdmission(pluginDir, manifestJson);
 
         var dispatcher = new CommandDispatcher(Array.Empty<CommandDefinition>(), Array.Empty<ICommandHandler>());
         var host = new DefaultPluginHost(dispatcher, pluginsUserDirectory: tempUserPluginsDir);
@@ -374,7 +399,7 @@ public sealed class PluginRegistryServiceTests
           ]
         }
         """;
-        File.WriteAllText(Path.Combine(pluginDir, "wincare-plugin.json"), manifestJson);
+        WritePluginWithAdmission(pluginDir, manifestJson);
 
         var dispatcher = new CommandDispatcher(Array.Empty<CommandDefinition>(), Array.Empty<ICommandHandler>());
         var host = new DefaultPluginHost(dispatcher, pluginsUserDirectory: tempUserPluginsDir);
@@ -427,7 +452,7 @@ public sealed class PluginRegistryServiceTests
           ]
         }
         """;
-        File.WriteAllText(Path.Combine(pluginDir, "wincare-plugin.json"), manifestJson);
+        WritePluginWithAdmission(pluginDir, manifestJson);
 
         var dispatcher = new CommandDispatcher(Array.Empty<CommandDefinition>(), Array.Empty<ICommandHandler>());
         var host = new DefaultPluginHost(dispatcher, pluginsUserDirectory: tempUserPluginsDir);
@@ -490,7 +515,7 @@ public sealed class PluginRegistryServiceTests
           ]
         }
         """;
-        File.WriteAllText(Path.Combine(pluginDir, "wincare-plugin.json"), manifestJson);
+        WritePluginWithAdmission(pluginDir, manifestJson);
 
         var dispatcher = new CommandDispatcher(Array.Empty<CommandDefinition>(), Array.Empty<ICommandHandler>());
         var host = new DefaultPluginHost(dispatcher, pluginsUserDirectory: tempUserPluginsDir);
@@ -527,7 +552,7 @@ public sealed class PluginRegistryServiceTests
             MigrationStatus: MigrationStatus.Implemented,
             Keywords: Array.Empty<string>());
 
-        var dispatcher = new CommandDispatcher(new[] { diskPressureDef }, new ICommandHandler[] { new FakeSucceedingHandler("cleaner-disk-pressure") });
+        var dispatcher = new CommandDispatcher(new[] { diskPressureDef }, new ICommandHandler[] { new FakeSucceedingHandler("cleaner-disk-pressure") }, isProcessElevated: () => true);
         var tempRoot = Path.Combine(Path.GetTempPath(), "WinCareAliasTest_" + Guid.NewGuid().ToString("N"));
         var userPluginsDir = Path.Combine(tempRoot, "UserPlugins");
         Directory.CreateDirectory(userPluginsDir);

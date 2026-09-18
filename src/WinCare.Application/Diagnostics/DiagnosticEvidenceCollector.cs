@@ -22,15 +22,15 @@ namespace WinCare.Application.Diagnostics
             {
                 switch (intent)
                 {
-                    case "intent.storage.cleanup":
+                    case DiagnosticIntents.StorageCleanup:
                         evidence.AddRange(ProbeStorageDrives());
                         break;
 
-                    case "intent.memory.optimize":
+                    case DiagnosticIntents.MemoryOptimize:
                         evidence.AddRange(ProbeMemoryUsage());
                         break;
 
-                    case "intent.network.flush":
+                    case DiagnosticIntents.NetworkFlush:
                         evidence.AddRange(ProbeNetworkAdapters());
                         break;
 

@@ -11,7 +11,16 @@ class DeterministicZipWriter {
   }
 
   addFile(relativePath, data) {
-    const cleanPath = relativePath.replace(/\\/g, '/').replace(/^\/+/, '');
+    const cleanPath = relativePath.replace(/\\/g, '/');
+    // Reject traversal and absolute names outright instead of silently rewriting them. This
+    // writer is an exported API, so a partial sanitizer (strip the leading "/", keep the
+    // ".." segments) would hand any future caller an archive whose entries escape the
+    // extraction root with no error.
+    if (path.posix.isAbsolute(cleanPath) ||
+        /^[A-Za-z]:[\\/]/.test(relativePath) ||
+        path.posix.normalize(cleanPath).split('/').includes('..')) {
+      throw new Error(`Refusing to add an unsafe archive entry name: "${relativePath}"`);
+    }
     const buffer = Buffer.isBuffer(data) ? data : Buffer.from(data);
     this.files.push({ path: cleanPath, data: buffer });
   }
@@ -48,8 +57,8 @@ class DeterministicZipWriter {
       localHeader.writeUInt16LE(20, 4);          // Version needed (2.0)
       localHeader.writeUInt16LE(0x0800, 6);      // UTF-8 filenames
       localHeader.writeUInt16LE(8, 8);           // Compression method (8 = Deflate)
-      localHeader.writeUInt16LE(0x4000, 10);     // Fixed MS-DOS time (deterministic)
-      localHeader.writeUInt16LE(0x5600, 12);     // Fixed MS-DOS date (deterministic)
+      localHeader.writeUInt16LE(0x0000, 10);     // Fixed MS-DOS time 00:00:00 (deterministic)
+      localHeader.writeUInt16LE(0x0021, 12);     // Fixed MS-DOS date 1980-01-01 (deterministic)
       localHeader.writeUInt32LE(crc, 14);        // CRC-32
       localHeader.writeUInt32LE(compressedSize, 18); // Compressed size
       localHeader.writeUInt32LE(uncompressedSize, 22); // Uncompressed size
@@ -66,8 +75,8 @@ class DeterministicZipWriter {
       cdEntry.writeUInt16LE(20, 6);          // Version needed
       cdEntry.writeUInt16LE(0x0800, 8);      // UTF-8 filenames
       cdEntry.writeUInt16LE(8, 10);          // Compression (Deflate)
-      cdEntry.writeUInt16LE(0x4000, 12);     // Fixed Time
-      cdEntry.writeUInt16LE(0x5600, 14);     // Fixed Date
+      cdEntry.writeUInt16LE(0x0000, 12);     // Fixed Time 00:00:00 (deterministic)
+      cdEntry.writeUInt16LE(0x0021, 14);     // Fixed Date 1980-01-01 (deterministic)
       cdEntry.writeUInt32LE(crc, 16);        // CRC-32
       cdEntry.writeUInt32LE(compressedSize, 20); // Compressed size
       cdEntry.writeUInt32LE(uncompressedSize, 24); // Uncompressed size
@@ -116,6 +125,12 @@ for (let i = 0; i < 256; i++) {
   CRC_TABLE[i] = c >>> 0;
 }
 
+// Sidecars "pack --key" writes next to the archive. They are catalog artifacts, not package
+// contents, so a repeat pack must never bundle them (the installer rejects a package-supplied
+// signature); the archive itself is already excluded below.
+const DIGEST_SUFFIX = '.sha256';
+const TRUST_SUFFIX = '.sig.json';
+
 /**
  * Packs a plugin folder into a .wincare-plugin ZIP archive.
  * @param {string} pluginDir - Directory containing wincare-plugin.json
@@ -125,6 +140,7 @@ for (let i = 0; i < 256; i++) {
 function packPlugin(pluginDir, outputPath) {
   const resolvedDir = path.resolve(pluginDir);
   const targetOutput = path.resolve(outputPath || path.join(resolvedDir, 'plugin.wincare-plugin'));
+  const excludedPaths = [targetOutput, targetOutput + DIGEST_SUFFIX, targetOutput + TRUST_SUFFIX];
   const zip = new DeterministicZipWriter();
   let totalBytes = 0;
 
@@ -140,8 +156,9 @@ function packPlugin(pluginDir, outputPath) {
       if (stat.isDirectory()) {
         scanDir(fullPath, baseDir);
       } else if (stat.isFile()) {
+        const resolved = path.resolve(fullPath);
+        if (excludedPaths.includes(resolved)) continue;
         const relativePath = path.relative(baseDir, fullPath);
-        if (path.resolve(fullPath) === targetOutput) continue;
         totalBytes += stat.size;
         if (zip.files.length >= 500 || totalBytes > 200 * 1024 * 1024) {
           throw new Error('Plugin package exceeds the installer entry or uncompressed size limit.');
@@ -158,7 +175,23 @@ function packPlugin(pluginDir, outputPath) {
   if (archiveBuffer.length > 50 * 1024 * 1024) {
     throw new Error('Plugin package exceeds the 50 MiB installer archive limit.');
   }
-  fs.writeFileSync(targetOutput, archiveBuffer);
+
+  // Write through a temp file and rename into place, so a failed write (ENOSPC, EACCES, an
+  // antivirus lock) cannot leave a truncated archive with the correct extension that looks
+  // releasable. The temp file is removed in the finally even when the rename itself failed.
+  const tempOutput = targetOutput + '.tmp';
+  try {
+    fs.writeFileSync(tempOutput, archiveBuffer);
+    fs.renameSync(tempOutput, targetOutput);
+  } finally {
+    try {
+      if (fs.existsSync(tempOutput)) {
+        fs.unlinkSync(tempOutput);
+      }
+    } catch (_cleanupError) {
+      // Best-effort cleanup; the failure that matters is the one reported to the caller.
+    }
+  }
 
   return {
     success: true,
@@ -170,5 +203,7 @@ function packPlugin(pluginDir, outputPath) {
 
 module.exports = {
   DeterministicZipWriter,
-  packPlugin
+  packPlugin,
+  DIGEST_SUFFIX,
+  TRUST_SUFFIX
 };

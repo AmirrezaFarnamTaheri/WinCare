@@ -81,7 +81,10 @@ class FullNativeMigrationTests(unittest.TestCase):
         self.assertIn("ParameterFields", vm)
         self.assertIn("CommandParameterCatalog.For", vm)
         self.assertIn("UseAdvancedParameterJson", vm)
-        self.assertIn('code = "command.parameters_invalid"', vm)
+        self.assertIn('SetExecutionFailure(CommandResultStatus.Blocked, "command.parameters_invalid", message)', vm)
+        failure_writer = vm[vm.index("private void SetExecutionFailure"):vm.index("private void ApplyExecutionResult")]
+        self.assertIn("JsonSerializer.Serialize", failure_writer)
+        self.assertRegex(failure_writer, r"status,\s+code,\s+message,")
         self.assertIn("RebuildParameterEditor", page)
         self.assertIn("CreateParameterField", page)
         self.assertIn("AdvancedParameterEditing", page)
@@ -268,7 +271,9 @@ class FullNativeMigrationTests(unittest.TestCase):
         runner = (ROOT / "src/WinCare.Infrastructure/Commands/BoundedProcessRunner.cs").read_text(encoding="utf-8")
         self.assertIn("ResolveExecutable", runner)
         self.assertIn("Environment.SpecialFolder.System", runner)
-        self.assertIn("FileName = ResolveExecutable(fileName)", runner)
+        self.assertIn("string resolvedExecutable = ResolveExecutable(fileName);", runner)
+        self.assertIn("FileName = resolvedExecutable", runner)
+        self.assertLess(runner.index("ResolveExecutable(fileName)"), runner.index("process.Start()"))
 
     def test_security_hardening_reports_partial_application_as_failure(self) -> None:
         security = (ROOT / "src/WinCare.Infrastructure/Commands/WindowsCommandExecutor.Security.cs").read_text(encoding="utf-8")

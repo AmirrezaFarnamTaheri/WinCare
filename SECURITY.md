@@ -69,15 +69,11 @@ Remote installation requires an independently anchored catalog boundary:
 
 **Current release boundary:** this repository does not ship an approved production catalog signing key or a live official signed catalog. `AppRuntime` therefore creates `RemoteCatalogService` without a pinned key, keeping remote installation intentionally browse-only/disabled. This is safer than inventing a trust root. A later release may enable remote installation only after an explicitly reviewed public key and signed catalog endpoint are shipped.
 
-### 6. Encrypted profile storage
-
-New encrypted profile envelopes use AES-256-GCM and a versioned key-derivation envelope with PBKDF2-HMAC-SHA256 at 600,000 iterations. Legacy 100,000-iteration envelopes remain decryptable for compatibility and migrate naturally when rewritten. Envelope metadata is bounded before accepting a work factor, and AES-GCM authentication detects tampering or a wrong passphrase.
-
-### 7. Rust FFI safety
+### 6. Rust FFI safety
 
 Rust C-ABI exports use caller-owned buffers/pointer-length pairs, validate boundaries, and contain panics with `std::panic::catch_unwind`; Rust panics must not unwind into .NET.
 
-### 8. Guard IPC boundary
+### 7. Guard IPC boundary
 
 `wincare-guard` is currently an **experimental local daemon**, not a production SCM-installed service. Its Windows named pipe uses an explicit DACL instead of the permissive default named-pipe ACL. Production service lifecycle, service identity/authorization policy, and complete app/native notification consumption remain promotion requirements and are not claimed as finished.
 
@@ -94,7 +90,6 @@ Rust C-ABI exports use caller-owned buffers/pointer-length pairs, validate bound
 | Filesystem | Canonical containment, reparse rejection, bounded enumeration |
 | External process | System executable resolution, discrete args, timeout/cancel/output bounds |
 | Rust C ABI | Versioned interface, validated caller buffers, unwind containment |
-| Profile encryption | Versioned AES-GCM envelope and bounded PBKDF2-HMAC-SHA256 work factor |
 | Guard IPC | Local explicit DACL; production service authorization still pending |
 
 ## Deliberately excluded behavior

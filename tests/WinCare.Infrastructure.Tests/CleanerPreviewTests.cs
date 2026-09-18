@@ -45,8 +45,13 @@ public sealed class CleanerPreviewTests
         string[] executionRoots = WindowsCommandExecutor.CleanupTempRoots();
         Assert.Equal(executionRoots, previewRoots);
 
-        // The previously fabricated roots must not reappear.
-        Assert.DoesNotContain(previewRoots, root => root.Contains("WINDIR", StringComparison.OrdinalIgnoreCase) || root.EndsWith("Windows\\Temp", StringComparison.OrdinalIgnoreCase));
+        // A fabricated %WINDIR%\Temp root must not reappear. When Path.GetTempPath()
+        // itself resolves to the shared Windows temp directory, that root is legitimate;
+        // the historical bug was presenting %WINDIR%\Temp *instead of* the real user temp.
+        string resolvedTemp = Path.GetTempPath().TrimEnd('\\', '/');
+        Assert.DoesNotContain(previewRoots, root =>
+            (root.Contains("WINDIR", StringComparison.OrdinalIgnoreCase) || root.EndsWith("Windows\\Temp", StringComparison.OrdinalIgnoreCase))
+            && !root.TrimEnd('\\', '/').Equals(resolvedTemp, StringComparison.OrdinalIgnoreCase));
         // The actually executed %LOCALAPPDATA%\Temp root must be present.
         string localTemp = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Temp").TrimEnd('\\');
         Assert.Contains(previewRoots, root => root.TrimEnd('\\').Equals(localTemp, StringComparison.OrdinalIgnoreCase));

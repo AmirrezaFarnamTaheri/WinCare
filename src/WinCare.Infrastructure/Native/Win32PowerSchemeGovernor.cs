@@ -97,9 +97,12 @@ public static class Win32PowerSchemeGovernor
                 }
             }
         }
-        catch
+        catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or EntryPointNotFoundException or DllNotFoundException)
         {
-            // Fallback
+            // A missing PowrProf export or an access denial means the scheme API is unavailable on
+            // this host; unexpected marshalling faults are allowed to surface rather than being
+            // converted into a silent "no active scheme".
+            System.Diagnostics.Debug.WriteLine($"[Win32PowerSchemeGovernor] GetActiveSchemeGuid failed: {ex.Message}");
         }
 
         return Guid.Empty;
@@ -129,6 +132,14 @@ public static class Win32PowerSchemeGovernor
             uint currentSize = guidSize;
             uint res = PowerEnumerate(0, null, null, AccessScheme, index++, guidBuffer, ref currentSize);
             if (res != 0)
+            {
+                break;
+            }
+
+            // Never build a span wider than the 16-byte stack allocation: the ACCESS_SCHEME
+            // contract always yields one GUID, but an unexpected native variant reporting a
+            // larger buffer must not be trusted to read past it.
+            if (currentSize == 0 || currentSize > guidSize)
             {
                 break;
             }
@@ -186,9 +197,9 @@ public static class Win32PowerSchemeGovernor
                 }
             }
         }
-        catch
+        catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or EntryPointNotFoundException or DllNotFoundException)
         {
-            // Fallback
+            System.Diagnostics.Debug.WriteLine($"[Win32PowerSchemeGovernor] ReadFriendlyName failed for {schemeGuid}: {ex.Message}");
         }
 
         return ResolveWellKnownName(schemeGuid);
@@ -209,8 +220,9 @@ public static class Win32PowerSchemeGovernor
             uint result = PowerSetActiveScheme(0, in schemeGuid);
             return result == 0;
         }
-        catch
+        catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or EntryPointNotFoundException or DllNotFoundException)
         {
+            System.Diagnostics.Debug.WriteLine($"[Win32PowerSchemeGovernor] SetActiveScheme failed for {schemeGuid}: {ex.Message}");
             return false;
         }
     }
@@ -230,8 +242,9 @@ public static class Win32PowerSchemeGovernor
         {
             return PowerReadACValueIndex(0, in schemeGuid, in subGroupGuid, in settingGuid, out valueIndex) == 0;
         }
-        catch
+        catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or EntryPointNotFoundException or DllNotFoundException)
         {
+            System.Diagnostics.Debug.WriteLine($"[Win32PowerSchemeGovernor] TryReadAcValueIndex failed for {settingGuid}: {ex.Message}");
             return false;
         }
     }
@@ -250,8 +263,9 @@ public static class Win32PowerSchemeGovernor
         {
             return PowerWriteACValueIndex(0, in schemeGuid, in subGroupGuid, in settingGuid, valueIndex) == 0;
         }
-        catch
+        catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or EntryPointNotFoundException or DllNotFoundException)
         {
+            System.Diagnostics.Debug.WriteLine($"[Win32PowerSchemeGovernor] WriteAcValueIndex failed for {settingGuid}: {ex.Message}");
             return false;
         }
     }

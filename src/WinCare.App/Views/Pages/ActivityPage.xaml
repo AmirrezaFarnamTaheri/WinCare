@@ -27,9 +27,11 @@
                 IsClosable="False"
                 Severity="Warning"
                 Title="Needs attention"
-                Message="Open an item to see what happened and what you can do next."
+                Message="Review the outcomes of operations that need attention."
                 AutomationProperties.AutomationId="AttentionInfoBar"
-                AutomationProperties.Name="Activity items need attention" />
+                AutomationProperties.Name="Activity items need attention">
+                <InfoBar.ActionButton><Button Content="Review items" Click="ReviewAttention_Click" MinHeight="44" AutomationProperties.AutomationId="ReviewAttentionItems" AutomationProperties.Name="Review activity items that need attention" /></InfoBar.ActionButton>
+            </InfoBar>
             <InfoBar
                 x:Name="PersistenceInfoBar"
                 Margin="0"
@@ -58,7 +60,7 @@
             <Border Style="{StaticResource SurfaceBorderStyle}" Visibility="{x:Bind views:LayoutVisibility.InvertBoolToVisibility(ViewModel.IsEmpty), Mode=OneWay}">
                 <Grid>
                     <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="*" /></Grid.RowDefinitions>
-                    <Grid x:Name="TableHeader" Height="48" Padding="16,0" ColumnSpacing="16" Background="{ThemeResource SurfaceSecondaryBrush}" Visibility="{x:Bind views:LayoutVisibility.InvertBoolToVisibility(ViewModel.IsCompactLayout), Mode=OneWay}">
+                    <Grid x:Name="TableHeader" Padding="16,14" ColumnSpacing="16" Background="{ThemeResource SurfaceSecondaryBrush}" Visibility="{x:Bind views:LayoutVisibility.InvertBoolToVisibility(ViewModel.IsCompactLayout), Mode=OneWay}">
                         <Grid.ColumnDefinitions><ColumnDefinition Width="2*" /><ColumnDefinition Width="3*" /><ColumnDefinition Width="140" /><ColumnDefinition Width="180" /></Grid.ColumnDefinitions>
                         <TextBlock Style="{StaticResource ColumnHeaderTextStyle}" Text="Item" />
                         <TextBlock x:Name="DescriptionHeader" Grid.Column="1" Style="{StaticResource ColumnHeaderTextStyle}" Text="Summary" />

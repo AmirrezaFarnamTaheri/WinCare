@@ -4,7 +4,7 @@ The checked-in runtime images below were captured from the locally installed **v
 
 The current source has since moved to a task-first Home, product-wide search, structured Power tools filters, exact care Area/Section routing, a canonical Power tools execution/review surface, visible extension trust state, and a Troubleshoot handoff into that same execution path. Until a new installed candidate is captured, current XAML/theme resources are authoritative for changed surfaces and these images remain baseline references only.
 
-Concept images remain design references and are explicitly marked as concepts.
+Each changed surface needs recapture from the new candidate before these images can represent the current interface. Concept images remain design references and are explicitly marked as concepts.
 
 ## Home
 
@@ -12,7 +12,7 @@ Concept images remain design references and are explicitly marked as concepts.
 
 ![WinCare Home screen captured from the installed v2.5.0.0 candidate package](images/runtime-dashboard.png)
 
-**Capture status:** needs recapture after the current PR is packaged. The current Home is recommendation-led, derives evidence coverage from shared Activity records, exposes one primary Checkup CTA, and no longer uses the older instrument-panel hierarchy.
+**Capture status:** historical for the v2.5.0-rc5 candidate; recapture when the next candidate is installed. The current Home is recommendation-led, derives evidence coverage from shared Activity records, exposes one primary Checkup CTA, and no longer uses the older instrument-panel hierarchy.
 
 ### Original concept
 
@@ -24,7 +24,7 @@ Concept images remain design references and are explicitly marked as concepts.
 
 ![WinCare Checkup screen captured from the installed v2.5.0.0 candidate package](images/runtime-checkup.png)
 
-**Capture status:** needs recapture after the current PR is packaged. The current source reports checked-area evidence rather than a synthetic machine-health claim. Its fast read-only probes run concurrently with bounded concurrency, while Windows Update readiness is checked in the background; compact layouts stack below the shared 920-DIP breakpoint.
+**Capture status:** historical for the v2.5.0-rc5 candidate; recapture when the next candidate is installed. The current source reports checked-area evidence rather than a synthetic machine-health claim. Its fast read-only probes run concurrently with bounded concurrency, while Windows Update readiness is checked in the background; compact layouts stack below the shared 920-DIP breakpoint.
 
 ### Original concept
 
@@ -53,6 +53,8 @@ Concept images remain design references and are explicitly marked as concepts.
 **Interactive experience:** Open [`docs/showcase.html`](showcase.html) in any modern browser for the live holographic diagnostic topology, command simulator, and responsive telemetry panels.
 
 ## Capture policy
+
+Capturing requires a Windows host with an installed MSIX or portable build of the exact version being recorded; the source tree alone cannot produce runtime evidence.
 
 Every runtime image must record:
 

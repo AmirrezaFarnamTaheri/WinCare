@@ -63,7 +63,7 @@ The UI no longer claims that every mutation necessarily uses the destructive two
 
 ## Documentation and screenshot truth
 
-The checked-in `runtime-dashboard.png` and `runtime-checkup.png` are explicitly versioned as historical v2.5.0-rc5 runtime evidence. They are not presented as current-source screenshots after this redesign. Current source/XAML is authoritative until a new installed candidate is captured and visually reviewed.
+The checked-in `runtime-dashboard.png` and `runtime-checkup.png` are explicitly versioned as historical v2.5.0-rc5 runtime evidence. They are not presented as current-source screenshots for later candidates. Current source/XAML is authoritative until a new installed candidate is captured and visually reviewed.
 
 ## Validation contract
 

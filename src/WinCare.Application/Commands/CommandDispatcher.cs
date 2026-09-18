@@ -5,6 +5,7 @@ using System.Text.Json;
 using WinCare.Application.Activity;
 using WinCare.Application.Native;
 using WinCare.CommandCatalog.Models;
+using WinCare.CommandCatalog;
 using WinCare.Domain.Activity;
 using WinCare.Domain.Commands;
 
@@ -19,6 +20,7 @@ public sealed class CommandDispatcher : ICommandDispatcher
     private readonly IReadOnlyDictionary<string, ICommandHandler> _handlers;
     private readonly ConcurrentDictionary<string, (CommandDefinition Definition, ICommandHandler Handler)> _dynamicCommands = new(StringComparer.OrdinalIgnoreCase);
     private readonly TimeProvider _timeProvider;
+    private readonly Func<bool> _isProcessElevated;
     private readonly IActivityJournalService? _journal;
     private readonly ConcurrentDictionary<string, ApprovedMutationPlan> _issuedReviewPlans = new(StringComparer.Ordinal);
     private static readonly TimeSpan ReviewPlanLifetime = TimeSpan.FromMinutes(15);
@@ -31,16 +33,29 @@ public sealed class CommandDispatcher : ICommandDispatcher
     /// <summary>
     /// Initializes a new dispatcher bound to the catalog and the supplied handlers.
     /// </summary>
+    /// <param name="definitions">Catalog command definitions the dispatcher admits.</param>
+    /// <param name="handlers">Handlers bound to admitted command IDs.</param>
+    /// <param name="timeProvider">Clock used for approval-plan expiry and timestamps; defaults to the system clock.</param>
+    /// <param name="nativeCore">Optional native core interop used by system probes; defaults to the loaded core.</param>
+    /// <param name="journal">Optional activity journal receiving dispatch records.</param>
+    /// <param name="isProcessElevated">
+    /// Optional override for the process elevation probe used by the administrator-access gate.
+    /// Production callers omit it and get the real <see cref="WindowsPrincipal"/> check; tests that
+    /// exercise elevated commands supply a deterministic value instead of depending on how the test
+    /// host was launched. The gate itself is enforced either way.
+    /// </param>
     public CommandDispatcher(
         IReadOnlyList<CommandDefinition> definitions,
         IEnumerable<ICommandHandler> handlers,
         TimeProvider? timeProvider = null,
         INativeCoreService? nativeCore = null,
-        IActivityJournalService? journal = null)
+        IActivityJournalService? journal = null,
+        Func<bool>? isProcessElevated = null)
     {
         ArgumentNullException.ThrowIfNull(definitions);
         ArgumentNullException.ThrowIfNull(handlers);
         _journal = journal;
+        _isProcessElevated = isProcessElevated ?? IsCurrentProcessElevated;
 
         if (nativeCore is not null)
         {
@@ -124,6 +139,7 @@ public sealed class CommandDispatcher : ICommandDispatcher
             return false;
         }
 
+        definition = WinCare.Application.Plugins.PluginCommandPolicy.Normalize(definition);
         return _dynamicCommands.TryAdd(definition.Id, (definition, handler));
     }
 
@@ -145,10 +161,27 @@ public sealed class CommandDispatcher : ICommandDispatcher
         ArgumentNullException.ThrowIfNull(request);
         DateTimeOffset startedAt = _timeProvider.GetUtcNow();
 
+        if (string.IsNullOrWhiteSpace(request.CommandId))
+        {
+            return CreateResult(request, CommandResultStatus.Blocked, "command.id_required",
+                "The request does not identify a command.", null, false, startedAt);
+        }
+
         if (request.Parameters.ValueKind != JsonValueKind.Object)
         {
             return CreateResult(request, CommandResultStatus.Blocked, "command.parameters_invalid",
                 "Command parameters must be a JSON object.", null, false, startedAt);
+        }
+
+        // Validate the payload against the command's declared parameter schema on the dispatch path
+        // itself, not only on the playbook-import path: the same command reached from the palette or
+        // a button must satisfy the same contract as one reached from an imported playbook.
+        // Commands that declare no schema (plugin and dynamic commands) are unconstrained here.
+        IReadOnlyList<string> parameterErrors = CommandParameterValidator.Validate(request.CommandId, request.Parameters);
+        if (parameterErrors.Count > 0)
+        {
+            return CreateResult(request, CommandResultStatus.Blocked, "command.parameters_invalid",
+                parameterErrors[0], null, false, startedAt);
         }
 
         if (cancellationToken.IsCancellationRequested)
@@ -192,6 +225,19 @@ public sealed class CommandDispatcher : ICommandDispatcher
         {
             return CreateResult(request, CommandResultStatus.Blocked, "command.readonly_mutation_denied",
                 $"Command '{request.CommandId}' is declared ReadOnly and cannot be invoked with Apply=true.", null, false, startedAt);
+        }
+
+        // An AdministratorAccess declaration is enforced at admission, not merely displayed. A
+        // mutating command that requires elevation must never reach its handler in a non-elevated
+        // process: failing later at native-execution time would already have promised the user an
+        // operation this process is not entitled to perform. Read-only previews stay available so
+        // the surface can explain what elevation is needed for.
+        if (!definition.ReadOnly && request.Apply &&
+            definition.AdministratorAccess == AdministratorAccess.Required &&
+            !_isProcessElevated())
+        {
+            return CreateResult(request, CommandResultStatus.Blocked, "command.elevation_required",
+                $"Command '{request.CommandId}' requires administrator access. Relaunch WinCare as an administrator, then run this command again.", null, false, startedAt);
         }
 
         if (!definition.ReadOnly && request.Apply)
@@ -352,7 +398,7 @@ public sealed class CommandDispatcher : ICommandDispatcher
         }
 
         ApprovedMutationPlan issued = new(
-            "AMP-" + Guid.NewGuid().ToString("N")[..12].ToUpperInvariant(),
+            ApprovedMutationPlan.NewPlanId(),
             commandId,
             ApprovedMutationPlan.ComputeCanonicalDigest(parameters),
             now,
@@ -393,8 +439,8 @@ public sealed class CommandDispatcher : ICommandDispatcher
 
     private static string? ExecutionDigestFromPreview(string commandId, JsonElement? previewData)
     {
-        if (commandId is not ("preset" or "remediation-restore") || previewData is not JsonElement data ||
-            data.ValueKind != JsonValueKind.Object || !data.TryGetProperty("executionDigest", out JsonElement digest) ||
+        if (commandId is not (CommandIds.Preset or CommandIds.RemediationRestore) || previewData is not JsonElement data ||
+            data.ValueKind != JsonValueKind.Object || !data.TryGetProperty(CommandIds.ExecutionDigestPropertyName, out JsonElement digest) ||
             digest.ValueKind != JsonValueKind.String)
         {
             return null;
@@ -405,24 +451,32 @@ public sealed class CommandDispatcher : ICommandDispatcher
 
     private static string? CurrentExecutionDigest(string commandId, JsonElement parameters, string? submittedExecutionDigest)
     {
-        if (commandId.Equals("remediation-restore", StringComparison.OrdinalIgnoreCase))
+        if (commandId.Equals(CommandIds.RemediationRestore, StringComparison.OrdinalIgnoreCase))
             return submittedExecutionDigest;
-        if (!commandId.Equals("preset", StringComparison.OrdinalIgnoreCase) ||
-            !parameters.TryGetProperty("PresetId", out JsonElement presetId) || presetId.ValueKind != JsonValueKind.String ||
+        if (!commandId.Equals(CommandIds.Preset, StringComparison.OrdinalIgnoreCase) ||
+            !parameters.TryGetProperty(CommandIds.PresetIdPropertyName, out JsonElement presetId) || presetId.ValueKind != JsonValueKind.String ||
             string.IsNullOrWhiteSpace(presetId.GetString()))
         {
             return null;
         }
 
-        using WindowsIdentity identity = WindowsIdentity.GetCurrent();
-        bool isAdministrator = new WindowsPrincipal(identity).IsInRole(WindowsBuiltInRole.Administrator);
         RemediationPresetPlan plan = RemediationPresetPlanner.Create(
             presetId.GetString()!,
             WinCare.CommandCatalog.RemediationCatalog.LoadPresets(),
             WinCare.CommandCatalog.RemediationCatalog.LoadRules(),
             Environment.OSVersion.Version.Build,
-            isAdministrator);
+            IsCurrentProcessElevated());
         return plan.IsExecutable ? plan.Digest : null;
+    }
+
+    /// <summary>
+    /// Reports whether the current process runs with administrator privileges. Both the admission
+    /// gate and the preset execution digest use this single probe so the two never disagree.
+    /// </summary>
+    private static bool IsCurrentProcessElevated()
+    {
+        using WindowsIdentity identity = WindowsIdentity.GetCurrent();
+        return new WindowsPrincipal(identity).IsInRole(WindowsBuiltInRole.Administrator);
     }
 
     private CommandResult CreateResult(
@@ -437,11 +491,14 @@ public sealed class CommandDispatcher : ICommandDispatcher
         ActivityRecord? activity = null)
     {
         // Admission rejections (Blocked / NotMigrated) happen before a normal activity
-        // record exists; log them so they remain visible in Activity history.
+        // record exists; log them so they remain visible in Activity history. The command id is
+        // sanitized because a request that reaches admission with no usable id is exactly the
+        // malformed case this path must report instead of throwing on.
         if (activity is null && _journal is not null &&
             status is CommandResultStatus.Blocked or CommandResultStatus.NotMigrated)
         {
-            ActivityRecord rejection = _journal.Begin(request.CommandId, request.CommandId);
+            string journalCommandId = string.IsNullOrWhiteSpace(request.CommandId) ? "unknown" : request.CommandId;
+            ActivityRecord rejection = _journal.Begin(journalCommandId, journalCommandId);
             _journal.Fail(rejection.Id, message);
         }
 

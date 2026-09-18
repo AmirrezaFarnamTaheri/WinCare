@@ -11,7 +11,7 @@ The native source distribution contains **zero PowerShell files**. Historical Po
 | `WinCare.App` | WinUI shell, task-first navigation, Home/Checkup/care presentation, Power tools parameter/review UI, Troubleshoot UI, Extensions UI, theme/accessibility resources |
 | `WinCare.Application` | Fail-closed command dispatcher, dispatcher-issued review receipts, exact catalog projection, extension host/registry, rule-based Troubleshoot orchestration, activity journal |
 | `WinCare.Domain` | Typed requests/results, risk/admission policy, evidence models, activity records |
-| `WinCare.Infrastructure` | Windows APIs, bounded process execution, persistent state, encrypted profiles, extension catalog/package verification, Rust FFI |
+| `WinCare.Infrastructure` | Windows APIs, bounded process execution, persistent state, extension catalog/package verification, Rust FFI |
 | `WinCare.CommandCatalog` | 269-command catalog, preserving the 259 frozen legacy IDs, plus typed UI parameter schemas |
 | `native/wincare-core` | Bounded native primitives exposed through a versioned C ABI |
 | `native/wincare-guard` | **Experimental** local health daemon and local named-pipe endpoint; production SCM lifecycle and app notification consumption are not complete |

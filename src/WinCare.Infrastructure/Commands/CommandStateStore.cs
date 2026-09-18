@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using WinCare.Infrastructure.Security;
 
 namespace WinCare.Infrastructure.Commands;
 
@@ -25,6 +26,13 @@ public sealed class CommandStateStore
     /// Bounded wait for the cross-process state lock.
     /// </summary>
     private static readonly TimeSpan CrossProcessLockTimeout = TimeSpan.FromSeconds(5);
+
+    /// <summary>
+    /// Upper bound on a single state value. State keys are app-owned and fixed in number, so a
+    /// value larger than this is either external data that belongs in a file the caller manages
+    /// or a corrupted/truncated write; either way it must not be fully loaded into memory.
+    /// </summary>
+    private const int MaxStateBytes = 16 * 1024 * 1024;
 
     /// <summary>
     /// Initializes a new instance of <see cref="CommandStateStore"/>.
@@ -73,7 +81,32 @@ public sealed class CommandStateStore
                 return fallback.Clone();
             }
             await using FileStream stream = new(path, FileMode.Open, FileAccess.Read, FileShare.Read | FileShare.Delete, 64 * 1024, useAsync: true);
-            JsonDocument document = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken).ConfigureAwait(false);
+            // Bound the read before parsing: a state file can grow while it is being read (another
+            // process holds the write lock and is mid-commit), and ParseAsync would otherwise
+            // buffer an unbounded amount of JSON into managed memory. Checking the length up front
+            // and then reading at most that many bytes closes the window between measurement and
+            // read without trusting the length as a fixed truth.
+            long length = stream.Length;
+            if (length > MaxStateBytes)
+            {
+                throw new InvalidDataException(
+                    $"WinCare state '{key}' is {length} bytes and exceeds the {MaxStateBytes}-byte limit.");
+            }
+            // Read at most the observed length plus a small tolerance so a concurrent grower cannot
+            // push the actual byte count past the bound between the check and the parse.
+            int boundedLength = (int)Math.Min(length + 4 * 1024, MaxStateBytes);
+            var buffer = new byte[boundedLength];
+            int read = 0;
+            while (read < buffer.Length)
+            {
+                int n = await stream.ReadAsync(buffer.AsMemory(read), cancellationToken).ConfigureAwait(false);
+                if (n == 0) break;
+                read += n;
+            }
+            // Parse exactly the bytes read: the buffer is already bounded, so no further
+            // allocation can grow past the limit during deserialization.
+            using var bounded = new MemoryStream(buffer, 0, read, writable: false);
+            JsonDocument document = await JsonDocument.ParseAsync(bounded, cancellationToken: cancellationToken).ConfigureAwait(false);
             using (document)
             {
                 return document.RootElement.Clone();
@@ -248,7 +281,10 @@ public sealed class CommandStateStore
             {
                 await using (FileStream stream = new(temp, FileMode.CreateNew, FileAccess.Write, FileShare.None, 64 * 1024, useAsync: true))
                 {
-                    await JsonSerializer.SerializeAsync(stream, value, JsonOptions, cancellationToken).ConfigureAwait(false);
+                    // Mask at the serialization boundary so no API key, token, private key or card
+                    // number reaches the persisted JSON regardless of which caller built the tree.
+                    JsonElement masked = SensitiveCredentialMasker.MaskSensitiveData(value);
+                    await JsonSerializer.SerializeAsync(stream, masked, JsonOptions, cancellationToken).ConfigureAwait(false);
                     await stream.FlushAsync(cancellationToken).ConfigureAwait(false);
                 }
 

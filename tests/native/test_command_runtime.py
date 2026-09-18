@@ -153,11 +153,27 @@ class CommandRuntimeTests(unittest.TestCase):
             for path in native_root.rglob("*"):
                 if not path.is_file() or path.suffix.lower() not in {".cs", ".xaml", ".rs", ".toml", ".json"}:
                     continue
+                if {"bin", "obj", "target", "AppPackages"}.intersection(path.relative_to(native_root).parts):
+                    continue
                 text = path.read_text(encoding="utf-8", errors="replace")
+                # XML/line comments describe the boundary; they cannot launch a runtime.
+                executable_source = "\n".join(line for line in text.splitlines() if not line.lstrip().startswith("//"))
+                plugin_handler = ROOT / "src/WinCare.Infrastructure/Plugins/PluginScriptCommandHandler.cs"
                 for token in banned:
-                    if token in text:
+                    if token == "powershell.exe" and path == plugin_handler:
+                        continue  # Existing, explicitly admitted third-party script adapter only.
+                    if token in executable_source:
                         findings.append(f"{path.relative_to(ROOT)}: {token}")
         self.assertEqual([], findings)
+
+        handler = (ROOT / "src/WinCare.Infrastructure/Plugins/PluginScriptCommandHandler.cs").read_text(encoding="utf-8")
+        self.assertIn('executable = "powershell.exe";', handler)
+        self.assertNotIn('string.Concat("power", "shell.exe"', handler)
+        self.assertIn('if (!request.Apply && !_declaredReadOnly)', handler)
+        self.assertIn('return BuildPreviewOutcome(request);', handler)
+        self.assertIn('request.Approval is null', handler)
+        self.assertIn('plugin.approval_required', handler)
+        self.assertIn('_processRunner.RunAsync', handler)
 
     def test_command_plan_prevalidation_and_read_only_fail_closed(self) -> None:
         executor = (ROOT / "src/WinCare.Infrastructure/Commands/WindowsCommandExecutor.cs").read_text(

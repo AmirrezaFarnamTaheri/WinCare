@@ -11,12 +11,14 @@ namespace WinCare.Infrastructure.Commands;
 /// <param name="StandardError">Captured standard error text.</param>
 /// <param name="OutputTruncated">Whether output exceeded the character limit.</param>
 /// <param name="Duration">Total execution duration.</param>
+/// <param name="ResolvedExecutablePath">The absolute path actually launched, when the caller passed a bare tool name; empty when the caller supplied the path.</param>
 public sealed record ProcessExecutionResult(
     int ExitCode,
     string StandardOutput,
     string StandardError,
     bool OutputTruncated,
-    TimeSpan Duration);
+    TimeSpan Duration,
+    string ResolvedExecutablePath = "");
 
 /// <summary>
 /// Executes a native child process without a shell, with bounded output, cancellation and a hard deadline.
@@ -50,9 +52,12 @@ public sealed class BoundedProcessRunner
         using CancellationTokenSource linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
         linked.Token.ThrowIfCancellationRequested();
 
+        // Resolve the tool to an absolute path before launching so the exact binary an elevated
+        // WinCare runs is knowable and can be reported in the execution receipt.
+        string resolvedExecutable = ResolveExecutable(fileName);
         var startInfo = new ProcessStartInfo
         {
-            FileName = ResolveExecutable(fileName),
+            FileName = resolvedExecutable,
             UseShellExecute = false,
             CreateNoWindow = true,
             RedirectStandardOutput = true,
@@ -92,7 +97,8 @@ public sealed class BoundedProcessRunner
                 output.Text,
                 error.Text,
                 output.Truncated || error.Truncated,
-                started.Elapsed);
+                started.Elapsed,
+                string.Equals(resolvedExecutable, fileName, StringComparison.Ordinal) ? string.Empty : resolvedExecutable);
         }
         catch (OperationCanceledException)
         {
@@ -110,6 +116,14 @@ public sealed class BoundedProcessRunner
         ? Environment.GetFolderPath(Environment.SpecialFolder.System)
         : null;
 
+    /// <summary>
+    /// Resolves a tool name to an absolute path. Tools that do not live in System32 (winget,
+    /// sysmon, wg, adb, ...) are resolved by walking PATH <em>explicitly</em> rather than letting
+    /// CreateProcess search it: the implicit search also covers this process's own directory and
+    /// the working directory, so a user-writable early PATH entry would otherwise silently supply
+    /// the binary an elevated WinCare executes. Callers that need a proven binary should pass an
+    /// absolute path plus an expected digest, the way the studio-adb/studio-xbox-fse commands do.
+    /// </summary>
     private static string ResolveExecutable(string fileName)
     {
         if (Path.IsPathRooted(fileName))
@@ -128,6 +142,26 @@ public sealed class BoundedProcessRunner
                 return systemCandidate;
             }
         }
+
+        string? searchPath = Environment.GetEnvironmentVariable("PATH");
+        if (!string.IsNullOrEmpty(searchPath))
+        {
+            foreach (string directory in searchPath.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            {
+                try
+                {
+                    string candidate = Path.Combine(directory.Trim('"'), fileName);
+                    if (File.Exists(candidate))
+                    {
+                        return Path.GetFullPath(candidate);
+                    }
+                }
+                catch (ArgumentException) { }
+            }
+        }
+
+        // Nothing could be resolved to an absolute path; let the OS attempt the launch so the
+        // existing missing-dependency failure mode is preserved.
         return fileName;
     }
 

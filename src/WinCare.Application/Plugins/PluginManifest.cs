@@ -481,7 +481,7 @@ public sealed class PluginToolDefinition
 
         var effectiveReadOnly = ReadOnly || parsedRisk == CommandRisk.ReadOnly;
 
-        return new CommandDefinition(
+        return PluginCommandPolicy.Normalize(new CommandDefinition(
             Id: Id,
             Title: string.IsNullOrWhiteSpace(Title) ? Id : Title,
             Summary: string.IsNullOrWhiteSpace(Summary) ? Title : Summary,
@@ -494,6 +494,6 @@ public sealed class PluginToolDefinition
             LegacySource: $"plugin:{pluginId}",
             MigrationStatus: MigrationStatus.BehaviorVerified,
             Keywords: new[] { Id, Title, Area, Section, pluginId }
-        );
+        ));
     }
 }

@@ -15,6 +15,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 PYTHON = sys.executable
 PORTABLE_EXECUTABLE_MAX_BYTES = 70_000_000
+# Floor for a real PE image: the DOS header, PE signature and COFF header alone run to a few
+# hundred bytes, so anything smaller is not a real executable even if it carries the "MZ" magic.
+PORTABLE_EXECUTABLE_MIN_BYTES = 1_024
 
 
 def _get_product_version() -> str:
@@ -32,10 +35,11 @@ def _get_product_version() -> str:
 CHECKS = [
     ("Visual tokens check", [PYTHON, "tools/verify_visual_tokens.py"], 120),
     ("Pill contrast check", [PYTHON, "tools/verify_pill_contrast.py"], 120),
+    ("Palette contrast check", [PYTHON, "tools/verify_palette_contrast.py"], 120),
     ("Native foundation gate", [PYTHON, "tools/verify_native_foundation.py"], 120),
     ("Rust format check", ["cargo", "fmt", "--manifest-path", "native/Cargo.toml", "--all", "--", "--check"], 300),
-    ("Rust unit tests", ["cargo", "test", "--manifest-path", "native/Cargo.toml"], 900),
-    ("Rust clippy lints", ["cargo", "clippy", "--manifest-path", "native/Cargo.toml", "--all-targets", "--all-features", "--", "-D", "warnings"], 900),
+    ("Rust unit tests", ["cargo", "test", "--manifest-path", "native/Cargo.toml", "--locked"], 900),
+    ("Rust clippy lints", ["cargo", "clippy", "--manifest-path", "native/Cargo.toml", "--all-targets", "--all-features", "--locked", "--", "-D", "warnings"], 900),
     ("Python repository tests", [PYTHON, "-m", "unittest", "discover", "-s", "tests", "-t", ".", "-v"], 300),
 ]
 
@@ -46,7 +50,20 @@ def validate_portable_artifact(path: Path) -> int:
     if not artifact.is_file():
         raise FileNotFoundError(f"portable executable is missing: {path}")
 
+    # Size alone has no lower bound, so a truncated or substituted file could pass on the ceiling
+    # check alone; require the Portable Executable magic header before trusting the file at all.
+    with open(artifact, "rb") as stream:
+        magic = stream.read(2)
+    if magic != b"MZ":
+        raise ValueError(
+            f"portable executable at {path} is not a PE image (expected 'MZ' magic header, got {magic!r})"
+        )
+
     size = artifact.stat().st_size
+    if size < PORTABLE_EXECUTABLE_MIN_BYTES:
+        raise ValueError(
+            f"portable executable is {size:,} bytes; minimum is {PORTABLE_EXECUTABLE_MIN_BYTES:,} bytes"
+        )
     if size > PORTABLE_EXECUTABLE_MAX_BYTES:
         raise ValueError(
             f"portable executable is {size:,} bytes; limit is {PORTABLE_EXECUTABLE_MAX_BYTES:,} bytes"
@@ -60,8 +77,9 @@ def _parse_args() -> argparse.Namespace:
         "--portable-artifact",
         type=Path,
         help=(
-            "Validate one published WinCare.App.exe against the canonical "
-            f"{PORTABLE_EXECUTABLE_MAX_BYTES:,}-byte ceiling and exit."
+            "Validate one published WinCare.App.exe against the PE magic header, the "
+            f"{PORTABLE_EXECUTABLE_MIN_BYTES:,}-byte floor and the "
+            f"{PORTABLE_EXECUTABLE_MAX_BYTES:,}-byte ceiling, and exit."
         ),
     )
     return parser.parse_args()
@@ -76,8 +94,8 @@ def main() -> int:
             print(f"[FAIL] {exc}")
             return 1
         print(
-            f"[PASS] Portable executable: {size:,} bytes "
-            f"(limit {PORTABLE_EXECUTABLE_MAX_BYTES:,} bytes)"
+            f"[PASS] Portable executable: PE magic header present, {size:,} bytes "
+            f"(floor {PORTABLE_EXECUTABLE_MIN_BYTES:,}, limit {PORTABLE_EXECUTABLE_MAX_BYTES:,} bytes)"
         )
         return 0
 

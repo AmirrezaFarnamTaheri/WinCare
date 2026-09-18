@@ -1,6 +1,8 @@
 namespace WinCare.Infrastructure.Security;
 
 using System;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 
 /// <summary>
@@ -113,9 +115,75 @@ public static class SensitiveCredentialMasker
         {
             return "********";
         }
+        // Keep only a short length-proportional prefix and redact the rest. Retaining the last
+        // four characters as well leaked real secret material: for sk-/ghp_-prefixed keys the
+        // suffix is entirely secret, so a masked form of "sk-abcdefghij1234567890" must never
+        // expose characters past the well-known scheme prefix.
         string prefix = token[..4];
-        string suffix = token[^4..];
-        return $"{prefix}****...{suffix}";
+        return $"{prefix}****";
+    }
+
+    /// <summary>
+    /// Recursively masks every string value inside a JSON tree, returning a new element that is
+    /// safe to persist or transmit. Non-string values are passed through untouched; masking is
+    /// idempotent, so an already-masked tree round-trips unchanged.
+    /// </summary>
+    public static JsonElement MaskSensitiveData(JsonElement element)
+    {
+        JsonNode? node;
+        try
+        {
+            node = JsonSerializer.Deserialize<JsonNode>(element.GetRawText());
+        }
+        catch (JsonException)
+        {
+            // A value that cannot be re-parsed is left as-is rather than blocking a state write.
+            return element;
+        }
+        if (node is null)
+        {
+            return element;
+        }
+
+        // A bare root string has no parent node to replace within, so mask it directly.
+        if (node is JsonValue rootValue && rootValue.TryGetValue<string>(out string? rootText))
+        {
+            return JsonSerializer.SerializeToElement(MaskSensitiveData(rootText));
+        }
+
+        MaskJsonNode(node);
+        return JsonSerializer.SerializeToElement(node);
+    }
+
+    private static void MaskJsonNode(JsonNode node)
+    {
+        if (node is JsonObject obj)
+        {
+            // JsonNode.ReplaceWith detaches the node being visited, so recursion must consume a
+            // snapshot: enumerating obj directly throws "Collection was modified" whenever any
+            // property value is a masked string.
+            foreach (var property in obj.ToArray())
+            {
+                if (property.Value is not null)
+                {
+                    MaskJsonNode(property.Value);
+                }
+            }
+        }
+        else if (node is JsonArray array)
+        {
+            for (int i = 0; i < array.Count; i++)
+            {
+                if (array[i] is { } item)
+                {
+                    MaskJsonNode(item);
+                }
+            }
+        }
+        else if (node is JsonValue value && value.TryGetValue<string>(out string? text))
+        {
+            node.ReplaceWith(MaskSensitiveData(text));
+        }
     }
 
     /// <summary>

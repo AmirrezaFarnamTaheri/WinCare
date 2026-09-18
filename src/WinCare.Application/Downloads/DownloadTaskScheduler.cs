@@ -57,6 +57,14 @@ public sealed class DownloadTaskScheduler : IDisposable
         public CancellationTokenSource Cts { get; set; } = new();
         public bool PauseRequested { get; set; }
 
+        /// <summary>
+        /// Bumped on every pause, resume and cancel. An execution attempt captures the value at
+        /// start and must stop touching task state or files once it is stale: a paused attempt that
+        /// observes cancellation after a resume would otherwise overwrite the resumed state, and two
+        /// concurrent attempts would race on the same destination file.
+        /// </summary>
+        public int Epoch { get; set; }
+
         public DownloadTaskItem ToSnapshot()
         {
             lock (SyncRoot)
@@ -114,6 +122,7 @@ public sealed class DownloadTaskScheduler : IDisposable
         {
             if (state.Status is DownloadStatus.Completed or DownloadStatus.Cancelled) return false;
             state.PauseRequested = false;
+            state.Epoch++;
             state.Status = DownloadStatus.Cancelled;
             state.ErrorMessage = null;
             state.Cts.Cancel();
@@ -128,6 +137,7 @@ public sealed class DownloadTaskScheduler : IDisposable
         {
             if (state.Status is not (DownloadStatus.Pending or DownloadStatus.Downloading)) return false;
             state.PauseRequested = true;
+            state.Epoch++;
             state.Status = DownloadStatus.Paused;
             state.Cts.Cancel();
             return true;
@@ -143,6 +153,7 @@ public sealed class DownloadTaskScheduler : IDisposable
             state.Cts.Dispose();
             state.Cts = new CancellationTokenSource();
             state.PauseRequested = false;
+            state.Epoch++;
             state.Status = DownloadStatus.Pending;
             state.ErrorMessage = null;
             return true;
@@ -175,7 +186,12 @@ public sealed class DownloadTaskScheduler : IDisposable
     private async Task ExecuteSingleTaskWithThrottleAsync(DownloadTaskState task, CancellationToken callerToken)
     {
         CancellationToken taskToken;
-        lock (task.SyncRoot) taskToken = task.Cts.Token;
+        int epoch;
+        lock (task.SyncRoot)
+        {
+            taskToken = task.Cts.Token;
+            epoch = task.Epoch;
+        }
         using var linked = CancellationTokenSource.CreateLinkedTokenSource(callerToken, taskToken);
         CancellationToken ct = linked.Token;
 
@@ -185,7 +201,7 @@ public sealed class DownloadTaskScheduler : IDisposable
         }
         catch (OperationCanceledException)
         {
-            ApplyCancellationState(task, callerToken);
+            ApplyCancellationState(task, callerToken, epoch);
             return;
         }
 
@@ -193,17 +209,23 @@ public sealed class DownloadTaskScheduler : IDisposable
         {
             string? directory = Path.GetDirectoryName(task.DestinationPath);
             if (!string.IsNullOrEmpty(directory)) Directory.CreateDirectory(directory);
-            string tempPath = task.DestinationPath + $".{task.TaskId}.part";
+            // The temp name carries the epoch so an attempt that outlives a pause/resume cannot
+            // collide with the resumed attempt's partial file.
+            string tempPath = $"{task.DestinationPath}.{task.TaskId}.e{epoch}.part";
 
             try
             {
                 for (int attempt = 1; attempt <= MaxRetries; attempt++)
                 {
                     ct.ThrowIfCancellationRequested();
+                    // A pause/resume or cancel while waiting on the throttle retired this attempt:
+                    // leave the task to its new owner instead of clobbering its state.
+                    if (!IsCurrentAttempt(task, epoch)) return;
                     try
                     {
                         lock (task.SyncRoot)
                         {
+                            if (!IsCurrentAttempt(task, epoch)) return;
                             task.DownloadedBytes = 0;
                             task.TotalBytes = 0;
                         }
@@ -220,7 +242,11 @@ public sealed class DownloadTaskScheduler : IDisposable
                         }
 
                         long? expectedLength = response.Content.Headers.ContentLength;
-                        lock (task.SyncRoot) task.TotalBytes = expectedLength ?? 0;
+                        lock (task.SyncRoot)
+                        {
+                            if (!IsCurrentAttempt(task, epoch)) return;
+                            task.TotalBytes = expectedLength ?? 0;
+                        }
 
                         await using (var input = await response.Content.ReadAsStreamAsync(ct).ConfigureAwait(false))
                         await using (var output = new FileStream(tempPath, FileMode.Create, FileAccess.Write, FileShare.None, 64 * 1024, useAsync: true))
@@ -230,7 +256,11 @@ public sealed class DownloadTaskScheduler : IDisposable
                             while ((read = await input.ReadAsync(buffer.AsMemory(0, buffer.Length), ct).ConfigureAwait(false)) > 0)
                             {
                                 await output.WriteAsync(buffer.AsMemory(0, read), ct).ConfigureAwait(false);
-                                lock (task.SyncRoot) task.DownloadedBytes += read;
+                                lock (task.SyncRoot)
+                                {
+                                    if (!IsCurrentAttempt(task, epoch)) return;
+                                    task.DownloadedBytes += read;
+                                }
                             }
                             await output.FlushAsync(ct).ConfigureAwait(false);
                         }
@@ -240,9 +270,12 @@ public sealed class DownloadTaskScheduler : IDisposable
                         if (expectedLength.HasValue && actualLength != expectedLength.Value)
                             throw new IOException($"Download ended at {actualLength} bytes; expected {expectedLength.Value} bytes.");
 
-                        File.Move(tempPath, task.DestinationPath, overwrite: true);
+                        // Only the current attempt may publish the destination: a stale one that
+                        // completed against the old token would overwrite a newer, valid download.
                         lock (task.SyncRoot)
                         {
+                            if (!IsCurrentAttempt(task, epoch)) return;
+                            File.Move(tempPath, task.DestinationPath, overwrite: true);
                             task.Status = DownloadStatus.Completed;
                             task.ErrorMessage = null;
                         }
@@ -250,7 +283,7 @@ public sealed class DownloadTaskScheduler : IDisposable
                     }
                     catch (OperationCanceledException) when (ct.IsCancellationRequested)
                     {
-                        ApplyCancellationState(task, callerToken);
+                        ApplyCancellationState(task, callerToken, epoch);
                         return;
                     }
                     catch (Exception ex) when (IsTransient(ex) && attempt < MaxRetries)
@@ -264,12 +297,15 @@ public sealed class DownloadTaskScheduler : IDisposable
             {
                 lock (task.SyncRoot)
                 {
+                    if (!IsCurrentAttempt(task, epoch)) return;
                     task.Status = DownloadStatus.Failed;
                     task.ErrorMessage = ex.Message;
                 }
             }
             finally
             {
+                // An abandoned stale attempt cleans up only its own epoch-scoped temp file; the
+                // resumed attempt owns a different one and must not be disturbed.
                 if (task.ToSnapshot().Status != DownloadStatus.Completed) TryDelete(tempPath);
             }
         }
@@ -291,10 +327,24 @@ public sealed class DownloadTaskScheduler : IDisposable
         await Task.Delay(delay, ct).ConfigureAwait(false);
     }
 
-    private static void ApplyCancellationState(DownloadTaskState task, CancellationToken callerToken)
+    /// <summary>
+    /// Reports whether <paramref name="epoch" /> is still the task's current attempt. Every pause,
+    /// resume and cancel bumps the epoch, so a stale attempt learns here that it must let go of the
+    /// task instead of writing state or the destination file.
+    /// </summary>
+    private static bool IsCurrentAttempt(DownloadTaskState task, int epoch)
+    {
+        lock (task.SyncRoot) return task.Epoch == epoch;
+    }
+
+    private static void ApplyCancellationState(DownloadTaskState task, CancellationToken callerToken, int epoch)
     {
         lock (task.SyncRoot)
         {
+            // The cancellation this attempt observed may belong to a pause that was already
+            // resumed (or a cancel that was superseded). Only the current attempt may record the
+            // resulting status; otherwise it would resurrect Paused/Cancelled over a live download.
+            if (!IsCurrentAttempt(task, epoch)) return;
             if (task.PauseRequested)
             {
                 task.Status = DownloadStatus.Paused;

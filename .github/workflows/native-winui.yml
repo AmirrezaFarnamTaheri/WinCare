@@ -35,6 +35,12 @@ jobs:
           python-version: "3.13"
       - name: Run repository Python tests
         run: python -m unittest discover -s tests -t . -v
+      - name: Verify visual design tokens
+        run: python tools/verify_visual_tokens.py
+      - name: Verify contrast ratios
+        run: |
+          python tools/verify_pill_contrast.py
+          python tools/verify_palette_contrast.py
       - name: Verify documentation screenshots
         run: python tools/capture_screenshots.py --verify-only
       - name: Read product version
@@ -60,6 +66,9 @@ jobs:
             target: aarch64-pc-windows-msvc
     env:
       PRODUCT_VERSION: ${{ needs.verify.outputs.product_version }}
+      # RFC 3161 timestamp server used to counter-sign every shipped binary so a signature stays
+      # verifiable after the signing certificate itself lapses.
+      WINCARE_TIMESTAMP_URL: http://timestamp.digicert.com
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772 # master 2026-08-05
@@ -79,14 +88,16 @@ jobs:
         if: matrix.platform == 'x64'
         run: cargo fmt --manifest-path native/Cargo.toml --all -- --check
       - name: Run Rust clippy
-        run: cargo clippy --manifest-path native/Cargo.toml --target ${{ matrix.target }} --all-targets --all-features -- -D warnings
+        # --locked keeps CI on the committed Cargo.lock: a stale manifest/lock pair must fail
+        # the gate instead of being silently resolved.
+        run: cargo clippy --manifest-path native/Cargo.toml --target ${{ matrix.target }} --all-targets --all-features --locked -- -D warnings
       - name: Run Rust unit tests
         if: matrix.platform == 'x64'
-        run: cargo test --manifest-path native/Cargo.toml
+        run: cargo test --manifest-path native/Cargo.toml --locked
       - name: Build and stage Rust core
         shell: bash
         run: |
-          cargo build --manifest-path native/Cargo.toml --target ${{ matrix.target }} --release
+          cargo build --manifest-path native/Cargo.toml --target ${{ matrix.target }} --release --locked
           mkdir -p src/WinCare.App/Native/${{ matrix.platform }}
           cp native/target/${{ matrix.target }}/release/wincare_core.dll src/WinCare.App/Native/${{ matrix.platform }}/wincare_core.dll
 
@@ -133,6 +144,16 @@ jobs:
             if ($sig.Status -notin @('Valid', 'UnknownError')) {
               throw "Development MSIX '$Path' signature status is '$($sig.Status)' ($($sig.StatusMessage))."
             }
+            if ($sig.Status -eq 'UnknownError') {
+              # Get-AuthenticodeSignature answers UnknownError when it cannot determine the
+              # state at all. On the build runner that is the expected answer for a self-signed
+              # development signer that is deliberately absent from every system trust store, so
+              # it is tolerated only on positive evidence gathered here and below: the signer is
+              # exactly the expected certificate (subject and thumbprint, asserted above), and
+              # its chain builds against the exported public certificate as a custom root. Every
+              # other undetermined state, including a digest mismatch, still fails closed.
+              Write-Output 'Tolerating UnknownError on signer-identity plus custom-root-chain evidence only; all other undetermined states fail closed.'
+            }
 
             $chain = [System.Security.Cryptography.X509Certificates.X509Chain]::new()
             try {
@@ -152,6 +173,14 @@ jobs:
           try {
             $signDir = "$PWD/artifacts/signing"
             New-Item -ItemType Directory -Force -Path $signDir | Out-Null
+            # TODO(maintainers): this mints a brand-new, per-run development identity with no
+            # -NotAfter, so a published signature is non-reproducible and lapses with the
+            # ephemeral certificate. It is runner-local by design and no signing secret lives in
+            # this workflow. Before the production channel, replace it with a persisted identity
+            # from a repository secret (or Azure Trusted Signing / OIDC) and keep the RFC 3161
+            # timestamp below so published signatures stay valid after the certificate expires.
+            # Once the identity is stable, pin its public certificate in tools/install_msix.py
+            # instead of the 'CN=WinCare Development' subject string.
             $cert = New-SelfSignedCertificate `
               -Type Custom `
               -KeyUsage DigitalSignature `
@@ -162,6 +191,12 @@ jobs:
               -HashAlgorithm SHA256 `
               -TextExtension @('2.5.29.37={text}1.3.6.1.5.5.7.3.3', '2.5.29.19={text}')
             Export-Certificate -Cert $cert -FilePath "$signDir/WinCare.cer" | Out-Null
+            # Hand the identity to the 'Sign portable executable' step so the MSIX and the
+            # portable exe carry one shared signer and the published WinCare.cer attests to both.
+            # The private key is removed by that step's finally, not here.
+            $env:WINCARE_SHARED_SIGNING_IDENTITY = 'true'
+            Add-Content -Path $env:GITHUB_ENV -Value "WINCARE_SHARED_SIGNING_IDENTITY=true"
+            Add-Content -Path $env:GITHUB_ENV -Value "WINCARE_PACKAGE_THUMBPRINT=$($cert.Thumbprint)"
             $expectedCer = [System.Security.Cryptography.X509Certificates.X509Certificate2]::new("$signDir/WinCare.cer")
 
             $msixFiles = @(
@@ -188,7 +223,9 @@ jobs:
               $signtoolPath = $signtoolCandidate.FullName
             }
 
-            & $signtoolPath sign /fd SHA256 /s My /sha1 $cert.Thumbprint $file.FullName
+            # /tr adds an RFC 3161 timestamp counter-signature and /td sets its digest
+            # algorithm, so the signature remains verifiable after the certificate lapses.
+            & $signtoolPath sign /fd SHA256 /tr $env:WINCARE_TIMESTAMP_URL /td SHA256 /s My /sha1 $cert.Thumbprint $file.FullName
             if ($LASTEXITCODE -ne 0) {
               throw "SignTool failed for '$($file.Name)' with exit code $LASTEXITCODE."
             }
@@ -227,7 +264,10 @@ jobs:
             if ($tamperedPath) {
               Remove-Item -Force $tamperedPath -ErrorAction SilentlyContinue
             }
-            if ($cert) {
+            # The signing identity is shared with the 'Sign portable executable' step below;
+            # removing it here would force that step to mint a second, unrelated identity and
+            # the published WinCare.cer would no longer attest to the portable executable.
+            if ($cert -and -not $env:WINCARE_SHARED_SIGNING_IDENTITY) {
               Remove-Item -Force "Cert:\CurrentUser\My\$($cert.Thumbprint)" -ErrorAction SilentlyContinue
             }
           }
@@ -251,12 +291,115 @@ jobs:
       - name: Validate portable executable size
         shell: bash
         run: python tools/release_checklist.py --portable-artifact artifacts/portable/${{ matrix.runtime }}/WinCare.App.exe
+      - name: Sign portable executable
+        timeout-minutes: 3
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $cert = $null
+          try {
+            $portableExe = "artifacts/portable/${{ matrix.runtime }}/WinCare.App.exe"
+            if (-not (Test-Path -LiteralPath $portableExe -PathType Leaf)) {
+              throw "Portable executable not found: $portableExe"
+            }
+
+            # Reuse the identity created by the MSIX signing step so both artifacts share one
+            # signer and the published WinCare.cer attests to both.
+            if (-not $env:WINCARE_PACKAGE_THUMBPRINT) {
+              throw 'The MSIX signing step did not publish a shared signing identity.'
+            }
+            $cert = Get-ChildItem -Path "Cert:\CurrentUser\My\$env:WINCARE_PACKAGE_THUMBPRINT" -ErrorAction Stop
+
+            $signtool = Get-Command signtool.exe -ErrorAction SilentlyContinue
+            if ($signtool) {
+              $signtoolPath = $signtool.Source
+            }
+            else {
+              $signtoolCandidate = Get-ChildItem "${env:ProgramFiles(x86)}\Windows Kits\10\bin" -Recurse -Filter signtool.exe -ErrorAction SilentlyContinue |
+                Where-Object { $_.FullName -match '\\x64\\signtool\.exe$' } |
+                Sort-Object FullName -Descending |
+                Select-Object -First 1
+              if (-not $signtoolCandidate) {
+                throw 'signtool.exe was not found on the Windows runner.'
+              }
+              $signtoolPath = $signtoolCandidate.FullName
+            }
+
+            & $signtoolPath sign /fd SHA256 /tr $env:WINCARE_TIMESTAMP_URL /td SHA256 /s My /sha1 $cert.Thumbprint $portableExe
+            if ($LASTEXITCODE -ne 0) {
+              throw "SignTool failed for the portable executable with exit code $LASTEXITCODE."
+            }
+
+            $sig = Get-AuthenticodeSignature -LiteralPath $portableExe
+            Write-Output "Signature status for WinCare.App.exe: $($sig.Status)"
+            if (-not $sig.SignerCertificate) {
+              throw "Portable executable does not expose a signer certificate (status: $($sig.Status))."
+            }
+            if ($sig.SignerCertificate.Subject -ne 'CN=WinCare Development') {
+              throw "Portable executable signer '$($sig.SignerCertificate.Subject)' does not match the package publisher."
+            }
+            if ($sig.SignerCertificate.Thumbprint -ne $cert.Thumbprint) {
+              throw 'Portable executable signer thumbprint does not match the shared WinCare.cer.'
+            }
+            if ($sig.Status -ne 'Valid' -and $sig.Status -ne 'UnknownError') {
+              throw "Portable executable signature status is '$($sig.Status)' ($($sig.StatusMessage))."
+            }
+            if ($sig.Status -eq 'UnknownError') {
+              # Same self-signed, out-of-store condition as the MSIX gate: accept it only because
+              # the signer is exactly the expected certificate and the chain below builds against
+              # the exported public certificate as a custom root.
+              Write-Output 'Tolerating UnknownError on signer-identity plus custom-root-chain evidence only; all other undetermined states fail closed.'
+            }
+
+            $chain = [System.Security.Cryptography.X509Certificates.X509Chain]::new()
+            try {
+              $chain.ChainPolicy.TrustMode = [System.Security.Cryptography.X509Certificates.X509ChainTrustMode]::CustomRootTrust
+              [void]$chain.ChainPolicy.CustomTrustStore.Add($cert)
+              $chain.ChainPolicy.RevocationMode = [System.Security.Cryptography.X509Certificates.X509RevocationMode]::NoCheck
+              if (-not $chain.Build($sig.SignerCertificate)) {
+                $statuses = ($chain.ChainStatus | ForEach-Object { $_.Status.ToString() }) -join ', '
+                throw "Development signer certificate chain failed custom-root validation: $statuses"
+              }
+            }
+            finally {
+              $chain.Dispose()
+            }
+          }
+          finally {
+            # The signing identity was created by the MSIX signing step and is removed here, once
+            # both shipped binaries have been signed with it.
+            if ($cert) {
+              Remove-Item -Force "Cert:\CurrentUser\My\$($cert.Thumbprint)" -ErrorAction SilentlyContinue
+            }
+          }
       - name: Stage release files
         shell: bash
         run: |
           mkdir -p artifacts/release
           cp artifacts/portable/${{ matrix.runtime }}/WinCare.App.exe artifacts/release/WinCare-v${PRODUCT_VERSION}-${{ matrix.platform }}.exe
           python tools/package_portable.py artifacts/portable/${{ matrix.runtime }} artifacts/release/WinCare-v${PRODUCT_VERSION}-${{ matrix.platform }}-portable.zip
+      - name: Record package digest manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Bind every staged binary to a SHA-256 recorded on the signing runner. The publish
+          # side verifies this manifest, so substitution between the Windows build runner and the
+          # Ubuntu publish runner becomes detectable, and users can verify out of band.
+          msix_path="$(find src/WinCare.App/AppPackages -type f -name 'WinCare.App_*.msix' ! -path '*/Dependencies/*' -print -quit)"
+          if [[ -z "$msix_path" ]]; then
+            echo "No WinCare application MSIX found to digest." >&2
+            exit 1
+          fi
+          msix_dir="$(dirname "$msix_path")"
+          {
+            (cd "$msix_dir" && sha256sum "$(basename "$msix_path")")
+            (cd artifacts/signing && sha256sum WinCare.cer)
+            (cd artifacts/release && sha256sum \
+              "WinCare-v${PRODUCT_VERSION}-${{ matrix.platform }}.exe" \
+              "WinCare-v${PRODUCT_VERSION}-${{ matrix.platform }}-portable.zip")
+            (cd tools && sha256sum install_msix.py)
+          } > artifacts/release/SHA256SUMS
+          echo "Recorded $(wc -l < artifacts/release/SHA256SUMS) package digests."
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: package-${{ matrix.platform }}
@@ -266,6 +409,7 @@ jobs:
             tools/install_msix.py
             artifacts/release/*.exe
             artifacts/release/*.zip
+            artifacts/release/SHA256SUMS
           if-no-files-found: error
 
   portable-runtime-smoke:
@@ -358,11 +502,26 @@ jobs:
           --mode "$FINALIZE_MODE"
       - name: Stage packaged release assets
         shell: bash
-        run: >-
-          python tools/stage_release_assets.py
-          --downloads artifacts/downloads
-          --output release_assets
-          --version "$RELEASE_TAG"
+        run: |
+          set -euo pipefail
+          # The digest manifests are written by each architecture's build job next to the signed
+          # binaries; without them the staged bytes are unbound to the bytes the Windows runner
+          # signed. Every manifest must cover its own architecture: a single-architecture
+          # manifest cannot vouch for the other architecture's binaries.
+          manifest_count="$(find artifacts/downloads -type f -name SHA256SUMS | wc -l)"
+          if [[ "$manifest_count" -eq 0 ]]; then
+            echo "SHA256SUMS digest manifest is missing from the downloaded package artifacts." >&2
+            exit 1
+          fi
+          manifest_args=()
+          while IFS= read -r manifest; do
+            manifest_args+=(--expected-manifest "$manifest")
+          done <<< "$(find artifacts/downloads -type f -name SHA256SUMS | sort)"
+          python tools/stage_release_assets.py \
+            --downloads artifacts/downloads \
+            --output release_assets \
+            --version "$RELEASE_TAG" \
+            "${manifest_args[@]}"
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: WinCare-release-${{ needs.verify.outputs.product_version }}
@@ -373,7 +532,16 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          set -euo pipefail
           if gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            # A published tag is immutable: refuse to publish unless the tag still points at the
+            # commit this workflow built and validated.
+            TAG_SHA=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$RELEASE_TAG" --jq '.object.sha')
+            if [[ "$TAG_SHA" != "$GITHUB_SHA" ]]; then
+              echo "Release $RELEASE_TAG already points to $TAG_SHA, but the built commit is $GITHUB_SHA." >&2
+              echo "Bump Directory.Build.props before publishing a new release." >&2
+              exit 1
+            fi
             existing_assets=$(gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name')
             for asset in release_assets/*; do
               asset_name=$(basename "$asset")
@@ -387,7 +555,7 @@ jobs:
             gh release create "$RELEASE_TAG" release_assets/* \
               --title "WinCare $RELEASE_TAG" \
               --generate-notes \
-              $RELEASE_FLAGS \
+              "$RELEASE_FLAGS" \
               --target "$GITHUB_SHA" \
               --repo "$GITHUB_REPOSITORY"
           fi

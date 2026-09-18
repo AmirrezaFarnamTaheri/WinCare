@@ -36,7 +36,16 @@ public sealed class ToolCatalogService
                 {
                     _cachedMergedCommands = null;
                 }
-                CatalogChanged?.Invoke(this, EventArgs.Empty);
+                var subscribers = CatalogChanged;
+                if (subscribers is null) return;
+                foreach (EventHandler subscriber in subscribers.GetInvocationList())
+                {
+                    try { subscriber(this, EventArgs.Empty); }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"[ToolCatalog] CatalogChanged subscriber failed: {ex}");
+                    }
+                }
             };
         }
         _baseCommands = CommandCatalog.CommandCatalog.Load();

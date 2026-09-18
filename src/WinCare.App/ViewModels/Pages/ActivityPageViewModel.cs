@@ -138,15 +138,15 @@ public sealed class ActivityPageViewModel : TabbedPageViewModel
             int succeeded = entries.Count(record => record.State == ActivityState.Completed);
             int failed = entries.Count(record => record.State == ActivityState.Failed);
             int cancelled = entries.Count(record => record.State == ActivityState.Cancelled);
-            string state = failed > 0 ? "Review" : "Complete";
+            string state = failed > 0 ? "Review" : cancelled > 0 ? "Stopped" : "Complete";
             string description = $"{entries.Length} operations · {succeeded} completed · {failed} failed · {cancelled} cancelled";
 
             if (records.Count >= ActivityJournalService.MaxPersistedRecords)
                 description += $" · only the latest {ActivityJournalService.MaxPersistedRecords} records are kept";
 
             string first = entries[0].StartedAt.ToLocalTime().ToString("HH:mm");
-            string last = (entries[^1].CompletedAt ?? entries[^1].StartedAt).ToLocalTime().ToString("HH:mm");
-            _reportRows.Add(new PageRow(day.Key.ToString("dddd, MMM d"), description, state, $"{first}-{last}"));
+            string last = entries.Max(record => record.CompletedAt ?? record.StartedAt).ToLocalTime().ToString("HH:mm");
+            _reportRows.Add(new PageRow(day.Key.ToString("dddd, MMM d, yyyy"), description, state, $"{first}-{last}"));
         }
     }
 
@@ -163,8 +163,8 @@ public sealed class ActivityPageViewModel : TabbedPageViewModel
         };
 
         string detail = rec.CompletedAt.HasValue
-            ? rec.CompletedAt.Value.ToLocalTime().ToString("HH:mm:ss")
-            : $"Started {rec.StartedAt.ToLocalTime():HH:mm:ss}";
+            ? rec.CompletedAt.Value.ToLocalTime().ToString("g")
+            : $"Started {rec.StartedAt.ToLocalTime():g}";
 
         return new PageRow(rec.Title, rec.Result, state, detail);
     }

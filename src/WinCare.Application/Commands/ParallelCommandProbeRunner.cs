@@ -66,10 +66,11 @@ public static class ParallelCommandProbeRunner
     {
         await semaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
         DateTimeOffset startedAt = DateTimeOffset.UtcNow;
+        CommandRequest request = CommandRequest.Preview(commandId);
         try
         {
             return await dispatcher.ExecuteAsync(
-                CommandRequest.Preview(commandId),
+                request,
                 new CommandExecutionOptions(
                     ReviewApproved: false,
                     Deadline: startedAt + perProbeBudget),
@@ -79,15 +80,18 @@ public static class ParallelCommandProbeRunner
         {
             throw;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            // A diagnostics product cannot afford to discard the reason a measurement failed, and
+            // the synthesized result must stay correlated with the probe request that produced it.
+            System.Diagnostics.Debug.WriteLine($"[ParallelCommandProbeRunner] Probe '{commandId}' faulted: {ex.GetType().Name} - {ex.Message}");
             DateTimeOffset completedAt = DateTimeOffset.UtcNow;
             return new CommandResult(
                 commandId,
-                Guid.NewGuid(),
+                request.CorrelationId,
                 CommandResultStatus.Failed,
                 "probe.dispatch_exception",
-                "WinCare could not complete this read-only measurement probe.",
+                $"WinCare could not complete this read-only measurement probe: {ex.GetType().Name} - {ex.Message}",
                 null,
                 startedAt,
                 completedAt,

@@ -300,6 +300,58 @@ public sealed class CommandDispatcherTests
     }
 
     [Fact]
+    public async Task Administrator_access_mutation_is_blocked_when_the_process_is_not_elevated()
+    {
+        // AdministratorAccess is enforced at admission, not merely displayed as a badge: a mutating
+        // command that requires elevation must be refused before its handler runs, instead of being
+        // dispatched and failing later at native-execution time.
+        CommandDefinition definition = Definition("elevated", MigrationStatus.Implemented, readOnly: false, AdministratorAccess.Required);
+        RecordingHandler handler = new("elevated");
+        CommandDispatcher dispatcher = CreateDispatcher([definition], [handler], isProcessElevated: () => false);
+
+        CommandResult result = await dispatcher.ExecuteAsync(
+            Request("elevated", apply: true),
+            new CommandExecutionOptions(ReviewApproved: true),
+            CancellationToken.None);
+
+        Assert.Equal(CommandResultStatus.Blocked, result.Status);
+        Assert.Equal("command.elevation_required", result.Code);
+        Assert.Equal(0, handler.InvocationCount);
+    }
+
+    [Fact]
+    public async Task Administrator_access_preview_remains_available_without_elevation()
+    {
+        // The read-only preview stays reachable in a non-elevated process so the surface can show
+        // what the command does and why elevation is needed for it.
+        CommandDefinition definition = Definition("elevated", MigrationStatus.Implemented, readOnly: false, AdministratorAccess.Required);
+        RecordingHandler handler = new("elevated");
+        CommandDispatcher dispatcher = CreateDispatcher([definition], [handler], isProcessElevated: () => false);
+
+        CommandResult result = await dispatcher.ExecuteAsync(
+            Request("elevated", apply: false), CommandExecutionOptions.Default, CancellationToken.None);
+
+        Assert.Equal(CommandResultStatus.Succeeded, result.Status);
+        Assert.Equal(1, handler.InvocationCount);
+    }
+
+    [Fact]
+    public async Task Administrator_access_mutation_is_admitted_when_the_process_is_elevated()
+    {
+        CommandDefinition definition = Definition("elevated", MigrationStatus.Implemented, readOnly: false, AdministratorAccess.Required);
+        RecordingHandler handler = new("elevated");
+        CommandDispatcher dispatcher = CreateDispatcher([definition], [handler], isProcessElevated: () => true);
+
+        CommandResult result = await dispatcher.ExecuteAsync(
+            Request("elevated", apply: true),
+            new CommandExecutionOptions(ReviewApproved: true),
+            CancellationToken.None);
+
+        Assert.Equal(CommandResultStatus.Succeeded, result.Status);
+        Assert.Equal(1, handler.InvocationCount);
+    }
+
+    [Fact]
     public async Task Dynamic_command_registration_and_execution_succeeds()
     {
         CommandDispatcher dispatcher = CreateDispatcher([], []);
@@ -352,13 +404,14 @@ public sealed class CommandDispatcherTests
 
     private static CommandDispatcher CreateDispatcher(
         IReadOnlyList<CommandDefinition> definitions,
-        IReadOnlyList<ICommandHandler> handlers) =>
-        new(definitions, handlers, TimeProvider.System);
+        IReadOnlyList<ICommandHandler> handlers,
+        Func<bool>? isProcessElevated = null) =>
+        new(definitions, handlers, TimeProvider.System, isProcessElevated: isProcessElevated);
 
     private static CommandRequest Request(string id, bool apply = false) =>
         new(id, JsonSerializer.SerializeToElement(new { }), apply, Guid.NewGuid());
 
-    private static CommandDefinition Definition(string id, MigrationStatus status, bool readOnly) =>
+    private static CommandDefinition Definition(string id, MigrationStatus status, bool readOnly, AdministratorAccess administratorAccess = AdministratorAccess.No) =>
         new(
             id,
             id,
@@ -367,7 +420,7 @@ public sealed class CommandDispatcherTests
             "Commands",
             readOnly ? CommandRisk.ReadOnly : CommandRisk.Moderate,
             readOnly,
-            AdministratorAccess.No,
+            administratorAccess,
             RestartExpectation.No,
             "test",
             status,

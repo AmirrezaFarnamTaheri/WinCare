@@ -297,7 +297,7 @@ public sealed class CommandSafetyTests
 
         using WindowsCommandExecutor executor = new();
         ICommandHandler handler = new DelegatingCommandHandler(pagefileDef, executor);
-        CommandDispatcher dispatcher = new(new[] { pagefileDef }, new[] { handler });
+        CommandDispatcher dispatcher = new(new[] { pagefileDef }, new[] { handler }, isProcessElevated: () => true);
 
         using JsonDocument paramsDoc = JsonDocument.Parse("""{ "Mode": "Automatic" }""");
         CommandRequest requestWithoutPlan = CommandRequest.Execute("pagefile-set", paramsDoc.RootElement, approval: null);

@@ -29,6 +29,15 @@ public sealed class PluginAdmissionRecord
 
     [JsonPropertyName("publisherSignature")]
     public string? PublisherSignature { get; init; }
+
+    /// <summary>
+    /// SHA-256 of the compiled plugin assembly bytes recorded at install time. When present,
+    /// discovery must refuse to instantiate an assembly whose on-disk bytes no longer match:
+    /// the manifest can still validate while a swapped assembly would run arbitrary code.
+    /// Null for script plugins and for records predating this binding.
+    /// </summary>
+    [JsonPropertyName("assemblySha256")]
+    public string? AssemblySha256 { get; init; }
 }
 
 /// <summary>

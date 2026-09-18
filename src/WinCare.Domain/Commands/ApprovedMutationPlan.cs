@@ -22,6 +22,15 @@ public sealed record ApprovedMutationPlan(
     Guid CorrelationId,
     string? ExecutionDigest = null)
 {
+    /// <summary>Prefix of every single-use review plan identifier.</summary>
+    public const string PlanIdPrefix = "AMP-";
+
+    /// <summary>
+    /// Creates a single-use review plan identifier. All plan ids are issued through this method so
+    /// the format lives in exactly one place alongside the dispatcher's issuance path.
+    /// </summary>
+    public static string NewPlanId() => PlanIdPrefix + Guid.NewGuid().ToString("N")[..12].ToUpperInvariant();
+
     /// <summary>
     /// Creates an approved mutation plan with a canonical parameter digest and a new correlation ID.
     /// </summary>
@@ -35,7 +44,7 @@ public sealed record ApprovedMutationPlan(
     {
         string digest = ComputeCanonicalDigest(parameters);
         return new ApprovedMutationPlan(
-            "AMP-" + Guid.NewGuid().ToString("N")[..12].ToUpperInvariant(),
+            NewPlanId(),
             commandId,
             digest,
             DateTimeOffset.UtcNow,

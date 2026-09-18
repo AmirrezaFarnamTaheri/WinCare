@@ -28,6 +28,7 @@ public sealed class PluginStorePageViewModel : INotifyPropertyChanged, IDisposab
     private long _refreshVersion;
     private bool _disposed;
     private string? _catalogErrorMessage;
+    private readonly SynchronizationContext? _uiContext = SynchronizationContext.Current;
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
@@ -195,7 +196,7 @@ public sealed class PluginStorePageViewModel : INotifyPropertyChanged, IDisposab
         long refreshVersion = Interlocked.Increment(ref _refreshVersion);
         string selectedCategory = _selectedCategory;
         string searchQuery = _searchQuery;
-        IsLoading = true;
+        EnqueueOnUi(() => IsLoading = true);
         string statusMessage = "Showing installed extensions.";
         bool trustVerified = false;
         string? catalogError = null;
@@ -258,20 +259,27 @@ public sealed class PluginStorePageViewModel : INotifyPropertyChanged, IDisposab
             cancellationToken.ThrowIfCancellationRequested();
             if (_disposed || refreshVersion != Volatile.Read(ref _refreshVersion)) return;
 
-            CatalogStatusMessage = statusMessage;
-            IsCatalogTrustVerified = trustVerified;
-            if (ErrorMessage == _catalogErrorMessage || catalogError is not null)
-                ErrorMessage = catalogError;
-            _catalogErrorMessage = catalogError;
-            OnPropertyChanged(nameof(HasCatalogError));
+            EnqueueOnUi(() =>
+            {
+                CatalogStatusMessage = statusMessage;
+                IsCatalogTrustVerified = trustVerified;
+                // A completed refresh owns the catalog-error surface but must not swallow an
+                // unrelated operation failure that is still on screen: replace only when this
+                // refresh actually produced a catalog error (or is clearing its own previous one).
+                if (ErrorMessage == _catalogErrorMessage || catalogError is not null)
+                    ErrorMessage = catalogError;
+                _catalogErrorMessage = catalogError;
+                OnPropertyChanged(nameof(HasCatalogError));
 
-            Plugins.Clear();
-            foreach (var card in cards) Plugins.Add(card);
-            OnPropertyChanged(nameof(IsEmpty));
+                Plugins.Clear();
+                foreach (var card in cards) Plugins.Add(card);
+                OnPropertyChanged(nameof(IsEmpty));
+            });
         }
         finally
         {
-            if (refreshVersion == Volatile.Read(ref _refreshVersion)) IsLoading = false;
+            if (refreshVersion == Volatile.Read(ref _refreshVersion))
+                EnqueueOnUi(() => IsLoading = false);
         }
     }
 
@@ -434,6 +442,40 @@ public sealed class PluginStorePageViewModel : INotifyPropertyChanged, IDisposab
 
     private void OnPropertyChanged([CallerMemberName] string? propertyName = null) =>
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+
+    /// <summary>
+    /// Runs a bound-state mutation on the UI thread. Every caller is on the UI thread today,
+    /// but the refresh chain is async, so a background refresh must not touch the bound
+    /// collection off-thread. Posted work is dropped once the view model is disposed. The
+    /// context is captured at construction (view models are constructed on the UI thread);
+    /// <see cref="SynchronizationContext"/> keeps this file free of WinUI types so the test
+    /// project can compile it.
+    /// </summary>
+    private void EnqueueOnUi(Action action)
+    {
+        if (_uiContext is null || _uiContext == SynchronizationContext.Current)
+        {
+            if (!_disposed) action();
+        }
+        else
+        {
+            _uiContext.Post(_ => { if (!_disposed) action(); }, null);
+        }
+    }
+
+    /// <summary>
+    /// Re-enables a view model that <see cref="Dispose"/> shut down when the cached page was
+    /// left. The page is <c>NavigationCacheMode="Required"</c> and disposes on every leave, so
+    /// without this the second visit reuses the same instance with <c>_disposed == true</c>:
+    /// the list still renders from cache, but every refresh bails and search and category
+    /// filtering silently go dead. The refresh is in-memory (cached catalog + local registry).
+    /// </summary>
+    public void Reactivate()
+    {
+        if (!_disposed) return;
+        _disposed = false;
+        _ = RefreshAfterFilterChangeAsync();
+    }
 
     public void Dispose()
     {

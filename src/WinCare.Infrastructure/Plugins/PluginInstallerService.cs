@@ -153,13 +153,27 @@ public class PluginInstallerService : IPluginInstallerService
         }
 
         bool isRemote = uri.Scheme.Equals(Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase);
-        if (isRemote)
+        bool isLocalPackage = uri.Scheme.Equals(Uri.UriSchemeFile, StringComparison.OrdinalIgnoreCase);
+        if (isRemote || isLocalPackage)
         {
+            // A package reached by URL cannot be trusted to be the bytes the caller thinks it
+            // selected: an HTTPS origin can be MitM'd without a pinned key and a local file://
+            // path can be substituted in a download folder or handed to a wincare:// handler.
+            // Require an explicit digest on both, so an unsigned or tampered package fails closed
+            // instead of becoming an arbitrary-code install path. In-memory stream installs are
+            // the trusted/test entry point (InstallTrustedPluginFromStreamAsync).
             if (string.IsNullOrWhiteSpace(expectedSha256))
             {
-                throw new ArgumentException("Remote package installation requires a non-empty expectedSha256 digest.", nameof(expectedSha256));
+                throw new ArgumentException(
+                    isRemote
+                        ? "Remote package installation requires a non-empty expectedSha256 digest."
+                        : "Local package installation requires a non-empty expectedSha256 digest; an unsigned package cannot be admitted without an integrity check.",
+                    nameof(expectedSha256));
             }
+        }
 
+        if (isRemote)
+        {
             if (string.IsNullOrWhiteSpace(expectedPublisherPublicKeyPem) || string.IsNullOrWhiteSpace(expectedPublisherSignature))
             {
                 throw new ArgumentException(
@@ -529,10 +543,12 @@ public class PluginInstallerService : IPluginInstallerService
             }
 
             var manifestDigest = Convert.ToHexString(SHA256.HashData(manifestRawBytes)).ToLowerInvariant();
+            string? assemblyDigest = await RecordAdmittedAssemblyDigestAsync(doc.RootElement, tempExtractDir, cancellationToken).ConfigureAwait(false);
             var admissionRecord = new PluginAdmissionRecord
             {
                 PluginId = manifestId,
                 ManifestSha256 = manifestDigest,
+                AssemblySha256 = assemblyDigest,
                 PublisherId = string.IsNullOrWhiteSpace(expectedPublisherId) ? null : expectedPublisherId,
                 PublisherPublicKeyPem = hasExpectedKey ? expectedPublisherPublicKeyPem : null,
                 PublisherSignature = hasExpectedSignature ? expectedPublisherSignature : null,
@@ -589,6 +605,38 @@ public class PluginInstallerService : IPluginInstallerService
         }
 
         return removed;
+    }
+
+    /// <summary>
+    /// Hashes the compiled assembly declared by an assembly plugin's manifest so the admission
+    /// record can bind the exact bytes admitted at install time. Returns null for script plugins
+    /// or when the declared assembly is absent, so admission is not blocked on non-assembly
+    /// packages; a missing digest simply leaves the assembly unbound rather than untrusted.
+    /// </summary>
+    private static async Task<string?> RecordAdmittedAssemblyDigestAsync(
+        JsonElement manifestRoot, string stagedPluginDir, CancellationToken cancellationToken)
+    {
+        if (!manifestRoot.TryGetProperty("assemblyFileName", out var nameProp) ||
+            nameProp.ValueKind != JsonValueKind.String)
+        {
+            return null;
+        }
+
+        string? assemblyFileName = nameProp.GetString();
+        if (string.IsNullOrWhiteSpace(assemblyFileName))
+        {
+            return null;
+        }
+
+        string assemblyPath = Path.Combine(stagedPluginDir, assemblyFileName);
+        if (!File.Exists(assemblyPath))
+        {
+            return null;
+        }
+
+        await using var stream = File.OpenRead(assemblyPath);
+        byte[] hash = await SHA256.HashDataAsync(stream, cancellationToken).ConfigureAwait(false);
+        return Convert.ToHexString(hash).ToLowerInvariant();
     }
 
     private static async Task PromoteWithAdmissionRecordAsync(

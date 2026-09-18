@@ -5,6 +5,7 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Navigation;
 
 using WinCare.App.ViewModels.Pages;
+using WinCare.App.Views;
 using WinCare.App.Views.Dialogs;
 
 namespace WinCare.App.Views.Pages;
@@ -14,7 +15,9 @@ public sealed partial class PluginStorePage : Page
     private bool _initialized;
     public PluginStorePageViewModel ViewModel { get; }
 
-    public static Visibility BoolToVisibility(bool value) => value ? Visibility.Visible : Visibility.Collapsed;
+    // Kept as a one-line delegation to the shared LayoutVisibility helper so the bool-to-
+    // visibility pair has a single implementation; this wrapper exists for the XAML contract.
+    public static Visibility BoolToVisibility(bool value) => LayoutVisibility.BoolToVisibility(value);
 
     public PluginStorePage()
     {
@@ -40,6 +43,9 @@ public sealed partial class PluginStorePage : Page
 
     protected override void OnNavigatedTo(NavigationEventArgs e)
     {
+        // Cached page: Dispose() runs on every leave, so undo it here or the second visit
+        // reuses a disposed view model whose search and filtering silently no-op.
+        ViewModel.Reactivate();
         base.OnNavigatedTo(e);
         if (e.Parameter is string query && !string.IsNullOrWhiteSpace(query))
         {
@@ -104,7 +110,8 @@ public sealed partial class PluginStorePage : Page
 
     private async void UninstallButton_Click(object sender, RoutedEventArgs e)
     {
-        if (sender is Button button && button.Tag is PluginCardViewModel card)
+        if (sender is not Button { Tag: PluginCardViewModel card }) return;
+        try
         {
             var dialog = new ContentDialog
             {
@@ -118,29 +125,47 @@ public sealed partial class PluginStorePage : Page
             if (await dialog.ShowAsync() == ContentDialogResult.Primary)
                 await ViewModel.UninstallPluginAsync(card);
         }
+        catch (OperationCanceledException) { }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[PluginStorePage] Uninstall dialog failed: {ex}");
+            ViewModel.ErrorMessage = "The uninstall request couldn't finish. Check the extension's current state before trying again.";
+        }
     }
 
     private async Task ShowPluginDetailsDialogAsync(PluginCardViewModel card, bool allowInstall)
     {
-        var item = card.RemoteItem ?? new WinCare.Application.Plugins.RemotePluginItem
+        // Guard the UI interaction itself: the view model methods catch their own failures,
+        // but an exception while building or showing the dialog would otherwise escape the
+        // async-void click handler and terminate the process. Surface it as a normal error.
+        try
         {
-            Id = card.Id,
-            Name = card.Name,
-            Author = card.Author,
-            Version = card.Version,
-            Description = card.Description,
-            Category = card.Category,
-            Permissions = card.Permissions
-        };
+            var item = card.RemoteItem ?? new WinCare.Application.Plugins.RemotePluginItem
+            {
+                Id = card.Id,
+                Name = card.Name,
+                Author = card.Author,
+                Version = card.Version,
+                Description = card.Description,
+                Category = card.Category,
+                Permissions = card.Permissions
+            };
 
-        var dialog = new PluginDetailDialog(item, allowInstall)
+            var dialog = new PluginDetailDialog(item, allowInstall)
+            {
+                XamlRoot = XamlRoot
+            };
+
+            var result = await dialog.ShowAsync();
+            if (allowInstall && result == ContentDialogResult.Primary && card.CanInstall)
+                await ViewModel.InstallPluginAsync(card, card.Permissions);
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception ex)
         {
-            XamlRoot = XamlRoot
-        };
-
-        var result = await dialog.ShowAsync();
-        if (allowInstall && result == ContentDialogResult.Primary && card.CanInstall)
-            await ViewModel.InstallPluginAsync(card, card.Permissions);
+            System.Diagnostics.Debug.WriteLine($"[PluginStorePage] Details failed: {ex}");
+            ViewModel.ErrorMessage = "Extension details couldn't be opened. Try again, and check Activity if it keeps happening.";
+        }
     }
 
     protected override void OnNavigatedFrom(NavigationEventArgs e)

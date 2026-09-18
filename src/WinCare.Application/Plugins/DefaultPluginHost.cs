@@ -62,6 +62,8 @@ public class DefaultPluginHost : IPluginHost
                 return false;
             }
 
+            command = PluginCommandPolicy.Normalize(command);
+
             if (_registeredCommands.ContainsKey(command.Id))
             {
                 return false;

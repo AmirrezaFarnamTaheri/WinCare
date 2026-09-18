@@ -47,6 +47,24 @@ public sealed class BuiltInPluginAliasTests : IDisposable
     }
 
     [Fact]
+    public async Task Alias_of_a_destructive_core_command_is_admitted_at_that_tier()
+    {
+        // The event-log manifest declares a Moderate tool, but the alias re-dispatches to the
+        // destructive deep-clean core command. The registered definition must carry the stricter
+        // tier, because that is what an approval of this card actually executes.
+        var executor = new RecordingExecutor();
+        CommandDispatcher dispatcher = CommandRuntime.CreateDefault(executor);
+        var host = new DefaultPluginHost(dispatcher, pluginsUserDirectory: _pluginsDirectory);
+        var registry = new PluginRegistryService();
+
+        await registry.DiscoverAndInitializeAsync(host);
+
+        CommandDefinition command = Assert.Single(host.RegisteredCommands, command => command.Id == "eventlog.powershell");
+        Assert.Equal(RiskTier.Destructive, command.RiskTier);
+        Assert.Equal(AdministratorAccess.Required, command.AdministratorAccess);
+    }
+
+    [Fact]
     public async Task Ai_model_cleaner_alias_delegates_to_cleaner_disk_pressure()
     {
         var executor = new RecordingExecutor();
@@ -429,7 +447,10 @@ public sealed class BuiltInPluginAliasTests : IDisposable
     {
         var executor = new RecordingExecutor();
         var direct = new RecordingDirectHandler("gpu.amd_ulps");
-        CommandDispatcher dispatcher = CommandRuntime.CreateDefault(executor);
+        // The tool declares administrator access, so the admission gate must see an elevated
+        // process before its apply phase can run. The real probe would depend on how this test
+        // host happens to be launched; the gate itself is exercised either way.
+        CommandDispatcher dispatcher = CommandRuntime.CreateDefault(executor, isProcessElevated: () => true);
         var host = new DefaultPluginHost(dispatcher, pluginsUserDirectory: _pluginsDirectory);
         var registry = new PluginRegistryService(
             builtInHandlerFactory: command => command.Id == direct.CommandId ? direct : null);
