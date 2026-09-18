@@ -106,7 +106,7 @@ Source and oracle archives can be generated locally:
 ```bash
 python tools/finalize_native_release.py \
   --output artifacts/finalization \
-  --version 2.5.0-rc5 \
+  --version 2.5.0-rc6 \
   --mode rc
 ```
 

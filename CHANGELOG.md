@@ -6,6 +6,10 @@ All notable changes to WinCare are documented in this file in accordance with [K
 
 ## [Unreleased]
 
+_No changes yet in the next release candidate._
+
+## [2.5.0-rc6] - 2026-09-13
+
 ### Security & Safety
 
 - Made mutating approval a dispatcher-issued, parameter-bound, expiring, single-use capability; callers such as the System Doctor can no longer synthesize their own approval without a successful preview.

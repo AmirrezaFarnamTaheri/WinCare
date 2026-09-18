@@ -14,7 +14,7 @@
 </p>
 
 > [!IMPORTANT]
-> WinCare 2.5.0-rc5 is a release candidate. The current catalog contains 269 commands. Operations that can change the system are admitted according to their declared risk and privilege requirements; review high-impact changes before applying them.
+> WinCare 2.5.0-rc6 is a release candidate. The current catalog contains 269 commands. Operations that can change the system are admitted according to their declared risk and privilege requirements; review high-impact changes before applying them.
 
 ## Overview
 
