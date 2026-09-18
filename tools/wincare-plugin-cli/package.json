@@ -1,13 +1,17 @@
 {
   "name": "wincare-plugin-cli",
   "version": "1.0.0",
-  "description": "Developer CLI for scaffolding, linting, testing, and packaging WinCare plugin archives",
+  "description": "Developer CLI for scaffolding, linting, and packaging WinCare plugin archives",
   "main": "bin/wincare-plugin.js",
   "bin": {
     "wincare-plugin": "bin/wincare-plugin.js"
   },
   "scripts": {
-    "test": "python ../../tests/tools/test_plugin_cli.py -v"
+    "test": "python ../../tests/tools/test_plugin_cli.py -v",
+    "test:js": "node --test test/*.test.js"
+  },
+  "engines": {
+    "node": ">=18"
   },
   "keywords": ["wincare", "plugin", "windows", "maintenance", "cli"],
   "author": "WinCare Core Team",

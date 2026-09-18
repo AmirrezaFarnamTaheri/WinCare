@@ -10,29 +10,29 @@
     CornerRadius="{StaticResource RadiusControl}"
     Style="{ThemeResource DefaultContentDialogStyle}"
     AutomationProperties.Name="WinCare first-run tour">
-    <StackPanel Width="460" MinHeight="270" Spacing="20">
+    <StackPanel MaxWidth="460" MinHeight="270" Spacing="20">
         <TextBlock
             x:Name="StepCounter"
             Style="{StaticResource RowSecondaryTextStyle}"
             Text="1 of 3" />
 
-        <Grid MinHeight="190">
+        <Grid>
             <StackPanel x:Name="CheckupStep" Spacing="12">
-                <FontIcon Glyph="&#xE9D9;" FontSize="32" Foreground="{ThemeResource AccentTealBrush}" HorizontalAlignment="Left" />
+                <FontIcon Glyph="&#xE9D9;" FontSize="32" Foreground="{ThemeResource AccentTealBrush}" HorizontalAlignment="Left" AutomationProperties.AccessibilityView="Raw" />
                 <TextBlock Style="{StaticResource SectionHeaderTextStyle}" Text="Start with a checkup" />
                 <TextBlock Style="{StaticResource PageDescriptionTextStyle}" TextWrapping="Wrap" Text="Get a quick picture of Windows, storage, security, and updates. Checkup only reads system information." />
                 <TextBlock Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap" Text="If something needs attention, WinCare points you to the right place." />
             </StackPanel>
 
             <StackPanel x:Name="CareStep" Spacing="12" Visibility="Collapsed">
-                <FontIcon Glyph="&#xE90F;" FontSize="32" Foreground="{ThemeResource AccentTealBrush}" HorizontalAlignment="Left" />
+                <FontIcon Glyph="&#xE90F;" FontSize="32" Foreground="{ThemeResource AccentTealBrush}" HorizontalAlignment="Left" AutomationProperties.AccessibilityView="Raw" />
                 <TextBlock Style="{StaticResource SectionHeaderTextStyle}" Text="Use the care pages" />
                 <TextBlock Style="{StaticResource PageDescriptionTextStyle}" TextWrapping="Wrap" Text="System care, Security, and Repair &amp; recovery keep everyday tasks grouped by what you're trying to do." />
                 <TextBlock Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap" Text="You can always come back to Home when you're not sure where to start." />
             </StackPanel>
 
             <StackPanel x:Name="FindStep" Spacing="12" Visibility="Collapsed">
-                <FontIcon Glyph="&#xE721;" FontSize="32" Foreground="{ThemeResource AccentTealBrush}" HorizontalAlignment="Left" />
+                <FontIcon Glyph="&#xE721;" FontSize="32" Foreground="{ThemeResource AccentTealBrush}" HorizontalAlignment="Left" AutomationProperties.AccessibilityView="Raw" />
                 <TextBlock Style="{StaticResource SectionHeaderTextStyle}" Text="Find anything fast" />
                 <TextBlock Style="{StaticResource PageDescriptionTextStyle}" TextWrapping="Wrap" Text="Power tools has the full catalog. Press Ctrl+K from anywhere to search pages, tools, extensions, and help." />
                 <TextBlock Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap" Text="You can take this tour again later from Help." />

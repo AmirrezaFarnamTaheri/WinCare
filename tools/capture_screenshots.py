@@ -134,7 +134,9 @@ def capture_screenshot(
             text=True,
             timeout=35,
         )
-        if proc.returncode != 0 and "--headless=new" in cmd:
+        # cmd always carries --headless=new; the only live condition for falling back is a
+        # non-zero exit from the newer headless mode.
+        if proc.returncode != 0:
             fallback_cmd = [
                 browser_path,
                 "--headless",
@@ -158,8 +160,7 @@ def capture_screenshot(
         if (
             proc.returncode == 0
             and target_png.is_file()
-            and target_png.stat().st_size > 1024
-            and verify_image_integrity(target_png, min_bytes=1024, check_content=True)
+            and verify_image_integrity(target_png, check_content=True)
         ):
             size_kb = target_png.stat().st_size / 1024
             print(f"[+] Captured {target_png.name} ({width}x{height}, {size_kb:.1f} KB)")

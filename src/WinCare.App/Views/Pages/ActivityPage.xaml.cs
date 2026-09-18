@@ -48,6 +48,12 @@ public sealed partial class ActivityPage : Page
         }
     }
 
+    private void ReviewAttention_Click(object sender, RoutedEventArgs e)
+    {
+        SectionSelector.SelectedItem = SectionSelector.Items[1];
+        SectionSelector.Focus(FocusState.Programmatic);
+    }
+
     private void Page_SizeChanged(object sender, SizeChangedEventArgs e)
     {
         bool compact = LayoutVisibility.IsCompact(e.NewSize.Width);

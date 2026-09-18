@@ -19,7 +19,7 @@
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="*" />
-                <ColumnDefinition x:Name="SearchColumn" Width="420" />
+                <ColumnDefinition x:Name="SearchColumn" Width="*" MinWidth="220" MaxWidth="420" />
             </Grid.ColumnDefinitions>
 
             <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
@@ -30,7 +30,7 @@
             <AutoSuggestBox
                 x:Name="GlobalSearchBox"
                 Grid.Column="2"
-                Height="40"
+                MinHeight="44"
                 VerticalAlignment="Center"
                 PlaceholderText="Search WinCare (Ctrl+K)"
                 TextChanged="GlobalSearchBox_TextChanged"
@@ -67,7 +67,6 @@
                         <AdaptiveTrigger MinWindowWidth="0" />
                     </VisualState.StateTriggers>
                     <VisualState.Setters>
-                        <Setter Target="SearchColumn.Width" Value="220" />
                         <Setter Target="AppTitleText.Visibility" Value="Collapsed" />
                     </VisualState.Setters>
                 </VisualState>
@@ -76,7 +75,6 @@
                         <AdaptiveTrigger MinWindowWidth="760" />
                     </VisualState.StateTriggers>
                     <VisualState.Setters>
-                        <Setter Target="SearchColumn.Width" Value="420" />
                         <Setter Target="AppTitleText.Visibility" Value="Visible" />
                     </VisualState.Setters>
                 </VisualState>

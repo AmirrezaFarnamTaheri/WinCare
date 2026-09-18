@@ -144,7 +144,15 @@ public class RemoteCatalogService : IRemoteCatalogService
             NormalizeCatalog(catalog);
             SetTrustState(catalog, trustVerified, trustMessage);
             ApplyRevocationPolicy(catalog);
-            await SaveToCacheAsync(catalogBytes, detachedSignature, cancellationToken).ConfigureAwait(false);
+
+            // Only a signature-verified catalog is persisted. Without a pinned key there is no way
+            // to prove these bytes are authentic, and a written cache would become the trust root
+            // for install-time digests, publisher keys and the revocation lists that admission
+            // enforces: an unverified catalog is browse-only and is never cached or replayed.
+            if (_trustedCatalogPublicKeyPem is not null)
+            {
+                await SaveToCacheAsync(catalogBytes, detachedSignature, cancellationToken).ConfigureAwait(false);
+            }
 
             return catalog;
         }
@@ -281,29 +289,31 @@ public class RemoteCatalogService : IRemoteCatalogService
             }
 
             byte[] catalogBytes = await File.ReadAllBytesAsync(_cacheFilePath, cancellationToken).ConfigureAwait(false);
+
+            // Without a pinned catalog key no cached copy can be proven authentic, so it is never
+            // served: installs must fail closed rather than trust a tampered cache file as the
+            // origin of digests, publisher keys and revocation state.
+            if (_trustedCatalogPublicKeyPem is null)
+            {
+                return null;
+            }
+
             bool trustVerified = false;
             string trustMessage;
-            if (_trustedCatalogPublicKeyPem is not null)
+            if (!File.Exists(_cacheSignatureFilePath))
             {
-                if (!File.Exists(_cacheSignatureFilePath))
-                {
-                    return null;
-                }
-                string detachedSignature = (await File.ReadAllTextAsync(_cacheSignatureFilePath, cancellationToken).ConfigureAwait(false)).Trim();
-                trustVerified = PluginAdmissionTrustStore.VerifyManifestSignature(
-                    catalogBytes,
-                    detachedSignature,
-                    _trustedCatalogPublicKeyPem);
-                if (!trustVerified)
-                {
-                    return null;
-                }
-                trustMessage = "Cached catalog signature verified against the WinCare-pinned trust root.";
+                return null;
             }
-            else
+            string detachedSignature = (await File.ReadAllTextAsync(_cacheSignatureFilePath, cancellationToken).ConfigureAwait(false)).Trim();
+            trustVerified = PluginAdmissionTrustStore.VerifyManifestSignature(
+                catalogBytes,
+                detachedSignature,
+                _trustedCatalogPublicKeyPem);
+            if (!trustVerified)
             {
-                trustMessage = "Cached catalog is available for browsing, but remote installation is disabled because this build has no pinned catalog signing key.";
+                return null;
             }
+            trustMessage = "Cached catalog signature verified against the WinCare-pinned trust root.";
 
             RemotePluginCatalog? catalog = JsonSerializer.Deserialize<RemotePluginCatalog>(catalogBytes, JsonOptions);
             if (catalog != null)

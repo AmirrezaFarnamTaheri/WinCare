@@ -10,7 +10,9 @@ namespace WinCare.App.Views.Pages;
 
 public sealed partial class AiDoctorPage : Page
 {
-    public static Visibility BoolToVisibility(bool value) => value ? Visibility.Visible : Visibility.Collapsed;
+    // Kept as a one-line delegation to the shared LayoutVisibility helper so the bool-to-
+    // visibility pair has a single implementation; this wrapper exists for the XAML contract.
+    public static Visibility BoolToVisibility(bool value) => LayoutVisibility.BoolToVisibility(value);
     public static HorizontalAlignment UserToHorizontalAlignment(bool isUser) => isUser ? HorizontalAlignment.Right : HorizontalAlignment.Left;
 
     public AiDoctorPageViewModel ViewModel { get; }
@@ -24,7 +26,7 @@ public sealed partial class AiDoctorPage : Page
     private async void SendButton_Click(object sender, RoutedEventArgs e)
     {
         await ViewModel.SubmitPromptAsync();
-        ChatScrollViewer?.ChangeView(null, ChatScrollViewer.ScrollableHeight, null);
+        ScrollToLatestMessage();
     }
 
     private async void PromptTextBox_KeyDown(object sender, KeyRoutedEventArgs e)
@@ -32,7 +34,20 @@ public sealed partial class AiDoctorPage : Page
         if (e.Key != Windows.System.VirtualKey.Enter) return;
         e.Handled = true;
         await ViewModel.SubmitPromptAsync();
-        ChatScrollViewer?.ChangeView(null, ChatScrollViewer.ScrollableHeight, null);
+        ScrollToLatestMessage();
+    }
+
+    private void ScrollToLatestMessage()
+    {
+        try
+        {
+            if (IsLoaded) ChatScrollViewer?.ChangeView(null, ChatScrollViewer.ScrollableHeight, null);
+        }
+        catch (Exception ex)
+        {
+            // Preserve the completed answer if the view was detached before scrolling.
+            System.Diagnostics.Debug.WriteLine($"[AiDoctorPage] Scroll failed: {ex}");
+        }
     }
 
     private void ExecuteStepButton_Click(object sender, RoutedEventArgs e)

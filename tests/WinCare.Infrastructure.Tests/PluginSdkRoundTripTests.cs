@@ -4,6 +4,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Reflection;
+using System.Security.Cryptography;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -164,7 +165,9 @@ namespace Community.GoldenSdkPlugin
 
             // 5. Install package via PluginInstallerService
             var installer = new PluginInstallerService(pluginsBaseDirectory: userPluginsDir);
-            var installedPluginDir = await installer.InstallPluginFromPackageAsync(new Uri(packagePath).AbsoluteUri, "com.community.goldensdk");
+            // Local file:// packages require an expected SHA-256 digest for admission.
+            string packageDigest = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(packagePath))).ToLowerInvariant();
+            var installedPluginDir = await installer.InstallPluginFromPackageAsync(new Uri(packagePath).AbsoluteUri, "com.community.goldensdk", packageDigest);
             Assert.True(Directory.Exists(installedPluginDir));
             Assert.True(File.Exists(Path.Combine(installedPluginDir, "PluginAssembly.dll")));
 

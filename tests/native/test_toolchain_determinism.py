@@ -20,6 +20,19 @@ EXPECTED_LOCKFILES = {
 
 
 class ToolchainDeterminismTests(unittest.TestCase):
+    def test_cargo_dependency_resolving_gates_use_locked_graph(self) -> None:
+        from tools.release_checklist import CHECKS
+        workflow = (ROOT / ".github/workflows/native-winui.yml").read_text(encoding="utf-8")
+        commands = re.findall(r"cargo (?:clippy|test|build) [^\n]+", workflow)
+        self.assertEqual(3, len(commands))
+        for command in commands:
+            self.assertIn("--locked", command.split(" -- ")[0])
+        checklist_commands = [command for _, command, _ in CHECKS
+                              if command[:2] in (["cargo", "test"], ["cargo", "clippy"])]
+        self.assertEqual(2, len(checklist_commands))
+        for command in checklist_commands:
+            self.assertIn("--locked", command[:command.index("--")] if "--" in command else command)
+
     def test_dotnet_sdk_is_strictly_pinned(self) -> None:
         global_json = json.loads((ROOT / "global.json").read_text(encoding="utf-8"))
         sdk = global_json["sdk"]

@@ -1,6 +1,7 @@
 using System.Text.Json;
 using CommunityToolkit.Mvvm.Input;
 using WinCare.Application.Commands;
+using WinCare.Application.Navigation;
 using WinCare.App.Services;
 using WinCare.Domain.Commands;
 
@@ -9,6 +10,11 @@ namespace WinCare.App.ViewModels.Pages;
 public sealed class CheckupPageViewModel : TabbedPageViewModel
 {
     private const int ResultsSectionIndex = 1;
+
+    // The "Review …" actions deep-link into these routes; resolve them from the routing table
+    // once so a catalog rename fails at startup instead of silently breaking the action.
+    private static readonly string SystemCareRoute = NavigationCatalog.Items.Single(item => item.Id == "system-care").Id;
+    private static readonly string SecurityRoute = NavigationCatalog.Items.Single(item => item.Id == "security").Id;
 
     private static readonly (string CommandId, string RowTitle)[] FastCheckCommands =
     [
@@ -22,7 +28,9 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
 
     private readonly CommandDispatcher _dispatcher;
     private readonly List<PageRow> _resultRows = [];
+    private CancellationTokenSource? _runCts;
     private bool _isRunning;
+    private bool _isStopping;
     private string _runSummary = "Run Checkup to see how things look.";
     private string _healthScoreText = "Not checked";
     private string _healthScoreDetail = "Run Checkup to see the latest results";
@@ -41,9 +49,38 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
     {
         _dispatcher = dispatcher;
         RunQuickCheckCommand = new AsyncRelayCommand(RunQuickCheckAsync, () => !IsRunning);
+        StopCheckCommand = new RelayCommand(CancelRunningCheck, () => IsRunning && !IsStopping);
     }
 
     public IAsyncRelayCommand RunQuickCheckCommand { get; }
+    public IRelayCommand StopCheckCommand { get; }
+
+    /// <summary>
+    /// Cancels an in-flight checkup. Used when the user navigates away from the cached page so
+    /// late-arriving probe results cannot mutate rows the user is no longer looking at.
+    /// </summary>
+    public void CancelRunningCheck()
+    {
+        if (_runCts is null || !IsRunning || IsStopping) return;
+        IsStopping = true;
+        RunSummary = "Stopping the checkup. Waiting for the active checks to finish.";
+        HealthScoreText = "Stopping";
+        HealthScoreDetail = "waiting for active checks";
+        _runCts.Cancel();
+    }
+
+    public bool IsStopping
+    {
+        get => _isStopping;
+        private set
+        {
+            if (SetProperty(ref _isStopping, value))
+            {
+                StopCheckCommand.NotifyCanExecuteChanged();
+                OnPropertyChanged(nameof(RunActionText));
+            }
+        }
+    }
 
     public bool IsRunning
     {
@@ -53,12 +90,13 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
             if (SetProperty(ref _isRunning, value))
             {
                 RunQuickCheckCommand.NotifyCanExecuteChanged();
+                StopCheckCommand.NotifyCanExecuteChanged();
                 OnPropertyChanged(nameof(RunActionText));
             }
         }
     }
 
-    public string RunActionText => IsRunning ? "Checking your PC…" : "Run checkup";
+    public string RunActionText => IsStopping ? "Stopping…" : IsRunning ? "Checking your PC…" : "Run checkup";
     public string RunSummary { get => _runSummary; private set => SetProperty(ref _runSummary, value); }
     public string HealthScoreText { get => _healthScoreText; private set => SetProperty(ref _healthScoreText, value); }
     public string HealthScoreDetail { get => _healthScoreDetail; private set => SetProperty(ref _healthScoreDetail, value); }
@@ -70,7 +108,7 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
         if (index == ResultsSectionIndex) ShowResultRows();
     }
 
-    private async Task RunQuickCheckAsync()
+    private async Task RunQuickCheckAsync(CancellationToken cancellationToken)
     {
         IsRunning = true;
         RunSummary = "Checking a few important parts of Windows. Nothing will be changed.";
@@ -78,6 +116,12 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
         HealthScoreDetail = "checking now";
         HealthScoreBrushKey = "AccentTealBrush";
 
+        // Link the command token with a page-owned source so leaving the page cancels the
+        // whole run, including the Windows Update probe.
+        using CancellationTokenSource runCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        _runCts = runCts;
+        CancellationToken token = runCts.Token;
+        Task<CommandResult>? updateTask = null;
         try
         {
             foreach ((_, string rowTitle) in FastCheckCommands)
@@ -90,13 +134,18 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
             if (wuaRow is not null)
                 ResetRowForCheck(wuaRow, "Checking…", "Checking Windows Update…");
 
-            Task<CommandResult> updateTask = RunUpdateCheckAsync();
+            RebuildResultRowsFromQuickChecks();
+            updateTask = RunUpdateCheckAsync(token);
             IReadOnlyList<CommandResult> fastResults = await ParallelCommandProbeRunner.RunPreviewsAsync(
                 _dispatcher,
                 FastCheckCommands.Select(item => item.CommandId).ToArray(),
                 TimeSpan.FromSeconds(3),
                 maxConcurrency: 3,
-                cancellationToken: CancellationToken.None);
+                cancellationToken: token);
+
+            // Discard late results, but settle the cached page through the cancellation path.
+            token.ThrowIfCancellationRequested();
+
             var fastDict = new Dictionary<string, CommandResult>(StringComparer.OrdinalIgnoreCase);
 
             for (int index = 0; index < FastCheckCommands.Length; index++)
@@ -116,22 +165,63 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
             RebuildResultRowsFromQuickChecks();
 
             CommandResult updateResult = await updateTask;
+            token.ThrowIfCancellationRequested();
             ApplyWuaResult(updateResult, fastDict);
+        }
+        catch (OperationCanceledException)
+        {
+            // Keep the pending state until the update probe has settled in finally.
+        }
+        catch (Exception ex)
+        {
+            // This command body is the owning boundary: a late fault in result parsing must
+            // become a message instead of escaping to the unhandled-exception handler.
+            System.Diagnostics.Debug.WriteLine($"[CheckupPageViewModel] Checkup failed: {ex}");
+            CompleteInterruptedCheck(cancelled: false);
         }
         finally
         {
+            bool cancelled = token.IsCancellationRequested;
+            if (updateTask is not null)
+            {
+                // Parsing or fast-probe failure must not leave Windows Update orphaned.
+                if (!updateTask.IsCompleted) runCts.Cancel();
+                await updateTask;
+            }
+            if (cancelled) CompleteInterruptedCheck(cancelled: true);
+            _runCts = null;
             IsRunning = false;
+            IsStopping = false;
         }
     }
 
-    private async Task<CommandResult> RunUpdateCheckAsync()
+    private void CompleteInterruptedCheck(bool cancelled)
+    {
+        foreach (PageRow row in Sections[0].Rows)
+        {
+            if (row.State is not ("Checking" or "Checking…")) continue;
+            row.State = "Not finished";
+            row.Detail = cancelled ? "Check stopped. Run Checkup to try again." : "Check failed. Run Checkup to try again.";
+            row.StatusBrushKey = "TextSecondaryBrush";
+            ClearNavigationAction(row);
+        }
+        HealthScoreText = cancelled ? "Stopped" : "Incomplete";
+        HealthScoreDetail = "completed results are shown below";
+        HealthScoreBrushKey = cancelled ? "TextSecondaryBrush" : "WarningBrush";
+        RunSummary = cancelled
+            ? "Checkup stopped. Nothing was changed. Completed results are kept below; run it again to check all areas."
+            : "Checkup couldn't finish. Nothing was changed. Try again, and open Activity if it keeps happening.";
+        RebuildResultRowsFromQuickChecks();
+    }
+
+    private async Task<CommandResult> RunUpdateCheckAsync(CancellationToken cancellationToken)
     {
         try
         {
             return await _dispatcher.ExecuteAsync(
                 CommandRequest.Preview(WuaCommandId),
                 new CommandExecutionOptions(ReviewApproved: false, Deadline: DateTimeOffset.UtcNow + TimeSpan.FromSeconds(25)),
-                CancellationToken.None);
+                cancellationToken);
         }
         catch (Exception ex)
         {
@@ -214,7 +304,7 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
         row.State = state;
         row.Detail = detail;
         row.StatusBrushKey = brushKey;
-        if (brushKey == "WarningBrush") SetNavigationAction(row, "Review updates", "system-care", "Network & updates");
+        if (brushKey == "WarningBrush") SetNavigationAction(row, "Review updates", SystemCareRoute, "Network & updates");
         else ClearNavigationAction(row);
     }
 
@@ -256,7 +346,7 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
                         {
                             storageRow.State = "Very low space";
                             storageRow.StatusBrushKey = "DangerBrush";
-                            SetNavigationAction(storageRow, "Review cleanup", "system-care", "Clean up");
+                            SetNavigationAction(storageRow, "Review cleanup", SystemCareRoute, "Clean up");
                         }
                     }
                     else if (freeGb < WinCare.Domain.Assessment.AssessmentPolicy.DiskFreeWarningGb)
@@ -267,7 +357,7 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
                         {
                             storageRow.State = "Low space";
                             storageRow.StatusBrushKey = "WarningBrush";
-                            SetNavigationAction(storageRow, "Review cleanup", "system-care", "Clean up");
+                            SetNavigationAction(storageRow, "Review cleanup", SystemCareRoute, "Clean up");
                         }
                     }
                 }
@@ -287,7 +377,7 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
                     {
                         securityRow.State = "Defender stopped";
                         securityRow.StatusBrushKey = "DangerBrush";
-                        SetNavigationAction(securityRow, "Review security", "security", "Status");
+                        SetNavigationAction(securityRow, "Review security", SecurityRoute, "Status");
                     }
                 }
 
@@ -299,7 +389,7 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
                     {
                         securityRow.State = "Firewall off";
                         securityRow.StatusBrushKey = "DangerBrush";
-                        SetNavigationAction(securityRow, "Review security", "security", "Status");
+                        SetNavigationAction(securityRow, "Review security", SecurityRoute, "Status");
                     }
                 }
             }

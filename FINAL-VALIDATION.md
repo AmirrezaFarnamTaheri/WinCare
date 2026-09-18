@@ -1,6 +1,6 @@
 # Final validation — product / UX finalization
 
-This branch contains the task-first WinCare product restructuring plus a second deeper pass across visual hierarchy, frontend behavior, backend/frontend parity, design-system debt, navigation architecture, documentation truth, and regression coverage. See `docs/PRODUCT-UX-FINALIZATION.md` for the implementation summary.
+This release candidate contains the task-first WinCare product restructuring plus a second deeper pass across visual hierarchy, frontend behavior, backend/frontend parity, design-system debt, navigation architecture, documentation truth, and regression coverage. See `docs/PRODUCT-UX-FINALIZATION.md` for the implementation summary.
 
 ## Automated validation contract
 
@@ -44,4 +44,4 @@ The deeper pass adds explicit checks for:
 
 ## Live Windows visual-validation limitation
 
-The interactive agent environment used for this review does not provide a Windows desktop session, so it cannot truthfully certify the final rendered UI, Narrator output, keyboard focus order, High Contrast appearance, text/display scaling, or new runtime screenshots. GitHub Actions can validate Windows compilation/build/package behavior, but a fresh installed-candidate visual/accessibility pass is still required. Follow `docs/Windows-Validation.md` and recapture the runtime screenshots after the current PR is packaged.
+The interactive agent environment used for this review does not provide a Windows desktop session, so it cannot truthfully certify the final rendered UI, Narrator output, keyboard focus order, High Contrast appearance, text/display scaling, or new runtime screenshots. GitHub Actions can validate Windows compilation/build/package behavior, but a fresh installed-candidate visual/accessibility pass is still required. Follow `docs/Windows-Validation.md` and recapture the runtime screenshots when the next release candidate is installed.

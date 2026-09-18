@@ -29,7 +29,22 @@ public static class JsonPluginLoader
     /// directory, so modifying both the manifest and a colocated checksum cannot bypass the
     /// discovery integrity check.
     /// </summary>
+    /// <remarks>
+    /// This overload performs no admission gate and is preserved for trusted locations (the
+    /// application install directory) and for direct test fixtures. Directories a user can write
+    /// to must be loaded with the two-argument overload passing <c>requireAdmissionRecord</c>
+    /// <c>true</c>, otherwise a package with no trust evidence would be parsed and registered.
+    /// </remarks>
     public static PluginLoadResult LoadFromDirectory(string pluginDirectoryPath)
+        => LoadFromDirectory(pluginDirectoryPath, requireAdmissionRecord: false);
+
+    /// <summary>
+    /// Loads and validates a declarative JSON plugin, optionally requiring an external admission
+    /// record for the package. Pass <paramref name="requireAdmissionRecord" /> for any directory
+    /// that an unprivileged user can write to: without a recorded signature and digest there is no
+    /// trust anchor to verify, so the package is rejected instead of parsed.
+    /// </summary>
+    public static PluginLoadResult LoadFromDirectory(string pluginDirectoryPath, bool requireAdmissionRecord, Func<bool>? isProcessElevated = null, string? machineTrustRootOverride = null)
     {
         if (string.IsNullOrWhiteSpace(pluginDirectoryPath) || !Directory.Exists(pluginDirectoryPath))
         {
@@ -57,9 +72,14 @@ public static class JsonPluginLoader
 
             byte[] manifestBytes = File.ReadAllBytes(manifestPath);
             PluginAdmissionRecord? admissionRecord = null;
-            string admissionPath = PluginAdmissionTrustStore.GetRecordPath(pluginDirectoryPath);
+            // Prefer the machine trust store, then fall back to the per-user record. Both live
+            // outside the plugin directory, but only the machine store is beyond the installing
+            // account's reach, so a record found there is a real anchor while a per-user record is
+            // account-scoped trust that an elevated process must not rely on.
+            string machineRecordPath = PluginAdmissionTrustStore.GetMachineRecordPath(pluginDirectoryPath, machineTrustRootOverride);
+            string? admissionPath = PluginAdmissionTrustStore.TryResolveAdmissionRecordPath(pluginDirectoryPath, machineTrustRootOverride);
 
-            if (File.Exists(admissionPath))
+            if (admissionPath is not null)
             {
                 var admissionInfo = new FileInfo(admissionPath);
                 if (admissionInfo.Length > PluginAdmissionTrustStore.MaxRecordBytes)
@@ -86,6 +106,20 @@ public static class JsonPluginLoader
                 {
                     return new PluginLoadResult(false, null, Array.Empty<CommandDefinition>(),
                         "Plugin admission record is missing required trust metadata.");
+                }
+
+                // The record's verified location, not its self-declared scope, is the
+                // security-relevant fact: a machine record only counts when the store is actually
+                // admin-only, and only an elevated session can place one there. A record found in
+                // the user-writable fallback can be rewritten by the same account that can swap the
+                // plugin bytes, so it must not anchor code an elevated process will run.
+                bool machineAnchored = string.Equals(admissionPath, machineRecordPath, StringComparison.OrdinalIgnoreCase)
+                    && PluginAdmissionTrustStore.IsMachineRecordTrustworthy(admissionPath, machineTrustRootOverride);
+                bool elevated = (isProcessElevated ?? PluginAdmissionTrustStore.IsCurrentProcessElevated)();
+                if (!machineAnchored && elevated)
+                {
+                    return new PluginLoadResult(false, null, Array.Empty<CommandDefinition>(),
+                        "This plugin is trusted only for the account that installed it: its admission record lives in a user-writable location, so an elevated WinCare process cannot load it. Reinstall the plugin from an elevated session to anchor it in the machine trust store.");
                 }
 
                 string actualDigest = Convert.ToHexString(SHA256.HashData(manifestBytes)).ToLowerInvariant();
@@ -119,6 +153,17 @@ public static class JsonPluginLoader
                 // to that legacy trust model; require a reinstall to create the external record.
                 return new PluginLoadResult(false, null, Array.Empty<CommandDefinition>(),
                     "Legacy colocated manifest integrity metadata is no longer trusted. Reinstall the plugin to create an external admission record.");
+            }
+            else if (requireAdmissionRecord)
+            {
+                // Fail closed: no admission record and no legacy digest means no trust anchor was
+                // ever established for this package. Anything dropped into a user-writable plugin
+                // directory must be installed through the plugin store first, which records the
+                // manifest digest (and publisher signature) outside the directory an unprivileged
+                // user can rewrite. Built-in packages in the application install directory stay
+                // exempt because that location is not user-writable.
+                return new PluginLoadResult(false, null, Array.Empty<CommandDefinition>(),
+                    "Plugin is missing an external admission record. Install the plugin through the plugin store before it can be loaded from this directory.");
             }
 
             // Parse from a strict UTF-8 decode that tolerates only an optional BOM. The digest

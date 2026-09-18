@@ -6,6 +6,7 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Navigation;
 using WinCare.App.ViewModels.Pages;
+using WinCare.App.Views;
 using WinCare.CommandCatalog.Models;
 
 namespace WinCare.App.Views.Pages;
@@ -15,24 +16,30 @@ public sealed partial class AllToolsPage : Page
     private const double ToolTableCompactBreakpointDip = 840;
     private const double InlineInspectorBreakpointDip = 1320;
     private Control? _inspectorReturnFocus;
+    private bool _viewModelSubscribed;
 
     public AllToolsPage()
     {
         ViewModel = new AllToolsPageViewModel();
         InitializeComponent();
         ToolTabs.SelectedItem = ToolTabs.Items[0] as SelectorBarItem;
-        ViewModel.PropertyChanged += ViewModel_PropertyChanged;
         ApplyFilterLayout(ActualWidth < ToolTableCompactBreakpointDip);
         RebuildParameterEditor();
     }
 
     public AllToolsPageViewModel ViewModel { get; }
 
-    public static Visibility BoolToVisibility(bool value) => value ? Visibility.Visible : Visibility.Collapsed;
-    public static Visibility InvertBoolToVisibility(bool value) => value ? Visibility.Collapsed : Visibility.Visible;
+    // Kept as one-line delegations to the shared LayoutVisibility helpers so the bool-to-
+    // visibility pair has a single implementation; these wrappers exist for the XAML contract.
+    public static Visibility BoolToVisibility(bool value) => LayoutVisibility.BoolToVisibility(value);
+    public static Visibility InvertBoolToVisibility(bool value) => LayoutVisibility.InvertBoolToVisibility(value);
 
     protected override void OnNavigatedTo(NavigationEventArgs e)
     {
+        // The cached page's view model is disposed on leave; reattach its subscription and
+        // catch up on catalog changes before the parameter editor is asked to render.
+        ViewModel.Reactivate();
+        SubscribeToViewModel();
         base.OnNavigatedTo(e);
         if (e.Parameter is ToolNavigationRequest request)
         {
@@ -50,6 +57,35 @@ public sealed partial class AllToolsPage : Page
                 ToolSearchBox.Focus(FocusState.Programmatic);
         }
     }
+
+    protected override void OnNavigatedFrom(NavigationEventArgs e)
+    {
+        // Release the page->view-model references and the catalog subscription while the
+        // page is off-screen; it is reattached on the next OnNavigatedTo.
+        UnsubscribeFromViewModel();
+        ViewModel.Dispose();
+        base.OnNavigatedFrom(e);
+    }
+
+    private void SubscribeToViewModel()
+    {
+        if (_viewModelSubscribed) return;
+        _viewModelSubscribed = true;
+        ViewModel.PropertyChanged += ViewModel_PropertyChanged;
+        ViewModel.Execution.ParameterValuesChanged += Execution_ParameterValuesChanged;
+    }
+
+    private void UnsubscribeFromViewModel()
+    {
+        if (!_viewModelSubscribed) return;
+        _viewModelSubscribed = false;
+        ViewModel.PropertyChanged -= ViewModel_PropertyChanged;
+        ViewModel.Execution.ParameterValuesChanged -= Execution_ParameterValuesChanged;
+    }
+
+    // Programmatic parameter changes (deep links, presets, importing the raw JSON editor)
+    // must re-render the generated controls, which hold one-shot copies of the field values.
+    private void Execution_ParameterValuesChanged(object? sender, EventArgs e) => RebuildParameterEditor();
 
     private void ToolTabs_SelectionChanged(SelectorBar sender, SelectorBarSelectionChangedEventArgs args)
     {
@@ -95,7 +131,7 @@ public sealed partial class AllToolsPage : Page
 
     private void Inspector_KeyDown(object sender, KeyRoutedEventArgs e)
     {
-        if (e.Key != Windows.System.VirtualKey.Escape) return;
+        if (e.Key != Windows.System.VirtualKey.Escape || !ViewModel.IsDetailsOpen) return;
         CloseInspector_Click(sender, e);
         e.Handled = true;
     }

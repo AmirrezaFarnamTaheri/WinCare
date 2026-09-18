@@ -65,8 +65,11 @@ public class RemoteCatalogServiceTests
     }
 
     [Fact]
-    public async Task GetCatalogAsync_LoadsFromHttpAndCachesLocally()
+    public async Task GetCatalogAsync_ServesBrowseOnlyCatalogWithoutCachingIt()
     {
+        // Without a pinned catalog signing key the fetched catalog cannot be proven authentic, so
+        // it is served browse-only and never written to the cache: a persisted unverified catalog
+        // would become the trust root for install-time digests, keys and revocation state.
         var tempCacheFile = Path.Combine(Path.GetTempPath(), $"wincare_test_cache_{Guid.NewGuid():N}.json");
 
         try
@@ -93,7 +96,45 @@ public class RemoteCatalogServiceTests
             Assert.NotNull(catalog);
             Assert.Single(catalog.Plugins);
             Assert.Equal("test.plugin", catalog.Plugins[0].Id);
-            Assert.True(File.Exists(tempCacheFile));
+            Assert.False(catalog.IsTrustVerified);
+            Assert.False(File.Exists(tempCacheFile));
+        }
+        finally
+        {
+            if (File.Exists(tempCacheFile))
+            {
+                File.Delete(tempCacheFile);
+            }
+        }
+    }
+
+    [Fact]
+    public async Task GetCatalogAsync_CachesOnlySignatureVerifiedCatalogs()
+    {
+        // A pinned key that does not verify the payload must fail closed: nothing is cached and
+        // the fetch surfaces the verification failure instead of trusting the remote bytes.
+        var tempCacheFile = Path.Combine(Path.GetTempPath(), $"wincare_test_cache_{Guid.NewGuid():N}.json");
+
+        try
+        {
+            using var rsa = System.Security.Cryptography.RSA.Create(2048);
+            string publicKeyPem = rsa.ExportSubjectPublicKeyInfoPem();
+
+            var handler = new FakeHttpMessageHandler(req => new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent("""{"plugins":[{"id":"test.plugin","name":"Test Plugin"}]}""")
+            });
+
+            var service = new RemoteCatalogService(
+                new HttpClient(handler),
+                cacheFilePath: tempCacheFile,
+                trustedCatalogPublicKeyPem: publicKeyPem,
+                catalogSignatureUrl: "https://localhost.invalid/catalog.json.sig");
+
+            // The handler answers every request with the catalog body, so the "signature" payload
+            // cannot verify against the pinned key: the fetch must fail closed, not cache.
+            await Assert.ThrowsAsync<InvalidOperationException>(() => service.GetCatalogAsync(forceRefresh: true));
+            Assert.False(File.Exists(tempCacheFile));
         }
         finally
         {

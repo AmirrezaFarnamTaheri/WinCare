@@ -98,10 +98,29 @@ public sealed class PluginStoreRefreshTests
         Plugins = [new RemotePluginItem { Id = id, Name = id }]
     };
 
-    private static PluginStorePageViewModel Create(ControlledCatalog catalog) => new(
-        DispatchProxy.Create<IPluginRegistry, UnusedDependency>(), catalog,
-        DispatchProxy.Create<IPluginInstallerService, UnusedDependency>(),
-        DispatchProxy.Create<IPluginHost, UnusedDependency>());
+    private static PluginStorePageViewModel Create(ControlledCatalog catalog)
+    {
+        // The view model captures SynchronizationContext.Current at construction so it can marshal
+        // updates back to a real UI thread. Test classes run in parallel and share thread-pool
+        // threads, so a class that leaves a context installed can hand one to this test: the async
+        // continuations then resume on a different thread where that captured context is no longer
+        // current, EnqueueOnUi posts to it instead of running inline, and nothing pumps the posted
+        // updates before the assertions read the state. A headless unit test has no UI thread to
+        // marshal to, so construct with no ambient context and let every update run inline.
+        SynchronizationContext? previous = SynchronizationContext.Current;
+        SynchronizationContext.SetSynchronizationContext(null);
+        try
+        {
+            return new PluginStorePageViewModel(
+                DispatchProxy.Create<IPluginRegistry, UnusedDependency>(), catalog,
+                DispatchProxy.Create<IPluginInstallerService, UnusedDependency>(),
+                DispatchProxy.Create<IPluginHost, UnusedDependency>());
+        }
+        finally
+        {
+            SynchronizationContext.SetSynchronizationContext(previous);
+        }
+    }
 
     public class UnusedDependency : DispatchProxy
     {

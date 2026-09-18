@@ -156,6 +156,11 @@ public static class AppPreferences
 
     public static string DataDirectory => DirectoryPath;
 
+    /// <summary>
+    /// Waits for the persistence chain to drain. Awaits the tail as of the call: a save queued
+    /// concurrently is not included, and the window close path is the sole caller with nothing
+    /// queued after it.
+    /// </summary>
     public static async Task FlushAsync(CancellationToken cancellationToken = default)
     {
         Task pending;
@@ -219,8 +224,11 @@ public static class AppPreferences
             temporaryPath = null;
             SetPersistenceStatus(null);
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        catch (Exception ex)
         {
+            // Covers IO faults and serialization faults alike: a non-IO failure must not fault
+            // the persistence chain unnoticed — route it through the same status so
+            // IsPersistenceHealthy reflects reality and the Settings page can surface it.
             SetPersistenceStatus("WinCare couldn't save your settings. They'll keep working until you close the app.");
             System.Diagnostics.Debug.WriteLine($"[AppPreferences] Save failed: {ex}");
         }

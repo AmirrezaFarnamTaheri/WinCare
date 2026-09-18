@@ -43,11 +43,13 @@ public class PluginInstallerService : IPluginInstallerService
     private readonly HttpClient _httpClient;
     private readonly string _pluginsBaseDirectory;
     private readonly string _operationLocksDirectory;
+    private readonly string? _machineTrustRootOverride;
+    private readonly Func<bool> _isProcessElevated;
 
     /// <summary>
     /// Initializes a new instance of <see cref="PluginInstallerService"/>.
     /// </summary>
-    public PluginInstallerService(HttpClient? httpClient = null, string? pluginsBaseDirectory = null)
+    public PluginInstallerService(HttpClient? httpClient = null, string? pluginsBaseDirectory = null, string? trustRootOverride = null, Func<bool>? isProcessElevated = null)
     {
         _httpClient = httpClient ?? new HttpClient();
 
@@ -63,6 +65,8 @@ public class PluginInstallerService : IPluginInstallerService
 
         Directory.CreateDirectory(_pluginsBaseDirectory);
         _operationLocksDirectory = Path.Combine(_pluginsBaseDirectory, ".locks");
+        _machineTrustRootOverride = trustRootOverride;
+        _isProcessElevated = isProcessElevated ?? PluginAdmissionTrustStore.IsCurrentProcessElevated;
     }
 
     /// <inheritdoc />
@@ -153,13 +157,27 @@ public class PluginInstallerService : IPluginInstallerService
         }
 
         bool isRemote = uri.Scheme.Equals(Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase);
-        if (isRemote)
+        bool isLocalPackage = uri.Scheme.Equals(Uri.UriSchemeFile, StringComparison.OrdinalIgnoreCase);
+        if (isRemote || isLocalPackage)
         {
+            // A package reached by URL cannot be trusted to be the bytes the caller thinks it
+            // selected: an HTTPS origin can be MitM'd without a pinned key and a local file://
+            // path can be substituted in a download folder or handed to a wincare:// handler.
+            // Require an explicit digest on both, so an unsigned or tampered package fails closed
+            // instead of becoming an arbitrary-code install path. In-memory stream installs are
+            // the trusted/test entry point (InstallTrustedPluginFromStreamAsync).
             if (string.IsNullOrWhiteSpace(expectedSha256))
             {
-                throw new ArgumentException("Remote package installation requires a non-empty expectedSha256 digest.", nameof(expectedSha256));
+                throw new ArgumentException(
+                    isRemote
+                        ? "Remote package installation requires a non-empty expectedSha256 digest."
+                        : "Local package installation requires a non-empty expectedSha256 digest; an unsigned package cannot be admitted without an integrity check.",
+                    nameof(expectedSha256));
             }
+        }
 
+        if (isRemote)
+        {
             if (string.IsNullOrWhiteSpace(expectedPublisherPublicKeyPem) || string.IsNullOrWhiteSpace(expectedPublisherSignature))
             {
                 throw new ArgumentException(
@@ -529,20 +547,36 @@ public class PluginInstallerService : IPluginInstallerService
             }
 
             var manifestDigest = Convert.ToHexString(SHA256.HashData(manifestRawBytes)).ToLowerInvariant();
+            string? assemblyDigest = await RecordAdmittedAssemblyDigestAsync(doc.RootElement, tempExtractDir, cancellationToken).ConfigureAwait(false);
+            var finalTargetDir = ValidateAndGetPluginDirectory(manifestId);
+
+            // The trust anchor must live where the installing account cannot rewrite it. Only an
+            // elevated session can establish the machine trust store with its admin-only ACL, so
+            // admission is anchored there when this session can secure it; otherwise it is recorded
+            // beside the plugin bytes as per-user trust, which discovery refuses to load with
+            // administrator privileges.
+            bool machineAnchored = PluginAdmissionTrustStore.TryEnsureMachineTrustStore(_machineTrustRootOverride, _isProcessElevated);
+            string admissionPath = machineAnchored
+                ? PluginAdmissionTrustStore.GetMachineRecordPath(finalTargetDir, _machineTrustRootOverride)
+                : PluginAdmissionTrustStore.GetUserScopedRecordPath(finalTargetDir);
             var admissionRecord = new PluginAdmissionRecord
             {
                 PluginId = manifestId,
                 ManifestSha256 = manifestDigest,
+                AssemblySha256 = assemblyDigest,
                 PublisherId = string.IsNullOrWhiteSpace(expectedPublisherId) ? null : expectedPublisherId,
                 PublisherPublicKeyPem = hasExpectedKey ? expectedPublisherPublicKeyPem : null,
                 PublisherSignature = hasExpectedSignature ? expectedPublisherSignature : null,
+                TrustScope = machineAnchored
+                    ? PluginAdmissionTrustStore.MachineTrustScope
+                    : PluginAdmissionTrustStore.UserTrustScope,
             };
 
-            var finalTargetDir = ValidateAndGetPluginDirectory(manifestId);
             await PromoteWithAdmissionRecordAsync(
                 tempExtractDir,
                 finalTargetDir,
                 admissionRecord,
+                admissionPath,
                 stagingBackupsDir,
                 cancellationToken).ConfigureAwait(false);
 
@@ -581,24 +615,93 @@ public class PluginInstallerService : IPluginInstallerService
             removed = true;
         }
 
-        string admissionPath = PluginAdmissionTrustStore.GetRecordPath(pluginDir);
-        if (File.Exists(admissionPath))
+        // Remove the admission record from either trust store. A machine-anchored record is written
+        // by an elevated session, so a standard-account uninstall may not be able to delete it;
+        // that is reported but does not fail the uninstall, because the record's manifest and
+        // assembly bindings keep it from admitting a different package in the meantime.
+        foreach (var admissionPath in new[]
         {
-            File.Delete(admissionPath);
-            removed = true;
+            PluginAdmissionTrustStore.GetMachineRecordPath(pluginDir, _machineTrustRootOverride),
+            PluginAdmissionTrustStore.GetUserScopedRecordPath(pluginDir),
+        })
+        {
+            try
+            {
+                if (File.Exists(admissionPath))
+                {
+                    File.Delete(admissionPath);
+                    removed = true;
+                }
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                System.Diagnostics.Debug.WriteLine($"[PluginInstaller] Could not remove admission record '{admissionPath}': {ex.GetType().Name} - {ex.Message}");
+            }
         }
 
         return removed;
+    }
+
+    /// <summary>
+    /// Hashes the compiled assembly declared by an assembly plugin's manifest so the admission
+    /// record can bind the exact bytes admitted at install time. The manifest is parsed through the
+    /// canonical <see cref="PluginManifest" /> type so the <c>assemblyEntry</c> alias resolves to the
+    /// same effective filename that discovery later loads; a raw lookup of <c>assemblyFileName</c>
+    /// alone would miss that alias and admit an assembly plugin with no binding at all.
+    /// </summary>
+    /// <returns>
+    /// The SHA-256 of the declared assembly bytes, or null for script plugins, which carry no
+    /// compiled code to bind.
+    /// </returns>
+    /// <exception cref="InvalidOperationException">
+    /// Thrown when the manifest resolves to an assembly entry (via <c>assemblyFileName</c> or the
+    /// <c>assemblyEntry</c> alias) whose file is absent from the staged package. A null digest would
+    /// fail open at load time (<see cref="PluginRegistryService" /> verifies only when a digest
+    /// exists), so an assembly plugin that cannot be bound must not be admitted at all.
+    /// </exception>
+    private static async Task<string?> RecordAdmittedAssemblyDigestAsync(
+        JsonElement manifestRoot, string stagedPluginDir, CancellationToken cancellationToken)
+    {
+        PluginManifest? manifest;
+        try
+        {
+            manifest = manifestRoot.Deserialize<PluginManifest>(new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            manifest?.ValidateAliasConsistency();
+        }
+        catch (JsonException ex)
+        {
+            throw new InvalidOperationException(
+                $"Package admission rejected: the manifest could not be parsed to resolve its assembly entry ({ex.Message}).", ex);
+        }
+
+        // The effective filename honors both `assemblyFileName` and the `assemblyEntry` alias; when
+        // neither is present this is a script plugin and there is no compiled code to bind.
+        string? assemblyFileName = manifest?.AssemblyFileName;
+        if (string.IsNullOrWhiteSpace(assemblyFileName))
+        {
+            return null;
+        }
+
+        string assemblyPath = Path.Combine(stagedPluginDir, assemblyFileName);
+        if (!File.Exists(assemblyPath))
+        {
+            throw new InvalidOperationException(
+                $"Package admission rejected: assembly plugin declares '{assemblyFileName}' but the staged package does not contain it, so its compiled bytes cannot be bound. Rebuild and reinstall the plugin.");
+        }
+
+        await using var stream = File.OpenRead(assemblyPath);
+        byte[] hash = await SHA256.HashDataAsync(stream, cancellationToken).ConfigureAwait(false);
+        return Convert.ToHexString(hash).ToLowerInvariant();
     }
 
     private static async Task PromoteWithAdmissionRecordAsync(
         string stagedPluginDir,
         string finalTargetDir,
         PluginAdmissionRecord admissionRecord,
+        string admissionPath,
         string stagingBackupsDir,
         CancellationToken cancellationToken)
     {
-        string admissionPath = PluginAdmissionTrustStore.GetRecordPath(finalTargetDir);
         string admissionDirectory = Path.GetDirectoryName(admissionPath)!;
         Directory.CreateDirectory(admissionDirectory);
 

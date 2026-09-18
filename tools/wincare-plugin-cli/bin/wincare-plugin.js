@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-const path = require('path');
+const { parseFlags } = require('../src/util/parseFlags');
 const { createPlugin } = require('../src/commands/create');
 const { runValidate } = require('../src/commands/validate');
 const { runPack } = require('../src/commands/pack');
@@ -20,7 +20,15 @@ Commands:
                       Options: --template <json-pack|csharp-plugin> --outDir <path>
   validate [dir]      Lint and verify plugin manifest and security boundaries
   pack [dir]          Validate and package plugin into .wincare-plugin ZIP archive
+                      Options: --out <archive> --key <publisher-key.pem>
   help                Show this help message
+
+Signing:
+  "pack --key <publisher-key.pem>" emits the trust metadata the plugin catalog consumes,
+  next to the archive: an archive digest (<archive>.sha256) and a signed manifest record
+  (<archive>.sig.json). The signature covers the exact raw manifest bytes, so it is not
+  affected by how the JSON is formatted. An unsigned archive cannot be installed through
+  the store; neither can a signature shipped inside the package.
 `);
 }
 
@@ -31,34 +39,35 @@ if (!command || command === 'help' || command === '--help' || command === '-h') 
 
 try {
   if (command === 'create') {
-    const name = args[1];
-    let template = 'json-pack';
-    let outDir = null;
-
-    for (let i = 2; i < args.length; i++) {
-      if (args[i] === '--template' && args[i + 1]) {
-        template = args[++i];
-      } else if (args[i] === '--outDir' && args[i + 1]) {
-        outDir = args[++i];
-      }
-    }
+    const { positionals, flags } = parseFlags(args.slice(1), {
+      template: {},
+      outDir: {}
+    });
+    const name = positionals[0];
+    const template = flags.template || 'json-pack';
 
     if (!['json-pack', 'csharp-plugin'].includes(template)) {
       throw new Error(`Unsupported template '${template}'. Use json-pack or csharp-plugin.`);
     }
 
-    const result = createPlugin(name, { template, outDir });
+    const result = createPlugin(name, { template, outDir: flags.outDir || null });
     console.log(`✓ Created plugin "${result.id}" using template "${result.template}" in ${result.targetDir}`);
   } else if (command === 'validate') {
-    const target = args[1] || '.';
-    const result = runValidate(target);
+    const { positionals } = parseFlags(args.slice(1), {});
+    const result = runValidate(positionals[0] || '.');
     if (!result.valid) {
       process.exit(1);
     }
   } else if (command === 'pack') {
-    const target = args[1] || '.';
-    const customOut = args[2] || null;
-    const result = runPack(target, customOut);
+    const { positionals, flags } = parseFlags(args.slice(1), {
+      out: { alias: 'output' },
+      output: {},
+      key: {}
+    });
+    const result = runPack(positionals[0] || '.', {
+      output: flags.output || null,
+      key: flags.key || null
+    });
     if (!result.success) {
       process.exit(1);
     }

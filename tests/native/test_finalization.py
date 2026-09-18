@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import subprocess
 import sys
@@ -91,6 +92,8 @@ class FinalizationTests(unittest.TestCase):
                 self.assertIn("migration/oracle/legacy-command-ids.json", names)
                 self.assertIn("docs/migration/finalization-status.md", names)
                 self.assertIn("tools/finalize_native_release.py", names)
+                for required in ("tests/__init__.py", "PRODUCT.md", "UX-CONTRACT.md", "FINAL-VALIDATION.md"):
+                    self.assertIn(required, names)
                 self.assertNotIn("tools/validate_gui.py", names)
                 self.assertNotIn("tools/test_gui.py", names)
                 self.assertNotIn("docs/RELEASE.md", names)
@@ -180,7 +183,7 @@ class FinalizationTests(unittest.TestCase):
             self.assertEqual(b"WINCARE", staged[0].read_bytes())
             self.assertFalse(any("WindowsAppRuntime" in path.name for path in staged))
 
-    def test_stage_release_assets_stages_installer_executable(self) -> None:
+    def test_stage_release_assets_stages_portable_without_fabricating_installer(self) -> None:
         from tools.stage_release_assets import stage_assets
         with tempfile.TemporaryDirectory() as src_dir, tempfile.TemporaryDirectory() as dst_dir:
             src = Path(src_dir)
@@ -190,13 +193,188 @@ class FinalizationTests(unittest.TestCase):
             (portable_dir / "WinCare.App.exe").write_bytes(b"PORTABLE_EXE")
             installer_dir = src / "installer"
             installer_dir.mkdir(parents=True)
+            # The pipeline compiles no Inno installer: a stray Setup.exe must not be promoted into
+            # a release asset under a name the release page never produced.
             (installer_dir / "WinCare-Setup.exe").write_bytes(b"SETUP_EXE")
 
             staged = stage_assets(src, dst, version="2.5.0-rc1")
             staged_names = [path.name for path in staged]
             self.assertIn("WinCare-v2.5.0-rc1-x64.exe", staged_names)
-            self.assertIn("WinCare-v2.5.0-rc1-Setup.exe", staged_names)
-            self.assertEqual(2, len(staged))
+            self.assertEqual(1, len(staged))
+            self.assertFalse(any("Setup" in name or "Installer" in name for name in staged_names))
+
+    def test_staging_cli_accepts_repeated_manifest_paths_and_rejects_swapped_certificates(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            downloads = root / "downloads"
+            manifests = []
+            for arch in ("x64", "ARM64"):
+                package = downloads / f"package-{arch}"
+                signing = package / "artifacts/signing"
+                release = package / "artifacts/release"
+                signing.mkdir(parents=True)
+                release.mkdir(parents=True)
+                assets = {
+                    signing / "WinCare.cer": arch.encode(),
+                    release / f"WinCare-{arch}.exe": f"exe-{arch}".encode(),
+                    release / f"WinCare-{arch}-portable.zip": f"zip-{arch}".encode(),
+                    release / f"WinCare.App_1.0.0.0_{arch}.msix": f"msix-{arch}".encode(),
+                    package / "install_msix.py": b"shared installer",
+                }
+                for path, payload in assets.items():
+                    path.write_bytes(payload)
+                manifest = release / "SHA256SUMS"
+                manifest.write_text("".join(
+                    f"{hashlib.sha256(payload).hexdigest()}  {path.name}" + chr(10)
+                    for path, payload in assets.items()
+                ), encoding="utf-8")
+                manifests.append(manifest)
+            command = [sys.executable, str(ROOT / "tools/stage_release_assets.py"),
+                       "--downloads", str(downloads), "--output", str(root / "out"),
+                       "--version", "1.0.0"]
+            for manifest in manifests:
+                command.extend(["--expected-manifest", str(manifest)])
+            result = subprocess.run(command, capture_output=True, text=True, timeout=30)
+            self.assertEqual(0, result.returncode, result.stderr)
+            self.assertEqual(9, len((root / "out/SHA256SUMS").read_text().splitlines()))
+
+            # A digest from the other architecture must not authorize this certificate.
+            (downloads / "package-x64/artifacts/signing/WinCare.cer").write_bytes(b"ARM64")
+            result = subprocess.run(command, capture_output=True, text=True, timeout=30)
+            self.assertNotEqual(0, result.returncode)
+            self.assertIn("but the build-time digest was", result.stderr)
+
+    def test_stage_release_assets_fails_closed_on_digest_mismatch(self) -> None:
+        from tools.stage_release_assets import stage_assets
+        with tempfile.TemporaryDirectory() as src_dir, tempfile.TemporaryDirectory() as dst_dir:
+            src = Path(src_dir)
+            dst = Path(dst_dir)
+            portable_dir = src / "win-x64" / "portable"
+            portable_dir.mkdir(parents=True)
+            (portable_dir / "WinCare.App.exe").write_bytes(b"PORTABLE_EXE")
+            manifest = src / "SHA256SUMS"
+            wrong_digest = hashlib.sha256(b"bytes the build runner did not produce").hexdigest()
+            manifest.write_text(f"{wrong_digest}  WinCare.App.exe\n", encoding="utf-8")
+
+            with self.assertRaisesRegex(ValueError, "but the build-time digest was"):
+                stage_assets(src, dst, version="2.5.0-rc1", expected_manifests=[manifest])
+
+    def test_stage_release_assets_fails_closed_on_missing_digest_entry(self) -> None:
+        from tools.stage_release_assets import stage_assets
+        with tempfile.TemporaryDirectory() as src_dir, tempfile.TemporaryDirectory() as dst_dir:
+            src = Path(src_dir)
+            dst = Path(dst_dir)
+            portable_dir = src / "win-x64" / "portable"
+            portable_dir.mkdir(parents=True)
+            (portable_dir / "WinCare.App.exe").write_bytes(b"PORTABLE_EXE")
+            manifest = src / "SHA256SUMS"
+            digest = hashlib.sha256(b"PORTABLE_EXE").hexdigest()
+            manifest.write_text(f"{digest}  some-other-asset.zip\n", encoding="utf-8")
+
+            with self.assertRaisesRegex(ValueError, "no build-time digest"):
+                stage_assets(src, dst, version="2.5.0-rc1", expected_manifests=[manifest])
+
+    def test_stage_release_assets_publishes_verified_digest_manifest(self) -> None:
+        from tools.stage_release_assets import stage_assets
+        with tempfile.TemporaryDirectory() as src_dir, tempfile.TemporaryDirectory() as dst_dir:
+            src = Path(src_dir)
+            dst = Path(dst_dir)
+            portable_dir = src / "win-x64" / "portable"
+            portable_dir.mkdir(parents=True)
+            (portable_dir / "WinCare.App.exe").write_bytes(b"PORTABLE_EXE")
+            digest = hashlib.sha256(b"PORTABLE_EXE").hexdigest()
+            manifest = src / "SHA256SUMS"
+            manifest.write_text(f"{digest}  WinCare.App.exe\n", encoding="utf-8")
+
+            staged = stage_assets(src, dst, version="2.5.0-rc1", expected_manifests=[manifest])
+
+            published_manifest = dst / "SHA256SUMS"
+            self.assertTrue(published_manifest.is_file())
+            self.assertNotIn(published_manifest, staged)
+            self.assertEqual(
+                f"{digest}  WinCare-v2.5.0-rc1-x64.exe\n",
+                published_manifest.read_text(encoding="utf-8"),
+            )
+
+    def test_stage_release_assets_verifies_each_architecture_against_its_own_manifest(self) -> None:
+        from tools.stage_release_assets import stage_assets
+        with tempfile.TemporaryDirectory() as src_dir, tempfile.TemporaryDirectory() as dst_dir:
+            src = Path(src_dir)
+            dst = Path(dst_dir)
+            x64_dir = src / "package-x64"
+            arm64_dir = src / "package-ARM64"
+            x64_dir.mkdir(parents=True)
+            arm64_dir.mkdir(parents=True)
+
+            # Each architecture builds its own exe, zip, and runner-local signing certificate,
+            # and its SHA256SUMS records only its own digests.
+            x64_cer = "CERT_X64_CONTENT"
+            arm64_cer = "CERT_ARM64_CONTENT"
+            x64_manifest = src / "package-x64" / "SHA256SUMS"
+            arm64_manifest = src / "package-ARM64" / "SHA256SUMS"
+            artifacts = {
+                x64_dir: [("WinCare.App.exe", b"X64_EXE"), ("WinCare.cer", x64_cer.encode())],
+                arm64_dir: [("WinCare.App.exe", b"ARM64_EXE"), ("WinCare.cer", arm64_cer.encode())],
+            }
+            digests_by_dir: dict[Path, dict[str, str]] = {}
+            for directory, files in artifacts.items():
+                digests_by_dir[directory] = {}
+                for name, payload in files:
+                    (directory / name).write_bytes(payload)
+                    digests_by_dir[directory][name] = hashlib.sha256(payload).hexdigest()
+            x64_manifest.write_text(
+                "".join(f"{digest}  {name}\n" for name, digest in digests_by_dir[x64_dir].items()),
+                encoding="utf-8",
+            )
+            arm64_manifest.write_text(
+                "".join(f"{digest}  {name}\n" for name, digest in digests_by_dir[arm64_dir].items()),
+                encoding="utf-8",
+            )
+
+            staged = stage_assets(
+                src,
+                dst,
+                version="2.5.0-rc1",
+                expected_manifests=[x64_manifest, arm64_manifest],
+            )
+
+            staged_names = [path.name for path in staged]
+            self.assertIn("WinCare-v2.5.0-rc1-x64.exe", staged_names)
+            self.assertIn("WinCare-v2.5.0-rc1-ARM64.exe", staged_names)
+            published_manifest = dst / "SHA256SUMS"
+            published_lines = published_manifest.read_text(encoding="utf-8").splitlines()
+            self.assertIn(
+                f"{hashlib.sha256(b'X64_EXE').hexdigest()}  WinCare-v2.5.0-rc1-x64.exe",
+                published_lines,
+            )
+            self.assertIn(
+                f"{hashlib.sha256(b'ARM64_EXE').hexdigest()}  WinCare-v2.5.0-rc1-ARM64.exe",
+                published_lines,
+            )
+
+    def test_stage_release_assets_rejects_bytes_absent_from_every_manifest(self) -> None:
+        from tools.stage_release_assets import stage_assets
+        with tempfile.TemporaryDirectory() as src_dir, tempfile.TemporaryDirectory() as dst_dir:
+            src = Path(src_dir)
+            dst = Path(dst_dir)
+            x64_dir = src / "package-x64"
+            arm64_dir = src / "package-ARM64"
+            x64_dir.mkdir(parents=True)
+            arm64_dir.mkdir(parents=True)
+            (x64_dir / "WinCare.App.exe").write_bytes(b"X64_EXE")
+            substituted = arm64_dir / "WinCare.App.exe"
+            substituted.write_bytes(b"TAMPERED_ARM64_EXE")
+            x64_manifest = src / "package-x64" / "SHA256SUMS"
+            arm64_manifest = src / "package-ARM64" / "SHA256SUMS"
+            x64_manifest.write_text(
+                f"{hashlib.sha256(b'X64_EXE').hexdigest()}  WinCare.App.exe\n", encoding="utf-8"
+            )
+            arm64_manifest.write_text(
+                f"{hashlib.sha256(b'ARM64_EXE').hexdigest()}  WinCare.App.exe\n", encoding="utf-8"
+            )
+
+            with self.assertRaisesRegex(ValueError, "but the build-time digest was"):
+                stage_assets(src, dst, version="2.5.0-rc1", expected_manifests=[x64_manifest, arm64_manifest])
 
     def test_finalizer_rejects_unsafe_version_labels(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

@@ -1,5 +1,5 @@
-using System.Globalization;
 using System.Text.Json;
+using WinCare.CommandCatalog;
 using WinCare.CommandCatalog.Models;
 
 namespace WinCare.Application.Commands;
@@ -100,71 +100,25 @@ public static class PortablePlaybookExchange
     private static void ValidateParameters(string commandId, JsonElement parameters)
     {
         RequireObject(parameters, $"Parameters for '{commandId}'");
-        IReadOnlyList<CommandParameterDefinition> schema = CommandParameterCatalog.For(commandId);
-        var byName = schema.ToDictionary(parameter => parameter.Name, StringComparer.OrdinalIgnoreCase);
-        foreach (JsonProperty property in parameters.EnumerateObject())
-        {
-            if (!byName.TryGetValue(property.Name, out CommandParameterDefinition? definition))
-                throw new PortablePlaybookValidationException($"Parameter '{property.Name}' is not declared for '{commandId}'.");
-            ValidateParameter(commandId, definition, property.Value);
-        }
-        foreach (CommandParameterDefinition definition in schema.Where(parameter => parameter.Required))
-        {
-            if (!parameters.TryGetProperty(definition.Name, out _))
-                throw new PortablePlaybookValidationException($"Parameter '{definition.Name}' is required for '{commandId}'.");
-        }
-    }
 
-    private static void ValidateParameter(string commandId, CommandParameterDefinition definition, JsonElement value)
-    {
-        switch (definition.Kind)
+        // A JSON parameter is not permitted in an imported playbook: the import path cannot
+        // re-check an arbitrary nested payload the way an interactive dispatch can.
+        foreach (CommandParameterDefinition jsonParameter in CommandParameterCatalog.For(commandId)
+                     .Where(parameter => parameter.Kind == CommandParameterKind.Json))
         {
-            case CommandParameterKind.Text:
-            case CommandParameterKind.DateTime:
-                if (value.ValueKind != JsonValueKind.String) throw InvalidType(commandId, definition, "a string");
-                string text = value.GetString() ?? string.Empty;
-                if (text.Length > 256 * 1024) throw new PortablePlaybookValidationException($"Parameter '{definition.Name}' for '{commandId}' is too long.");
-                if (definition.Kind == CommandParameterKind.DateTime && !DateTimeOffset.TryParse(text, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out _))
-                    throw new PortablePlaybookValidationException($"Parameter '{definition.Name}' for '{commandId}' must be an ISO-8601 date/time.");
-                if (definition.Options is { Count: > 0 } && !definition.Options.Contains(text, StringComparer.OrdinalIgnoreCase))
-                    throw new PortablePlaybookValidationException($"Parameter '{definition.Name}' for '{commandId}' has an unsupported value.");
-                break;
-            case CommandParameterKind.Integer:
-                if (value.ValueKind != JsonValueKind.Number || !value.TryGetInt32(out int integer)) throw InvalidType(commandId, definition, "an integer");
-                ValidateNumberRange(commandId, definition, integer);
-                break;
-            case CommandParameterKind.Long:
-                if (value.ValueKind != JsonValueKind.Number || !value.TryGetInt64(out long longValue)) throw InvalidType(commandId, definition, "an integer");
-                ValidateNumberRange(commandId, definition, longValue);
-                break;
-            case CommandParameterKind.Number:
-                if (value.ValueKind != JsonValueKind.Number || !value.TryGetDouble(out double number) || !double.IsFinite(number)) throw InvalidType(commandId, definition, "a finite number");
-                ValidateNumberRange(commandId, definition, number);
-                break;
-            case CommandParameterKind.Boolean:
-                if (value.ValueKind is not (JsonValueKind.True or JsonValueKind.False)) throw InvalidType(commandId, definition, "a boolean");
-                break;
-            case CommandParameterKind.StringList:
-                if (value.ValueKind != JsonValueKind.Array || value.GetArrayLength() > 256) throw InvalidType(commandId, definition, "an array of strings");
-                foreach (JsonElement item in value.EnumerateArray())
-                    if (item.ValueKind != JsonValueKind.String || (item.GetString()?.Length ?? 0) > 32 * 1024) throw InvalidType(commandId, definition, "an array of strings");
-                break;
-            case CommandParameterKind.Json:
-                throw new PortablePlaybookValidationException($"JSON parameter '{definition.Name}' is not permitted in portable playbooks.");
-            default:
-                throw new PortablePlaybookValidationException($"Parameter '{definition.Name}' for '{commandId}' has an unsupported type.");
+            if (parameters.TryGetProperty(jsonParameter.Name, out _))
+            {
+                throw new PortablePlaybookValidationException($"JSON parameter '{jsonParameter.Name}' is not permitted in portable playbooks.");
+            }
+        }
+
+        // Everything else (required presence, declared names, types, ranges, options) is shared with
+        // the dispatch path through CommandParameterValidator so the two entry points agree.
+        foreach (string error in CommandParameterValidator.Validate(commandId, parameters))
+        {
+            throw new PortablePlaybookValidationException(error);
         }
     }
-
-    private static void ValidateNumberRange(string commandId, CommandParameterDefinition definition, double value)
-    {
-        if (definition.Minimum is not null && value < double.Parse(definition.Minimum, CultureInfo.InvariantCulture) ||
-            definition.Maximum is not null && value > double.Parse(definition.Maximum, CultureInfo.InvariantCulture))
-            throw new PortablePlaybookValidationException($"Parameter '{definition.Name}' for '{commandId}' is outside its supported range.");
-    }
-
-    private static PortablePlaybookValidationException InvalidType(string commandId, CommandParameterDefinition definition, string expected) =>
-        new($"Parameter '{definition.Name}' for '{commandId}' must be {expected}.");
 
     private static void RequireObject(JsonElement value, string description)
     {

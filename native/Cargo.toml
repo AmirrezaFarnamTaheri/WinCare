@@ -19,5 +19,10 @@ tempfile = "3.20.0"
 opt-level = 3
 lto = "fat"
 codegen-units = 1
-panic = "abort"
+# The core is loaded in-process by the WinCare host and its C ABI wraps every entry point in
+# catch_unwind to convert an unexpected panic into an InternalError status. Unwinding is what
+# makes that recovery possible: with panic = "abort" catch_unwind cannot intercept anything and
+# the first panic terminates the host process alongside the library. Reserve abort for
+# standalone binaries that own their own process.
+panic = "unwind"
 strip = true

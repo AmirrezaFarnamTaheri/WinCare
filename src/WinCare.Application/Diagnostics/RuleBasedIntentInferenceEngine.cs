@@ -77,26 +77,26 @@ namespace WinCare.Application.Diagnostics
 
             if (lower.Contains("dns") || lower.Contains("network") || lower.Contains("internet") || lower.Contains("ping") || lower.Contains("wifi") || lower.Contains("winsock"))
             {
-                return Task.FromResult("intent.network.flush");
+                return Task.FromResult(DiagnosticIntents.NetworkFlush);
             }
             if (lower.Contains("privacy") || lower.Contains("telemetry") || lower.Contains("tracking") || lower.Contains("spy"))
             {
-                return Task.FromResult("intent.privacy.harden");
+                return Task.FromResult(DiagnosticIntents.PrivacyHarden);
             }
             if (lower.Contains("winget") || lower.Contains("outdated") || (lower.Contains("update") && !lower.Contains("clean_updates")))
             {
-                return Task.FromResult("intent.apps.update");
+                return Task.FromResult(DiagnosticIntents.AppsUpdate);
             }
             if (lower.Contains("disk") || lower.Contains("drive") || lower.Contains("storage") || lower.Contains("full") || lower.Contains("temp") || lower.Contains("junk"))
             {
-                return Task.FromResult("intent.storage.cleanup");
+                return Task.FromResult(DiagnosticIntents.StorageCleanup);
             }
             if (lower.Contains("ram") || lower.Contains("memory") || lower.Contains("slow") || lower.Contains("freeze") || lower.Contains("lag"))
             {
-                return Task.FromResult("intent.memory.optimize");
+                return Task.FromResult(DiagnosticIntents.MemoryOptimize);
             }
 
-            return Task.FromResult("intent.general.diagnose");
+            return Task.FromResult(DiagnosticIntents.GeneralDiagnose);
         }
     }
 }

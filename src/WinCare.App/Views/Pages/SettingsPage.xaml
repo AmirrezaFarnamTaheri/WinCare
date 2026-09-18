@@ -29,7 +29,7 @@
             <Border Style="{StaticResource DashboardCardStyle}">
                 <Grid RowSpacing="16">
                     <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
-                    <StackPanel Spacing="5" VerticalAlignment="Center">
+                    <StackPanel Spacing="4" VerticalAlignment="Center">
                         <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="App theme" />
                         <TextBlock Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap" Text="Follow Windows, or keep WinCare light or dark." />
                     </StackPanel>
@@ -40,7 +40,7 @@
             <Border Style="{StaticResource DashboardCardStyle}">
                 <Grid RowSpacing="16">
                     <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
-                    <StackPanel Spacing="5" VerticalAlignment="Center">
+                    <StackPanel Spacing="4" VerticalAlignment="Center">
                         <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="Remember this window" />
                         <TextBlock Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap" Text="Open WinCare at the same size and position next time." />
                     </StackPanel>
@@ -56,12 +56,12 @@
             <Border Style="{StaticResource DashboardCardStyle}">
                 <Grid RowSpacing="16">
                     <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
-                    <StackPanel Spacing="5" VerticalAlignment="Center">
+                    <StackPanel Spacing="4" VerticalAlignment="Center">
                         <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="Local data" />
                         <TextBlock Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap" Text="Open the folder where WinCare keeps settings, reports, activity, and diagnostic logs." />
                         <TextBlock Style="{StaticResource RowSecondaryTextStyle}" FontFamily="{StaticResource TelemetryFontFamily}" Text="{x:Bind ViewModel.DataDirectory}" TextWrapping="Wrap" />
                     </StackPanel>
-                    <Button Grid.Row="1" HorizontalAlignment="Left" Content="Open folder" Click="OpenDataFolderButton_Click" AutomationProperties.AutomationId="OpenDataFolder" AutomationProperties.Name="Open WinCare data folder" />
+                    <Button Grid.Row="1" HorizontalAlignment="Left" Content="Open folder" Style="{StaticResource QuietButtonStyle}" Click="OpenDataFolderButton_Click" AutomationProperties.AutomationId="OpenDataFolder" AutomationProperties.Name="Open WinCare data folder" />
                 </Grid>
             </Border>
         </StackPanel>

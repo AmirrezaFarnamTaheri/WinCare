@@ -1,8 +1,10 @@
 using System.IO;
+using System.Linq;
 using Microsoft.UI.Xaml;
 using Microsoft.Windows.AppLifecycle;
 using ProtocolActivatedEventArgs = Windows.ApplicationModel.Activation.ProtocolActivatedEventArgs;
 using WinCare.Application.Commands;
+using WinCare.Application.Navigation;
 using WinCare.Domain.Commands;
 using WinCare.Infrastructure.Observability;
 
@@ -14,13 +16,13 @@ public partial class App : Microsoft.UI.Xaml.Application
     private MainWindow? _window;
 
     /// <summary>
-    /// Exercises every navigation route during packaged smoke testing.
+    /// Exercises every navigation route during packaged smoke testing. Derived from
+    /// <see cref="NavigationCatalog.Items"/> so the smoke test cannot drift from the routing
+    /// table the shell actually builds from.
     /// </summary>
-    private static readonly string[] SmokeNavigationKeys =
-    [
-        "home", "checkup", "system-care", "security", "repair-recovery",
-        "all-tools", "activity", "plugin-store", "ai-doctor", "settings", "help", "about",
-    ];
+    private static readonly string[] SmokeNavigationKeys = NavigationCatalog.Items
+        .Select(item => item.Id)
+        .ToArray();
 
     public MainWindow? MainWindow => _window;
 

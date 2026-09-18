@@ -147,7 +147,7 @@ if ($certPath) {
         Write-Output "Pinned signer certificate is already trusted in LocalMachine\\TrustedPeople: $($cert.Thumbprint)"
     }
 }
-elif ($initialSig.Status -ne 'Valid') {
+elseif ($initialSig.Status -ne 'Valid') {
     throw "Package signer is not already trusted and no matching --certificate was provided (Status: $($initialSig.Status), Detail: $($initialSig.StatusMessage))."
 }
 
@@ -168,10 +168,8 @@ Write-Output "Signature Verified: Valid ($($finalSig.SignerCertificate.Subject))
 Write-Output "Signer Thumbprint: $($finalSig.SignerCertificate.Thumbprint)"
 """
 
-    # PowerShell's keyword is "elseif"; keep the script text readable above and
-    # avoid interpolating any user-controlled path into it.
-    verify_and_trust_script = verify_and_trust_script.replace("\nelif (", "\nelseif (")
-
+    # PowerShell's keyword is "elseif"; the script above is written in valid PowerShell so no
+    # source-level repair is needed. No user-controlled path is interpolated into the script text.
     verify_res = _run_powershell_script(verify_and_trust_script, env_params)
     if verify_res.returncode != 0:
         print(f"[-] Error: Pre-installation signature / trust verification failed (exit code {verify_res.returncode}):")

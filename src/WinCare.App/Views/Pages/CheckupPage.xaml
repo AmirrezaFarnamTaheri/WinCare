@@ -4,12 +4,8 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:views="using:WinCare.App.Views"
     xmlns:vm="using:WinCare.App.ViewModels.Pages"
-    xmlns:converters="using:WinCare.App.Converters"
     NavigationCacheMode="Required"
     SizeChanged="Page_SizeChanged">
-    <Page.Resources>
-        <converters:ThemeResourceBrushConverter x:Key="ThemeResourceBrushConverter" />
-    </Page.Resources>
     <ScrollViewer VerticalScrollBarVisibility="Auto">
         <Grid Padding="28,28,28,32" RowSpacing="20">
             <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
@@ -19,21 +15,26 @@
             </StackPanel>
             <Border Grid.Row="1" Style="{StaticResource DashboardCardStyle}" Background="{ThemeResource HeroBackgroundBrush}">
                 <Grid x:Name="CheckupHero" ColumnSpacing="24" RowSpacing="18">
+                    <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
                     <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
                     <StackPanel Spacing="10" MaxWidth="720">
                         <TextBlock Style="{StaticResource SectionHeaderTextStyle}" Text="Check this PC" />
-                        <TextBlock Style="{StaticResource PageDescriptionTextStyle}" TextWrapping="Wrap" Text="{x:Bind ViewModel.RunSummary, Mode=OneWay}" />
+                        <TextBlock Style="{StaticResource PageDescriptionTextStyle}" TextWrapping="Wrap" Text="{x:Bind ViewModel.RunSummary, Mode=OneWay}" AutomationProperties.LiveSetting="Polite" />
                         <Button HorizontalAlignment="Left" Style="{StaticResource PrimaryActionButtonStyle}" Command="{x:Bind ViewModel.RunQuickCheckCommand}" AutomationProperties.AutomationId="RunQuickCheck" AutomationProperties.Name="Run a read-only checkup">
                             <StackPanel Orientation="Horizontal" Spacing="8">
                                 <ProgressRing Width="16" Height="16" IsActive="{x:Bind ViewModel.IsRunning, Mode=OneWay}" Visibility="{x:Bind views:LayoutVisibility.BoolToVisibility(ViewModel.IsRunning), Mode=OneWay}" />
                                 <TextBlock Text="{x:Bind ViewModel.RunActionText, Mode=OneWay}" />
                             </StackPanel>
                         </Button>
+                        <Button Content="Stop checkup" Command="{x:Bind ViewModel.StopCheckCommand}"
+                                Visibility="{x:Bind views:LayoutVisibility.BoolToVisibility(ViewModel.IsRunning), Mode=OneWay}"
+                                HorizontalAlignment="Left" Style="{StaticResource QuietButtonStyle}" MinHeight="44"
+                                AutomationProperties.AutomationId="StopQuickCheck" AutomationProperties.Name="Stop checkup" />
                     </StackPanel>
                     <Border x:Name="CheckupStatusCard" Grid.Column="1" MinWidth="190" Padding="18" Background="{ThemeResource SurfaceSecondaryBrush}" CornerRadius="{StaticResource RadiusControl}">
-                        <StackPanel Spacing="5">
+                        <StackPanel Spacing="4">
                             <TextBlock Style="{StaticResource RowSecondaryTextStyle}" Text="Status" />
-                            <TextBlock FontSize="22" FontWeight="SemiBold" Foreground="{x:Bind ViewModel.HealthScoreBrushKey, Mode=OneWay, Converter={StaticResource ThemeResourceBrushConverter}}" Text="{x:Bind ViewModel.HealthScoreText, Mode=OneWay}" TextWrapping="Wrap" />
+                            <TextBlock Style="{StaticResource MetricTextStyle}" Foreground="{x:Bind ViewModel.HealthScoreBrushKey, Mode=OneWay, Converter={StaticResource ThemeResourceBrushConverter}}" Text="{x:Bind ViewModel.HealthScoreText, Mode=OneWay}" />
                             <TextBlock Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind ViewModel.HealthScoreDetail, Mode=OneWay}" TextWrapping="Wrap" />
                         </StackPanel>
                     </Border>
@@ -44,8 +45,9 @@
             </SelectorBar>
             <Grid Grid.Row="3" RowSpacing="10">
                 <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
+                <InfoBar IsOpen="{x:Bind ViewModel.IsEmpty, Mode=OneWay}" IsClosable="False" Severity="Informational" Title="No results yet" Message="{x:Bind ViewModel.EmptyMessage, Mode=OneWay}" />
                 <Grid Padding="16,0" Visibility="{x:Bind views:LayoutVisibility.InvertBoolToVisibility(ViewModel.IsCompactLayout), Mode=OneWay}">
-                    <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="150" /><ColumnDefinition Width="220" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="150" /><ColumnDefinition Width="220" /><ColumnDefinition Width="Auto" MaxWidth="220" /></Grid.ColumnDefinitions>
                     <TextBlock Style="{StaticResource ColumnHeaderTextStyle}" Text="Area" /><TextBlock Grid.Column="1" Style="{StaticResource ColumnHeaderTextStyle}" Text="Status" /><TextBlock Grid.Column="2" Style="{StaticResource ColumnHeaderTextStyle}" Text="Result" /><TextBlock Grid.Column="3" Style="{StaticResource ColumnHeaderTextStyle}" Text="Next step" Margin="8,0,0,0" />
                 </Grid>
                 <ListView Grid.Row="1" ItemsSource="{x:Bind ViewModel.CurrentRows, Mode=OneWay}" SelectionMode="None" AutomationProperties.AutomationId="CheckupPageRows" AutomationProperties.Name="Checkup findings">
@@ -54,13 +56,13 @@
                         <DataTemplate x:DataType="vm:PageRow">
                             <Border Style="{StaticResource SurfaceBorderStyle}" Padding="20,16"><Grid>
                                 <Grid ColumnSpacing="16" Visibility="{x:Bind views:LayoutVisibility.InvertBoolToVisibility(IsCompact), Mode=OneWay}">
-                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="150" /><ColumnDefinition Width="220" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="150" /><ColumnDefinition Width="220" /><ColumnDefinition Width="Auto" MaxWidth="220" /></Grid.ColumnDefinitions>
                                     <StackPanel Spacing="4"><TextBlock Style="{StaticResource RowTitleTextStyle}" Text="{x:Bind Title}" TextWrapping="Wrap" /><TextBlock Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap" Text="{x:Bind Description}" /></StackPanel>
-                                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center"><FontIcon Glyph="&#xE73E;" FontSize="14" Foreground="{x:Bind StatusBrushKey, Mode=OneWay, Converter={StaticResource ThemeResourceBrushConverter}}" /><TextBlock FontSize="12" FontWeight="SemiBold" Foreground="{x:Bind StatusBrushKey, Mode=OneWay, Converter={StaticResource ThemeResourceBrushConverter}}" Text="{x:Bind State, Mode=OneWay}" TextWrapping="Wrap" /></StackPanel>
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center"><TextBlock Style="{StaticResource StatusTextStyle}" Foreground="{x:Bind StatusBrushKey, Mode=OneWay, Converter={StaticResource ThemeResourceBrushConverter}}" Text="{x:Bind State, Mode=OneWay}" /></StackPanel>
                                     <TextBlock Grid.Column="2" Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap" Text="{x:Bind Detail, Mode=OneWay}" VerticalAlignment="Center" />
                                     <Button Grid.Column="3" Visibility="{x:Bind views:LayoutVisibility.BoolToVisibility(HasAction), Mode=OneWay}" Command="{x:Bind ActionCommand, Mode=OneWay}" Click="FindingAction_Click" Content="{x:Bind ActionText, Mode=OneWay}" Style="{StaticResource QuietButtonStyle}" MinHeight="44" VerticalAlignment="Center" Margin="8,0,0,0" AutomationProperties.Name="{x:Bind ActionAccessibleName, Mode=OneWay}" />
                                 </Grid>
-                                <StackPanel Spacing="7" Visibility="{x:Bind views:LayoutVisibility.BoolToVisibility(IsCompact), Mode=OneWay}">
+                                <StackPanel Spacing="8" Visibility="{x:Bind views:LayoutVisibility.BoolToVisibility(IsCompact), Mode=OneWay}">
                                     <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="{x:Bind Title}" TextWrapping="Wrap" /><TextBlock Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind Description}" TextWrapping="Wrap" /><TextBlock Style="{StaticResource RowSecondaryTextStyle}" FontWeight="SemiBold" Text="{x:Bind State, Mode=OneWay}" Foreground="{x:Bind StatusBrushKey, Mode=OneWay, Converter={StaticResource ThemeResourceBrushConverter}}" TextWrapping="Wrap" /><TextBlock Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind Detail, Mode=OneWay}" TextWrapping="Wrap" />
                                     <Button Visibility="{x:Bind views:LayoutVisibility.BoolToVisibility(HasAction), Mode=OneWay}" Command="{x:Bind ActionCommand, Mode=OneWay}" Click="FindingAction_Click" Content="{x:Bind ActionText, Mode=OneWay}" Style="{StaticResource QuietButtonStyle}" MinHeight="44" HorizontalAlignment="Left" Margin="0,4,0,0" AutomationProperties.Name="{x:Bind ActionAccessibleName, Mode=OneWay}" />
                                 </StackPanel>

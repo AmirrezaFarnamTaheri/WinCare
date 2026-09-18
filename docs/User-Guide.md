@@ -182,19 +182,13 @@ Settings is intentionally small and only exposes behavior the app actually saves
 - **Local data** — open the WinCare data directory.
 - A warning appears if settings cannot be loaded or saved.
 
-## 13. Encrypted profiles
-
-Commands that use encrypted profile storage create versioned AES-256-GCM envelopes. New writes derive keys with PBKDF2-HMAC-SHA256 using 600,000 iterations. Legacy 100,000-iteration envelopes remain decryptable for compatibility and migrate naturally when rewritten. Authentication detects a wrong passphrase or modified ciphertext.
-
-This storage capability is separate from a promise that Settings provides automatic cloud synchronization; the current Settings surface does not make that claim.
-
-## 14. WinCare Guard
+## 13. WinCare Guard
 
 `wincare-guard` is currently an **experimental local daemon boundary**.
 
 The Windows named pipe is local and protected by an explicit DACL. The daemon can provide its current local health/IPC primitives, but this release does **not** claim a finished Windows Service Control Manager lifecycle or complete native/app toast-notification integration. Those remain production-promotion requirements.
 
-## 15. Keyboard and accessibility
+## 14. Keyboard and accessibility
 
 WinCare favors native WinUI controls and explicit automation names/IDs on important controls. The app provides Light, Dark, and Windows High Contrast resources, visible keyboard focus, wrapped text styles, and compact layouts for core task pages.
 
@@ -209,7 +203,7 @@ Important release checks still require a live Windows environment:
 
 If a layout clips at a particular display or text scale, include the screen name and exact scale in the bug report.
 
-## 16. Troubleshooting
+## 15. Troubleshooting
 
 ### A command is Blocked or Not available
 

@@ -86,6 +86,35 @@ public sealed class HomePageViewModelTests
         Assert.Equal("Checked", vm.SystemStatus);
     }
 
+    [Theory]
+    [InlineData(ActivityState.Completed)]
+    [InlineData(ActivityState.Cancelled)]
+    public void Home_calls_inactive_partial_checks_incomplete(ActivityState state)
+    {
+        var vm = new HomePageViewModel();
+        var record = Completed("system", "System", DateTimeOffset.UtcNow.AddMinutes(-1)) with { State = state };
+
+        vm.RefreshActivity([record]);
+
+        Assert.Equal("Checkup is incomplete", vm.CheckupTitle);
+        Assert.Contains("Run Checkup", vm.CheckupSummary);
+    }
+
+    [Fact]
+    public void Home_calls_only_running_checks_in_progress()
+    {
+        var vm = new HomePageViewModel();
+        var record = Completed("system", "System", DateTimeOffset.UtcNow) with
+        {
+            State = ActivityState.Running,
+            CompletedAt = null
+        };
+
+        vm.RefreshActivity([record]);
+
+        Assert.Equal("Checkup is still in progress", vm.CheckupTitle);
+    }
+
     private static ActivityRecord Completed(string commandId, string title, DateTimeOffset startedAt, DateTimeOffset? completedAt = null) =>
         new(Guid.NewGuid(), commandId, title, ActivityState.Completed, startedAt, completedAt ?? startedAt.AddSeconds(1), "Check completed", false);
 }

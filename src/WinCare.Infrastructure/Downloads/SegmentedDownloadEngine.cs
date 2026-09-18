@@ -47,6 +47,16 @@ public static class SegmentedDownloadEngine
     }
 
     public static (byte[] CombinedData, string CombinedSha256) AssembleSlices(IReadOnlyList<DownloadSliceResult> slices)
+        => AssembleSlices(slices, requireDigestLabels: false);
+
+    /// <summary>
+    /// Assembles slices into a single buffer. Pass <paramref name="requireDigestLabels"/> to
+    /// demand that every slice carries a real 64-hex SHA-256 digest that is then verified: older
+    /// callers used this record as an assembly container and supplied free-form labels, and a
+    /// caller that believes it verified the slices must not silently get an unverified assembly
+    /// because a label happened not to be a digest.
+    /// </summary>
+    public static (byte[] CombinedData, string CombinedSha256) AssembleSlices(IReadOnlyList<DownloadSliceResult> slices, bool requireDigestLabels)
     {
         ArgumentNullException.ThrowIfNull(slices);
         if (slices.Count == 0) return (Array.Empty<byte>(), Convert.ToHexString(SHA256.HashData(Array.Empty<byte>())).ToLowerInvariant());
@@ -57,14 +67,16 @@ public static class SegmentedDownloadEngine
             if (sorted[i].SliceIndex != i)
                 throw new InvalidDataException("Download slices must be unique and contiguous from index zero.");
 
-            // Older callers used this record as an assembly container and supplied labels rather
-            // than digests. Validate only values that are actually SHA-256 digests; new download
-            // paths always populate a real digest.
             if (IsSha256(sorted[i].Sha256Hash))
             {
                 string actual = Convert.ToHexString(SHA256.HashData(sorted[i].Data)).ToLowerInvariant();
                 if (!actual.Equals(sorted[i].Sha256Hash, StringComparison.OrdinalIgnoreCase))
                     throw new InvalidDataException($"Slice {i} failed SHA-256 verification.");
+            }
+            else if (requireDigestLabels)
+            {
+                throw new InvalidDataException(
+                    $"Slice {i} label '{sorted[i].Sha256Hash}' is not a SHA-256 digest, so the assembled bytes cannot be proven. Supply a 64-character hex digest per slice.");
             }
         }
 
@@ -75,12 +87,19 @@ public static class SegmentedDownloadEngine
         return (combined, hash);
     }
 
+    /// <summary>
+    /// Default ceiling on the number of bytes a single download may write, matching the
+    /// command-level WinCare safety limit. Callers with a tighter budget should pass a smaller <c>maxBytes</c> argument.
+    /// </summary>
+    public const long DefaultMaxBytes = 2L * 1024 * 1024 * 1024;
+
     public static async Task<SegmentedDownloadResult> DownloadToFileAsync(
         HttpClient httpClient,
         Uri uri,
         string destinationPath,
         int requestedSlices = 4,
         int maxParallelSlices = 4,
+        long maxBytes = DefaultMaxBytes,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(httpClient);
@@ -90,6 +109,7 @@ public static class SegmentedDownloadEngine
             throw new ArgumentException("Download URI must be absolute HTTP or HTTPS.", nameof(uri));
         if (requestedSlices <= 0) throw new ArgumentOutOfRangeException(nameof(requestedSlices));
         if (maxParallelSlices <= 0) throw new ArgumentOutOfRangeException(nameof(maxParallelSlices));
+        if (maxBytes <= 0) throw new ArgumentOutOfRangeException(nameof(maxBytes));
 
         string fullDestination = Path.GetFullPath(destinationPath);
         string? directory = Path.GetDirectoryName(fullDestination);
@@ -101,9 +121,15 @@ public static class SegmentedDownloadEngine
         try
         {
             (long? length, bool rangeSupported) = await ProbeAsync(httpClient, uri, cancellationToken).ConfigureAwait(false);
+            if (length.HasValue && length.Value > maxBytes)
+            {
+                throw new InvalidDataException(
+                    $"Download size {length.Value} bytes exceeds the {maxBytes}-byte limit for this operation.");
+            }
+
             if (!length.HasValue || length.Value <= 0 || !rangeSupported || requestedSlices == 1)
             {
-                await DownloadSingleStreamAsync(httpClient, uri, assembledPath, cancellationToken).ConfigureAwait(false);
+                await DownloadSingleStreamAsync(httpClient, uri, assembledPath, maxBytes, cancellationToken).ConfigureAwait(false);
                 long bytes = new FileInfo(assembledPath).Length;
                 string hash = await ComputeFileSha256Async(assembledPath, cancellationToken).ConfigureAwait(false);
                 File.Move(assembledPath, fullDestination, overwrite: true);
@@ -112,7 +138,7 @@ public static class SegmentedDownloadEngine
 
             IReadOnlyList<ByteRange> ranges = PartitionRanges(length.Value, requestedSlices);
             using var throttle = new SemaphoreSlim(Math.Min(maxParallelSlices, ranges.Count));
-            var tasks = ranges.Select(range => DownloadRangeAsync(httpClient, uri, range, tempRoot, throttle, cancellationToken)).ToArray();
+            var tasks = ranges.Select(range => DownloadRangeAsync(httpClient, uri, range, tempRoot, throttle, maxBytes, cancellationToken)).ToArray();
             var parts = await Task.WhenAll(tasks).ConfigureAwait(false);
 
             await using (var output = new FileStream(assembledPath, FileMode.CreateNew, FileAccess.Write, FileShare.None, 128 * 1024, useAsync: true))
@@ -154,13 +180,31 @@ public static class SegmentedDownloadEngine
         return (response.Content.Headers.ContentLength, ranges);
     }
 
-    private static async Task DownloadSingleStreamAsync(HttpClient client, Uri uri, string path, CancellationToken ct)
+    private static async Task DownloadSingleStreamAsync(HttpClient client, Uri uri, string path, long maxBytes, CancellationToken ct)
     {
         using HttpResponseMessage response = await client.GetAsync(uri, HttpCompletionOption.ResponseHeadersRead, ct).ConfigureAwait(false);
         response.EnsureSuccessStatusCode();
+        if (response.Content.Headers.ContentLength is long declared && declared > maxBytes)
+        {
+            throw new InvalidDataException(
+                $"Download size {declared} bytes exceeds the {maxBytes}-byte limit for this operation.");
+        }
         await using var input = await response.Content.ReadAsStreamAsync(ct).ConfigureAwait(false);
         await using var output = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.None, 128 * 1024, useAsync: true);
-        await input.CopyToAsync(output, 128 * 1024, ct).ConfigureAwait(false);
+        // Bound the copy as well as the declared length: a lying or hostile server can stream
+        // past Content-Length and fill the disk through a user-supplied destination path.
+        byte[] buffer = new byte[128 * 1024];
+        long total = 0;
+        int read;
+        while ((read = await input.ReadAsync(buffer, ct).ConfigureAwait(false)) > 0)
+        {
+            total += read;
+            if (total > maxBytes)
+            {
+                throw new InvalidDataException($"Download exceeded the {maxBytes}-byte limit for this operation.");
+            }
+            await output.WriteAsync(buffer.AsMemory(0, read), ct).ConfigureAwait(false);
+        }
         await output.FlushAsync(ct).ConfigureAwait(false);
     }
 
@@ -172,6 +216,7 @@ public static class SegmentedDownloadEngine
         ByteRange range,
         string tempRoot,
         SemaphoreSlim throttle,
+        long maxBytes,
         CancellationToken ct)
     {
         await throttle.WaitAsync(ct).ConfigureAwait(false);
@@ -188,10 +233,23 @@ public static class SegmentedDownloadEngine
                 throw new InvalidDataException($"Server returned an unexpected Content-Range for slice {range.SliceIndex}.");
 
             string path = Path.Combine(tempRoot, $"slice-{range.SliceIndex:D6}.part");
+            long written = 0;
             await using (var input = await response.Content.ReadAsStreamAsync(ct).ConfigureAwait(false))
             await using (var output = new FileStream(path, FileMode.CreateNew, FileAccess.Write, FileShare.None, 128 * 1024, useAsync: true))
             {
-                await input.CopyToAsync(output, 128 * 1024, ct).ConfigureAwait(false);
+                // Bound the copy, not just the declared Content-Range: a server that overruns its
+                // own range would otherwise write past the slice's share of the byte budget.
+                byte[] buffer = new byte[128 * 1024];
+                int read;
+                while ((read = await input.ReadAsync(buffer, ct).ConfigureAwait(false)) > 0)
+                {
+                    written += read;
+                    if (written > range.Length || written > maxBytes)
+                    {
+                        throw new InvalidDataException($"Slice {range.SliceIndex} exceeded its declared byte range.");
+                    }
+                    await output.WriteAsync(buffer.AsMemory(0, read), ct).ConfigureAwait(false);
+                }
                 await output.FlushAsync(ct).ConfigureAwait(false);
             }
 

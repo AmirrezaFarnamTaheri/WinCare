@@ -1,8 +1,10 @@
+using System;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using WinCare.App.Services;
 using WinCare.App.ViewModels;
 using WinCare.App.Views.Dialogs;
+using WinCare.Application.Navigation;
 
 namespace WinCare.App.Views;
 
@@ -11,6 +13,12 @@ public sealed partial class ShellPage : Page
     private readonly PageService _pageService = new();
     private object? _pendingParameter;
     private bool _initialized;
+    private bool _synchronizingNavigation;
+
+    // Route keys live in NavigationCatalog; resolve the two the shell activates deep links
+    // through once, so a catalog rename fails loudly here instead of silently breaking a route.
+    private static readonly string HomeKey = NavigationCatalog.Items.Single(item => item.Id == "home").Id;
+    private static readonly string AllToolsKey = NavigationCatalog.Items.Single(item => item.Id == "all-tools").Id;
 
     public ShellPage()
     {
@@ -30,9 +38,9 @@ public sealed partial class ShellPage : Page
                 : NavigationViewPaneDisplayMode.LeftMinimal;
     }
 
-    public void OpenGlobalSearch(string? query) => OpenNavigationItem("all-tools", query?.Trim() ?? string.Empty);
+    public void OpenGlobalSearch(string? query) => OpenNavigationItem(AllToolsKey, query?.Trim() ?? string.Empty);
 
-    public void OpenTool(ToolNavigationRequest request) => OpenNavigationItem("all-tools", request);
+    public void OpenTool(ToolNavigationRequest request) => OpenNavigationItem(AllToolsKey, request);
 
     public void NavigateTo(string key, object? parameter = null)
     {
@@ -60,17 +68,28 @@ public sealed partial class ShellPage : Page
         if (_initialized) return;
         _initialized = true;
 
-        NavigationViewItem home = PrimaryNavigation.MenuItems.OfType<NavigationViewItem>().First();
-        PrimaryNavigation.SelectedItem = home;
-        _pageService.Navigate(ContentFrame, "home");
+        // Look the home item up by route rather than trusting menu ordering.
+        PrimaryNavigation.SelectedItem = FindNavigationItem(HomeKey);
+        _pageService.Navigate(ContentFrame, HomeKey);
 
         if (!AppPreferences.HasSeenFirstRunTour)
-            await ShowTourAsync();
+        {
+            // First run is the least error-tolerant moment of the session: a dialog fault must
+            // not escape the loaded path and take the shell down with it.
+            try
+            {
+                await ShowTourAsync();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[ShellPage] First-run tour failed: {ex}");
+            }
+        }
     }
 
     private void PrimaryNavigation_SelectionChanged(NavigationView sender, NavigationViewSelectionChangedEventArgs args)
     {
-        if (args.SelectedItemContainer?.Tag is not string key) return;
+        if (_synchronizingNavigation || args.SelectedItemContainer?.Tag is not string key) return;
 
         object? parameter = _pendingParameter;
         _pendingParameter = null;
@@ -79,8 +98,17 @@ public sealed partial class ShellPage : Page
 
     private void OpenNavigationItem(string key, object? parameter)
     {
-        NavigationViewItem target = FindNavigationItem(key)
-            ?? throw new KeyNotFoundException($"Navigation item '{key}' is not visible in the shell.");
+        // A hidden route (about) or a renamed XAML Tag must not fault a deep link or a
+        // wincare:// activation: fall back to direct frame navigation, which NavigateTo
+        // already implements. Throwing is reserved for genuinely unknown routes at the
+        // PageService boundary.
+        NavigationViewItem? target = FindNavigationItem(key);
+        if (target is null)
+        {
+            NavigateTo(key, parameter);
+            return;
+        }
+
         OpenNavigationItem(target, key, parameter);
     }
 
@@ -96,9 +124,28 @@ public sealed partial class ShellPage : Page
         PrimaryNavigation.SelectedItem = target;
     }
 
+    private void PrimaryNavigation_BackRequested(NavigationView sender, NavigationViewBackRequestedEventArgs args)
+    {
+        if (ContentFrame.CanGoBack) ContentFrame.GoBack();
+    }
+
+    private void ContentFrame_Navigated(object sender, Microsoft.UI.Xaml.Navigation.NavigationEventArgs e)
+    {
+        PrimaryNavigation.IsBackEnabled = ContentFrame.CanGoBack;
+        _synchronizingNavigation = true;
+        try
+        {
+            string? key = _pageService.GetNavigationKey(e.SourcePageType);
+            PrimaryNavigation.SelectedItem = key is null ? null : FindNavigationItem(key);
+        }
+        finally { _synchronizingNavigation = false; }
+        if (PrimaryNavigation.PaneDisplayMode is NavigationViewPaneDisplayMode.LeftMinimal or NavigationViewPaneDisplayMode.LeftCompact)
+            PrimaryNavigation.IsPaneOpen = false;
+    }
+
     private NavigationViewItem? FindNavigationItem(string key) =>
         PrimaryNavigation.MenuItems
             .Concat(PrimaryNavigation.FooterMenuItems)
             .OfType<NavigationViewItem>()
-            .SingleOrDefault(item => string.Equals(item.Tag as string, key, StringComparison.Ordinal));
+            .FirstOrDefault(item => string.Equals(item.Tag as string, key, StringComparison.Ordinal));
 }

@@ -46,7 +46,7 @@ namespace WinCare.Application.Diagnostics
 
             switch (intent)
             {
-                case "intent.storage.cleanup":
+                case DiagnosticIntents.StorageCleanup:
                     severity = hasMeasuredPressure ? DiagnosticSeverity.Warning : DiagnosticSeverity.Information;
                     summary = hasMeasuredPressure
                         ? $"Your system drive is running low on space ({pressureEvidence!.MeasuredValue})."
@@ -67,7 +67,7 @@ namespace WinCare.Application.Diagnostics
                         "cleaner-disk-pressure");
                     break;
 
-                case "intent.memory.optimize":
+                case DiagnosticIntents.MemoryOptimize:
                     severity = hasMeasuredPressure ? DiagnosticSeverity.Warning : DiagnosticSeverity.Information;
                     summary = hasMeasuredPressure
                         ? $"Memory use is high ({pressureEvidence!.MeasuredValue})."
@@ -84,7 +84,7 @@ namespace WinCare.Application.Diagnostics
                     AddRecommendedSteps(proposedSteps, "internals-memory", "health", "system");
                     break;
 
-                case "intent.network.flush":
+                case DiagnosticIntents.NetworkFlush:
                     summary = "This sounds like a network or DNS problem. Start with the read-only network checks.";
                     findings.Add(new DiagnosticFinding(
                         "finding.network.dns",
@@ -112,7 +112,7 @@ namespace WinCare.Application.Diagnostics
                         "experience-privacy-apply");
                     break;
 
-                case "intent.apps.update":
+                case DiagnosticIntents.AppsUpdate:
                     summary = "Check Windows Update history and available updates.";
                     findings.Add(new DiagnosticFinding(
                         "finding.apps.outdated",

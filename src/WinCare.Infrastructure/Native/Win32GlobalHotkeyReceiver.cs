@@ -29,32 +29,53 @@ public static class Win32GlobalHotkeyReceiver
     private static readonly ConcurrentDictionary<int, Action> _registeredCallbacks = new();
 
     /// <summary>
-    /// Registers a global hotkey with a callback action.
+    /// Registers a global hotkey with a callback action. The returned id is always allocated, but
+    /// the overload with an <c>out bool registered</c> argument reports whether the operating system armed it: when
+    /// registration fails the callback is dropped from the dispatch map so a caller can never
+    /// mistake a dead id for a live hotkey.
     /// </summary>
     public static int Register(nint hWnd, uint modifiers, uint virtualKey, Action callback)
+        => Register(hWnd, modifiers, virtualKey, callback, out _);
+
+    public static int Register(nint hWnd, uint modifiers, uint virtualKey, Action callback, out bool registered)
     {
         ArgumentNullException.ThrowIfNull(callback);
 
         int id = Interlocked.Increment(ref _nextHotkeyId);
         _registeredCallbacks[id] = callback;
 
+        registered = true;
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
-            try
+            registered = TryRegisterHotKey(hWnd, id, modifiers | ModNoRepeat, virtualKey) ||
+                         TryRegisterHotKey(hWnd, id, modifiers, virtualKey);
+            if (!registered)
             {
-                if (!RegisterHotKey(hWnd, id, modifiers | ModNoRepeat, virtualKey))
-                {
-                    // If MOD_NOREPEAT fails on older OS versions, retry without it
-                    RegisterHotKey(hWnd, id, modifiers, virtualKey);
-                }
-            }
-            catch
-            {
-                // Fallback for non-GUI/headless test environments
+                // Nothing will ever deliver a WM_HOTKEY for this id, so the callback would
+                // otherwise linger in the dispatch map forever as an unusable hotkey.
+                _registeredCallbacks.TryRemove(id, out _);
             }
         }
 
         return id;
+    }
+
+    /// <summary>
+    /// Attempts a single registration, recording the Win32 reason when it does not succeed.
+    /// </summary>
+    private static bool TryRegisterHotKey(nint hWnd, int id, uint modifiers, uint virtualKey)
+    {
+        if (RegisterHotKey(hWnd, id, modifiers, virtualKey))
+        {
+            return true;
+        }
+
+        // SetLastError is declared on the import, so the failure reason is recoverable instead of
+        // being silently swallowed into "hotkey did not register".
+        int error = Marshal.GetLastWin32Error();
+        System.Diagnostics.Debug.WriteLine(
+            $"[Win32GlobalHotkeyReceiver] RegisterHotKey id {id} failed with Win32 error {error}: {new System.ComponentModel.Win32Exception(error).Message}");
+        return false;
     }
 
     /// <summary>
@@ -70,8 +91,9 @@ public static class Win32GlobalHotkeyReceiver
             {
                 return UnregisterHotKey(hWnd, hotkeyId);
             }
-            catch
+            catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or EntryPointNotFoundException or DllNotFoundException)
             {
+                System.Diagnostics.Debug.WriteLine($"[Win32GlobalHotkeyReceiver] UnregisterHotKey id {hotkeyId} failed: {ex.Message}");
                 return false;
             }
         }

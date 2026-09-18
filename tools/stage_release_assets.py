@@ -8,6 +8,7 @@ import hashlib
 import os
 import shutil
 import sys
+from collections.abc import Sequence
 from pathlib import Path
 
 
@@ -31,7 +32,50 @@ def _get_default_version() -> str:
     return "v2.5.0-rc5"
 
 
-def stage_assets(src_dir: Path, dest_dir: Path, version: str) -> list[Path]:
+def _read_expected_manifest(manifest_path: Path) -> dict[str, str]:
+    """Parse a ``<sha256>  <name>`` digest manifest into a ``{source name: digest}`` map."""
+    digests: dict[str, str] = {}
+    for line in manifest_path.read_text(encoding="utf-8").splitlines():
+        if not line.strip():
+            continue
+        parts = line.split()
+        if len(parts) != 2:
+            raise ValueError(f"malformed digest manifest line in '{manifest_path}': {line!r}")
+        digest, name = parts[0], parts[1].lstrip("*")
+        if len(digest) != 64 or any(character not in "0123456789abcdef" for character in digest):
+            raise ValueError(f"invalid SHA-256 digest in '{manifest_path}': {digest!r}")
+        digests[name] = digest
+    if not digests:
+        raise ValueError(f"digest manifest '{manifest_path}' contains no entries")
+    return digests
+
+
+def _read_expected_manifests(
+    src_dir: Path, manifest_paths: Sequence[Path]
+) -> dict[Path, dict[str, str]]:
+    """Bind each manifest to its artifact directory below the downloads root.
+
+    download-artifact preserves package-<architecture> as the first directory,
+    with SHA256SUMS nested under artifacts/release. A root-level manifest covers
+    a single-artifact download. Never let another artifact authorize its bytes.
+    """
+    expected: dict[Path, dict[str, str]] = {}
+    for manifest_path in manifest_paths:
+        manifest_path = manifest_path.resolve()
+        relative = manifest_path.relative_to(src_dir)
+        scope = src_dir if len(relative.parts) == 1 else src_dir / relative.parts[0]
+        if scope in expected:
+            raise ValueError(f"multiple digest manifests for artifact '{scope}'")
+        expected[scope] = _read_expected_manifest(manifest_path)
+    return expected
+
+
+def stage_assets(
+    src_dir: Path,
+    dest_dir: Path,
+    version: str,
+    expected_manifests: Sequence[Path] | None = None,
+) -> list[Path]:
     """Discover, validate, and stage release assets, failing closed on conflicting duplicates."""
     src_dir = Path(src_dir).resolve()
     dest_dir = Path(dest_dir).resolve()
@@ -41,6 +85,10 @@ def stage_assets(src_dir: Path, dest_dir: Path, version: str) -> list[Path]:
 
     dest_dir.mkdir(parents=True, exist_ok=True)
     version_tag = version if version.startswith(("v", "V")) else f"v{version}"
+
+    expected_digests = (
+        _read_expected_manifests(src_dir, [Path(p) for p in expected_manifests]) if expected_manifests else None
+    )
 
     staged: dict[str, dict[str, str | int]] = {}
 
@@ -56,6 +104,12 @@ def stage_assets(src_dir: Path, dest_dir: Path, version: str) -> list[Path]:
 
             # Skip intermediate build executables
             if f.endswith(".exe") and ("wincare" not in lower_name and "release" not in lower_path and "portable" not in lower_path):
+                continue
+
+            # The pipeline compiles no Inno installer, so no Setup/installer executable is a
+            # releasable WinCare asset. Refusing it here keeps a hand-built, unsigned installer
+            # from being promoted onto the release page under the WinCare name.
+            if f.endswith(".exe") and ("setup" in lower_name or "installer" in lower_name):
                 continue
 
             # Only the WinCare application MSIX is a releasable package. Windows App Runtime
@@ -79,10 +133,7 @@ def stage_assets(src_dir: Path, dest_dir: Path, version: str) -> list[Path]:
             if f.endswith(".msix"):
                 dest_name = f"WinCare-{version_tag}-{platform_tag}.msix" if platform_tag else f
             elif f.endswith(".exe"):
-                if "setup" in lower_name or "installer" in lower_name:
-                    dest_name = f"WinCare-{version_tag}-{platform_tag}-Setup.exe" if platform_tag else f"WinCare-{version_tag}-Setup.exe"
-                else:
-                    dest_name = f"WinCare-{version_tag}-{platform_tag}.exe" if platform_tag else f
+                dest_name = f"WinCare-{version_tag}-{platform_tag}.exe" if platform_tag else f
             elif f.endswith(".zip") and "portable" in lower_name:
                 dest_name = f"WinCare-{version_tag}-{platform_tag}-portable.zip" if platform_tag else f
             elif f.endswith(".cer"):
@@ -90,8 +141,31 @@ def stage_assets(src_dir: Path, dest_dir: Path, version: str) -> list[Path]:
             else:
                 dest_name = f
 
+            # GitHub artifact names cannot carry separators, but the fallback branches above can
+            # hand a raw filename through; reject anything that would escape dest_dir.
+            if Path(dest_name).is_absolute() or ".." in Path(dest_name).parts:
+                raise ValueError(f"unsafe staged destination name '{dest_name}' derived from '{full_path}'")
+
             file_size = full_path.stat().st_size
             file_sha = _compute_sha256(full_path)
+
+            if expected_digests is not None:
+                # Bind the staged bytes to the digest its build job recorded next to the signed
+                # binary, so substitution anywhere between build and publish fails closed.
+                relative = full_path.relative_to(src_dir)
+                scope = src_dir / relative.parts[0] if len(relative.parts) > 1 else src_dir
+                recorded = expected_digests.get(scope, expected_digests.get(src_dir, {})).get(full_path.name)
+                if not recorded:
+                    raise ValueError(
+                        f"no build-time digest recorded for staged asset '{full_path.name}'; the "
+                        "published bytes would not be bound to a recorded digest."
+                    )
+                if file_sha != recorded:
+                    raise ValueError(
+                        f"staged asset '{full_path.name}' (published as '{dest_name}') has SHA-256 "
+                        f"{file_sha}, but the build-time digest was {recorded}; the "
+                        "downloaded artifact bytes differ from the bytes the build runner produced."
+                    )
 
             if dest_name in staged:
                 existing = staged[dest_name]
@@ -116,8 +190,17 @@ def stage_assets(src_dir: Path, dest_dir: Path, version: str) -> list[Path]:
         staged_files.append(dest_path)
         print(f"Staged release asset: '{dest_name}' ({item['size']} bytes, sha256: {item['sha256'][:12]}...)")
 
+    # Publish the digest manifest alongside the assets so the release page carries the digests of
+    # the exact bytes the build runner signed. Names are the published filenames, so a user can
+    # verify any asset with `sha256sum -c SHA256SUMS` from the release download directory.
     if not staged_files:
         raise ValueError("No release assets were found to stage!")
+
+    manifest_path = dest_dir / "SHA256SUMS"
+    with manifest_path.open("w", encoding="utf-8", newline="\n") as manifest:
+        for dest_name, item in sorted(staged.items()):
+            manifest.write(f"{item['sha256']}  {dest_name}\n")
+    print(f"Recorded digest manifest for {len(staged_files)} staged assets: {manifest_path.name}")
 
     return staged_files
 
@@ -127,10 +210,21 @@ def main() -> int:
     parser.add_argument("--version", default=os.getenv("WINCARE_VERSION", _get_default_version()), help="Release version string (e.g. v2.5.0-rc5)")
     parser.add_argument("--downloads", default="artifacts/downloads", help="Directory containing downloaded workflow artifacts")
     parser.add_argument("--output", default="release_assets", help="Target release assets staging directory")
+    parser.add_argument(
+        "--expected-manifest",
+        dest="expected_manifests",
+        type=Path,
+        action="append",
+        help=(
+            "SHA256SUMS manifest written by a build job; every staged asset must match a digest "
+            "recorded in its artifact manifest or staging fails closed. Supply one per "
+            "architecture so each architecture's binaries verify against their own recorded digests."
+        ),
+    )
     args = parser.parse_args()
 
     try:
-        staged = stage_assets(Path(args.downloads), Path(args.output), args.version)
+        staged = stage_assets(Path(args.downloads), Path(args.output), args.version, args.expected_manifests)
         print(f"\nTotal release assets staged: {len(staged)}")
         return 0
     except Exception as exc:

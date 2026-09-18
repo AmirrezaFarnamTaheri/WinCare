@@ -15,6 +15,8 @@ public sealed class AllToolsPageViewModel : ObservableObject, IDisposable
     private readonly ToolCatalogService _catalog;
     private readonly Microsoft.UI.Dispatching.DispatcherQueue? _uiQueue = Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread();
     private bool _isDisposed;
+    private IReadOnlyList<CommandDefinition> _catalogSnapshot = [];
+    private bool _isRefreshingTools;
     private readonly HashSet<string> _favoriteIds = new(StringComparer.Ordinal);
     private readonly List<string> _recentIds = [];
     private string _searchText = string.Empty;
@@ -50,6 +52,7 @@ public sealed class AllToolsPageViewModel : ObservableObject, IDisposable
         Execution = new ToolExecutionViewModel(dispatcher, RecordRecent);
         IReadOnlyDictionary<string, RemediationRule> rules = RemediationCatalog.LoadRules().ToDictionary(rule => rule.Id, StringComparer.OrdinalIgnoreCase);
         PresetCards = RemediationCatalog.LoadPresets().Select(preset => PresetCardViewModel.Create(preset, rules)).ToArray();
+        _catalogSnapshot = _catalog.All.ToArray();
         _catalog.CatalogChanged += OnCatalogChanged;
         Refresh();
     }
@@ -108,6 +111,8 @@ public sealed class AllToolsPageViewModel : ObservableObject, IDisposable
 
     public AreaFilterOption SelectedAreaOption
     {
+        // The null guard is load-bearing: RebuildSectionOptions swaps the collection and the
+        // control pushes a null selection mid-swap. Removing it silently breaks area filtering.
         get => _selectedAreaOption;
         set { if (value is not null && SetProperty(ref _selectedAreaOption, value)) { RebuildSectionOptions(); _selectedSectionOption = SectionOptions[0]; OnPropertyChanged(nameof(SelectedSectionOption)); Refresh(); } }
     }
@@ -120,7 +125,8 @@ public sealed class AllToolsPageViewModel : ObservableObject, IDisposable
         get => _selectedTool;
         set
         {
-            if (ReferenceEquals(_selectedTool, value)) return;
+            // Ignore transient selection feedback while rebuilding the bound list.
+            if (_isRefreshingTools || ReferenceEquals(_selectedTool, value)) return;
             Execution.SelectTool(value);
             if (SetProperty(ref _selectedTool, value)) { IsDetailsOpen = value is not null; NotifySelectedToolChanged(); }
         }
@@ -256,13 +262,29 @@ public sealed class AllToolsPageViewModel : ObservableObject, IDisposable
         if (SelectedRiskOption.Value is RiskTier tier)
             commands = commands.Where(command => command.RiskTier == tier);
         commands = _selectedTab switch { "Favorites" => commands.Where(command => _favoriteIds.Contains(command.Id)), "Recent" => commands.Where(command => _recentIds.Contains(command.Id)).OrderBy(command => _recentIds.IndexOf(command.Id)), _ => commands };
-        string? previousSelectedId = SelectedTool?.Id; VisibleTools.Clear(); ToolRowViewModel? newSelectedTool = null;
-        foreach (CommandDefinition command in commands)
+        string? previousSelectedId = SelectedTool?.Id;
+        var previousRows = VisibleTools.ToDictionary(row => row.Id, StringComparer.Ordinal);
+        ToolRowViewModel? newSelectedTool = null;
+        _isRefreshingTools = true;
+        try
         {
-            var row = new ToolRowViewModel(command) { IsCompact = IsCompactLayout }; VisibleTools.Add(row);
-            if (previousSelectedId != null && string.Equals(command.Id, previousSelectedId, StringComparison.Ordinal)) newSelectedTool = row;
+            VisibleTools.Clear();
+            foreach (CommandDefinition command in commands)
+            {
+                // Record equality checks every definition property, not just its ID.
+                // Changed definitions get new rows, invalidating old previews and approvals.
+                var row = previousRows.TryGetValue(command.Id, out ToolRowViewModel? existing) && existing.Definition == command
+                    ? existing : new ToolRowViewModel(command);
+                row.IsCompact = IsCompactLayout;
+                VisibleTools.Add(row);
+                if (string.Equals(command.Id, previousSelectedId, StringComparison.Ordinal)) newSelectedTool = row;
+            }
         }
-        SelectedTool = newSelectedTool; OnPropertyChanged(nameof(ResultCountText)); OnPropertyChanged(nameof(IsEmpty)); OnPropertyChanged(nameof(EmptyMessage));
+        finally { _isRefreshingTools = false; }
+        SelectedTool = newSelectedTool;
+        // Republish selection after the control's transient list reset.
+        OnPropertyChanged(nameof(SelectedTool));
+        OnPropertyChanged(nameof(ResultCountText)); OnPropertyChanged(nameof(IsEmpty)); OnPropertyChanged(nameof(EmptyMessage));
     }
 
     private void OnCatalogChanged(object? sender, EventArgs e)
@@ -275,6 +297,26 @@ public sealed class AllToolsPageViewModel : ObservableObject, IDisposable
     public void Dispose()
     {
         if (_isDisposed) return; _isDisposed = true; _catalog.CatalogChanged -= OnCatalogChanged; _searchCts?.Cancel(); _searchCts?.Dispose(); _searchCts = null;
+    }
+
+    /// <summary>
+    /// Re-attaches the catalog subscription released by <see cref="Dispose"/> when the cached
+    /// page becomes active again, and picks up catalog changes that happened in the meantime.
+    /// The selected tool and its entered parameters are preserved when nothing changed.
+    /// </summary>
+    public void Reactivate()
+    {
+        if (!_isDisposed) return;
+        _isDisposed = false;
+        _catalog.CatalogChanged += OnCatalogChanged;
+
+        IReadOnlyList<CommandDefinition> snapshot = _catalog.All.ToArray();
+        if (!_catalogSnapshot.SequenceEqual(snapshot))
+        {
+            _catalogSnapshot = snapshot;
+            RebuildAreaOptions();
+            Refresh();
+        }
     }
 }
 

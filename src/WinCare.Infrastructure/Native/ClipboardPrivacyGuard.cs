@@ -53,6 +53,23 @@ public static class ClipboardPrivacyGuard
     private static extern IntPtr GlobalFree(IntPtr hMem);
 
     /// <summary>
+    /// Hands an allocated HGLOBAL to the clipboard, freeing it locally when the clipboard
+    /// refuses ownership. <see cref="SetClipboardData"/> returns NULL on failure and does
+    /// <em>not</em> take ownership of <paramref name="hMem"/>, so the caller must free it;
+    /// leaking sensitive payload memory on every failed set would leak unboundedly.
+    /// </summary>
+    /// <returns>True when the clipboard took ownership of the handle.</returns>
+    private static bool TrySetClipboardData(uint format, IntPtr hMem)
+    {
+        if (SetClipboardData(format, hMem) == IntPtr.Zero)
+        {
+            GlobalFree(hMem);
+            return false;
+        }
+        return true;
+    }
+
+    /// <summary>
     /// Sets sensitive text into the Windows clipboard while explicitly marking it
     /// to be ignored by clipboard history, monitor processing, and cloud sync.
     /// </summary>
@@ -72,40 +89,45 @@ public static class ClipboardPrivacyGuard
                 {
                     EmptyClipboard();
 
-                    // Set Unicode text data
+                    // Set Unicode text data. If the clipboard refuses ownership of the handle
+                    // TrySetClipboardData frees it here, so no payload memory is leaked.
                     byte[] textBytes = Encoding.Unicode.GetBytes(text + "\0");
                     IntPtr hText = AllocAndCopy(textBytes);
-                    if (hText != IntPtr.Zero)
+                    if (hText == IntPtr.Zero)
                     {
-                        SetClipboardData(CF_UNICODETEXT, hText);
+                        return false;
+                    }
+                    if (!TrySetClipboardData(CF_UNICODETEXT, hText))
+                    {
+                        return false;
                     }
 
-                    // Set privacy flags (DWORD = 0)
+                    // Privacy flags are best-effort and never carry the sensitive payload.
                     byte[] zeroDword = [0, 0, 0, 0];
                     byte[] oneDword = [1, 0, 0, 0];
 
                     if (CfCanIncludeInClipboardHistory != 0)
                     {
                         IntPtr hHistory = AllocAndCopy(zeroDword);
-                        if (hHistory != IntPtr.Zero) SetClipboardData(CfCanIncludeInClipboardHistory, hHistory);
+                        if (hHistory != IntPtr.Zero) TrySetClipboardData(CfCanIncludeInClipboardHistory, hHistory);
                     }
 
                     if (CfCanUploadToCloudClipboard != 0)
                     {
                         IntPtr hCloud = AllocAndCopy(zeroDword);
-                        if (hCloud != IntPtr.Zero) SetClipboardData(CfCanUploadToCloudClipboard, hCloud);
+                        if (hCloud != IntPtr.Zero) TrySetClipboardData(CfCanUploadToCloudClipboard, hCloud);
                     }
 
                     if (CfExcludeClipboardContentFromMonitorProcessing != 0)
                     {
                         IntPtr hMonitor = AllocAndCopy(oneDword);
-                        if (hMonitor != IntPtr.Zero) SetClipboardData(CfExcludeClipboardContentFromMonitorProcessing, hMonitor);
+                        if (hMonitor != IntPtr.Zero) TrySetClipboardData(CfExcludeClipboardContentFromMonitorProcessing, hMonitor);
                     }
 
                     if (CfClipboardViewerIgnore != 0)
                     {
                         IntPtr hViewer = AllocAndCopy(oneDword);
-                        if (hViewer != IntPtr.Zero) SetClipboardData(CfClipboardViewerIgnore, hViewer);
+                        if (hViewer != IntPtr.Zero) TrySetClipboardData(CfClipboardViewerIgnore, hViewer);
                     }
 
                     return true;
@@ -123,7 +145,10 @@ public static class ClipboardPrivacyGuard
     }
 
     /// <summary>
-    /// Empties the system clipboard and burns any residual stack memory.
+    /// Empties the system clipboard. EmptyClipboard already transfers ownership of every
+    /// remaining handle away from the clipboard and frees it, which is the real residual-data
+    /// control; burning this thread's stack would neither clear the clipboard payload (it lives
+    /// in HGLOBALs owned by the clipboard) nor add safety, so it is intentionally not done.
     /// </summary>
     public static bool ClearClipboard()
     {
@@ -135,10 +160,6 @@ public static class ClipboardPrivacyGuard
                 try
                 {
                     EmptyClipboard();
-                    unsafe
-                    {
-                        WinCareCoreNative.WinCareCoreBurnStack(128);
-                    }
                     return true;
                 }
                 finally

@@ -54,9 +54,24 @@ public sealed class PluginStateRepositoryFailureTests
 
     private void Cleanup()
     {
-        foreach (string path in Directory.GetFiles(Path.GetDirectoryName(_stateFile)!, Path.GetFileName(_stateFile) + "*"))
+        // The state file and its atomic-write temp sibling both live in the shared temp
+        // directory. Enumerating that directory throws UnauthorizedAccessException on
+        // machines where Path.GetTempPath() resolves to a folder that permits creating
+        // files by name but denies listing them (for example C:\Windows\Temp), so delete
+        // the known paths directly and only fall back to enumeration when listing works.
+        DeletePath(_stateFile);
+        try
         {
-            try { File.Delete(path); } catch (IOException) { }
+            foreach (string path in Directory.GetFiles(Path.GetDirectoryName(_stateFile)!, Path.GetFileName(_stateFile) + "*"))
+                DeletePath(path);
+        }
+        catch (UnauthorizedAccessException) { }
+        catch (DirectoryNotFoundException) { }
+
+        static void DeletePath(string path)
+        {
+            try { if (Directory.Exists(path)) Directory.Delete(path, recursive: true); } catch (IOException) { }
+            try { if (File.Exists(path)) File.Delete(path); } catch (IOException) { }
         }
     }
 

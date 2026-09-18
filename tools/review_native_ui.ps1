@@ -27,46 +27,57 @@ public static class WinCareReviewWindow {
 [void][WinCareReviewWindow]::SetProcessDpiAwarenessContext([IntPtr](-4))
 [void][WinCareReviewWindow]::SetThreadDpiAwarenessContext([IntPtr](-4))
 $exe = (Resolve-Path -LiteralPath $Executable).Path
-$process = Get-Process | Where-Object { $_.Path -eq $exe } | Select-Object -First 1
-if (-not $process) { $process = Start-Process -FilePath $exe -PassThru -WindowStyle Hidden }
-$deadline = [DateTime]::UtcNow.AddSeconds(20)
-do {
-    $process.Refresh()
-    if ($process.HasExited) { throw 'WinCare exited before opening its window.' }
-    if ($process.MainWindowHandle -ne 0) { break }
-    Start-Sleep -Milliseconds 200
-} while ([DateTime]::UtcNow -lt $deadline)
-if ($process.MainWindowHandle -eq 0) { throw 'WinCare did not open its window.' }
-$handle = $process.MainWindowHandle
-[void][WinCareReviewWindow]::ShowWindow($handle, 9)
-[void][WinCareReviewWindow]::SetWindowPos($handle, [IntPtr]::Zero, 40, 40, $Width, $Height, 0x0040)
-$window = [System.Windows.Automation.AutomationElement]::FromHandle($handle)
-$condition = [System.Windows.Automation.PropertyCondition]::new([System.Windows.Automation.AutomationElement]::AutomationIdProperty, $NavigationId)
-$deadline = [DateTime]::UtcNow.AddSeconds(20)
-do {
-    $element = $window.FindFirst([System.Windows.Automation.TreeScope]::Descendants, $condition)
-    if ($element) { break }
-    $process.Refresh()
-    if ($process.HasExited) { throw 'WinCare exited while loading navigation. Inspect its local crash log.' }
-    Start-Sleep -Milliseconds 200
-} while ([DateTime]::UtcNow -lt $deadline)
-if (-not $element) { throw "Navigation item not found: $NavigationId" }
-$pattern = $null
-if ($element.TryGetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern, [ref]$pattern)) { $pattern.Select() }
-elseif ($element.TryGetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern, [ref]$pattern)) { $pattern.Invoke() }
-else { throw "Navigation item cannot be activated: $NavigationId" }
-Start-Sleep -Milliseconds 700
-if ($OutputPath) {
-    $rectangle = [WinCareReviewWindow+Rect]::new()
-    [void][WinCareReviewWindow]::GetWindowRect($handle, [ref]$rectangle)
-    [void][WinCareReviewWindow]::DwmGetWindowAttribute($handle, 9, [ref]$rectangle, 16)
-    [void][WinCareReviewWindow]::SetForegroundWindow($handle)
-    Start-Sleep -Milliseconds 250
-    $bitmap = [Drawing.Bitmap]::new($rectangle.Right - $rectangle.Left, $rectangle.Bottom - $rectangle.Top)
-    $graphics = [Drawing.Graphics]::FromImage($bitmap)
-    try { $graphics.CopyFromScreen($rectangle.Left, $rectangle.Top, 0, 0, $bitmap.Size) }
-    finally { $graphics.Dispose() }
-    try { $bitmap.Save([IO.Path]::GetFullPath($OutputPath), [Drawing.Imaging.ImageFormat]::Png) }
-    finally { $bitmap.Dispose() }
+# Always launch a fresh instance. An existing process whose Path matches $Executable may be a
+# build from a different source tree or an older revision, and attaching to it would review
+# bytes other than the ones this script was asked to inspect. This script owns the process it
+# reviews, and it stops that process in the finally below.
+$process = Start-Process -FilePath $exe -PassThru -WindowStyle Hidden
+try {
+    $deadline = [DateTime]::UtcNow.AddSeconds(20)
+    do {
+        $process.Refresh()
+        if ($process.HasExited) { throw 'WinCare exited before opening its window.' }
+        if ($process.MainWindowHandle -ne 0) { break }
+        Start-Sleep -Milliseconds 200
+    } while ([DateTime]::UtcNow -lt $deadline)
+    if ($process.MainWindowHandle -eq 0) { throw 'WinCare did not open its window.' }
+    $handle = $process.MainWindowHandle
+    [void][WinCareReviewWindow]::ShowWindow($handle, 9)
+    [void][WinCareReviewWindow]::SetWindowPos($handle, [IntPtr]::Zero, 40, 40, $Width, $Height, 0x0040)
+    $window = [System.Windows.Automation.AutomationElement]::FromHandle($handle)
+    $condition = [System.Windows.Automation.PropertyCondition]::new([System.Windows.Automation.AutomationElement]::AutomationIdProperty, $NavigationId)
+    $deadline = [DateTime]::UtcNow.AddSeconds(20)
+    do {
+        $element = $window.FindFirst([System.Windows.Automation.TreeScope]::Descendants, $condition)
+        if ($element) { break }
+        $process.Refresh()
+        if ($process.HasExited) { throw 'WinCare exited while loading navigation. Inspect its local crash log.' }
+        Start-Sleep -Milliseconds 200
+    } while ([DateTime]::UtcNow -lt $deadline)
+    if (-not $element) { throw "Navigation item not found: $NavigationId" }
+    $pattern = $null
+    if ($element.TryGetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern, [ref]$pattern)) { $pattern.Select() }
+    elseif ($element.TryGetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern, [ref]$pattern)) { $pattern.Invoke() }
+    else { throw "Navigation item cannot be activated: $NavigationId" }
+    Start-Sleep -Milliseconds 700
+    if ($OutputPath) {
+        $rectangle = [WinCareReviewWindow+Rect]::new()
+        [void][WinCareReviewWindow]::GetWindowRect($handle, [ref]$rectangle)
+        [void][WinCareReviewWindow]::DwmGetWindowAttribute($handle, 9, [ref]$rectangle, 16)
+        [void][WinCareReviewWindow]::SetForegroundWindow($handle)
+        Start-Sleep -Milliseconds 250
+        $bitmap = [Drawing.Bitmap]::new($rectangle.Right - $rectangle.Left, $rectangle.Bottom - $rectangle.Top)
+        $graphics = [Drawing.Graphics]::FromImage($bitmap)
+        try { $graphics.CopyFromScreen($rectangle.Left, $rectangle.Top, 0, 0, $bitmap.Size) }
+        finally { $graphics.Dispose() }
+        try { $bitmap.Save([IO.Path]::GetFullPath($OutputPath), [Drawing.Imaging.ImageFormat]::Png) }
+        finally { $bitmap.Dispose() }
+    }
+    Write-Output "Opened $NavigationId at $Width x $Height."
 }
-Write-Output "Opened $NavigationId at $Width x $Height."
+finally {
+    # Leave no WinCare process behind on an error path or a success path.
+    if ($process -and -not $process.HasExited) {
+        Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
+    }
+}

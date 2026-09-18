@@ -106,9 +106,10 @@ public sealed class ActivityJournalService : IActivityJournalService
             _records.Add(record);
             TrimCompletedRecords();
             snapshot = SnapshotForPersistence();
+            // Queue in mutation order; the continuation performs disk I/O off-lock.
+            QueueSave(snapshot);
         }
 
-        QueueSave(snapshot);
         RaiseChanged();
         return record;
     }
@@ -160,9 +161,10 @@ public sealed class ActivityJournalService : IActivityJournalService
             };
             TrimCompletedRecords();
             snapshot = SnapshotForPersistence();
+            // Queue in mutation order; the continuation performs disk I/O off-lock.
+            QueueSave(snapshot);
         }
 
-        QueueSave(snapshot);
         RaiseChanged();
     }
 
@@ -272,13 +274,15 @@ public sealed class ActivityJournalService : IActivityJournalService
 
     private void RaiseChanged()
     {
-        try
+        var subscribers = Changed;
+        if (subscribers is null) return;
+        foreach (EventHandler subscriber in subscribers.GetInvocationList())
         {
-            Changed?.Invoke(this, EventArgs.Empty);
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"[ActivityJournal] Changed subscriber failed: {ex}");
+            try { subscriber(this, EventArgs.Empty); }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[ActivityJournal] Changed subscriber failed: {ex}");
+            }
         }
     }
 

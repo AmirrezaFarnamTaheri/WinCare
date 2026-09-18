@@ -27,6 +27,13 @@ public sealed class CommandStateStore
     private static readonly TimeSpan CrossProcessLockTimeout = TimeSpan.FromSeconds(5);
 
     /// <summary>
+    /// Upper bound on a single state value. State keys are app-owned and fixed in number, so a
+    /// value larger than this is either external data that belongs in a file the caller manages
+    /// or a corrupted/truncated write; either way it must not be fully loaded into memory.
+    /// </summary>
+    private const int MaxStateBytes = 16 * 1024 * 1024;
+
+    /// <summary>
     /// Initializes a new instance of <see cref="CommandStateStore"/>.
     /// </summary>
     /// <param name="root">Optional data root directory.</param>
@@ -73,11 +80,12 @@ public sealed class CommandStateStore
                 return fallback.Clone();
             }
             await using FileStream stream = new(path, FileMode.Open, FileAccess.Read, FileShare.Read | FileShare.Delete, 64 * 1024, useAsync: true);
-            JsonDocument document = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken).ConfigureAwait(false);
-            using (document)
-            {
-                return document.RootElement.Clone();
-            }
+            // Bound the read before parsing: a state file can grow while it is being read (another
+            // process holds the write lock and is mid-commit), and ParseAsync would otherwise
+            // buffer an unbounded amount of JSON into managed memory. Checking the length up front
+            // and then reading at most that many bytes closes the window between measurement and
+            // read without trusting the length as a fixed truth.
+            return await ParseBoundedStreamAsync(key, stream, cancellationToken).ConfigureAwait(false);
         }
         catch (JsonException ex)
         {
@@ -87,6 +95,44 @@ public sealed class CommandStateStore
         {
             _gate.Release();
         }
+    }
+
+    /// <summary>
+    /// Reads and parses a state stream without ever buffering more than <see cref="MaxStateBytes" />
+    /// into memory. <see cref="ReadAsync" /> and <see cref="UpdateAsync" /> share this primitive so an
+    /// oversized or corrupted state file is refused on every path, not only the direct read: most
+    /// state mutations flow through <see cref="UpdateAsync" />, and unbounded deserialization there
+    /// would defeat the very bound this store exists to enforce.
+    /// </summary>
+    private static async Task<JsonElement> ParseBoundedStreamAsync(string key, Stream stream, CancellationToken cancellationToken)
+    {
+        // Bound the read before parsing: a state file can grow while it is being read (another
+        // process holds the write lock and is mid-commit), and ParseAsync would otherwise
+        // buffer an unbounded amount of JSON into managed memory. Checking the length up front
+        // and then reading at most that many bytes closes the window between measurement and
+        // read without trusting the length as a fixed truth.
+        long length = stream.Length;
+        if (length > MaxStateBytes)
+        {
+            throw new InvalidDataException(
+                $"WinCare state '{key}' is {length} bytes and exceeds the {MaxStateBytes}-byte limit.");
+        }
+        // Read at most the observed length plus a small tolerance so a concurrent grower cannot
+        // push the actual byte count past the bound between the check and the parse.
+        int boundedLength = (int)Math.Min(length + 4 * 1024, MaxStateBytes);
+        var buffer = new byte[boundedLength];
+        int read = 0;
+        while (read < buffer.Length)
+        {
+            int n = await stream.ReadAsync(buffer.AsMemory(read), cancellationToken).ConfigureAwait(false);
+            if (n == 0) break;
+            read += n;
+        }
+        // Parse exactly the bytes read: the buffer is already bounded, so no further
+        // allocation can grow past the limit during deserialization.
+        using var bounded = new MemoryStream(buffer, 0, read, writable: false);
+        using JsonDocument document = await JsonDocument.ParseAsync(bounded, cancellationToken: cancellationToken).ConfigureAwait(false);
+        return document.RootElement.Clone();
     }
 
     /// <summary>
@@ -164,8 +210,7 @@ public sealed class CommandStateStore
                 try
                 {
                     await using FileStream readStream = new(path, FileMode.Open, FileAccess.Read, FileShare.Read | FileShare.Delete, 64 * 1024, useAsync: true);
-                    using JsonDocument doc = await JsonDocument.ParseAsync(readStream, cancellationToken: cancellationToken).ConfigureAwait(false);
-                    current = doc.RootElement.Clone();
+                    current = await ParseBoundedStreamAsync(key, readStream, cancellationToken).ConfigureAwait(false);
                 }
                 catch (JsonException ex)
                 {
@@ -248,6 +293,13 @@ public sealed class CommandStateStore
             {
                 await using (FileStream stream = new(temp, FileMode.CreateNew, FileAccess.Write, FileShare.None, 64 * 1024, useAsync: true))
                 {
+                    // Persist the caller's exact tree. This store is not only telemetry: it holds
+                    // transactional state such as remediation-history records that capture the exact
+                    // previous registry value so recovery can later restore it. Masking here would
+                    // silently rewrite that evidence (any previous value resembling a token, key or
+                    // card number) and recovery would then write the redacted value back. Secret
+                    // redaction belongs at the log/export/telemetry presentation boundary, which can
+                    // call SensitiveCredentialMasker explicitly; durable state stays byte-exact.
                     await JsonSerializer.SerializeAsync(stream, value, JsonOptions, cancellationToken).ConfigureAwait(false);
                     await stream.FlushAsync(cancellationToken).ConfigureAwait(false);
                 }

@@ -44,7 +44,8 @@ class ProductUiParityTests(unittest.TestCase):
         xaml = self.read("src/WinCare.App/Views/Pages/CheckupPage.xaml")
 
         self.assertIn('CommandRequest.Preview(WuaCommandId)', view_model)
-        self.assertIn('SetNavigationAction(row, "Review updates", "system-care", "Network & updates")', view_model)
+        self.assertIn('SystemCareRoute = NavigationCatalog.Items.Single(item => item.Id == "system-care").Id', view_model)
+        self.assertIn('SetNavigationAction(row, "Review updates", SystemCareRoute, "Network & updates")', view_model)
         self.assertIn("NavigationSectionTitle", view_model)
         self.assertIn("PageNavigation.NavigateToSection", page)
         self.assertNotIn("NavigationSectionIndex", row)

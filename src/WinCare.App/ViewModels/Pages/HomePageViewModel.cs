@@ -73,6 +73,7 @@ public sealed class HomePageViewModel : ObservableObject
             latestByCommand.TryGetValue(commandId, out ActivityRecord? record) &&
             record.State is ActivityState.Failed or ActivityState.NeedsAttention);
 
+        bool isChecking = latestByCommand.Values.Any(record => record.State == ActivityState.Running);
         CheckupCoverageText = $"{completed} of {QuickCheckCommandIds.Length} areas";
         if (recent == QuickCheckCommandIds.Length)
         {
@@ -89,8 +90,15 @@ public sealed class HomePageViewModel : ObservableObject
         }
         else if (latestByCommand.Count > 0)
         {
-            CheckupTitle = needsAttention > 0 ? "A few checks need attention" : "Checkup is still in progress";
-            CheckupSummary = $"{completed} of {QuickCheckCommandIds.Length} checks finished. Open a result for details.";
+            if (needsAttention > 0)
+                CheckupTitle = "A few checks need attention";
+            else if (isChecking)
+                CheckupTitle = "Checkup is still in progress";
+            else
+                CheckupTitle = "Checkup is incomplete";
+            CheckupSummary = isChecking
+                ? $"{completed} of {QuickCheckCommandIds.Length} checks finished. Other checks are still running."
+                : $"{completed} of {QuickCheckCommandIds.Length} checks finished. Run Checkup to check all four areas.";
         }
         else
         {

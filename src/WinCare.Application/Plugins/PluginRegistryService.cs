@@ -1,6 +1,8 @@
 namespace WinCare.Application.Plugins;
 
 using System.Collections.Concurrent;
+using System.Security.Cryptography;
+using System.Text.Json;
 using WinCare.Application.Commands;
 using WinCare.CommandCatalog.Models;
 using WinCare.Domain.Commands;
@@ -34,7 +36,14 @@ public sealed class PluginRegistryService : IPluginRegistry
     private readonly HashSet<string> _enabledIds;
     private readonly ScriptCommandHandlerFactory? _scriptHandlerFactory;
     private readonly BuiltInCommandHandlerFactory? _builtInHandlerFactory;
+    private readonly Func<bool> _isProcessElevated;
     private readonly SemaphoreSlim _gate = new(1, 1);
+
+    /// <summary>
+    /// Upper bound on a single plugin shutdown or disposal. A plugin that ignores its cancellation
+    /// token is abandoned after this so plugin discovery, enable and disable cannot be held forever.
+    /// </summary>
+    private static readonly TimeSpan PluginShutdownTimeout = TimeSpan.FromSeconds(30);
 
     /// <inheritdoc />
     public event EventHandler? RegistryChanged;
@@ -46,12 +55,14 @@ public sealed class PluginRegistryService : IPluginRegistry
         IPluginStateRepository? stateRepository = null,
         HashSet<string>? initialEnabledPluginIds = null,
         ScriptCommandHandlerFactory? scriptHandlerFactory = null,
-        BuiltInCommandHandlerFactory? builtInHandlerFactory = null)
+        BuiltInCommandHandlerFactory? builtInHandlerFactory = null,
+        Func<bool>? isProcessElevated = null)
     {
         _stateRepository = stateRepository;
         _enabledIds = initialEnabledPluginIds ?? _stateRepository?.LoadEnabledPluginIds() ?? new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         _scriptHandlerFactory = scriptHandlerFactory;
         _builtInHandlerFactory = builtInHandlerFactory;
+        _isProcessElevated = isProcessElevated ?? PluginAdmissionTrustStore.IsCurrentProcessElevated;
     }
 
     /// <inheritdoc />
@@ -108,7 +119,7 @@ public sealed class PluginRegistryService : IPluginRegistry
         finally
         {
             _gate.Release();
-            RegistryChanged?.Invoke(this, EventArgs.Empty);
+            RaiseRegistryChanged();
         }
     }
 
@@ -186,7 +197,7 @@ public sealed class PluginRegistryService : IPluginRegistry
         finally
         {
             _gate.Release();
-            RegistryChanged?.Invoke(this, EventArgs.Empty);
+            RaiseRegistryChanged();
         }
     }
 
@@ -210,7 +221,21 @@ public sealed class PluginRegistryService : IPluginRegistry
         finally
         {
             _gate.Release();
-            RegistryChanged?.Invoke(this, EventArgs.Empty);
+            RaiseRegistryChanged();
+        }
+    }
+
+    private void RaiseRegistryChanged()
+    {
+        var subscribers = RegistryChanged;
+        if (subscribers is null) return;
+        foreach (EventHandler subscriber in subscribers.GetInvocationList())
+        {
+            try { subscriber(this, EventArgs.Empty); }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[PluginRegistry] RegistryChanged subscriber failed: {ex}");
+            }
         }
     }
 
@@ -226,7 +251,10 @@ public sealed class PluginRegistryService : IPluginRegistry
 
     private void LoadPluginDirectory(string dirPath, bool isBuiltIn)
     {
-        var loadResult = JsonPluginLoader.LoadFromDirectory(dirPath);
+        // Only packages in a user-writable directory must present an external admission record;
+        // built-in packages in the application install directory are exempt because that location
+        // cannot be rewritten without elevation.
+        var loadResult = JsonPluginLoader.LoadFromDirectory(dirPath, requireAdmissionRecord: !isBuiltIn, isProcessElevated: _isProcessElevated);
         if (!loadResult.Success || loadResult.Manifest == null)
         {
             return;
@@ -289,23 +317,14 @@ public sealed class PluginRegistryService : IPluginRegistry
             return;
         }
 
-        try
-        {
-            await existing.Plugin.ShutdownAsync(cancellationToken).ConfigureAwait(false);
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"[PluginRegistry] Failed shutting down plugin '{pluginId}': {ex.GetType().Name} - {ex.Message}");
-        }
+        // A plugin that never returns from ShutdownAsync/DisposeAsync would hold _gate indefinitely
+        // and freeze every subsequent discovery, enable and disable. Ask it to stop, then abandon
+        // the operation when the bound elapses.
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeout.CancelAfter(PluginShutdownTimeout);
 
-        try
-        {
-            await existing.Plugin.DisposeAsync().ConfigureAwait(false);
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"[PluginRegistry] Failed disposing plugin '{pluginId}': {ex.GetType().Name} - {ex.Message}");
-        }
+        await BoundedLifecycleAsync(pluginId, "ShutdownAsync", () => existing.Plugin.ShutdownAsync(timeout.Token)).ConfigureAwait(false);
+        await BoundedLifecycleAsync(pluginId, "DisposeAsync", () => existing.Plugin.DisposeAsync().AsTask()).ConfigureAwait(false);
 
         try
         {
@@ -314,6 +333,34 @@ public sealed class PluginRegistryService : IPluginRegistry
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"[PluginRegistry] Failed unloading plugin '{pluginId}': {ex.GetType().Name} - {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Awaits a plugin lifecycle operation for at most <see cref="PluginShutdownTimeout"/>. A plugin
+    /// that ignores its cancellation token is abandoned instead of blocking the registry: the fault
+    /// is logged and observed so a late completion cannot surface as an unobserved task exception.
+    /// </summary>
+    private static async Task BoundedLifecycleAsync(string pluginId, string operationName, Func<Task> operation)
+    {
+        Task? lifecycleTask = null;
+        try
+        {
+            // Invocation itself can throw before returning a task. In-process synchronous
+            // work cannot be forcibly timed out; the deadline bounds only the returned task.
+            lifecycleTask = operation();
+            await lifecycleTask.WaitAsync(PluginShutdownTimeout).ConfigureAwait(false);
+        }
+        catch (TimeoutException) when (lifecycleTask is { IsCompleted: false })
+        {
+            System.Diagnostics.Debug.WriteLine($"[PluginRegistry] Plugin '{pluginId}' did not complete {operationName} within {(int)PluginShutdownTimeout.TotalSeconds}s and was abandoned to keep plugin lifecycle responsive.");
+            _ = lifecycleTask.ContinueWith(
+                task => System.Diagnostics.Debug.WriteLine($"[PluginRegistry] Abandoned {operationName} for plugin '{pluginId}' later faulted: {task.Exception?.InnerException?.GetType().Name} - {task.Exception?.InnerException?.Message}"),
+                CancellationToken.None, TaskContinuationOptions.OnlyOnFaulted, TaskScheduler.Default);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[PluginRegistry] Failed {operationName} for plugin '{pluginId}': {ex.GetType().Name} - {ex.Message}");
         }
     }
 
@@ -337,6 +384,35 @@ public sealed class PluginRegistryService : IPluginRegistry
         }
 
         cancellationToken.ThrowIfCancellationRequested();
+
+        // Bind the assembly to the bytes admitted at install time. A swapped assembly can keep
+        // a still-valid manifest, so verifying the manifest alone is not enough to run compiled
+        // plugin code. Absent a recorded digest (script plugins, direct test fixtures, or records
+        // predating this binding) the pre-existing trust model applies unchanged.
+        string? admittedAssemblyDigest = ReadAdmittedAssemblyDigest(entry.SourceDirectoryPath);
+        if (admittedAssemblyDigest is not null)
+        {
+            string actualAssemblyDigest;
+            try
+            {
+                using var assemblyStream = File.OpenRead(assemblyPath);
+                actualAssemblyDigest = Convert.ToHexString(SHA256.HashData(assemblyStream)).ToLowerInvariant();
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                await ShutdownInstantiatedPluginAsync(manifest.Id, CancellationToken.None).ConfigureAwait(false);
+                _entries[manifest.Id] = entry with { State = PluginState.Error, ErrorMessage = $"Plugin assembly could not be read for integrity verification: {ex.Message}" };
+                return false;
+            }
+
+            if (!string.Equals(actualAssemblyDigest, admittedAssemblyDigest, StringComparison.OrdinalIgnoreCase))
+            {
+                await ShutdownInstantiatedPluginAsync(manifest.Id, CancellationToken.None).ConfigureAwait(false);
+                _entries[manifest.Id] = entry with { State = PluginState.Error, ErrorMessage = "Security Violation: Plugin assembly no longer matches the bytes admitted at install time. Reinstall the plugin to rebind its compiled code." };
+                return false;
+            }
+        }
+
         var asmResult = AssemblyPluginLoader.LoadPluginAssembly(assemblyPath, manifest.PluginClassName);
         if (asmResult.Success && asmResult.Plugin != null)
         {
@@ -348,6 +424,48 @@ public sealed class PluginRegistryService : IPluginRegistry
         await ShutdownInstantiatedPluginAsync(manifest.Id, CancellationToken.None).ConfigureAwait(false);
         _entries[manifest.Id] = entry with { State = PluginState.Error, ErrorMessage = asmResult.ErrorMessage ?? "Assembly load failed." };
         return false;
+    }
+
+    /// <summary>
+    /// Returns the assembly digest bound by the external admission record, or null when no record
+    /// exists or it does not bind the assembly bytes.
+    /// </summary>
+    private static string? ReadAdmittedAssemblyDigest(string? sourceDirectoryPath)
+    {
+        if (string.IsNullOrWhiteSpace(sourceDirectoryPath))
+        {
+            return null;
+        }
+
+        string admissionPath;
+        try
+        {
+            admissionPath = PluginAdmissionTrustStore.TryResolveAdmissionRecordPath(sourceDirectoryPath) ?? string.Empty;
+        }
+        catch (ArgumentException)
+        {
+            return null;
+        }
+
+        if (!File.Exists(admissionPath))
+        {
+            return null;
+        }
+
+        try
+        {
+            using var stream = File.OpenRead(admissionPath);
+            var record = JsonSerializer.Deserialize<PluginAdmissionRecord>(stream,
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            return string.IsNullOrWhiteSpace(record?.AssemblySha256) ? null : record.AssemblySha256;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException)
+        {
+            // An unreadable admission record is reported by the manifest integrity path during
+            // discovery; do not attempt assembly instantiation against trust evidence we could
+            // not read.
+            return null;
+        }
     }
 
     private async Task EnablePluginInternalAsync(string pluginId, IPluginHost host, CancellationToken ct)
@@ -368,7 +486,11 @@ public sealed class PluginRegistryService : IPluginRegistry
             PluginManifest? manifest = null;
             if (!string.IsNullOrEmpty(entry.SourceDirectoryPath))
             {
-                var loadResult = JsonPluginLoader.LoadFromDirectory(entry.SourceDirectoryPath);
+                // The admission gate applied at discovery must apply again here: an enable attempt
+                // re-reads the manifest from disk and must not admit a package whose trust evidence
+                // disappeared after discovery.
+                var loadResult = JsonPluginLoader.LoadFromDirectory(
+                    entry.SourceDirectoryPath, requireAdmissionRecord: !entry.IsBuiltIn, isProcessElevated: _isProcessElevated);
                 if (!loadResult.Success || loadResult.Manifest == null)
                 {
                     throw new InvalidOperationException($"Manifest validation failed: {loadResult.ErrorMessage ?? "unknown error"}");
@@ -409,7 +531,16 @@ public sealed class PluginRegistryService : IPluginRegistry
             }
 
             var toolMap = manifest?.Tools?.ToDictionary(t => t.Id, StringComparer.OrdinalIgnoreCase);
-            foreach (var cmd in entry.Commands)
+            // Admission tiers are derived before registration so the entry's command list — which the
+            // review cards are built from — cannot disagree with what the host registered.
+            IReadOnlyList<CommandDefinition> effectiveCommands = EffectiveBuiltInCommands(entry, toolMap);
+            if (!ReferenceEquals(effectiveCommands, entry.Commands))
+            {
+                _entries[pluginId] = entry with { Commands = effectiveCommands };
+                entry = _entries[pluginId];
+            }
+
+            foreach (var cmd in effectiveCommands)
             {
                 if (host.RegisteredCommands.Any(c => string.Equals(c.Id, cmd.Id, StringComparison.OrdinalIgnoreCase)))
                 {
@@ -490,6 +621,60 @@ public sealed class PluginRegistryService : IPluginRegistry
 
         _registeredCommandIdsByPlugin.Remove(pluginId);
         await ShutdownInstantiatedPluginAsync(pluginId, CancellationToken.None).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Derives the command list a built-in plugin exposes for both registration and review cards. A
+    /// built-in tool with no handler of its own re-dispatches to a core command, so it must be
+    /// admitted at that command's tier when it is stricter than the plugin's own declaration: the
+    /// card the user approves must not understate the operation that actually executes. Tools that
+    /// have their own handler or a script keep their declared tier.
+    /// </summary>
+    private IReadOnlyList<CommandDefinition> EffectiveBuiltInCommands(
+        PluginRegistryEntry entry,
+        Dictionary<string, PluginToolDefinition>? toolMap)
+    {
+        if (!entry.IsBuiltIn || entry.Commands.Count == 0)
+        {
+            return entry.Commands;
+        }
+
+        var effective = new List<CommandDefinition>(entry.Commands.Count);
+        bool changed = false;
+        foreach (CommandDefinition command in entry.Commands)
+        {
+            PluginToolDefinition? toolDef = null;
+            toolMap?.TryGetValue(command.Id, out toolDef);
+            ICommandHandler? dedicatedHandler = _builtInHandlerFactory?.Invoke(command);
+            string? delegatedCoreCommandId = dedicatedHandler is null
+                ? ResolveBuiltInCoreCommandId(command.Id, toolDef)
+                : null;
+
+            CommandDefinition resolved = string.IsNullOrWhiteSpace(delegatedCoreCommandId)
+                ? command
+                : WithEffectiveDelegationTier(command, delegatedCoreCommandId!);
+            changed |= !ReferenceEquals(resolved, command);
+            effective.Add(resolved);
+        }
+
+        return changed ? effective : entry.Commands;
+    }
+
+    /// <summary>
+    /// Derives the admission definition a built-in alias must be registered with: the stricter of
+    /// the plugin command's declared tier and the delegated core command's own tier. Returns the
+    /// original definition unchanged when the core command is unknown or no stricter than the alias.
+    /// </summary>
+    private static CommandDefinition WithEffectiveDelegationTier(CommandDefinition pluginCommand, string targetCoreCommandId)
+    {
+        CommandDefinition? target = WinCare.CommandCatalog.CommandCatalog.Find(targetCoreCommandId);
+        if (target is null)
+        {
+            return pluginCommand;
+        }
+
+        RiskTier effective = (RiskTier)Math.Max((int)pluginCommand.RiskTier, (int)target.RiskTier);
+        return effective == pluginCommand.RiskTier ? pluginCommand : pluginCommand with { ExplicitRiskTier = effective };
     }
 
     private static string? ResolveBuiltInCoreCommandId(string commandId, PluginToolDefinition? toolDef = null)
@@ -601,10 +786,16 @@ public sealed class PluginRegistryService : IPluginRegistry
 
 internal sealed class BuiltInDelegatingHandler : ICommandHandler
 {
+    private const int MaximumDelegatedPlans = 256;
+
+    // Mirrors the dispatcher's own single-use review-plan window: a delegated receipt must not
+    // outlive the plan it carries.
+    private static readonly TimeSpan DelegatedPlanLifetime = TimeSpan.FromMinutes(15);
+
     private readonly string _commandId;
     private readonly string _targetCoreCommandId;
     private readonly ICommandDispatcher _dispatcher;
-    private readonly ConcurrentDictionary<Guid, ApprovedMutationPlan> _delegatedReviewPlans = new();
+    private readonly ConcurrentDictionary<Guid, (ApprovedMutationPlan Plan, DateTimeOffset IssuedAtUtc)> _delegatedReviewPlans = new();
 
     public BuiltInDelegatingHandler(string commandId, string targetCoreCommandId, ICommandDispatcher dispatcher)
     {
@@ -618,11 +809,28 @@ internal sealed class BuiltInDelegatingHandler : ICommandHandler
     public async Task<CommandHandlerOutcome> ExecuteAsync(CommandRequest request, CancellationToken cancellationToken)
     {
         ApprovedMutationPlan? delegatedApproval = null;
-        if (request.Apply && !_delegatedReviewPlans.TryRemove(request.CorrelationId, out delegatedApproval))
+        if (request.Apply)
         {
-            return CommandHandlerOutcome.Blocked(
-                "plugin.delegated_review_missing",
-                "The delegated core command no longer has the preview receipt created during this plugin command review. Preview the plugin command again before applying.");
+            DateTimeOffset issuedAtUtc = DateTimeOffset.UtcNow;
+            if (_delegatedReviewPlans.TryRemove(request.CorrelationId, out var receipt))
+            {
+                delegatedApproval = receipt.Plan;
+                issuedAtUtc = receipt.IssuedAtUtc;
+            }
+
+            if (delegatedApproval is null)
+            {
+                return CommandHandlerOutcome.Blocked(
+                    "plugin.delegated_review_missing",
+                    "The delegated core command no longer has the preview receipt created during this plugin command review. Preview the plugin command again before applying.");
+            }
+
+            if (DateTimeOffset.UtcNow - issuedAtUtc > DelegatedPlanLifetime)
+            {
+                return CommandHandlerOutcome.Blocked(
+                    "plugin.delegated_review_expired",
+                    "The preview receipt for this delegated plugin command expired. Preview the plugin command again before applying.");
+            }
         }
 
         var mappedRequest = new CommandRequest(
@@ -637,7 +845,7 @@ internal sealed class BuiltInDelegatingHandler : ICommandHandler
 
         if (!request.Apply && result.Status == CommandResultStatus.Succeeded && result.ReviewPlan is not null)
         {
-            _delegatedReviewPlans[request.CorrelationId] = result.ReviewPlan;
+            RecordDelegatedReviewPlan(request.CorrelationId, result.ReviewPlan);
         }
 
         if (result.Status == CommandResultStatus.Succeeded)
@@ -649,5 +857,30 @@ internal sealed class BuiltInDelegatingHandler : ICommandHandler
             return CommandHandlerOutcome.Blocked(result.Code, result.Message);
         }
         return CommandHandlerOutcome.Failed(result.Code, result.Message, result.Data);
+    }
+
+    /// <summary>
+    /// Stores a delegated receipt with its issue time. A preview that is never applied would
+    /// otherwise retain an entry for the process lifetime, so the store is bounded and expired
+    /// receipts are reclaimed before a new one is admitted.
+    /// </summary>
+    private void RecordDelegatedReviewPlan(Guid correlationId, ApprovedMutationPlan plan)
+    {
+        if (_delegatedReviewPlans.Count >= MaximumDelegatedPlans)
+        {
+            var now = DateTimeOffset.UtcNow;
+            foreach (var stale in _delegatedReviewPlans.Where(kvp => now - kvp.Value.IssuedAtUtc > DelegatedPlanLifetime).ToList())
+            {
+                _delegatedReviewPlans.TryRemove(stale.Key, out _);
+            }
+
+            if (_delegatedReviewPlans.Count >= MaximumDelegatedPlans)
+            {
+                var oldest = _delegatedReviewPlans.OrderBy(kvp => kvp.Value.IssuedAtUtc).FirstOrDefault();
+                _delegatedReviewPlans.TryRemove(oldest.Key, out _);
+            }
+        }
+
+        _delegatedReviewPlans[correlationId] = (plan, DateTimeOffset.UtcNow);
     }
 }
