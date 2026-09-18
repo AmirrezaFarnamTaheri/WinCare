@@ -6,7 +6,11 @@ All notable changes to WinCare are documented in this file in accordance with [K
 
 ## [Unreleased]
 
-_No changes yet in the next release candidate._
+### UX, Accessibility & Reliability
+
+- Restructured the product around a task-first Home and Checkup, product-wide search (`Ctrl+K`), structured Power tools Area/Section filters, exact care taxonomy routing, a canonical execution/review surface, visible extension trust state, and a Troubleshoot handoff into the same execution path.
+- Refined onboarding, product copy, and the first-run tour; the user guide now matches the tour and the PR template separates residual risk from follow-up work.
+- Rebuilt the navigation shell around grouped routes (Home, Checkup, Care, Power tools, Activity) with secondary destinations reachable without permanent rail space, and made Doctor intents translate to exact care areas rather than fuzzy categories.
 
 ## [2.5.0-rc6] - 2026-09-13
 
