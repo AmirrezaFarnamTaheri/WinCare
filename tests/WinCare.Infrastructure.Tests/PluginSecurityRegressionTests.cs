@@ -171,7 +171,7 @@ public sealed class PluginSecurityRegressionTests
             var installer = new PluginInstallerService(pluginsBaseDirectory: root);
             var installedDir = await installer.InstallPluginFromStreamAsync(package, "com.wincare.externaltrust");
 
-            var admissionPath = PluginAdmissionTrustStore.GetRecordPath(installedDir);
+            var admissionPath = PluginAdmissionTrustStore.GetUserScopedRecordPath(installedDir);
             Assert.True(File.Exists(admissionPath));
             Assert.False(admissionPath.StartsWith(
                 Path.GetFullPath(installedDir).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar,
@@ -315,7 +315,7 @@ public sealed class PluginSecurityRegressionTests
             string manifestPath = Path.Combine(pluginDir, "wincare-plugin.json");
             byte[] manifestBytes = File.ReadAllBytes(manifestPath);
             byte[] assemblyBytes = File.ReadAllBytes(Path.Combine(pluginDir, "PluginAssembly.dll"));
-            string admissionPath = PluginAdmissionTrustStore.GetRecordPath(pluginDir);
+            string admissionPath = PluginAdmissionTrustStore.GetUserScopedRecordPath(pluginDir);
             Directory.CreateDirectory(Path.GetDirectoryName(admissionPath)!);
             File.WriteAllText(admissionPath, JsonSerializer.Serialize(new PluginAdmissionRecord
             {
@@ -407,7 +407,7 @@ public sealed class PluginSecurityRegressionTests
             // disk: this is exactly the post-install assembly swap the binding must detect.
             byte[] manifestBytes = File.ReadAllBytes(manifestPath);
             string manifestDigest = Convert.ToHexString(SHA256.HashData(manifestBytes)).ToLowerInvariant();
-            string recordPath = PluginAdmissionTrustStore.GetRecordPath(pluginDir);
+            string recordPath = PluginAdmissionTrustStore.GetUserScopedRecordPath(pluginDir);
             Directory.CreateDirectory(Path.GetDirectoryName(recordPath)!);
             File.WriteAllText(recordPath, JsonSerializer.Serialize(new PluginAdmissionRecord
             {

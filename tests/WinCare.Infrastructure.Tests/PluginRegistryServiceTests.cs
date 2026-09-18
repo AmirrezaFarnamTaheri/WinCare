@@ -52,7 +52,7 @@ public sealed class PluginRegistryServiceTests
 
         byte[] manifestBytes = File.ReadAllBytes(manifestPath);
         string manifestDigest = Convert.ToHexString(SHA256.HashData(manifestBytes)).ToLowerInvariant();
-        string recordPath = PluginAdmissionTrustStore.GetRecordPath(pluginDir);
+        string recordPath = PluginAdmissionTrustStore.GetUserScopedRecordPath(pluginDir);
         Directory.CreateDirectory(Path.GetDirectoryName(recordPath)!);
         File.WriteAllText(recordPath, JsonSerializer.Serialize(new PluginAdmissionRecord
         {
@@ -608,7 +608,7 @@ public sealed class PluginRegistryServiceTests
                 System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(manifestJson)))
                 .ToLowerInvariant();
 
-            var admissionPath = PluginAdmissionTrustStore.GetRecordPath(dir);
+            var admissionPath = PluginAdmissionTrustStore.GetUserScopedRecordPath(dir);
             Directory.CreateDirectory(Path.GetDirectoryName(admissionPath)!);
             File.WriteAllText(admissionPath, System.Text.Json.JsonSerializer.Serialize(new PluginAdmissionRecord
             {

@@ -36,15 +36,18 @@ public static class RemediationRecoveryPlanner
             string appliedValueType = ReadString(detail, "valueType");
             if (path.Length == 0 || name.Length == 0 || appliedValueType.Length == 0 || !detail.TryGetProperty("value", out JsonElement appliedValue))
                 return Failed("An applied registry change is missing recovery evidence.");
-            JsonElement? previous = detail.TryGetProperty("previous", out JsonElement previousValue) ? previousValue.Clone() : null;
-            string? previousKind = detail.TryGetProperty("previousKind", out JsonElement kind) && kind.ValueKind == JsonValueKind.String ? kind.GetString() : null;
-            // JSON null counts as "no recorded previous value": a change that overwrote
-            // nothing has nothing to restore to. Reporting it as an executable compensator
-            // would promise an undo this plan cannot perform.
-            if (previous is null || (previous.Value.ValueKind is JsonValueKind.Null or JsonValueKind.Undefined) && string.IsNullOrEmpty(previousKind))
+            // The restore executor gives `previous: null` a precise meaning: the registry value
+            // did not exist before this remediation, so the compensator deletes the value it
+            // created. That is a valid, restorable undo and must stay executable.
+            if (!detail.TryGetProperty("previous", out JsonElement previousValue))
             {
+                // The apply path always writes `previous` (as null when the value was newly
+                // created), so an absent property means the record is corrupt or predates the
+                // field. No compensator can be built from it, and promising one would be unsafe.
                 return Failed($"Applied registry change '{name}' has no previous-value evidence, so no compensator can be built for it.");
             }
+            JsonElement? previous = previousValue.ValueKind == JsonValueKind.Null ? null : previousValue.Clone();
+            string? previousKind = detail.TryGetProperty("previousKind", out JsonElement kind) && kind.ValueKind == JsonValueKind.String ? kind.GetString() : null;
             steps.Add(new RegistryRecoveryStep(path, name, appliedValue.Clone(), appliedValueType, previous, previousKind));
         }
         string digest = ApprovedMutationPlan.ComputeCanonicalDigest(history).ToLowerInvariant();

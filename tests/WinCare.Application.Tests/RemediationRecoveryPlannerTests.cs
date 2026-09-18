@@ -24,15 +24,37 @@ public sealed class RemediationRecoveryPlannerTests
     }
 
     [Fact]
-    public void Applied_change_without_previous_evidence_is_not_reported_as_executable()
+    public void Applied_change_that_created_a_value_restores_by_deleting_it()
     {
-        // A compensator that has no recorded previous value has nothing to restore to. It must not
-        // be reported as an executable undo, even when every other field of the change is present.
+        // `previous: null` has a precise meaning on the execution side: the registry value did not
+        // exist before the remediation, so the compensator deletes the newly-created value. The
+        // apply path always records the property (as null in exactly this case), so the plan built
+        // from it must stay executable rather than reporting a valid undo as missing evidence.
         JsonElement history = JsonSerializer.SerializeToElement(new
         {
             id = "run-5", status = "Applied", changes = new object[]
             {
                 new { Type = "SetRegistryValue", detail = new { path = @"HKCU:\A", name = "One", previous = (object?)null, previousKind = (string?)null, value = 0, valueType = "DWord" } },
+            }
+        });
+        RemediationRecoveryPlan plan = RemediationRecoveryPlanner.Create(history);
+        Assert.True(plan.IsExecutable);
+        Assert.Single(plan.Steps);
+        Assert.Empty(plan.Failures);
+        Assert.Null(plan.Steps[0].PreviousValue);
+    }
+
+    [Fact]
+    public void Applied_change_without_a_previous_property_fails_closed()
+    {
+        // The apply path always writes `previous`; a record without the property is corrupt or
+        // predates the field, and no compensator can be built from it. It must not be reported as
+        // executable, because discovery cannot tell delete-on-undo from missing evidence.
+        JsonElement history = JsonSerializer.SerializeToElement(new
+        {
+            id = "run-6", status = "Applied", changes = new object[]
+            {
+                new { Type = "SetRegistryValue", detail = new { path = @"HKCU:\A", name = "One", value = 0, valueType = "DWord" } },
             }
         });
         RemediationRecoveryPlan plan = RemediationRecoveryPlanner.Create(history);

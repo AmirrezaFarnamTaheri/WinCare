@@ -304,9 +304,12 @@ public sealed class DownloadTaskScheduler : IDisposable
             }
             finally
             {
-                // An abandoned stale attempt cleans up only its own epoch-scoped temp file; the
-                // resumed attempt owns a different one and must not be disturbed.
-                if (task.ToSnapshot().Status != DownloadStatus.Completed) TryDelete(tempPath);
+                // Clean up this attempt's own epoch-scoped temp file unconditionally. A file that
+                // was successfully published was already moved to the destination, so TryDelete is
+                // a no-op for the current attempt. Gating on the task status instead lets a stale
+                // epoch that completes after the resumed attempt observe Completed and leak its
+                // own .part file behind.
+                TryDelete(tempPath);
             }
         }
         finally

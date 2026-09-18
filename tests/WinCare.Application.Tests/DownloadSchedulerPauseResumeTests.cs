@@ -40,8 +40,16 @@ public sealed class DownloadSchedulerPauseResumeTests
         }
     }
 
+    /// <summary>
+    /// Creates a dedicated per-test directory under the temp root and returns a destination path
+    /// inside it. Cleanup deletes only this directory, never the shared temp root.
+    /// </summary>
     private static string TempDestination()
-        => Path.Combine(Path.GetTempPath(), "WinCarePauseRace_" + Guid.NewGuid().ToString("N") + ".bin");
+    {
+        string dir = Path.Combine(Path.GetTempPath(), "WinCarePauseRace_" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(dir);
+        return Path.Combine(dir, "payload.bin");
+    }
 
     [Fact]
     public async Task ResumedTask_CompletesAndStaleAttempt_DoesNotClobberState()
@@ -96,8 +104,17 @@ public sealed class DownloadSchedulerPauseResumeTests
 
     private static void TryCleanup(string destination)
     {
-        // Remove the whole dedicated directory; it holds only this test's destination and the
-        // epoch-scoped .part files the scheduler wrote next to it.
-        try { if (Directory.Exists(Path.GetDirectoryName(destination))) Directory.Delete(Path.GetDirectoryName(destination)!, recursive: true); } catch { }
+        // Delete only the dedicated per-test directory that TempDestination created. Its parent is
+        // the shared temp root and must never be deleted recursively: that would remove unrelated
+        // files, and the broad catch below cannot undo a partial recursive delete.
+        try
+        {
+            string? dir = Path.GetDirectoryName(destination);
+            if (!string.IsNullOrEmpty(dir) && Directory.Exists(dir))
+            {
+                Directory.Delete(dir, recursive: true);
+            }
+        }
+        catch { }
     }
 }

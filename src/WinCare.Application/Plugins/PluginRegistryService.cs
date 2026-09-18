@@ -36,6 +36,7 @@ public sealed class PluginRegistryService : IPluginRegistry
     private readonly HashSet<string> _enabledIds;
     private readonly ScriptCommandHandlerFactory? _scriptHandlerFactory;
     private readonly BuiltInCommandHandlerFactory? _builtInHandlerFactory;
+    private readonly Func<bool> _isProcessElevated;
     private readonly SemaphoreSlim _gate = new(1, 1);
 
     /// <summary>
@@ -54,12 +55,14 @@ public sealed class PluginRegistryService : IPluginRegistry
         IPluginStateRepository? stateRepository = null,
         HashSet<string>? initialEnabledPluginIds = null,
         ScriptCommandHandlerFactory? scriptHandlerFactory = null,
-        BuiltInCommandHandlerFactory? builtInHandlerFactory = null)
+        BuiltInCommandHandlerFactory? builtInHandlerFactory = null,
+        Func<bool>? isProcessElevated = null)
     {
         _stateRepository = stateRepository;
         _enabledIds = initialEnabledPluginIds ?? _stateRepository?.LoadEnabledPluginIds() ?? new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         _scriptHandlerFactory = scriptHandlerFactory;
         _builtInHandlerFactory = builtInHandlerFactory;
+        _isProcessElevated = isProcessElevated ?? PluginAdmissionTrustStore.IsCurrentProcessElevated;
     }
 
     /// <inheritdoc />
@@ -251,7 +254,7 @@ public sealed class PluginRegistryService : IPluginRegistry
         // Only packages in a user-writable directory must present an external admission record;
         // built-in packages in the application install directory are exempt because that location
         // cannot be rewritten without elevation.
-        var loadResult = JsonPluginLoader.LoadFromDirectory(dirPath, requireAdmissionRecord: !isBuiltIn);
+        var loadResult = JsonPluginLoader.LoadFromDirectory(dirPath, requireAdmissionRecord: !isBuiltIn, isProcessElevated: _isProcessElevated);
         if (!loadResult.Success || loadResult.Manifest == null)
         {
             return;
@@ -437,7 +440,7 @@ public sealed class PluginRegistryService : IPluginRegistry
         string admissionPath;
         try
         {
-            admissionPath = PluginAdmissionTrustStore.GetRecordPath(sourceDirectoryPath);
+            admissionPath = PluginAdmissionTrustStore.TryResolveAdmissionRecordPath(sourceDirectoryPath) ?? string.Empty;
         }
         catch (ArgumentException)
         {
@@ -487,7 +490,7 @@ public sealed class PluginRegistryService : IPluginRegistry
                 // re-reads the manifest from disk and must not admit a package whose trust evidence
                 // disappeared after discovery.
                 var loadResult = JsonPluginLoader.LoadFromDirectory(
-                    entry.SourceDirectoryPath, requireAdmissionRecord: !entry.IsBuiltIn);
+                    entry.SourceDirectoryPath, requireAdmissionRecord: !entry.IsBuiltIn, isProcessElevated: _isProcessElevated);
                 if (!loadResult.Success || loadResult.Manifest == null)
                 {
                     throw new InvalidOperationException($"Manifest validation failed: {loadResult.ErrorMessage ?? "unknown error"}");

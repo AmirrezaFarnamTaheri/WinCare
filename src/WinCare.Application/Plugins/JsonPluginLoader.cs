@@ -44,7 +44,7 @@ public static class JsonPluginLoader
     /// that an unprivileged user can write to: without a recorded signature and digest there is no
     /// trust anchor to verify, so the package is rejected instead of parsed.
     /// </summary>
-    public static PluginLoadResult LoadFromDirectory(string pluginDirectoryPath, bool requireAdmissionRecord)
+    public static PluginLoadResult LoadFromDirectory(string pluginDirectoryPath, bool requireAdmissionRecord, Func<bool>? isProcessElevated = null, string? machineTrustRootOverride = null)
     {
         if (string.IsNullOrWhiteSpace(pluginDirectoryPath) || !Directory.Exists(pluginDirectoryPath))
         {
@@ -72,9 +72,14 @@ public static class JsonPluginLoader
 
             byte[] manifestBytes = File.ReadAllBytes(manifestPath);
             PluginAdmissionRecord? admissionRecord = null;
-            string admissionPath = PluginAdmissionTrustStore.GetRecordPath(pluginDirectoryPath);
+            // Prefer the machine trust store, then fall back to the per-user record. Both live
+            // outside the plugin directory, but only the machine store is beyond the installing
+            // account's reach, so a record found there is a real anchor while a per-user record is
+            // account-scoped trust that an elevated process must not rely on.
+            string machineRecordPath = PluginAdmissionTrustStore.GetMachineRecordPath(pluginDirectoryPath, machineTrustRootOverride);
+            string? admissionPath = PluginAdmissionTrustStore.TryResolveAdmissionRecordPath(pluginDirectoryPath, machineTrustRootOverride);
 
-            if (File.Exists(admissionPath))
+            if (admissionPath is not null)
             {
                 var admissionInfo = new FileInfo(admissionPath);
                 if (admissionInfo.Length > PluginAdmissionTrustStore.MaxRecordBytes)
@@ -101,6 +106,20 @@ public static class JsonPluginLoader
                 {
                     return new PluginLoadResult(false, null, Array.Empty<CommandDefinition>(),
                         "Plugin admission record is missing required trust metadata.");
+                }
+
+                // The record's verified location, not its self-declared scope, is the
+                // security-relevant fact: a machine record only counts when the store is actually
+                // admin-only, and only an elevated session can place one there. A record found in
+                // the user-writable fallback can be rewritten by the same account that can swap the
+                // plugin bytes, so it must not anchor code an elevated process will run.
+                bool machineAnchored = string.Equals(admissionPath, machineRecordPath, StringComparison.OrdinalIgnoreCase)
+                    && PluginAdmissionTrustStore.IsMachineRecordTrustworthy(admissionPath, machineTrustRootOverride);
+                bool elevated = (isProcessElevated ?? PluginAdmissionTrustStore.IsCurrentProcessElevated)();
+                if (!machineAnchored && elevated)
+                {
+                    return new PluginLoadResult(false, null, Array.Empty<CommandDefinition>(),
+                        "This plugin is trusted only for the account that installed it: its admission record lives in a user-writable location, so an elevated WinCare process cannot load it. Reinstall the plugin from an elevated session to anchor it in the machine trust store.");
                 }
 
                 string actualDigest = Convert.ToHexString(SHA256.HashData(manifestBytes)).ToLowerInvariant();

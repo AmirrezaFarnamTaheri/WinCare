@@ -6,6 +6,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using WinCare.Infrastructure.Plugins;
+using WinCare.Application.Plugins;
 using Xunit;
 
 namespace WinCare.Infrastructure.Tests;
@@ -758,6 +759,109 @@ public class PluginInstallerServiceTests
                 consentedCapabilities: new[] { "filesystem.read" });
 
             Assert.True(Directory.Exists(installedPath));
+        }
+        finally
+        {
+            if (Directory.Exists(tempPluginsDir))
+            {
+                Directory.Delete(tempPluginsDir, recursive: true);
+            }
+        }
+    }
+
+    [Fact]
+    public async Task InstallPluginFromStreamAsync_BindsAssemblyDigestThroughTheAssemblyEntryAlias()
+    {
+        var tempPluginsDir = Path.Combine(Path.GetTempPath(), $"wincare_test_plugins_{Guid.NewGuid():N}");
+        var tempTrustRoot = Path.Combine(Path.GetTempPath(), $"wincare_test_trust_{Guid.NewGuid():N}");
+
+        try
+        {
+            byte[] assemblyBytes = Encoding.UTF8.GetBytes("MZ\u0090\u0000 payload for the assembly entry alias binding");
+            using var memoryStream = new MemoryStream();
+            using (var zip = new ZipArchive(memoryStream, ZipArchiveMode.Create, leaveOpen: true))
+            {
+                var manifestEntry = zip.CreateEntry("plugin.json");
+                using (var writer = new StreamWriter(manifestEntry.Open()))
+                {
+                    // `assemblyEntry` is the alias for `assemblyFileName`; the installer must resolve it
+                    // to the effective filename, or the admission record would carry no assembly digest
+                    // and the compiled code would load unbound.
+                    writer.Write(JsonSerializer.Serialize(new
+                    {
+                        id = "com.wincare.assemblyalias", name = "Assembly Alias Plugin", version = "1.0.0",
+                        assemblyEntry = "AliasPlugin.dll", pluginClassName = "AliasPlugin.Plugin"
+                    }));
+                }
+                var codeEntry = zip.CreateEntry("AliasPlugin.dll");
+                using (var stream = codeEntry.Open())
+                {
+                    stream.Write(assemblyBytes, 0, assemblyBytes.Length);
+                }
+            }
+
+            memoryStream.Position = 0;
+
+            var installer = new PluginInstallerService(
+                pluginsBaseDirectory: tempPluginsDir,
+                trustRootOverride: tempTrustRoot,
+                isProcessElevated: static () => false);
+
+            string installedPath = await installer.InstallPluginFromStreamAsync(memoryStream, "com.wincare.assemblyalias");
+
+            string admissionPath = PluginAdmissionTrustStore.GetUserScopedRecordPath(installedPath);
+            Assert.True(File.Exists(admissionPath));
+            var record = JsonSerializer.Deserialize<PluginAdmissionRecord>(
+                await File.ReadAllTextAsync(admissionPath), new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            Assert.NotNull(record);
+            string expected = Convert.ToHexString(SHA256.HashData(assemblyBytes)).ToLowerInvariant();
+            Assert.Equal(expected, record!.AssemblySha256);
+        }
+        finally
+        {
+            if (Directory.Exists(tempPluginsDir))
+            {
+                Directory.Delete(tempPluginsDir, recursive: true);
+            }
+
+            if (Directory.Exists(tempTrustRoot))
+            {
+                Directory.Delete(tempTrustRoot, recursive: true);
+            }
+        }
+    }
+
+    [Fact]
+    public async Task InstallPluginFromStreamAsync_RejectsAssemblyPluginWhoseDeclaredAssemblyIsMissing()
+    {
+        var tempPluginsDir = Path.Combine(Path.GetTempPath(), $"wincare_test_plugins_{Guid.NewGuid():N}");
+
+        try
+        {
+            using var memoryStream = new MemoryStream();
+            using (var zip = new ZipArchive(memoryStream, ZipArchiveMode.Create, leaveOpen: true))
+            {
+                var manifestEntry = zip.CreateEntry("plugin.json");
+                using (var writer = new StreamWriter(manifestEntry.Open()))
+                {
+                    writer.Write(JsonSerializer.Serialize(new
+                    {
+                        id = "com.wincare.missingassembly", name = "Missing Assembly Plugin", version = "1.0.0",
+                        assemblyEntry = "NotPresent.dll", pluginClassName = "Missing.Plugin"
+                    }));
+                }
+            }
+
+            memoryStream.Position = 0;
+
+            var installer = new PluginInstallerService(pluginsBaseDirectory: tempPluginsDir);
+
+            // An assembly plugin whose compiled bytes cannot be bound must not be admitted: a null
+            // digest fails open at load time, where verification runs only when a digest exists.
+            await Assert.ThrowsAsync<InvalidOperationException>(() =>
+                installer.InstallPluginFromStreamAsync(memoryStream, "com.wincare.missingassembly"));
+
+            Assert.False(Directory.Exists(Path.Combine(tempPluginsDir, "com.wincare.missingassembly")));
         }
         finally
         {

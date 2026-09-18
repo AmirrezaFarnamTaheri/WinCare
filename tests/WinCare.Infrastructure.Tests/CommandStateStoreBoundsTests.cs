@@ -55,4 +55,22 @@ public sealed class CommandStateStoreBoundsTests : IDisposable
         Assert.Equal("state", read.GetProperty("label").GetString());
         Assert.Equal(new[] { 1, 2, 3 }, read.GetProperty("sequence").EnumerateArray().Select(e => e.GetInt32()).ToArray());
     }
+
+    [Fact]
+    public async Task Oversized_state_is_rejected_by_update_instead_of_fully_loaded()
+    {
+        var store = new CommandStateStore(_root);
+
+        // UpdateAsync reads the existing file before transforming it, so the same unbounded
+        // deserialization path ReadAsync guards must be guarded here too. Most state mutations
+        // flow through this method, so an unbounded parse would defeat the bound entirely.
+        var small = JsonDocument.Parse("""{"ok": true}""").RootElement.Clone();
+        await store.WriteAsync("big", small, CancellationToken.None);
+
+        string path = Path.Combine(_root, "big.json");
+        await File.WriteAllBytesAsync(path, new byte[MaxStateBytes + 4096], CancellationToken.None);
+
+        await Assert.ThrowsAsync<InvalidDataException>(() =>
+            store.UpdateAsync("big", small, _ => small, CancellationToken.None));
+    }
 }
