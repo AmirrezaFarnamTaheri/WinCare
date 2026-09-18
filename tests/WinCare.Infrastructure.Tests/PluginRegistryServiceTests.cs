@@ -90,7 +90,7 @@ public sealed class PluginRegistryServiceTests
 
         var host = new DummyPluginHost { PluginsUserDirectory = tempUserPluginsDir };
         var enabledIds = new HashSet<string> { "com.wincare.sample" };
-        var service = new PluginRegistryService(initialEnabledPluginIds: enabledIds);
+        var service = new PluginRegistryService(initialEnabledPluginIds: enabledIds, isProcessElevated: static () => false);
 
         int eventCount = 0;
         service.RegistryChanged += (s, e) => eventCount++;
@@ -167,7 +167,7 @@ public sealed class PluginRegistryServiceTests
         WritePluginWithAdmission(pluginDir, manifestJson);
 
         var host = new DummyPluginHost { PluginsUserDirectory = tempUserPluginsDir };
-        var service = new PluginRegistryService();
+        var service = new PluginRegistryService(isProcessElevated: static () => false);
 
         try
         {
@@ -224,7 +224,8 @@ public sealed class PluginRegistryServiceTests
         var host = new DefaultPluginHost(dispatcher, pluginsUserDirectory: tempUserPluginsDir);
         var service = new PluginRegistryService(
             scriptHandlerFactory: (cmdId, scriptPath, pDir, readOnly, capabilities) => new WinCare.Infrastructure.Plugins.PluginScriptCommandHandler(cmdId, scriptPath, pDir, declaredReadOnly: readOnly, declaredCapabilities: capabilities),
-            initialEnabledPluginIds: new HashSet<string> { "com.wincare.e2e" });
+            initialEnabledPluginIds: new HashSet<string> { "com.wincare.e2e" },
+            isProcessElevated: static () => false);
 
         try
         {
@@ -285,7 +286,8 @@ public sealed class PluginRegistryServiceTests
         var host = new DefaultPluginHost(dispatcher, pluginsUserDirectory: tempUserPluginsDir);
         var service = new PluginRegistryService(
             scriptHandlerFactory: (cmdId, scriptPath, pDir, readOnly, capabilities) => new WinCare.Infrastructure.Plugins.PluginScriptCommandHandler(cmdId, scriptPath, pDir, declaredReadOnly: readOnly, declaredCapabilities: capabilities),
-            initialEnabledPluginIds: new HashSet<string> { "com.wincare.collision" });
+            initialEnabledPluginIds: new HashSet<string> { "com.wincare.collision" },
+            isProcessElevated: static () => false);
 
         try
         {
@@ -345,7 +347,8 @@ public sealed class PluginRegistryServiceTests
         var host = new DefaultPluginHost(dispatcher, pluginsUserDirectory: tempUserPluginsDir);
         var service = new PluginRegistryService(
             scriptHandlerFactory: (cmdId, scriptPath, pDir, readOnly, capabilities) => new WinCare.Infrastructure.Plugins.PluginScriptCommandHandler(cmdId, scriptPath, pDir, declaredReadOnly: readOnly, declaredCapabilities: capabilities),
-            initialEnabledPluginIds: new HashSet<string> { "com.community.mycustomtool" });
+            initialEnabledPluginIds: new HashSet<string> { "com.community.mycustomtool" },
+            isProcessElevated: static () => false);
 
         try
         {
@@ -403,7 +406,7 @@ public sealed class PluginRegistryServiceTests
 
         var dispatcher = new CommandDispatcher(Array.Empty<CommandDefinition>(), Array.Empty<ICommandHandler>());
         var host = new DefaultPluginHost(dispatcher, pluginsUserDirectory: tempUserPluginsDir);
-        var service = new PluginRegistryService();
+        var service = new PluginRegistryService(isProcessElevated: static () => false);
 
         try
         {
@@ -458,7 +461,8 @@ public sealed class PluginRegistryServiceTests
         var host = new DefaultPluginHost(dispatcher, pluginsUserDirectory: tempUserPluginsDir);
         var service = new PluginRegistryService(
             scriptHandlerFactory: (cmdId, scriptPath, pDir, readOnly, capabilities) => new WinCare.Infrastructure.Plugins.PluginScriptCommandHandler(cmdId, scriptPath, pDir, declaredReadOnly: readOnly, declaredCapabilities: capabilities),
-            initialEnabledPluginIds: new HashSet<string> { "com.wincare.mutating" });
+            initialEnabledPluginIds: new HashSet<string> { "com.wincare.mutating" },
+            isProcessElevated: static () => false);
 
         try
         {
@@ -519,7 +523,8 @@ public sealed class PluginRegistryServiceTests
 
         var dispatcher = new CommandDispatcher(Array.Empty<CommandDefinition>(), Array.Empty<ICommandHandler>());
         var host = new DefaultPluginHost(dispatcher, pluginsUserDirectory: tempUserPluginsDir);
-        var service = new PluginRegistryService(initialEnabledPluginIds: new HashSet<string> { "com.community.badtfm" });
+        var service = new PluginRegistryService(initialEnabledPluginIds: new HashSet<string> { "com.community.badtfm" },
+            isProcessElevated: static () => false);
 
         try
         {
@@ -616,7 +621,7 @@ public sealed class PluginRegistryServiceTests
                 ManifestSha256 = digest
             }));
 
-            var untampered = JsonPluginLoader.LoadFromDirectory(dir);
+            var untampered = JsonPluginLoader.LoadFromDirectory(dir, requireAdmissionRecord: true, isProcessElevated: static () => false);
             Assert.True(untampered.Success, untampered.ErrorMessage);
 
             var tamperedJson = manifestJson.Replace("Integrity Plugin", "Tampered Plugin", StringComparison.Ordinal);
@@ -626,7 +631,7 @@ public sealed class PluginRegistryServiceTests
                 .ToLowerInvariant();
             File.WriteAllText(Path.Combine(dir, ".wincare-manifest.sha256"), forgedLegacyDigest);
 
-            var tampered = JsonPluginLoader.LoadFromDirectory(dir);
+            var tampered = JsonPluginLoader.LoadFromDirectory(dir, requireAdmissionRecord: true, isProcessElevated: static () => false);
             Assert.False(tampered.Success);
             Assert.Contains("integrity", tampered.ErrorMessage, StringComparison.OrdinalIgnoreCase);
         }

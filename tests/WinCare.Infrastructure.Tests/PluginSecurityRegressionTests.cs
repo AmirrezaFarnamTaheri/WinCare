@@ -168,9 +168,13 @@ public sealed class PluginSecurityRegressionTests
         try
         {
             using var package = CreatePackage("com.wincare.externaltrust", "Publisher");
-            var installer = new PluginInstallerService(pluginsBaseDirectory: root);
+            var installer = new PluginInstallerService(pluginsBaseDirectory: root, isProcessElevated: static () => false);
             var installedDir = await installer.InstallPluginFromStreamAsync(package, "com.wincare.externaltrust");
 
+            // The installer records per-user trust when the session is not elevated, which is the
+            // case this fixture models. The machine trust store would require an elevated session
+            // to harden its ACL, and the CI runner is elevated, so assert the user-scoped path
+            // against a session that is declared non-elevated rather than ambient.
             var admissionPath = PluginAdmissionTrustStore.GetUserScopedRecordPath(installedDir);
             Assert.True(File.Exists(admissionPath));
             Assert.False(admissionPath.StartsWith(
@@ -180,7 +184,9 @@ public sealed class PluginSecurityRegressionTests
 
             // The package helper intentionally emits an UTF-8 BOM. Installer and discovery
             // must accept it without changing the exact raw bytes covered by admission trust.
-            var admitted = JsonPluginLoader.LoadFromDirectory(installedDir);
+            // A non-elevated session is the trust scope the installer above recorded, so discovery
+            // must read the per-user record instead of refusing it as user-writable trust.
+            var admitted = JsonPluginLoader.LoadFromDirectory(installedDir, requireAdmissionRecord: true, isProcessElevated: static () => false);
             Assert.True(admitted.Success, admitted.ErrorMessage);
 
             var manifestPath = Path.Combine(installedDir, "wincare-plugin.json");
@@ -192,7 +198,7 @@ public sealed class PluginSecurityRegressionTests
             var forgedDigest = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(tampered))).ToLowerInvariant();
             File.WriteAllText(Path.Combine(installedDir, PluginInstallerService.ManifestDigestFileName), forgedDigest);
 
-            var result = JsonPluginLoader.LoadFromDirectory(installedDir);
+            var result = JsonPluginLoader.LoadFromDirectory(installedDir, requireAdmissionRecord: true, isProcessElevated: static () => false);
             Assert.False(result.Success);
             Assert.Contains("integrity", result.ErrorMessage, StringComparison.OrdinalIgnoreCase);
         }
@@ -328,7 +334,8 @@ public sealed class PluginSecurityRegressionTests
             var dispatcher = new CommandDispatcher(Array.Empty<CommandDefinition>(), Array.Empty<ICommandHandler>());
             var host = new DefaultPluginHost(dispatcher, pluginsUserDirectory: root);
             var registry = new PluginRegistryService(
-                initialEnabledPluginIds: new HashSet<string> { "com.wincare.rollbackassembly" });
+                initialEnabledPluginIds: new HashSet<string> { "com.wincare.rollbackassembly" },
+                isProcessElevated: static () => false);
 
             await registry.DiscoverAndInitializeAsync(host);
 
@@ -419,7 +426,8 @@ public sealed class PluginSecurityRegressionTests
 
             var host = new DummyPluginHost { PluginsUserDirectory = root };
             var registry = new PluginRegistryService(
-                initialEnabledPluginIds: new HashSet<string> { "com.wincare.tamperprobe" });
+                initialEnabledPluginIds: new HashSet<string> { "com.wincare.tamperprobe" },
+                isProcessElevated: static () => false);
 
             await registry.DiscoverAndInitializeAsync(host);
 
