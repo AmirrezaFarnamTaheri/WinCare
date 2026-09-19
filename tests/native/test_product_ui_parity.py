@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import html
 import re
 import unittest
 from pathlib import Path
@@ -181,6 +182,44 @@ class ProductUiParityTests(unittest.TestCase):
         self.assertIn("PrimaryNavigation.SelectedItem = null", shell_code)
         self.assertEqual(1, shell_code.count("_pendingParameter" + " = parameter"))
         self.assertNotIn("_pendingToolsParameter", shell_code)
+
+    def test_chrome_labels_agree_across_catalog_xaml_and_resources(self) -> None:
+        # Wave 4 i18n audit: en-US is the only shipped locale, but nav/page chrome labels
+        # exist in three places (NavigationCatalog, XAML Content/Text, Resources.resw).
+        # Pin them together so a rename cannot silently drift one copy.
+        catalog = self.read("src/WinCare.Application/Navigation/NavigationCatalog.cs")
+        resw = self.read("src/WinCare.App/Strings/en-US/Resources.resw")
+
+        resw_values = {
+            (uid, prop): value
+            for uid, prop, value in re.findall(
+                r'<data name="([^.]+)\.(\w+)"[^>]*><value>(.*?)</value></data>', resw)
+        }
+
+        xaml_files = [ROOT / "src/WinCare.App/Views/ShellPage.xaml",
+                      *sorted((ROOT / "src/WinCare.App/Views/Pages").glob("*.xaml"))]
+        uid_count = 0
+        for path in xaml_files:
+            source = path.read_text(encoding="utf-8")
+            for attrs in re.findall(r'<\w+(?:\.\w+)*\s((?:[^>"]|"[^"]*")*?/?)>', source):
+                uid_match = re.search(r'x:Uid="([^"]+)"', attrs)
+                if uid_match is None:
+                    continue
+                uid = uid_match.group(1)
+                for prop in ("Content", "Text"):
+                    prop_match = re.search(rf'{prop}="([^"]*)"', attrs)
+                    if prop_match is None:
+                        continue
+                    uid_count += 1
+                    self.assertIn((uid, prop), resw_values, f"{path.name}: {uid}.{prop} missing from Resources.resw")
+                    self.assertEqual(prop_match.group(1), resw_values[(uid, prop)],
+                                     f"{path.name}: {uid}.{prop} differs from Resources.resw")
+        self.assertGreater(uid_count, 15)
+
+        catalog_labels = set(re.findall(r'new\("[^"]+", "([^"]+)"', catalog))
+        nav_labels = {html.unescape(value) for (uid, prop), value in resw_values.items()
+                      if uid.startswith("Nav") and prop == "Content"}
+        self.assertEqual(catalog_labels, nav_labels)
 
     def test_activity_copy_is_plain_language(self) -> None:
         activity = self.read("src/WinCare.App/Views/Pages/ActivityPage.xaml")

@@ -205,3 +205,17 @@ Targeted scans beyond the UI layer, all resolved against source:
   (catalog ⇄ PageService ⇄ ShellPage Tags, `about` hidden-exception) — verified live: passes on
   current source, fails with the correct finding on a seeded drift, restores clean. The runtime
   one-direction `Debug.Assert` in `PageService.cs` remains as defense-in-depth.
+- Wave 3 triage (finding, not a skip): real XAML spacing values (6/10/14/18/20/28) do not sit on
+  the documented 4/8/12/16/24 scale; forcing token substitution without live rendering would be
+  a blind redesign. Card shells mostly already use `DashboardCardStyle`/`SurfaceBorderStyle`
+  (recon overstated). PageHeader duplication (12 pages, one adjacency) is real — deferred to a
+  post-render verified pass. The spacing token scale from wave 2 stays available.
+- Wave 4 landed: global-search ranking extracted to `Application/Navigation/GlobalSearchService`
+  (+11 characterization tests; view glue left in `MainWindow`; parity gate retargeted, contract
+  unchanged). i18n audit finding: the app is English-only (single `Strings/en-US/Resources.resw`,
+  22 keys) covering only nav/page-title chrome; all body copy, VM strings, and search results are
+  unlocalized literals. Each chrome label exists in three copies (catalog / XAML / resw) with no
+  prior guard — new native gate
+  `test_chrome_labels_agree_across_catalog_xaml_and_resources` pins XAML⇄resw equality and
+  catalog⇄resw label sets (falsification-tested). Expanding resw coverage is out of scope for the
+  re-release; recorded as a post-3.0 decision point.
