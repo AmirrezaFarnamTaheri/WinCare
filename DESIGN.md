@@ -1,6 +1,6 @@
 # WinCare — Task-first Fluent Workspace
 
-The September 2026 product finalization moves WinCare from an instrument-panel metaphor to a calmer task-first native WinUI 3 workspace. Earlier concepts remain reference studies only.
+WinCare is a task-first native WinUI 3 workspace played straight against Fluent: calm surfaces, system-tracked accent, semantics carried by text and structure rather than hue. The 3.0.0 re-release re-based the palette onto this system; the task-first product model itself predates it.
 
 ## Design intent
 
@@ -32,15 +32,15 @@ The 2026-09 redesign concept studies were retired with the 3.0.0 re-release; thi
 | AccentChromeSubtleBrush | #D6EAF7 | #1E3B4F |
 | TextOnAccentBrush | #FFFFFF | #0A1E2C |
 
-Status colors retain semantic meaning. Brand color is not a health result. Primary-action styles use WinUI's native `AccentFillColorDefaultBrush`/`TextOnAccentFillColorPrimaryBrush`, so buttons and links follow the user's system accent; the static `AccentBrush`/`AccentChromeBrush` values above carry the Windows default accent for view-model-bound brushes. High contrast uses Windows system colors; status pills there carry meaning through text and borders, never fill hue alone. Native caption controls follow appearance too.
+Status colors retain semantic meaning. Brand color is not a health result. Primary-action styles use WinUI's native `AccentFillColorDefaultBrush`/`TextOnAccentFillColorPrimaryBrush`, so buttons and links follow the user's system accent; the static `AccentBrush`/`AccentChromeBrush` values above carry the Windows default accent for view-model-bound brushes. Status-pill pairs (`PillReadOnlyBg`/`PillMutatingBg`/`PillElevatedBg`/`PillNotReadyBg` with `PillText`/`PillAltText`) stay literal hex so the contrast gates can measure them; runtime composition is pinned in `verify_pill_contrast.py`. High contrast uses Windows system colors — the not-ready pill drops to the window ground and HC pills carry meaning through text and borders, never fill hue alone. Native caption controls follow appearance too.
 
 ## Typography and geometry
 
 - Segoe UI Variable Display for headings, Segoe UI Variable Text for controls and prose. Native Windows legibility is intentional.
 - Cascadia Code / Cascadia Mono / Consolas only for measurements, identifiers and technical evidence.
 - Page title 34 DIP; section 20; row title 15; body 14 with 21-DIP line height; secondary prose 13 with 18-DIP line height. No decorative labels above page headings.
-- Four-DIP rhythm, 32-DIP desktop inset, 20-DIP compact inset. Related controls use 8–12 DIP gaps; sections use 24–28.
-- Outer panels 12-DIP corners, inner panels and controls 8, status labels 4. Use one enclosure per functional group.
+- Spacing tokens `SpacingXS`–`XXL` (4/8/12/16/24/32) and `GapXS`–`XL` exist in `ControlStyles.xaml` for new work; existing page markup still uses a 6–28 DIP mix that does not sit on that scale. Migrating page literals is a deferred, render-verified pass — replacing values blind would be a redesign, not a cleanup.
+- Desktop inset 32 DIP; compact 20. Outer panels 12-DIP corners, inner panels and controls 8, status labels 4. One enclosure per functional group.
 - Primary actions use the Windows system accent via native WinUI accent brushes. Secondary actions use QuietButtonStyle. Diagnostic channels share a native button style with visible focus.
 - Preserve native hover, pressed, disabled and busy states. No perpetual animation or delayed feedback for effect.
 
@@ -74,4 +74,4 @@ Activity uses a theme-aware document illustration and a separate empty compositi
 
 ## Verification
 
-Build/source checks do not establish runtime accessibility. Follow `docs/Windows-Validation.md` for the maintained Windows interaction, theme, scaling, keyboard, Narrator, packaging, and release-validation procedure. Historical captures remain labeled by build, and generated art never counts as execution evidence.
+The palette above is not decoration: `verify_visual_tokens.py` pins key presence per theme dictionary, and `verify_pill_contrast.py` plus `verify_palette_contrast.py`/`tests/native/test_visual_contrast.py` enforce WCAG 2.1 AA (≥4.5:1) on the measured literal pairs. Route and chrome-label parity across catalog/XAML/resources is gated by `verify_native_foundation.py` and `tests/native/test_product_ui_parity.py`. Build/source checks do not establish runtime accessibility: follow `docs/Windows-Validation.md` for the maintained Windows interaction, theme, scaling, keyboard, Narrator, packaging, and release-validation procedure. Historical captures remain labeled by build, and generated art never counts as execution evidence.
