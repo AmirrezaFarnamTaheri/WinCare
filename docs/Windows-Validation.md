@@ -97,4 +97,4 @@ After the required validation is complete, generate the deterministic release-ca
 python tools/finalize_native_release.py --output artifacts/finalization --version 3.0.0 --mode production
 ```
 
-The version must match `VersionPrefix` plus the optional `VersionSuffix` in `Directory.Build.props`. For production publication, follow [Release-Readiness.md](Release-Readiness.md) and use the guarded GitHub Actions release path so package, runtime, signature, version, and source-finalization checks remain attached to the exact commit being released.
+The version must match the product version in `Directory.Build.props` (VersionPrefix plus an optional prerelease suffix while one is in use). For production publication, follow [Validation.md](Validation.md) and use the guarded GitHub Actions release path so package, runtime, signature, version, and source-finalization checks remain attached to the exact commit being released.

@@ -15,7 +15,6 @@ This directory is the product-facing and engineering reference for WinCare. Star
 | Document | Purpose |
 |---|---|
 | [Architecture](Architecture.md) | Ownership boundaries, command lifecycle, plugin admission, native integration, and packaging. |
-| [Release readiness](Release-Readiness.md) | Authoritative repository gates and the distinction between automated evidence and manual release evidence. |
 | [Windows validation](Windows-Validation.md) | Repeatable Windows build, package, runtime, accessibility, and release-validation procedure. |
 | [Validation](Validation.md) | Evidence categories, repeatable checks, and the production-promotion gate. |
 | [Security](../SECURITY.md) | Threat boundaries, reporting route, and safety invariants. |

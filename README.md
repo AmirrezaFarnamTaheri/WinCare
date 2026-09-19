@@ -127,7 +127,6 @@ Automated checks do not replace human UI/accessibility inspection. Follow [Windo
 | [User guide](docs/User-Guide.md) | Installation, navigation, safe operation, and troubleshooting. |
 | [Screenshots](docs/Screenshots.md) | Runtime captures and interface references. |
 | [Architecture](docs/Architecture.md) | System boundaries, trust model, lifecycle, native integration, and packaging. |
-| [Release readiness](docs/Release-Readiness.md) | Current automated and manual release evidence requirements. |
 | [Windows validation](docs/Windows-Validation.md) | Repeatable Windows runtime and accessibility validation. |
 | [Validation](docs/Validation.md) | Evidence model and verification categories. |
 | [Security](SECURITY.md) | Security invariants and vulnerability reporting. |
