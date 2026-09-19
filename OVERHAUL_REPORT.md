@@ -55,12 +55,13 @@ Net diff: 96 files, +844/−975.
 | `verify_native_foundation` / `verify_visual_tokens` / `verify_pill_contrast` / `verify_palette_contrast` | all exit 0 |
 | App Release x64 build | 0 errors (pre-existing `mspdbcmf.exe` symbol-packing warning only) |
 | cargo `fmt --check` / `clippy -D warnings` / `test --workspace` | all exit 0 (after `b41adf5`; Rust untouched since except version constant, verified in that commit) |
+| Portable x64 publish + **local runtime smoke** (2026-09-20, post-report) | `dotnet publish` exit 0; `WinCare.App.exe --smoke-test` exit 0 in 3.0s — native ABI handshake, plugin initialization, read-only `system` dispatcher path `Succeeded`, and all 12 catalog routes navigated and loaded under the new theme system (trace: `%LOCALAPPDATA%\WinCare\logs\smoke-trace.log`). Deterministic ZIP via `package_portable.py`: exit 0, 33.2 MB (< 70 MB ceiling) |
 
 No test deleted, skipped, or weakened; the one gate retarget (`test_global_search_does_not_hide_registry_errors`) kept every assertion and gained one (service file added to the no-empty-catch check).
 
 ## 6. Known limits & remaining risks (honest)
 
-1. **Runtime visual truth is unverified by this session** — no Windows desktop session existed for the agent, and the IDE subagent path is broken. Everything visual is source-gated (keys, measured hex AA ratios) but not render-certified. **User action required:** follow `docs/Windows-Validation.md` on an installed 3.0.0 candidate — themes (Light/Dark/HC), live accent changes, Narrator, keyboard order, 100–225% scaling, and recapture `docs/images/runtime-*.png`. VM-bound brushes re-resolve via `RefreshBrushes()` on theme/HC change by design; confirm it visibly.
+1. **Runtime visual truth is partially verified.** The portable x64 runtime smoke ran successfully on this machine (see §5): the 3.0.0 shell, new theme resources, native core, plugins, and every route load without error in a real WinUI desktop session. Still **not** render-certified: theme-by-theme visual review (Light/Dark/HC), live accent changes, Narrator output, keyboard focus order, 100–225% scaling, and recaptured `docs/images/runtime-*.png`. **User action required:** follow `docs/Windows-Validation.md` section 3 on the portable build or an installed 3.0.0 candidate. VM-bound brushes re-resolve via `RefreshBrushes()` on theme/HC change by design; confirm it visibly.
 2. Wave-3 spacing-literal migration and PageHeader dedup: deferred pending the same render verification (rationale recorded in spec §8).
 3. 107 `unsafe` blocks in `wincare-core/src/lib.rs` without `// SAFETY:` — documented residual, owner-gated.
 4. Big VMs (`ToolExecutionViewModel`, PluginStore/Checkup/AllTools ~20 KB) not split: independent review was impossible (broken subagents) and splitting without evidence violates the repo's minimal-implementation rule; named residual risk, re-reviewable later.
