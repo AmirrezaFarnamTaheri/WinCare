@@ -6,7 +6,7 @@ The September 2026 product finalization moves WinCare from an instrument-panel m
 
 Give people a clear starting point, make the next useful action obvious, and keep advanced capability available without forcing everyone through a 269-command catalog. The product sequence is **Check → Understand → Act → Review**.
 
-Studies in `design/redesign-2026-09/precision-character/` are concept art, not runtime evidence. The implementation combines their strongest ideas rather than duplicating one screenshot.
+The 2026-09 redesign concept studies were retired with the 3.0.0 re-release; this file is the visual system of record. Runtime truth lives in the code and in `docs/Screenshots.md` captures — never in concept art.
 
 ## Canonical owners
 
