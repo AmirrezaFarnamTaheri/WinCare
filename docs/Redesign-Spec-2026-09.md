@@ -217,5 +217,11 @@ Targeted scans beyond the UI layer, all resolved against source:
   unlocalized literals. Each chrome label exists in three copies (catalog / XAML / resw) with no
   prior guard — new native gate
   `test_chrome_labels_agree_across_catalog_xaml_and_resources` pins XAML⇄resw equality and
-  catalog⇄resw label sets (falsification-tested). Expanding resw coverage is out of scope for the
+  catalog ⇄ resw label sets (falsification-tested). Expanding resw coverage is out of scope for the
   re-release; recorded as a post-3.0 decision point.
+- Wave 5 landed: `HealthScore{Text,Detail,BrushKey}` → `CheckupStatus*` in
+  `CheckupPageViewModel` + `CheckupPage.xaml` (the values are qualitative states — "Action
+  needed", "Looks good" — never a score; finding #6's stale naming closed). Test-first: the
+  `test_care_refinement` string pin flipped to the new name and was confirmed red before the
+  rename turned it green. Unrelated banned literal `overallHealthScore = 98`
+  (fake-handler forbid-list) intentionally untouched.

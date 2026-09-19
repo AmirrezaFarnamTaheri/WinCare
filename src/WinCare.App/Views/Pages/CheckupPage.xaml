@@ -34,8 +34,8 @@
                     <Border x:Name="CheckupStatusCard" Grid.Column="1" MinWidth="190" Padding="18" Background="{ThemeResource SurfaceSecondaryBrush}" CornerRadius="{StaticResource RadiusControl}">
                         <StackPanel Spacing="4">
                             <TextBlock Style="{StaticResource RowSecondaryTextStyle}" Text="Status" />
-                            <TextBlock Style="{StaticResource MetricTextStyle}" Foreground="{x:Bind ViewModel.HealthScoreBrushKey, Mode=OneWay, Converter={StaticResource ThemeResourceBrushConverter}}" Text="{x:Bind ViewModel.HealthScoreText, Mode=OneWay}" />
-                            <TextBlock Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind ViewModel.HealthScoreDetail, Mode=OneWay}" TextWrapping="Wrap" />
+                            <TextBlock Style="{StaticResource MetricTextStyle}" Foreground="{x:Bind ViewModel.CheckupStatusBrushKey, Mode=OneWay, Converter={StaticResource ThemeResourceBrushConverter}}" Text="{x:Bind ViewModel.CheckupStatusText, Mode=OneWay}" />
+                            <TextBlock Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind ViewModel.CheckupStatusDetail, Mode=OneWay}" TextWrapping="Wrap" />
                         </StackPanel>
                     </Border>
                 </Grid>

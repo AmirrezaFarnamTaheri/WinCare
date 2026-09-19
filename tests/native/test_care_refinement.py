@@ -19,7 +19,7 @@ class CareRefinementTests(unittest.TestCase):
         self.assertIn("CompleteInterruptedCheck(cancelled: true);", source)
         final = source.split("finally", 1)[1].split("private async Task", 1)[0]
         self.assertLess(final.index("await updateTask;"), final.index("IsRunning = false;"))
-        self.assertIn('HealthScoreText = cancelled ? "Stopped" : "Incomplete";', source)
+        self.assertIn('CheckupStatusText = cancelled ? "Stopped" : "Incomplete";', source)
         self.assertIn('row.State = "Not finished";', source)
         self.assertIn("RebuildResultRowsFromQuickChecks();", source.split("private void CompleteInterruptedCheck", 1)[1])
 

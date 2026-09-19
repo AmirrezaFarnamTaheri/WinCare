@@ -32,9 +32,9 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
     private bool _isRunning;
     private bool _isStopping;
     private string _runSummary = "Run Checkup to see how things look.";
-    private string _healthScoreText = "Not checked";
-    private string _healthScoreDetail = "Run Checkup to see the latest results";
-    private string _healthScoreBrushKey = "AccentChromeBrush";
+    private string _CheckupStatusText = "Not checked";
+    private string _CheckupStatusDetail = "Run Checkup to see the latest results";
+    private string _CheckupStatusBrushKey = "AccentChromeBrush";
 
     public CheckupPageViewModel() : this(AppRuntime.Current.Dispatcher) { }
 
@@ -64,8 +64,8 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
         if (_runCts is null || !IsRunning || IsStopping) return;
         IsStopping = true;
         RunSummary = "Stopping the checkup. Waiting for the active checks to finish.";
-        HealthScoreText = "Stopping";
-        HealthScoreDetail = "waiting for active checks";
+        CheckupStatusText = "Stopping";
+        CheckupStatusDetail = "waiting for active checks";
         _runCts.Cancel();
     }
 
@@ -98,9 +98,9 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
 
     public string RunActionText => IsStopping ? "Stopping…" : IsRunning ? "Checking your PC…" : "Run checkup";
     public string RunSummary { get => _runSummary; private set => SetProperty(ref _runSummary, value); }
-    public string HealthScoreText { get => _healthScoreText; private set => SetProperty(ref _healthScoreText, value); }
-    public string HealthScoreDetail { get => _healthScoreDetail; private set => SetProperty(ref _healthScoreDetail, value); }
-    public string HealthScoreBrushKey { get => _healthScoreBrushKey; private set => SetProperty(ref _healthScoreBrushKey, value); }
+    public string CheckupStatusText { get => _CheckupStatusText; private set => SetProperty(ref _CheckupStatusText, value); }
+    public string CheckupStatusDetail { get => _CheckupStatusDetail; private set => SetProperty(ref _CheckupStatusDetail, value); }
+    public string CheckupStatusBrushKey { get => _CheckupStatusBrushKey; private set => SetProperty(ref _CheckupStatusBrushKey, value); }
 
     public override void SelectSection(int index)
     {
@@ -112,9 +112,9 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
     {
         IsRunning = true;
         RunSummary = "Checking a few important parts of Windows. Nothing will be changed.";
-        HealthScoreText = "Checking";
-        HealthScoreDetail = "checking now";
-        HealthScoreBrushKey = "AccentChromeBrush";
+        CheckupStatusText = "Checking";
+        CheckupStatusDetail = "checking now";
+        CheckupStatusBrushKey = "AccentChromeBrush";
 
         // Link the command token with a page-owned source so leaving the page cancels the
         // whole run, including the Windows Update probe.
@@ -205,9 +205,9 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
             row.StatusBrushKey = "TextSecondaryBrush";
             ClearNavigationAction(row);
         }
-        HealthScoreText = cancelled ? "Stopped" : "Incomplete";
-        HealthScoreDetail = "completed results are shown below";
-        HealthScoreBrushKey = cancelled ? "TextSecondaryBrush" : "WarningBrush";
+        CheckupStatusText = cancelled ? "Stopped" : "Incomplete";
+        CheckupStatusDetail = "completed results are shown below";
+        CheckupStatusBrushKey = cancelled ? "TextSecondaryBrush" : "WarningBrush";
         RunSummary = cancelled
             ? "Checkup stopped. Nothing was changed. Completed results are kept below; run it again to check all areas."
             : "Checkup couldn't finish. Nothing was changed. Try again, and open Activity if it keeps happening.";
@@ -403,37 +403,37 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
 
         if (hasCritical)
         {
-            HealthScoreText = "Action needed";
-            HealthScoreDetail = "something needs your attention";
-            HealthScoreBrushKey = "DangerBrush";
+            CheckupStatusText = "Action needed";
+            CheckupStatusDetail = "something needs your attention";
+            CheckupStatusBrushKey = "DangerBrush";
             RunSummary = $"WinCare found something that needs attention: {string.Join("; ", findings)}.";
         }
         else if (hasWarning)
         {
-            HealthScoreText = "Worth a look";
-            HealthScoreDetail = "a few things are worth checking";
-            HealthScoreBrushKey = "WarningBrush";
+            CheckupStatusText = "Worth a look";
+            CheckupStatusDetail = "a few things are worth checking";
+            CheckupStatusBrushKey = "WarningBrush";
             RunSummary = $"A few things are worth a look: {string.Join("; ", findings)}.";
         }
         else if (hasIncompleteProbe)
         {
-            HealthScoreText = "Incomplete";
-            HealthScoreDetail = "some checks didn't finish";
-            HealthScoreBrushKey = "WarningBrush";
+            CheckupStatusText = "Incomplete";
+            CheckupStatusDetail = "some checks didn't finish";
+            CheckupStatusBrushKey = "WarningBrush";
             RunSummary = $"Some checks didn't finish: {string.Join("; ", findings)}.";
         }
         else if (updatesPending)
         {
-            HealthScoreText = "Checking";
-            HealthScoreDetail = "Windows Update is still checking";
-            HealthScoreBrushKey = "AccentChromeBrush";
+            CheckupStatusText = "Checking";
+            CheckupStatusDetail = "Windows Update is still checking";
+            CheckupStatusBrushKey = "AccentChromeBrush";
             RunSummary = "The main checks are done. Windows Update is still checking.";
         }
         else
         {
-            HealthScoreText = "Looks good";
-            HealthScoreDetail = "nothing stood out in these checks";
-            HealthScoreBrushKey = "SuccessBrush";
+            CheckupStatusText = "Looks good";
+            CheckupStatusDetail = "nothing stood out in these checks";
+            CheckupStatusBrushKey = "SuccessBrush";
             RunSummary = "Everything checked looks okay.";
         }
     }
