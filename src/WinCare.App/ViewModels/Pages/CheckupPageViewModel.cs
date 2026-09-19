@@ -34,7 +34,7 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
     private string _runSummary = "Run Checkup to see how things look.";
     private string _healthScoreText = "Not checked";
     private string _healthScoreDetail = "Run Checkup to see the latest results";
-    private string _healthScoreBrushKey = "AccentTealBrush";
+    private string _healthScoreBrushKey = "AccentChromeBrush";
 
     public CheckupPageViewModel() : this(AppRuntime.Current.Dispatcher) { }
 
@@ -114,7 +114,7 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
         RunSummary = "Checking a few important parts of Windows. Nothing will be changed.";
         HealthScoreText = "Checking";
         HealthScoreDetail = "checking now";
-        HealthScoreBrushKey = "AccentTealBrush";
+        HealthScoreBrushKey = "AccentChromeBrush";
 
         // Link the command token with a page-owned source so leaving the page cancels the
         // whole run, including the Windows Update probe.
@@ -243,7 +243,7 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
     {
         row.State = state;
         row.Detail = detail;
-        row.StatusBrushKey = "AccentTealBrush";
+        row.StatusBrushKey = "AccentChromeBrush";
         ClearNavigationAction(row);
     }
 
@@ -426,7 +426,7 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
         {
             HealthScoreText = "Checking";
             HealthScoreDetail = "Windows Update is still checking";
-            HealthScoreBrushKey = "AccentTealBrush";
+            HealthScoreBrushKey = "AccentChromeBrush";
             RunSummary = "The main checks are done. Windows Update is still checking.";
         }
         else

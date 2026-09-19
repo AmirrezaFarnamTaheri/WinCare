@@ -13,12 +13,13 @@ THEME_FILE = ROOT / "src/WinCare.App/Styles/ThemeResources.xaml"
 XAML_NS = "http://schemas.microsoft.com/winfx/2006/xaml/presentation"
 X_NS = "http://schemas.microsoft.com/winfx/2006/xaml"
 
-# (label, fg_key, bg_key, theme)
+# (label, fg_key, bg_key, theme) — pairs as ToolRowViewModel.StatusPill*ResourceKey
+# actually composes them: read-only/mutating carry PillText, elevated/not-ready PillAltText.
 PAIRS_SPEC = [
     ("ReadOnly dark",       "PillTextBrush",    "PillReadOnlyBgBrush",  "Dark"),
     ("Mutating dark",       "PillTextBrush",    "PillMutatingBgBrush",  "Dark"),
     ("Elevated dark",       "PillAltTextBrush", "PillElevatedBgBrush",  "Dark"),
-    ("NotReady dark",       "PillTextBrush",    "PillNotReadyBgBrush",  "Dark"),
+    ("NotReady dark",       "PillAltTextBrush", "PillNotReadyBgBrush",  "Dark"),
     ("ReadOnly light",      "PillTextBrush",    "PillReadOnlyBgBrush",  "Light"),
     ("Mutating light",      "PillTextBrush",    "PillMutatingBgBrush",  "Light"),
     ("Elevated light",      "PillAltTextBrush", "PillElevatedBgBrush",  "Light"),

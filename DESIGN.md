@@ -19,20 +19,20 @@ Studies in `design/redesign-2026-09/precision-character/` are concept art, not r
 
 | Role / resource | Light | Dark |
 |---|---|---|
-| PageBackgroundBrush | #EDF2F5 | #101B24 |
-| SurfaceBrush / CardSurfaceBrush | #FFFFFF | #182A35 |
-| SurfaceSecondaryBrush | #F2F6F8 | #203542 |
-| SurfaceHoverBrush | #E0EBF0 | #2B4655 |
-| HeroBackgroundBrush | #E5EFF4 | #14232D |
-| NavigationRailBrush | #E4ECF1 | #14232D |
-| CardBorderBrush / BorderSubtleBrush | #CBD8E0 | #36505E |
-| TextPrimaryBrush | #172D3B | #EEF5F7 |
-| TextSecondaryBrush | #435C6B | #B0C4CE |
-| AccentTealBrush / AccentBrush | #006B80 | #70D6DF |
-| AccentTealSubtleBrush | #DCEFF2 | #203F4A |
-| TextOnAccentBrush | #FFFFFF | #06151C |
+| PageBackgroundBrush | #F2F4F7 | #1C2733 |
+| SurfaceBrush / CardSurfaceBrush | #FFFFFF | #26313D |
+| SurfaceSecondaryBrush | #EDF1F5 | #2E3B49 |
+| SurfaceHoverBrush | #E1E8EE | #374656 |
+| HeroBackgroundBrush | #DFEAF2 | #202B37 |
+| NavigationRailBrush / TitleBarBackgroundBrush | #EAEEF2 | #202B37 |
+| CardBorderBrush / BorderSubtleBrush | #D5DDE4 | #46586A |
+| TextPrimaryBrush | #14202B | #EAF0F5 |
+| TextSecondaryBrush | #3D5568 | #AFC0CD |
+| AccentChromeBrush / AccentBrush | #005FB8 | #60CDFF |
+| AccentChromeSubtleBrush | #D6EAF7 | #1E3B4F |
+| TextOnAccentBrush | #FFFFFF | #0A1E2C |
 
-Status colors retain semantic meaning. Brand color is not a health result. High contrast uses Windows system colors; native caption controls follow appearance too.
+Status colors retain semantic meaning. Brand color is not a health result. Primary-action styles use WinUI's native `AccentFillColorDefaultBrush`/`TextOnAccentFillColorPrimaryBrush`, so buttons and links follow the user's system accent; the static `AccentBrush`/`AccentChromeBrush` values above carry the Windows default accent for view-model-bound brushes. High contrast uses Windows system colors; status pills there carry meaning through text and borders, never fill hue alone. Native caption controls follow appearance too.
 
 ## Typography and geometry
 
@@ -41,7 +41,7 @@ Status colors retain semantic meaning. Brand color is not a health result. High 
 - Page title 34 DIP; section 20; row title 15; body 14 with 21-DIP line height; secondary prose 13 with 18-DIP line height. No decorative labels above page headings.
 - Four-DIP rhythm, 32-DIP desktop inset, 20-DIP compact inset. Related controls use 8–12 DIP gaps; sections use 24–28.
 - Outer panels 12-DIP corners, inner panels and controls 8, status labels 4. Use one enclosure per functional group.
-- Primary actions use cyan. Secondary actions use QuietButtonStyle. Diagnostic channels share a native button style with visible focus.
+- Primary actions use the Windows system accent via native WinUI accent brushes. Secondary actions use QuietButtonStyle. Diagnostic channels share a native button style with visible focus.
 - Preserve native hover, pressed, disabled and busy states. No perpetual animation or delayed feedback for effect.
 
 ## Composition

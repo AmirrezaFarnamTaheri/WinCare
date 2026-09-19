@@ -21,7 +21,7 @@
                                 <TextBlock Text="{x:Bind Title, Mode=OneTime}" Style="{StaticResource RowTitleTextStyle}" />
                                 <TextBlock Text="{x:Bind StatusSummary, Mode=OneTime}" Style="{StaticResource RowSecondaryTextStyle}" MaxLines="4" />
                             </StackPanel>
-                            <ContentControl Grid.Column="1" VerticalAlignment="Center" Template="{StaticResource StatusPillTemplate}" Background="{ThemeResource AccentTealSubtleBrush}" BorderBrush="{ThemeResource AccentTealBrush}" Content="{x:Bind Category}" Foreground="{ThemeResource TextPrimaryBrush}" />
+                            <ContentControl Grid.Column="1" VerticalAlignment="Center" Template="{StaticResource StatusPillTemplate}" Background="{ThemeResource AccentChromeSubtleBrush}" BorderBrush="{ThemeResource AccentChromeBrush}" Content="{x:Bind Category}" Foreground="{ThemeResource TextPrimaryBrush}" />
                         </Grid>
                     </Border>
                 </DataTemplate>

@@ -9,7 +9,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 TOKENS = [
-    'AccentTealBrush', 'AccentTealSubtleBrush', 'CardSurfaceBrush',
+    'AccentChromeBrush', 'AccentChromeSubtleBrush', 'CardSurfaceBrush',
     'TelemetryFrameBrush', 'PillReadOnlyBgBrush', 'PillMutatingBgBrush',
     'PillElevatedBgBrush', 'PillVerifiedBorderBrush', 'PillNotReadyBgBrush',
     'PillTextBrush', 'PillAltTextBrush',

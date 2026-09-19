@@ -10,9 +10,24 @@
     <CornerRadius x:Key="RadiusCardOuter">12</CornerRadius>
     <CornerRadius x:Key="RadiusCardInner">8</CornerRadius>
 
+    <!-- Spacing scale backing the four-DIP rhythm in DESIGN.md; page markup must bind to
+         these instead of inline Thickness literals. -->
+    <Thickness x:Key="SpacingNone">0</Thickness>
+    <Thickness x:Key="SpacingXS">4</Thickness>
+    <Thickness x:Key="SpacingS">8</Thickness>
+    <Thickness x:Key="SpacingM">12</Thickness>
+    <Thickness x:Key="SpacingL">16</Thickness>
+    <Thickness x:Key="SpacingXL">24</Thickness>
+    <Thickness x:Key="SpacingXXL">32</Thickness>
+    <x:Double x:Key="GapXS">4</x:Double>
+    <x:Double x:Key="GapS">8</x:Double>
+    <x:Double x:Key="GapM">12</x:Double>
+    <x:Double x:Key="GapL">16</x:Double>
+    <x:Double x:Key="GapXL">24</x:Double>
+
     <Style x:Key="SectionHeaderTextStyle" TargetType="TextBlock"><Setter Property="FontFamily" Value="{StaticResource DisplayFontFamily}" /><Setter Property="FontSize" Value="20" /><Setter Property="FontWeight" Value="SemiBold" /><Setter Property="Foreground" Value="{ThemeResource TextPrimaryBrush}" /><Setter Property="TextWrapping" Value="Wrap" /></Style>
     <Style x:Key="QuietButtonStyle" TargetType="Button"><Setter Property="MinHeight" Value="44" /><Setter Property="MinWidth" Value="44" /><Setter Property="Padding" Value="16,10" /><Setter Property="CornerRadius" Value="{StaticResource RadiusControl}" /><Setter Property="Background" Value="{ThemeResource SurfaceSecondaryBrush}" /><Setter Property="Foreground" Value="{ThemeResource TextPrimaryBrush}" /><Setter Property="BorderBrush" Value="{ThemeResource CardBorderBrush}" /></Style>
-    <Style x:Key="DiagnosticChannelStyle" TargetType="Button" BasedOn="{StaticResource QuietButtonStyle}"><Setter Property="HorizontalAlignment" Value="Stretch" /><Setter Property="HorizontalContentAlignment" Value="Stretch" /><Setter Property="Padding" Value="12" /><Setter Property="MinHeight" Value="72" /><Setter Property="FocusVisualPrimaryBrush" Value="{ThemeResource AccentTealBrush}" /><Setter Property="FocusVisualSecondaryBrush" Value="{ThemeResource SurfaceBrush}" /></Style>
+    <Style x:Key="DiagnosticChannelStyle" TargetType="Button" BasedOn="{StaticResource QuietButtonStyle}"><Setter Property="HorizontalAlignment" Value="Stretch" /><Setter Property="HorizontalContentAlignment" Value="Stretch" /><Setter Property="Padding" Value="12" /><Setter Property="MinHeight" Value="72" /><Setter Property="FocusVisualPrimaryBrush" Value="{ThemeResource AccentChromeBrush}" /><Setter Property="FocusVisualSecondaryBrush" Value="{ThemeResource SurfaceBrush}" /></Style>
     <Style x:Key="AppTitleTextStyle" TargetType="TextBlock"><Setter Property="FontFamily" Value="{StaticResource DisplayFontFamily}" /><Setter Property="FontSize" Value="18" /><Setter Property="FontWeight" Value="SemiBold" /><Setter Property="Foreground" Value="{ThemeResource TextPrimaryBrush}" /></Style>
     <Style x:Key="PageTitleTextStyle" TargetType="TextBlock"><Setter Property="FontFamily" Value="{StaticResource DisplayFontFamily}" /><Setter Property="FontSize" Value="34" /><Setter Property="FontWeight" Value="SemiBold" /><Setter Property="Foreground" Value="{ThemeResource TextPrimaryBrush}" /><Setter Property="TextWrapping" Value="Wrap" /></Style>
     <Style x:Key="PageDescriptionTextStyle" TargetType="TextBlock"><Setter Property="FontFamily" Value="{StaticResource BodyFontFamily}" /><Setter Property="FontSize" Value="14" /><Setter Property="LineHeight" Value="21" /><Setter Property="TextWrapping" Value="Wrap" /><Setter Property="Foreground" Value="{ThemeResource TextSecondaryBrush}" /></Style>
@@ -27,10 +42,10 @@
     <Style x:Key="TelemetryTextStyle" TargetType="TextBlock"><Setter Property="FontFamily" Value="{StaticResource TelemetryFontFamily}" /><Setter Property="FontSize" Value="12" /><Setter Property="Foreground" Value="{ThemeResource TextSecondaryBrush}" /><Setter Property="TextWrapping" Value="Wrap" /></Style>
     <Style x:Key="SurfaceBorderStyle" TargetType="Border"><Setter Property="Background" Value="{ThemeResource CardSurfaceBrush}" /><Setter Property="BorderBrush" Value="{ThemeResource CardBorderBrush}" /><Setter Property="BorderThickness" Value="1" /><Setter Property="CornerRadius" Value="{StaticResource RadiusCardOuter}" /></Style>
     <Style x:Key="DashboardCardStyle" TargetType="Border" BasedOn="{StaticResource SurfaceBorderStyle}"><Setter Property="Padding" Value="24" /></Style>
-    <Style x:Key="AccentButtonStyle" TargetType="Button"><Setter Property="Background" Value="{ThemeResource AccentBrush}" /><Setter Property="Foreground" Value="{ThemeResource TextOnAccentBrush}" /><Setter Property="FontWeight" Value="SemiBold" /><Setter Property="Padding" Value="20,12" /><Setter Property="CornerRadius" Value="{StaticResource RadiusControl}" /><Setter Property="MinHeight" Value="44" /><Setter Property="MinWidth" Value="44" /></Style>
+    <Style x:Key="AccentButtonStyle" TargetType="Button"><Setter Property="Background" Value="{ThemeResource AccentFillColorDefaultBrush}" /><Setter Property="Foreground" Value="{ThemeResource TextOnAccentFillColorPrimaryBrush}" /><Setter Property="FontWeight" Value="SemiBold" /><Setter Property="Padding" Value="20,12" /><Setter Property="CornerRadius" Value="{StaticResource RadiusControl}" /><Setter Property="MinHeight" Value="44" /><Setter Property="MinWidth" Value="44" /></Style>
     <Style x:Key="PrimaryActionButtonStyle" TargetType="Button" BasedOn="{StaticResource AccentButtonStyle}" />
     <ControlTemplate x:Key="StatusPillTemplate" TargetType="ContentControl"><Border Padding="8,4" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1" CornerRadius="{StaticResource RadiusPill}"><ContentPresenter FontFamily="{StaticResource BodyFontFamily}" FontSize="12" FontWeight="SemiBold" Foreground="{TemplateBinding Foreground}" HorizontalAlignment="Center" VerticalAlignment="Center" /></Border></ControlTemplate>
-    <Style TargetType="ListViewItem"><Setter Property="FocusVisualPrimaryBrush" Value="{ThemeResource AccentTealBrush}" /><Setter Property="FocusVisualSecondaryBrush" Value="{ThemeResource SurfaceBrush}" /><Setter Property="FocusVisualPrimaryThickness" Value="3" /><Setter Property="FocusVisualMargin" Value="-3" /><Setter Property="CornerRadius" Value="{StaticResource RadiusControl}" /></Style>
+    <Style TargetType="ListViewItem"><Setter Property="FocusVisualPrimaryBrush" Value="{ThemeResource AccentChromeBrush}" /><Setter Property="FocusVisualSecondaryBrush" Value="{ThemeResource SurfaceBrush}" /><Setter Property="FocusVisualPrimaryThickness" Value="3" /><Setter Property="FocusVisualMargin" Value="-3" /><Setter Property="CornerRadius" Value="{StaticResource RadiusControl}" /></Style>
     <Style x:Key="RecommendationButtonStyle" TargetType="Button" BasedOn="{StaticResource QuietButtonStyle}"><Setter Property="Background" Value="{ThemeResource CardSurfaceBrush}" /><Setter Property="Padding" Value="18" /><Setter Property="MinHeight" Value="96" /><Setter Property="HorizontalAlignment" Value="Stretch" /><Setter Property="HorizontalContentAlignment" Value="Stretch" /><Setter Property="VerticalContentAlignment" Value="Center" /></Style>
     <Style x:Key="StatusRowButtonStyle" TargetType="Button" BasedOn="{StaticResource QuietButtonStyle}"><Setter Property="Background" Value="Transparent" /><Setter Property="BorderThickness" Value="0" /><Setter Property="Padding" Value="10,8" /><Setter Property="MinHeight" Value="44" /><Setter Property="HorizontalAlignment" Value="Stretch" /><Setter Property="HorizontalContentAlignment" Value="Stretch" /></Style>
 </ResourceDictionary>

@@ -8,7 +8,7 @@ public sealed class PageRow : ObservableObject
     private bool _isCompact;
     private string _state;
     private string _detail;
-    private string _statusBrushKey = "AccentTealBrush";
+    private string _statusBrushKey = "AccentChromeBrush";
     private string? _actionText;
     private CommunityToolkit.Mvvm.Input.IRelayCommand? _actionCommand;
     private string? _navigationKey;

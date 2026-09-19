@@ -26,7 +26,7 @@ TEXT_PAIRS = [
     ("Secondary text on card surface",    "TextSecondaryBrush", "CardSurfaceBrush"),
     ("Secondary text on secondary surface", "TextSecondaryBrush", "SurfaceSecondaryBrush"),
     ("Secondary text on hero background", "TextSecondaryBrush", "HeroBackgroundBrush"),
-    ("Secondary text on accent-subtle",   "TextSecondaryBrush", "AccentTealSubtleBrush"),
+    ("Secondary text on accent-subtle",   "TextSecondaryBrush", "AccentChromeSubtleBrush"),
     ("Accent on page background",         "AccentBrush",        "PageBackgroundBrush"),
     ("Accent on card surface",            "AccentBrush",        "CardSurfaceBrush"),
     ("Text on accent (button)",           "TextOnAccentBrush",  "AccentBrush"),
