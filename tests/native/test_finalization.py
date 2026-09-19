@@ -92,7 +92,7 @@ class FinalizationTests(unittest.TestCase):
                 self.assertIn("migration/oracle/legacy-command-ids.json", names)
                 self.assertIn("docs/migration/finalization-status.md", names)
                 self.assertIn("tools/finalize_native_release.py", names)
-                for required in ("tests/__init__.py", "PRODUCT.md", "UX-CONTRACT.md", "FINAL-VALIDATION.md"):
+                for required in ("tests/__init__.py", "PRODUCT.md", "UX-CONTRACT.md", "docs/Validation.md"):
                     self.assertIn(required, names)
                 self.assertNotIn("tools/validate_gui.py", names)
                 self.assertNotIn("tools/test_gui.py", names)

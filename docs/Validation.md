@@ -2,6 +2,8 @@
 
 WinCare separates source validation, hosted Windows CI, packaged-runtime evidence, interactive validation, and command-by-command behavior verification. Passing one evidence class does not silently substitute for another.
 
+This document consolidates the former root `VALIDATION.md` and `FINAL-VALIDATION.md`; release history lives in git, not in validation docs.
+
 ---
 
 ## Evidence classifications
@@ -22,8 +24,8 @@ WinCare separates source validation, hosted Windows CI, packaged-runtime evidenc
 
 ### 1. Source and structural verification
 
-- [x] **Native foundation contract** (`tools/verify_native_foundation.py`): exact 259/259 command ID parity with the frozen oracle, native-source boundaries, WinUI navigation contracts, and one fail-closed command executor boundary.
-- [x] **Native Python regression suite** (`tests/native/`): passes in PR CI. Coverage includes command admission, parameter/approval provenance, bounded process behavior, reparse-point safety, plugin admission rollback, dependency-lock determinism, portable publish contracts, finalized-source completeness, responsive UI contracts, and release behavior.
+- [x] **Native foundation contract** (`tools/verify_native_foundation.py`): exact 259/259 command ID parity with the frozen oracle, native-source boundaries, WinUI navigation contracts (including three-way catalog ⇄ PageService ⇄ ShellPage route agreement), and one fail-closed command executor boundary.
+- [x] **Native Python regression suite** (`tests/native/`): passes in PR CI. Coverage includes command admission, parameter/approval provenance, bounded process behavior, reparse-point safety, plugin admission rollback, dependency-lock determinism, portable publish contracts, finalized-source completeness, responsive UI contracts, chrome-label resource parity, and release behavior.
 - [x] **Community plugin CLI suite** (`tests/tools/`): passes in PR CI. Coverage includes scaffolding, manifest linting, SemVer validation, archive bounds, symlink/path traversal rejection, deterministic packaging, and Unicode archive paths.
 - [x] **Visual and accessibility source contracts**: theme-token consistency and status-pill WCAG 2.1 AA contrast remain covered by the repository tests and validators; see the workflow result for the exact commit for current token and pair counts.
 - [x] **Documentation image integrity**: checked-in PNG evidence is validated without regenerating screenshots during ordinary CI.
@@ -60,6 +62,33 @@ The smoke crosses WinUI startup/window activation, native Rust ABI loading, plug
 - [ ] **Command-by-command Windows behavior comparison against the historical oracle**. Production promotion remains blocked until all 269 commands reach `BehaviorVerified`.
 
 ---
+
+## Repository gates on every head update
+
+The authoritative merge evidence is the GitHub Actions **Native WinUI** workflow for the exact PR head. The source is expected to pass these repository-level gates on every update:
+
+- native/Python repository regression suite;
+- `tools/verify_native_foundation.py`;
+- visual-token verification;
+- status-pill WCAG 2.1 AA contrast verification;
+- XML/XAML/RESW/project/manifest and JSON parsing checks;
+- command-catalog uniqueness and migration/finalization checks;
+- XAML/code-behind event-wiring checks;
+- x64 and ARM64 native/managed build and packaging jobs.
+
+Hard-coded historical test counts are intentionally not used here because regression tests are added as the product contract evolves. The workflow result for the exact commit is the source of truth.
+
+## Product/data invariants
+
+- Command catalog: **269 commands / 269 unique IDs** (frozen IDs; 259 in the legacy-parity oracle).
+- Care pages continue to derive from exact command-catalog Area/Section taxonomy.
+- Checkup remains read-only and routes findings to care surfaces.
+- Home remains presentation-only and exposes one primary Checkup CTA; its evidence rows match the actual Checkup evidence sources.
+- Troubleshoot hands suggested commands to the canonical Power tools execution/review surface; Power tools exposes Safe / Moderate / Destructive product tiers instead of raw backend risk values.
+- Extension catalog trust/availability is visible in the frontend.
+- Named care-section navigation keeps shell/PageService/navigation-catalog route parity.
+- Raw catalog risk and command IDs remain available as advanced technical detail without defining the normal product taxonomy.
+- The dispatcher remains authoritative for admission, preview/approval semantics, execution, results, and Activity evidence.
 
 ## Core safety evidence
 
@@ -106,8 +135,8 @@ Source and oracle archives can be generated locally:
 ```bash
 python tools/finalize_native_release.py \
   --output artifacts/finalization \
-  --version 2.5.0-rc6 \
-  --mode rc
+  --version <version> \
+  --mode <rc|production>
 ```
 
 The finalizer produces:
@@ -132,6 +161,10 @@ Production mode still exits non-zero until all 269 commands are `BehaviorVerifie
 3. **Portable runtime smoke** — runs the versioned portable executable on matching x64 and ARM64 hosted runners.
 4. **Release gate** — only for release tags or an explicit manual `publish_release=true`; downloads package artifacts, finalizes source/oracle evidence, stages release assets, and publishes or completes the matching GitHub release.
 
-Manual dispatch defaults to validation/build only. A supplied `release_tag` must exactly match `Directory.Build.props`. Finalization mode is derived from the checked-in product version: prerelease versions such as `2.5.0-rc5` use `rc`, while a stable version uses `production` and therefore still requires full `BehaviorVerified` command parity.
+Manual dispatch defaults to validation/build only. A supplied `release_tag` must exactly match `Directory.Build.props`. Finalization mode is derived from the checked-in product version: prerelease versions such as `3.0.0-rc1` use `rc`, while a stable version uses `production` and therefore still requires full `BehaviorVerified` command parity.
 
 Release builds do not require repository signing secrets. Each packaging job creates a temporary runner-local development certificate, validates the resulting MSIX against its exported public certificate without adding a trusted root, and removes the private identity before the job completes.
+
+## Live Windows visual-validation limitation
+
+Agent environments without a Windows desktop session cannot truthfully certify the final rendered UI, Narrator output, keyboard focus order, High Contrast appearance, text/display scaling, or new runtime screenshots. GitHub Actions can validate Windows compilation/build/package behavior, but a fresh installed-candidate visual/accessibility pass is still required. Follow `docs/Windows-Validation.md` and recapture the runtime screenshots when the next release candidate is installed.

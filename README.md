@@ -129,7 +129,7 @@ Automated checks do not replace human UI/accessibility inspection. Follow [Windo
 | [Architecture](docs/Architecture.md) | System boundaries, trust model, lifecycle, native integration, and packaging. |
 | [Release readiness](docs/Release-Readiness.md) | Current automated and manual release evidence requirements. |
 | [Windows validation](docs/Windows-Validation.md) | Repeatable Windows runtime and accessibility validation. |
-| [Validation](VALIDATION.md) | Evidence model and verification categories. |
+| [Validation](docs/Validation.md) | Evidence model and verification categories. |
 | [Security](SECURITY.md) | Security invariants and vulnerability reporting. |
 | [Contributing](CONTRIBUTING.md) | Development and review workflow. |
 | [Third-party notices](THIRD-PARTY-NOTICES.md) | Licensing information for external dependencies. |
