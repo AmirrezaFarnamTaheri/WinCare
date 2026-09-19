@@ -1,5 +1,6 @@
-namespace WinCare.App.ViewModels;
+namespace WinCare.Application.Navigation;
 
+/// <summary>Kind of entity a global-search suggestion points at.</summary>
 public enum GlobalSearchSuggestionKind
 {
     Page,
@@ -8,6 +9,7 @@ public enum GlobalSearchSuggestionKind
     Help,
 }
 
+/// <summary>One ranked global-search suggestion and the route it opens.</summary>
 public sealed record GlobalSearchSuggestion(
     string Title,
     string Subtitle,

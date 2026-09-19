@@ -156,9 +156,15 @@ class ProductUiParityTests(unittest.TestCase):
 
     def test_global_search_does_not_hide_registry_errors(self) -> None:
         main_window = self.read("src/WinCare.App/MainWindow.xaml.cs")
+        search_service = self.read("src/WinCare.Application/Navigation/GlobalSearchService.cs")
 
-        self.assertIn("PluginRegistry.GetAllPlugins()", main_window)
+        # Ranking moved into GlobalSearchService (wave 4); the contract is unchanged:
+        # the shell wires the real registry in, the service enumerates it directly,
+        # and no empty catch may swallow failures anywhere on that path.
+        self.assertIn("new(AppRuntime.Current.ToolCatalog, AppRuntime.Current.PluginRegistry)", main_window)
+        self.assertIn("_extensions.GetAllPlugins()", search_service)
         self.assertNotIn("catch { }", main_window)
+        self.assertNotIn("catch { }", search_service)
         self.assertNotIn("How reviews and approvals work", main_window)
 
     def test_shell_page_service_and_navigation_catalog_share_one_route_set(self) -> None:
