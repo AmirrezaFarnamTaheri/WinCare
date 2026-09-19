@@ -1,7 +1,7 @@
 {
   "id": "com.wincare.builtin.download_scheduler",
   "name": "Download Task Scheduler",
-  "version": "2.5.0",
+  "version": "3.0.0",
   "author": "WinCare Core Team",
   "description": "Prioritized concurrent download scheduling with bounded retries, progress tracking, pause and resume, cancellation, and atomic destination replacement.",
   "category": "Network & Updates",

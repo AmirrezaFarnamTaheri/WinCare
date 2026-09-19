@@ -1,7 +1,7 @@
 {
   "id": "com.wincare.builtin.scoop_catalog",
   "name": "Package Repository Dependency Graph & SemVer Engine",
-  "version": "2.5.0",
+  "version": "3.0.0",
   "author": "WinCare Core Team",
   "description": "Resolves complex application dependencies using topological sorting and strict Semantic Versioning 2.0 precedence comparison.",
   "category": "Package Management",

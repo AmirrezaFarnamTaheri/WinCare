@@ -1,7 +1,7 @@
 {
   "id": "com.wincare.builtin.adb_cleaner",
   "name": "Android Subsystem & Companion Storage Cleaner",
-  "version": "2.5.0",
+  "version": "3.0.0",
   "author": "WinCare Core Team",
   "description": "Storage cleaner for Windows Subsystem for Android (WSA), ADB device staging logs, and connected emulator caches.",
   "category": "Developer Tools",

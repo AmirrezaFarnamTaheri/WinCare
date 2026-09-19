@@ -1,7 +1,7 @@
 {
   "id": "com.wincare.builtin.event_log_sanitizer",
   "name": "Event Log Maintenance",
-  "version": "2.5.0",
+  "version": "3.0.0",
   "author": "WinCare Core Team",
   "description": "Reviews and clears three explicitly supported Windows event-log channels after confirmation: Diagnosis-PLA, PowerShell Operational, and BITS Client Operational.",
   "category": "Privacy",

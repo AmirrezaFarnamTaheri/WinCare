@@ -84,7 +84,7 @@ dotnet publish src/WinCare.App/WinCare.App.csproj -c Release -p:Platform=x64 -r 
   -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true \
   -o artifacts/portable/win-x64
 
-python tools/package_portable.py artifacts/portable/win-x64 artifacts/WinCare-v2.5.0-rc6-x64-portable.zip
+python tools/package_portable.py artifacts/portable/win-x64 artifacts/WinCare-v3.0.0-x64-portable.zip
 ```
 
 Repeat the package/runtime validation for ARM64 with `-p:Platform=ARM64 -r win-arm64`. The CI workflow also runs the portable smoke path on an ARM64 Windows runner; a local cross-build alone is not ARM64 runtime evidence.
@@ -94,7 +94,7 @@ Repeat the package/runtime validation for ARM64 with `-p:Platform=ARM64 -r win-a
 After the required validation is complete, generate the deterministic release-candidate source archive:
 
 ```bash
-python tools/finalize_native_release.py --output artifacts/finalization --version 2.5.0-rc6 --mode rc
+python tools/finalize_native_release.py --output artifacts/finalization --version 3.0.0 --mode production
 ```
 
 The version must match `VersionPrefix` plus the optional `VersionSuffix` in `Directory.Build.props`. For production publication, follow [Release-Readiness.md](Release-Readiness.md) and use the guarded GitHub Actions release path so package, runtime, signature, version, and source-finalization checks remain attached to the exact commit being released.

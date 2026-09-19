@@ -206,7 +206,7 @@ mod win32 {
 }
 
 const ABI_VERSION: u32 = 1;
-const VERSION: &[u8] = b"2.5.0";
+const VERSION: &[u8] = b"3.0.0";
 const SHA256_LENGTH: usize = 32;
 const READ_BUFFER_LENGTH: usize = 64 * 1024;
 

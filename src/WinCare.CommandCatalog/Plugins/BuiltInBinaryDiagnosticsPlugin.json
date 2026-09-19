@@ -1,7 +1,7 @@
 {
   "id": "com.wincare.builtin.binary_diagnostics",
   "name": "Binary Architecture & Crash Dump Diagnostic Suite",
-  "version": "2.5.0",
+  "version": "3.0.0",
   "author": "WinCare Core Team",
   "description": "Portable Executable (PE) binary header inspection, ASLR/DEP/CFG security mitigation verification, and system crash dump analyzer.",
   "category": "Diagnostics & Security",
