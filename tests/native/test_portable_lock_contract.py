@@ -14,7 +14,7 @@ PROJECTS = (
     "WinCare.Infrastructure",
 )
 RUNTIMES = ("win-x64", "win-arm64")
-CATALOG_DOMAIN_VERSION = "[2.5.0-rc5, )"
+CATALOG_DOMAIN_VERSION = "[3.0.0, )"
 
 
 class PortableLockContractTests(unittest.TestCase):

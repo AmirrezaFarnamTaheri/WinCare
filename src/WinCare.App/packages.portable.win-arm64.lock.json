@@ -161,14 +161,14 @@
       "wincare.application": {
         "type": "Project",
         "dependencies": {
-          "WinCare.CommandCatalog": "[2.5.0-rc5, )",
-          "WinCare.Domain": "[2.5.0-rc5, )"
+          "WinCare.CommandCatalog": "[3.0.0, )",
+          "WinCare.Domain": "[3.0.0, )"
         }
       },
       "wincare.commandcatalog": {
         "type": "Project",
         "dependencies": {
-          "WinCare.Domain": "[2.5.0-rc5, )"
+          "WinCare.Domain": "[3.0.0, )"
         }
       },
       "wincare.domain": {
@@ -179,9 +179,9 @@
         "dependencies": {
           "Microsoft.Win32.Registry": "[5.0.0, )",
           "System.Diagnostics.EventLog": "[8.0.1, )",
-          "WinCare.Application": "[2.5.0-rc5, )",
-          "WinCare.CommandCatalog": "[2.5.0-rc5, )",
-          "WinCare.Domain": "[2.5.0-rc5, )"
+          "WinCare.Application": "[3.0.0, )",
+          "WinCare.CommandCatalog": "[3.0.0, )",
+          "WinCare.Domain": "[3.0.0, )"
         }
       },
       "Microsoft.Win32.Registry": {
@@ -201,7 +201,7 @@
         "contentHash": "n1ZP7NM2Gkn/MgD8+eOT5MulMj6wfeQMNS2Pizvq5GHCZfjlFMXV2irQlQmJhwA2VABC57M0auudO89Iu2uRLg=="
       }
     },
-    "net8.0-windows10.0.19041/win-arm64": {
+    "net8.0-windows10.0.19041/win-x64": {
       "Microsoft.Web.WebView2": {
         "type": "Transitive",
         "resolved": "1.0.3719.77",
@@ -255,7 +255,7 @@
         "contentHash": "n1ZP7NM2Gkn/MgD8+eOT5MulMj6wfeQMNS2Pizvq5GHCZfjlFMXV2irQlQmJhwA2VABC57M0auudO89Iu2uRLg=="
       }
     },
-    "net8.0-windows10.0.19041/win-x64": {
+    "net8.0-windows10.0.19041/win-arm64": {
       "Microsoft.Web.WebView2": {
         "type": "Transitive",
         "resolved": "1.0.3719.77",
