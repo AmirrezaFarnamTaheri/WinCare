@@ -425,12 +425,18 @@ jobs:
             runner: windows-11-vs2026-arm
     runs-on: ${{ matrix.runner }}
     steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: package-${{ matrix.platform }}
           path: artifacts/smoke
-      - name: Run portable startup and core-flow smoke
+      - name: Run portable startup, core-flow smoke, and runtime capture
         shell: pwsh
+        env:
+          WINCARE_EXE_ARCH: ${{ matrix.platform }}
         run: |
           $ErrorActionPreference = 'Stop'
           $executables = @(
@@ -448,6 +454,23 @@ jobs:
           if ($process.ExitCode -ne 0) {
             throw "Portable ${{ matrix.platform }} smoke test failed with exit code $($process.ExitCode)."
           }
+
+          # E2E capture: render each documented route from this exact signed artifact, verify every
+          # PNG's integrity, and regenerate the provenance manifest. This proves the documented
+          # capture pipeline works against the shipped binary; the committed docs/images stay the
+          # source of truth and the verify job's --verify-only gate keeps doc and manifest in sync.
+          python tools/capture_screenshots.py --runtime --exe "$($executables[0].FullName)"
+          if ($LASTEXITCODE -ne 0) {
+            throw "Portable ${{ matrix.platform }} runtime capture failed with exit code $LASTEXITCODE."
+          }
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: runtime-capture-${{ matrix.platform }}
+          path: |
+            docs/images/runtime-dashboard.png
+            docs/images/runtime-checkup.png
+            docs/images/runtime-captures.json
+          if-no-files-found: error
 
   release-gate:
     needs: [verify, build, portable-runtime-smoke]

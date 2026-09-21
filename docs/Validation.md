@@ -28,7 +28,8 @@ This document consolidates the former root `VALIDATION.md` and `FINAL-VALIDATION
 - [x] **Native Python regression suite** (`tests/native/`): passes in PR CI. Coverage includes command admission, parameter/approval provenance, bounded process behavior, reparse-point safety, plugin admission rollback, dependency-lock determinism, portable publish contracts, finalized-source completeness, responsive UI contracts, chrome-label resource parity, and release behavior.
 - [x] **Community plugin CLI suite** (`tests/tools/`): passes in PR CI. Coverage includes scaffolding, manifest linting, SemVer validation, archive bounds, symlink/path traversal rejection, deterministic packaging, and Unicode archive paths.
 - [x] **Visual and accessibility source contracts**: theme-token consistency and status-pill WCAG 2.1 AA contrast remain covered by the repository tests and validators; see the workflow result for the exact commit for current token and pair counts.
-- [x] **Documentation image integrity**: checked-in PNG evidence is validated without regenerating screenshots during ordinary CI.
+- [x] **Documentation image integrity**: the verify gate validates checked-in PNGs and that `docs/Screenshots.md` renders exactly from `docs/images/runtime-captures.json`; ordinary source CI never rewrites committed documentation images.
+- [x] **Documentation screenshot pipeline contracts** (`tests/native/test_screenshot_pipeline.py`): the app's read-only `--capture-screens` routes, the generator's route→image mapping, manifest provenance, doc/manifest sync, and README capture labels are pinned as source contracts.
 
 The unified workflow runs the Python repository tests with one discovery command instead of repeating the native foundation and plugin test paths as separate workflow steps.
 
@@ -47,12 +48,12 @@ These are CI-verified build/package results. Runner-local development signing do
 
 ### 3. Packaged runtime smoke
 
-The workflow downloads the actual versioned portable artifact and executes `--smoke-test` on the matching architecture runner:
+The workflow downloads the actual versioned portable artifact, executes `--smoke-test`, and then runs the same executable through `tools/capture_screenshots.py --runtime` to regenerate every documented route render and the provenance manifest from that exact binary, uploaded as a `runtime-capture-<platform>` evidence artifact:
 
 - [x] **x64 portable runtime** on `windows-latest`.
 - [x] **ARM64 portable runtime** on `windows-11-vs2026-arm`.
 
-The smoke crosses WinUI startup/window activation, native Rust ABI loading, plugin/runtime initialization, and a read-only `system` dispatcher path before exiting successfully. This is meaningful packaged-runtime evidence, but it does not prove every WUA/COM path, arbitrary third-party plugin behavior, accessibility behavior, or all 269 command implementations.
+The smoke crosses WinUI startup/window activation, native Rust core loading, plugin/runtime initialization, and a read-only `system` dispatcher path before exiting successfully; the capture step additionally proves each documented route renders from the shipped binary and every PNG passes content integrity. This is meaningful packaged-runtime evidence, but it does not prove every WUA/COM path, arbitrary third-party plugin behavior, accessibility behavior, or all 269 command implementations. The committed `docs/images` runtime captures stay the documentation source of truth (currently the v3.0.0 x64 portable build at commit fb207ac); CI regenerates evidence per build and the verify gate keeps the checked-in doc and manifest in sync.
 
 ### 4. Interactive / deployment / command evidence still required
 
@@ -116,8 +117,12 @@ cargo fmt --manifest-path native/Cargo.toml --all -- --check
 cargo clippy --manifest-path native/Cargo.toml --all-targets --all-features -- -D warnings
 cargo test --manifest-path native/Cargo.toml
 
-# Screenshot integrity only; ordinary CI does not regenerate documentation images
+# Screenshot/doc sync gate; committed documentation images are never rewritten by source CI
 python tools/capture_screenshots.py --verify-only
+
+# Real e2e capture from a built portable executable (rewrites docs/images, the manifest, and
+# docs/Screenshots.md together; run this on a Windows desktop session when recapturing is due)
+python tools/capture_screenshots.py --runtime --exe artifacts/portable/win-x64/WinCare.App.exe
 
 # Managed restore/tests
 dotnet restore WinCare.Native.sln -p:Platform=x64 --locked-mode
@@ -158,7 +163,7 @@ Production mode still exits non-zero until all 269 commands are `BehaviorVerifie
 
 1. **Verify** — one Python repository test invocation, checked-in screenshot integrity, and one product-version extraction.
 2. **Build matrix** — Rust format/lint/test/build plus managed restore/test, MSIX build/sign/verify, trimmed portable publish, size validation, and package artifact staging for x64 and ARM64.
-3. **Portable runtime smoke** — runs the versioned portable executable on matching x64 and ARM64 hosted runners.
+3. **Portable runtime smoke and capture** — runs the versioned portable executable on matching x64 and ARM64 hosted runners, then regenerates the e2e route captures and provenance manifest from that binary as an evidence artifact.
 4. **Release gate** — only for release tags or an explicit manual `publish_release=true`; downloads package artifacts, finalizes source/oracle evidence, stages release assets, and publishes or completes the matching GitHub release.
 
 Manual dispatch defaults to validation/build only. A supplied `release_tag` must exactly match `Directory.Build.props`. Finalization mode is derived from the checked-in product version: prerelease versions such as `3.0.0-rc1` use `rc`, while a stable version uses `production` and therefore still requires full `BehaviorVerified` command parity.
@@ -167,4 +172,4 @@ Release builds do not require repository signing secrets. Each packaging job cre
 
 ## Live Windows visual-validation limitation
 
-Agent environments without a Windows desktop session cannot truthfully certify the final rendered UI, Narrator output, keyboard focus order, High Contrast appearance, text/display scaling, or new runtime screenshots. GitHub Actions can validate Windows compilation/build/package behavior, but a fresh installed-candidate visual/accessibility pass is still required. Follow `docs/Windows-Validation.md` and recapture the runtime screenshots when the next release candidate is installed.
+Agent environments without a Windows desktop session cannot truthfully certify the final rendered UI, Narrator output, keyboard focus order, High Contrast appearance, text/display scaling, or new runtime screenshots. GitHub Actions can validate Windows compilation/build/package behavior and regenerate route-render evidence from the shipped binary, but a fresh installed-candidate visual/accessibility pass is still required. Follow `docs/Windows-Validation.md`; when a UI-affecting change lands, recapture locally via `tools/capture_screenshots.py --runtime` against the built portable executable so the manifest, images, and `docs/Screenshots.md` move together.

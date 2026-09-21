@@ -19,10 +19,10 @@
 ## Overview
 
 <p align="center">
-  <img src="docs/images/runtime-dashboard.png" alt="Historical WinCare v2.5.0-rc5 Home runtime capture" width="900" />
+  <img src="docs/images/runtime-dashboard.png" alt="WinCare v3.0.0 Home e2e runtime capture" width="900" />
 </p>
 
-<p align="center"><em>Historical v2.5.0-rc5 runtime capture. The current source has a newer task-first Home; see <a href="docs/Screenshots.md">Screenshots</a> for capture status.</em></p>
+<p align="center"><em>E2E runtime capture from the v3.0.0 x64 portable build; see <a href="docs/Screenshots.md">Screenshots</a> for capture provenance.</em></p>
 
 WinCare brings Windows maintenance, diagnostics, recovery, and operational tooling into one native WinUI 3 application. Read-only checks remain separate from mutations, system-changing actions use explicit admission rules, and operation history is stored locally so users can see what ran and why.
 
