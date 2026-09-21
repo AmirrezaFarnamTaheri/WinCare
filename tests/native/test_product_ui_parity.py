@@ -1,12 +1,39 @@
 from __future__ import annotations
 
 import html
+import json
 import re
 import unittest
 from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[2]
+CATALOG = ROOT / "src/WinCare.CommandCatalog/Data/commands.json"
+
+# The three curated care pages project catalog commands through CareAreaSelection;
+# each maps a tab index to (area, section[s]) literals in its view model.
+CARE_PAGES = {
+    "system-care": "src/WinCare.App/ViewModels/Pages/SystemCarePageViewModel.cs",
+    "security": "src/WinCare.App/ViewModels/Pages/SecurityPageViewModel.cs",
+    "repair-recovery": "src/WinCare.App/ViewModels/Pages/RepairRecoveryPageViewModel.cs",
+}
+
+
+def _catalog_area_sections() -> dict[str, set[str]]:
+    commands = json.loads(CATALOG.read_text(encoding="utf-8"))["commands"]
+    areas: dict[str, set[str]] = {}
+    for command in commands:
+        areas.setdefault(command["area"], set()).add(command["section"])
+    return areas
+
+
+def _view_model_selections(source: str) -> set[tuple[str, str]]:
+    # Matches both forms: new("Area", "Section") and new("Area", ["A", "B"]).
+    pairs: set[tuple[str, str]] = set()
+    for area, tail in re.findall(r'new\("([^"]+)",\s*(\[[^\]]*\]|"[^"]+")', source):
+        for section in re.findall(r'"([^"]+)"', tail):
+            pairs.add((area, section))
+    return pairs
 
 
 class ProductUiParityTests(unittest.TestCase):
@@ -237,6 +264,37 @@ class ProductUiParityTests(unittest.TestCase):
         for legacy in ("DoubleBezel", "HudChassis", "LuminousGlow", "IslandIcon", "TelemetrySensorBox", "EyebrowBadge"):
             self.assertNotIn(legacy, controls)
             self.assertNotIn(legacy, theme)
+
+    def test_care_pages_claim_every_catalog_section_without_phantoms(self) -> None:
+        # Parity gate for the ux4 audit: commands.json declares the product taxonomy, and
+        # the care view models must claim it exactly. An unclaimed section would silently
+        # orphan its commands from curated browsing; a phantom section would render an
+        # empty tab. Both drift classes must fail here, not in the running app.
+        areas = _catalog_area_sections()
+        care_areas = {area for area in areas if area not in {"All tools", "Checkup"}}
+        self.assertEqual({"System care", "Security", "Repair & recovery"}, care_areas)
+        self.assertEqual({"Quick check", "Results"}, areas["Checkup"])
+        self.assertEqual({"Commands"}, areas["All tools"])
+
+        for route, relative in CARE_PAGES.items():
+            claimed = _view_model_selections(self.read(relative))
+            area = {"system-care": "System care", "security": "Security", "repair-recovery": "Repair & recovery"}[route]
+            expected = {(area, section) for section in areas[area]}
+            self.assertEqual(expected, claimed, f"{route} care-page sections drifted from commands.json")
+
+    def test_care_page_tabs_match_navigation_catalog_sections(self) -> None:
+        # The visible tab titles (PageSection) and the route's catalog section list are two
+        # renderings of one contract; a rename in either place must fail here.
+        catalog = self.read("src/WinCare.Application/Navigation/NavigationCatalog.cs")
+        route_sections = {
+            route: re.findall(r'"([^"]+)"', sections)
+            for route, sections in re.findall(
+                r'new\("([a-z-]+)", "[^"]+", "[^"]+", \[([^\]]*)\]', catalog)
+        }
+        for route, relative in CARE_PAGES.items():
+            view_model = self.read(relative).replace("&amp;", "&")
+            tabs = re.findall(r'new PageSection\(\s*"([^"]+)"', view_model)
+            self.assertEqual(route_sections[route], tabs, f"{route} tabs drifted from NavigationCatalog")
 
     def test_product_docs_still_match_execution_and_responsive_contracts(self) -> None:
         guide = self.read("docs/User-Guide.md")
