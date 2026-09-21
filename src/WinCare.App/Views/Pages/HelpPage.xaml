@@ -24,12 +24,6 @@
             </Border>
 
             <StackPanel Spacing="12">
-                <TextBlock Style="{StaticResource SectionHeaderTextStyle}" Text="Find what you need" />
-                <TextBlock Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap" Text="Press Ctrl+K anywhere to find a page or tool. Power tools is where the full catalog lives." />
-                <StackPanel Orientation="Horizontal" Spacing="10"><Button Content="Open Power tools" Style="{StaticResource QuietButtonStyle}" Click="OpenPowerTools_Click" AutomationProperties.Name="Open Power tools" /><Button Content="Open Extensions" Style="{StaticResource QuietButtonStyle}" Click="OpenPluginStore_Click" AutomationProperties.Name="Open Extensions" /><Button Content="Troubleshoot" Style="{StaticResource QuietButtonStyle}" Click="OpenTroubleshoot_Click" AutomationProperties.Name="Open Troubleshoot" /></StackPanel>
-            </StackPanel>
-
-            <StackPanel Spacing="12">
                 <TextBlock Style="{StaticResource SectionHeaderTextStyle}" Text="Before WinCare changes anything" />
                 <TextBlock Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap" Text="Read-only checks run without approval. Changes with more impact ask you to review or confirm them first. Checkup never changes the PC." />
                 <TextBlock Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap" Text="Activity shows what's running, what finished, and anything that needs another look." />

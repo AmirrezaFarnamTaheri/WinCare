@@ -27,9 +27,8 @@ class ProductUiParityTests(unittest.TestCase):
         ):
             self.assertNotIn(stale_owner, view_model)
         self.assertIn("Home never runs system commands", view_model)
-        self.assertEqual(1, xaml.count('Content="Run checkup"'))
+        self.assertEqual(1, xaml.count('Content="Open checkup"'))
         self.assertIn('Text="Common care"', xaml)
-        self.assertIn('Text="More tools"', xaml)
         self.assertIn("PageNavigation.NavigateToSection", code_behind)
         self.assertIn("CheckupCoverageText", view_model)
         self.assertIn("CheckupTimestamp", view_model)

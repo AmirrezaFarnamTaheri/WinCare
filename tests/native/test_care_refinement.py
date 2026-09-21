@@ -21,7 +21,6 @@ class CareRefinementTests(unittest.TestCase):
         self.assertLess(final.index("await updateTask;"), final.index("IsRunning = false;"))
         self.assertIn('CheckupStatusText = cancelled ? "Stopped" : "Incomplete";', source)
         self.assertIn('row.State = "Not finished";', source)
-        self.assertIn("RebuildResultRowsFromQuickChecks();", source.split("private void CompleteInterruptedCheck", 1)[1])
 
     def test_stop_action_has_pending_feedback_and_a_disabled_guard(self):
         source = self.read("ViewModels/Pages/CheckupPageViewModel.cs")
@@ -32,18 +31,17 @@ class CareRefinementTests(unittest.TestCase):
         self.assertIn('AutomationProperties.AutomationId="StopQuickCheck"', page)
         self.assertIn('AutomationProperties.LiveSetting="Polite"', page)
 
-    def test_a_rerun_replaces_cached_results_before_awaiting_probes(self):
+    def test_a_rerun_resets_rows_before_awaiting_probes(self):
         source = self.read("ViewModels/Pages/CheckupPageViewModel.cs")
         run = source.split("private async Task RunQuickCheckAsync", 1)[1]
-        self.assertLess(run.index("RebuildResultRowsFromQuickChecks();"), run.index("await ParallelCommandProbeRunner"))
+        self.assertLess(run.index("ResetRowForCheck(wuaRow"), run.index("await ParallelCommandProbeRunner"))
 
-    def test_compact_checkup_keeps_status_and_has_an_empty_results_message(self):
+    def test_compact_checkup_keeps_the_last_status_stat(self):
         source = self.read("Views/Pages/CheckupPage.xaml.cs")
         page = self.read("Views/Pages/CheckupPage.xaml")
-        self.assertNotIn("CheckupStatusCard.Visibility = Visibility.Collapsed", source)
-        self.assertIn("Grid.SetRow(CheckupStatusCard, compact ? 1 : 0)", source)
-        self.assertIn("ViewModel.EmptyMessage", page)
-        self.assertIn("ViewModel.IsEmpty", page)
+        self.assertNotIn("CheckupStatus.Visibility = Visibility.Collapsed", source)
+        self.assertIn("Grid.SetRow(CheckupStatus, compact ? 1 : 0)", source)
+        self.assertIn("CheckupDivider.Visibility = compact ? Visibility.Collapsed : Visibility.Visible", source)
         self.assertNotIn('Glyph="&#xE73E;"', page)  # no unconditional success checkmark
 
     def test_home_does_not_call_an_inactive_partial_check_running(self):

@@ -9,8 +9,6 @@ namespace WinCare.App.ViewModels.Pages;
 
 public sealed class CheckupPageViewModel : TabbedPageViewModel
 {
-    private const int ResultsSectionIndex = 1;
-
     // The "Review …" actions deep-link into these routes; resolve them from the routing table
     // once so a catalog rename fails at startup instead of silently breaking the action.
     private static readonly string SystemCareRoute = NavigationCatalog.Items.Single(item => item.Id == "system-care").Id;
@@ -27,7 +25,6 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
     private const string WuaRowTitle = "Updates";
 
     private readonly CommandDispatcher _dispatcher;
-    private readonly List<PageRow> _resultRows = [];
     private CancellationTokenSource? _runCts;
     private bool _isRunning;
     private bool _isStopping;
@@ -40,12 +37,11 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
 
     internal CheckupPageViewModel(CommandDispatcher dispatcher)
         : base([
-            new PageSection("Quick check", "Run Checkup to see the latest results.", [
+            new PageSection("Checkup", "Run Checkup to see the latest results.", [
                 new PageRow("Windows and hardware", "Windows version, uptime, memory, processor, and device basics.", "Ready", "Read-only"),
                 new PageRow("Storage", "Free space and drive status.", "Ready", "Read-only"),
                 new PageRow("Security", "Windows Security, firewall, updates, and restart state.", "Ready", "Read-only"),
-                new PageRow("Updates", "Check Windows Update without installing anything.", "Ready", "Read-only")]),
-            new PageSection("Results", "Run Checkup to see results here.", [])])
+                new PageRow("Updates", "Check Windows Update without installing anything.", "Ready", "Read-only")])])
     {
         _dispatcher = dispatcher;
         RunQuickCheckCommand = new AsyncRelayCommand(RunQuickCheckAsync, () => !IsRunning);
@@ -102,12 +98,6 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
     public string CheckupStatusDetail { get => _CheckupStatusDetail; private set => SetProperty(ref _CheckupStatusDetail, value); }
     public string CheckupStatusBrushKey { get => _CheckupStatusBrushKey; private set => SetProperty(ref _CheckupStatusBrushKey, value); }
 
-    public override void SelectSection(int index)
-    {
-        base.SelectSection(index);
-        if (index == ResultsSectionIndex) ShowResultRows();
-    }
-
     private async Task RunQuickCheckAsync(CancellationToken cancellationToken)
     {
         IsRunning = true;
@@ -134,7 +124,6 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
             if (wuaRow is not null)
                 ResetRowForCheck(wuaRow, "Checking…", "Checking Windows Update…");
 
-            RebuildResultRowsFromQuickChecks();
             updateTask = RunUpdateCheckAsync(token);
             IReadOnlyList<CommandResult> fastResults = await ParallelCommandProbeRunner.RunPreviewsAsync(
                 _dispatcher,
@@ -162,7 +151,6 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
             }
 
             EvaluateFindings(fastDict, null);
-            RebuildResultRowsFromQuickChecks();
 
             CommandResult updateResult = await updateTask;
             token.ThrowIfCancellationRequested();
@@ -211,7 +199,6 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
         RunSummary = cancelled
             ? "Checkup stopped. Nothing was changed. Completed results are kept below; run it again to check all areas."
             : "Checkup couldn't finish. Nothing was changed. Try again, and open Activity if it keeps happening.";
-        RebuildResultRowsFromQuickChecks();
     }
 
     private async Task<CommandResult> RunUpdateCheckAsync(CancellationToken cancellationToken)
@@ -247,41 +234,9 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
         ClearNavigationAction(row);
     }
 
-    private void RebuildResultRowsFromQuickChecks()
-    {
-        _resultRows.Clear();
-        foreach (PageRow quickRow in Sections[0].Rows)
-        {
-            _resultRows.Add(new PageRow(quickRow.Title, quickRow.Description, quickRow.State, quickRow.Detail)
-            {
-                StatusBrushKey = quickRow.StatusBrushKey,
-                ActionText = quickRow.ActionText,
-                ActionCommand = quickRow.ActionCommand,
-                NavigationKey = quickRow.NavigationKey,
-                NavigationSectionTitle = quickRow.NavigationSectionTitle,
-            });
-        }
-        ShowResultRows();
-    }
-
-    private void ShowResultRows()
-    {
-        if (SelectedIndex != ResultsSectionIndex) return;
-
-        CurrentRows.Clear();
-        foreach (PageRow row in _resultRows)
-        {
-            row.IsCompact = IsCompactLayout;
-            CurrentRows.Add(row);
-        }
-        OnPropertyChanged(nameof(IsEmpty));
-        OnPropertyChanged(nameof(EmptyMessage));
-    }
-
     private void ApplyWuaResult(CommandResult wuaResult, Dictionary<string, CommandResult> fastDict)
     {
         PageRow? row = Sections[0].Rows.FirstOrDefault(candidate => candidate.Title == WuaRowTitle);
-        PageRow? resultRow = _resultRows.FirstOrDefault(candidate => candidate.Title == WuaRowTitle);
         string state = wuaResult.Status == CommandResultStatus.Succeeded ? "Checked" : "Needs review";
         string brushKey = wuaResult.Status == CommandResultStatus.Succeeded ? "SuccessBrush" : "WarningBrush";
         string detail = wuaResult.Message;
@@ -293,9 +248,7 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
         }
 
         ApplyUpdateOutcome(row, state, detail, brushKey);
-        ApplyUpdateOutcome(resultRow, state, detail, brushKey);
         EvaluateFindings(fastDict, wuaResult);
-        ShowResultRows();
     }
 
     private static void ApplyUpdateOutcome(PageRow? row, string state, string detail, string brushKey)

@@ -76,9 +76,9 @@ Extension widgets appear only when active. If a widget fails to load, WinCare sh
 
 ## 6. System Checkup
 
-Checkup has two sections: **Quick check** and **Results**.
+Checkup lists four areas — **Windows and hardware**, **Storage**, **Security**, and **Updates** — and the same rows become the results when a check runs.
 
-The quick check looks at Windows/hardware basics, storage, security, and Windows Update without changing the PC. The fast system/storage/security probes run concurrently with bounded concurrency; Windows Update continues alongside them so a slow update search does not hold up the first results.
+The check looks at Windows/hardware basics, storage, security, and Windows Update without changing the PC. The fast system/storage/security probes run concurrently with bounded concurrency; Windows Update continues alongside them so a slow update search does not hold up the first results.
 
 The summary only describes what these checks found: things look okay, something is worth a look, a check did not finish, or something needs attention. It is not a blanket health score. A finding can open the relevant care section; Checkup itself never applies maintenance.
 

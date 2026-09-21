@@ -39,6 +39,8 @@ Status colors retain semantic meaning. Brand color is not a health result. Prima
 - Segoe UI Variable Display for headings, Segoe UI Variable Text for controls and prose. Native Windows legibility is intentional.
 - Cascadia Code / Cascadia Mono / Consolas only for measurements, identifiers and technical evidence.
 - Page title 34 DIP; section 20; row title 15; body 14 with 21-DIP line height; secondary prose 13 with 18-DIP line height. No decorative labels above page headings.
+- Status masthead 40 DIP with 48-DIP line height (`HeroTitleTextStyle`) carries the Home verdict and the Checkup action heading — the only type permitted to outrank a page title, and the sole full-strength display moment per page. Coverage and last-status render as an inline stat (metric, caption, 1-DIP `BorderSubtleBrush` hairline divider) inside the hero enclosure, never a nested card; compact stacks the stat and drops the hairline.
+- Entry-point icons sit in 40-DIP `IconTileStyle` tiles (`AccentChromeSubtleBrush` ground, `AccentChromeBrush` glyph) — the system's recurring structural device, built only from the existing accent pair.
 - Spacing tokens `SpacingXS`–`XXL` (4/8/12/16/24/32) and `GapXS`–`XL` exist in `ControlStyles.xaml` for new work; existing page markup still uses a 6–28 DIP mix that does not sit on that scale. Migrating page literals is a deferred, render-verified pass — replacing values blind would be a redesign, not a cleanup.
 - Desktop inset 32 DIP; compact 20. Outer panels 12-DIP corners, inner panels and controls 8, status labels 4. One enclosure per functional group.
 - Primary actions use the Windows system accent via native WinUI accent brushes. Secondary actions use QuietButtonStyle. Diagnostic channels share a native button style with visible focus.
@@ -46,9 +48,9 @@ Status colors retain semantic meaning. Brand color is not a health result. Prima
 
 ## Composition
 
-Home is recommendation-led: one checkup action, three common care entry points, a compact evidence summary, recent activity, and secondary links to Power tools, Extensions, and Troubleshoot. Decorative hardware atlases and telemetry HUDs are not part of the runtime Home hierarchy.
+Home is recommendation-led: one checkup action, three common care entry points, a compact evidence summary, and recent activity. Power tools, Extensions, and Troubleshoot live on the navigation rail; Home does not repeat them. Decorative hardware atlases and telemetry HUDs are not part of the runtime Home hierarchy.
 
-Checkup is explicitly read-only. Its selector appears before the findings list, and findings deep-link to the relevant care surface instead of performing maintenance in place. The summary is a checked-area status, not a synthetic health score.
+Checkup is explicitly read-only. Its four areas are listed up front and their rows update in place when a check runs, and findings deep-link to the relevant care surface instead of performing maintenance in place. The summary is a checked-area status, not a synthetic health score.
 
 System care, Security, and Repair & recovery share `CareToolList` and project commands through exact catalog Area/Section values. Descriptions sit under task names; impact and requirements are supporting metadata. Portable playbooks remain a dedicated Repair & recovery section.
 
