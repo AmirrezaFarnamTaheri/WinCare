@@ -29,7 +29,7 @@ public sealed partial class MainWindow : Window
     [DllImport("user32.dll")]
     private static extern uint GetDpiForWindow(nint windowHandle);
 
-    public MainWindow()
+    public MainWindow(bool captureMode = false)
     {
         InitializeComponent();
         WindowRoot.ActualThemeChanged += OnWindowRootThemeChanged;
@@ -46,7 +46,13 @@ public sealed partial class MainWindow : Window
         ExtendsContentIntoTitleBar = true;
         SetTitleBar(AppTitleBar);
         ConfigureBackdrop();
-        if (!AppPreferences.RememberWindowPlacement || !RestoreWindowPlacement())
+        if (captureMode)
+        {
+            // Documentation captures need deterministic geometry: skip saved placement entirely.
+            var (width, height) = App.CaptureWindowSizeDips;
+            ResizeWindow(width, height);
+        }
+        else if (!AppPreferences.RememberWindowPlacement || !RestoreWindowPlacement())
         {
             ResizeWindow(1280, 800);
         }
@@ -54,6 +60,9 @@ public sealed partial class MainWindow : Window
         Activated += OnWindowActivated;
         Closed += OnWindowClosed;
     }
+
+    /// <summary>Resolved render theme, exposed for capture provenance without leaking the root element.</summary>
+    public string CaptureAppearance => WindowRoot.ActualTheme.ToString();
 
     public void ApplyTheme(string theme)
     {

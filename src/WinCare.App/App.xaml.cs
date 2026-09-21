@@ -1,7 +1,11 @@
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Media.Imaging;
 using Microsoft.Windows.AppLifecycle;
+using Windows.Graphics.Imaging;
+using Windows.Storage.Streams;
 using ProtocolActivatedEventArgs = Windows.ApplicationModel.Activation.ProtocolActivatedEventArgs;
 using WinCare.Application.Commands;
 using WinCare.Application.Navigation;
@@ -13,7 +17,27 @@ namespace WinCare.App;
 public partial class App : Microsoft.UI.Xaml.Application
 {
     private const string PortableSmokeArgument = "--smoke-test";
+    private const string CaptureScreensArgument = "--capture-screens";
     private MainWindow? _window;
+
+    /// <summary>
+    /// Routes rendered into documentation runtime captures by <c>--capture-screens</c>.
+    /// The image file name is the route id plus <c>.png</c> (e.g. "home" ->
+    /// "home.png"); tools/capture_screenshots.py renames them to docs/images/runtime-*.png
+    /// and records the provenance manifest the documentation is synced from.
+    /// </summary>
+    public static readonly (string Route, int SettleDelayMs)[] CaptureRoutes =
+    [
+        ("home", 700),
+        ("checkup", 2500), // allow read-only probe completion and background WUA readiness to land
+    ];
+
+    /// <summary>
+    /// Fixed device-independent size for documentation captures. <see cref="MainWindow"/>
+    /// resizes to this and skips saved-placement restore in capture mode, and the provenance
+    /// sidecar reports the same geometry, so the three cannot drift.
+    /// </summary>
+    public static readonly (int Width, int Height) CaptureWindowSizeDips = (1280, 800);
 
     /// <summary>
     /// Exercises every navigation route during packaged smoke testing. Derived from
@@ -25,6 +49,9 @@ public partial class App : Microsoft.UI.Xaml.Application
         .ToArray();
 
     public MainWindow? MainWindow => _window;
+
+    /// <summary>Launch argument handled by <see cref="RunCaptureScreensAsync"/>, exposed for the contract gate.</summary>
+    public static string CaptureArgument => CaptureScreensArgument;
 
     public App()
     {
@@ -46,13 +73,21 @@ public partial class App : Microsoft.UI.Xaml.Application
                 PortableSmokeArgument,
                 StringComparison.OrdinalIgnoreCase));
 
-        _window = new MainWindow();
+        string? captureOutputDirectory = ResolveCaptureOutputDirectory(processArguments);
+
+        _window = new MainWindow(captureOutputDirectory is not null);
         StartupTelemetry.Mark("WindowCreated");
         _window.Activate();
 
         if (runPortableSmoke)
         {
             _ = RunPortableSmokeTestAsync();
+            return;
+        }
+
+        if (captureOutputDirectory is not null)
+        {
+            _ = RunCaptureScreensAsync(captureOutputDirectory);
             return;
         }
 
@@ -68,9 +103,33 @@ public partial class App : Microsoft.UI.Xaml.Application
     }
 
     /// <summary>
+    /// Returns the directory passed to <c>--capture-screens &lt;dir&gt;</c>, or null when the
+    /// argument is absent. Capture is the only mode that suppresses saved-placement restore,
+    /// so the flag and the output path resolve from this single source.
+    /// </summary>
+    private static string? ResolveCaptureOutputDirectory(string[] processArguments)
+    {
+        for (int i = 1; i < processArguments.Length - 1; i++)
+        {
+            if (string.Equals(processArguments[i], CaptureScreensArgument, StringComparison.OrdinalIgnoreCase))
+            {
+                return processArguments[i + 1];
+            }
+        }
+        return null;
+    }
+
+    /// <summary>
     /// Appends each smoke test stage to a diagnostic trace log.
     /// </summary>
-    private static void TraceSmoke(string stage)
+    private static void TraceSmoke(string stage) => TraceStage("smoke-trace.log", stage);
+
+    /// <summary>
+    /// Appends each documentation-capture stage to a diagnostic trace log.
+    /// </summary>
+    private static void TraceCapture(string stage) => TraceStage("capture-trace.log", stage);
+
+    private static void TraceStage(string fileName, string stage)
     {
         try
         {
@@ -79,12 +138,12 @@ public partial class App : Microsoft.UI.Xaml.Application
                 "WinCare", "logs");
             Directory.CreateDirectory(logsDir);
             File.AppendAllText(
-                Path.Combine(logsDir, "smoke-trace.log"),
+                Path.Combine(logsDir, fileName),
                 $"{DateTime.UtcNow:O} {stage}{Environment.NewLine}");
         }
         catch
         {
-            // Tracing must never be the reason the smoke run fails.
+            // Tracing must never be the reason the run fails.
         }
     }
 
@@ -137,6 +196,100 @@ public partial class App : Microsoft.UI.Xaml.Application
             System.Diagnostics.Debug.WriteLine($"[App] Portable smoke test failed: {ex}");
             Environment.Exit(1);
         }
+    }
+
+    /// <summary>
+    /// Renders each documentation route from <see cref="CaptureRoutes"/> to a PNG in
+    /// <paramref name="outputDirectory"/> and exits with 0 only when every file was written.
+    /// Runs the packaged plugin initialization first so captures reflect real plugin state.
+    /// </summary>
+    private static async Task RunCaptureScreensAsync(string outputDirectory)
+    {
+        TraceCapture($"capture-start:{outputDirectory}");
+        try
+        {
+            Services.AppRuntime runtime = Services.AppRuntime.Current;
+            await runtime.InitializePluginsAsync().ConfigureAwait(true);
+            TraceCapture("plugins-initialized");
+
+            MainWindow window = ((App)Current)._window
+                ?? throw new InvalidOperationException("Capture run could not access the main window.");
+
+            // Sidecar the tool reads to record the policy-required provenance fields.
+            File.WriteAllText(
+                Path.Combine(outputDirectory, "capture-meta.json"),
+                $$"""
+                  {
+                    "version": "{{typeof(App).Assembly.GetName().Version?.ToString(3) ?? "unknown"}}",
+                    "appearance": "{{window.CaptureAppearance}}",
+                    "windowSizeDips": "{{CaptureWindowSizeDips.Width}}x{{CaptureWindowSizeDips.Height}}"
+                  }
+                  """);
+
+            foreach ((string route, int settleDelayMs) in CaptureRoutes)
+            {
+                TraceCapture($"capturing:{route}");
+                window.ShellPage.NavigateTo(route);
+                await Task.Delay(settleDelayMs).ConfigureAwait(true); // layout, bindings, probe results
+                await SaveWindowCapturePngAsync(window, Path.Combine(outputDirectory, $"{route}.png"))
+                    .ConfigureAwait(true);
+                TraceCapture($"captured:{route}");
+            }
+
+            StartupTelemetry.Mark("DocumentationCapturesPassed");
+            Environment.Exit(0);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[App] Documentation capture failed: {ex}");
+            Environment.Exit(1);
+        }
+    }
+
+    private static async Task SaveWindowCapturePngAsync(MainWindow window, string filePath)
+    {
+        if (window.Content is not FrameworkElement root)
+        {
+            throw new InvalidOperationException("Window content is not a FrameworkElement; cannot capture.");
+        }
+
+        var renderTarget = new RenderTargetBitmap();
+        await renderTarget.RenderAsync(root).AsTask().ConfigureAwait(true);
+        byte[] pixelBytes = ToByteArray(await renderTarget.GetPixelsAsync().AsTask().ConfigureAwait(true));
+
+        using var stream = new InMemoryRandomAccessStream();
+        var encoder = await BitmapEncoder.CreateAsync(
+            BitmapEncoder.PngEncoderId, stream).AsTask().ConfigureAwait(true);
+        encoder.SetPixelData(
+            BitmapPixelFormat.Bgra8,
+            BitmapAlphaMode.Straight,
+            (uint)renderTarget.PixelWidth,
+            (uint)renderTarget.PixelHeight,
+            96,
+            96,
+            pixelBytes);
+        await encoder.FlushAsync().AsTask().ConfigureAwait(true);
+
+        byte[] pngBytes = await ToByteArrayAsync(stream).ConfigureAwait(true);
+        await File.WriteAllBytesAsync(filePath, pngBytes).ConfigureAwait(true);
+    }
+
+    private static byte[] ToByteArray(IBuffer buffer)
+    {
+        DataReader reader = DataReader.FromBuffer(buffer);
+        byte[] bytes = new byte[buffer.Length];
+        reader.ReadBytes(bytes);
+        return bytes;
+    }
+
+    private static async Task<byte[]> ToByteArrayAsync(Windows.Storage.Streams.IRandomAccessStream stream)
+    {
+        stream.Seek(0);
+        var reader = new DataReader(stream.GetInputStreamAt(0));
+        await reader.LoadAsync((uint)stream.Size).AsTask().ConfigureAwait(true);
+        byte[] bytes = new byte[stream.Size];
+        reader.ReadBytes(bytes);
+        return bytes;
     }
 
     private static async Task InitializeRuntimeAsync()
