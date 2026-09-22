@@ -12,9 +12,9 @@ capture lines are rendered from, and CI re-checks that sync on every build.
 
 ### E2E runtime capture
 
-![WinCare Home screen captured from the v3.0.0 portable build (x64, commit 0910537)](images/runtime-dashboard.png)
+![WinCare Home screen captured from the v3.0.0 portable build (x64, commit a7dcc77)](images/runtime-dashboard.png)
 
-**Capture status:** captured 2026-09-22 from the v3.0.0 portable build (x64, commit 0910537, Light appearance, 1280x800 DIP window) by running `--capture-screens` against that artifact. Authoritative for that exact build; any later UI change makes it historical until recaptured. The Home is recommendation-led, derives evidence coverage from shared Activity records, and exposes one primary Checkup CTA.
+**Capture status:** captured 2026-09-22 from the v3.0.0 portable build (x64, commit a7dcc77, Light appearance, 1280x800 DIP window) by running `--capture-screens` against that artifact. Authoritative for that exact build; any later UI change makes it historical until recaptured. The Home is recommendation-led, derives evidence coverage from shared Activity records, and exposes one primary Checkup CTA.
 
 ### Original concept
 
@@ -24,9 +24,9 @@ capture lines are rendered from, and CI re-checks that sync on every build.
 
 ### E2E runtime capture
 
-![WinCare Checkup screen captured from the v3.0.0 portable build (x64, commit 0910537)](images/runtime-checkup.png)
+![WinCare Checkup screen captured from the v3.0.0 portable build (x64, commit a7dcc77)](images/runtime-checkup.png)
 
-**Capture status:** captured 2026-09-22 from the v3.0.0 portable build (x64, commit 0910537, Light appearance, 1280x800 DIP window) by running `--capture-screens` against that artifact. Authoritative for that exact build; any later UI change makes it historical until recaptured. Checkup reports checked-area evidence rather than a synthetic machine-health claim; fast read-only probes run concurrently while Windows Update readiness is checked in the background.
+**Capture status:** captured 2026-09-22 from the v3.0.0 portable build (x64, commit a7dcc77, Light appearance, 1280x800 DIP window) by running `--capture-screens` against that artifact. Authoritative for that exact build; any later UI change makes it historical until recaptured. Checkup reports checked-area evidence rather than a synthetic machine-health claim; fast read-only probes run concurrently while Windows Update readiness is checked in the background.
 
 ### Original concept
 
@@ -68,6 +68,7 @@ The tool launches that build in `--capture-screens` mode, verifies every rendere
 
 Every runtime image must record:
 
+- the date and time of capture;
 - the exact package/product version;
 - architecture (`x64` or `ARM64`);
 - the source commit SHA or release tag;
