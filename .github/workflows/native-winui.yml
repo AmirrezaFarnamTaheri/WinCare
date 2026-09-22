@@ -30,6 +30,9 @@ jobs:
       product_version: ${{ steps.version.outputs.value }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # The capture-freshness gate diffs the recorded capture commit against HEAD.
+          fetch-depth: 50
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.13"
@@ -43,6 +46,8 @@ jobs:
           python tools/verify_palette_contrast.py
       - name: Verify documentation screenshots
         run: python tools/capture_screenshots.py --verify-only
+      - name: Verify the checked-in capture depicts this source
+        run: python tools/capture_screenshots.py --check-freshness
       - name: Read product version
         id: version
         shell: bash
@@ -426,6 +431,10 @@ jobs:
     runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # The freshness gate diffs the recorded capture commit against HEAD, so it needs
+          # enough history to reach that commit. 50 covers any realistic recapture gap.
+          fetch-depth: 50
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.13"
@@ -453,6 +462,20 @@ jobs:
           }
           if ($process.ExitCode -ne 0) {
             throw "Portable ${{ matrix.platform }} smoke test failed with exit code $($process.ExitCode)."
+          }
+
+          # Freshness gate: the checked-in capture must still depict the source CI is building.
+          # This must run BEFORE the e2e capture below, which rewrites the manifest with this
+          # build's commit — checking it afterwards would always read "fresh" and gate nothing.
+          # A capture whose recorded commit is behind HEAD on capture-affecting paths is
+          # historical evidence wearing current labels, so this fails the run instead of
+          # shipping an image that no longer matches the binary. Only enforced on x64, where
+          # the committed capture is recorded; ARM64 renders the same UI.
+          if ('${{ matrix.platform }}' -eq 'x64') {
+            python tools/capture_screenshots.py --check-freshness
+            if ($LASTEXITCODE -ne 0) {
+              throw "Checked-in runtime capture is stale for this build. Run 'python tools/capture_screenshots.py --runtime --exe <portable build>' locally and commit the regenerated images."
+            }
           }
 
           # E2E capture: render each documented route from this exact signed artifact, verify every

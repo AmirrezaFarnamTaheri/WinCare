@@ -14,7 +14,7 @@ capture lines are rendered from, and CI re-checks that sync on every build.
 
 ![WinCare Home screen captured from the v3.0.0 portable build (x64, commit 7c79b6e)](images/runtime-dashboard.png)
 
-**Capture status:** captured 2026-09-21 from the v3.0.0 portable build (x64, commit 7c79b6e, Dark appearance, 1280x800 DIP window) by running `--capture-screens` against that artifact. Authoritative for that exact build; any later UI change makes it historical until recaptured. The Home is recommendation-led, derives evidence coverage from shared Activity records, and exposes one primary Checkup CTA.
+**Capture status:** captured 2026-09-21 from the v3.0.0 portable build (x64, commit 7c79b6e, Dark appearance, 1280x800 DIP window) by running `--capture-screens` against that artifact. Authoritative for that exact build; any later UI change makes it historical until recaptured. **Stale:** capture-affecting source changed since commit 7c79b6e (8 path(s) at ef086e0+uncommitted); this image is historical evidence until recaptured. The Home is recommendation-led, derives evidence coverage from shared Activity records, and exposes one primary Checkup CTA.
 
 ### Original concept
 
@@ -26,7 +26,7 @@ capture lines are rendered from, and CI re-checks that sync on every build.
 
 ![WinCare Checkup screen captured from the v3.0.0 portable build (x64, commit 7c79b6e)](images/runtime-checkup.png)
 
-**Capture status:** captured 2026-09-21 from the v3.0.0 portable build (x64, commit 7c79b6e, Dark appearance, 1280x800 DIP window) by running `--capture-screens` against that artifact. Authoritative for that exact build; any later UI change makes it historical until recaptured. Checkup reports checked-area evidence rather than a synthetic machine-health claim; fast read-only probes run concurrently while Windows Update readiness is checked in the background.
+**Capture status:** captured 2026-09-21 from the v3.0.0 portable build (x64, commit 7c79b6e, Dark appearance, 1280x800 DIP window) by running `--capture-screens` against that artifact. Authoritative for that exact build; any later UI change makes it historical until recaptured. **Stale:** capture-affecting source changed since commit 7c79b6e (8 path(s) at ef086e0+uncommitted); this image is historical evidence until recaptured. Checkup reports checked-area evidence rather than a synthetic machine-health claim; fast read-only probes run concurrently while Windows Update readiness is checked in the background.
 
 ### Original concept
 
@@ -56,7 +56,9 @@ capture lines are rendered from, and CI re-checks that sync on every build.
 
 ## Capture policy
 
-Capturing requires a Windows host with a built portable executable (or installed MSIX) of the exact version being recorded; the source tree alone cannot produce runtime evidence. Run:
+Capturing requires a Windows host with a built portable executable of the exact version being
+recorded; the source tree alone cannot produce runtime evidence. (Installed-MSIX capture is
+not yet implemented — only the portable build is supported.) Run:
 
 ```text
 python tools/capture_screenshots.py --runtime --exe artifacts/portable/win-x64/WinCare.App.exe
@@ -69,7 +71,7 @@ Every runtime image must record:
 - the exact package/product version;
 - architecture (`x64` or `ARM64`);
 - the source commit SHA or release tag;
-- whether the image came from an installed MSIX or portable build;
+- the packaging source of the image (`portable`; installed MSIX is not yet implemented);
 - the Windows appearance used when visually relevant.
 
 Runtime captures must be taken from a known built artifact and kept free of machine names, account names, paths, license keys, tokens, or other personal data. The in-app capture path renders the XAML content surface only, so window chrome and shell titles are never included. Concept imagery must never be presented as a runtime capture.

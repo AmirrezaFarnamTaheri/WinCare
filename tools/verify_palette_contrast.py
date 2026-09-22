@@ -5,6 +5,8 @@
 product surface: primary/secondary text and accents over every background they are
 composed against in Light and Dark, per DESIGN.md. HighContrast follows Windows system
 colors and is intentionally excluded here (it is verified by the Windows validation pass).
+Primary buttons are also excluded: they compose WinUI's system accent resources, whose
+contrast the OS guarantees and a literal-hex gate cannot measure — see TEXT_PAIRS.
 
 Reuses the XML parsing and luminance math from verify_pill_contrast.py.
 """
@@ -18,6 +20,13 @@ THEME_FILE = Path(__file__).resolve().parents[1] / "src/WinCare.App/Styles/Theme
 
 # (label, foreground brush, background brush) — composed as the UI actually composes them.
 # Body prose is 13–14px, so every pair must clear the 4.5:1 normal-text bar, not 3:1.
+#
+# Primary buttons are deliberately absent. AccentButtonStyle composes WinUI's own
+# AccentFillColorDefaultBrush / TextOnAccentFillColorPrimaryBrush, whose contrast Microsoft
+# guarantees for the user's system accent; a literal-hex gate cannot measure a ThemeResource
+# pair, so claiming it here would assert a composition the UI never uses. The static
+# TextOnAccentBrush/AccentBrush pair is kept defined for reference but is not composed by any
+# control, and is therefore not measured.
 TEXT_PAIRS = [
     ("Primary text on page background",   "TextPrimaryBrush",   "PageBackgroundBrush"),
     ("Primary text on card surface",      "TextPrimaryBrush",   "CardSurfaceBrush"),
@@ -29,7 +38,6 @@ TEXT_PAIRS = [
     ("Secondary text on accent-subtle",   "TextSecondaryBrush", "AccentChromeSubtleBrush"),
     ("Accent on page background",         "AccentBrush",        "PageBackgroundBrush"),
     ("Accent on card surface",            "AccentBrush",        "CardSurfaceBrush"),
-    ("Text on accent (button)",           "TextOnAccentBrush",  "AccentBrush"),
     ("Success on card surface",           "SuccessBrush",       "CardSurfaceBrush"),
     ("Warning on card surface",           "WarningBrush",       "CardSurfaceBrush"),
     ("Danger on card surface",            "DangerBrush",        "CardSurfaceBrush"),

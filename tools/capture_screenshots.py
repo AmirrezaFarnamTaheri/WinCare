@@ -124,19 +124,45 @@ def _git_commit() -> str:
         return "unknown"
 
 
-def _exe_architecture(exe_path: Path) -> str:
+# PE machine types this pipeline can capture. The portable build ships one of these.
+_PE_MACHINE_TYPES = {
+    0x014C: "x64",    # i386 — the .NET host for an x64 portable build
+    0x8664: "x64",    # x64
+    0x01C0: "ARM64",  # ARM
+    0xAA64: "ARM64",  # ARM64
+}
+
+
+def _exe_architecture_from_pe(exe_path: Path) -> str | None:
+    """Reads the PE machine type straight out of the executable header.
+
+    Shells out to nothing, so it works on any host and, unlike reading the checkout,
+    it describes the artifact actually being captured.
+    """
     try:
-        proc = subprocess.run(
-            ["file", str(exe_path)],
-            stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True, timeout=10,
-        )
-        out = proc.stdout.lower()
-        if "arm" in out or "aarch64" in out:
-            return "ARM64"
+        with open(exe_path, "rb") as handle:
+            if handle.read(2) != b"MZ":
+                return None
+            handle.seek(0x3C)
+            pe_offset = struct.unpack("<I", handle.read(4))[0]
+            handle.seek(pe_offset)
+            if handle.read(4) != b"PE\0\0":
+                return None
+            machine = struct.unpack("<H", handle.read(2))[0]
+        return _PE_MACHINE_TYPES.get(machine)
     except Exception:
-        pass
-    machine = os.environ.get("WINCARE_EXE_ARCH", "").strip()
-    return machine or "x64"
+        return None
+
+
+def _normalize_architecture(value: str | None) -> str | None:
+    if not value:
+        return None
+    lowered = value.strip().lower()
+    if "arm64" in lowered or "aarch64" in lowered:
+        return "ARM64"
+    if "x64" in lowered or "amd64" in lowered or "x86_64" in lowered:
+        return "x64"
+    return None
 
 
 def _product_version() -> str:
@@ -157,6 +183,83 @@ def load_runtime_manifest() -> dict | None:
         return None
 
 
+def _resolve_provenance(
+    exe_path: Path,
+    meta: dict,
+    checkout_commit: str,
+) -> dict:
+    """Provenance originates from the artifact, cross-checked against the checkout.
+
+    Version and architecture come from the executable's own sidecar (assembly version and
+    RuntimeInformation.ProcessArchitecture), then the PE header independently confirms the
+    architecture. A mismatch means the checkout and the artifact disagree — a real condition
+    when someone points `--exe` at a build from a different tree — and it fails loudly rather
+    than silently recording the checkout's facts next to another build's image.
+    """
+    exe_version = str(meta.get("version") or "").strip() or None
+    exe_arch = _normalize_architecture(str(meta.get("architecture") or ""))
+    pe_arch = _exe_architecture_from_pe(exe_path)
+
+    provenance: dict = {
+        "version": exe_version or _product_version(),
+        "architecture": exe_arch or pe_arch or _normalize_architecture(
+            os.environ.get("WINCARE_EXE_ARCH", "")) or "x64",
+        "commit": checkout_commit,
+    }
+    provenance["architecture_checked"] = pe_arch
+    provenance["version_source"] = "executable" if exe_version else "directory.build.props"
+    return provenance
+
+
+# Source roots that change what a documented capture depicts. Anything under src/ moves the UI
+# or the data it renders; the capture tool itself is included because a pipeline change can
+# alter what the images mean. docs/, tests/, and .github/ deliberately are not: they describe
+# or verify the images without changing them.
+_CAPTURE_AFFECTING_PATHS = (
+    "src/",
+    "tools/capture_screenshots.py",
+)
+
+
+def _paths_changed_since(commit: str) -> list[str]:
+    """Capture-affecting source paths that changed between a recorded commit and HEAD."""
+    if not commit or commit == "unknown":
+        return []
+    try:
+        proc = subprocess.run(
+            ["git", "diff", "--name-only", f"{commit}..HEAD", "--", *_CAPTURE_AFFECTING_PATHS],
+            cwd=REPO_ROOT, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True, timeout=20,
+        )
+    except Exception:
+        return []
+    return [line.strip() for line in proc.stdout.splitlines() if line.strip()]
+
+
+def capture_freshness_report(manifest: dict | None) -> dict:
+    """Decides whether a checked-in capture still depicts the current source.
+
+    Freshness is decided from provenance metadata, not pixels: the screens render real machine
+    data — drive sizes, Windows build numbers, memory amounts — that legitimately differs
+    between the capture host and a CI runner, so a pixel diff cannot separate "the UI changed"
+    from "the machine differs". The recorded commit, diffed against HEAD over the paths that
+    change what a capture depicts, can.
+    """
+    head = _git_commit()
+    if not manifest or not manifest.get("images"):
+        return {"status": "unrecorded", "manifest_commit": None, "head": head, "changed": [],
+                "detail": "no runtime capture has been recorded for this build yet"}
+    manifest_commit = next(iter(manifest["images"].values())).get("commit")
+    if not manifest_commit:
+        return {"status": "unrecorded", "manifest_commit": None, "head": head, "changed": [],
+                "detail": "the manifest records no source commit"}
+    changed = _paths_changed_since(manifest_commit)
+    if not changed:
+        return {"status": "fresh", "manifest_commit": manifest_commit, "head": head, "changed": [],
+                "detail": f"no capture-affecting source changed since {manifest_commit}"}
+    return {"status": "stale", "manifest_commit": manifest_commit, "head": head, "changed": changed,
+            "detail": f"{len(changed)} capture-affecting path(s) changed since {manifest_commit}"}
+
+
 def capture_runtime_screenshots(exe_path: Path) -> bool:
     """Runs the built portable executable in `--capture-screens` mode (the e2e render path,
     same navigation loop discipline as `--smoke-test`), verifies each PNG, installs it into
@@ -166,9 +269,7 @@ def capture_runtime_screenshots(exe_path: Path) -> bool:
         print(f"[-] Portable executable not found: {exe_path}", file=sys.stderr)
         return False
 
-    version = _product_version()
-    architecture = _exe_architecture(exe_path)
-    commit = _git_commit()
+    checkout_commit = _git_commit()
     captured_utc = dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds")
 
     with tempfile.TemporaryDirectory(prefix="wincare-capture-") as tmp:
@@ -191,6 +292,18 @@ def capture_runtime_screenshots(exe_path: Path) -> bool:
             except Exception:
                 meta = {}
         appearance = meta.get("appearance", "unknown")
+        provenance = _resolve_provenance(exe_path, meta, checkout_commit)
+
+        architecture = provenance["architecture"]
+        checked = provenance.get("architecture_checked")
+        if checked and checked != architecture:
+            print(
+                f"[-] Architecture provenance conflict: the executable reports {architecture} "
+                f"but its PE header reports {checked}. Refusing to record either.",
+                file=sys.stderr,
+            )
+            return False
+        version = provenance["version"]
 
         images: dict = {}
         for image_name, (_title, route) in RUNTIME_CAPTURE_IMAGES.items():
@@ -208,7 +321,8 @@ def capture_runtime_screenshots(exe_path: Path) -> bool:
                 "source": "portable",
                 "architecture": architecture,
                 "version": version,
-                "commit": commit,
+                "version_source": provenance["version_source"],
+                "commit": checkout_commit,
                 "captured_utc": captured_utc,
                 "appearance": appearance,
                 "window_dips": meta.get("windowSizeDips", "unknown"),
@@ -241,6 +355,13 @@ def format_runtime_status_line(image_name: str, manifest: dict | None) -> str:
             " Checkup reports checked-area evidence rather than a synthetic machine-health claim; "
             "fast read-only probes run concurrently while Windows Update readiness is checked in "
             "the background."
+        )
+    stale = capture_freshness_report(manifest)
+    if stale["status"] == "stale":
+        extra = (
+            f" **Stale:** capture-affecting source changed since commit {stale['manifest_commit']}"
+            f" ({len(stale['changed'])} path(s) at {stale['head']}); this image is historical "
+            f"evidence until recaptured.{extra}"
         )
     return (
         f"**Capture status:** captured {date} from the v{entry['version']} portable build "
@@ -297,7 +418,9 @@ DOC_TAIL = """\
 
 ## Capture policy
 
-Capturing requires a Windows host with a built portable executable (or installed MSIX) of the exact version being recorded; the source tree alone cannot produce runtime evidence. Run:
+Capturing requires a Windows host with a built portable executable of the exact version being
+recorded; the source tree alone cannot produce runtime evidence. (Installed-MSIX capture is
+not yet implemented — only the portable build is supported.) Run:
 
 ```text
 python tools/capture_screenshots.py --runtime --exe artifacts/portable/win-x64/WinCare.App.exe
@@ -310,7 +433,7 @@ Every runtime image must record:
 - the exact package/product version;
 - architecture (`x64` or `ARM64`);
 - the source commit SHA or release tag;
-- whether the image came from an installed MSIX or portable build;
+- the packaging source of the image (`portable`; installed MSIX is not yet implemented);
 - the Windows appearance used when visually relevant.
 
 Runtime captures must be taken from a known built artifact and kept free of machine names, account names, paths, license keys, tokens, or other personal data. The in-app capture path renders the XAML content surface only, so window chrome and shell titles are never included. Concept imagery must never be presented as a runtime capture.
@@ -719,7 +842,24 @@ def main() -> int:
     parser.add_argument("--runtime", action="store_true", help="Capture runtime images e2e from a built portable executable and regenerate docs/Screenshots.md from the manifest")
     parser.add_argument("--exe", help="Path to the portable WinCare.App.exe to capture from (default: artifacts/portable/win-x64/WinCare.App.exe)")
     parser.add_argument("--check-doc", action="store_true", help="Fail if docs/Screenshots.md is out of sync with the capture manifest")
+    parser.add_argument(
+        "--check-freshness",
+        action="store_true",
+        help="Fail if the checked-in capture depicts a source revision behind HEAD on capture-affecting paths",
+    )
     args = parser.parse_args()
+
+    if args.check_freshness:
+        report = capture_freshness_report(load_runtime_manifest())
+        print(f"capture freshness: {report['status']}")
+        print(f"  manifest commit: {report['manifest_commit']}")
+        print(f"  head:            {report['head']}")
+        for path in report["changed"][:25]:
+            print(f"  changed:         {path}")
+        if len(report["changed"]) > 25:
+            print(f"  ... and {len(report['changed']) - 25} more")
+        print(f"  {report['detail']}")
+        return 0 if report["status"] in ("fresh", "unrecorded") else 1
 
     if args.verify_only:
         print("--- Verifying Documentation Screenshots (Verify-Only Mode) ---")

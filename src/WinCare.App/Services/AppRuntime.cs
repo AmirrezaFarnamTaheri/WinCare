@@ -16,18 +16,33 @@ namespace WinCare.App.Services;
 /// </summary>
 public sealed class AppRuntime
 {
-    private static readonly Lazy<AppRuntime> CurrentValue = new(() => new AppRuntime());
+    private static readonly Lazy<AppRuntime> CurrentValue = new(() => new AppRuntime(CaptureModeEnabled));
     private readonly object _pluginInitializationLock = new();
     private Task? _pluginInitializationTask;
 
-    private AppRuntime()
+    /// <summary>
+    /// Set by app startup before the first <see cref="Current"/> access when this process renders
+    /// documentation captures. The capture runtime wraps the command dispatcher in a rejecting
+    /// proxy, so a documented route cannot mutate the machine it documents. Startup ordering
+    /// guarantees this runs before <see cref="MainWindow"/>'s field initializer forces the value.
+    /// </summary>
+    public static bool CaptureModeEnabled { get; private set; }
+
+    /// <summary>Startup-only switch; must be called before any <see cref="Current"/> access.</summary>
+    internal static void EnableCaptureMode() => CaptureModeEnabled = true;
+
+    private AppRuntime(bool captureMode = false)
     {
         Journal = new ActivityJournalService();
         NativeCore = new NativeCoreService();
         StorageReports = new StorageReportService();
         SystemProbe = new NativeSystemProbeRepository();
         CommandExecutor = new WindowsCommandExecutor(NativeCore);
-        Dispatcher = CommandRuntime.CreateDefault(CommandExecutor, NativeCore, Journal);
+        CommandDispatcher dispatcher = CommandRuntime.CreateDefault(CommandExecutor, NativeCore, Journal);
+        // The capture session renders documented routes; it never dispatches. The proxy rejects
+        // execution while still registering plugin commands, so the documented catalog matches
+        // what a real session shows.
+        Dispatcher = captureMode ? new CaptureModeCommandDispatcher(dispatcher) : dispatcher;
         PluginState = new PluginStateRepository();
         PluginHost = new DefaultPluginHost(Dispatcher);
         PluginRegistry = new PluginRegistryService(
@@ -72,9 +87,10 @@ public sealed class AppRuntime
     internal WindowsCommandExecutor CommandExecutor { get; }
 
     /// <summary>
-    /// Gets the command dispatcher instance.
+    /// Gets the command dispatcher instance. Typed as the interface so a capture session can
+    /// substitute a rejecting proxy without callers depending on the concrete dispatcher.
     /// </summary>
-    public CommandDispatcher Dispatcher { get; }
+    public ICommandDispatcher Dispatcher { get; }
 
     /// <summary>
     /// Gets the plugin state repository instance.

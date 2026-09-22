@@ -43,6 +43,41 @@ class ScreenshotPipelineContractTests(unittest.TestCase):
         capture_body = source[source.index("private static async Task RunCaptureScreensAsync"):]
         self.assertNotIn("ExecuteAsync", capture_body[: capture_body.index("InitializeRuntimeAsync")])
 
+    def test_capture_installs_a_rejecting_command_plane(self) -> None:
+        """The read-only contract is enforced at runtime, not by source-text scanning.
+
+        Capture mode wraps the real dispatcher in CaptureModeCommandDispatcher, whose
+        ExecuteAsync throws. A route that dispatches therefore fails the capture run
+        instead of mutating the machine — the source-text gate above can be defeated by
+        an indirect call, this cannot.
+        """
+        runtime = (ROOT / "src/WinCare.App/Services/AppRuntime.cs").read_text(encoding="utf-8")
+        self.assertIn("CaptureModeCommandDispatcher", runtime)
+        self.assertIn("EnableCaptureMode", runtime)
+        app = (ROOT / "src/WinCare.App/App.xaml.cs").read_text(encoding="utf-8")
+        # The capture environment must be installed before the window is constructed:
+        # MainWindow's field initializer forces the AppRuntime singleton.
+        self.assertLess(
+            app.index("ConfigureCaptureEnvironment()"),
+            app.index("new MainWindow("),
+            "capture environment must be configured before the main window is created",
+        )
+
+    def test_capture_cli_fails_closed_without_an_output_directory(self) -> None:
+        source = (ROOT / "src/WinCare.App/App.xaml.cs").read_text(encoding="utf-8")
+        self.assertIn("Environment.Exit(2)", source)
+
+    def test_capture_data_root_is_isolated_from_the_user_profile(self) -> None:
+        """A capture must not render this machine's journal, preferences, or plugins."""
+        for rel in (
+            "src/WinCare.Application/Storage/AppDataRoot.cs",
+            "src/WinCare.Application/Activity/ActivityJournalService.cs",
+            "src/WinCare.App/Services/AppPreferences.cs",
+            "src/WinCare.Application/Plugins/DefaultPluginHost.cs",
+            "src/WinCare.Infrastructure/Plugins/PluginStateRepository.cs",
+        ):
+            self.assertIn("AppDataRoot", (ROOT / rel).read_text(encoding="utf-8"), f"{rel} must resolve through AppDataRoot")
+
     def test_capture_routes_are_real_readonly_navigation_targets(self) -> None:
         catalog = (ROOT / "src/WinCare.Application/Navigation/NavigationCatalog.cs").read_text(encoding="utf-8")
         app_source = (ROOT / "src/WinCare.App/App.xaml.cs").read_text(encoding="utf-8")

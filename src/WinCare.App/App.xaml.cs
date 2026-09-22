@@ -79,7 +79,13 @@ public partial class App : Microsoft.UI.Xaml.Application
 
         string? captureOutputDirectory = ResolveCaptureOutputDirectory(processArguments);
         IsCaptureSession = captureOutputDirectory is not null;
-
+        if (IsCaptureSession)
+        {
+            // Must run before the window is created: MainWindow's field initializer forces the
+            // AppRuntime singleton and AppPreferences' static constructor resolves the data root,
+            // and both must see the capture environment.
+            ConfigureCaptureEnvironment();
+        }
         _window = new MainWindow(IsCaptureSession);
         StartupTelemetry.Mark("WindowCreated");
         _window.Activate();
@@ -108,18 +114,27 @@ public partial class App : Microsoft.UI.Xaml.Application
     }
 
     /// <summary>
-    /// Returns the directory passed to <c>--capture-screens &lt;dir&gt;</c>, or null when the
-    /// argument is absent. Capture is the only mode that suppresses saved-placement restore,
-    /// so the flag and the output path resolve from this single source.
+    /// Returns the directory passed to <c>--capture-screens &lt;dir&gt;</c>. When the flag is
+    /// present without a usable directory the process fails closed with a nonzero exit code:
+    /// a malformed capture invocation must never fall through into an ordinary app launch,
+    /// which would silently capture nothing and report success to the caller.
     /// </summary>
     private static string? ResolveCaptureOutputDirectory(string[] processArguments)
     {
-        for (int i = 1; i < processArguments.Length - 1; i++)
+        for (int i = 1; i < processArguments.Length; i++)
         {
-            if (string.Equals(processArguments[i], CaptureScreensArgument, StringComparison.OrdinalIgnoreCase))
+            if (!string.Equals(processArguments[i], CaptureScreensArgument, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+            if (i + 1 < processArguments.Length && !string.IsNullOrWhiteSpace(processArguments[i + 1]))
             {
                 return processArguments[i + 1];
             }
+            Console.Error.WriteLine(
+                $"{CaptureScreensArgument} requires a writable output directory; no path was given.");
+            Environment.Exit(2);
+            return null;
         }
         return null;
     }
@@ -204,6 +219,23 @@ public partial class App : Microsoft.UI.Xaml.Application
     }
 
     /// <summary>
+    /// Points the process at an isolated, empty data root and installs the read-only command
+    /// plane, so a documentation capture renders a pristine first-run surface and can never
+    /// dispatch a mutation. Runs before the first <see cref="Services.AppRuntime.Current"/>
+    /// access and before <see cref="AppPreferences"/>' static constructor.
+    /// </summary>
+    private static void ConfigureCaptureEnvironment()
+    {
+        string captureDataRoot = Path.Combine(
+            Path.GetTempPath(),
+            $"wincare-capture-data-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(captureDataRoot);
+        WinCare.Application.Storage.AppDataRoot.Override = captureDataRoot;
+        Services.AppRuntime.EnableCaptureMode();
+        TraceCapture($"capture-data-root:{captureDataRoot}");
+    }
+
+    /// <summary>
     /// Renders each documentation route from <see cref="CaptureRoutes"/> to a PNG in
     /// <paramref name="outputDirectory"/> and exits with 0 only when every file was written.
     /// Runs the packaged plugin initialization first so captures reflect real plugin state.
@@ -220,14 +252,18 @@ public partial class App : Microsoft.UI.Xaml.Application
             MainWindow window = ((App)Current)._window
                 ?? throw new InvalidOperationException("Capture run could not access the main window.");
 
-            // Sidecar the tool reads to record the policy-required provenance fields.
+            // Sidecar the tool reads to record the policy-required provenance fields. Version and
+            // architecture come from the running assembly and process, not from the source tree,
+            // so the manifest describes this exact executable.
+            var captureDispatcher = runtime.Dispatcher as CaptureModeCommandDispatcher;
             File.WriteAllText(
                 Path.Combine(outputDirectory, "capture-meta.json"),
                 $$"""
                   {
                     "version": "{{typeof(App).Assembly.GetName().Version?.ToString(3) ?? "unknown"}}",
                     "appearance": "{{window.CaptureAppearance}}",
-                    "windowSizeDips": "{{CaptureWindowSizeDips.Width}}x{{CaptureWindowSizeDips.Height}}"
+                    "windowSizeDips": "{{CaptureWindowSizeDips.Width}}x{{CaptureWindowSizeDips.Height}}",
+                    "architecture": "{{System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture}}"
                   }
                   """);
 
@@ -239,6 +275,16 @@ public partial class App : Microsoft.UI.Xaml.Application
                 await SaveWindowCapturePngAsync(window, Path.Combine(outputDirectory, $"{route}.png"))
                     .ConfigureAwait(true);
                 TraceCapture($"captured:{route}");
+            }
+
+            if (captureDispatcher is { RejectedRequests.Count: > 0 })
+            {
+                // The rejecting proxy already aborted the offending dispatch; this is the
+                // belt-and-braces record so a suppressed exception cannot look like success.
+                string attempted = string.Join(", ", captureDispatcher.RejectedRequests.Select(r => r.CommandId));
+                throw new InvalidOperationException(
+                    $"Documentation capture attempted to execute commands: {attempted}. "
+                    + "Capture must render documented routes only.");
             }
 
             StartupTelemetry.Mark("DocumentationCapturesPassed");

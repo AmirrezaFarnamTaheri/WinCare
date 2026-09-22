@@ -37,8 +37,9 @@ public sealed class PluginStateRepository : IPluginStateRepository
         }
         else
         {
-            var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-            var wincareDir = Path.Combine(localAppData, "WinCare");
+            // Follows the shared data root so a capture session starts from a fresh-install
+            // plugin state: no enabled/disabled choices from this machine leak into the image.
+            var wincareDir = WinCare.Application.Storage.AppDataRoot.Current;
             Directory.CreateDirectory(wincareDir);
             _stateFilePath = Path.Combine(wincareDir, "plugins.json");
         }

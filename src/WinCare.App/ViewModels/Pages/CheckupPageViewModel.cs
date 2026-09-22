@@ -24,7 +24,7 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
     private const string WuaCommandId = "wua-search";
     private const string WuaRowTitle = "Updates";
 
-    private readonly CommandDispatcher _dispatcher;
+    private readonly ICommandDispatcher _dispatcher;
     private CancellationTokenSource? _runCts;
     private bool _isRunning;
     private bool _isStopping;
@@ -35,7 +35,7 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
 
     public CheckupPageViewModel() : this(AppRuntime.Current.Dispatcher) { }
 
-    internal CheckupPageViewModel(CommandDispatcher dispatcher)
+    internal CheckupPageViewModel(ICommandDispatcher dispatcher)
         : base([
             new PageSection("Checkup", "Run Checkup to see the latest results.", [
                 new PageRow("Windows and hardware", "Windows version, uptime, memory, processor, and device basics.", "Ready", "Read-only"),
