@@ -27,8 +27,11 @@ public class DefaultPluginHost : IPluginHost
 
         if (string.IsNullOrWhiteSpace(pluginsUserDirectory))
         {
-            var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-            PluginsUserDirectory = Path.Combine(localAppData, "WinCare", "Plugins");
+            // Follows the shared data root so a capture session's isolated root also isolates
+            // user-installed extensions: a documentation image can never render a plugin this
+            // machine happens to have installed.
+            PluginsUserDirectory = Path.Combine(
+                WinCare.Application.Storage.AppDataRoot.Current, "Plugins");
         }
         else
         {

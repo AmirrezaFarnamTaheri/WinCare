@@ -14,15 +14,15 @@
 </p>
 
 > [!IMPORTANT]
-> WinCare 2.5.0-rc6 is a release candidate. The current catalog contains 269 commands. Operations that can change the system are admitted according to their declared risk and privilege requirements; review high-impact changes before applying them.
+> WinCare 3.0.0 is the current re-release line. The current catalog contains 269 commands. Operations that can change the system are admitted according to their declared risk and privilege requirements; review high-impact changes before applying them.
 
 ## Overview
 
 <p align="center">
-  <img src="docs/images/runtime-dashboard.png" alt="Historical WinCare v2.5.0-rc5 Home runtime capture" width="900" />
+  <img src="docs/images/runtime-dashboard.png" alt="WinCare v3.0.0 Home e2e runtime capture" width="900" />
 </p>
 
-<p align="center"><em>Historical v2.5.0-rc5 runtime capture. The current source has a newer task-first Home; see <a href="docs/Screenshots.md">Screenshots</a> for capture status.</em></p>
+<p align="center"><em>E2E runtime capture from the v3.0.0 x64 portable build; see <a href="docs/Screenshots.md">Screenshots</a> for capture provenance.</em></p>
 
 WinCare brings Windows maintenance, diagnostics, recovery, and operational tooling into one native WinUI 3 application. Read-only checks remain separate from mutations, system-changing actions use explicit admission rules, and operation history is stored locally so users can see what ran and why.
 
@@ -127,9 +127,8 @@ Automated checks do not replace human UI/accessibility inspection. Follow [Windo
 | [User guide](docs/User-Guide.md) | Installation, navigation, safe operation, and troubleshooting. |
 | [Screenshots](docs/Screenshots.md) | Runtime captures and interface references. |
 | [Architecture](docs/Architecture.md) | System boundaries, trust model, lifecycle, native integration, and packaging. |
-| [Release readiness](docs/Release-Readiness.md) | Current automated and manual release evidence requirements. |
 | [Windows validation](docs/Windows-Validation.md) | Repeatable Windows runtime and accessibility validation. |
-| [Validation](VALIDATION.md) | Evidence model and verification categories. |
+| [Validation](docs/Validation.md) | Evidence model and verification categories. |
 | [Security](SECURITY.md) | Security invariants and vulnerability reporting. |
 | [Contributing](CONTRIBUTING.md) | Development and review workflow. |
 | [Third-party notices](THIRD-PARTY-NOTICES.md) | Licensing information for external dependencies. |

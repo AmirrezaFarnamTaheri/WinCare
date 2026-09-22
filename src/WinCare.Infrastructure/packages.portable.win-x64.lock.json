@@ -46,14 +46,14 @@
       "wincare.application": {
         "type": "Project",
         "dependencies": {
-          "WinCare.CommandCatalog": "[2.5.0-rc5, )",
-          "WinCare.Domain": "[2.5.0-rc5, )"
+          "WinCare.CommandCatalog": "[3.0.0, )",
+          "WinCare.Domain": "[3.0.0, )"
         }
       },
       "wincare.commandcatalog": {
         "type": "Project",
         "dependencies": {
-          "WinCare.Domain": "[2.5.0-rc5, )"
+          "WinCare.Domain": "[3.0.0, )"
         }
       },
       "wincare.domain": {

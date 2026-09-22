@@ -23,7 +23,7 @@ public sealed class ToolExecutionViewModel : ObservableObject
         Converters = { new JsonStringEnumConverter() },
     };
 
-    private readonly CommandDispatcher _dispatcher;
+    private readonly ICommandDispatcher _dispatcher;
     private readonly Action<string> _recordRecent;
     private ToolRowViewModel? _selectedTool;
     private bool _isExecuting;
@@ -54,7 +54,7 @@ public sealed class ToolExecutionViewModel : ObservableObject
     /// </summary>
     public event EventHandler? ParameterValuesChanged;
 
-    public ToolExecutionViewModel(CommandDispatcher dispatcher, Action<string> recordRecent)
+    public ToolExecutionViewModel(ICommandDispatcher dispatcher, Action<string> recordRecent)
     {
         _dispatcher = dispatcher ?? throw new ArgumentNullException(nameof(dispatcher));
         _recordRecent = recordRecent ?? throw new ArgumentNullException(nameof(recordRecent));

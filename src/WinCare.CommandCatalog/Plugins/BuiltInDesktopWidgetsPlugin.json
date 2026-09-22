@@ -1,7 +1,7 @@
 {
   "id": "com.wincare.builtin.desktop_widgets",
   "name": "Desktop Performance HUD & Widget Grid",
-  "version": "2.5.0",
+  "version": "3.0.0",
   "author": "WinCare Core Team",
   "description": "High-density system performance monitoring widgets providing real-time CPU, RAM, Disk I/O, and Network telemetry.",
   "category": "Utilities",

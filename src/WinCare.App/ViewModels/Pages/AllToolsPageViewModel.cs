@@ -32,7 +32,7 @@ public sealed class AllToolsPageViewModel : ObservableObject, IDisposable
     public AllToolsPageViewModel() : this(AppRuntime.Current.ToolCatalog, AppRuntime.Current.Dispatcher) { }
     public AllToolsPageViewModel(ToolCatalogService catalog) : this(catalog, AppRuntime.Current.Dispatcher) { }
 
-    public AllToolsPageViewModel(ToolCatalogService catalog, CommandDispatcher dispatcher)
+    public AllToolsPageViewModel(ToolCatalogService catalog, ICommandDispatcher dispatcher)
     {
         _catalog = catalog ?? throw new ArgumentNullException(nameof(catalog));
         foreach (string id in AppPreferences.FavoriteCommandIds) _favoriteIds.Add(id);

@@ -1,7 +1,7 @@
 {
   "id": "com.wincare.builtin.android_bridge",
   "name": "Android Device Bridge & Storage Inspector",
-  "version": "2.5.0",
+  "version": "3.0.0",
   "author": "WinCare Core Team",
   "description": "Developer device manager inspecting connected Android hardware, emulators, and WSA subsystems for storage usage and stale staging artifacts.",
   "category": "Developer Tools",

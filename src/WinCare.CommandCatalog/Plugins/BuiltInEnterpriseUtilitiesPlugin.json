@@ -1,7 +1,7 @@
 {
   "id": "com.wincare.builtin.enterprise_utilities",
   "name": "Enterprise Hosts & System Policy Hardener",
-  "version": "2.5.0",
+  "version": "3.0.0",
   "author": "WinCare Core Team",
   "description": "Deterministic, memory-safe Windows hosts file parser and telemetry domain blocklist manager adhering to RFC 1123 standards.",
   "category": "Security & Privacy",

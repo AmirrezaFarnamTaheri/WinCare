@@ -1,12 +1,12 @@
 # WinCare — Task-first Fluent Workspace
 
-The September 2026 product finalization moves WinCare from an instrument-panel metaphor to a calmer task-first native WinUI 3 workspace. Earlier concepts remain reference studies only.
+WinCare is a task-first native WinUI 3 workspace played straight against Fluent: calm surfaces, system-tracked accent, semantics carried by text and structure rather than hue. The 3.0.0 re-release re-based the palette onto this system; the task-first product model itself predates it.
 
 ## Design intent
 
 Give people a clear starting point, make the next useful action obvious, and keep advanced capability available without forcing everyone through a 269-command catalog. The product sequence is **Check → Understand → Act → Review**.
 
-Studies in `design/redesign-2026-09/precision-character/` are concept art, not runtime evidence. The implementation combines their strongest ideas rather than duplicating one screenshot.
+The 2026-09 redesign concept studies were retired with the 3.0.0 re-release; this file is the visual system of record. Runtime truth lives in the code and in `docs/Screenshots.md` captures — never in concept art.
 
 ## Canonical owners
 
@@ -19,36 +19,38 @@ Studies in `design/redesign-2026-09/precision-character/` are concept art, not r
 
 | Role / resource | Light | Dark |
 |---|---|---|
-| PageBackgroundBrush | #EDF2F5 | #101B24 |
-| SurfaceBrush / CardSurfaceBrush | #FFFFFF | #182A35 |
-| SurfaceSecondaryBrush | #F2F6F8 | #203542 |
-| SurfaceHoverBrush | #E0EBF0 | #2B4655 |
-| HeroBackgroundBrush | #E5EFF4 | #14232D |
-| NavigationRailBrush | #E4ECF1 | #14232D |
-| CardBorderBrush / BorderSubtleBrush | #CBD8E0 | #36505E |
-| TextPrimaryBrush | #172D3B | #EEF5F7 |
-| TextSecondaryBrush | #435C6B | #B0C4CE |
-| AccentTealBrush / AccentBrush | #006B80 | #70D6DF |
-| AccentTealSubtleBrush | #DCEFF2 | #203F4A |
-| TextOnAccentBrush | #FFFFFF | #06151C |
+| PageBackgroundBrush | #F2F4F7 | #1C2733 |
+| SurfaceBrush / CardSurfaceBrush | #FFFFFF | #26313D |
+| SurfaceSecondaryBrush | #EDF1F5 | #2E3B49 |
+| SurfaceHoverBrush | #E1E8EE | #374656 |
+| HeroBackgroundBrush | #DFEAF2 | #202B37 |
+| NavigationRailBrush / TitleBarBackgroundBrush | #EAEEF2 | #202B37 |
+| CardBorderBrush / BorderSubtleBrush | #D5DDE4 | #46586A |
+| TextPrimaryBrush | #14202B | #EAF0F5 |
+| TextSecondaryBrush | #3D5568 | #AFC0CD |
+| AccentChromeBrush / AccentBrush | #005FB8 | #60CDFF |
+| AccentChromeSubtleBrush | #D6EAF7 | #1E3B4F |
+| TextOnAccentBrush | #FFFFFF | #0A1E2C |
 
-Status colors retain semantic meaning. Brand color is not a health result. High contrast uses Windows system colors; native caption controls follow appearance too.
+Status colors retain semantic meaning. Brand color is not a health result. Primary-action styles use WinUI's native `AccentFillColorDefaultBrush`/`TextOnAccentFillColorPrimaryBrush`, so buttons and links follow the user's system accent; the static `AccentBrush`/`AccentChromeBrush` values above carry the Windows default accent for view-model-bound brushes. Status-pill pairs (`PillReadOnlyBg`/`PillMutatingBg`/`PillElevatedBg`/`PillNotReadyBg` with `PillText`/`PillAltText`) stay literal hex so the contrast gates can measure them; runtime composition is pinned in `verify_pill_contrast.py`. High contrast uses Windows system colors — the not-ready pill drops to the window ground and HC pills carry meaning through text and borders, never fill hue alone. Native caption controls follow appearance too.
 
 ## Typography and geometry
 
 - Segoe UI Variable Display for headings, Segoe UI Variable Text for controls and prose. Native Windows legibility is intentional.
 - Cascadia Code / Cascadia Mono / Consolas only for measurements, identifiers and technical evidence.
 - Page title 34 DIP; section 20; row title 15; body 14 with 21-DIP line height; secondary prose 13 with 18-DIP line height. No decorative labels above page headings.
-- Four-DIP rhythm, 32-DIP desktop inset, 20-DIP compact inset. Related controls use 8–12 DIP gaps; sections use 24–28.
-- Outer panels 12-DIP corners, inner panels and controls 8, status labels 4. Use one enclosure per functional group.
-- Primary actions use cyan. Secondary actions use QuietButtonStyle. Diagnostic channels share a native button style with visible focus.
+- Status masthead 40 DIP with 48-DIP line height (`HeroTitleTextStyle`) carries the Home verdict and the Checkup action heading — the only type permitted to outrank a page title, and the sole full-strength display moment per page. Coverage and last-status render as an inline stat (metric, caption, 1-DIP `BorderSubtleBrush` hairline divider) inside the hero enclosure, never a nested card; compact stacks the stat and drops the hairline.
+- Entry-point icons sit in 40-DIP `IconTileStyle` tiles (`AccentChromeSubtleBrush` ground, `AccentChromeBrush` glyph) — the system's recurring structural device, built only from the existing accent pair.
+- Spacing tokens `SpacingXS`–`XXL` (4/8/12/16/24/32) and `GapXS`–`XL` exist in `ControlStyles.xaml` for new work; existing page markup still uses a 6–28 DIP mix that does not sit on that scale. Migrating page literals is a deferred, render-verified pass — replacing values blind would be a redesign, not a cleanup.
+- Desktop inset 32 DIP; compact 20. Outer panels 12-DIP corners, inner panels and controls 8, status labels 4. One enclosure per functional group.
+- Primary actions use the Windows system accent via native WinUI accent brushes. Secondary actions use QuietButtonStyle. Diagnostic channels share a native button style with visible focus.
 - Preserve native hover, pressed, disabled and busy states. No perpetual animation or delayed feedback for effect.
 
 ## Composition
 
-Home is recommendation-led: one checkup action, three common care entry points, a compact evidence summary, recent activity, and secondary links to Power tools, Extensions, and Troubleshoot. Decorative hardware atlases and telemetry HUDs are not part of the runtime Home hierarchy.
+Home is recommendation-led: one checkup action, three common care entry points, a compact evidence summary, and recent activity. Power tools, Extensions, and Troubleshoot live on the navigation rail; Home does not repeat them. Decorative hardware atlases and telemetry HUDs are not part of the runtime Home hierarchy.
 
-Checkup is explicitly read-only. Its selector appears before the findings list, and findings deep-link to the relevant care surface instead of performing maintenance in place. The summary is a checked-area status, not a synthetic health score.
+Checkup is explicitly read-only. Its four areas are listed up front and their rows update in place when a check runs, and findings deep-link to the relevant care surface instead of performing maintenance in place. The summary is a checked-area status, not a synthetic health score.
 
 System care, Security, and Repair & recovery share `CareToolList` and project commands through exact catalog Area/Section values. Descriptions sit under task names; impact and requirements are supporting metadata. Portable playbooks remain a dedicated Repair & recovery section.
 
@@ -74,4 +76,4 @@ Activity uses a theme-aware document illustration and a separate empty compositi
 
 ## Verification
 
-Build/source checks do not establish runtime accessibility. Follow `docs/Windows-Validation.md` for the maintained Windows interaction, theme, scaling, keyboard, Narrator, packaging, and release-validation procedure. Historical captures remain labeled by build, and generated art never counts as execution evidence.
+The palette above is not decoration: `verify_visual_tokens.py` pins key presence per theme dictionary, and `verify_pill_contrast.py` plus `verify_palette_contrast.py`/`tests/native/test_visual_contrast.py` enforce WCAG 2.1 AA (≥4.5:1) on the measured literal pairs. Route and chrome-label parity across catalog/XAML/resources is gated by `verify_native_foundation.py` and `tests/native/test_product_ui_parity.py`. Build/source checks do not establish runtime accessibility: follow `docs/Windows-Validation.md` for the maintained Windows interaction, theme, scaling, keyboard, Narrator, packaging, and release-validation procedure. Historical captures remain labeled by build, and generated art never counts as execution evidence.

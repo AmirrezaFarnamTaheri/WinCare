@@ -30,8 +30,7 @@ public static class AppPreferences
 {
     private static readonly object StateSync = new();
     private static readonly object PersistenceSync = new();
-    private static readonly string DirectoryPath = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "WinCare");
+    private static readonly string DirectoryPath = WinCare.Application.Storage.AppDataRoot.Current;
     private static readonly string FilePath = Path.Combine(DirectoryPath, "settings.json");
     private static string? _persistenceStatusMessage;
     private static AppPreferenceData _current = Load(out _persistenceStatusMessage);

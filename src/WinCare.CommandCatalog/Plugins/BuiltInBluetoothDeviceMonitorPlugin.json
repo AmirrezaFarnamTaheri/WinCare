@@ -1,7 +1,7 @@
 {
   "id": "com.wincare.builtin.bluetooth_monitor",
   "name": "Bluetooth Accessory & Peripheral Battery Telemetry",
-  "version": "2.5.0",
+  "version": "3.0.0",
   "author": "WinCare Core Team",
   "description": "Probes paired and connected Bluetooth audio peripherals, input devices, and battery telemetry levels via Win32 Bluetooth APIs.",
   "category": "Hardware & Peripherals",

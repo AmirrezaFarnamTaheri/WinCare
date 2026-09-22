@@ -41,8 +41,9 @@ public sealed class ActivityJournalService : IActivityJournalService
     {
         if (string.IsNullOrWhiteSpace(journalFilePath))
         {
-            var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-            _journalFilePath = Path.Combine(localAppData, "WinCare", "activity.json");
+            // The capture session redirects the root so documentation images never render this
+            // machine's saved activity; a caller may still pass an explicit path.
+            _journalFilePath = WinCare.Application.Storage.AppDataRoot.ActivityJournalPath;
         }
         else
         {

@@ -1,7 +1,7 @@
 {
   "id": "com.wincare.builtin.log_viewer",
   "name": "Diagnostic Log Viewer & Trace Tailer",
-  "version": "2.5.0",
+  "version": "3.0.0",
   "author": "WinCare Core Team",
   "description": "High-performance sliding-window log tailing engine with regex filtering, log severity categorization, and trace analysis.",
   "category": "Diagnostics & Logs",

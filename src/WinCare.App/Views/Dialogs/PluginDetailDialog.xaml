@@ -15,8 +15,8 @@
     <ScrollViewer MaxHeight="620" VerticalScrollBarVisibility="Auto">
         <StackPanel MaxWidth="460" Spacing="24">
         <Grid ColumnDefinitions="Auto,*">
-            <Border Width="64" Height="64" CornerRadius="{StaticResource RadiusControl}" Background="{ThemeResource AccentTealSubtleBrush}" BorderBrush="{ThemeResource AccentTealBrush}" BorderThickness="1" Margin="0,0,16,0">
-                <FontIcon Glyph="&#xE74C;" FontSize="32" Foreground="{ThemeResource AccentTealBrush}" AutomationProperties.AccessibilityView="Raw"/>
+            <Border Width="64" Height="64" CornerRadius="{StaticResource RadiusControl}" Background="{ThemeResource AccentChromeSubtleBrush}" BorderBrush="{ThemeResource AccentChromeBrush}" BorderThickness="1" Margin="0,0,16,0">
+                <FontIcon Glyph="&#xE74C;" FontSize="32" Foreground="{ThemeResource AccentChromeBrush}" AutomationProperties.AccessibilityView="Raw"/>
             </Border>
             <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="4">
                 <TextBlock x:Name="PluginNameText" Style="{StaticResource AppTitleTextStyle}" Text="Extension name"/>
@@ -44,14 +44,14 @@
 
         <Border BorderThickness="1" BorderBrush="{ThemeResource BorderSubtleBrush}" CornerRadius="{StaticResource RadiusControl}" Padding="12" Background="{ThemeResource CardSurfaceBrush}">
             <StackPanel Spacing="8">
-                <StackPanel Orientation="Horizontal" Spacing="8"><FontIcon Glyph="&#xE72E;" FontSize="14" Foreground="{ThemeResource AccentTealBrush}" AutomationProperties.AccessibilityView="Raw"/><TextBlock Text="What it can access" Style="{StaticResource FieldLabelTextStyle}"/></StackPanel>
-                <ItemsControl x:Name="PermissionsItemsControl"><ItemsControl.ItemTemplate><DataTemplate x:DataType="x:String"><Grid ColumnDefinitions="Auto,*" Margin="0,2"><FontIcon Glyph="&#xE73E;" FontSize="12" Foreground="{ThemeResource AccentTealBrush}" Margin="0,0,8,0" AutomationProperties.AccessibilityView="Raw"/><TextBlock Grid.Column="1" Text="{x:Bind}" Style="{StaticResource TelemetryTextStyle}"/></Grid></DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
+                <StackPanel Orientation="Horizontal" Spacing="8"><FontIcon Glyph="&#xE72E;" FontSize="14" Foreground="{ThemeResource AccentChromeBrush}" AutomationProperties.AccessibilityView="Raw"/><TextBlock Text="What it can access" Style="{StaticResource FieldLabelTextStyle}"/></StackPanel>
+                <ItemsControl x:Name="PermissionsItemsControl"><ItemsControl.ItemTemplate><DataTemplate x:DataType="x:String"><Grid ColumnDefinitions="Auto,*" Margin="0,2"><FontIcon Glyph="&#xE73E;" FontSize="12" Foreground="{ThemeResource AccentChromeBrush}" Margin="0,0,8,0" AutomationProperties.AccessibilityView="Raw"/><TextBlock Grid.Column="1" Text="{x:Bind}" Style="{StaticResource TelemetryTextStyle}"/></Grid></DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
                 <TextBlock Text="Extensions use the same Windows permissions as your account." Style="{StaticResource FieldHintTextStyle}" />
             </StackPanel>
         </Border>
 
         <Border BorderThickness="1" BorderBrush="{ThemeResource BorderSubtleBrush}" CornerRadius="{StaticResource RadiusControl}" Padding="10" Background="{ThemeResource CardSurfaceBrush}">
-            <Grid ColumnDefinitions="Auto,*"><FontIcon Glyph="&#xE8D7;" FontSize="14" Foreground="{ThemeResource AccentTealBrush}" Margin="0,0,10,0" VerticalAlignment="Center" AutomationProperties.AccessibilityView="Raw"/><StackPanel Grid.Column="1" Spacing="4"><TextBlock Text="Publisher" Style="{StaticResource FieldLabelTextStyle}"/><TextBlock x:Name="PublisherTrustText" Style="{StaticResource BodyTextStyle}" Text="Community"/></StackPanel></Grid>
+            <Grid ColumnDefinitions="Auto,*"><FontIcon Glyph="&#xE8D7;" FontSize="14" Foreground="{ThemeResource AccentChromeBrush}" Margin="0,0,10,0" VerticalAlignment="Center" AutomationProperties.AccessibilityView="Raw"/><StackPanel Grid.Column="1" Spacing="4"><TextBlock Text="Publisher" Style="{StaticResource FieldLabelTextStyle}"/><TextBlock x:Name="PublisherTrustText" Style="{StaticResource BodyTextStyle}" Text="Community"/></StackPanel></Grid>
         </Border>
 
         <Border x:Name="RevocationBanner" Visibility="Collapsed" BorderThickness="1" BorderBrush="{ThemeResource DangerBrush}" CornerRadius="{StaticResource RadiusControl}" Padding="10" Background="{ThemeResource SurfaceSecondaryBrush}">

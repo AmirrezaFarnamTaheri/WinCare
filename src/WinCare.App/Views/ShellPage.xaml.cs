@@ -72,8 +72,9 @@ public sealed partial class ShellPage : Page
         PrimaryNavigation.SelectedItem = FindNavigationItem(HomeKey);
         _pageService.Navigate(ContentFrame, HomeKey);
 
-        if (!AppPreferences.HasSeenFirstRunTour)
+        if (!AppPreferences.HasSeenFirstRunTour && !App.IsCaptureSession)
         {
+            // Capture sessions skip the tour so it never overlays a route being documented.
             // First run is the least error-tolerant moment of the session: a dialog fault must
             // not escape the loaded path and take the shell down with it.
             try

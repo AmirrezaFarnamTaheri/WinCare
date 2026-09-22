@@ -1,7 +1,7 @@
 {
   "id": "com.wincare.builtin.shell_extensibility",
   "name": "Shell Extensibility & Context Menu Auditor",
-  "version": "2.5.0",
+  "version": "3.0.0",
   "author": "WinCare Core Team",
   "description": "Audits third-party shell context menu extensions, verifies COM handlers, and inspects Windows 11 context menu policies.",
   "category": "Windows Experience",

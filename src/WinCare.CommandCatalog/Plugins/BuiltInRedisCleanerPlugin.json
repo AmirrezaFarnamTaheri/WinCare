@@ -1,7 +1,7 @@
 {
   "id": "com.wincare.builtin.redis_cleaner",
   "name": "Redis & In-Memory Database Cache Optimizer",
-  "version": "2.5.0",
+  "version": "3.0.0",
   "author": "WinCare Core Team",
   "description": "Optimizer and cleaner for developer Redis snapshots, Append-Only Files (AOF), and local memory database dumps.",
   "category": "Developer Tools",

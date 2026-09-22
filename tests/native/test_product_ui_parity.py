@@ -1,11 +1,39 @@
 from __future__ import annotations
 
+import html
+import json
 import re
 import unittest
 from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[2]
+CATALOG = ROOT / "src/WinCare.CommandCatalog/Data/commands.json"
+
+# The three curated care pages project catalog commands through CareAreaSelection;
+# each maps a tab index to (area, section[s]) literals in its view model.
+CARE_PAGES = {
+    "system-care": "src/WinCare.App/ViewModels/Pages/SystemCarePageViewModel.cs",
+    "security": "src/WinCare.App/ViewModels/Pages/SecurityPageViewModel.cs",
+    "repair-recovery": "src/WinCare.App/ViewModels/Pages/RepairRecoveryPageViewModel.cs",
+}
+
+
+def _catalog_area_sections() -> dict[str, set[str]]:
+    commands = json.loads(CATALOG.read_text(encoding="utf-8"))["commands"]
+    areas: dict[str, set[str]] = {}
+    for command in commands:
+        areas.setdefault(command["area"], set()).add(command["section"])
+    return areas
+
+
+def _view_model_selections(source: str) -> set[tuple[str, str]]:
+    # Matches both forms: new("Area", "Section") and new("Area", ["A", "B"]).
+    pairs: set[tuple[str, str]] = set()
+    for area, tail in re.findall(r'new\("([^"]+)",\s*(\[[^\]]*\]|"[^"]+")', source):
+        for section in re.findall(r'"([^"]+)"', tail):
+            pairs.add((area, section))
+    return pairs
 
 
 class ProductUiParityTests(unittest.TestCase):
@@ -26,9 +54,8 @@ class ProductUiParityTests(unittest.TestCase):
         ):
             self.assertNotIn(stale_owner, view_model)
         self.assertIn("Home never runs system commands", view_model)
-        self.assertEqual(1, xaml.count('Content="Run checkup"'))
+        self.assertEqual(1, xaml.count('Content="Open checkup"'))
         self.assertIn('Text="Common care"', xaml)
-        self.assertIn('Text="More tools"', xaml)
         self.assertIn("PageNavigation.NavigateToSection", code_behind)
         self.assertIn("CheckupCoverageText", view_model)
         self.assertIn("CheckupTimestamp", view_model)
@@ -156,9 +183,15 @@ class ProductUiParityTests(unittest.TestCase):
 
     def test_global_search_does_not_hide_registry_errors(self) -> None:
         main_window = self.read("src/WinCare.App/MainWindow.xaml.cs")
+        search_service = self.read("src/WinCare.Application/Navigation/GlobalSearchService.cs")
 
-        self.assertIn("PluginRegistry.GetAllPlugins()", main_window)
+        # Ranking moved into GlobalSearchService (wave 4); the contract is unchanged:
+        # the shell wires the real registry in, the service enumerates it directly,
+        # and no empty catch may swallow failures anywhere on that path.
+        self.assertIn("new(AppRuntime.Current.ToolCatalog, AppRuntime.Current.PluginRegistry)", main_window)
+        self.assertIn("_extensions.GetAllPlugins()", search_service)
         self.assertNotIn("catch { }", main_window)
+        self.assertNotIn("catch { }", search_service)
         self.assertNotIn("How reviews and approvals work", main_window)
 
     def test_shell_page_service_and_navigation_catalog_share_one_route_set(self) -> None:
@@ -175,6 +208,44 @@ class ProductUiParityTests(unittest.TestCase):
         self.assertIn("PrimaryNavigation.SelectedItem = null", shell_code)
         self.assertEqual(1, shell_code.count("_pendingParameter" + " = parameter"))
         self.assertNotIn("_pendingToolsParameter", shell_code)
+
+    def test_chrome_labels_agree_across_catalog_xaml_and_resources(self) -> None:
+        # Wave 4 i18n audit: en-US is the only shipped locale, but nav/page chrome labels
+        # exist in three places (NavigationCatalog, XAML Content/Text, Resources.resw).
+        # Pin them together so a rename cannot silently drift one copy.
+        catalog = self.read("src/WinCare.Application/Navigation/NavigationCatalog.cs")
+        resw = self.read("src/WinCare.App/Strings/en-US/Resources.resw")
+
+        resw_values = {
+            (uid, prop): value
+            for uid, prop, value in re.findall(
+                r'<data name="([^.]+)\.(\w+)"[^>]*><value>(.*?)</value></data>', resw)
+        }
+
+        xaml_files = [ROOT / "src/WinCare.App/Views/ShellPage.xaml",
+                      *sorted((ROOT / "src/WinCare.App/Views/Pages").glob("*.xaml"))]
+        uid_count = 0
+        for path in xaml_files:
+            source = path.read_text(encoding="utf-8")
+            for attrs in re.findall(r'<\w+(?:\.\w+)*\s((?:[^>"]|"[^"]*")*?/?)>', source):
+                uid_match = re.search(r'x:Uid="([^"]+)"', attrs)
+                if uid_match is None:
+                    continue
+                uid = uid_match.group(1)
+                for prop in ("Content", "Text"):
+                    prop_match = re.search(rf'{prop}="([^"]*)"', attrs)
+                    if prop_match is None:
+                        continue
+                    uid_count += 1
+                    self.assertIn((uid, prop), resw_values, f"{path.name}: {uid}.{prop} missing from Resources.resw")
+                    self.assertEqual(prop_match.group(1), resw_values[(uid, prop)],
+                                     f"{path.name}: {uid}.{prop} differs from Resources.resw")
+        self.assertGreater(uid_count, 15)
+
+        catalog_labels = set(re.findall(r'new\("[^"]+", "([^"]+)"', catalog))
+        nav_labels = {html.unescape(value) for (uid, prop), value in resw_values.items()
+                      if uid.startswith("Nav") and prop == "Content"}
+        self.assertEqual(catalog_labels, nav_labels)
 
     def test_activity_copy_is_plain_language(self) -> None:
         activity = self.read("src/WinCare.App/Views/Pages/ActivityPage.xaml")
@@ -193,6 +264,37 @@ class ProductUiParityTests(unittest.TestCase):
         for legacy in ("DoubleBezel", "HudChassis", "LuminousGlow", "IslandIcon", "TelemetrySensorBox", "EyebrowBadge"):
             self.assertNotIn(legacy, controls)
             self.assertNotIn(legacy, theme)
+
+    def test_care_pages_claim_every_catalog_section_without_phantoms(self) -> None:
+        # Parity gate for the ux4 audit: commands.json declares the product taxonomy, and
+        # the care view models must claim it exactly. An unclaimed section would silently
+        # orphan its commands from curated browsing; a phantom section would render an
+        # empty tab. Both drift classes must fail here, not in the running app.
+        areas = _catalog_area_sections()
+        care_areas = {area for area in areas if area not in {"All tools", "Checkup"}}
+        self.assertEqual({"System care", "Security", "Repair & recovery"}, care_areas)
+        self.assertEqual({"Checkup"}, areas["Checkup"])
+        self.assertEqual({"Commands"}, areas["All tools"])
+
+        for route, relative in CARE_PAGES.items():
+            claimed = _view_model_selections(self.read(relative))
+            area = {"system-care": "System care", "security": "Security", "repair-recovery": "Repair & recovery"}[route]
+            expected = {(area, section) for section in areas[area]}
+            self.assertEqual(expected, claimed, f"{route} care-page sections drifted from commands.json")
+
+    def test_care_page_tabs_match_navigation_catalog_sections(self) -> None:
+        # The visible tab titles (PageSection) and the route's catalog section list are two
+        # renderings of one contract; a rename in either place must fail here.
+        catalog = self.read("src/WinCare.Application/Navigation/NavigationCatalog.cs")
+        route_sections = {
+            route: re.findall(r'"([^"]+)"', sections)
+            for route, sections in re.findall(
+                r'new\("([a-z-]+)", "[^"]+", "[^"]+", \[([^\]]*)\]', catalog)
+        }
+        for route, relative in CARE_PAGES.items():
+            view_model = self.read(relative).replace("&amp;", "&")
+            tabs = re.findall(r'new PageSection\(\s*"([^"]+)"', view_model)
+            self.assertEqual(route_sections[route], tabs, f"{route} tabs drifted from NavigationCatalog")
 
     def test_product_docs_still_match_execution_and_responsive_contracts(self) -> None:
         guide = self.read("docs/User-Guide.md")

@@ -6,7 +6,7 @@ public static class NavigationCatalog
     public static IReadOnlyList<NavigationDefinition> Items { get; } =
     [
         new("home", "Home", "NavHome", ["Overview", "Common care", "Recent activity"]),
-        new("checkup", "Checkup", "NavCheckup", ["Quick check", "Results"]),
+        new("checkup", "Checkup", "NavCheckup", ["Checkup"]),
         new("system-care", "System care", "NavSystemCare", ["Clean up", "Performance", "Apps & startup", "Network & updates", "Routines & maintenance"]),
         new("security", "Security", "NavSecurity", ["Status", "Protection", "Privacy", "Hardening"]),
         new("repair-recovery", "Repair & recovery", "NavRepairRecovery", ["Repair", "Restore", "Backup", "Reset & media", "Portable playbooks"]),

@@ -24,18 +24,12 @@ public sealed partial class MainWindow : Window
     private bool _highContrastEventRegistered;
     public bool IsClosed { get; private set; }
 
-    // Global-search suggestions carry route keys that must match the routing table; resolve them
-    // once so a catalog rename fails at startup instead of producing suggestions to nowhere.
-    private static readonly string AllToolsRoute = NavigationCatalog.Items.Single(item => item.Id == "all-tools").Id;
-    private static readonly string PluginStoreRoute = NavigationCatalog.Items.Single(item => item.Id == "plugin-store").Id;
-    private static readonly string HelpRoute = NavigationCatalog.Items.Single(item => item.Id == "help").Id;
-    private static readonly string ActivityRoute = NavigationCatalog.Items.Single(item => item.Id == "activity").Id;
-    private static readonly string AboutRoute = NavigationCatalog.Items.Single(item => item.Id == "about").Id;
+    private readonly GlobalSearchService _globalSearch = new(AppRuntime.Current.ToolCatalog, AppRuntime.Current.PluginRegistry);
 
     [DllImport("user32.dll")]
     private static extern uint GetDpiForWindow(nint windowHandle);
 
-    public MainWindow()
+    public MainWindow(bool captureMode = false)
     {
         InitializeComponent();
         WindowRoot.ActualThemeChanged += OnWindowRootThemeChanged;
@@ -52,7 +46,13 @@ public sealed partial class MainWindow : Window
         ExtendsContentIntoTitleBar = true;
         SetTitleBar(AppTitleBar);
         ConfigureBackdrop();
-        if (!AppPreferences.RememberWindowPlacement || !RestoreWindowPlacement())
+        if (captureMode)
+        {
+            // Documentation captures need deterministic geometry: skip saved placement entirely.
+            var (width, height) = App.CaptureWindowSizeDips;
+            ResizeWindow(width, height);
+        }
+        else if (!AppPreferences.RememberWindowPlacement || !RestoreWindowPlacement())
         {
             ResizeWindow(1280, 800);
         }
@@ -60,6 +60,9 @@ public sealed partial class MainWindow : Window
         Activated += OnWindowActivated;
         Closed += OnWindowClosed;
     }
+
+    /// <summary>Resolved render theme, exposed for capture provenance without leaking the root element.</summary>
+    public string CaptureAppearance => WindowRoot.ActualTheme.ToString();
 
     public void ApplyTheme(string theme)
     {
@@ -201,7 +204,7 @@ public sealed partial class MainWindow : Window
     private void GlobalSearchBox_TextChanged(AutoSuggestBox sender, AutoSuggestBoxTextChangedEventArgs args)
     {
         if (args.Reason != AutoSuggestionBoxTextChangeReason.UserInput) return;
-        sender.ItemsSource = BuildGlobalSuggestions(sender.Text);
+        sender.ItemsSource = _globalSearch.Search(sender.Text);
     }
 
     private void GlobalSearchBox_QuerySubmitted(AutoSuggestBox sender, AutoSuggestBoxQuerySubmittedEventArgs args)
@@ -214,7 +217,7 @@ public sealed partial class MainWindow : Window
 
         string query = args.QueryText?.Trim() ?? string.Empty;
         if (query.Length == 0) return;
-        GlobalSearchSuggestion? best = BuildGlobalSuggestions(query)
+        GlobalSearchSuggestion? best = _globalSearch.Search(query)
             .FirstOrDefault(item => string.Equals(item.Title, query, StringComparison.OrdinalIgnoreCase));
         if (best is not null)
         {
@@ -236,80 +239,6 @@ public sealed partial class MainWindow : Window
         }
 
         Shell.NavigateTo(suggestion.Route, suggestion.Query);
-    }
-
-    private static IReadOnlyList<GlobalSearchSuggestion> BuildGlobalSuggestions(string? text)
-    {
-        string query = text?.Trim() ?? string.Empty;
-        if (query.Length == 0) return [];
-
-        var candidates = new List<(GlobalSearchSuggestion Item, int Score)>();
-        foreach (NavigationDefinition route in NavigationCatalog.Items)
-        {
-            int score = ScoreSearch(query, route.Label, route.Id, string.Join(' ', route.Tabs));
-            if (score > 0)
-            {
-                candidates.Add((new GlobalSearchSuggestion(route.Label, route.IsHidden ? "WinCare information" : "Open this area", route.Id, null, GlobalSearchSuggestionKind.Page), score + 30));
-            }
-        }
-
-        foreach (var tool in AppRuntime.Current.ToolCatalog.All)
-        {
-            int score = ScoreSearch(query, tool.Title, tool.Summary, tool.Area, tool.Section, tool.Id, string.Join(' ', tool.Keywords));
-            if (score <= 0) continue;
-            candidates.Add((new GlobalSearchSuggestion(tool.Title, $"{tool.Area} · {tool.Section}", AllToolsRoute, tool.Id, GlobalSearchSuggestionKind.Tool), score));
-        }
-
-        foreach (var extension in AppRuntime.Current.PluginRegistry.GetAllPlugins())
-        {
-            int score = ScoreSearch(query, extension.Name, extension.Description, extension.Category, extension.Author, extension.Id);
-            if (score <= 0) continue;
-            candidates.Add((new GlobalSearchSuggestion(extension.Name, $"Extension · {extension.Category}", PluginStoreRoute, extension.Name, GlobalSearchSuggestionKind.Extension), score + 10));
-        }
-
-        (string Title, string Terms, string Route)[] helpTopics =
-        [
-            ("How changes work", "changes confirmation preview risk destructive", HelpRoute),
-            ("Keyboard shortcuts", "keyboard shortcut ctrl k ctrl f search", HelpRoute),
-            ("Find a tool", "find discover tool category power tools", HelpRoute),
-            ("Recent activity and results", "history report recent activity results", ActivityRoute),
-            ("About WinCare", "about version license credits", AboutRoute),
-        ];
-        foreach ((string title, string terms, string route) in helpTopics)
-        {
-            int score = ScoreSearch(query, title, terms);
-            if (score <= 0) continue;
-            candidates.Add((new GlobalSearchSuggestion(title, "Help topic", route, null, GlobalSearchSuggestionKind.Help), score + 5));
-        }
-
-        return candidates.OrderByDescending(candidate => candidate.Score)
-            .ThenBy(candidate => candidate.Item.Title, StringComparer.OrdinalIgnoreCase)
-            .Select(candidate => candidate.Item)
-            .DistinctBy(item => (item.Title, item.Route, item.Query))
-            .Take(10)
-            .ToArray();
-    }
-
-    private static int ScoreSearch(string query, params string?[] fields)
-    {
-        string[] tokens = query.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        if (tokens.Length == 0) return 0;
-
-        int score = 0;
-        foreach (string token in tokens)
-        {
-            int tokenScore = 0;
-            foreach (string? field in fields)
-            {
-                if (string.IsNullOrWhiteSpace(field)) continue;
-                if (string.Equals(field, token, StringComparison.OrdinalIgnoreCase)) tokenScore = Math.Max(tokenScore, 100);
-                else if (field.StartsWith(token, StringComparison.OrdinalIgnoreCase)) tokenScore = Math.Max(tokenScore, 70);
-                else if (field.Contains(token, StringComparison.OrdinalIgnoreCase)) tokenScore = Math.Max(tokenScore, 35);
-            }
-            if (tokenScore == 0) return 0;
-            score += tokenScore;
-        }
-        return score;
     }
 
     public void HandleProtocolActivation(string arguments)

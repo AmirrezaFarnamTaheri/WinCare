@@ -167,14 +167,14 @@
       "wincare.application": {
         "type": "Project",
         "dependencies": {
-          "WinCare.CommandCatalog": "[2.5.0-rc5, )",
-          "WinCare.Domain": "[2.5.0-rc5, )"
+          "WinCare.CommandCatalog": "[3.0.0, )",
+          "WinCare.Domain": "[3.0.0, )"
         }
       },
       "wincare.commandcatalog": {
         "type": "Project",
         "dependencies": {
-          "WinCare.Domain": "[2.5.0-rc5, )"
+          "WinCare.Domain": "[3.0.0, )"
         }
       },
       "wincare.domain": {
@@ -185,9 +185,9 @@
         "dependencies": {
           "Microsoft.Win32.Registry": "[5.0.0, )",
           "System.Diagnostics.EventLog": "[8.0.1, )",
-          "WinCare.Application": "[2.5.0-rc5, )",
-          "WinCare.CommandCatalog": "[2.5.0-rc5, )",
-          "WinCare.Domain": "[2.5.0-rc5, )"
+          "WinCare.Application": "[3.0.0, )",
+          "WinCare.CommandCatalog": "[3.0.0, )",
+          "WinCare.Domain": "[3.0.0, )"
         }
       },
       "Microsoft.Win32.Registry": {

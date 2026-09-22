@@ -1,7 +1,7 @@
 {
   "id": "com.wincare.builtin.clipboard_security",
   "name": "Clipboard Security & Credential Quarantine",
-  "version": "2.5.0",
+  "version": "3.0.0",
   "author": "WinCare Core Team",
   "description": "Scans and redacts sensitive API keys, bearer tokens, passwords, and payment card numbers from clipboard buffers before storage.",
   "category": "Security & Privacy",

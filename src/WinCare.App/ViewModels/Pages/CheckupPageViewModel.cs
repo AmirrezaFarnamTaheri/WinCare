@@ -9,8 +9,6 @@ namespace WinCare.App.ViewModels.Pages;
 
 public sealed class CheckupPageViewModel : TabbedPageViewModel
 {
-    private const int ResultsSectionIndex = 1;
-
     // The "Review …" actions deep-link into these routes; resolve them from the routing table
     // once so a catalog rename fails at startup instead of silently breaking the action.
     private static readonly string SystemCareRoute = NavigationCatalog.Items.Single(item => item.Id == "system-care").Id;
@@ -26,26 +24,24 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
     private const string WuaCommandId = "wua-search";
     private const string WuaRowTitle = "Updates";
 
-    private readonly CommandDispatcher _dispatcher;
-    private readonly List<PageRow> _resultRows = [];
+    private readonly ICommandDispatcher _dispatcher;
     private CancellationTokenSource? _runCts;
     private bool _isRunning;
     private bool _isStopping;
     private string _runSummary = "Run Checkup to see how things look.";
-    private string _healthScoreText = "Not checked";
-    private string _healthScoreDetail = "Run Checkup to see the latest results";
-    private string _healthScoreBrushKey = "AccentTealBrush";
+    private string _checkupStatusText = "Not checked";
+    private string _checkupStatusDetail = "Run Checkup to see the latest results";
+    private string _checkupStatusBrushKey = "AccentChromeBrush";
 
     public CheckupPageViewModel() : this(AppRuntime.Current.Dispatcher) { }
 
-    internal CheckupPageViewModel(CommandDispatcher dispatcher)
+    internal CheckupPageViewModel(ICommandDispatcher dispatcher)
         : base([
-            new PageSection("Quick check", "Run Checkup to see the latest results.", [
+            new PageSection("Checkup", "Run Checkup to see the latest results.", [
                 new PageRow("Windows and hardware", "Windows version, uptime, memory, processor, and device basics.", "Ready", "Read-only"),
                 new PageRow("Storage", "Free space and drive status.", "Ready", "Read-only"),
                 new PageRow("Security", "Windows Security, firewall, updates, and restart state.", "Ready", "Read-only"),
-                new PageRow("Updates", "Check Windows Update without installing anything.", "Ready", "Read-only")]),
-            new PageSection("Results", "Run Checkup to see results here.", [])])
+                new PageRow("Updates", "Check Windows Update without installing anything.", "Ready", "Read-only")])])
     {
         _dispatcher = dispatcher;
         RunQuickCheckCommand = new AsyncRelayCommand(RunQuickCheckAsync, () => !IsRunning);
@@ -64,8 +60,8 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
         if (_runCts is null || !IsRunning || IsStopping) return;
         IsStopping = true;
         RunSummary = "Stopping the checkup. Waiting for the active checks to finish.";
-        HealthScoreText = "Stopping";
-        HealthScoreDetail = "waiting for active checks";
+        CheckupStatusText = "Stopping";
+        CheckupStatusDetail = "waiting for active checks";
         _runCts.Cancel();
     }
 
@@ -98,23 +94,17 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
 
     public string RunActionText => IsStopping ? "Stopping…" : IsRunning ? "Checking your PC…" : "Run checkup";
     public string RunSummary { get => _runSummary; private set => SetProperty(ref _runSummary, value); }
-    public string HealthScoreText { get => _healthScoreText; private set => SetProperty(ref _healthScoreText, value); }
-    public string HealthScoreDetail { get => _healthScoreDetail; private set => SetProperty(ref _healthScoreDetail, value); }
-    public string HealthScoreBrushKey { get => _healthScoreBrushKey; private set => SetProperty(ref _healthScoreBrushKey, value); }
-
-    public override void SelectSection(int index)
-    {
-        base.SelectSection(index);
-        if (index == ResultsSectionIndex) ShowResultRows();
-    }
+    public string CheckupStatusText { get => _checkupStatusText; private set => SetProperty(ref _checkupStatusText, value); }
+    public string CheckupStatusDetail { get => _checkupStatusDetail; private set => SetProperty(ref _checkupStatusDetail, value); }
+    public string CheckupStatusBrushKey { get => _checkupStatusBrushKey; private set => SetProperty(ref _checkupStatusBrushKey, value); }
 
     private async Task RunQuickCheckAsync(CancellationToken cancellationToken)
     {
         IsRunning = true;
         RunSummary = "Checking a few important parts of Windows. Nothing will be changed.";
-        HealthScoreText = "Checking";
-        HealthScoreDetail = "checking now";
-        HealthScoreBrushKey = "AccentTealBrush";
+        CheckupStatusText = "Checking";
+        CheckupStatusDetail = "checking now";
+        CheckupStatusBrushKey = "AccentChromeBrush";
 
         // Link the command token with a page-owned source so leaving the page cancels the
         // whole run, including the Windows Update probe.
@@ -134,7 +124,6 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
             if (wuaRow is not null)
                 ResetRowForCheck(wuaRow, "Checking…", "Checking Windows Update…");
 
-            RebuildResultRowsFromQuickChecks();
             updateTask = RunUpdateCheckAsync(token);
             IReadOnlyList<CommandResult> fastResults = await ParallelCommandProbeRunner.RunPreviewsAsync(
                 _dispatcher,
@@ -162,7 +151,6 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
             }
 
             EvaluateFindings(fastDict, null);
-            RebuildResultRowsFromQuickChecks();
 
             CommandResult updateResult = await updateTask;
             token.ThrowIfCancellationRequested();
@@ -205,13 +193,12 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
             row.StatusBrushKey = "TextSecondaryBrush";
             ClearNavigationAction(row);
         }
-        HealthScoreText = cancelled ? "Stopped" : "Incomplete";
-        HealthScoreDetail = "completed results are shown below";
-        HealthScoreBrushKey = cancelled ? "TextSecondaryBrush" : "WarningBrush";
+        CheckupStatusText = cancelled ? "Stopped" : "Incomplete";
+        CheckupStatusDetail = "completed results are shown below";
+        CheckupStatusBrushKey = cancelled ? "TextSecondaryBrush" : "WarningBrush";
         RunSummary = cancelled
             ? "Checkup stopped. Nothing was changed. Completed results are kept below; run it again to check all areas."
             : "Checkup couldn't finish. Nothing was changed. Try again, and open Activity if it keeps happening.";
-        RebuildResultRowsFromQuickChecks();
     }
 
     private async Task<CommandResult> RunUpdateCheckAsync(CancellationToken cancellationToken)
@@ -243,45 +230,13 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
     {
         row.State = state;
         row.Detail = detail;
-        row.StatusBrushKey = "AccentTealBrush";
+        row.StatusBrushKey = "AccentChromeBrush";
         ClearNavigationAction(row);
-    }
-
-    private void RebuildResultRowsFromQuickChecks()
-    {
-        _resultRows.Clear();
-        foreach (PageRow quickRow in Sections[0].Rows)
-        {
-            _resultRows.Add(new PageRow(quickRow.Title, quickRow.Description, quickRow.State, quickRow.Detail)
-            {
-                StatusBrushKey = quickRow.StatusBrushKey,
-                ActionText = quickRow.ActionText,
-                ActionCommand = quickRow.ActionCommand,
-                NavigationKey = quickRow.NavigationKey,
-                NavigationSectionTitle = quickRow.NavigationSectionTitle,
-            });
-        }
-        ShowResultRows();
-    }
-
-    private void ShowResultRows()
-    {
-        if (SelectedIndex != ResultsSectionIndex) return;
-
-        CurrentRows.Clear();
-        foreach (PageRow row in _resultRows)
-        {
-            row.IsCompact = IsCompactLayout;
-            CurrentRows.Add(row);
-        }
-        OnPropertyChanged(nameof(IsEmpty));
-        OnPropertyChanged(nameof(EmptyMessage));
     }
 
     private void ApplyWuaResult(CommandResult wuaResult, Dictionary<string, CommandResult> fastDict)
     {
         PageRow? row = Sections[0].Rows.FirstOrDefault(candidate => candidate.Title == WuaRowTitle);
-        PageRow? resultRow = _resultRows.FirstOrDefault(candidate => candidate.Title == WuaRowTitle);
         string state = wuaResult.Status == CommandResultStatus.Succeeded ? "Checked" : "Needs review";
         string brushKey = wuaResult.Status == CommandResultStatus.Succeeded ? "SuccessBrush" : "WarningBrush";
         string detail = wuaResult.Message;
@@ -293,9 +248,7 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
         }
 
         ApplyUpdateOutcome(row, state, detail, brushKey);
-        ApplyUpdateOutcome(resultRow, state, detail, brushKey);
         EvaluateFindings(fastDict, wuaResult);
-        ShowResultRows();
     }
 
     private static void ApplyUpdateOutcome(PageRow? row, string state, string detail, string brushKey)
@@ -403,37 +356,37 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
 
         if (hasCritical)
         {
-            HealthScoreText = "Action needed";
-            HealthScoreDetail = "something needs your attention";
-            HealthScoreBrushKey = "DangerBrush";
+            CheckupStatusText = "Action needed";
+            CheckupStatusDetail = "something needs your attention";
+            CheckupStatusBrushKey = "DangerBrush";
             RunSummary = $"WinCare found something that needs attention: {string.Join("; ", findings)}.";
         }
         else if (hasWarning)
         {
-            HealthScoreText = "Worth a look";
-            HealthScoreDetail = "a few things are worth checking";
-            HealthScoreBrushKey = "WarningBrush";
+            CheckupStatusText = "Worth a look";
+            CheckupStatusDetail = "a few things are worth checking";
+            CheckupStatusBrushKey = "WarningBrush";
             RunSummary = $"A few things are worth a look: {string.Join("; ", findings)}.";
         }
         else if (hasIncompleteProbe)
         {
-            HealthScoreText = "Incomplete";
-            HealthScoreDetail = "some checks didn't finish";
-            HealthScoreBrushKey = "WarningBrush";
+            CheckupStatusText = "Incomplete";
+            CheckupStatusDetail = "some checks didn't finish";
+            CheckupStatusBrushKey = "WarningBrush";
             RunSummary = $"Some checks didn't finish: {string.Join("; ", findings)}.";
         }
         else if (updatesPending)
         {
-            HealthScoreText = "Checking";
-            HealthScoreDetail = "Windows Update is still checking";
-            HealthScoreBrushKey = "AccentTealBrush";
+            CheckupStatusText = "Checking";
+            CheckupStatusDetail = "Windows Update is still checking";
+            CheckupStatusBrushKey = "AccentChromeBrush";
             RunSummary = "The main checks are done. Windows Update is still checking.";
         }
         else
         {
-            HealthScoreText = "Looks good";
-            HealthScoreDetail = "nothing stood out in these checks";
-            HealthScoreBrushKey = "SuccessBrush";
+            CheckupStatusText = "Looks good";
+            CheckupStatusDetail = "nothing stood out in these checks";
+            CheckupStatusBrushKey = "SuccessBrush";
             RunSummary = "Everything checked looks okay.";
         }
     }

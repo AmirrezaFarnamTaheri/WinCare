@@ -22,4 +22,4 @@ class VisualContrastTests(unittest.TestCase):
                 self.assertGreaterEqual(ratio(colors[theme, 'TextOnAccentBrush'], colors[theme, 'AccentBrush']), 4.5)
             for surface in ('HeroBackgroundBrush', 'SurfaceSecondaryBrush'):
                 with self.subTest(theme=theme, surface=surface):
-                    self.assertGreaterEqual(ratio(colors[theme, 'AccentTealBrush'], colors[theme, surface]), 4.5)
+                    self.assertGreaterEqual(ratio(colors[theme, 'AccentChromeBrush'], colors[theme, surface]), 4.5)

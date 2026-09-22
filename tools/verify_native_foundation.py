@@ -67,7 +67,6 @@ EXPECTED_NAVIGATION = {
 }
 
 EXPECTED_PAGE_TABS = {
-    "CheckupPage.xaml": ("Quick check", "Results"),
     "SystemCarePage.xaml": ("Clean up", "Performance", "Apps & startup", "Network & updates", "Routines & maintenance"),
     "SecurityPage.xaml": ("Status", "Protection", "Privacy", "Hardening"),
     "RepairRecoveryPage.xaml": ("Repair", "Restore", "Backup", "Reset & media", "Portable playbooks"),
@@ -259,6 +258,30 @@ def verify() -> list[Finding]:
         if "Native\\$(Platform)\\wincare_core.dll" not in project_text: findings.append(Finding("native-stage", "WinCare.App does not stage the platform Rust DLL"))
         if "CopyToPublishDirectory" not in project_text: findings.append(Finding("native-publish", "WinCare.App does not copy the Rust DLL to portable output"))
 
+    nav_contract = ROOT / "src/WinCare.Application/Navigation/NavigationCatalog.cs"
+    page_service = ROOT / "src/WinCare.App/Services/PageService.cs"
+    if nav_contract.is_file() and page_service.is_file() and shell.is_file():
+        catalog_text = nav_contract.read_text(encoding="utf-8")
+        catalog_ids: set[str] = set()
+        hidden_ids: set[str] = set()
+        for line in catalog_text.splitlines():
+            match = re.search(r'new\("([^"]+)"', line)
+            if match:
+                catalog_ids.add(match.group(1))
+                if "IsHidden: true" in line:
+                    hidden_ids.add(match.group(1))
+        pageservice_ids = set(re.findall(
+            r'\["([^"]+)"\]\s*=\s*typeof\(', page_service.read_text(encoding="utf-8")))
+        shell_tags = set(re.findall(r'Tag="([^"]+)"', shell.read_text(encoding="utf-8")))
+        for orphan in sorted(pageservice_ids - catalog_ids):
+            findings.append(Finding("nav-catalog-pageservice", f"PageService key '{orphan}' has no NavigationCatalog route"))
+        for orphan in sorted(catalog_ids - pageservice_ids):
+            findings.append(Finding("nav-catalog-pageservice", f"NavigationCatalog id '{orphan}' has no PageService page type"))
+        for orphan in sorted(shell_tags - (catalog_ids - hidden_ids)):
+            findings.append(Finding("nav-shell-tags", f"ShellPage Tag '{orphan}' is not a visible NavigationCatalog id"))
+        for orphan in sorted((catalog_ids - hidden_ids) - shell_tags):
+            findings.append(Finding("nav-shell-tags", f"visible NavigationCatalog id '{orphan}' has no ShellPage Tag"))
+
     secret_suffixes = {".pfx", ".p12", ".key", ".pem", ".snk", ".secret", ".token"}
     for root_dir in NATIVE_ROOTS:
         if root_dir.is_dir():
@@ -277,7 +300,7 @@ def main() -> int:
     print("native foundation verification passed")
     print("catalog: all frozen 259 command IDs retained; additional admitted native commands validated")
     print("native source: no PowerShell or WPF references")
-    print("WinUI source: approved navigation, tabs, table contract, command execution binding, and automation metadata present")
+    print("WinUI source: approved navigation, three-way nav contract (catalog/pageservice/shell tags), tabs, table contract, command execution binding, and automation metadata present")
     print("command runtime: all admitted catalog commands route through one fail-closed native executor")
     return 0
 

@@ -1,7 +1,7 @@
 {
   "id": "com.wincare.builtin.media_privacy",
   "name": "Media & Document Privacy Cleaner",
-  "version": "2.5.0",
+  "version": "3.0.0",
   "author": "WinCare Core Team",
   "description": "Cleans playback and document history for Windows Media Player, VLC, PotPlayer, and Microsoft Office Recent items.",
   "category": "Privacy",

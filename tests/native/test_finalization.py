@@ -92,7 +92,7 @@ class FinalizationTests(unittest.TestCase):
                 self.assertIn("migration/oracle/legacy-command-ids.json", names)
                 self.assertIn("docs/migration/finalization-status.md", names)
                 self.assertIn("tools/finalize_native_release.py", names)
-                for required in ("tests/__init__.py", "PRODUCT.md", "UX-CONTRACT.md", "FINAL-VALIDATION.md"):
+                for required in ("tests/__init__.py", "PRODUCT.md", "UX-CONTRACT.md", "docs/Validation.md"):
                     self.assertIn(required, names)
                 self.assertNotIn("tools/validate_gui.py", names)
                 self.assertNotIn("tools/test_gui.py", names)
@@ -402,7 +402,7 @@ class FinalizationTests(unittest.TestCase):
             self.assertEqual(0, result.returncode, result.stdout + result.stderr)
             self.assertTrue((Path(directory) / "WinCare-2.5.0-rc3-native-source.zip").is_file())
 
-    def test_release_metadata_is_pinned_to_native_release_candidate(self) -> None:
+    def test_release_metadata_is_pinned_across_release_surfaces(self) -> None:
         props_path = ROOT / "Directory.Build.props"
         props = ET.parse(props_path).getroot()
         manifest = (ROOT / "src/WinCare.App/Package.appxmanifest").read_text(encoding="utf-8")
@@ -413,10 +413,9 @@ class FinalizationTests(unittest.TestCase):
         prefix = props.findtext(".//VersionPrefix")
         suffix = props.findtext(".//VersionSuffix")
         informational = props.findtext(".//InformationalVersion")
-        self.assertEqual("2.5.0", prefix)
-        self.assertIsNotNone(suffix)
-        self.assertRegex(suffix or "", r"^rc\d+$")
-        self.assertEqual(f"{prefix}-{suffix}", informational)
+        self.assertEqual("3.0.0", prefix)
+        self.assertIsNone(suffix)
+        self.assertEqual(prefix, informational)
 
         # The checked-in manifest carries the numeric fallback (VersionPrefix + ".0"); the
         # build-time StampAppxManifestVersion target derives the packaged version instead of

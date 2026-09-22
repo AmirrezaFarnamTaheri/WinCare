@@ -25,11 +25,11 @@ def _get_default_version() -> str:
     if props_path.is_file():
         import xml.etree.ElementTree as ET
         tree = ET.parse(props_path)
-        prefix = tree.findtext(".//VersionPrefix", "2.5.0")
+        prefix = tree.findtext(".//VersionPrefix", "3.0.0")
         suffix = tree.findtext(".//VersionSuffix", "")
         return f"v{prefix}-{suffix}" if suffix else f"v{prefix}"
     # Keep the fallback aligned with Directory.Build.props (VersionPrefix/VersionSuffix).
-    return "v2.5.0-rc5"
+    return "v3.0.0"
 
 
 def _read_expected_manifest(manifest_path: Path) -> dict[str, str]:
@@ -207,7 +207,7 @@ def stage_assets(
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Stage release assets for GitHub releases.")
-    parser.add_argument("--version", default=os.getenv("WINCARE_VERSION", _get_default_version()), help="Release version string (e.g. v2.5.0-rc5)")
+    parser.add_argument("--version", default=os.getenv("WINCARE_VERSION", _get_default_version()), help="Release version string (e.g. v3.0.0)")
     parser.add_argument("--downloads", default="artifacts/downloads", help="Directory containing downloaded workflow artifacts")
     parser.add_argument("--output", default="release_assets", help="Target release assets staging directory")
     parser.add_argument(

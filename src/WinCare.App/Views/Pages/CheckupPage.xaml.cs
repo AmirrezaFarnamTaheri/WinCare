@@ -12,7 +12,6 @@ public sealed partial class CheckupPage : Page
     {
         ViewModel = new CheckupPageViewModel();
         InitializeComponent();
-        SectionSelector.SelectedItem = SectionSelector.Items[0] as SelectorBarItem;
     }
 
     public CheckupPageViewModel ViewModel { get; }
@@ -24,9 +23,6 @@ public sealed partial class CheckupPage : Page
         ViewModel.CancelRunningCheck();
         base.OnNavigatedFrom(e);
     }
-
-    private void SectionSelector_SelectionChanged(SelectorBar sender, SelectorBarSelectionChangedEventArgs args) =>
-        ViewModel.SelectSection(sender.Items.IndexOf(sender.SelectedItem));
 
     private void FindingAction_Click(object sender, RoutedEventArgs e)
     {
@@ -43,8 +39,12 @@ public sealed partial class CheckupPage : Page
         ViewModel.SetCompactLayout(compact);
         CheckupHero.ColumnDefinitions[0].Width = new GridLength(1, GridUnitType.Star);
         CheckupHero.ColumnDefinitions[1].Width = compact ? new GridLength(0) : GridLength.Auto;
-        Grid.SetRow(CheckupStatusCard, compact ? 1 : 0);
-        Grid.SetColumn(CheckupStatusCard, compact ? 0 : 1);
-        CheckupStatusCard.HorizontalAlignment = compact ? HorizontalAlignment.Stretch : HorizontalAlignment.Right;
+        CheckupHero.ColumnDefinitions[2].Width = compact ? new GridLength(0) : GridLength.Auto;
+        // Compact stacks the status stat below the masthead instead of hiding it;
+        // the column hairline only makes sense when it actually divides columns.
+        CheckupDivider.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
+        Grid.SetColumn(CheckupStatus, compact ? 0 : 2);
+        Grid.SetRow(CheckupStatus, compact ? 1 : 0);
+        CheckupStatus.MinWidth = compact ? 0 : 190;
     }
 }

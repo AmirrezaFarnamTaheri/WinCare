@@ -8,7 +8,7 @@
     SizeChanged="Page_SizeChanged">
     <ScrollViewer VerticalScrollBarVisibility="Auto">
         <Grid Padding="28,28,28,32" RowSpacing="20">
-            <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
+            <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
             <StackPanel Spacing="6">
                 <TextBlock x:Uid="CheckupPageTitle" Style="{StaticResource PageTitleTextStyle}" Text="Checkup" />
                 <TextBlock Style="{StaticResource PageDescriptionTextStyle}" TextWrapping="Wrap" Text="Check a few important parts of Windows without changing anything. If something looks off, WinCare points you to the right place." />
@@ -16,10 +16,11 @@
             <Border Grid.Row="1" Style="{StaticResource DashboardCardStyle}" Background="{ThemeResource HeroBackgroundBrush}">
                 <Grid x:Name="CheckupHero" ColumnSpacing="24" RowSpacing="18">
                     <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
-                    <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                    <StackPanel Spacing="10" MaxWidth="720">
-                        <TextBlock Style="{StaticResource SectionHeaderTextStyle}" Text="Check this PC" />
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                    <StackPanel Spacing="14" MaxWidth="720">
+                        <TextBlock Style="{StaticResource HeroTitleTextStyle}" Text="Check this PC" />
                         <TextBlock Style="{StaticResource PageDescriptionTextStyle}" TextWrapping="Wrap" Text="{x:Bind ViewModel.RunSummary, Mode=OneWay}" AutomationProperties.LiveSetting="Polite" />
+                        <StackPanel Orientation="Horizontal" Spacing="10">
                         <Button HorizontalAlignment="Left" Style="{StaticResource PrimaryActionButtonStyle}" Command="{x:Bind ViewModel.RunQuickCheckCommand}" AutomationProperties.AutomationId="RunQuickCheck" AutomationProperties.Name="Run a read-only checkup">
                             <StackPanel Orientation="Horizontal" Spacing="8">
                                 <ProgressRing Width="16" Height="16" IsActive="{x:Bind ViewModel.IsRunning, Mode=OneWay}" Visibility="{x:Bind views:LayoutVisibility.BoolToVisibility(ViewModel.IsRunning), Mode=OneWay}" />
@@ -30,22 +31,18 @@
                                 Visibility="{x:Bind views:LayoutVisibility.BoolToVisibility(ViewModel.IsRunning), Mode=OneWay}"
                                 HorizontalAlignment="Left" Style="{StaticResource QuietButtonStyle}" MinHeight="44"
                                 AutomationProperties.AutomationId="StopQuickCheck" AutomationProperties.Name="Stop checkup" />
-                    </StackPanel>
-                    <Border x:Name="CheckupStatusCard" Grid.Column="1" MinWidth="190" Padding="18" Background="{ThemeResource SurfaceSecondaryBrush}" CornerRadius="{StaticResource RadiusControl}">
-                        <StackPanel Spacing="4">
-                            <TextBlock Style="{StaticResource RowSecondaryTextStyle}" Text="Status" />
-                            <TextBlock Style="{StaticResource MetricTextStyle}" Foreground="{x:Bind ViewModel.HealthScoreBrushKey, Mode=OneWay, Converter={StaticResource ThemeResourceBrushConverter}}" Text="{x:Bind ViewModel.HealthScoreText, Mode=OneWay}" />
-                            <TextBlock Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind ViewModel.HealthScoreDetail, Mode=OneWay}" TextWrapping="Wrap" />
                         </StackPanel>
-                    </Border>
+                    </StackPanel>
+                    <Border x:Name="CheckupDivider" Grid.Column="1" Width="1" Background="{ThemeResource BorderSubtleBrush}" VerticalAlignment="Stretch" />
+                    <StackPanel x:Name="CheckupStatus" Grid.Column="2" Spacing="6" MinWidth="190" VerticalAlignment="Center">
+                        <TextBlock Style="{StaticResource MetricTextStyle}" Foreground="{x:Bind ViewModel.CheckupStatusBrushKey, Mode=OneWay, Converter={StaticResource ThemeResourceBrushConverter}}" Text="{x:Bind ViewModel.CheckupStatusText, Mode=OneWay}" />
+                        <TextBlock Style="{StaticResource FieldLabelTextStyle}" Text="Last checkup status" />
+                        <TextBlock Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind ViewModel.CheckupStatusDetail, Mode=OneWay}" TextWrapping="Wrap" />
+                    </StackPanel>
                 </Grid>
             </Border>
-            <SelectorBar x:Name="SectionSelector" Grid.Row="2" SelectionChanged="SectionSelector_SelectionChanged" AutomationProperties.AutomationId="CheckupPageTabs" AutomationProperties.Name="Checkup sections">
-                <SelectorBarItem Text="Quick check" AutomationProperties.Name="Quick check" /><SelectorBarItem Text="Results" AutomationProperties.Name="Results" />
-            </SelectorBar>
-            <Grid Grid.Row="3" RowSpacing="10">
+            <Grid Grid.Row="2" RowSpacing="10">
                 <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
-                <InfoBar IsOpen="{x:Bind ViewModel.IsEmpty, Mode=OneWay}" IsClosable="False" Severity="Informational" Title="No results yet" Message="{x:Bind ViewModel.EmptyMessage, Mode=OneWay}" />
                 <Grid Padding="16,0" Visibility="{x:Bind views:LayoutVisibility.InvertBoolToVisibility(ViewModel.IsCompactLayout), Mode=OneWay}">
                     <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="150" /><ColumnDefinition Width="220" /><ColumnDefinition Width="Auto" MaxWidth="220" /></Grid.ColumnDefinitions>
                     <TextBlock Style="{StaticResource ColumnHeaderTextStyle}" Text="Area" /><TextBlock Grid.Column="1" Style="{StaticResource ColumnHeaderTextStyle}" Text="Status" /><TextBlock Grid.Column="2" Style="{StaticResource ColumnHeaderTextStyle}" Text="Result" /><TextBlock Grid.Column="3" Style="{StaticResource ColumnHeaderTextStyle}" Text="Next step" Margin="8,0,0,0" />

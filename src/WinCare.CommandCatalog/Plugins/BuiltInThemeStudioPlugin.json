@@ -1,7 +1,7 @@
 {
   "id": "com.wincare.builtin.theme_studio",
   "name": "Material Design 3 Theme Studio & Palette Tokens",
-  "version": "2.5.0",
+  "version": "3.0.0",
   "author": "WinCare Core Team",
   "description": "Synthesizes harmonious Material Design 3 and WinUI 3 color tokens across Catppuccin, Dracula, Everforest, Gruvbox, Nord, Rosepine, Solarized, and Tokyo-Night presets.",
   "category": "Personalization",

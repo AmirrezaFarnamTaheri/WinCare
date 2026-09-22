@@ -66,9 +66,6 @@ public sealed partial class HomePage : Page
 
     private void RunCheckupButton_Click(object sender, RoutedEventArgs e) => NavigateTo("checkup");
     private void ViewActivityButton_Click(object sender, RoutedEventArgs e) => NavigateTo("activity");
-    private void BrowseToolsButton_Click(object sender, RoutedEventArgs e) => NavigateTo("all-tools");
-    private void OpenExtensions_Click(object sender, RoutedEventArgs e) => NavigateTo("plugin-store");
-    private void OpenTroubleshoot_Click(object sender, RoutedEventArgs e) => NavigateTo("ai-doctor");
     private void OpenCleanup_Click(object sender, RoutedEventArgs e) => PageNavigation.NavigateToSection(this, "system-care", "Clean up");
     private void OpenStartup_Click(object sender, RoutedEventArgs e) => PageNavigation.NavigateToSection(this, "system-care", "Apps & startup");
     private void OpenNetwork_Click(object sender, RoutedEventArgs e) => PageNavigation.NavigateToSection(this, "system-care", "Network & updates");
@@ -84,9 +81,14 @@ public sealed partial class HomePage : Page
         ViewModel.SetCompactLayout(compact);
         PageLayout.Padding = compact ? new Thickness(20, 20, 20, 28) : new Thickness(32, 28, 32, 36);
         HeroLayout.ColumnDefinitions[0].Width = new GridLength(1, GridUnitType.Star);
-        HeroLayout.ColumnDefinitions[1].Width = compact ? new GridLength(0) : new GridLength(1, GridUnitType.Star);
-        Grid.SetColumn(CheckupSummaryCard, compact ? 0 : 1);
-        Grid.SetRow(CheckupSummaryCard, compact ? 1 : 0);
+        HeroLayout.ColumnDefinitions[1].Width = compact ? new GridLength(0) : GridLength.Auto;
+        HeroLayout.ColumnDefinitions[2].Width = compact ? new GridLength(0) : GridLength.Auto;
+        // Compact stacks the coverage stat below the masthead instead of hiding it,
+        // with the vertical hairline dropped because it no longer divides columns.
+        HeroDivider.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
+        Grid.SetColumn(HeroStats, compact ? 0 : 2);
+        Grid.SetRow(HeroStats, compact ? 1 : 0);
+        HeroStats.MinWidth = compact ? 0 : 170;
         RecommendationsGrid.ColumnDefinitions[0].Width = new GridLength(1, GridUnitType.Star);
         RecommendationsGrid.ColumnDefinitions[1].Width = compact ? new GridLength(0) : new GridLength(1, GridUnitType.Star);
         RecommendationsGrid.ColumnDefinitions[2].Width = compact ? new GridLength(0) : new GridLength(1, GridUnitType.Star);
@@ -96,6 +98,5 @@ public sealed partial class HomePage : Page
         OverviewGrid.ColumnDefinitions[0].Width = new GridLength(1, GridUnitType.Star);
         OverviewGrid.ColumnDefinitions[1].Width = compact ? new GridLength(0) : new GridLength(1, GridUnitType.Star);
         Grid.SetColumn(RecentActivityCard, compact ? 0 : 1); Grid.SetRow(RecentActivityCard, compact ? 1 : 0);
-        ExploreActions.Orientation = compact ? Orientation.Vertical : Orientation.Horizontal;
     }
 }

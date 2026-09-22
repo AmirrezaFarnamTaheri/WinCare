@@ -40,9 +40,9 @@ public sealed class CommandStateStore
     /// <param name="root">Optional data root directory.</param>
     public CommandStateStore(string? root = null)
     {
+        // Follows the shared data root so a capture session starts from empty command state.
         _root = Path.GetFullPath(root ?? Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "WinCare",
+            WinCare.Application.Storage.AppDataRoot.Current,
             "state"));
         Directory.CreateDirectory(_root);
 

@@ -1,7 +1,7 @@
 {
   "id": "com.wincare.builtin.gpu_tuner",
   "name": "GPU & Display Latency Tuner",
-  "version": "2.5.0",
+  "version": "3.0.0",
   "author": "WinCare Core Team",
   "description": "Hardware-level graphics adapter optimization for AMD, NVIDIA, and Intel GPUs. Provides Ultra-Low Power State (ULPS) disablement, dynamic P-State frequency locking, and async flip latency minimization.",
   "category": "Performance",

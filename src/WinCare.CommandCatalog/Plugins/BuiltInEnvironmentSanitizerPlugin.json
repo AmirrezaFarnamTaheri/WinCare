@@ -1,7 +1,7 @@
 {
   "id": "com.wincare.builtin.environment_sanitizer",
   "name": "Environment & PATH Sanitizer Suite",
-  "version": "2.5.0",
+  "version": "3.0.0",
   "author": "WinCare Core Team",
   "description": "Audits System and User %PATH% variables, detects dead/nonexistent paths, identifies duplicate directories, and scans package manager caches.",
   "category": "Developer Tools",

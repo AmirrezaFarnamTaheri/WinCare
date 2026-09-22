@@ -1,7 +1,7 @@
 {
   "id": "com.wincare.builtin.ai_model_cleaner",
   "name": "AI Model & ML Storage Cleaner",
-  "version": "2.5.0",
+  "version": "3.0.0",
   "author": "WinCare Core Team",
   "description": "Specialized storage cleaner for machine learning weights, checkpoints, and blobs across HuggingFace, Whisper, Ollama, PyTorch Hub, Keras, and LM Studio.",
   "category": "Developer Tools",

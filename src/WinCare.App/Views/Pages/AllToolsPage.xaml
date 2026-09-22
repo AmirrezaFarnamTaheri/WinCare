@@ -25,7 +25,7 @@
                 <ColumnDefinition Width="2*" /><ColumnDefinition Width="190" /><ColumnDefinition Width="190" />
                 <ColumnDefinition Width="160" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
-            <TextBox x:Name="ToolSearchBox" Header="Find a tool" MinHeight="44" TabIndex="1"
+            <TextBox x:Name="ToolSearchBox" MinHeight="44" TabIndex="1"
                      PlaceholderText="What do you want to do?"
                      Text="{x:Bind ViewModel.SearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                      AutomationProperties.AutomationId="ToolSearch" AutomationProperties.Name="Search power tools">
@@ -70,12 +70,10 @@
                                 <TextBlock Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind ViewModel.SelectedToolMetadata, Mode=OneWay}" />
                                 <TextBlock Style="{StaticResource PageDescriptionTextStyle}" Text="{x:Bind ViewModel.SelectedToolSummary, Mode=OneWay}" />
                             </StackPanel>
-                            <Border Padding="14" Background="{ThemeResource SurfaceSecondaryBrush}" CornerRadius="{StaticResource RadiusControl}">
-                                <StackPanel Spacing="4">
-                                    <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="{x:Bind ViewModel.Execution.ActionFlowTitle, Mode=OneWay}" />
-                                    <TextBlock Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind ViewModel.Execution.ActionFlowDescription, Mode=OneWay}" />
-                                </StackPanel>
-                            </Border>
+                            <StackPanel Spacing="4">
+                                <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="{x:Bind ViewModel.Execution.ActionFlowTitle, Mode=OneWay}" />
+                                <TextBlock Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind ViewModel.Execution.ActionFlowDescription, Mode=OneWay}" />
+                            </StackPanel>
                             <InfoBar IsOpen="{x:Bind ViewModel.Execution.IsDestructiveTool, Mode=OneWay}" IsClosable="False" Severity="Error"
                                      Title="Permanent change" Message="This can make permanent changes. Read the preview before you apply it." />
                             <ToggleSwitch Header="I reviewed this change" OffContent="Not approved" OnContent="Approved" AutomationProperties.HelpText="Approval is required before a tool that makes permanent changes can run"
@@ -168,8 +166,7 @@
 
                 <ScrollViewer Background="{ThemeResource PageBackgroundBrush}" VerticalScrollBarVisibility="Auto"
                               Visibility="{x:Bind local:AllToolsPage.BoolToVisibility(ViewModel.IsCategoryTab), Mode=OneWay}">
-                    <StackPanel Spacing="14"><TextBlock Style="{StaticResource SectionHeaderTextStyle}" Text="Browse by category" />
-                        <TextBlock Style="{StaticResource PageDescriptionTextStyle}" Text="Choose an area to browse related tools." />
+                    <StackPanel Spacing="14">
                         <ItemsControl ItemsSource="{x:Bind ViewModel.CategoryCards, Mode=OneWay}"><ItemsControl.ItemTemplate>
                             <DataTemplate x:DataType="vm:ToolCategoryViewModel">
                                 <Button Margin="0,0,0,8" Padding="18" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
@@ -186,8 +183,7 @@
 
                 <ScrollViewer Background="{ThemeResource PageBackgroundBrush}" VerticalScrollBarVisibility="Auto"
                               Visibility="{x:Bind local:AllToolsPage.BoolToVisibility(ViewModel.IsPresetTab), Mode=OneWay}">
-                    <StackPanel Spacing="16"><TextBlock Style="{StaticResource SectionHeaderTextStyle}" Text="Care plans" />
-                        <TextBlock Style="{StaticResource PageDescriptionTextStyle}" Text="Review a group of related changes together. You can see every step before applying it." />
+                    <StackPanel Spacing="16"><TextBlock Style="{StaticResource PageDescriptionTextStyle}" Text="Review a group of related changes together. You can see every step before applying it." />
                         <ItemsControl ItemsSource="{x:Bind ViewModel.PresetCards, Mode=OneWay}"><ItemsControl.ItemTemplate>
                             <DataTemplate x:DataType="vm:PresetCardViewModel">
                                 <Border Margin="0,0,0,12" Padding="20" Style="{StaticResource SurfaceBorderStyle}">

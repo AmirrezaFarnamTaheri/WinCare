@@ -32,13 +32,10 @@ class NativeFoundationTests(unittest.TestCase):
                 self.assertIn("SizeChanged", text, name)
                 if name == "HomePage.xaml":
                     self.assertIn("Common care", text, name)
-                    self.assertIn('x:Name="ExploreActions"', text, name)
-                    self.assertIn("More tools", text, name)
                     self.assertNotIn("Review before applying", text, name)
                 if name == "CheckupPage.xaml":
                     self.assertIn('AutomationProperties.AutomationId="RunQuickCheck"', text, name)
                     self.assertIn('Text="Result"', text, name)
-                    self.assertIn("SelectorBar", text, name)
                     self.assertIn("ViewModel.IsCompactLayout", text, name)
                     self.assertIn("LayoutVisibility.InvertBoolToVisibility(ViewModel.IsCompactLayout)", text, name)
                     self.assertIn("LayoutVisibility.BoolToVisibility(IsCompact)", text, name)
