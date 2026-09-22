@@ -28,7 +28,7 @@ Additional findings not in the recon: `finalize` suite initially red from a pre-
 
 - **Rust** (`wincare-core`/`wincare-guard`): every non-test `unwrap/expect` resolved against source (test modules, fixed-length slice conversions, infallible `write!` to String); no `panic!` in production paths; `catch_unwind` at the C-ABI boundary. **Residual, documented:** 168 `unsafe` blocks vs 61 `// SAFETY:` comments in `lib.rs` — auditing 107 undocumented blocks is a deliberate per-block effort; owner rule adopted (any wave touching an unsafe region documents its invariants). Not touched by this overhaul.
 - **C#/.NET**: literal-hex contrast validators can't see `{ThemeResource}` values — drove the wave-2 design decision (pills stay literal and gate-measured; chrome delegates to native accent).
-- All 19 AA pairings re-measured after the new palette; worst real runtime pair 4.93:1 (light elevated pill), fixed to pass; zero thresholds lowered, no ignores added.
+- All AA pairings re-measured after the new palette (8 pill + 14 text, Light and Dark); worst real runtime pair 4.93:1 (light elevated pill), fixed to pass; zero thresholds lowered, no ignores added.
 
 ## 4. Waves delivered
 
@@ -74,3 +74,16 @@ No test deleted, skipped, or weakened; the one gate retarget (`test_global_searc
 - Verified by execution: all gate numbers above, contrast ratios, nav/label parity, search-ranking equivalence (tests), version-set consistency (metadata pin test), finalizer archives contain the consolidated doc.
 - Verified by reading, not rendered: every XAML/theme change.
 - Unverifiable here, stated as such: subagent-based independent review; live Windows accessibility.
+
+## 8. Amendment — state at `7c79b6e` (2026-09-21)
+
+The sections above close at `2dc3023` (13 commits). Seven more followed, which they do not describe: this report and the local portable-smoke record (`a7fdad2`, `fb207ac`); a NuGet graph refresh to the 3.0.0 project versions — internal project references only, zero external dependency changes (`192bc6d`); the read-only `--capture-screens` documentation capture mode (`744634f`); the interface design pass across runtime chrome (`e2dcd7e`); the care-area taxonomy and tab/section parity gate (`cbcd0f5`); and the end-to-end capture pipeline with provenance manifest and CI capture step (`7c79b6e`). That last commit regenerated `docs/images/runtime-*.png` and rendered `docs/Screenshots.md` from the manifest, closing the §6.1 recapture item.
+
+Gates re-verified independently at `7c79b6e` after a multi-aspect review of the whole 20-commit range: `dotnet restore --locked-mode` exit 0; managed suite 564/564 (24 + 229 + 311), 0 failed, 0 skipped; `tests/` unittest OK; all four `verify_*` gates exit 0; the capture-pipeline contract tests 6/6. The review also confirmed the safety-critical surfaces untouched — plugin admission thresholds, release publishing fence, signature/tamper constants, and dependency locks — and found four defects carried by the later commits, now fixed:
+
+1. The read-only-capture contract gate sliced the wrong region of `App.xaml.cs` (it anchored on a doc comment, so the capture method body was never inspected and an injected command dispatch still passed). Re-anchored on the method definition; falsification-tested both ways.
+2. The committed provenance manifest named `fb207ac`, a commit that predates `--capture-screens` entirely — the capture had run in a dirty tree and `_git_commit` recorded the committed head. The manifest now names the tree its images depict, and `_git_commit` flags an uncommitted tree.
+3. The Checkup route kept its `Quick check`/`Results` sections in `NavigationCatalog.cs` and `commands.json` after the design pass collapsed the page to one section, and the new parity gate pinned the stale state. All three sources now agree on `Checkup`.
+4. Two built-in plugin manifests remained at `2.4.0` while 28 moved to `3.0.0`, and their version is shown in the Extensions UI. Both at `3.0.0`.
+
+The §3 pairing count was also corrected from an unverifiable "19" to the gates' actual 8 pill + 14 text pairings, and the CHANGELOG `3.0.0` heading is undated until the version is tagged, since no `v3.0.0` tag exists and publishing was not performed.
