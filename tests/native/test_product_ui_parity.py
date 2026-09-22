@@ -273,7 +273,7 @@ class ProductUiParityTests(unittest.TestCase):
         areas = _catalog_area_sections()
         care_areas = {area for area in areas if area not in {"All tools", "Checkup"}}
         self.assertEqual({"System care", "Security", "Repair & recovery"}, care_areas)
-        self.assertEqual({"Quick check", "Results"}, areas["Checkup"])
+        self.assertEqual({"Checkup"}, areas["Checkup"])
         self.assertEqual({"Commands"}, areas["All tools"])
 
         for route, relative in CARE_PAGES.items():

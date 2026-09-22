@@ -29,9 +29,9 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
     private bool _isRunning;
     private bool _isStopping;
     private string _runSummary = "Run Checkup to see how things look.";
-    private string _CheckupStatusText = "Not checked";
-    private string _CheckupStatusDetail = "Run Checkup to see the latest results";
-    private string _CheckupStatusBrushKey = "AccentChromeBrush";
+    private string _checkupStatusText = "Not checked";
+    private string _checkupStatusDetail = "Run Checkup to see the latest results";
+    private string _checkupStatusBrushKey = "AccentChromeBrush";
 
     public CheckupPageViewModel() : this(AppRuntime.Current.Dispatcher) { }
 
@@ -94,9 +94,9 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
 
     public string RunActionText => IsStopping ? "Stopping…" : IsRunning ? "Checking your PC…" : "Run checkup";
     public string RunSummary { get => _runSummary; private set => SetProperty(ref _runSummary, value); }
-    public string CheckupStatusText { get => _CheckupStatusText; private set => SetProperty(ref _CheckupStatusText, value); }
-    public string CheckupStatusDetail { get => _CheckupStatusDetail; private set => SetProperty(ref _CheckupStatusDetail, value); }
-    public string CheckupStatusBrushKey { get => _CheckupStatusBrushKey; private set => SetProperty(ref _CheckupStatusBrushKey, value); }
+    public string CheckupStatusText { get => _checkupStatusText; private set => SetProperty(ref _checkupStatusText, value); }
+    public string CheckupStatusDetail { get => _checkupStatusDetail; private set => SetProperty(ref _checkupStatusDetail, value); }
+    public string CheckupStatusBrushKey { get => _checkupStatusBrushKey; private set => SetProperty(ref _checkupStatusBrushKey, value); }
 
     private async Task RunQuickCheckAsync(CancellationToken cancellationToken)
     {

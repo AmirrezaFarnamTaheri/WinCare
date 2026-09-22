@@ -6,10 +6,10 @@
       "source": "portable",
       "architecture": "x64",
       "version": "3.0.0",
-      "commit": "fb207ac",
+      "commit": "7c79b6e",
       "captured_utc": "2026-09-21T10:50:27+00:00",
       "appearance": "Dark",
-      "window": "1280x800",
+      "window_dips": "1280x800",
       "exe": "WinCare.App.exe"
     },
     "runtime-checkup.png": {
@@ -17,10 +17,10 @@
       "source": "portable",
       "architecture": "x64",
       "version": "3.0.0",
-      "commit": "fb207ac",
+      "commit": "7c79b6e",
       "captured_utc": "2026-09-21T10:50:27+00:00",
       "appearance": "Dark",
-      "window": "1280x800",
+      "window_dips": "1280x800",
       "exe": "WinCare.App.exe"
     }
   }

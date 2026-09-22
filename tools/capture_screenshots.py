@@ -79,32 +79,47 @@ RUNTIME_MANIFEST = IMAGES_DIR / "runtime-captures.json"
 SCREENSHOTS_DOC = DOCS_DIR / "Screenshots.md"
 
 # Docs-truth fallback: what the checked-in images may claim when no runtime capture
-# has been run against a built artifact yet. The rc5 captures were manual installs.
-FALLBACK_VERSION = "2.5.0-rc5"
+# has been recorded against a built artifact yet. The checked-in images outlive any single
+# candidate, so the fallback names no version itself; the current product version is rendered
+# from Directory.Build.props where the page needs it.
 FALLBACK_STATUS_LINES = {
     "runtime-dashboard.png": (
-        "**Capture status:** historical for the v2.5.0-rc5 candidate; recapture when the next "
-        "candidate is installed. The current Home is recommendation-led, derives evidence "
-        "coverage from shared Activity records, exposes one primary Checkup CTA, and no longer "
-        "uses the older instrument-panel hierarchy."
+        "**Capture status:** historical; no runtime capture has been recorded for the current "
+        "build yet. Run `--runtime` against a built portable executable to recapture. The "
+        "current Home is recommendation-led, derives evidence coverage from shared Activity "
+        "records, exposes one primary Checkup CTA, and no longer uses the older "
+        "instrument-panel hierarchy."
     ),
     "runtime-checkup.png": (
-        "**Capture status:** historical for the v2.5.0-rc5 candidate; recapture when the next "
-        "candidate is installed. The current source reports checked-area evidence rather than a "
-        "synthetic machine-health claim. Its fast read-only probes run concurrently with bounded "
-        "concurrency, while Windows Update readiness is checked in the background; compact "
-        "layouts stack below the shared 920-DIP breakpoint."
+        "**Capture status:** historical; no runtime capture has been recorded for the current "
+        "build yet. Run `--runtime` against a built portable executable to recapture. The "
+        "current source reports checked-area evidence rather than a synthetic machine-health "
+        "claim. Its fast read-only probes run concurrently with bounded concurrency, while "
+        "Windows Update readiness is checked in the background; compact layouts stack below the "
+        "shared 920-DIP breakpoint."
     ),
 }
 
 
 def _git_commit() -> str:
+    """Short HEAD id, flagged when the working tree is dirty.
+
+    A capture records the tree that rendered its images. When that tree carries
+    uncommitted changes the bare HEAD id misattributes them — a reader who checks
+    out that commit does not see what the image shows.
+    """
     try:
-        proc = subprocess.run(
+        head = subprocess.run(
             ["git", "rev-parse", "--short", "HEAD"],
             cwd=REPO_ROOT, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True, timeout=10,
-        )
-        return proc.stdout.strip() or "unknown"
+        ).stdout.strip()
+        if not head:
+            return "unknown"
+        dirty = subprocess.run(
+            ["git", "status", "--porcelain"],
+            cwd=REPO_ROOT, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True, timeout=10,
+        ).stdout.split()
+        return f"{head}+uncommitted" if dirty else head
     except Exception:
         return "unknown"
 
@@ -196,7 +211,7 @@ def capture_runtime_screenshots(exe_path: Path) -> bool:
                 "commit": commit,
                 "captured_utc": captured_utc,
                 "appearance": appearance,
-                "window": meta.get("windowSizeDips", "unknown"),
+                "window_dips": meta.get("windowSizeDips", "unknown"),
                 "exe": exe_path.name,
             }
             print(f"[+] Captured {image_name} from {route} (v{version}, {architecture})")
@@ -230,7 +245,7 @@ def format_runtime_status_line(image_name: str, manifest: dict | None) -> str:
     return (
         f"**Capture status:** captured {date} from the v{entry['version']} portable build "
         f"({entry['architecture']}, commit {entry['commit']}, {entry['appearance']} appearance, "
-        f"{entry.get('window', 'unknown')} DIP window) by running `--capture-screens` against "
+        f"{entry.get('window_dips', 'unknown')} DIP window) by running `--capture-screens` against "
         f"that artifact. Authoritative for that exact build; any later UI change makes it "
         f"historical until recaptured.{extra}"
     )
@@ -253,8 +268,8 @@ RUNTIME_INTRO_LINES = {
     "runtime-checkup.png": "### E2E runtime capture",
 }
 RUNTIME_FALLBACK_CAPTIONS = {
-    "runtime-dashboard.png": "### Historical runtime — v2.5.0-rc5 candidate",
-    "runtime-checkup.png": "### Historical runtime — v2.5.0-rc5 candidate",
+    "runtime-dashboard.png": "### Historical runtime",
+    "runtime-checkup.png": "### Historical runtime",
 }
 
 DOC_TAIL = """\
@@ -321,9 +336,10 @@ def render_screenshots_doc(manifest: dict | None) -> str:
             "of truth for later source changes. The provenance manifest\n"
             "[`images/runtime-captures.json`](images/runtime-captures.json) is the source that this page's\n"
             "capture lines are rendered from, and CI re-checks that sync on every build.\n",
-            "The checked-in runtime images below are **historical captures from the v"
-            + FALLBACK_VERSION
-            + " candidate**; no e2e runtime capture has been recorded for the current build yet.\n"
+            "The checked-in runtime images below are **historical captures**; no e2e runtime "
+            "capture has been recorded for the current build (v"
+            + _product_version()
+            + ") yet.\n"
             "They are runtime evidence for that exact package only, not a perpetual source of truth\n"
             "for later source changes. Run `--runtime` against a built portable executable to replace\n"
             "them and regenerate this page.\n",
@@ -344,7 +360,7 @@ def render_screenshots_doc(manifest: dict | None) -> str:
                 f"({entry['architecture']}, commit {entry['commit']})"
             )
         else:
-            label = f"WinCare {title} screen captured from the installed v2.5.0.0 candidate package"
+            label = f"WinCare {title} screen captured from the installed v{_product_version()} candidate package"
         parts.append(
             f"## {title}\n\n"
             f"{caption}\n\n"

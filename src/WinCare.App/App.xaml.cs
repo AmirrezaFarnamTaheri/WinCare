@@ -29,7 +29,7 @@ public partial class App : Microsoft.UI.Xaml.Application
     public static readonly (string Route, int SettleDelayMs)[] CaptureRoutes =
     [
         ("home", 700),
-        ("checkup", 2500), // allow read-only probe completion and background WUA readiness to land
+        ("checkup", 2500), // let layout, bindings, and background results settle before render
     ];
 
     /// <summary>
@@ -53,6 +53,10 @@ public partial class App : Microsoft.UI.Xaml.Application
     /// <summary>Launch argument handled by <see cref="RunCaptureScreensAsync"/>, exposed for the contract gate.</summary>
     public static string CaptureArgument => CaptureScreensArgument;
 
+    /// <summary>Whether this session renders documentation captures, so the shell stays
+    /// deterministic: the first-run tour never overlays a route being captured.</summary>
+    public static bool IsCaptureSession { get; private set; }
+
     public App()
     {
         StartupTelemetry.Mark("AppConstructed");
@@ -74,8 +78,9 @@ public partial class App : Microsoft.UI.Xaml.Application
                 StringComparison.OrdinalIgnoreCase));
 
         string? captureOutputDirectory = ResolveCaptureOutputDirectory(processArguments);
+        IsCaptureSession = captureOutputDirectory is not null;
 
-        _window = new MainWindow(captureOutputDirectory is not null);
+        _window = new MainWindow(IsCaptureSession);
         StartupTelemetry.Mark("WindowCreated");
         _window.Activate();
 

@@ -38,7 +38,9 @@ class ScreenshotPipelineContractTests(unittest.TestCase):
         self.assertIn("CaptureRoutes", source)
         # Captures must stay read-only: the mode navigates and renders, never dispatches
         # mutations beyond what plugin initialization (same as the smoke test) requires.
-        capture_body = source[source.index("RunCaptureScreensAsync"):]
+        # Anchor on the method definition: the cref doc comment and the OnLaunched call
+        # site also contain the name, so slicing from the first text hit checks nothing.
+        capture_body = source[source.index("private static async Task RunCaptureScreensAsync"):]
         self.assertNotIn("ExecuteAsync", capture_body[: capture_body.index("InitializeRuntimeAsync")])
 
     def test_capture_routes_are_real_readonly_navigation_targets(self) -> None:
