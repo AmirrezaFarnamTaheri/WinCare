@@ -68,7 +68,6 @@ The tool launches that build in `--capture-screens` mode, verifies every rendere
 
 Every runtime image must record:
 
-- the date and time of capture;
 - the exact package/product version;
 - architecture (`x64` or `ARM64`);
 - the source commit SHA or release tag;

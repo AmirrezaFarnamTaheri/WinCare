@@ -58,9 +58,10 @@
                     </StackPanel>
                 </StackPanel>
 
-                <Button x:Name="BtnCompact" Grid.Column="1" Content="Purge Standby Cache" 
-                        Style="{StaticResource QuietButtonStyle}" 
+                <Button x:Name="BtnCompact" Grid.Column="1" Content="Purge Standby Cache"
+                        Style="{StaticResource QuietButtonStyle}"
                         Click="BtnCompact_Click"
+                        AutomationProperties.Name="Purge standby cache"
                         FontFamily="{StaticResource TelemetryFontFamily}" FontSize="11" Padding="10,4" MinHeight="28" />
             </Grid>
         </StackPanel>
