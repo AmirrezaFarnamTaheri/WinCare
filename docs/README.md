@@ -14,6 +14,7 @@ This directory is the product-facing and engineering reference for WinCare. Star
 |---|---|
 | [Architecture](Architecture.md) | System boundaries, trust model, lifecycle, native integration, and packaging. |
 | [WinCare 4.0 Specification](Kinetic-Mission-Control-Spec.md) | WinCare 4.0 Kinetic Mission Control Architecture and roadmap. |
+| [Memory safety audit](Memory-Safety-Audit.md) | Audit and formal invariants for native core unsafe operations and C-ABI boundaries. |
 | [Windows validation](Windows-Validation.md) | Repeatable Windows runtime and accessibility validation. |
 | [Validation](Validation.md) | Evidence model and verification categories. |
 | [Security](../SECURITY.md) | Security invariants and vulnerability reporting. |
