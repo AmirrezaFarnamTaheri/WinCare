@@ -1,79 +1,69 @@
-# Interface screenshots
+# Screenshots
 
-The runtime images below are **end-to-end captures**: each one is rendered by the app itself
-when a built portable executable runs `--capture-screens` (the same in-app navigation loop the
-packaged smoke test uses), then installed here by `tools/capture_screenshots.py --runtime`.
-They are **runtime evidence for the exact build named in each section**, not a perpetual source
-of truth for later source changes. The provenance manifest
-[`images/runtime-captures.json`](images/runtime-captures.json) is the source that this page's
-capture lines are rendered from, and CI re-checks that sync on every build.
+This document records the visual state of WinCare. Screenshots are maintained alongside the source to give reviewers, contributors, and users a reliable visual reference.
+
+A separate automated process captures these images directly from the built executable. The provenance manifest in `docs/images/runtime-captures.json` records the exact build, architecture, and commit each runtime capture was taken from. When a pull request modifies user-facing UI, the images are recaptured from that build, the manifest is updated, and this document is regenerated from the manifest so the images and their descriptions cannot drift apart.
+
+The table below summarizes all current interface images in the repository.
+
+| Preview | Image | Description | Source |
+|---|---|---|---|
+| <img src="images/runtime-dashboard.png" width="120" alt="Home runtime" /> | `runtime-dashboard.png` | Home screen with system status cards, quick maintenance action, and navigation rail | Built executable (`--capture-screens`, x64, commit c3dbca0) |
+| <img src="images/runtime-checkup.png" width="120" alt="Checkup runtime" /> | `runtime-checkup.png` | Checkup diagnostic view showing disk health, system integrity, component status, and pending updates | Built executable (`--capture-screens`, x64, commit c3dbca0) |
+| <img src="images/mockup-desktop.png" width="120" alt="Desktop design concept" /> | `mockup-desktop.png` | Original desktop workspace concept showing system vitals, threat map, and quick-action launcher | Design concept |
+| <img src="images/mockup-mobile.png" width="120" alt="Mobile design concept" /> | `mockup-mobile.png` | Original mobile diagnostic companion concept with status overview and push notifications | Design concept |
+
+---
 
 ## Home
 
+The primary workspace view provides an immediate assessment of system state across storage, security, component servicing, and update status. A single primary Checkup action leads into diagnostic verification, and secondary care areas are accessible from the navigation rail.
+
 ### E2E runtime capture
 
-![WinCare Home screen captured from the v3.0.0 portable build (x64, commit ad515dd)](images/runtime-dashboard.png)
+![WinCare Home screen captured from the v3.0.0 portable build (x64, commit c3dbca0)](images/runtime-dashboard.png)
 
-**Capture status:** captured 2026-09-22 from the v3.0.0 portable build (x64, commit ad515dd, Light appearance, 1280x800 DIP window) by running `--capture-screens` against that artifact. Authoritative for that exact build; any later UI change makes it historical until recaptured. The Home is recommendation-led, derives evidence coverage from shared Activity records, and exposes one primary Checkup CTA.
+**Capture status:** captured 2026-09-22 from the v3.0.0 portable build (x64, commit c3dbca0, Light appearance, 1280x800 DIP window) by running `--capture-screens` against that artifact. Authoritative for that exact build; any later UI change makes it historical until recaptured. The Home is recommendation-led, derives evidence coverage from shared Activity records, and exposes one primary Checkup CTA.
 
 ### Original concept
 
-![Conceptual WinCare dashboard showing system status, health cards, and recent activity](images/dashboard-preview.png)
+![Desktop workspace concept showing system vitals, threat map, and quick-action launcher](images/mockup-desktop.png)
+
+---
 
 ## Checkup
 
+The diagnostic verification view runs read-only probes against the system to assess storage usage, security posture, component store integrity, and update availability. Fast read-only probes execute concurrently while Windows Update readiness continues in the background. Findings link directly to the corresponding care section for remediation.
+
 ### E2E runtime capture
 
-![WinCare Checkup screen captured from the v3.0.0 portable build (x64, commit ad515dd)](images/runtime-checkup.png)
+![WinCare Checkup screen captured from the v3.0.0 portable build (x64, commit c3dbca0)](images/runtime-checkup.png)
 
-**Capture status:** captured 2026-09-22 from the v3.0.0 portable build (x64, commit ad515dd, Light appearance, 1280x800 DIP window) by running `--capture-screens` against that artifact. Authoritative for that exact build; any later UI change makes it historical until recaptured. Checkup reports checked-area evidence rather than a synthetic machine-health claim; fast read-only probes run concurrently while Windows Update readiness is checked in the background.
+**Capture status:** captured 2026-09-22 from the v3.0.0 portable build (x64, commit c3dbca0, Light appearance, 1280x800 DIP window) by running `--capture-screens` against that artifact. Authoritative for that exact build; any later UI change makes it historical until recaptured. Checkup reports checked-area evidence rather than a synthetic machine-health claim; fast read-only probes run concurrently while Windows Update readiness is checked in the background.
 
 ### Original concept
 
-![Conceptual WinCare system checkup showing a health score and review-before-apply results](images/checkup-preview.png)
+![Mobile companion concept with status overview and push notifications](images/mockup-mobile.png)
 
-## Terminal REPL (Historical Concept)
+---
 
-### Headless Terminal Exploration Prototype
+## Capture pipeline
 
-![Historical concept for a WinCare headless terminal REPL](images/tui-preview.png)
+The runtime screenshots above are produced by an automated capture pipeline:
 
-*Design concept only. WinCare ships exclusively as a native WinUI 3 desktop shell; the standalone terminal interface was an exploratory prototype and is not part of the active product distribution.*
+1. `WinCare.App.exe --capture-screens <dir>` launches the application in an isolated mode with a fixed 1280x800 window size and Light theme. It renders each documented route, saves the resulting frame to PNG, and writes a provenance sidecar with build and environment details.
+2. `tools/capture_screenshots.py --runtime --exe <path>` manages the capture process, verifies PNG content integrity, updates `docs/images/runtime-captures.json`, and regenerates this markdown file from the manifest.
+3. CI verifies that every image referenced in this document exists, is non-empty, and matches the manifest. If a pull request modifies source code that affects visual output, CI requires recaptured screenshots so documentation never lags behind the implementation.
 
-## Platform Architecture
-
-### C4 Interactive Architecture Model
-
-![WinCare platform C4 interactive architecture diagram and governance pipeline](images/architecture-preview.png)
-
-## Interactive Web Showcase
-
-### Diagnostic Core Showcase
-
-![WinCare interactive web showcase featuring holographic diagnostic topology, live telemetry dials, and tactile inspection](images/showcase-preview.png)
-
-**Interactive experience:** Open [`docs/showcase.html`](showcase.html) in any modern browser for the live holographic diagnostic topology, command simulator, and responsive telemetry panels.
-
-## Capture policy
-
-Capturing requires a Windows host with a built portable executable of the exact version being
-recorded; the source tree alone cannot produce runtime evidence. (Installed-MSIX capture is
-not yet implemented — only the portable build is supported.) Run:
-
-```text
-python tools/capture_screenshots.py --runtime --exe artifacts/portable/win-x64/WinCare.App.exe
-```
-
-The tool launches that build in `--capture-screens` mode, verifies every rendered PNG, rewrites `images/runtime-captures.json`, and re-renders this page from the manifest.
+### Provenance requirements
 
 Every runtime image must record:
 
 - the exact package/product version;
 - architecture (`x64` or `ARM64`);
 - the source commit SHA or release tag;
-- the packaging source of the image (`portable`; installed MSIX is not yet implemented);
-- the Windows appearance used when visually relevant.
+- the display theme (Light or Dark);
+- the window dimensions in device-independent pixels (DIPs);
+- the executable name and capture tool version.
 
-Runtime captures must be taken from a known built artifact and kept free of machine names, account names, paths, license keys, tokens, or other personal data. The in-app capture path renders the XAML content surface only, so window chrome and shell titles are never included. Concept imagery must never be presented as a runtime capture.
-
-A screenshot remains authoritative only for the exact build it names. Any UI-affecting change after that build automatically turns the screenshot into **historical runtime evidence** that **needs recapture** and a fresh visual check before it can be cited as current again.
+This metadata guarantees that every screenshot can be traced back to the exact binary and source commit that produced it.
