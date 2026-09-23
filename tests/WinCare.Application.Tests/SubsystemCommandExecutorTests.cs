@@ -1,5 +1,6 @@
 namespace WinCare.Application.Tests;
 
+using System;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -27,6 +28,7 @@ public sealed class SubsystemCommandExecutorTests
         Assert.True(handler.CanHandle("cleaner.temporary.files"));
         Assert.True(handler.CanHandle("cache.delivery.optimization"));
         Assert.False(handler.CanHandle("driver.inf.audit"));
+        Assert.False(handler.CanHandle(null!));
     }
 
     [Fact]
@@ -37,6 +39,7 @@ public sealed class SubsystemCommandExecutorTests
         Assert.True(handler.CanHandle("dism.cleanup.components"));
         Assert.True(handler.CanHandle("appx.package.inventory"));
         Assert.False(handler.CanHandle("disk.clean.pressure"));
+        Assert.False(handler.CanHandle(""));
     }
 
     [Fact]
@@ -60,33 +63,45 @@ public sealed class SubsystemCommandExecutorTests
     }
 
     [Fact]
-    public void SubsystemCommandRegistry_Registers_And_Resolves_Handlers()
+    public void SubsystemCommandRegistry_Registers_Resolves_And_Queries_Handlers()
     {
         var registry = new SubsystemCommandRegistry();
-        registry.Register(new StorageReclamationHandler());
-        registry.Register(new DismServicingHandler());
-        registry.Register(new DriverSecurityHandler());
-        registry.Register(new RemediationPolicyHandler());
+        var storage = new StorageReclamationHandler();
+        var servicing = new DismServicingHandler();
+        var security = new DriverSecurityHandler();
+        var remediation = new RemediationPolicyHandler();
 
+        registry.Register(storage);
+        registry.Register(servicing);
+        registry.Register(security);
+        registry.Register(remediation);
+
+        // Deduplication
+        registry.Register(storage);
         Assert.Equal(4, registry.Executors.Count);
 
-        var storage = registry.Resolve("disk.clean.pressure");
-        Assert.NotNull(storage);
-        Assert.Equal("Storage", storage.Subsystem);
+        Assert.True(registry.CanHandle("disk.clean.pressure"));
+        Assert.True(registry.CanHandle("dism.cleanup.components"));
+        Assert.True(registry.CanHandle("driver.store.audit"));
+        Assert.True(registry.CanHandle("remediation.baseline.apply"));
+        Assert.False(registry.CanHandle("nonexistent.tool"));
 
-        var servicing = registry.Resolve("dism.cleanup.components");
-        Assert.NotNull(servicing);
-        Assert.Equal("Servicing", servicing.Subsystem);
+        Assert.Same(storage, registry.Resolve("disk.clean.pressure"));
+        Assert.Same(servicing, registry.Resolve("dism.cleanup.components"));
+        Assert.Same(security, registry.Resolve("driver.store.audit"));
+        Assert.Same(remediation, registry.Resolve("remediation.baseline.apply"));
 
-        var security = registry.Resolve("driver.store.audit");
-        Assert.NotNull(security);
-        Assert.Equal("Security", security.Subsystem);
+        var storageHandlers = registry.GetBySubsystem("Storage");
+        Assert.Single(storageHandlers);
+        Assert.Same(storage, storageHandlers[0]);
 
-        var remediation = registry.Resolve("remediation.baseline.apply");
-        Assert.NotNull(remediation);
-        Assert.Equal("Remediation", remediation.Subsystem);
+        // Unregister & Clear
+        Assert.True(registry.Unregister(storage));
+        Assert.Equal(3, registry.Executors.Count);
+        Assert.Null(registry.Resolve("disk.clean.pressure"));
 
-        Assert.Null(registry.Resolve("nonexistent.tool"));
+        registry.Clear();
+        Assert.Empty(registry.Executors);
     }
 
     [Fact]
@@ -94,21 +109,64 @@ public sealed class SubsystemCommandExecutorTests
     {
         var handler = new StorageReclamationHandler();
         var request = CommandRequest.Execute("disk.clean.pressure", EmptyParameters);
-        var outcome = await handler.ExecuteAsync(null, request, CancellationToken.None);
+        var outcome = await handler.ExecuteAsync(null!, request, CancellationToken.None);
 
         Assert.NotNull(outcome);
         Assert.True(outcome.Success);
     }
 
     [Fact]
+    public async Task SubsystemHandlers_ExecuteAsync_Respects_CancellationToken()
+    {
+        var handler = new StorageReclamationHandler();
+        var request = CommandRequest.Execute("disk.clean.pressure", EmptyParameters);
+        using var cts = new CancellationTokenSource();
+        cts.Cancel();
+
+        await Assert.ThrowsAsync<OperationCanceledException>(() =>
+            handler.ExecuteAsync(null!, request, cts.Token));
+    }
+
+    [Fact]
     public void SubsystemHandlers_PlanPreview_Returns_Valid_Preview()
     {
         var handler = new StorageReclamationHandler();
-        var preview = handler.PlanPreview(null, CommandParameters.Empty);
+        var preview = handler.PlanPreview(null!, CommandParameters.Empty);
 
         Assert.NotNull(preview);
         Assert.Equal("Storage", preview.Subsystem);
         Assert.NotEmpty(preview.AffectedTargets);
         Assert.True(preview.EstimatedImpactBytes > 0);
+        Assert.False(preview.RequiresElevation);
+
+        var securityHandler = new DriverSecurityHandler();
+        var secPreview = securityHandler.PlanPreview(null!, CommandParameters.Empty);
+        Assert.True(secPreview.RequiresElevation);
+    }
+
+    [Fact]
+    public void CommandParameters_Parses_Json_And_Extracts_Types()
+    {
+        var json = "{\"path\":\"C:\\\\Temp\",\"count\":42,\"dryRun\":true}";
+        var parameters = CommandParameters.FromJson(json);
+
+        Assert.True(parameters.ContainsKey("path"));
+        Assert.True(parameters.ContainsKey("count"));
+        Assert.True(parameters.ContainsKey("dryRun"));
+        Assert.False(parameters.ContainsKey("missing"));
+
+        Assert.True(parameters.TryGetString("path", out var path));
+        Assert.Equal("C:\\Temp", path);
+
+        Assert.True(parameters.TryGetInt64("count", out var count));
+        Assert.Equal(42L, count);
+
+        Assert.True(parameters.TryGetBoolean("dryRun", out var dryRun));
+        Assert.True(dryRun);
+
+        // Invalid JSON fallback
+        var fallback = CommandParameters.FromJson("not a json");
+        Assert.NotNull(fallback);
+        Assert.False(fallback.ContainsKey("anything"));
     }
 }
