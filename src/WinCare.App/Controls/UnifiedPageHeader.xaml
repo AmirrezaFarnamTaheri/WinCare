@@ -11,13 +11,58 @@
             <ColumnDefinition Width="*" />
             <ColumnDefinition Width="Auto" />
         </Grid.ColumnDefinitions>
-        <StackPanel Spacing="4">
-            <TextBlock Text="{x:Bind Title, Mode=OneWay}" Style="{StaticResource TitleLargeTextBlockStyle}" />
-            <TextBlock Text="{x:Bind Subtitle, Mode=OneWay}" Style="{StaticResource BodySubtleTextBlockStyle}" />
+
+        <!-- Left Block: Breadcrumb, Title with Badge, and Subtitle -->
+        <StackPanel Grid.Column="0" Spacing="4">
+            <TextBlock 
+                x:Name="SectionBreadcrumb" 
+                Text="{x:Bind BreadcrumbText, Mode=OneWay}"
+                Style="{StaticResource CaptionTextBlockStyle}" 
+                Foreground="{ThemeResource TextSecondaryBrush}"
+                FontWeight="SemiBold" />
+
+            <StackPanel Orientation="Horizontal" Spacing="12">
+                <TextBlock 
+                    x:Name="PageTitle" 
+                    Text="{x:Bind Title, Mode=OneWay}"
+                    Style="{StaticResource TitleLargeTextBlockStyle}" 
+                    FontWeight="Bold" />
+
+                <Border 
+                    x:Name="StatusBadgeBorder"
+                    VerticalAlignment="Center"
+                    CornerRadius="4"
+                    Padding="6,2"
+                    BorderThickness="1"
+                    BorderBrush="{ThemeResource BorderSpecular}"
+                    Background="{ThemeResource SurfaceGlass}">
+                    <TextBlock 
+                        x:Name="StatusBadgeText"
+                        Text="{x:Bind BadgeText, Mode=OneWay}"
+                        FontSize="11"
+                        FontWeight="SemiBold"
+                        Foreground="{ThemeResource AccentPrimary}" />
+                </Border>
+            </StackPanel>
+
+            <TextBlock 
+                x:Name="PageSubtitle" 
+                Text="{x:Bind Subtitle, Mode=OneWay}"
+                Style="{StaticResource BodySubtleTextBlockStyle}"
+                Foreground="{ThemeResource TextSecondaryBrush}"
+                MaxWidth="680"
+                HorizontalAlignment="Left"
+                TextWrapping="WrapWholeWords" />
         </StackPanel>
-        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
-            <ContentPresenter Content="{x:Bind PrimaryAction, Mode=OneWay}" />
+
+        <!-- Right Block: Dynamic Action Presentation Slots -->
+        <StackPanel 
+            Grid.Column="1" 
+            Orientation="Horizontal" 
+            Spacing="8" 
+            VerticalAlignment="Bottom">
             <ContentPresenter Content="{x:Bind SecondaryActions, Mode=OneWay}" />
+            <ContentPresenter Content="{x:Bind PrimaryAction, Mode=OneWay}" />
         </StackPanel>
     </Grid>
 </UserControl>
