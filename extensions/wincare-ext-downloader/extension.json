@@ -1,0 +1,10 @@
+{
+  "id": "wincare-ext-downloader",
+  "name": "WinCare Segmented Download Engine",
+  "version": "4.0.0",
+  "publisher": "WinCare Official",
+  "entrypoint": "WinCare.Ext.Downloader.dll",
+  "isolated": true,
+  "description": "Multi-segment HTTP engine, HLS/ED2K scrapers, and token-bucket throttlers.",
+  "capabilities": ["NetworkTransfer", "Throttling"]
+}

@@ -1,0 +1,10 @@
+{
+  "id": "wincare-ext-gamerig",
+  "name": "WinCare Game Rig & Shader Cache Auditor",
+  "version": "4.0.0",
+  "publisher": "WinCare Official",
+  "entrypoint": "WinCare.Ext.GameRig.dll",
+  "isolated": true,
+  "description": "Steam shader cache reclamation, driver cache aggregators, and game runtime profilers.",
+  "capabilities": ["StorageAudit", "GameManifests"]
+}

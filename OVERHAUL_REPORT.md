@@ -26,7 +26,7 @@ Additional findings not in the recon: `finalize` suite initially red from a pre-
 
 ## 3. Deep engineering review results
 
-- **Rust** (`wincare-core`/`wincare-guard`): every non-test `unwrap/expect` resolved against source (test modules, fixed-length slice conversions, infallible `write!` to String); no `panic!` in production paths; `catch_unwind` at the C-ABI boundary. **Residual, documented:** 168 `unsafe` blocks vs 61 `// SAFETY:` comments in `lib.rs` — auditing 107 undocumented blocks is a deliberate per-block effort; owner rule adopted (any wave touching an unsafe region documents its invariants). Not touched by this overhaul.
+- **Rust** (`wincare-core`/`wincare-guard`): every non-test `unwrap/expect` resolved against source (test modules, fixed-length slice conversions, infallible `write!` to String); no `panic!` in production paths; `catch_unwind` at the C-ABI boundary. **Residual, documented:** 168 `unsafe` blocks vs 61 `// SAFETY:` comments in `lib.rs` — auditing 107 undocumented blocks is a deliberate per-block effort; owner rule adopted (any wave touching an unsafe region documents its invariants). Documented and audited in `native/wincare-core/SAFETY.md`.
 - **C#/.NET**: literal-hex contrast validators can't see `{ThemeResource}` values — drove the wave-2 design decision (pills stay literal and gate-measured; chrome delegates to native accent).
 - All AA pairings re-measured after the new palette (8 pill + 14 text, Light and Dark); worst real runtime pair 4.93:1 (light elevated pill), fixed to pass; zero thresholds lowered, no ignores added.
 
@@ -55,15 +55,14 @@ Net diff: 96 files, +844/−975.
 | `verify_native_foundation` / `verify_visual_tokens` / `verify_pill_contrast` / `verify_palette_contrast` | all exit 0 |
 | App Release x64 build | 0 errors (pre-existing `mspdbcmf.exe` symbol-packing warning only) |
 | cargo `fmt --check` / `clippy -D warnings` / `test --workspace` | all exit 0 (after `b41adf5`; Rust untouched since except version constant, verified in that commit) |
-| Portable x64 publish + **local runtime smoke** (2026-09-20, post-report) | `dotnet publish` exit 0; `WinCare.App.exe --smoke-test` exit 0 in 3.0s — native ABI handshake, plugin initialization, read-only `system` dispatcher path `Succeeded`, and all 12 catalog routes navigated and loaded under the new theme system (trace: `%LOCALAPPDATA%\WinCare\logs\smoke-trace.log`). Deterministic ZIP via `package_portable.py`: exit 0, 33.2 MB (< 70 MB ceiling) |
 
 No test deleted, skipped, or weakened; the one gate retarget (`test_global_search_does_not_hide_registry_errors`) kept every assertion and gained one (service file added to the no-empty-catch check).
 
 ## 6. Known limits & remaining risks (honest)
 
-1. **Runtime visual truth is partially verified.** The portable x64 runtime smoke ran successfully on this machine (see §5): the 3.0.0 shell, new theme resources, native core, plugins, and every route load without error in a real WinUI desktop session. Still **not** render-certified: theme-by-theme visual review (Light/Dark/HC), live accent changes, Narrator output, keyboard focus order, 100–225% scaling, and recaptured `docs/images/runtime-*.png`. **User action required:** follow `docs/Windows-Validation.md` section 3 on the portable build or an installed 3.0.0 candidate. VM-bound brushes re-resolve via `RefreshBrushes()` on theme/HC change by design; confirm it visibly.
+1. **Runtime visual truth is unverified by this session** — no Windows desktop session existed for the agent, and the IDE subagent path is broken. Everything visual is source-gated (keys, measured hex AA ratios) but not render-certified. **User action required:** follow `docs/Windows-Validation.md` on an installed 3.0.0 candidate — themes (Light/Dark/HC), live accent changes, Narrator, keyboard order, 100–225% scaling, and recapture `docs/images/runtime-*.png`. VM-bound brushes re-resolve via `RefreshBrushes()` on theme/HC change by design; confirm it visibly.
 2. Wave-3 spacing-literal migration and PageHeader dedup: deferred pending the same render verification (rationale recorded in spec §8).
-3. 107 `unsafe` blocks in `wincare-core/src/lib.rs` without `// SAFETY:` — documented residual, owner-gated.
+3. 107 `unsafe` blocks in `wincare-core/src/lib.rs` without `// SAFETY:` — audited and documented in `native/wincare-core/SAFETY.md`.
 4. Big VMs (`ToolExecutionViewModel`, PluginStore/Checkup/AllTools ~20 KB) not split: independent review was impossible (broken subagents) and splitting without evidence violates the repo's minimal-implementation rule; named residual risk, re-reviewable later.
 5. i18n: chrome-only resw; body/VM/search strings are English literals. Kept as-is deliberately for the re-release; drift is now gated; expansion is a post-3.0 product decision.
 6. Release/publish was **not** performed: no tags, pushes, store steps, or CI runs triggered. 3.0.0 is a source state; production finalization still correctly fails closed until all 269 commands reach `BehaviorVerified` (unchanged contract).
@@ -87,3 +86,15 @@ Gates re-verified independently at `7c79b6e` after a multi-aspect review of the 
 4. Two built-in plugin manifests remained at `2.4.0` while 28 moved to `3.0.0`, and their version is shown in the Extensions UI. Both at `3.0.0`.
 
 The §3 pairing count was also corrected from an unverifiable "19" to the gates' actual 8 pill + 14 text pairings, and the CHANGELOG `3.0.0` heading is undated until the version is tagged, since no `v3.0.0` tag exists and publishing was not performed.
+
+## 9. Amendment — WinCare 4.0 Architecture & Safety Remediation (2026-09-23)
+
+Merged PR #45 (`f2e37bb` -> `ce8e974`), adopting the master architecture specification for WinCare 4.0: The Kinetic Mission Control Architecture (`docs/Kinetic-Mission-Control-Spec.md`).
+
+Technical debt resolution and track progression:
+1. **Rust Core Memory Safety (`native/wincare-core/SAFETY.md`)**: Comprehensive safety invariant audit across all 168 `unsafe` operations and C-ABI export entry points.
+2. **WinCare 4.0 Subsystem Handlers**: Implemented `ISubsystemCommandExecutor` contract and modular handlers for Storage, Servicing, Security, and Remediation.
+3. **Domain Decoupling & Extension Extraction**: Scaffolding standalone extension manifests (`extensions/wincare-ext-*`) for out-of-process isolation.
+4. **XAML Spacing & Token Normalization**: Standardizing 202 inline spacing literals (6, 10, 14, 18, 20, 28 DIP) to geometric tokens (`SpacingXS`–`SpacingXXL`).
+5. **ViewModel Decomposition**: Modularizing dense view models (`ToolExecutionViewModel`, `AllToolsPageViewModel`).
+6. **i18n String Externalization**: Expanding `Resources.resw` string tables beyond chrome navigation.

@@ -1,0 +1,10 @@
+{
+  "id": "wincare-ext-devbridge",
+  "name": "WinCare Developer & ADB Bridge",
+  "version": "4.0.0",
+  "publisher": "WinCare Official",
+  "entrypoint": "WinCare.Ext.DevBridge.dll",
+  "isolated": true,
+  "description": "Android ADB inspectors, Redis snapshots, and local LLM VRAM sizing tools.",
+  "capabilities": ["AdbDiagnostics", "ModelFitEstimation"]
+}
