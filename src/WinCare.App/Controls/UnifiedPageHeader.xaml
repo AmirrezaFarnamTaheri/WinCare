@@ -1,0 +1,23 @@
+<UserControl
+    x:Class="WinCare.App.Controls.UnifiedPageHeader"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d">
+
+    <Grid Margin="0,0,0,24">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="Auto" />
+        </Grid.ColumnDefinitions>
+        <StackPanel Spacing="4">
+            <TextBlock Text="{x:Bind Title, Mode=OneWay}" Style="{StaticResource TitleLargeTextBlockStyle}" />
+            <TextBlock Text="{x:Bind Subtitle, Mode=OneWay}" Style="{StaticResource BodySubtleTextBlockStyle}" />
+        </StackPanel>
+        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+            <ContentPresenter Content="{x:Bind PrimaryAction, Mode=OneWay}" />
+            <ContentPresenter Content="{x:Bind SecondaryActions, Mode=OneWay}" />
+        </StackPanel>
+    </Grid>
+</UserControl>
