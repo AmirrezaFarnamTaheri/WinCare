@@ -26,7 +26,7 @@ Additional findings not in the recon: `finalize` suite initially red from a pre-
 
 ## 3. Deep engineering review results
 
-- **Rust** (`wincare-core`/`wincare-guard`): every non-test `unwrap/expect` resolved against source (test modules, fixed-length slice conversions, infallible `write!` to String); no `panic!` in production paths; `catch_unwind` at the C-ABI boundary. **Residual, documented:** 168 `unsafe` blocks vs 61 `// SAFETY:` comments in `lib.rs` — auditing 107 undocumented blocks is a deliberate per-block effort; owner rule adopted (any wave touching an unsafe region documents its invariants). Documented and audited in `native/wincare-core/SAFETY.md`.
+- **Rust** (`wincare-core`/`wincare-guard`): every non-test `unwrap/expect` resolved against source (test modules, fixed-length slice conversions, infallible `write!` to String); no `panic!` in production paths; `catch_unwind` at the C-ABI boundary. **Residual, documented:** 168 `unsafe` blocks vs 61 `// SAFETY:` comments in `lib.rs` — auditing 107 undocumented blocks is a deliberate per-block effort; owner rule adopted (any wave touching an unsafe region documents its invariants). Documented and audited in `docs/Memory-Safety-Audit.md`.
 - **C#/.NET**: literal-hex contrast validators can't see `{ThemeResource}` values — drove the wave-2 design decision (pills stay literal and gate-measured; chrome delegates to native accent).
 - All AA pairings re-measured after the new palette (8 pill + 14 text, Light and Dark); worst real runtime pair 4.93:1 (light elevated pill), fixed to pass; zero thresholds lowered, no ignores added.
 
@@ -62,7 +62,7 @@ No test deleted, skipped, or weakened; the one gate retarget (`test_global_searc
 
 1. **Runtime visual truth is unverified by this session** — no Windows desktop session existed for the agent, and the IDE subagent path is broken. Everything visual is source-gated (keys, measured hex AA ratios) but not render-certified. **User action required:** follow `docs/Windows-Validation.md` on an installed 3.0.0 candidate — themes (Light/Dark/HC), live accent changes, Narrator, keyboard order, 100–225% scaling, and recapture `docs/images/runtime-*.png`. VM-bound brushes re-resolve via `RefreshBrushes()` on theme/HC change by design; confirm it visibly.
 2. Wave-3 spacing-literal migration and PageHeader dedup: deferred pending the same render verification (rationale recorded in spec §8).
-3. 107 `unsafe` blocks in `wincare-core/src/lib.rs` without `// SAFETY:` — audited and documented in `native/wincare-core/SAFETY.md`.
+3. 107 `unsafe` blocks in `wincare-core/src/lib.rs` without `// SAFETY:` — audited and documented in `docs/Memory-Safety-Audit.md`.
 4. Big VMs (`ToolExecutionViewModel`, PluginStore/Checkup/AllTools ~20 KB) not split: independent review was impossible (broken subagents) and splitting without evidence violates the repo's minimal-implementation rule; named residual risk, re-reviewable later.
 5. i18n: chrome-only resw; body/VM/search strings are English literals. Kept as-is deliberately for the re-release; drift is now gated; expansion is a post-3.0 product decision.
 6. Release/publish was **not** performed: no tags, pushes, store steps, or CI runs triggered. 3.0.0 is a source state; production finalization still correctly fails closed until all 269 commands reach `BehaviorVerified` (unchanged contract).
@@ -92,7 +92,7 @@ The §3 pairing count was also corrected from an unverifiable "19" to the gates'
 Merged PR #45 (`f2e37bb` -> `ce8e974`), adopting the master architecture specification for WinCare 4.0: The Kinetic Mission Control Architecture (`docs/Kinetic-Mission-Control-Spec.md`).
 
 Technical debt resolution and track progression:
-1. **Rust Core Memory Safety (`native/wincare-core/SAFETY.md`)**: Comprehensive safety invariant audit across all 168 `unsafe` operations and C-ABI export entry points.
+1. **Rust Core Memory Safety (`docs/Memory-Safety-Audit.md`)**: Comprehensive safety invariant audit across all 168 `unsafe` operations and C-ABI export entry points.
 2. **WinCare 4.0 Subsystem Handlers**: Implemented `ISubsystemCommandExecutor` contract and modular handlers for Storage, Servicing, Security, and Remediation.
 3. **Domain Decoupling & Extension Extraction**: Scaffolding standalone extension manifests (`extensions/wincare-ext-*`) for out-of-process isolation.
 4. **XAML Spacing & Token Normalization**: Standardizing 202 inline spacing literals (6, 10, 14, 18, 20, 28 DIP) to geometric tokens (`SpacingXS`–`SpacingXXL`).
