@@ -14,7 +14,7 @@ capture lines are rendered from, and CI re-checks that sync on every build.
 
 ![WinCare Home screen captured from the v3.0.0 portable build (x64, commit ad515dd)](images/runtime-dashboard.png)
 
-**Capture status:** captured 2026-09-22 from the v3.0.0 portable build (x64, commit ad515dd, Light appearance, 1280x800 DIP window) by running `--capture-screens` against that artifact. Authoritative for that exact build; any later UI change makes it historical until recaptured. The Home is recommendation-led, derives evidence coverage from shared Activity records, and exposes one primary Checkup CTA.
+**Capture status:** captured 2026-09-22 from the v3.0.0 portable build (x64, commit ad515dd, Light appearance, 1280x800 DIP window) by running `--capture-screens` against that artifact. Authoritative for that exact build; any later UI change makes it historical until recaptured. **Stale:** capture-affecting source changed since commit ad515dd (35 capture-affecting path(s)); this image is historical evidence until recaptured. The Home is recommendation-led, derives evidence coverage from shared Activity records, and exposes one primary Checkup CTA.
 
 ### Original concept
 
@@ -26,7 +26,7 @@ capture lines are rendered from, and CI re-checks that sync on every build.
 
 ![WinCare Checkup screen captured from the v3.0.0 portable build (x64, commit ad515dd)](images/runtime-checkup.png)
 
-**Capture status:** captured 2026-09-22 from the v3.0.0 portable build (x64, commit ad515dd, Light appearance, 1280x800 DIP window) by running `--capture-screens` against that artifact. Authoritative for that exact build; any later UI change makes it historical until recaptured. Checkup reports checked-area evidence rather than a synthetic machine-health claim; fast read-only probes run concurrently while Windows Update readiness is checked in the background.
+**Capture status:** captured 2026-09-22 from the v3.0.0 portable build (x64, commit ad515dd, Light appearance, 1280x800 DIP window) by running `--capture-screens` against that artifact. Authoritative for that exact build; any later UI change makes it historical until recaptured. **Stale:** capture-affecting source changed since commit ad515dd (35 capture-affecting path(s)); this image is historical evidence until recaptured. Checkup reports checked-area evidence rather than a synthetic machine-health claim; fast read-only probes run concurrently while Windows Update readiness is checked in the background.
 
 ### Original concept
 

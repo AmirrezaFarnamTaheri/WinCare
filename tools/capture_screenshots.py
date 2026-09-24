@@ -360,7 +360,7 @@ def format_runtime_status_line(image_name: str, manifest: dict | None) -> str:
     if stale["status"] == "stale":
         extra = (
             f" **Stale:** capture-affecting source changed since commit {stale['manifest_commit']}"
-            f" ({len(stale['changed'])} path(s) at {stale['head']}); this image is historical "
+            f" ({len(stale['changed'])} capture-affecting path(s)); this image is historical "
             f"evidence until recaptured.{extra}"
         )
     return (

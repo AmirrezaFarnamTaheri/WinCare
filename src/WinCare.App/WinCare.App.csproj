@@ -73,7 +73,7 @@
   <!-- The MSIX Identity Version must be a four-part number (prerelease suffixes are not
        representable). Derive it at package time from VersionPrefix instead of trusting the
        checked-in literal: pass -p:AppxPackageVersion=x.y.z.w to override, otherwise the
-       prefix (4.0.0) becomes 4.0.0.0. -->
+       prefix (3.0.0) becomes 3.0.0.0. -->
   <PropertyGroup>
     <AppxPackageVersion Condition="'$(AppxPackageVersion)' == ''">$(VersionPrefix).0</AppxPackageVersion>
   </PropertyGroup>
