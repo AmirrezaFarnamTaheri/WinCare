@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "commandCount": 1,
+  "commands": [
+    {
+      "id": "dupe-shared",
+      "title": "Pack B",
+      "summary": "Declared by the second duplicate pack.",
+      "area": "All tools",
+      "section": "Commands",
+      "risk": "ReadOnly",
+      "readOnly": true,
+      "administratorAccess": "No",
+      "restart": "No",
+      "legacySource": "runtimepack",
+      "migrationStatus": "Implemented"
+    }
+  ]
+}

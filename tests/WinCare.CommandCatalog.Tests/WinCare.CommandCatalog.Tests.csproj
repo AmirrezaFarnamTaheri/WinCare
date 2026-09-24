@@ -22,4 +22,18 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\WinCare.CommandCatalog\WinCare.CommandCatalog.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <!--
+      Test fixtures for CommandPackCatalog: the resource name must end with
+      commands.<packId>.json, matching CommandPackCatalog.FragmentResourceSuffix.
+      The LogicalName pins the default namespace prefix so the suffix contract is exercised exactly.
+    -->
+    <EmbeddedResource Include="Data\commands.testpack.json" LogicalName="WinCare.CommandCatalog.Tests.Data.commands.testpack.json" />
+    <EmbeddedResource Include="Data\commands.mismatch.json" LogicalName="WinCare.CommandCatalog.Tests.Data.commands.mismatch.json" />
+    <EmbeddedResource Include="Data\commands.unschema.json" LogicalName="WinCare.CommandCatalog.Tests.Data.commands.unschema.json" />
+    <EmbeddedResource Include="Data\commands.nometa.json" LogicalName="WinCare.CommandCatalog.Tests.Data.commands.nometa.json" />
+    <EmbeddedResource Include="Data\commands.duplicate.json" LogicalName="WinCare.CommandCatalog.Tests.Data.commands.duplicate.json" />
+    <EmbeddedResource Include="Data\commands.ambiguous.json" LogicalName="WinCare.CommandCatalog.Tests.Data.commands.ambiguous.json" />
+    <EmbeddedResource Include="Data\commands.ambiguous.alt.json" LogicalName="WinCare.CommandCatalog.Tests.Data.commands.ambiguous.alt.json" />
+  </ItemGroup>
 </Project>

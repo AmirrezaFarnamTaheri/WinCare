@@ -76,6 +76,7 @@ public enum MigrationStatus
 /// <param name="MigrationStatus">Current migration lifecycle state.</param>
 /// <param name="Keywords">Search keywords.</param>
 /// <param name="ExplicitRiskTier">Optional explicit risk tier override.</param>
+/// <param name="Parameters">Optional declared parameter schema; omitted core schemas retain their generated catalog contracts.</param>
 public sealed record CommandDefinition(
     string Id,
     string Title,
@@ -89,7 +90,8 @@ public sealed record CommandDefinition(
     string LegacySource,
     MigrationStatus MigrationStatus,
     IReadOnlyList<string> Keywords,
-    RiskTier? ExplicitRiskTier = null)
+    RiskTier? ExplicitRiskTier = null,
+    IReadOnlyList<CommandParameterDefinition>? Parameters = null)
 {
     /// <summary>
     /// Gets the operational admission risk tier.

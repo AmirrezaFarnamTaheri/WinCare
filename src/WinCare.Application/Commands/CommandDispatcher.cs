@@ -173,17 +173,6 @@ public sealed class CommandDispatcher : ICommandDispatcher
                 "Command parameters must be a JSON object.", null, false, startedAt);
         }
 
-        // Validate the payload against the command's declared parameter schema on the dispatch path
-        // itself, not only on the playbook-import path: the same command reached from the palette or
-        // a button must satisfy the same contract as one reached from an imported playbook.
-        // Commands that declare no schema (plugin and dynamic commands) are unconstrained here.
-        IReadOnlyList<string> parameterErrors = CommandParameterValidator.Validate(request.CommandId, request.Parameters);
-        if (parameterErrors.Count > 0)
-        {
-            return CreateResult(request, CommandResultStatus.Blocked, "command.parameters_invalid",
-                parameterErrors[0], null, false, startedAt);
-        }
-
         if (cancellationToken.IsCancellationRequested)
         {
             return CreateResult(request, CommandResultStatus.Cancelled, "command.cancelled",
@@ -207,6 +196,18 @@ public sealed class CommandDispatcher : ICommandDispatcher
         {
             return CreateResult(request, CommandResultStatus.Blocked, "command.not_found",
                 $"Command '{request.CommandId}' is not declared in the native catalog.", null, false, startedAt);
+        }
+
+        // Validate against the command's own schema on every dispatch path. Core definitions use
+        // the generated schema table; extension-pack definitions carry their schema in the fragment.
+        IReadOnlyList<string> parameterErrors = CommandParameterValidator.Validate(
+            definition.Id,
+            request.Parameters,
+            definition.Parameters);
+        if (parameterErrors.Count > 0)
+        {
+            return CreateResult(request, CommandResultStatus.Blocked, "command.parameters_invalid",
+                parameterErrors[0], null, false, startedAt);
         }
 
         if (definition.MigrationStatus is not (MigrationStatus.Implemented or MigrationStatus.BehaviorVerified))

@@ -5,14 +5,15 @@ using WinCare.CommandCatalog.Models;
 namespace WinCare.CommandCatalog;
 
 /// <summary>
-/// Validates a JSON parameter payload against a command's declared <see cref="CommandParameterCatalog"/>
-/// schema, returning the set of human-readable validation errors (an empty result means the payload
-/// satisfies the declared contract). The same validator backs both playbook import and direct
+/// Validates a JSON parameter payload against the command's declared schema or the generated core
+/// <see cref="CommandParameterCatalog"/>, returning human-readable validation errors (an empty result
+/// means the payload satisfies the declared contract). The same validator backs playbook import and direct
 /// dispatch so the parameter trust boundary cannot become asymmetric between the two entry points.
 /// </summary>
 /// <remarks>
-/// A command that declares no parameter schema (dynamic plugin commands, catalog commands without a
-/// parameter block) is accepted unchanged. JSON-valued parameters are permitted here — the stricter
+/// Dynamic commands with no schema are accepted unchanged. Extension catalog entries normalize an
+/// omitted schema to an explicitly empty schema, which accepts only an empty object. JSON-valued
+/// parameters are permitted here — the stricter
 /// "no JSON parameters" rule is an import-only restriction enforced by
 /// <c>PortablePlaybookExchange</c>, because an imported playbook cannot be re-checked by the
 /// declaring handler the way an interactive dispatch can.
@@ -27,15 +28,19 @@ public static class CommandParameterValidator
     /// Validates the parameters for the specified command, or returns an empty list when the command
     /// declares no parameter schema (in which case the payload is unconstrained).
     /// </summary>
-    public static IReadOnlyList<string> Validate(string commandId, JsonElement parameters)
+    public static IReadOnlyList<string> Validate(
+        string commandId,
+        JsonElement parameters,
+        IReadOnlyList<CommandParameterDefinition>? declaredSchema = null)
     {
         if (parameters.ValueKind != JsonValueKind.Object)
         {
             return new[] { $"Parameters for '{commandId}' must be an object." };
         }
 
-        IReadOnlyList<CommandParameterDefinition> schema = CommandParameterCatalog.For(commandId);
-        if (schema.Count == 0)
+        bool hasDeclaredSchema = declaredSchema is not null;
+        IReadOnlyList<CommandParameterDefinition> schema = declaredSchema ?? CommandParameterCatalog.For(commandId);
+        if (schema.Count == 0 && !hasDeclaredSchema)
         {
             return Array.Empty<string>();
         }
