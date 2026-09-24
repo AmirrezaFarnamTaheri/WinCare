@@ -1,14 +1,14 @@
 namespace WinCare.Application.Commands.Subsystems;
 
 using System;
-using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using WinCare.Application.Commands;
+using WinCare.CommandCatalog.Models;
 using WinCare.Domain.Commands;
 
 /// <summary>
-/// Subsystem executor handling DISM online servicing, AppX package inventory/removal, and component-store cleanups.
+/// Fail-closed placeholder for servicing command routing until a concrete subsystem executor is registered.
 /// </summary>
 public sealed class DismServicingHandler : ISubsystemCommandExecutor
 {
@@ -29,37 +29,34 @@ public sealed class DismServicingHandler : ISubsystemCommandExecutor
         CommandRequest request,
         CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(definition);
+        ArgumentNullException.ThrowIfNull(request);
+        if (!string.Equals(definition.Id, request.CommandId, StringComparison.OrdinalIgnoreCase))
+        {
+            return Task.FromResult(CommandHandlerOutcome.Blocked("command.definition_mismatch", "The command definition does not match the request."));
+        }
         cancellationToken.ThrowIfCancellationRequested();
-
-        var outcome = CommandHandlerOutcome.Succeeded(
-            new
-            {
-                Subsystem = Subsystem,
-                CommandId = request?.CommandId ?? "dism.cleanup.components",
-                ExecutedAtUtc = DateTimeOffset.UtcNow,
-                ServicingState = "Healthy"
-            },
-            $"Servicing component operation executed successfully for '{request?.CommandId ?? "dism.cleanup.components"}'.");
-
-        return Task.FromResult(outcome);
+        return Task.FromResult(new CommandHandlerOutcome(
+            CommandResultStatus.NotMigrated,
+            "servicing.executor_unavailable",
+            $"No servicing operation is registered for '{definition.Id}'. No Windows components were changed.",
+            null,
+            false));
     }
 
     public CommandPreview PlanPreview(
         CommandDefinition definition,
-        CommandParameters parameters)
+        SubsystemCommandParameters parameters)
     {
-        var targets = new List<string>
-        {
-            "DISM /Online /Cleanup-Image /StartComponentCleanup",
-            "WinSxS Package Manifest Inventory"
-        };
+        ArgumentNullException.ThrowIfNull(definition);
+        ArgumentNullException.ThrowIfNull(parameters);
 
         return new CommandPreview(
-            CommandId: definition?.Id ?? "dism.cleanup.components",
+            CommandId: definition.Id,
             Subsystem: Subsystem,
-            Summary: "Analyzes and cleans superseded Windows component packages and servicing manifests.",
-            AffectedTargets: targets,
-            EstimatedImpactBytes: 1024L * 1024L * 1024L,
-            RequiresElevation: true);
+            Summary: "No servicing executor is registered; no operation or impact estimate is available.",
+            AffectedTargets: Array.Empty<string>(),
+            EstimatedImpactBytes: 0,
+            RequiresElevation: definition.AdministratorAccess == AdministratorAccess.Required);
     }
 }

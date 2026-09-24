@@ -1,14 +1,14 @@
 namespace WinCare.Application.Commands.Subsystems;
 
 using System;
-using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using WinCare.Application.Commands;
+using WinCare.CommandCatalog.Models;
 using WinCare.Domain.Commands;
 
 /// <summary>
-/// Subsystem executor handling storage reclamation, temporary cache purging, Delivery Optimization, and component store cleanups.
+/// Fail-closed placeholder for storage command routing until a concrete subsystem executor is registered.
 /// </summary>
 public sealed class StorageReclamationHandler : ISubsystemCommandExecutor
 {
@@ -29,38 +29,34 @@ public sealed class StorageReclamationHandler : ISubsystemCommandExecutor
         CommandRequest request,
         CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(definition);
+        ArgumentNullException.ThrowIfNull(request);
+        if (!string.Equals(definition.Id, request.CommandId, StringComparison.OrdinalIgnoreCase))
+        {
+            return Task.FromResult(CommandHandlerOutcome.Blocked("command.definition_mismatch", "The command definition does not match the request."));
+        }
         cancellationToken.ThrowIfCancellationRequested();
-
-        var outcome = CommandHandlerOutcome.Succeeded(
-            new
-            {
-                Subsystem = Subsystem,
-                CommandId = request?.CommandId ?? "disk.clean.pressure",
-                ExecutedAtUtc = DateTimeOffset.UtcNow,
-                ReclaimedBytesEstimate = 1024L * 1024L * 250L
-            },
-            $"Storage reclamation executed successfully for '{request?.CommandId ?? "disk.clean.pressure"}' in subsystem '{Subsystem}'.");
-
-        return Task.FromResult(outcome);
+        return Task.FromResult(new CommandHandlerOutcome(
+            CommandResultStatus.NotMigrated,
+            "storage.executor_unavailable",
+            $"No storage operation is registered for '{definition.Id}'. No files were changed.",
+            null,
+            false));
     }
 
     public CommandPreview PlanPreview(
         CommandDefinition definition,
-        CommandParameters parameters)
+        SubsystemCommandParameters parameters)
     {
-        var targets = new List<string>
-        {
-            "%LOCALAPPDATA%\\Temp\\*",
-            "%WINDIR%\\Temp\\*",
-            "%LOCALAPPDATA%\\Microsoft\\Windows\\DeliveryOptimization\\Cache\\*"
-        };
+        ArgumentNullException.ThrowIfNull(definition);
+        ArgumentNullException.ThrowIfNull(parameters);
 
         return new CommandPreview(
-            CommandId: definition?.Id ?? "disk.clean.pressure",
+            CommandId: definition.Id,
             Subsystem: Subsystem,
-            Summary: "Purges obsolete temporary files, delivery optimization caches, and crash dumps.",
-            AffectedTargets: targets,
-            EstimatedImpactBytes: 1024L * 1024L * 512L,
-            RequiresElevation: false);
+            Summary: "No storage executor is registered; this preview contains no verified impact estimate.",
+            AffectedTargets: Array.Empty<string>(),
+            EstimatedImpactBytes: 0,
+            RequiresElevation: definition.AdministratorAccess == AdministratorAccess.Required);
     }
 }

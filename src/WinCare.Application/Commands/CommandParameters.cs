@@ -7,11 +7,11 @@ using System.Text.Json;
 /// Parameter container for WinCare 4.0 subsystem command planning and execution.
 /// Supports strongly-typed value extraction and canonical JSON document resolution.
 /// </summary>
-public sealed class CommandParameters
+public sealed class SubsystemCommandParameters
 {
     private static readonly JsonElement EmptyElement;
 
-    static CommandParameters()
+    static SubsystemCommandParameters()
     {
         using var doc = JsonDocument.Parse("{}");
         EmptyElement = doc.RootElement.Clone();
@@ -23,48 +23,52 @@ public sealed class CommandParameters
     public JsonElement RawElement { get; }
 
     /// <summary>
-    /// Initializes an empty instance of <see cref="CommandParameters"/>.
+    /// Initializes an empty instance of <see cref="SubsystemCommandParameters"/>.
     /// </summary>
-    public CommandParameters()
+    public SubsystemCommandParameters()
     {
         RawElement = EmptyElement;
     }
 
     /// <summary>
-    /// Initializes a new instance of <see cref="CommandParameters"/> wrapping an existing <see cref="JsonElement"/>.
+    /// Initializes a new instance of <see cref="SubsystemCommandParameters"/> wrapping an existing <see cref="JsonElement"/>.
     /// </summary>
     /// <param name="element">The JSON element containing parameter attributes.</param>
-    public CommandParameters(JsonElement element)
+    public SubsystemCommandParameters(JsonElement element)
     {
-        RawElement = element.ValueKind == JsonValueKind.Undefined ? EmptyElement : element;
+        if (element.ValueKind is not (JsonValueKind.Undefined or JsonValueKind.Object))
+        {
+            throw new ArgumentException("Command parameters must be a JSON object.", nameof(element));
+        }
+
+        RawElement = element.ValueKind == JsonValueKind.Undefined ? EmptyElement : element.Clone();
     }
 
     /// <summary>
-    /// Gets a shared empty instance of <see cref="CommandParameters"/>.
+    /// Gets a shared empty instance of <see cref="SubsystemCommandParameters"/>.
     /// </summary>
-    public static CommandParameters Empty => new(EmptyElement);
+    public static SubsystemCommandParameters Empty => new(EmptyElement);
 
     /// <summary>
-    /// Parses a JSON string into a structured <see cref="CommandParameters"/> container.
+    /// Parses a JSON string into a structured <see cref="SubsystemCommandParameters"/> container.
     /// </summary>
     /// <param name="json">The JSON payload string.</param>
-    /// <returns>A parsed <see cref="CommandParameters"/> instance.</returns>
-    public static CommandParameters FromJson(string? json)
+    /// <returns>A parsed <see cref="SubsystemCommandParameters"/> instance.</returns>
+    /// <exception cref="JsonException">The input is malformed or is not a JSON object.</exception>
+    public static SubsystemCommandParameters FromJson(string? json)
     {
         if (string.IsNullOrWhiteSpace(json))
         {
             return Empty;
         }
 
-        try
+        using var doc = JsonDocument.Parse(json);
+        if (doc.RootElement.ValueKind != JsonValueKind.Object)
         {
-            using var doc = JsonDocument.Parse(json);
-            return new CommandParameters(doc.RootElement.Clone());
+            throw new JsonException("Command parameters must be a JSON object.");
         }
-        catch (JsonException)
-        {
-            return Empty;
-        }
+
+        return new SubsystemCommandParameters(doc.RootElement);
     }
 
     /// <summary>
@@ -82,7 +86,7 @@ public sealed class CommandParameters
     public bool TryGetString(string propertyName, out string? value)
     {
         value = null;
-        if (RawElement.ValueKind == JsonValueKind.Object &&
+        if (!string.IsNullOrWhiteSpace(propertyName) && RawElement.ValueKind == JsonValueKind.Object &&
             RawElement.TryGetProperty(propertyName, out var prop))
         {
             if (prop.ValueKind == JsonValueKind.String)
@@ -90,9 +94,6 @@ public sealed class CommandParameters
                 value = prop.GetString();
                 return true;
             }
-
-            value = prop.ToString();
-            return true;
         }
 
         return false;
@@ -104,7 +105,7 @@ public sealed class CommandParameters
     public bool TryGetInt64(string propertyName, out long value)
     {
         value = 0;
-        if (RawElement.ValueKind == JsonValueKind.Object &&
+        if (!string.IsNullOrWhiteSpace(propertyName) && RawElement.ValueKind == JsonValueKind.Object &&
             RawElement.TryGetProperty(propertyName, out var prop))
         {
             if (prop.ValueKind == JsonValueKind.Number && prop.TryGetInt64(out value))
@@ -112,10 +113,6 @@ public sealed class CommandParameters
                 return true;
             }
 
-            if (prop.ValueKind == JsonValueKind.String && long.TryParse(prop.GetString(), out value))
-            {
-                return true;
-            }
         }
 
         return false;
@@ -127,16 +124,12 @@ public sealed class CommandParameters
     public bool TryGetBoolean(string propertyName, out bool value)
     {
         value = false;
-        if (RawElement.ValueKind == JsonValueKind.Object &&
+        if (!string.IsNullOrWhiteSpace(propertyName) && RawElement.ValueKind == JsonValueKind.Object &&
             RawElement.TryGetProperty(propertyName, out var prop))
         {
             if (prop.ValueKind == JsonValueKind.True) { value = true; return true; }
             if (prop.ValueKind == JsonValueKind.False) { value = false; return true; }
 
-            if (prop.ValueKind == JsonValueKind.String && bool.TryParse(prop.GetString(), out value))
-            {
-                return true;
-            }
         }
 
         return false;

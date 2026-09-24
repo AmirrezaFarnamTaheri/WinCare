@@ -1,75 +1,108 @@
 namespace WinCare.Application.Status;
 
+using System;
+using System.Collections.Generic;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using WinCare.Application.Commands;
 using WinCare.Domain.Commands;
 
-/// <summary>
-/// Synthesized health posture assessment.
-/// </summary>
-public enum ConfidenceVerdict
-{
-    Optimal,
-    ActionRecommended,
-    AttentionRequired
-}
+/// <summary>Evidence-based posture verdict.</summary>
+public enum ConfidenceVerdict { Unavailable, Optimal, ActionRecommended, AttentionRequired }
 
-/// <summary>
-/// High-level human-readable health posture report.
-/// </summary>
+/// <summary>Storage assessment result; it does not imply health of unassessed subsystems.</summary>
 public sealed record SystemConfidenceReport(
     ConfidenceVerdict Verdict,
     string Headline,
     string PlainEnglishCallToAction,
     int ReclaimableMegabytes,
-    int PendingRemediations);
+    int PendingRemediations,
+    string AssessedArea,
+    int AffectedTargetCount);
 
-/// <summary>
-/// Status engine synthesizing telemetry across subsystems into a decisive, bottom-line verdict without advisory hedging.
-/// </summary>
+/// <summary>Derives a storage posture from the command kernel's validated, read-only preview.</summary>
 public sealed class SystemConfidenceEngine
 {
-    private readonly SubsystemCommandRegistry _registry;
+    private readonly ICommandDispatcher _dispatcher;
 
-    public SystemConfidenceEngine(SubsystemCommandRegistry registry)
-    {
-        _registry = registry;
-    }
+    public SystemConfidenceEngine(ICommandDispatcher dispatcher) =>
+        _dispatcher = dispatcher ?? throw new ArgumentNullException(nameof(dispatcher));
 
-    /// <summary>
-    /// Evaluates current machine posture across storage, servicing, security, and remediation.
-    /// </summary>
-    public Task<SystemConfidenceReport> EvaluateMachinePostureAsync(CancellationToken cancellationToken)
+    public async Task<SystemConfidenceReport> EvaluateMachinePostureAsync(CancellationToken cancellationToken)
     {
+        CommandResult result = await _dispatcher.ExecuteAsync(
+            CommandRequest.Preview("cleaner-disk-pressure", JsonSerializer.SerializeToElement(new { OlderThanDays = 7 })),
+            CommandExecutionOptions.Default,
+            cancellationToken).ConfigureAwait(false);
         cancellationToken.ThrowIfCancellationRequested();
 
-        int reclaimableMb = 0;
-        int pendingActions = 0;
-
-        var storageExecutor = _registry?.Resolve("disk.clean.pressure");
-        if (storageExecutor != null)
+        if (result.Status != CommandResultStatus.Succeeded || result.Data is not JsonElement data ||
+            data.ValueKind != JsonValueKind.Object ||
+            !data.TryGetProperty("affectedResources", out JsonElement resources) || resources.ValueKind != JsonValueKind.Array)
         {
-            var preview = storageExecutor.PlanPreview(null!, CommandParameters.Empty);
-            reclaimableMb = (int)(preview.EstimatedImpactBytes / (1024 * 1024));
-            if (reclaimableMb > 0) pendingActions++;
+            return new SystemConfidenceReport(
+                ConfidenceVerdict.Unavailable,
+                "Storage posture unavailable",
+                "WinCare could not obtain a validated cleanup preview. No system health conclusion was made.",
+                0,
+                0,
+                "Storage",
+                0);
         }
 
-        if (pendingActions > 0)
+        HashSet<string> targets = new(StringComparer.OrdinalIgnoreCase);
+        foreach (JsonElement resource in resources.EnumerateArray())
         {
-            return Task.FromResult(new SystemConfidenceReport(
-                Verdict: ConfidenceVerdict.ActionRecommended,
-                Headline: $"{pendingActions} Recommended Action(s)",
-                PlainEnglishCallToAction: $"Clean {reclaimableMb / 1024.0:F1} GB of obsolete system cache to free up storage.",
-                ReclaimableMegabytes: reclaimableMb,
-                PendingRemediations: pendingActions));
+            cancellationToken.ThrowIfCancellationRequested();
+            if (resource.ValueKind != JsonValueKind.Object ||
+                !resource.TryGetProperty("path", out JsonElement path) ||
+                path.ValueKind != JsonValueKind.String || string.IsNullOrWhiteSpace(path.GetString()))
+            {
+                return new SystemConfidenceReport(
+                    ConfidenceVerdict.Unavailable,
+                    "Storage posture unavailable",
+                    "The cleanup preview included an invalid target; no system health conclusion was made.",
+                    0,
+                    0,
+                    "Storage",
+                    0);
+            }
+
+            targets.Add(path.GetString()!);
+            if (targets.Count > 10_000)
+            {
+                return new SystemConfidenceReport(
+                    ConfidenceVerdict.Unavailable,
+                    "Storage posture unavailable",
+                    "The cleanup preview exceeded the supported target count; no system health conclusion was made.",
+                    0,
+                    0,
+                    "Storage",
+                    0);
+            }
         }
 
-        return Task.FromResult(new SystemConfidenceReport(
-            Verdict: ConfidenceVerdict.Optimal,
-            Headline: "System is Optimal",
-            PlainEnglishCallToAction: "All core operating policies and component stores are verified healthy.",
-            ReclaimableMegabytes: 0,
-            PendingRemediations: 0));
+        int targetCount = targets.Count;
+        if (targetCount > 0)
+        {
+            return new SystemConfidenceReport(
+                ConfidenceVerdict.ActionRecommended,
+                "Cleanup candidates found",
+                $"The preview identified {targetCount} cleanup target(s). Review the command preview before applying any changes.",
+                0,
+                1,
+                "Storage",
+                targetCount);
+        }
+
+        return new SystemConfidenceReport(
+            ConfidenceVerdict.Optimal,
+            "Storage looks healthy",
+            "The cleanup preview found no eligible targets. Other system areas were not assessed.",
+            0,
+            0,
+            "Storage",
+            0);
     }
 }

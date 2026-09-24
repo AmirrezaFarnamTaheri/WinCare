@@ -105,50 +105,54 @@ public sealed class SubsystemCommandExecutorTests
     }
 
     [Fact]
-    public async Task SubsystemHandlers_ExecuteAsync_Produce_Successful_Outcome()
+    public async Task SubsystemHandlers_Fail_Closed_Without_An_Implementation()
     {
         var handler = new StorageReclamationHandler();
-        var request = CommandRequest.Execute("disk.clean.pressure", EmptyParameters);
-        var outcome = await handler.ExecuteAsync(null!, request, CancellationToken.None);
+        var definition = WinCare.CommandCatalog.CommandCatalog.Find("cleaner-disk-pressure")!;
+        var request = CommandRequest.Execute(definition.Id, EmptyParameters);
+        var outcome = await handler.ExecuteAsync(definition, request, CancellationToken.None);
 
         Assert.NotNull(outcome);
-        Assert.True(outcome.Success);
+        Assert.Equal(CommandResultStatus.NotMigrated, outcome.Status);
+        Assert.Contains("No files were changed", outcome.Message);
     }
 
     [Fact]
     public async Task SubsystemHandlers_ExecuteAsync_Respects_CancellationToken()
     {
         var handler = new StorageReclamationHandler();
-        var request = CommandRequest.Execute("disk.clean.pressure", EmptyParameters);
+        var definition = WinCare.CommandCatalog.CommandCatalog.Find("cleaner-disk-pressure")!;
+        var request = CommandRequest.Execute(definition.Id, EmptyParameters);
         using var cts = new CancellationTokenSource();
         cts.Cancel();
 
         await Assert.ThrowsAsync<OperationCanceledException>(() =>
-            handler.ExecuteAsync(null!, request, cts.Token));
+            handler.ExecuteAsync(definition, request, cts.Token));
     }
 
     [Fact]
     public void SubsystemHandlers_PlanPreview_Returns_Valid_Preview()
     {
         var handler = new StorageReclamationHandler();
-        var preview = handler.PlanPreview(null!, CommandParameters.Empty);
+        var definition = WinCare.CommandCatalog.CommandCatalog.Find("cleaner-disk-pressure")!;
+        var preview = handler.PlanPreview(definition, SubsystemCommandParameters.Empty);
 
         Assert.NotNull(preview);
         Assert.Equal("Storage", preview.Subsystem);
-        Assert.NotEmpty(preview.AffectedTargets);
-        Assert.True(preview.EstimatedImpactBytes > 0);
-        Assert.False(preview.RequiresElevation);
+        Assert.Empty(preview.AffectedTargets);
+        Assert.Equal(0, preview.EstimatedImpactBytes);
+        Assert.True(preview.RequiresElevation);
 
         var securityHandler = new DriverSecurityHandler();
-        var secPreview = securityHandler.PlanPreview(null!, CommandParameters.Empty);
+        var secPreview = securityHandler.PlanPreview(definition, SubsystemCommandParameters.Empty);
         Assert.True(secPreview.RequiresElevation);
     }
 
     [Fact]
-    public void CommandParameters_Parses_Json_And_Extracts_Types()
+    public void SubsystemCommandParameters_Parses_Json_And_Extracts_Types()
     {
         var json = "{\"path\":\"C:\\\\Temp\",\"count\":42,\"dryRun\":true}";
-        var parameters = CommandParameters.FromJson(json);
+        var parameters = SubsystemCommandParameters.FromJson(json);
 
         Assert.True(parameters.ContainsKey("path"));
         Assert.True(parameters.ContainsKey("count"));
@@ -164,9 +168,7 @@ public sealed class SubsystemCommandExecutorTests
         Assert.True(parameters.TryGetBoolean("dryRun", out var dryRun));
         Assert.True(dryRun);
 
-        // Invalid JSON fallback
-        var fallback = CommandParameters.FromJson("not a json");
-        Assert.NotNull(fallback);
-        Assert.False(fallback.ContainsKey("anything"));
+        // Malformed input must not silently turn into an empty, potentially executable request.
+        Assert.Throws<JsonException>(() => SubsystemCommandParameters.FromJson("not a json"));
     }
 }

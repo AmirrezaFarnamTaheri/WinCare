@@ -21,7 +21,7 @@ public sealed class SubsystemCommandRegistry
         if (executor == null) throw new ArgumentNullException(nameof(executor));
         lock (_syncRoot)
         {
-            if (!_executors.Contains(executor))
+            if (!_executors.Any(existing => ReferenceEquals(existing, executor)))
             {
                 _executors.Add(executor);
             }
@@ -36,7 +36,10 @@ public sealed class SubsystemCommandRegistry
         if (executor == null) return false;
         lock (_syncRoot)
         {
-            return _executors.Remove(executor);
+            int index = _executors.FindIndex(existing => ReferenceEquals(existing, executor));
+            if (index < 0) return false;
+            _executors.RemoveAt(index);
+            return true;
         }
     }
 
@@ -73,10 +76,20 @@ public sealed class SubsystemCommandRegistry
     public ISubsystemCommandExecutor? Resolve(string commandId)
     {
         if (string.IsNullOrWhiteSpace(commandId)) return null;
+        ISubsystemCommandExecutor[] snapshot;
         lock (_syncRoot)
         {
-            return _executors.FirstOrDefault(e => e.CanHandle(commandId));
+            snapshot = _executors.ToArray();
         }
+
+        ISubsystemCommandExecutor[] matches = snapshot.Where(executor => executor.CanHandle(commandId)).Take(2).ToArray();
+        return matches.Length switch
+        {
+            0 => null,
+            1 => matches[0],
+            _ => throw new InvalidOperationException(
+                $"Multiple subsystem executors claim command '{commandId}': {string.Join(", ", matches.Select(match => match.Subsystem))}.")
+        };
     }
 
     /// <summary>
@@ -87,13 +100,14 @@ public sealed class SubsystemCommandRegistry
     public IReadOnlyList<ISubsystemCommandExecutor> GetBySubsystem(string subsystem)
     {
         if (string.IsNullOrWhiteSpace(subsystem)) return Array.Empty<ISubsystemCommandExecutor>();
+        ISubsystemCommandExecutor[] snapshot;
         lock (_syncRoot)
         {
-            return _executors
-                .Where(e => string.Equals(e.Subsystem, subsystem, StringComparison.OrdinalIgnoreCase))
-                .ToList()
-                .AsReadOnly();
+            snapshot = _executors.ToArray();
         }
+        return Array.AsReadOnly(snapshot
+            .Where(executor => string.Equals(executor.Subsystem, subsystem, StringComparison.OrdinalIgnoreCase))
+            .ToArray());
     }
 
     /// <summary>

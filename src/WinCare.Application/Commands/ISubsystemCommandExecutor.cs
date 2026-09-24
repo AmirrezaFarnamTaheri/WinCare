@@ -2,6 +2,7 @@ namespace WinCare.Application.Commands;
 
 using System.Threading;
 using System.Threading.Tasks;
+using WinCare.CommandCatalog.Models;
 using WinCare.Domain.Commands;
 
 /// <summary>
@@ -33,5 +34,5 @@ public interface ISubsystemCommandExecutor
     /// </summary>
     CommandPreview PlanPreview(
         CommandDefinition definition, 
-        CommandParameters parameters);
+        SubsystemCommandParameters parameters);
 }

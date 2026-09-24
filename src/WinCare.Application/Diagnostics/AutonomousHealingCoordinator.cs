@@ -2,23 +2,18 @@ namespace WinCare.Application.Diagnostics;
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using WinCare.Application.Commands;
+using WinCare.CommandCatalog.Models;
 using WinCare.Domain.Commands;
 
-/// <summary>
-/// Concrete remediation step within a correlated anomaly resolution pipeline.
-/// </summary>
-public sealed record RemediationStep(
-    string CommandId,
-    JsonElement Parameters,
-    string StepDescription);
+/// <summary>A concrete command within a diagnosed remediation plan.</summary>
+public sealed record RemediationStep(string CommandId, JsonElement Parameters, string StepDescription);
 
-/// <summary>
-/// Correlated system finding grouping root cause telemetry with atomic resolution steps.
-/// </summary>
+/// <summary>A diagnosed finding and its proposed, ordered remediation steps.</summary>
 public sealed record CorrelatedAnomaly(
     string AnomalyId,
     string PlainEnglishTitle,
@@ -26,82 +21,179 @@ public sealed record CorrelatedAnomaly(
     string RecommendedResolution,
     IReadOnlyList<RemediationStep> RemediationPipeline);
 
+/// <summary>Provides findings from real diagnostic sources; this coordinator does not invent findings.</summary>
+public interface IAnomalySource
+{
+    Task<IReadOnlyList<CorrelatedAnomaly>> ScanAsync(CancellationToken cancellationToken);
+}
+
+/// <summary>Finds eligible temporary-file cleanup targets from the core executor's preview.</summary>
+public sealed class CommandBackedAnomalySource : IAnomalySource
+{
+    private const int CleanupAgeDays = 7;
+    private readonly ICommandDispatcher _dispatcher;
+
+    public CommandBackedAnomalySource(ICommandDispatcher dispatcher) =>
+        _dispatcher = dispatcher ?? throw new ArgumentNullException(nameof(dispatcher));
+
+    public async Task<IReadOnlyList<CorrelatedAnomaly>> ScanAsync(CancellationToken cancellationToken)
+    {
+        JsonElement parameters = JsonSerializer.SerializeToElement(new { OlderThanDays = CleanupAgeDays });
+        CommandResult result = await _dispatcher.ExecuteAsync(
+            CommandRequest.Preview("cleaner-disk-pressure", parameters),
+            CommandExecutionOptions.Default,
+            cancellationToken).ConfigureAwait(false);
+
+        if (result.Status != CommandResultStatus.Succeeded || result.Data is not JsonElement data ||
+            data.ValueKind != JsonValueKind.Object ||
+            !data.TryGetProperty("affectedResources", out JsonElement resources) ||
+            resources.ValueKind != JsonValueKind.Array)
+        {
+            throw new InvalidOperationException($"Storage diagnostics could not produce a validated preview: {result.Message}");
+        }
+
+        int targetCount = 0;
+        foreach (JsonElement resource in resources.EnumerateArray())
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (resource.ValueKind != JsonValueKind.Object ||
+                !resource.TryGetProperty("path", out JsonElement path) ||
+                path.ValueKind != JsonValueKind.String || string.IsNullOrWhiteSpace(path.GetString()))
+            {
+                throw new InvalidOperationException("Storage diagnostics returned an invalid cleanup target.");
+            }
+            targetCount++;
+            if (targetCount > 10_000)
+            {
+                throw new InvalidOperationException("Storage diagnostics exceeded the supported cleanup target count.");
+            }
+        }
+
+        if (targetCount == 0) return Array.Empty<CorrelatedAnomaly>();
+
+        CorrelatedAnomaly finding = new(
+            "storage.cleanup.candidates",
+            "Temporary files are eligible for review",
+            $"A bounded cleanup preview found {targetCount} temporary-file target(s) older than {CleanupAgeDays} days.",
+            "Review the exact target list and approve cleanup if it is appropriate.",
+            Array.AsReadOnly(new[]
+            {
+                new RemediationStep(
+                    "cleaner-disk-pressure",
+                    parameters,
+                    "Review eligible temporary files")
+            }));
+        return Array.AsReadOnly(new[] { finding });
+    }
+}
+
 /// <summary>
-/// Autonomous co-pilot coordinating diagnostic anomaly detection and inline, single-touch remediation.
-/// Eliminates page-bouncing and advisory hedging by pairing diagnosis directly with an atomic fix action.
+/// Coordinates evidence-backed diagnostics and sends approved remediation through the command
+/// dispatcher, preserving catalog validation, elevation, risk admission, and activity journaling.
 /// </summary>
 public sealed class AutonomousHealingCoordinator
 {
-    private readonly SubsystemCommandRegistry _registry;
+    private readonly IAnomalySource _anomalySource;
+    private readonly ICommandDispatcher _dispatcher;
 
-    public AutonomousHealingCoordinator(SubsystemCommandRegistry registry)
+    public AutonomousHealingCoordinator(IAnomalySource anomalySource, ICommandDispatcher dispatcher)
     {
-        _registry = registry ?? throw new ArgumentNullException(nameof(registry));
+        _anomalySource = anomalySource ?? throw new ArgumentNullException(nameof(anomalySource));
+        _dispatcher = dispatcher ?? throw new ArgumentNullException(nameof(dispatcher));
     }
 
-    /// <summary>
-    /// Evaluates system posture and synthesizes anomalies into correlated remediation bundles.
-    /// </summary>
-    public Task<IReadOnlyList<CorrelatedAnomaly>> ScanForAnomaliesAsync(CancellationToken cancellationToken)
+    public AutonomousHealingCoordinator(ICommandDispatcher dispatcher)
+        : this(new CommandBackedAnomalySource(dispatcher), dispatcher)
     {
-        cancellationToken.ThrowIfCancellationRequested();
+    }
 
-        var anomalies = new List<CorrelatedAnomaly>
+    public async Task<IReadOnlyList<CorrelatedAnomaly>> ScanForAnomaliesAsync(CancellationToken cancellationToken)
+    {
+        IReadOnlyList<CorrelatedAnomaly> anomalies = await _anomalySource.ScanAsync(cancellationToken).ConfigureAwait(false)
+            ?? throw new InvalidOperationException("The anomaly source returned no result collection.");
+
+        HashSet<string> ids = new(StringComparer.Ordinal);
+        foreach (CorrelatedAnomaly anomaly in anomalies)
         {
-            new(
-                AnomalyId: "anomaly.disk.pressure.telemetry_loop",
-                PlainEnglishTitle: "Storage Pressure from Background Diagnostics",
-                RootCauseDescription: "Windows telemetry buffers have accumulated obsolete diagnostic trace caches in %TEMP%.",
-                RecommendedResolution: "Purge stale diagnostic trace files and optimize filesystem free space.",
-                RemediationPipeline: new List<RemediationStep>
-                {
-                    new(
-                        CommandId: "cleaner.temporary.files",
-                        Parameters: JsonSerializer.SerializeToElement(new { OlderThanDays = 1 }),
-                        StepDescription: "Purge temporary trace logs"),
-                    new(
-                        CommandId: "remediation.baseline.apply",
-                        Parameters: JsonSerializer.SerializeToElement(new { Policy = "StandardizeExplorer" }),
-                        StepDescription: "Apply shell baseline configuration")
-                })
-        };
+            if (anomaly is null || string.IsNullOrWhiteSpace(anomaly.AnomalyId) ||
+                string.IsNullOrWhiteSpace(anomaly.PlainEnglishTitle) ||
+                string.IsNullOrWhiteSpace(anomaly.RootCauseDescription) ||
+                string.IsNullOrWhiteSpace(anomaly.RecommendedResolution) ||
+                anomaly.RemediationPipeline is null || !ids.Add(anomaly.AnomalyId))
+            {
+                throw new InvalidOperationException("The anomaly source returned an incomplete or duplicate finding.");
+            }
 
-        return Task.FromResult<IReadOnlyList<CorrelatedAnomaly>>(anomalies);
+            foreach (RemediationStep step in anomaly.RemediationPipeline)
+            {
+                if (step is null || string.IsNullOrWhiteSpace(step.CommandId) ||
+                    step.Parameters.ValueKind != JsonValueKind.Object || string.IsNullOrWhiteSpace(step.StepDescription))
+                {
+                    throw new InvalidOperationException($"Anomaly '{anomaly.AnomalyId}' contains an invalid remediation step.");
+                }
+            }
+        }
+
+        return Array.AsReadOnly(anomalies.ToArray());
     }
 
     /// <summary>
-    /// Executes all remediation steps sequentially within an autonomous execution loop.
+    /// Applies a diagnosed plan only through the command kernel. Mutating steps that require review
+    /// must carry the dispatcher-issued approval associated with their command id.
     /// </summary>
-    public async Task<bool> ResolveAnomalyInstantlyAsync(
+    public async Task<bool> ResolveAnomalyAsync(
         CorrelatedAnomaly anomaly,
+        IReadOnlyDictionary<string, ApprovedMutationPlan> approvals,
         IProgress<string>? progress,
         CancellationToken cancellationToken)
     {
-        if (anomaly == null) throw new ArgumentNullException(nameof(anomaly));
+        ArgumentNullException.ThrowIfNull(anomaly);
+        ArgumentNullException.ThrowIfNull(approvals);
 
-        foreach (var step in anomaly.RemediationPipeline)
+        foreach (RemediationStep step in anomaly.RemediationPipeline)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            progress?.Report($"Executing: {step.StepDescription}...");
+            progress?.Report($"Reviewing: {step.StepDescription}");
 
-            var executor = _registry.Resolve(step.CommandId);
-            if (executor == null)
+            CommandDefinition? definition = WinCare.CommandCatalog.CommandCatalog.Find(step.CommandId);
+            if (definition is null || definition.ReadOnly)
             {
-                progress?.Report($"No handler resolved for step '{step.CommandId}'.");
+                progress?.Report($"Step '{step.CommandId}' is not a cataloged mutation and cannot be applied as remediation.");
                 return false;
             }
 
-            var request = CommandRequest.Execute(step.CommandId, step.Parameters);
-            var outcome = await executor.ExecuteAsync(null!, request, cancellationToken);
-
-            if (!outcome.Success)
+            ApprovedMutationPlan? approval = FindApproval(approvals, step.CommandId);
+            if (approval is null)
             {
-                progress?.Report($"Step '{step.CommandId}' failed: {outcome.Message}");
+                progress?.Report($"Step '{step.CommandId}' needs a reviewed approval before it can run.");
+                return false;
+            }
+
+            CommandRequest request = CommandRequest.Execute(step.CommandId, step.Parameters, approval);
+            CommandResult result = await _dispatcher.ExecuteAsync(
+                request,
+                new CommandExecutionOptions(ReviewApproved: approval is not null),
+                cancellationToken).ConfigureAwait(false);
+
+            if (result.Status != CommandResultStatus.Succeeded)
+            {
+                progress?.Report($"Step '{step.CommandId}' was not completed: {result.Message}");
                 return false;
             }
         }
 
-        progress?.Report("System restored to optimal status.");
+        progress?.Report("All approved remediation steps completed.");
         return true;
+    }
+
+    private static ApprovedMutationPlan? FindApproval(
+        IReadOnlyDictionary<string, ApprovedMutationPlan> approvals,
+        string commandId)
+    {
+        foreach ((string key, ApprovedMutationPlan approval) in approvals)
+        {
+            if (string.Equals(key, commandId, StringComparison.OrdinalIgnoreCase)) return approval;
+        }
+        return null;
     }
 }

@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "commandCount": 2,
+  "commands": [
+    {
+      "id": "runtimepack-one",
+      "title": "Runtime one",
+      "summary": "First runtime pack command.",
+      "area": "All tools",
+      "section": "Commands",
+      "risk": "ReadOnly",
+      "readOnly": true,
+      "administratorAccess": "No",
+      "restart": "No",
+      "legacySource": "runtimepack",
+      "migrationStatus": "Implemented"
+    },
+    {
+      "id": "runtimepack-two",
+      "title": "Runtime two",
+      "summary": "Second runtime pack command.",
+      "area": "All tools",
+      "section": "Commands",
+      "risk": "ReadOnly",
+      "readOnly": true,
+      "administratorAccess": "No",
+      "restart": "No",
+      "legacySource": "runtimepack",
+      "migrationStatus": "Implemented"
+    }
+  ]
+}

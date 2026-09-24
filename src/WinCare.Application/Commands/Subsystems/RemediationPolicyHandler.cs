@@ -1,14 +1,14 @@
 namespace WinCare.Application.Commands.Subsystems;
 
 using System;
-using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using WinCare.Application.Commands;
+using WinCare.CommandCatalog.Models;
 using WinCare.Domain.Commands;
 
 /// <summary>
-/// Subsystem executor evaluating baseline deviations, applying registry policies, and managing compensating rollback transactions.
+/// Fail-closed placeholder for remediation command routing until a concrete subsystem executor is registered.
 /// </summary>
 public sealed class RemediationPolicyHandler : ISubsystemCommandExecutor
 {
@@ -28,37 +28,34 @@ public sealed class RemediationPolicyHandler : ISubsystemCommandExecutor
         CommandRequest request,
         CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(definition);
+        ArgumentNullException.ThrowIfNull(request);
+        if (!string.Equals(definition.Id, request.CommandId, StringComparison.OrdinalIgnoreCase))
+        {
+            return Task.FromResult(CommandHandlerOutcome.Blocked("command.definition_mismatch", "The command definition does not match the request."));
+        }
         cancellationToken.ThrowIfCancellationRequested();
-
-        var outcome = CommandHandlerOutcome.Succeeded(
-            new
-            {
-                Subsystem = Subsystem,
-                CommandId = request?.CommandId ?? "remediation.baseline.apply",
-                ExecutedAtUtc = DateTimeOffset.UtcNow,
-                CompensatorAttached = true
-            },
-            $"Remediation policy evaluated and applied successfully for '{request?.CommandId ?? "remediation.baseline.apply"}'.");
-
-        return Task.FromResult(outcome);
+        return Task.FromResult(new CommandHandlerOutcome(
+            CommandResultStatus.NotMigrated,
+            "remediation.executor_unavailable",
+            $"No remediation operation is registered for '{definition.Id}'. No policy was changed.",
+            null,
+            false));
     }
 
     public CommandPreview PlanPreview(
         CommandDefinition definition,
-        CommandParameters parameters)
+        SubsystemCommandParameters parameters)
     {
-        var targets = new List<string>
-        {
-            "HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows",
-            "HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies"
-        };
+        ArgumentNullException.ThrowIfNull(definition);
+        ArgumentNullException.ThrowIfNull(parameters);
 
         return new CommandPreview(
-            CommandId: definition?.Id ?? "remediation.baseline.apply",
+            CommandId: definition.Id,
             Subsystem: Subsystem,
-            Summary: "Evaluates policy baseline alignment and registers reversible rollback compensators.",
-            AffectedTargets: targets,
+            Summary: "No remediation executor is registered; no changes or rollback plan can be previewed.",
+            AffectedTargets: Array.Empty<string>(),
             EstimatedImpactBytes: 0,
-            RequiresElevation: false);
+            RequiresElevation: definition.AdministratorAccess == AdministratorAccess.Required);
     }
 }

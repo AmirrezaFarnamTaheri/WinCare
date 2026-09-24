@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using WinCare.Application.Commands;
 using WinCare.Infrastructure.Security;
 
 namespace WinCare.Infrastructure.Commands;
@@ -11,7 +12,7 @@ namespace WinCare.Infrastructure.Commands;
 /// Updates are serialized per root within the process and across processes, then committed through a temporary
 /// file so a failed write cannot expose partial JSON.
 /// </summary>
-public sealed class CommandStateStore
+public sealed class CommandStateStore : ICommandStateStore
 {
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
     private static readonly ConcurrentDictionary<string, SemaphoreSlim> ProcessWriteGates =
