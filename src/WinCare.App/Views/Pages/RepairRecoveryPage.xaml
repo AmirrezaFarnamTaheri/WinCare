@@ -8,10 +8,10 @@
     NavigationCacheMode="Required">
     <Grid Padding="28,28,28,32" RowSpacing="20">
         <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="*" /></Grid.RowDefinitions>
-        <StackPanel Spacing="6">
-            <TextBlock x:Uid="RepairRecoveryPageTitle" Style="{StaticResource PageTitleTextStyle}" Text="Repair &amp; recovery" />
-            <TextBlock MaxWidth="760" HorizontalAlignment="Left" Style="{StaticResource PageDescriptionTextStyle}" Text="Fix Windows problems, restore from trouble, and keep backup and recovery options close by." />
-        </StackPanel>
+        <controls:PageHeaderControl
+            Title="Repair &amp; recovery"
+            Description="Fix Windows problems, restore from trouble, and keep backup and recovery options close by." />
+
         <SelectorBar x:Name="SectionSelector" Grid.Row="1" SelectionChanged="SectionSelector_SelectionChanged" AutomationProperties.AutomationId="RepairRecoveryPageTabs" AutomationProperties.Name="Repair and recovery sections">
             <SelectorBarItem Text="Repair" AutomationProperties.Name="Repair" />
             <SelectorBarItem Text="Restore" AutomationProperties.Name="Restore" />

@@ -46,16 +46,6 @@ namespace WinCare.Application.Diagnostics
                 _isInitialized = true;
                 return Task.FromResult(true);
             }
-            catch (OperationCanceledException)
-            {
-                throw;
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[RuleBasedIntentInferenceEngine] Init error: {ex.Message}");
-                _isInitialized = false;
-                return Task.FromResult(false);
-            }
             finally
             {
                 sw.Stop();

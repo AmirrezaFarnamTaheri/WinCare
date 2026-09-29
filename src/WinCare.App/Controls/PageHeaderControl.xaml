@@ -6,7 +6,7 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     mc:Ignorable="d">
 
-    <Grid Margin="0,0,0,24">
+    <Grid>
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="*" />
             <ColumnDefinition Width="Auto" />
@@ -19,7 +19,7 @@
                         CornerRadius="{StaticResource RadiusControl}" 
                         Padding="8,2" 
                         VerticalAlignment="Center"
-                        Visibility="{x:Bind HasBadge, Mode=OneWay}">
+                        Visibility="{x:Bind BadgeVisibility, Mode=OneWay}">
                     <TextBlock Text="{x:Bind BadgeText, Mode=OneWay}" 
                                FontSize="11" 
                                FontWeight="SemiBold" 
@@ -28,7 +28,8 @@
             </StackPanel>
             <TextBlock Text="{x:Bind Description, Mode=OneWay}" 
                        Style="{StaticResource PageDescriptionTextStyle}" 
-                       MaxWidth="850" />
+                       MaxWidth="850"
+                       TextWrapping="Wrap" />
         </StackPanel>
 
         <ContentPresenter Grid.Column="1" 

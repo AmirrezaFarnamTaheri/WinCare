@@ -64,7 +64,7 @@ public sealed class PluginStateRepository : IPluginStateRepository
             LastError = null;
             return new HashSet<string>(model?.EnabledPluginIds ?? new(), StringComparer.OrdinalIgnoreCase);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException or ArgumentException)
         {
             LastError = $"Plugin state file '{_stateFilePath}' could not be read: {ex.Message} " +
                 "The last known good file is left untouched on disk; plugin enablement falls back to disabled until it is repaired.";
@@ -95,7 +95,7 @@ public sealed class PluginStateRepository : IPluginStateRepository
             File.Move(tempFilePath, _stateFilePath, overwrite: true);
             LastError = null;
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException or ArgumentException)
         {
             // Do not crash the host, but report that the save failed — the
             // write failure leaves the previous state file intact and the error is

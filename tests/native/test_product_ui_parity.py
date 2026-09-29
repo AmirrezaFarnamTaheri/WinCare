@@ -72,7 +72,7 @@ class ProductUiParityTests(unittest.TestCase):
 
         self.assertIn('CommandRequest.Preview(WuaCommandId)', view_model)
         self.assertIn('SystemCareRoute = NavigationCatalog.Items.Single(item => item.Id == "system-care").Id', view_model)
-        self.assertIn('SetNavigationAction(row, "Review updates", SystemCareRoute, "Network & updates")', view_model)
+        self.assertIn('SetNavigationAction(row, "Check updates", SystemCareRoute, "Network & updates")', view_model)
         self.assertIn("NavigationSectionTitle", view_model)
         self.assertIn("PageNavigation.NavigateToSection", page)
         self.assertNotIn("NavigationSectionIndex", row)
@@ -110,7 +110,10 @@ class ProductUiParityTests(unittest.TestCase):
         self.assertIn("PageNavigation.OpenTool", control)
         self.assertNotIn("PageNavigation.OpenTools", control)
         self.assertIn("CommandParameters is JsonElement", control)
-        self.assertIn("Power tools", xaml)
+        # The care list points rows at the shared inspector without naming the
+        # Power tools surface, so the copy stays accurate wherever the control is reused.
+        self.assertIn("run it in the inspector", xaml)
+        self.assertNotIn("Power tools", xaml)
 
     def test_power_tools_uses_named_controls_and_product_safety_tiers(self) -> None:
         xaml = self.read("src/WinCare.App/Views/Pages/AllToolsPage.xaml")
@@ -224,6 +227,7 @@ class ProductUiParityTests(unittest.TestCase):
 
         xaml_files = [ROOT / "src/WinCare.App/Views/ShellPage.xaml",
                       *sorted((ROOT / "src/WinCare.App/Views/Pages").glob("*.xaml"))]
+        referenced_uids = set()
         uid_count = 0
         for path in xaml_files:
             source = path.read_text(encoding="utf-8")
@@ -232,6 +236,7 @@ class ProductUiParityTests(unittest.TestCase):
                 if uid_match is None:
                     continue
                 uid = uid_match.group(1)
+                referenced_uids.add(uid)
                 for prop in ("Content", "Text"):
                     prop_match = re.search(rf'{prop}="([^"]*)"', attrs)
                     if prop_match is None:
@@ -240,7 +245,15 @@ class ProductUiParityTests(unittest.TestCase):
                     self.assertIn((uid, prop), resw_values, f"{path.name}: {uid}.{prop} missing from Resources.resw")
                     self.assertEqual(prop_match.group(1), resw_values[(uid, prop)],
                                      f"{path.name}: {uid}.{prop} differs from Resources.resw")
-        self.assertGreater(uid_count, 15)
+        # Page headers now come from the shared PageHeaderControl, so the localized
+        # surface is the shell/navigation labels plus the About page title. The floor
+        # guards against the localized surface silently collapsing to almost nothing.
+        self.assertGreaterEqual(uid_count, 11)
+
+        # Every shipped resource must be reachable from XAML. NavAbout is the one
+        # documented exception: the hidden about route has no navigation item.
+        orphans = {uid for uid, _ in resw_values} - referenced_uids - {"NavAbout"}
+        self.assertEqual(set(), orphans, f"unreferenced Resources.resw entries: {sorted(orphans)}")
 
         catalog_labels = set(re.findall(r'new\("[^"]+", "([^"]+)"', catalog))
         nav_labels = {html.unescape(value) for (uid, prop), value in resw_values.items()

@@ -351,6 +351,7 @@ mod nofollow_windows {
     struct OwnedHandle(Handle);
     impl Drop for OwnedHandle {
         fn drop(&mut self) {
+            // SAFETY: self.0 is an owned Win32/NT handle returned by CreateFileW or NtCreateFile.
             unsafe {
                 let _ = CloseHandle(self.0);
             }
@@ -364,6 +365,7 @@ mod nofollow_windows {
 
     fn open_root(path: &Path) -> io::Result<OwnedHandle> {
         let wide: Vec<u16> = path.as_os_str().encode_wide().chain(Some(0)).collect();
+        // SAFETY: wide is a null-terminated UTF-16 wide string; flags configure backup semantics to open a directory handle without parsing junctions.
         let handle = unsafe {
             CreateFileW(
                 wide.as_ptr(),
@@ -397,7 +399,9 @@ mod nofollow_windows {
         let mut buffer = vec![0u8; 64 * 1024];
         let mut first_child_error = None;
         loop {
+            // SAFETY: IoStatusBlock is a plain-old-data Win32 struct where zeroed memory is valid.
             let mut iosb: IoStatusBlock = unsafe { zeroed() };
+            // SAFETY: dir.0 is a valid open directory handle; buffer is pre-allocated with 64KB capacity.
             let status = unsafe {
                 NtQueryDirectoryFile(
                     dir.0,
@@ -422,6 +426,7 @@ mod nofollow_windows {
             }
             let mut offset = 0usize;
             while offset < iosb.information {
+                // SAFETY: offset is verified to be strictly bounded within iosb.information, which does not exceed buffer.len().
                 let entry = unsafe {
                     &*(buffer
                         .as_ptr()
@@ -433,6 +438,7 @@ mod nofollow_windows {
                 if name_bytes % 2 != 0 || name_offset + name_bytes > buffer.len() {
                     return Err(io::Error::other("invalid directory entry"));
                 }
+                // SAFETY: buffer contains at least name_offset + name_bytes, and name_bytes is an even count of bytes forming valid UTF-16 units.
                 let name = unsafe {
                     std::slice::from_raw_parts(
                         buffer.as_ptr().add(offset + name_offset).cast::<u16>(),
@@ -520,6 +526,7 @@ mod nofollow_windows {
             security_quality_of_service: ptr::null_mut(),
         };
         let mut handle = ptr::null_mut();
+        // SAFETY: IoStatusBlock is a plain-old-data Win32 struct where zeroed memory is valid.
         let mut iosb: IoStatusBlock = unsafe { zeroed() };
         let options = FILE_SYNCHRONOUS_IO_NONALERT
             | FILE_OPEN_REPARSE_POINT
@@ -528,6 +535,7 @@ mod nofollow_windows {
             } else {
                 FILE_NON_DIRECTORY_FILE
             };
+        // SAFETY: attributes correctly points to unicode with valid length, parent handle dir.0 is open, and OBJ_DONT_REPARSE prevents junction following.
         let status = unsafe {
             NtCreateFile(
                 &mut handle,
@@ -553,7 +561,9 @@ mod nofollow_windows {
     }
 
     fn information(handle: &OwnedHandle) -> io::Result<ByHandleFileInformation> {
+        // SAFETY: ByHandleFileInformation is POD where zeroed memory is valid.
         let mut info: ByHandleFileInformation = unsafe { zeroed() };
+        // SAFETY: handle.0 is a valid open Win32 handle and info points to writable ByHandleFileInformation memory.
         if unsafe { GetFileInformationByHandle(handle.0, &mut info) } == 0 {
             return Err(io::Error::last_os_error());
         }
@@ -571,6 +581,7 @@ mod nofollow_windows {
         let info = FileDispositionInfoEx {
             flags: FILE_DISPOSITION_FLAG_DELETE,
         };
+        // SAFETY: handle.0 was opened with DELETE access; info points to a valid FileDispositionInfoEx struct of matching size.
         if unsafe {
             SetFileInformationByHandle(
                 handle.0,

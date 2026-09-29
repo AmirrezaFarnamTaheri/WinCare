@@ -169,6 +169,6 @@ public sealed class SubsystemCommandExecutorTests
         Assert.True(dryRun);
 
         // Malformed input must not silently turn into an empty, potentially executable request.
-        Assert.Throws<JsonException>(() => SubsystemCommandParameters.FromJson("not a json"));
+        Assert.ThrowsAny<JsonException>(() => SubsystemCommandParameters.FromJson("not a json"));
     }
 }

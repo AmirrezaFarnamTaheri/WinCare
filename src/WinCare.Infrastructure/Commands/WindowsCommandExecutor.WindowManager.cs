@@ -69,7 +69,7 @@ internal sealed partial class WindowsCommandExecutor
                     }
                 }
             }
-            catch (Exception)
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Security.SecurityException)
             {
                 // Non-fatal: default to standard desktop state
             }
@@ -125,7 +125,7 @@ internal sealed partial class WindowsCommandExecutor
                     if (jointResize is int jr && jr == 0) jointResizeEnabled = false;
                 }
             }
-            catch (Exception)
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Security.SecurityException)
             {
                 // Fall back to defaults
             }

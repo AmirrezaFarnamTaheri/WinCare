@@ -155,12 +155,14 @@ public static class CommandPackCatalog
     public static CommandDefinition NormalizeCommand(CommandDefinition command) => command with
     {
         Keywords = Array.AsReadOnly((command.Keywords ?? Array.Empty<string>()).ToArray()),
-        Parameters = Array.AsReadOnly((command.Parameters ?? Array.Empty<CommandParameterDefinition>())
-            .Select(parameter => parameter with
-            {
-                Options = parameter.Options is null ? null : Array.AsReadOnly(parameter.Options.ToArray())
-            })
-            .ToArray())
+        Parameters = command.Parameters is null
+            ? null
+            : Array.AsReadOnly(command.Parameters
+                .Select(parameter => parameter with
+                {
+                    Options = parameter.Options is null ? null : Array.AsReadOnly(parameter.Options.ToArray())
+                })
+                .ToArray())
     };
 
     private static void ValidateParameterSchema(string packId, CommandDefinition command)

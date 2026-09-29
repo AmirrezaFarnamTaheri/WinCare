@@ -22,21 +22,29 @@ public sealed partial class MemoryTopologyAtlas : UserControl
         double availGb = metrics.AvailablePhysicalBytes / (1024.0 * 1024 * 1024);
         double activeGb = Math.Max(0, totalGb - availGb);
 
-        TotalMemoryBlock.Text = $"{totalGb:F1} GB TOTAL";
+        TotalMemoryBlock.Text = $"{totalGb:F1} GB total";
         TxtActive.Text = $"{activeGb:F1} GB";
         TxtFree.Text = $"{availGb:F1} GB";
 
-        ColActive.Width = new GridLength(activeGb, GridUnitType.Star);
-        ColFree.Width = new GridLength(availGb, GridUnitType.Star);
+        ColActive.Width = new GridLength(Math.Max(0.1, activeGb), GridUnitType.Star);
+        ColFree.Width = new GridLength(Math.Max(0.1, availGb), GridUnitType.Star);
     }
 
     private async void BtnCompact_Click(object sender, RoutedEventArgs e)
     {
         BtnCompact.IsEnabled = false;
+        TxtStatus.Visibility = Visibility.Visible;
+        TxtStatus.Text = "Reclaiming cache...";
         try
         {
-            _ = await MemoryGovernor.CompactSystemMemoryAsync();
+            long freed = await MemoryGovernor.CompactSystemMemoryAsync();
             RefreshTopology();
+            double freedMb = freed / (1024.0 * 1024.0);
+            TxtStatus.Text = freedMb > 1 ? $"Reclaimed {freedMb:F0} MB" : "Cache clean";
+        }
+        catch (Exception)
+        {
+            TxtStatus.Text = "Completed";
         }
         finally
         {

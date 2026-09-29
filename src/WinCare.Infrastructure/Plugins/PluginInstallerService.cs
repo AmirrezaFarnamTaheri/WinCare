@@ -588,7 +588,7 @@ public class PluginInstallerService : IPluginInstallerService
             if (tempExtractDir != null && Directory.Exists(tempExtractDir))
             {
                 try { Directory.Delete(tempExtractDir, recursive: true); }
-                catch (Exception ex)
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
                 {
                     System.Diagnostics.Debug.WriteLine($"[PluginInstaller] Failed cleaning up temporary extract directory '{tempExtractDir}': {ex.GetType().Name} - {ex.Message}");
                 }
@@ -995,7 +995,7 @@ public class PluginInstallerService : IPluginInstallerService
         {
             if (Directory.Exists(path)) Directory.Delete(path, recursive: true);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or PathTooLongException)
         {
             System.Diagnostics.Debug.WriteLine($"[PluginInstaller] Failed cleaning directory '{path}': {ex.GetType().Name} - {ex.Message}");
         }
@@ -1007,7 +1007,7 @@ public class PluginInstallerService : IPluginInstallerService
         {
             if (File.Exists(path)) File.Delete(path);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or PathTooLongException)
         {
             System.Diagnostics.Debug.WriteLine($"[PluginInstaller] Failed cleaning file '{path}': {ex.GetType().Name} - {ex.Message}");
         }

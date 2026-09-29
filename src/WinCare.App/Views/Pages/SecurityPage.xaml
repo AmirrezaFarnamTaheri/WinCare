@@ -7,10 +7,10 @@
     NavigationCacheMode="Required">
     <Grid Padding="28,28,28,32" RowSpacing="20">
         <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="*" /></Grid.RowDefinitions>
-        <StackPanel Spacing="6">
-            <TextBlock x:Uid="SecurityPageTitle" Style="{StaticResource PageTitleTextStyle}" Text="Security" />
-            <TextBlock MaxWidth="760" HorizontalAlignment="Left" Style="{StaticResource PageDescriptionTextStyle}" Text="See how Windows is protected and review security changes before you apply them." />
-        </StackPanel>
+        <controls:PageHeaderControl
+            Title="Security"
+            Description="See how Windows is protected and review security changes before you apply them." />
+
         <SelectorBar x:Name="SectionSelector" Grid.Row="1" SelectionChanged="SectionSelector_SelectionChanged" AutomationProperties.AutomationId="SecurityPageTabs" AutomationProperties.Name="Security sections">
             <SelectorBarItem Text="Status" AutomationProperties.Name="Status" />
             <SelectorBarItem Text="Protection" AutomationProperties.Name="Protection" />

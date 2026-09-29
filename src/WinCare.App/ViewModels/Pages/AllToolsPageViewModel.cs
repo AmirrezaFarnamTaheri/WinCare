@@ -296,7 +296,13 @@ public sealed class AllToolsPageViewModel : ObservableObject, IDisposable
 
     public void Dispose()
     {
-        if (_isDisposed) return; _isDisposed = true; _catalog.CatalogChanged -= OnCatalogChanged; _searchCts?.Cancel(); _searchCts?.Dispose(); _searchCts = null;
+        if (_isDisposed) return;
+        _isDisposed = true;
+        _catalog.CatalogChanged -= OnCatalogChanged;
+        _searchCts?.Cancel();
+        _searchCts?.Dispose();
+        _searchCts = null;
+        Execution.CancelRunningExecution();
     }
 
     /// <summary>

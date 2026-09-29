@@ -2,6 +2,7 @@ using System.Text.Json;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
+using Microsoft.UI.Xaml.Navigation;
 using WinCare.App.ViewModels.Pages;
 using WinCare.App.Views;
 using WinCare.Application.Diagnostics;
@@ -21,6 +22,12 @@ public sealed partial class AiDoctorPage : Page
     {
         ViewModel = new AiDoctorPageViewModel();
         InitializeComponent();
+    }
+
+    protected override void OnNavigatedFrom(NavigationEventArgs e)
+    {
+        ViewModel.CancelAnalysis();
+        base.OnNavigatedFrom(e);
     }
 
     private async void SendButton_Click(object sender, RoutedEventArgs e)

@@ -33,7 +33,7 @@ namespace WinCare.Infrastructure.IPC
                 ResetConnection();
                 throw;
             }
-            catch (Exception ex)
+            catch (Exception ex) when (ex is IOException or TimeoutException or UnauthorizedAccessException)
             {
                 System.Diagnostics.Debug.WriteLine($"[GuardPipeClient] Connection failed: {ex.Message}");
                 ResetConnection();
@@ -84,7 +84,7 @@ namespace WinCare.Infrastructure.IPC
                 ResetConnection();
                 throw;
             }
-            catch (Exception ex)
+            catch (Exception ex) when (ex is IOException or TimeoutException or UnauthorizedAccessException)
             {
                 System.Diagnostics.Debug.WriteLine($"[GuardPipeClient] SendCommand error: {ex.Message}");
                 ResetConnection();

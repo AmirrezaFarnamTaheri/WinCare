@@ -25,9 +25,19 @@ public sealed class AiDoctorPageViewModel : INotifyPropertyChanged
     private string _userPrompt = string.Empty;
     private bool _isAnalyzing;
     private DoctorActionPlan? _currentPlan;
+    private CancellationTokenSource? _activeCts;
 
     public event PropertyChangedEventHandler? PropertyChanged;
     public ObservableCollection<DoctorChatMessage> Messages { get; } = new();
+
+    /// <summary>
+    /// Cancels an in-flight diagnosis analysis, if any.
+    /// </summary>
+    public void CancelAnalysis()
+    {
+        if (_activeCts is null || !_isAnalyzing) return;
+        _activeCts.Cancel();
+    }
 
     private void AddMessage(DoctorChatMessage message)
     {
@@ -88,11 +98,15 @@ public sealed class AiDoctorPageViewModel : INotifyPropertyChanged
         UserPrompt = string.Empty;
         AddMessage(new DoctorChatMessage("You", prompt, IsUser: true, DateTime.UtcNow));
 
+        using CancellationTokenSource linkedCts = cancellationToken.CanBeCanceled
+            ? CancellationTokenSource.CreateLinkedTokenSource(cancellationToken)
+            : new CancellationTokenSource();
+        _activeCts = linkedCts;
         IsAnalyzing = true;
         CurrentPlan = null;
         try
         {
-            DoctorActionPlan plan = await _intentTranslator.TranslateAsync(prompt, cancellationToken);
+            DoctorActionPlan plan = await _intentTranslator.TranslateAsync(prompt, linkedCts.Token);
             CurrentPlan = plan;
 
             string signalCount = $"{plan.MeasuredEvidence.Count} local signal{(plan.MeasuredEvidence.Count == 1 ? string.Empty : "s")}";
@@ -116,6 +130,7 @@ public sealed class AiDoctorPageViewModel : INotifyPropertyChanged
         }
         finally
         {
+            _activeCts = null;
             IsAnalyzing = false;
         }
     }

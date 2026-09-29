@@ -4,15 +4,16 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:local="using:WinCare.App.Views.Pages"
     xmlns:vm="using:WinCare.App.ViewModels.Pages"
+    xmlns:controls="using:WinCare.App.Controls"
     NavigationCacheMode="Required"
     SizeChanged="Page_SizeChanged">
 
     <Grid Padding="32,24,32,32" RowDefinitions="Auto,Auto,Auto,Auto,*" RowSpacing="18">
         <Grid Grid.Row="0" ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="16" RowSpacing="12">
-            <StackPanel Grid.Column="0" Spacing="8">
-                <TextBlock Text="Extensions" Style="{StaticResource PageTitleTextStyle}" />
-                <TextBlock MaxWidth="760" HorizontalAlignment="Left" Text="Add optional features and manage what's already installed." Style="{StaticResource PageDescriptionTextStyle}" />
-            </StackPanel>
+            <controls:PageHeaderControl
+                Grid.Column="0"
+                Title="Extensions"
+                Description="Add optional features and manage what's already installed." />
 
             <AutoSuggestBox x:Name="PluginSearchBox" Grid.Column="1" Width="280" VerticalAlignment="Center" PlaceholderText="Search extensions or authors" QueryIcon="Find" TextChanged="SearchBox_TextChanged" AutomationProperties.AutomationId="PluginSearch" AutomationProperties.Name="Search extensions or authors"/>
             <ComboBox x:Name="CategoryFilter" Grid.Row="1" Grid.ColumnSpan="2" Width="220" HorizontalAlignment="Left" Header="Category" ItemsSource="{x:Bind ViewModel.Categories, Mode=OneWay}" SelectedItem="{x:Bind ViewModel.SelectedCategory, Mode=TwoWay}" AutomationProperties.AutomationId="PluginCategoryFilter" AutomationProperties.Name="Filter extensions by category" />
