@@ -41,6 +41,7 @@ internal sealed partial class WindowsCommandExecutor : ICommandOperationExecutor
     private readonly BoundedProcessRunner _process;
     private readonly CommandStateStore _state;
     private readonly HttpClient _httpClient;
+    private readonly WinCare.Application.Commands.SubsystemCommandRegistry _registry;
     private readonly bool _ownsHttpClient;
     private readonly ConcurrentDictionary<string, CancellationTokenSource> _operations = new(StringComparer.Ordinal);
     private bool _disposed;
@@ -100,6 +101,17 @@ internal sealed partial class WindowsCommandExecutor : ICommandOperationExecutor
         {
             Timeout = TimeSpan.FromSeconds(30),
         };
+
+        _registry = new WinCare.Application.Commands.SubsystemCommandRegistry();
+        _registry.Register(new Subsystems.DeveloperPillarExecutor(_nativeCore));
+        _registry.Register(new Subsystems.SystemPillarExecutor(_nativeCore));
+        _registry.Register(new Subsystems.VirtualizationPillarExecutor(_nativeCore));
+        _registry.Register(new Subsystems.StorageDedupPillarExecutor(_nativeCore));
+        _registry.Register(new Subsystems.PerformancePillarExecutor(_nativeCore));
+        _registry.Register(new Subsystems.DesktopPillarExecutor(_nativeCore));
+        _registry.Register(new Subsystems.HealthGuardPillarExecutor(_nativeCore));
+        _registry.Register(new Subsystems.ApplicationCleanupPillarExecutor(_nativeCore));
+
     }
 
     /// <summary>
@@ -117,6 +129,18 @@ internal sealed partial class WindowsCommandExecutor : ICommandOperationExecutor
 
         try
         {
+            var executor = _registry.Resolve(definition.Id);
+            if (executor != null)
+            {
+                if (!definition.ReadOnly && request.Apply && definition.AdministratorAccess == AdministratorAccess.Required && !IsAdministrator())
+                {
+                    return CommandHandlerOutcome.Blocked(
+                        "command.elevation_required",
+                        $"'{definition.Title}' requires administrator access. Restart WinCare elevated, then review and apply again.");
+                }
+                return await executor.ExecuteAsync(definition, request, cancellationToken).ConfigureAwait(false);
+            }
+
             var parameters = new CommandParameters(request.Parameters);
             if (!definition.ReadOnly && request.Apply && definition.AdministratorAccess == AdministratorAccess.Required && !IsAdministrator())
             {
