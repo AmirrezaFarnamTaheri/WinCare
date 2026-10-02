@@ -37,7 +37,7 @@ jobs:
         with:
           python-version: "3.13"
       - name: Run repository Python tests
-        run: python -m unittest discover -s tests -t . -v > test_output.log 2>&1 || { egrep -B 2 -A 10 "FAIL:|ERROR:" test_output.log | sed "s/^/::error::/" ; exit 1; }
+        run: python -m unittest discover -s tests -t . -v
       - name: Verify visual design tokens
         run: python tools/verify_visual_tokens.py
       - name: Verify contrast ratios
