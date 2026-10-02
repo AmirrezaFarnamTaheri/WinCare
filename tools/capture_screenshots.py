@@ -412,9 +412,9 @@ DOC_TAIL = """\
 
 ### Diagnostic Core Showcase
 
-![WinCare interactive web showcase featuring holographic diagnostic topology, live telemetry dials, and tactile inspection](images/showcase-preview.png)
+![WinCare interactive web showcase featuring the diagnostic core topology diagram, execution pipeline, and command simulator](images/showcase-preview.png)
 
-**Interactive experience:** Open [`docs/showcase.html`](showcase.html) in any modern browser for the live holographic diagnostic topology, command simulator, and responsive telemetry panels.
+**Interactive experience:** Open [`docs/showcase.html`](showcase.html) in any modern browser for the diagnostic core topology diagram, command simulator, and safety model overview.
 
 ## Capture policy
 

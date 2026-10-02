@@ -13,10 +13,13 @@
         </Grid.ColumnDefinitions>
 
         <StackPanel Spacing="6" VerticalAlignment="Center">
-            <StackPanel Orientation="Horizontal" Spacing="12">
-                <TextBlock Text="{x:Bind Title, Mode=OneWay}" Style="{StaticResource PageTitleTextStyle}" />
+            <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                <Rectangle Width="4" Height="26" RadiusX="2" RadiusY="2" Fill="{ThemeResource AccentChromeBrush}" VerticalAlignment="Center" />
+                <TextBlock Text="{x:Bind Title, Mode=OneWay}" Style="{StaticResource PageTitleTextStyle}" VerticalAlignment="Center" />
                 <Border Background="{ThemeResource AccentChromeSubtleBrush}" 
-                        CornerRadius="{StaticResource RadiusControl}" 
+                        BorderBrush="{ThemeResource BorderSubtleBrush}"
+                        BorderThickness="1"
+                        CornerRadius="{StaticResource RadiusPill}" 
                         Padding="8,2" 
                         VerticalAlignment="Center"
                         Visibility="{x:Bind BadgeVisibility, Mode=OneWay}">

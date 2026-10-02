@@ -76,6 +76,7 @@
         --success: CanvasText; --warning: CanvasText; --danger: CanvasText;
         --shadow-card: none; --shadow-lift: none;
       }
+      body { background-image: none !important; }
     }
 
     *, *::before, *::after { box-sizing: border-box; }
@@ -85,6 +86,8 @@
     body {
       margin: 0;
       background-color: var(--page-background);
+      background-image: radial-gradient(color-mix(in srgb, var(--accent) 7%, transparent) 1px, transparent 1px);
+      background-size: 24px 24px;
       color: var(--text-primary);
       font-family: "Segoe UI Variable Text", "Segoe UI", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
       font-size: 16px;
@@ -366,6 +369,351 @@
     .terminal-body .c-ok { color: var(--success); font-weight: 600; }
     .terminal-body .c-warn { color: var(--warning); font-weight: 600; }
 
+    /* ---- Tactile Registration Marks & Corner Crosshairs ---- */
+    .tactile-card {
+      position: relative;
+    }
+    .tactile-card::before, .tactile-card::after {
+      content: "+";
+      position: absolute;
+      font-family: "Cascadia Code", monospace;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--accent);
+      opacity: 0.45;
+      line-height: 1;
+      pointer-events: none;
+    }
+    .tactile-card::before { top: 8px; left: 10px; }
+    .tactile-card::after { top: 8px; right: 10px; }
+
+    /* ---- Sentry & Pixel Art Chassis ---- */
+    .sentry-grid {
+      display: grid;
+      grid-template-columns: 1.05fr 0.95fr;
+      gap: 28px;
+      align-items: stretch;
+      margin-top: 32px;
+    }
+    .sentry-bezel {
+      border-radius: 12px;
+      border: 1px solid var(--card-border);
+      background-color: var(--telemetry-frame);
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      box-shadow: var(--shadow-lift);
+      position: relative;
+      overflow: hidden;
+    }
+    .sentry-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .sentry-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .sentry-live-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background-color: var(--success);
+      box-shadow: 0 0 8px var(--success);
+      display: inline-block;
+    }
+    .sentry-img-wrap {
+      width: 100%;
+      background: #091218;
+      border-radius: 8px;
+      border: 1px solid var(--border-subtle);
+      padding: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+    .sentry-img-wrap img {
+      width: 100%;
+      max-width: 520px;
+      height: auto;
+      display: block;
+      image-rendering: pixelated;
+    }
+    .sentry-telemetry-strip {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      font-size: 11px;
+    }
+
+    /* Sentry Dialogue Tabs & Transcript */
+    .sentry-console {
+      display: flex;
+      flex-direction: column;
+      border-radius: 12px;
+      border: 1px solid var(--card-border);
+      background-color: var(--surface);
+      overflow: hidden;
+      box-shadow: var(--shadow-card);
+    }
+    .console-tab-bar {
+      display: flex;
+      background-color: var(--surface-secondary);
+      border-bottom: 1px solid var(--border-subtle);
+      overflow-x: auto;
+    }
+    .console-tab {
+      padding: 10px 14px;
+      border: none;
+      background: transparent;
+      color: var(--text-secondary);
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      border-bottom: 2px solid transparent;
+      white-space: nowrap;
+      transition: color 0.15s, background-color 0.15s;
+    }
+    .console-tab:hover {
+      color: var(--text-primary);
+      background-color: var(--surface-hover);
+    }
+    .console-tab.active {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+      background-color: var(--surface);
+    }
+    .console-pane {
+      padding: 20px;
+      font-size: 13px;
+      line-height: 1.7;
+      display: none;
+      flex-direction: column;
+      gap: 12px;
+      height: 100%;
+    }
+    .console-pane.active {
+      display: flex;
+    }
+    .dialogue-speaker {
+      font-weight: 700;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 2px;
+    }
+    .speaker-operator { color: var(--accent); }
+    .speaker-sentry { color: var(--success); }
+    .speaker-system { color: var(--warning); }
+    .dialogue-row {
+      padding: 10px 12px;
+      border-radius: 6px;
+      background-color: var(--surface-secondary);
+      border-left: 3px solid var(--border-subtle);
+    }
+    .dialogue-row.operator { border-left-color: var(--accent); }
+    .dialogue-row.sentry { border-left-color: var(--success); }
+    .dialogue-row.system { border-left-color: var(--warning); }
+
+    /* ---- Kinetic Strategic Pillars Matrix ---- */
+    .filter-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 24px;
+      margin-bottom: 24px;
+    }
+    .filter-chip {
+      padding: 6px 14px;
+      border-radius: 20px;
+      border: 1px solid var(--border-subtle);
+      background-color: var(--surface);
+      color: var(--text-secondary);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .filter-chip:hover {
+      background-color: var(--surface-hover);
+      color: var(--text-primary);
+    }
+    .filter-chip.active {
+      background-color: var(--accent);
+      color: var(--text-on-accent);
+      border-color: var(--accent);
+    }
+    .pillars-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 18px;
+    }
+    .pillar-card {
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      border-radius: 12px;
+      border: 1px solid var(--card-border);
+      background-color: var(--surface);
+      box-shadow: var(--shadow-card);
+      transition: transform 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease;
+      cursor: pointer;
+    }
+    .pillar-card:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-lift);
+      border-color: var(--accent);
+    }
+    .pillar-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 8px;
+    }
+    .pillar-icon-badge {
+      width: 32px;
+      height: 32px;
+      border-radius: 6px;
+      background-color: var(--accent-subtle);
+      color: var(--accent);
+      display: grid;
+      place-items: center;
+      flex: none;
+    }
+    .pillar-icon-badge svg {
+      width: 16px;
+      height: 16px;
+    }
+    .pillar-card h3 {
+      font-size: 15px;
+      line-height: 1.25;
+      font-weight: 700;
+    }
+    .pillar-card p {
+      font-size: 13px;
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+    .pillar-telemetry-tag {
+      margin-top: auto;
+      padding: 6px 8px;
+      background-color: var(--surface-secondary);
+      border-radius: 4px;
+      font-size: 11px;
+      border: 1px solid var(--border-subtle);
+      color: var(--accent);
+      word-break: break-all;
+    }
+    .pillar-drawer {
+      margin-top: 8px;
+      padding-top: 10px;
+      border-top: 1px dashed var(--border-subtle);
+      font-size: 12px;
+      color: var(--text-secondary);
+      display: none;
+    }
+    .pillar-card.expanded .pillar-drawer {
+      display: block;
+    }
+
+    /* ---- Tactile Command Simulator ---- */
+    .simulator-box {
+      margin-top: 32px;
+      border-radius: 12px;
+      border: 1px solid var(--card-border);
+      background-color: var(--surface);
+      overflow: hidden;
+      box-shadow: var(--shadow-lift);
+    }
+    .simulator-top {
+      padding: 14px 20px;
+      background-color: var(--surface-secondary);
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .sim-selector {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .sim-btn {
+      padding: 6px 12px;
+      border-radius: 6px;
+      border: 1px solid var(--border-subtle);
+      background-color: var(--surface);
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-primary);
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .sim-btn:hover {
+      background-color: var(--surface-hover);
+    }
+    .sim-btn.active {
+      border-color: var(--accent);
+      background-color: var(--accent-subtle);
+      color: var(--accent);
+    }
+    .sim-workspace {
+      display: grid;
+      grid-template-columns: 1fr 1.3fr;
+    }
+    .sim-details {
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      border-right: 1px solid var(--border-subtle);
+    }
+    .sim-meta-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+      padding: 6px 0;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .sim-meta-label {
+      color: var(--text-secondary);
+    }
+    .sim-action-area {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 12px;
+    }
+    .sim-terminal-pane {
+      background-color: var(--telemetry-frame);
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      font-size: 12px;
+      line-height: 1.8;
+      overflow-y: auto;
+      min-height: 320px;
+      max-height: 420px;
+    }
+
     /* ---- Download ---- */
     .download-panel {
       padding: clamp(32px, 5vw, 56px);
@@ -402,12 +750,14 @@
 
     @media (max-width: 960px) {
       .hero-grid { grid-template-columns: 1fr; }
-      .grid-3, .pipeline, .admission { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .grid-3, .pipeline, .admission, .pillars-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .sentry-grid, .sim-workspace { grid-template-columns: 1fr; }
+      .sim-details { border-right: none; border-bottom: 1px solid var(--border-subtle); }
     }
     @media (max-width: 680px) {
       .shell { padding: 0 20px; }
       .appbar nav .nav-link { display: none; }
-      .grid-3, .pipeline, .admission, .facts { grid-template-columns: 1fr; }
+      .grid-3, .pipeline, .admission, .facts, .pillars-grid { grid-template-columns: 1fr; }
       .section { padding: 56px 0; }
     }
 
@@ -430,6 +780,7 @@
         <span>WinCare</span>
       </a>
       <nav aria-label="Main navigation">
+        <a class="nav-link" href="#architecture">Architecture</a>
         <a class="nav-link" href="#capabilities">Capabilities</a>
         <a class="nav-link" href="#safety">Safety model</a>
         <a class="nav-link" href="#download">Releases</a>
@@ -497,6 +848,102 @@
       </div>
     </section>
 
+    <!-- NATIVE ARCHITECTURE & PROBES -->
+    <section class="section" id="architecture" aria-labelledby="architecture-title">
+      <div class="shell">
+        <span class="eyebrow">Native Core &amp; Sentry</span>
+        <h2 class="section-title" id="architecture-title">WinUI 3 desktop shell meets low-overhead Rust probes.</h2>
+        <p class="section-lede">
+          WinCare separates user interface workflows from kernel probes. The WinUI 3 interface drives navigation,
+          while <code>wincare-core</code> and the native dispatcher handle Event Tracing for Windows (ETW), low-level queries, and bounded child process execution.
+        </p>
+
+        <div class="sentry-grid">
+          <!-- Left: Diagram Bezel -->
+          <div class="sentry-bezel">
+            <div class="sentry-header">
+              <span class="sentry-title">
+                <span class="sentry-live-dot" aria-hidden="true"></span>
+                KERNEL PROBES &amp; DISPATCH PIPELINE
+              </span>
+              <span class="pill pill-readonly">zero-allocation</span>
+            </div>
+            <div class="sentry-img-wrap">
+              <img src="images/wincare-pixel-art.svg" alt="WinCare WinUI 3 operator and Rust core ETW guard communication diagram">
+            </div>
+            <div class="sentry-telemetry-strip telemetry">
+              <span class="pill pill-safe">FFI: C-ABI BOUND</span>
+              <span class="pill pill-moderate">PROBE: ZERO-COPY</span>
+              <span class="pill pill-readonly">BUFFER: 64 KB RING</span>
+            </div>
+          </div>
+
+          <!-- Right: Interactive Console Dialogue -->
+          <div class="sentry-console" role="region" aria-label="Telemetry and diagnostic console">
+            <div class="console-tab-bar" role="tablist">
+              <button class="console-tab active" role="tab" aria-selected="true" aria-controls="pane-storage" id="tab-storage" type="button">
+                <span>Storage probe</span>
+              </button>
+              <button class="console-tab" role="tab" aria-selected="false" aria-controls="pane-memory" id="tab-memory" type="button">
+                <span>Memory topology</span>
+              </button>
+              <button class="console-tab" role="tab" aria-selected="false" aria-controls="pane-repair" id="tab-repair" type="button">
+                <span>Service recovery</span>
+              </button>
+            </div>
+
+            <!-- Pane 1: Storage -->
+            <div class="console-pane active" id="pane-storage" role="tabpanel" aria-labelledby="tab-storage">
+              <div class="dialogue-row operator">
+                <div class="dialogue-speaker speaker-operator">WinUI 3 Operator</div>
+                <div>Requesting low-overhead volume geometry and NTFS allocation map for <code>C:\</code>.</div>
+              </div>
+              <div class="dialogue-row sentry">
+                <div class="dialogue-speaker speaker-sentry">Rust Kernel Probe</div>
+                <div>Volume snapshot verified via <code>GetDiskFreeSpaceExW</code>. NTFS dirty bit: clear. Standby cache: 1.42 GB.</div>
+              </div>
+              <div class="dialogue-row system">
+                <div class="dialogue-speaker speaker-system">Admission Dispatcher</div>
+                <div>Read-only inquiry completed in 1.4 ms. Zero system state altered. 3 findings mapped to System Care.</div>
+              </div>
+            </div>
+
+            <!-- Pane 2: Memory -->
+            <div class="console-pane" id="pane-memory" role="tabpanel" aria-labelledby="tab-memory">
+              <div class="dialogue-row operator">
+                <div class="dialogue-speaker speaker-operator">WinUI 3 Operator</div>
+                <div>Querying physical RAM distribution: active working set, modified pages, and standby list.</div>
+              </div>
+              <div class="dialogue-row sentry">
+                <div class="dialogue-speaker speaker-sentry">Rust Kernel Probe</div>
+                <div>Enumerating page-frame database. Standby priority 0–7: 2,410 MB. Modified: 120 MB. Free: 480 MB.</div>
+              </div>
+              <div class="dialogue-row system">
+                <div class="dialogue-speaker speaker-system">Admission Dispatcher</div>
+                <div>Compaction candidate identified: <code>SystemMemoryListInformation</code> purge admitted under Moderate risk.</div>
+              </div>
+            </div>
+
+            <!-- Pane 3: Repair -->
+            <div class="console-pane" id="pane-repair" role="tabpanel" aria-labelledby="tab-repair">
+              <div class="dialogue-row operator">
+                <div class="dialogue-speaker speaker-operator">WinUI 3 Operator</div>
+                <div>Initiating component store diagnostic (DISM /CheckHealth) with bounded execution.</div>
+              </div>
+              <div class="dialogue-row sentry">
+                <div class="dialogue-speaker speaker-sentry">Rust Kernel Probe</div>
+                <div>Child process isolated with job object limits. Stdout streaming through asynchronous named pipe.</div>
+              </div>
+              <div class="dialogue-row system">
+                <div class="dialogue-speaker speaker-system">Admission Dispatcher</div>
+                <div>CBS log checked: no store corruption detected. Exit code 0 recorded to local activity journal.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <!-- CAPABILITIES -->
     <section class="section" id="capabilities" aria-labelledby="capabilities-title">
       <div class="shell">
@@ -538,6 +985,144 @@
             <h3>Review history</h3>
             <p>Inspect activity, receipts, change records and local operation evidence. Undo appears only where a real, executable compensator exists.</p>
           </article>
+        </div>
+
+        <!-- SUBSYSTEMS & COMMAND DOMAINS -->
+        <div style="margin-top: 48px;">
+          <h3 style="font-size: 20px; font-weight: 700; margin-bottom: 8px;">Subsystems &amp; Command Domains</h3>
+          <p class="section-lede" style="margin-bottom: 16px;">
+            Every tool maps to an exact Area and Section in the catalog. Filter by subsystem or select a card to inspect admission details:
+          </p>
+
+          <div class="filter-bar" role="tablist" aria-label="Subsystem filters">
+            <button class="filter-chip active" type="button" data-filter="all">All subsystems (269)</button>
+            <button class="filter-chip" type="button" data-filter="system">System care (84)</button>
+            <button class="filter-chip" type="button" data-filter="security">Security (48)</button>
+            <button class="filter-chip" type="button" data-filter="repair">Repair &amp; recovery (62)</button>
+            <button class="filter-chip" type="button" data-filter="diagnostics">Diagnostic probes (75)</button>
+          </div>
+
+          <div class="pillars-grid" id="pillars-container">
+            <article class="pillar-card" data-category="system" tabindex="0" role="button" aria-expanded="false">
+              <div class="pillar-header">
+                <div class="pillar-icon-badge">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg>
+                </div>
+                <span class="pill pill-safe">Safe / Moderate</span>
+              </div>
+              <h3>Storage &amp; Disk Pressure</h3>
+              <p>Targeted disk cleanup, temporary directory analysis, and browser cache management without blind registry sweeping.</p>
+              <div class="pillar-telemetry-tag telemetry">cleaner-disk-pressure · storage-analyze</div>
+              <div class="pillar-drawer">
+                Dry-run preview enumerates affected directories (%TEMP%, Windows temp). Destructive deletion requires explicit operator approval.
+              </div>
+            </article>
+
+            <article class="pillar-card" data-category="system" tabindex="0" role="button" aria-expanded="false">
+              <div class="pillar-header">
+                <div class="pillar-icon-badge">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+                </div>
+                <span class="pill pill-safe">Safe</span>
+              </div>
+              <h3>Startup &amp; Background Services</h3>
+              <p>Inspect startup applications, scheduled tasks, and background services with recorded rollback state.</p>
+              <div class="pillar-telemetry-tag telemetry">startup-list · service-query</div>
+              <div class="pillar-drawer">
+                Queries Run registry keys, the Startup folder, and Task Scheduler. Disabling an item creates a recorded local rollback compensator.
+              </div>
+            </article>
+
+            <article class="pillar-card" data-category="security" tabindex="0" role="button" aria-expanded="false">
+              <div class="pillar-header">
+                <div class="pillar-icon-badge">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                </div>
+                <span class="pill pill-safe">Safe</span>
+              </div>
+              <h3>Defender &amp; Tamper Protection</h3>
+              <p>Verify antivirus definition freshness, real-time protection state, and active firewall network profiles.</p>
+              <div class="pillar-telemetry-tag telemetry">security-defender-status · firewall-audit</div>
+              <div class="pillar-drawer">
+                Uses WMI and Windows Security Center APIs. Read-only probes never disable security controls or bypass administrative policy.
+              </div>
+            </article>
+
+            <article class="pillar-card" data-category="security" tabindex="0" role="button" aria-expanded="false">
+              <div class="pillar-header">
+                <div class="pillar-icon-badge">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                </div>
+                <span class="pill pill-moderate">Moderate</span>
+              </div>
+              <h3>Network Isolation &amp; DNS</h3>
+              <p>Flush resolver caches, verify TLS cipher suites, and inspect active TCP listening sockets.</p>
+              <div class="pillar-telemetry-tag telemetry">network-dns-flush · tcp-listeners</div>
+              <div class="pillar-drawer">
+                Direct IP Helper API calls. Socket enumeration is read-only; resetting network stacks requires administrator approval.
+              </div>
+            </article>
+
+            <article class="pillar-card" data-category="repair" tabindex="0" role="button" aria-expanded="false">
+              <div class="pillar-header">
+                <div class="pillar-icon-badge">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+                </div>
+                <span class="pill pill-destructive">Destructive / Critical</span>
+              </div>
+              <h3>Component Store Servicing</h3>
+              <p>Execute DISM health checks, component store cleanup, and System File Checker (SFC) integrity scans.</p>
+              <div class="pillar-telemetry-tag telemetry">dism-checkhealth · sfc-scannow</div>
+              <div class="pillar-drawer">
+                Bounded execution with streaming process output. Captures CBS logs, checks exit codes, and logs operation receipts.
+              </div>
+            </article>
+
+            <article class="pillar-card" data-category="repair" tabindex="0" role="button" aria-expanded="false">
+              <div class="pillar-header">
+                <div class="pillar-icon-badge">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                </div>
+                <span class="pill pill-moderate">Moderate</span>
+              </div>
+              <h3>Windows Update Agent Reset</h3>
+              <p>Diagnose stalled downloads, repair the SoftwareDistribution catalog, and restart update services.</p>
+              <div class="pillar-telemetry-tag telemetry">wua-service-repair · catroot-reset</div>
+              <div class="pillar-drawer">
+                Stops BITS and WUA services before modifying catalog state. Emits receipt with before/after state to local journal.
+              </div>
+            </article>
+
+            <article class="pillar-card" data-category="diagnostics" tabindex="0" role="button" aria-expanded="false">
+              <div class="pillar-header">
+                <div class="pillar-icon-badge">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+                </div>
+                <span class="pill pill-safe">Safe</span>
+              </div>
+              <h3>Memory Topology &amp; Standby List</h3>
+              <p>Inspect physical page distribution and reclaim cached standby memory when system pressure rises.</p>
+              <div class="pillar-telemetry-tag telemetry">memory-topology · standby-purge</div>
+              <div class="pillar-drawer">
+                Direct native NT API call via wincare-core. Queries SystemMemoryListInformation with zero disk I/O.
+              </div>
+            </article>
+
+            <article class="pillar-card" data-category="diagnostics" tabindex="0" role="button" aria-expanded="false">
+              <div class="pillar-header">
+                <div class="pillar-icon-badge">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                </div>
+                <span class="pill pill-safe">Safe</span>
+              </div>
+              <h3>Hardware &amp; SMART Telemetry</h3>
+              <p>Read NVMe health, drive temperatures, battery wear, and CPU thermal throttling state.</p>
+              <div class="pillar-telemetry-tag telemetry">hardware-smart · battery-telemetry</div>
+              <div class="pillar-drawer">
+                Uses standard DeviceIoControl and kernel query structures. Read-only probes without vendor driver overhead.
+              </div>
+            </article>
+          </div>
         </div>
       </div>
     </section>
@@ -598,6 +1183,52 @@
             <h3>Extensions, fail-closed</h3>
             <p>Plugins run with the process's permissions and can be inspected locally, but remote installation stays browse-only until the catalog trust root verifies the required evidence.</p>
           </article>
+        </div>
+
+        <!-- INTERACTIVE ADMISSION SIMULATOR -->
+        <div class="simulator-box" role="region" aria-label="Interactive command admission simulator">
+          <div class="simulator-top">
+            <div class="sim-selector" role="radiogroup" aria-label="Command selection">
+              <button class="sim-btn active" type="button" role="radio" aria-checked="true" data-cmd="checkup">checkup.storage (Safe)</button>
+              <button class="sim-btn" type="button" role="radio" aria-checked="false" data-cmd="spooler">service.spooler-restart (Moderate)</button>
+              <button class="sim-btn" type="button" role="radio" aria-checked="false" data-cmd="cleanup">cleaner.disk-pressure (Destructive)</button>
+            </div>
+            <span class="pill pill-readonly telemetry">DISPATCHER SIMULATOR</span>
+          </div>
+
+          <div class="sim-workspace">
+            <div class="sim-details">
+              <div class="sim-meta-row">
+                <span class="sim-meta-label">Command ID</span>
+                <span class="telemetry" id="sim-disp-id" style="font-weight:600">checkup.storage</span>
+              </div>
+              <div class="sim-meta-row">
+                <span class="sim-meta-label">Risk tier</span>
+                <span id="sim-disp-risk"><span class="pill pill-safe">Safe</span></span>
+              </div>
+              <div class="sim-meta-row">
+                <span class="sim-meta-label">Privilege</span>
+                <span class="telemetry" id="sim-disp-priv">Standard user</span>
+              </div>
+              <div class="sim-meta-row">
+                <span class="sim-meta-label">Compensator</span>
+                <span class="telemetry" id="sim-disp-comp">None needed (read-only)</span>
+              </div>
+              <p id="sim-disp-desc" style="font-size:13px;color:var(--text-secondary);line-height:1.5;margin-top:4px">
+                Inspects volume geometry, mount points, and free space without modifying disk sectors or file tables.
+              </p>
+
+              <div class="sim-action-area">
+                <button class="button button-primary" id="sim-action-preview" type="button">Run Dry-Run Preview</button>
+                <button class="button button-quiet" id="sim-action-execute" type="button" disabled>Approve &amp; Execute</button>
+                <button class="button button-quiet" id="sim-action-reset" type="button" style="font-size:12px;padding:6px 12px">Clear Terminal</button>
+              </div>
+            </div>
+
+            <div class="sim-terminal-pane telemetry" id="sim-terminal">
+              <div><span class="c-dim"># Command Dispatcher initialized. Select a command and click 'Run Dry-Run Preview'.</span></div>
+            </div>
+          </div>
         </div>
 
         <div class="terminal">
@@ -809,6 +1440,166 @@
         var g = parseInt(h.substr(2, 2), 16) || 0;
         var b = parseInt(h.substr(4, 2), 16) || 0;
         return 'rgba(' + r + ',' + g + ',' + b + ',' + alpha + ')';
+      }
+
+      // ---- Sentry Console Tabs ----
+      var consoleTabs = document.querySelectorAll('.console-tab');
+      var consolePanes = document.querySelectorAll('.console-pane');
+      consoleTabs.forEach(function (tab) {
+        tab.addEventListener('click', function () {
+          consoleTabs.forEach(function (t) {
+            t.classList.remove('active');
+            t.setAttribute('aria-selected', 'false');
+          });
+          consolePanes.forEach(function (p) {
+            p.classList.remove('active');
+          });
+          tab.classList.add('active');
+          tab.setAttribute('aria-selected', 'true');
+          var targetId = tab.getAttribute('aria-controls');
+          var targetPane = document.getElementById(targetId);
+          if (targetPane) targetPane.classList.add('active');
+        });
+      });
+
+      // ---- Subsystems Filter & Expandable Cards ----
+      var filterChips = document.querySelectorAll('.filter-chip');
+      var pillarCards = document.querySelectorAll('.pillar-card');
+      filterChips.forEach(function (chip) {
+        chip.addEventListener('click', function () {
+          filterChips.forEach(function (c) { c.classList.remove('active'); });
+          chip.classList.add('active');
+          var filter = chip.getAttribute('data-filter');
+          pillarCards.forEach(function (card) {
+            if (filter === 'all' || card.getAttribute('data-category') === filter) {
+              card.style.display = 'flex';
+            } else {
+              card.style.display = 'none';
+            }
+          });
+        });
+      });
+
+      pillarCards.forEach(function (card) {
+        function toggleExpand() {
+          var isExp = card.classList.toggle('expanded');
+          card.setAttribute('aria-expanded', String(isExp));
+        }
+        card.addEventListener('click', toggleExpand);
+        card.addEventListener('keydown', function (e) {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            toggleExpand();
+          }
+        });
+      });
+
+      // ---- Interactive Admission Simulator ----
+      var cmdData = {
+        checkup: {
+          id: 'checkup.storage',
+          risk: '<span class="pill pill-safe">Safe</span>',
+          priv: 'Standard user',
+          comp: 'None needed (read-only)',
+          desc: 'Inspects volume geometry, mount points, and free space without modifying disk sectors or file tables.'
+        },
+        spooler: {
+          id: 'service.spooler-restart',
+          risk: '<span class="pill pill-moderate">Moderate</span>',
+          priv: 'Elevated administrator',
+          comp: 'Restart service again',
+          desc: 'Stops and restarts the Print Spooler service, clearing stale pending job queues in system32.'
+        },
+        cleanup: {
+          id: 'cleaner.disk-pressure',
+          risk: '<span class="pill pill-destructive">Destructive</span>',
+          priv: 'Standard / Elevated for Windows Temp',
+          comp: 'Not available (hard deletion)',
+          desc: 'Deletes cache targets and aged temporary files across %TEMP% and %LOCALAPPDATA%\\Temp.'
+        }
+      };
+
+      var activeCmdKey = 'checkup';
+      var simBtns = document.querySelectorAll('.sim-btn');
+      var dispId = document.getElementById('sim-disp-id');
+      var dispRisk = document.getElementById('sim-disp-risk');
+      var dispPriv = document.getElementById('sim-disp-priv');
+      var dispComp = document.getElementById('sim-disp-comp');
+      var dispDesc = document.getElementById('sim-disp-desc');
+      var btnPreview = document.getElementById('sim-action-preview');
+      var btnExecute = document.getElementById('sim-action-execute');
+      var btnReset = document.getElementById('sim-action-reset');
+      var terminal = document.getElementById('sim-terminal');
+
+      function printTerm(lineHtml) {
+        if (!terminal) return;
+        var div = document.createElement('div');
+        div.innerHTML = lineHtml;
+        terminal.appendChild(div);
+        terminal.scrollTop = terminal.scrollHeight;
+      }
+
+      simBtns.forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          simBtns.forEach(function (b) {
+            b.classList.remove('active');
+            b.setAttribute('aria-checked', 'false');
+          });
+          btn.classList.add('active');
+          btn.setAttribute('aria-checked', 'true');
+          activeCmdKey = btn.getAttribute('data-cmd');
+          var d = cmdData[activeCmdKey];
+          if (dispId) dispId.textContent = d.id;
+          if (dispRisk) dispRisk.innerHTML = d.risk;
+          if (dispPriv) dispPriv.textContent = d.priv;
+          if (dispComp) dispComp.textContent = d.comp;
+          if (dispDesc) dispDesc.textContent = d.desc;
+          if (btnExecute) btnExecute.disabled = true;
+          printTerm('<span class="c-dim">--- Switched command target to: ' + d.id + ' (' + (activeCmdKey === 'checkup' ? 'Safe' : activeCmdKey === 'spooler' ? 'Moderate' : 'Destructive') + ') ---</span>');
+        });
+      });
+
+      if (btnPreview) {
+        btnPreview.addEventListener('click', function () {
+          var d = cmdData[activeCmdKey];
+          printTerm('<div><span class="c-accent">&gt; admission.inspect</span> <span class="c-dim">id: ' + d.id + '</span></div>');
+          printTerm('<div><span class="c-dim">[Phase 01] Validating command schema against catalog... </span><span class="c-ok">VALID</span></div>');
+          printTerm('<div><span class="c-dim">[Phase 02] Evaluating declared risk tier: </span>' + d.risk + '</div>');
+          if (activeCmdKey === 'checkup') {
+            printTerm('<div><span class="c-ok">[Admitted]</span> <span class="c-dim">Read-only execution permitted without elevation or confirmation.</span></div>');
+          } else if (activeCmdKey === 'spooler') {
+            printTerm('<div><span class="c-warn">[Admitted with confirmation]</span> <span class="c-dim">Requires process elevation check. Action plan generated.</span></div>');
+          } else {
+            printTerm('<div><span class="c-warn">[Admitted with review]</span> <span class="c-dim">Dry run preview complete: 14 targets identified (412 MB). Explicit approval required.</span></div>');
+          }
+          if (btnExecute) btnExecute.disabled = false;
+        });
+      }
+
+      if (btnExecute) {
+        btnExecute.addEventListener('click', function () {
+          var d = cmdData[activeCmdKey];
+          printTerm('<div><span class="c-accent">&gt; dispatcher.execute</span> <span class="c-dim">id: ' + d.id + '</span></div>');
+          printTerm('<div><span class="c-dim">[Phase 03] Dispatching to bounded native executor...</span></div>');
+          setTimeout(function () {
+            printTerm('<div><span class="c-ok">[Phase 04] Completed in 42 ms. ExitCode: 0.</span></div>');
+            printTerm('<div><span class="c-dim">[Phase 05] Writing local journal receipt: </span><span class="c-accent">journal.rec.' + Date.now().toString(36) + '</span></div>');
+            if (activeCmdKey === 'spooler') {
+              printTerm('<div><span class="c-dim">[Compensator] Registered rollback compensator in session cache.</span></div>');
+            } else if (activeCmdKey === 'cleanup') {
+              printTerm('<div><span class="c-dim">[Compensator] No reversible state available for hard deletion. Marked irreversible.</span></div>');
+            }
+            if (btnExecute) btnExecute.disabled = true;
+          }, 180);
+        });
+      }
+
+      if (btnReset) {
+        btnReset.addEventListener('click', function () {
+          if (!terminal) return;
+          terminal.innerHTML = '<div><span class="c-dim"># Command Dispatcher initialized. Select a command and click \'Run Dry-Run Preview\'.</span></div>';
+          if (btnExecute) btnExecute.disabled = true;
+        });
       }
 
       drawCore();

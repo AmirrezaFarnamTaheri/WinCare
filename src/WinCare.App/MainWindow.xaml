@@ -4,7 +4,7 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:views="using:WinCare.App.Views"
     xmlns:nav="using:WinCare.Application.Navigation"
-    Title="WinCare 4.0 Kinetic Mission Control">
+    Title="WinCare">
     <Grid x:Name="WindowRoot" Background="{ThemeResource PageBackgroundBrush}">
         <Grid.RowDefinitions>
             <RowDefinition Height="56" />
@@ -22,9 +22,26 @@
                 <ColumnDefinition x:Name="SearchColumn" Width="*" MinWidth="300" MaxWidth="500" />
             </Grid.ColumnDefinitions>
 
-            <StackPanel Orientation="Horizontal" Spacing="16" VerticalAlignment="Center">
-                <Image Width="32" Height="32" Source="Assets/Square44x44Logo.png" />
-                <TextBlock x:Name="AppTitleText" Style="{StaticResource AppTitleTextStyle}" Text="WinCare 4.0" FontWeight="SemiBold" FontSize="18" />
+            <StackPanel Orientation="Horizontal" Spacing="14" VerticalAlignment="Center">
+                <Image Width="28" Height="28" Source="Assets/Square44x44Logo.png" />
+                <TextBlock x:Name="AppTitleText" Style="{StaticResource AppTitleTextStyle}" Text="WinCare 4.0" FontWeight="SemiBold" FontSize="16" VerticalAlignment="Center" />
+                <Border x:Name="TitleStatusBadge"
+                        Background="{ThemeResource AccentChromeSubtleBrush}"
+                        BorderBrush="{ThemeResource BorderSubtleBrush}"
+                        BorderThickness="1"
+                        CornerRadius="{StaticResource RadiusPill}"
+                        Padding="8,3"
+                        VerticalAlignment="Center">
+                    <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                        <Ellipse Width="6" Height="6" Fill="{ThemeResource SuccessBrush}" VerticalAlignment="Center" />
+                        <TextBlock Text="DISPATCHER · ACTIVE"
+                                   FontFamily="{StaticResource TelemetryFontFamily}"
+                                   FontSize="10"
+                                   FontWeight="SemiBold"
+                                   Foreground="{ThemeResource AccentChromeBrush}"
+                                   VerticalAlignment="Center" />
+                    </StackPanel>
+                </Border>
             </StackPanel>
 
             <AutoSuggestBox
@@ -32,7 +49,7 @@
                 Grid.Column="2"
                 MinHeight="48"
                 VerticalAlignment="Center"
-                PlaceholderText="Omni-Command Deck (Ctrl+K)"
+                PlaceholderText="Search tasks and tools (Ctrl+K)"
                 TextChanged="GlobalSearchBox_TextChanged"
                 QuerySubmitted="GlobalSearchBox_QuerySubmitted"
                 AutomationProperties.AutomationId="GlobalSearch"
@@ -68,6 +85,7 @@
                     </VisualState.StateTriggers>
                     <VisualState.Setters>
                         <Setter Target="AppTitleText.Visibility" Value="Collapsed" />
+                        <Setter Target="TitleStatusBadge.Visibility" Value="Collapsed" />
                     </VisualState.Setters>
                 </VisualState>
                 <VisualState x:Name="StandardTitleBar">
@@ -76,6 +94,7 @@
                     </VisualState.StateTriggers>
                     <VisualState.Setters>
                         <Setter Target="AppTitleText.Visibility" Value="Visible" />
+                        <Setter Target="TitleStatusBadge.Visibility" Value="Visible" />
                     </VisualState.Setters>
                 </VisualState>
             </VisualStateGroup>

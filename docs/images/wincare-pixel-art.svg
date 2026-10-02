@@ -59,7 +59,7 @@
     <rect x="35" y="56" width="14" height="7" fill="#0f172a"/>
   </g>
   <!-- Operator Label -->
-  <text x="64" y="172" text-anchor="middle" font-size="11px" font-weight="bold" fill="#38bdf8">Kinetic UI</text>
+  <text x="64" y="172" text-anchor="middle" font-size="11px" font-weight="bold" fill="#38bdf8">WinUI 3</text>
   <text x="64" y="186" text-anchor="middle" font-size="9px" fill="#64748b">Operator</text>
 
   <!-- Right Character: Rust Core Guard (7px pixel grid) -->
@@ -97,7 +97,7 @@
   </g>
   <!-- Guard Label -->
   <text x="794" y="172" text-anchor="middle" font-size="11px" font-weight="bold" fill="#34d399">Rust Core</text>
-  <text x="794" y="186" text-anchor="middle" font-size="9px" fill="#64748b">Guard ETW</text>
+  <text x="794" y="186" text-anchor="middle" font-size="9px" fill="#64748b">ETW Guard</text>
 
   <!-- Chat Dialogues -->
 
@@ -106,7 +106,7 @@
     <rect x="115" y="30" width="310" height="28" rx="8" fill="#0f2744" stroke="#0284c7" stroke-width="1.5"/>
     <polygon points="113,42 103,48 113,47" fill="#0f2744" stroke="#0284c7" stroke-width="1.5"/>
     <rect x="112" y="41" width="3" height="8" fill="#0f2744"/>
-    <text x="127" y="48" font-size="12px" font-weight="600" fill="#e0f2fe">🚀 Launching WinCare 4.0 Checkup...</text>
+    <text x="127" y="48" font-size="12px" font-weight="600" fill="#e0f2fe">checkup.storage --inspect</text>
   </g>
 
   <!-- Arrow 1: Row 1 -> Row 2 -->
@@ -117,7 +117,7 @@
     <rect x="435" y="88" width="315" height="28" rx="8" fill="#063826" stroke="#059669" stroke-width="1.5"/>
     <polygon points="752,100 762,106 752,105" fill="#063826" stroke="#059669" stroke-width="1.5"/>
     <rect x="750" y="99" width="3" height="8" fill="#063826"/>
-    <text x="447" y="106" font-size="12px" font-weight="600" fill="#d1fae5">⚡ ETW stream live: 8 pillars nominal</text>
+    <text x="447" y="106" font-size="12px" font-weight="600" fill="#d1fae5">etw: kernel trace stream active</text>
   </g>
 
   <!-- Arrow 2: Row 2 -> Row 3 -->
@@ -128,7 +128,7 @@
     <rect x="115" y="146" width="310" height="28" rx="8" fill="#0f2744" stroke="#0284c7" stroke-width="1.5"/>
     <polygon points="113,158 103,164 113,163" fill="#0f2744" stroke="#0284c7" stroke-width="1.5"/>
     <rect x="112" y="157" width="3" height="8" fill="#0f2744"/>
-    <text x="127" y="164" font-size="12px" font-weight="600" fill="#e0f2fe">🛡️ 1-click execution: Zero stubs confirmed</text>
+    <text x="127" y="164" font-size="12px" font-weight="600" fill="#e0f2fe">admission: risk verified, plan approved</text>
   </g>
 
   <!-- Arrow 3: Row 3 -> Row 4 -->
@@ -139,14 +139,14 @@
     <rect x="435" y="204" width="315" height="28" rx="8" fill="#063826" stroke="#059669" stroke-width="1.5"/>
     <polygon points="752,216 762,222 752,221" fill="#063826" stroke="#059669" stroke-width="1.5"/>
     <rect x="750" y="215" width="3" height="8" fill="#063826"/>
-    <text x="447" y="222" font-size="12px" font-weight="600" fill="#d1fae5">🔒 All 617 tests passed | CI 100% Green</text>
+    <text x="447" y="222" font-size="12px" font-weight="600" fill="#d1fae5">dispatch: bounded execution complete</text>
   </g>
 
-  <!-- Bottom Mission Control Badge -->
+  <!-- Bottom Badge -->
   <g transform="translate(190, 268)">
     <rect width="480" height="34" rx="17" fill="#131d31" stroke="#253552" stroke-width="1.2"/>
     <circle cx="24" cy="17" r="5" fill="#10b981"/>
-    <text x="38" y="21" font-size="11px" font-weight="700" fill="#94a3b8" letter-spacing="1.5">WINCARE 4.0 KINETIC MISSION CONTROL</text>
-    <text x="400" y="21" font-size="10px" font-weight="bold" fill="#38bdf8">• ZERO STUBS</text>
+    <text x="38" y="21" font-size="11px" font-weight="700" fill="#94a3b8" letter-spacing="1.2">WINCARE · NATIVE DIAGNOSTICS &amp; REPAIR</text>
+    <text x="390" y="21" font-size="10px" font-weight="bold" fill="#38bdf8">• OFFLINE-FIRST</text>
   </g>
 </svg>

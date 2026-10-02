@@ -49,6 +49,11 @@ public static class KineticSpringAnimation
             animationsEnabled = false;
         }
 
+        if (element is FrameworkElement fe && fe.ActualWidth > 0 && fe.ActualHeight > 0)
+        {
+            visual.CenterPoint = new Vector3((float)fe.ActualWidth / 2f, (float)fe.ActualHeight / 2f, 0f);
+        }
+
         if (!animationsEnabled)
         {
             visual.Scale = targetScale;
@@ -63,5 +68,28 @@ public static class KineticSpringAnimation
         springAnimation.Period = TimeSpan.FromMilliseconds(Math.Clamp(periodMs, 16, 1000));
 
         visual.StartAnimation("Scale", springAnimation);
+    }
+
+    /// <summary>
+    /// Attaches natural kinetic spring hover and press interactions to a FrameworkElement.
+    /// </summary>
+    public static void AttachSpringHover(FrameworkElement element, float hoverScale = 1.02f)
+    {
+        if (element is null) return;
+
+        element.PointerEntered += (s, e) =>
+        {
+            ApplyNaturalSpring(element, new Vector3(hoverScale, hoverScale, 1.0f));
+        };
+
+        element.PointerExited += (s, e) =>
+        {
+            ApplyNaturalSpring(element, Vector3.One);
+        };
+
+        element.PointerCaptureLost += (s, e) =>
+        {
+            ApplyNaturalSpring(element, Vector3.One);
+        };
     }
 }
