@@ -39,3 +39,4 @@ pub fn sample_system_health() -> SystemHealthSnapshot {
         has_critical_alerts: is_disk_critical || is_ram_critical,
     }
 }
+pub mod etw;
