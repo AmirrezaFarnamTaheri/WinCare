@@ -5,14 +5,9 @@
     xmlns:views="using:WinCare.App.Views"
     xmlns:nav="using:WinCare.Application.Navigation"
     Title="WinCare 4.0 Kinetic Mission Control">
-    <Grid x:Name="WindowRoot" Background="Transparent">
-        <!-- Kinetic Glass Mesh background effect -->
-        <Grid.Background>
-            <SolidColorBrush Color="#1A1A1A" Opacity="0.8" />
-        </Grid.Background>
-        
+    <Grid x:Name="WindowRoot" Background="{ThemeResource PageBackgroundBrush}">
         <Grid.RowDefinitions>
-            <RowDefinition Height="64" />
+            <RowDefinition Height="56" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
@@ -20,7 +15,7 @@
             x:Name="AppTitleBar"
             Grid.Row="0"
             Padding="24,0,138,0"
-            Background="Transparent">
+            Background="{ThemeResource TitleBarBackgroundBrush}">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="*" />

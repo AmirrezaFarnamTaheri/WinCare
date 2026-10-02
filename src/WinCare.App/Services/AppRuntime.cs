@@ -56,6 +56,7 @@ public sealed class AppRuntime
         CatalogService = new RemoteCatalogService();
         ToolCatalog = new ToolCatalogService(PluginRegistry);
         InstallerService = new PluginInstallerService();
+        GuardClient = new GuardPipeClient();
     }
 
     /// <summary>

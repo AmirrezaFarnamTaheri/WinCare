@@ -273,7 +273,7 @@ public sealed class ToolExecutionViewModel : ObservableObject
     public bool IsModerateTool => _selectedTool?.Definition.RiskTier == RiskTier.Moderate;
     public bool IsDestructiveTool => _selectedTool?.Definition.RiskTier == RiskTier.Destructive;
     public bool IsMutatingTool => _selectedTool?.Definition.ReadOnly == false;
-    public bool RequiresApprovalSwitch => false;
+    public bool RequiresApprovalSwitch => IsDestructiveTool;
     // Approval toggle requires a successful preview before flipping.
     public bool CanApproveReview => IsMutatingTool && !IsExecuting && _hasSuccessfulPreview;
 
@@ -382,9 +382,9 @@ public sealed class ToolExecutionViewModel : ObservableObject
         ToolRowViewModel? selected = _selectedTool;
         if (selected is null || !CanRunSelectedTool) return;
 
-        bool apply = IsMutatingTool;
+        bool apply = IsMutatingTool && (IsSafeTool || IsModerateTool || IsReviewApproved);
         long reviewVersion = _reviewVersion;
-        
+        if (apply && IsDestructiveTool && !CanApproveReview) return;
 
         if (!TryBuildExecutionParameters(out JsonElement parameters, out string parameterError))
         {

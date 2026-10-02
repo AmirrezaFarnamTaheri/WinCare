@@ -137,6 +137,12 @@ internal sealed partial class WindowsCommandExecutor : ICommandOperationExecutor
                     $"'{definition.Title}' requires Windows. No host state was changed.");
             }
 
+            if (!definition.ReadOnly && !request.Apply)
+            {
+                ValidateCommandParameters(definition, parameters);
+                return MutationPreview(definition, parameters);
+            }
+
             return definition.ReadOnly
                 ? await Task.Run(() => ExecuteReadOnlyAsync(definition, parameters, cancellationToken), cancellationToken).ConfigureAwait(false)
                 : await Task.Run(() => ExecuteMutationAsync(definition, request, parameters, cancellationToken), cancellationToken).ConfigureAwait(false);

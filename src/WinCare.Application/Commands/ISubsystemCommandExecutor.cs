@@ -1,5 +1,6 @@
 using System.Threading;
 using System.Threading.Tasks;
+using WinCare.CommandCatalog.Models;
 using WinCare.Domain.Commands;
 
 namespace WinCare.Application.Commands

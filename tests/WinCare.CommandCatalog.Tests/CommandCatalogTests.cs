@@ -6,12 +6,12 @@ namespace WinCare.CommandCatalog.Tests;
 public sealed class CommandCatalogTests
 {
     [Fact]
-    public void Load_preserves_all_269_unique_command_ids()
+    public void Load_preserves_all_296_unique_command_ids()
     {
         IReadOnlyList<CommandDefinition> commands = CommandCatalog.Load();
 
-        Assert.Equal(269, commands.Count);
-        Assert.Equal(269, commands.Select(command => command.Id).Distinct(StringComparer.Ordinal).Count());
+        Assert.Equal(296, commands.Count);
+        Assert.Equal(296, commands.Select(command => command.Id).Distinct(StringComparer.Ordinal).Count());
     }
 
     [Theory]

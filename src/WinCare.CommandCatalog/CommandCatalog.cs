@@ -12,8 +12,8 @@ public static class CommandCatalog
 {
     private const string ResourceName = "WinCare.CommandCatalog.Data.commands.json";
     // 259 frozen legacy IDs, five native AppX inventory/removal commands, installer-cache analysis,
-    // three read-only discovery routes, and one receipt-bound remediation restore route.
-    private const int ExpectedCommandCount = 269;
+    // three read-only discovery routes, one receipt-bound remediation restore route, and 27 Kinetic 4.0 strategic commands.
+    private const int ExpectedCommandCount = 296;
 
     private static readonly Lazy<IReadOnlyList<CommandDefinition>> Commands = new(LoadCore);
     private static readonly Lazy<IReadOnlyDictionary<string, CommandDefinition>> CommandsById = new(

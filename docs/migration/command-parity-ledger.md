@@ -23,26 +23,25 @@ Stages are cumulative. A command listed at a stage has satisfied every weaker st
 
 | Measure | Value |
 |---|---|
-| Commands in catalog | 293 |
+| Commands in catalog | 296 |
 | Frozen legacy-parity oracle | 259 |
-| Additional admitted native commands | 34 |
+| Additional admitted native commands | 37 |
 | At `ContractVerified` or stronger | 0 |
-| At `Implemented` or stronger | 293 |
+| At `Implemented` or stronger | 296 |
 | At `BehaviorVerified` | 0 |
-| Production blockers | 293 |
+| Production blockers | 296 |
 | Production ready | no |
 
-Production promotion is currently **blocked**: 293 of 293 commands have not reached `BehaviorVerified`.
+Production promotion is currently **blocked**: 296 of 296 commands have not reached `BehaviorVerified`.
 
 ## Progress by area
 
 | Area | Commands | Behavior verified |
 |---|---:|---:|
-| System care | 117 | 0 |
+| System care | 144 | 0 |
 | All tools | 82 | 0 |
 | Security | 34 | 0 |
 | Repair & recovery | 25 | 0 |
-| System | 24 | 0 |
 | Checkup | 11 | 0 |
 
 ## Progress by risk
@@ -53,9 +52,9 @@ Behavior verification is most valuable on the commands that can do real damage, 
 |---|---:|---:|
 | Critical | 1 | 0 |
 | High | 20 | 0 |
-| Moderate | 82 | 0 |
-| Low | 13 | 0 |
-| ReadOnly | 161 | 0 |
+| Moderate | 84 | 0 |
+| Low | 29 | 0 |
+| ReadOnly | 162 | 0 |
 
 ## Promoting a command
 
@@ -67,8 +66,8 @@ A command is only promoted on evidence from a real host. A command that is unrea
 
 ## Still blocking production promotion
 
-293 commands remain below `BehaviorVerified`. Grouped by the stage they currently occupy:
+296 commands remain below `BehaviorVerified`. Grouped by the stage they currently occupy:
 
 | Stage | Commands |
 |---|---:|
-| `Implemented` | 293 |
+| `Implemented` | 296 |

@@ -166,7 +166,7 @@ public class CommandRuntimePackTests
 
         CommandDefinition? definition = CommandCatalog.CommandCatalog.Find(CoreId);
         Assert.NotNull(definition);
-        Assert.Equal(269, CommandCatalog.CommandCatalog.Load().Count);
+        Assert.Equal(296, CommandCatalog.CommandCatalog.Load().Count);
     }
 
     [Fact]

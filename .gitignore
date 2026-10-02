@@ -36,3 +36,4 @@ build_out.txt
 .impeccable/
 idea-stage/
 src/WinCare.App/Native/
+.codegraph/
