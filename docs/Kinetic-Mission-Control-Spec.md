@@ -31,7 +31,7 @@ WinCare 4.0 structures the application as a task-first native Windows workspace.
 - **Gaming Runtime Cleanup**: Steam VDF app manifest decoders and shader cache auditors (`DetectSteamGameInstall`, `AuditSteamDebris`).
 - **Credential & Secret Maskers**: Luhn number validation, Bearer token sanitizers, and clipboard memory scrapers (`ClipboardPrivacyGuard`, `SensitiveCredentialMasker`).
 
-These utilities run outside the core binary in four isolated extensions:
+Under the target Kinetic architecture, these utilities are proposed to run outside the core binary in four isolated extensions (target boundary design):
 - **wincare-ext-workspace**: Tiling window manager, layout geometry, and global hotkeys.
 - **wincare-ext-downloader**: Multi-segment HTTP engine, HLS/ED2K scrapers, and token-bucket throttlers.
 - **wincare-ext-devbridge**: Android ADB inspectors, Redis snapshots, and local model VRAM sizing tools.
@@ -107,8 +107,8 @@ pub extern "C" fn wincare_core_calculate_entropy(
 }
 ```
 
-### Production SCM Service (`wincare-guard`)
-`wincare-guard` runs as a managed Windows Service registered with the Service Control Manager (SCM):
+### Target SCM Service Design (`wincare-guard`)
+Under the target design, `wincare-guard` is architected to run as a managed Windows Service registered with the Service Control Manager (SCM) (planned target architecture, not an installed production service in the current release candidate):
 - **SCM Lifecycle Integration**: Implements native service event handlers via the Rust `windows-service` crate, handling system shutdown and power-state transitions cleanly.
 - **DACL-Hardened IPC**: Restricts pipe permissions with an explicit SDDL descriptor limiting communication to callers holding the interactive logon SID.
 - **Real-time Kernel ETW Telemetry**: Uses an Event Tracing for Windows (ETW) consumer subscribed to `Microsoft-Windows-Kernel-Process`, `Microsoft-Windows-Kernel-Disk`, and `Microsoft-Windows-WindowsUpdateClient`.

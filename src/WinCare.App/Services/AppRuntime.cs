@@ -136,6 +136,7 @@ public sealed class AppRuntime
     /// </summary>
     public async Task ShutdownAsync(TimeSpan budget)
     {
+        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
         using CancellationTokenSource timeout = new(budget);
         CancellationToken token = timeout.Token;
         try
@@ -172,9 +173,27 @@ public sealed class AppRuntime
                 System.Diagnostics.Debug.WriteLine($"[AppRuntime] Executor dispose failed: {ex}");
             }
 
+            // Bound GuardClient disposal by the remaining shutdown budget and observe late completion.
+            var elapsed = stopwatch.Elapsed;
+            var remaining = budget > elapsed ? budget - elapsed : TimeSpan.FromMilliseconds(50);
+            using var disposalTimeout = new CancellationTokenSource(remaining);
+
+            Task? disposalTask = null;
             try
             {
-                await GuardClient.DisposeAsync().ConfigureAwait(false);
+                disposalTask = GuardClient.DisposeAsync(disposalTimeout.Token).AsTask();
+                await disposalTask.WaitAsync(remaining).ConfigureAwait(false);
+            }
+            catch (TimeoutException) when (disposalTask is { IsCompleted: false })
+            {
+                System.Diagnostics.Debug.WriteLine("[AppRuntime] GuardClient disposal exceeded remaining shutdown budget and was abandoned.");
+                _ = disposalTask.ContinueWith(
+                    task => System.Diagnostics.Debug.WriteLine($"[AppRuntime] Abandoned GuardClient disposal later faulted: {task.Exception?.InnerException?.Message}"),
+                    CancellationToken.None, TaskContinuationOptions.OnlyOnFaulted, TaskScheduler.Default);
+            }
+            catch (OperationCanceledException)
+            {
+                System.Diagnostics.Debug.WriteLine("[AppRuntime] GuardClient disposal cancelled within shutdown budget.");
             }
             catch (Exception ex)
             {

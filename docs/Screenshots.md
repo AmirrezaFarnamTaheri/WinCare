@@ -52,7 +52,7 @@ capture lines are rendered from, and CI re-checks that sync on every build.
 
 ![WinCare interactive web showcase featuring the diagnostic core topology diagram, execution pipeline, and command simulator](images/showcase-preview.png)
 
-**Interactive experience:** Open [`docs/showcase.html`](showcase.html) in any modern browser for the diagnostic core topology diagram, command simulator, and safety model overview.
+**Interactive experience:** Open [`docs/index.html`](index.html) in any modern browser for the diagnostic core topology diagram, command simulator, and safety model overview.
 
 ## Capture policy
 

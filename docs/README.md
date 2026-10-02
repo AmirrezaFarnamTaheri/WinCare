@@ -21,7 +21,7 @@ This directory is the product-facing and engineering reference for WinCare. Star
 
 ## Reference material
 
-- [Interactive Web Showcase](showcase.html): interactive diagnostic simulation and telemetry visualization.
+- [Interactive Web Showcase](index.html): interactive diagnostic simulation and telemetry visualization.
 - [Architecture Blueprint](architecture.html): C4 model interactive governance diagram matching canonical architecture.
 - [Terminal REPL Preview](terminal-preview.html): historical terminal exploration concept (WinCare ships as a WinUI 3 desktop shell).
 - [Command parity ledger](migration/command-parity-ledger.md): native catalog accounting and evidence limits.

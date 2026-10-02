@@ -29,7 +29,7 @@ IMAGES_DIR = DOCS_DIR / "images"
 
 CAPTURE_TARGETS = [
     (
-        DOCS_DIR / "showcase.html",
+        DOCS_DIR / "index.html",
         IMAGES_DIR / "showcase-preview.png",
         1440,
         900,
@@ -414,7 +414,7 @@ DOC_TAIL = """\
 
 ![WinCare interactive web showcase featuring the diagnostic core topology diagram, execution pipeline, and command simulator](images/showcase-preview.png)
 
-**Interactive experience:** Open [`docs/showcase.html`](showcase.html) in any modern browser for the diagnostic core topology diagram, command simulator, and safety model overview.
+**Interactive experience:** Open [`docs/index.html`](index.html) in any modern browser for the diagnostic core topology diagram, command simulator, and safety model overview.
 
 ## Capture policy
 

@@ -35,7 +35,7 @@ WinCare brings Windows maintenance, diagnostics, recovery, and operational tooli
 | Extend the app | Add and manage locally admitted capabilities through Extensions. |
 | Review history | Inspect activity, receipts, change records, and local operation evidence. |
 
-Explore the [interactive showcase](docs/showcase.html) or see [interface screenshots](docs/Screenshots.md).
+Explore the [interactive showcase](docs/index.html) or see [interface screenshots](docs/Screenshots.md).
 
 ### Where capabilities live
 
