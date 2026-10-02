@@ -29,6 +29,12 @@ public sealed record CommandHandlerOutcome(
         new(CommandResultStatus.Succeeded, code, message, data, undoAvailable);
 
     /// <summary>
+    /// Creates a successful outcome with a default code.
+    /// </summary>
+    public static CommandHandlerOutcome Success(string message) =>
+        Succeeded("command.succeeded", message);
+
+    /// <summary>
     /// Creates a blocked outcome.
     /// </summary>
     public static CommandHandlerOutcome Blocked(string code, string message) =>
@@ -42,4 +48,10 @@ public sealed record CommandHandlerOutcome(
         string message,
         JsonElement? data = null) =>
         new(CommandResultStatus.Failed, code, message, data, UndoAvailable: false);
+
+    /// <summary>
+    /// Creates a failed outcome with a default code.
+    /// </summary>
+    public static CommandHandlerOutcome Failed(string message) =>
+        Failed("command.failed", message);
 }

@@ -13,7 +13,7 @@ namespace WinCare.CommandCatalog;
 /// <remarks>
 /// Dynamic commands with no schema are accepted unchanged. Extension catalog entries normalize an
 /// omitted schema to an explicitly empty schema, which accepts only an empty object. JSON-valued
-/// parameters are permitted here — the stricter
+/// parameters are permitted here; the stricter
 /// "no JSON parameters" rule is an import-only restriction enforced by
 /// <c>PortablePlaybookExchange</c>, because an imported playbook cannot be re-checked by the
 /// declaring handler the way an interactive dispatch can.

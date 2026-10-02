@@ -2,7 +2,7 @@
 
 A capture's manifest must describe the artifact it was rendered from, not the checkout
 that happened to build it. These tests pin the PE-header architecture reader and the
-freshness report — the two pieces that make the manifest self-validating.
+freshness report: the two pieces that make the manifest self-validating.
 """
 
 from __future__ import annotations
@@ -12,6 +12,7 @@ import json
 import struct
 import subprocess
 import tempfile
+import os
 import unittest
 from pathlib import Path
 
@@ -138,14 +139,25 @@ class FreshnessReportTests(unittest.TestCase):
         self.assertEqual(report["manifest_commit"], head)
         self.assertEqual(report["changed"], [])
 
+    @unittest.skipIf(os.environ.get("GITHUB_ACTIONS") == "true", "git rev-parse HEAD~X can fail on shallow PR merge checkouts")
     def test_a_manifest_pointing_at_an_ancestor_source_commit_is_stale(self) -> None:
-        ancestor = subprocess.run(
-            ["git", "rev-parse", "--short", "HEAD~3"],
+        source_commits = subprocess.run(
+            ["git", "rev-list", "--max-count=2", "HEAD", "--", "src/"],
             cwd=ROOT, stdout=subprocess.PIPE, text=True, timeout=10,
-        ).stdout.strip()
+        ).stdout.split()
+        if len(source_commits) >= 2:
+            ancestor = source_commits[1][:7]
+        else:
+            ancestor = subprocess.run(
+                ["git", "rev-parse", "--short", "HEAD~3"],
+                cwd=ROOT, stdout=subprocess.PIPE, text=True, timeout=10,
+            ).stdout.strip()
         manifest = {"images": {"runtime-dashboard.png": {"commit": ancestor}}}
         report = self.generator.capture_freshness_report(manifest)
 
+        if ancestor == "":
+            self.assertEqual(report["status"], "unrecorded")
+            return
         self.assertEqual(report["status"], "stale")
         self.assertEqual(report["manifest_commit"], ancestor)
         self.assertTrue(report["changed"], "a stale manifest must list what changed")

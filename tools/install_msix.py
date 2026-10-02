@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""WinCare 1-Click MSIX Sideloading & Installation Helper.
+"""WinCare MSIX installation helper.
 
-Performs robust host architecture detection, signer pinning, certificate trust
-establishment, and secure MSIX package installation without shell interpolation.
+Detects host architecture, validates the package signer, imports the certificate,
+and installs the MSIX package directly without shell interpolation.
 """
 
 from __future__ import annotations

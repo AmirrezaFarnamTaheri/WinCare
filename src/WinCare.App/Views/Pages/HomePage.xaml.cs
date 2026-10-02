@@ -17,6 +17,10 @@ public sealed partial class HomePage : Page
     {
         ViewModel = new HomePageViewModel();
         InitializeComponent();
+        WinCare.App.Animations.KineticSpringAnimation.AttachSpringHover(CleanupRecommendation, 1.015f);
+        WinCare.App.Animations.KineticSpringAnimation.AttachSpringHover(StartupRecommendation, 1.015f);
+        WinCare.App.Animations.KineticSpringAnimation.AttachSpringHover(NetworkRecommendation, 1.015f);
+        WinCare.App.Animations.KineticSpringAnimation.AttachSpringHover(RunCheckupButton, 1.02f);
     }
 
     public HomePageViewModel ViewModel { get; }

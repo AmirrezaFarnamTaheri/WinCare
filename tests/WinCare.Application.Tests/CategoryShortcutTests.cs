@@ -13,9 +13,9 @@ public sealed class CategoryShortcutTests
 
     public static TheoryData<string, string, int> CareSections => new()
     {
-        { "System care", "Clean up", 11 },
-        { "System care", "Performance", 59 },
-        { "System care", "Apps & startup", 12 },
+        { "System care", "Clean up", 15 },
+        { "System care", "Performance", 63 },
+        { "System care", "Apps & startup", 13 },
         { "System care", "Network & updates", 26 },
         { "System care", "Routines", 8 },
         { "Security", "Status", 20 },

@@ -560,7 +560,7 @@ pub unsafe extern "C" fn wincare_core_sys_info(
         if buffer.is_null() || buffer_len < json_bytes.len() {
             return Status::BufferTooSmall.code();
         }
-        // SAFETY: buffer is non-null; buffer_len >= json_bytes.len() (checked above); source is stack slice, dest is caller heap — no overlap.
+        // SAFETY: buffer is non-null; buffer_len >= json_bytes.len() (checked above); source is stack slice, dest is caller heap; no overlap.
         unsafe { std::ptr::copy_nonoverlapping(json_bytes.as_ptr(), buffer, json_bytes.len()) };
         Status::Ok.code()
     }))

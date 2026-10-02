@@ -226,7 +226,7 @@ public static class AppPreferences
         catch (Exception ex)
         {
             // Covers IO faults and serialization faults alike: a non-IO failure must not fault
-            // the persistence chain unnoticed — route it through the same status so
+            // the persistence chain unnoticed; route it through the same status so
             // IsPersistenceHealthy reflects reality and the Settings page can surface it.
             SetPersistenceStatus("WinCare couldn't save your settings. They'll keep working until you close the app.");
             System.Diagnostics.Debug.WriteLine($"[AppPreferences] Save failed: {ex}");

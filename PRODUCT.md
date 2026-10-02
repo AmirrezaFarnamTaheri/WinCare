@@ -2,7 +2,7 @@
 
 Native Windows 10/11 maintenance and diagnostics application using WinUI 3, .NET 8 and a Rust core. People and technicians inspect Windows, maintain it, review changes and recover from problems.
 
-The 269-command catalog and existing dispatcher/integrations define functionality; product surfaces organize those capabilities without inventing new ones. The release candidate's promotion gates remain in docs/Validation.md.
+The 296-command catalog and existing dispatcher/integrations define functionality; product surfaces organize those capabilities without inventing new ones. The release candidate's promotion gates remain in docs/Validation.md.
 
 Evidence collection is distinct from a health verdict. Commands retain risk/admission rules. Activity reports actual outcomes. Undo requires an executable compensator. Remote installation stays browse-only without an approved catalog trust root.
 
@@ -10,7 +10,7 @@ The current product model is task-first: Home and Checkup guide common work, Car
 
 ## Competitive Alternatives & Differentiating Invariants
 
-WinCare is engineered for operators, technicians, and power users who need reliable Windows maintenance without black-box risk:
+WinCare is built for operators, technicians, and power users who need reliable Windows maintenance without black-box risk:
 
 | Dimension | Black-Box "Cleaners" & Registry Sweepers | WinCare Invariant |
 |---|---|---|

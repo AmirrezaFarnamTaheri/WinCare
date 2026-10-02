@@ -96,7 +96,7 @@ public sealed class GlobalSearchServiceTests
         // Token "media": the "Repair & recovery" page matches via its joined tabs field
         // "…Reset & media…" (contains = 35, +30 page boost = 65); the extension contains
         // the token only mid-string in its description (35 + 10 extension boost = 45).
-        // Note the "Extensions" page also matches — "media" is inside "extensions" — so
+        // Note the "Extensions" page also matches ("media" is inside "extensions"), so
         // compare first-occurrence positions rather than assuming a single page hit.
         var service = Service(extensions: [Extension("acme.hub", "Podcast Hub", "streaming media offline")]);
 

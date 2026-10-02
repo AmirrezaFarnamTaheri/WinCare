@@ -112,11 +112,11 @@ def main() -> int:
         try:
             res = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True, timeout=timeout_seconds)
         except subprocess.TimeoutExpired:
-            print(f"[FAIL] {name} — timed out after {timeout_seconds} seconds")
+            print(f"[FAIL] {name}: timed out after {timeout_seconds} seconds")
             failed.append(name)
             continue
         except OSError as exc:
-            print(f"[FAIL] {name} — could not launch process: {exc}")
+            print(f"[FAIL] {name}: could not launch process: {exc}")
             failed.append(name)
             continue
         if res.returncode == 0:

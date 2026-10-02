@@ -8,7 +8,7 @@ using WinCare.Application.Plugins;
 /// Immutable snapshot of one extension for the Extensions list. Card state is deliberately
 /// read-only: <c>RefreshPluginsAsync</c> rebuilds the whole <c>Plugins</c> collection on every
 /// state change, and the card's action buttons bind <c>OneTime</c>. In-place mutation would
-/// leave stale buttons with no binding failure to signal it — mutate by replacing the card.
+/// leave stale buttons with no binding failure to signal it; mutate by replacing the card.
 /// </summary>
 public sealed class PluginCardViewModel
 {

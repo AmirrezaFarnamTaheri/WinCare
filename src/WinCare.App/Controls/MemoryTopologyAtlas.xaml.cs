@@ -10,6 +10,7 @@ public sealed partial class MemoryTopologyAtlas : UserControl
     public MemoryTopologyAtlas()
     {
         InitializeComponent();
+        WinCare.App.Animations.KineticSpringAnimation.AttachSpringHover(BtnCompact, 1.02f);
         RefreshTopology();
     }
 
@@ -25,6 +26,7 @@ public sealed partial class MemoryTopologyAtlas : UserControl
         TotalMemoryBlock.Text = $"{totalGb:F1} GB total";
         TxtActive.Text = $"{activeGb:F1} GB";
         TxtFree.Text = $"{availGb:F1} GB";
+        TxtPressure.Text = $"{metrics.MemoryLoadPercentage}% load";
 
         ColActive.Width = new GridLength(Math.Max(0.1, activeGb), GridUnitType.Star);
         ColFree.Width = new GridLength(Math.Max(0.1, availGb), GridUnitType.Star);

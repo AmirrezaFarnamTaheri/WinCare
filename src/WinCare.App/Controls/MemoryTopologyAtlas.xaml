@@ -18,6 +18,9 @@
                     <Border Background="{ThemeResource AccentChromeSubtleBrush}" Padding="6,2" CornerRadius="{StaticResource RadiusPill}">
                         <TextBlock Text="Live telemetry" FontFamily="{StaticResource TelemetryFontFamily}" FontSize="10" FontWeight="SemiBold" Foreground="{ThemeResource AccentChromeBrush}" />
                     </Border>
+                    <Border x:Name="PressureBorder" Background="{ThemeResource AccentChromeSubtleBrush}" Padding="6,2" CornerRadius="{StaticResource RadiusPill}">
+                        <TextBlock x:Name="TxtPressure" Text="--% load" FontFamily="{StaticResource TelemetryFontFamily}" FontSize="10" FontWeight="SemiBold" Foreground="{ThemeResource AccentChromeBrush}" />
+                    </Border>
                 </StackPanel>
                 <TextBlock x:Name="TotalMemoryBlock" Grid.Column="1" Text="-- total" 
                            FontFamily="{StaticResource TelemetryFontFamily}" FontSize="12" FontWeight="SemiBold" Foreground="{ThemeResource TextSecondaryBrush}" />
@@ -53,11 +56,16 @@
 
                 <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
                     <TextBlock x:Name="TxtStatus" VerticalAlignment="Center" FontFamily="{StaticResource TelemetryFontFamily}" FontSize="11" Foreground="{ThemeResource SuccessBrush}" Visibility="Collapsed" />
-                    <Button x:Name="BtnCompact" Content="Reclaim standby memory"
+                    <Button x:Name="BtnCompact"
                             Style="{StaticResource QuietButtonStyle}"
                             Click="BtnCompact_Click"
                             AutomationProperties.Name="Reclaim standby cache memory"
-                            FontSize="11" Padding="12,6" MinHeight="32" />
+                            FontSize="11" Padding="12,6" MinHeight="34">
+                        <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                            <FontIcon Glyph="&#xE74D;" FontSize="12" Foreground="{ThemeResource AccentChromeBrush}" VerticalAlignment="Center" AutomationProperties.AccessibilityView="Raw" />
+                            <TextBlock Text="Reclaim standby memory" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
                 </StackPanel>
             </Grid>
         </StackPanel>

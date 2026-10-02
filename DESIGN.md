@@ -1,12 +1,12 @@
-# WinCare — Task-first Fluent Workspace
+# WinCare: Task-first Fluent Workspace
 
 WinCare is a task-first native WinUI 3 workspace played straight against Fluent: calm surfaces, system-tracked accent, semantics carried by text and structure rather than hue. The 3.0.0 re-release re-based the palette onto this system; the task-first product model itself predates it.
 
 ## Design intent
 
-Give people a clear starting point, make the next useful action obvious, and keep advanced capability available without forcing everyone through a 269-command catalog. The product sequence is **Check → Understand → Act → Review**.
+Give people a clear starting point, make the next useful action obvious, and keep advanced capability available without forcing everyone through a 296-command catalog. The product sequence is **Check → Understand → Act → Review**.
 
-The 2026-09 redesign concept studies were retired with the 3.0.0 re-release; this file is the visual system of record. Runtime truth lives in the code and in `docs/Screenshots.md` captures — never in concept art.
+The 2026-09 redesign concept studies were retired with the 3.0.0 re-release; this file is the visual system of record. Runtime truth lives in the code and in `docs/Screenshots.md` captures, never in concept art.
 
 ## Canonical owners
 
@@ -32,16 +32,16 @@ The 2026-09 redesign concept studies were retired with the 3.0.0 re-release; thi
 | AccentChromeSubtleBrush | #D6EAF7 | #1E3B4F |
 | TextOnAccentBrush | #FFFFFF | #0A1E2C |
 
-Status colors retain semantic meaning. Brand color is not a health result. Primary-action styles use WinUI's native `AccentFillColorDefaultBrush`/`TextOnAccentFillColorPrimaryBrush`, so buttons and links follow the user's system accent; the static `AccentBrush`/`AccentChromeBrush` values above carry the Windows default accent for view-model-bound brushes. Status-pill pairs (`PillReadOnlyBg`/`PillMutatingBg`/`PillElevatedBg`/`PillNotReadyBg` with `PillText`/`PillAltText`) stay literal hex so the contrast gates can measure them; runtime composition is pinned in `verify_pill_contrast.py`. High contrast uses Windows system colors — the not-ready pill drops to the window ground and HC pills carry meaning through text and borders, never fill hue alone. Native caption controls follow appearance too.
+Status colors retain semantic meaning. Brand color is not a health result. Primary-action styles use WinUI's native `AccentFillColorDefaultBrush`/`TextOnAccentFillColorPrimaryBrush`, so buttons and links follow the user's system accent; the static `AccentBrush`/`AccentChromeBrush` values above carry the Windows default accent for view-model-bound brushes. Status-pill pairs (`PillReadOnlyBg`/`PillMutatingBg`/`PillElevatedBg`/`PillNotReadyBg` with `PillText`/`PillAltText`) stay literal hex so the contrast gates can measure them; runtime composition is pinned in `verify_pill_contrast.py`. High contrast uses Windows system colors: the not-ready pill drops to the window ground and HC pills carry meaning through text and borders, never fill hue alone. Native caption controls follow appearance too.
 
 ## Typography and geometry
 
 - Segoe UI Variable Display for headings, Segoe UI Variable Text for controls and prose. Native Windows legibility is intentional.
 - Cascadia Code / Cascadia Mono / Consolas only for measurements, identifiers and technical evidence.
 - Page title 34 DIP; section 20; row title 15; body 14 with 21-DIP line height; secondary prose 13 with 18-DIP line height. No decorative labels above page headings.
-- Status masthead 40 DIP with 48-DIP line height (`HeroTitleTextStyle`) carries the Home verdict and the Checkup action heading — the only type permitted to outrank a page title, and the sole full-strength display moment per page. Coverage and last-status render as an inline stat (metric, caption, 1-DIP `BorderSubtleBrush` hairline divider) inside the hero enclosure, never a nested card; compact stacks the stat and drops the hairline.
-- Entry-point icons sit in 40-DIP `IconTileStyle` tiles (`AccentChromeSubtleBrush` ground, `AccentChromeBrush` glyph) — the system's recurring structural device, built only from the existing accent pair.
-- Spacing tokens `SpacingXS`–`XXL` (4/8/12/16/24/32) and `GapXS`–`XL` exist in `ControlStyles.xaml` for new work; existing page markup still uses a 6–28 DIP mix that does not sit on that scale. Migrating page literals is a deferred, render-verified pass — replacing values blind would be a redesign, not a cleanup.
+- Status masthead 40 DIP with 48-DIP line height (`HeroTitleTextStyle`) carries the Home verdict and the Checkup action heading, which is the only type permitted to outrank a page title, and the sole full-strength display moment per page. Coverage and last-status render as an inline stat (metric, caption, 1-DIP `BorderSubtleBrush` hairline divider) inside the hero enclosure, never a nested card; compact stacks the stat and drops the hairline.
+- Entry-point icons sit in 40-DIP `IconTileStyle` tiles (`AccentChromeSubtleBrush` ground, `AccentChromeBrush` glyph), the system's recurring structural device, built only from the existing accent pair.
+- Spacing tokens `SpacingXS` to `XXL` (4/8/12/16/24/32) and `GapXS` to `XL` exist in `ControlStyles.xaml` for new work; existing page markup still uses a 6 to 28 DIP mix that does not sit on that scale. Migrating page literals is a deferred, render-verified pass; replacing values blind would be a redesign, not a cleanup.
 - Desktop inset 32 DIP; compact 20. Outer panels 12-DIP corners, inner panels and controls 8, status labels 4. One enclosure per functional group.
 - Primary actions use the Windows system accent via native WinUI accent brushes. Secondary actions use QuietButtonStyle. Diagnostic channels share a native button style with visible focus.
 - Preserve native hover, pressed, disabled and busy states. No perpetual animation or delayed feedback for effect.
@@ -64,7 +64,7 @@ Global search is product-wide: pages, native tools, extensions, and help topics 
 
 ## Product truth and accessibility
 
-Activity uses a theme-aware document illustration and a separate empty composition; an empty message never overlays column headings. The tool inspector retains invalid raw input and focuses it for correction. Cancellation uses a pending “Stopping…” state until execution settles.
+Activity uses a theme-aware document illustration and a separate empty composition; an empty message never overlays column headings. The tool inspector retains invalid raw input and focuses it for correction. Cancellation uses a pending "Stopping..." state until execution settles.
 
 - No generic Undo claim: show Undo only with an executable compensator.
 - No unverifiable health score: collection coverage is not machine health. Findings retain their actual runtime interpretation.

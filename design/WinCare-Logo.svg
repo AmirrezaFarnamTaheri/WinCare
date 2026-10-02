@@ -160,7 +160,7 @@
              L 386 178 Z"
           fill="url(#specularRight)"/>
 
-    <!-- 6. Central Precision Diagnostic Diamond Keystone (Care Heartbeat & Vitality Spark) -->
+    <!-- 6. Central Diagnostic Diamond Keystone -->
     <g filter="url(#diamondGlow)">
       <!-- Left Facet of Diamond -->
       <polygon points="256,138 232,182 256,226"
@@ -179,7 +179,7 @@
       <circle cx="256" cy="182" r="8" fill="none" stroke="#FFFFFF" stroke-width="0.8" opacity="0.6"/>
     </g>
 
-    <!-- 7. Lower Shield Anchor Care Chevron (Balanced Health Beacon) -->
+    <!-- 7. Lower Shield Anchor Care Chevron -->
     <polygon points="256,396 272,374 256,362 240,374"
              fill="#00FFA3"
              opacity="0.95"/>

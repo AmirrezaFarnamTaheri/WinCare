@@ -14,18 +14,31 @@ namespace WinCare.Infrastructure.IPC
         private const int MaxResponseBytes = 64 * 1024;
         private NamedPipeClientStream? _pipeStream;
         private readonly SemaphoreSlim _lock = new(1, 1);
+        private readonly CancellationTokenSource _disposalCts = new();
+        private int _disposed;
 
         public bool IsConnected => _pipeStream?.IsConnected ?? false;
 
         public async Task<bool> TryConnectAsync(int timeoutMs = 2000, CancellationToken cancellationToken = default)
         {
-            await _lock.WaitAsync(cancellationToken);
+            if (Volatile.Read(ref _disposed) != 0) return false;
+            using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _disposalCts.Token);
             try
             {
+                await _lock.WaitAsync(linked.Token).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+                return false;
+            }
+
+            try
+            {
+                if (Volatile.Read(ref _disposed) != 0) return false;
                 if (IsConnected) return true;
 
                 _pipeStream = new NamedPipeClientStream(".", PipeName, PipeDirection.InOut, PipeOptions.Asynchronous);
-                await _pipeStream.ConnectAsync(timeoutMs, cancellationToken);
+                await _pipeStream.ConnectAsync(timeoutMs, linked.Token).ConfigureAwait(false);
                 return true;
             }
             catch (OperationCanceledException)
@@ -41,7 +54,7 @@ namespace WinCare.Infrastructure.IPC
             }
             finally
             {
-                _lock.Release();
+                try { _lock.Release(); } catch (ObjectDisposedException) { }
             }
         }
 
@@ -50,24 +63,36 @@ namespace WinCare.Infrastructure.IPC
             ArgumentException.ThrowIfNullOrWhiteSpace(command);
             if (command.Contains('\n') || command.Contains('\r') || Encoding.UTF8.GetByteCount(command) > 4096)
                 throw new ArgumentException("Expected one command of at most 4096 UTF-8 bytes.", nameof(command));
-            await _lock.WaitAsync(cancellationToken);
-            using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            if (Volatile.Read(ref _disposed) != 0) return null;
+
+            using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _disposalCts.Token);
+            try
+            {
+                await _lock.WaitAsync(linked.Token).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+                return null;
+            }
+
+            using var deadline = CancellationTokenSource.CreateLinkedTokenSource(linked.Token);
             deadline.CancelAfter(TimeSpan.FromSeconds(5));
             try
             {
+                if (Volatile.Read(ref _disposed) != 0) return null;
                 // The Guard serves one request per connection. Connect under the same lock
                 // as the exchange so queued callers cannot reuse another caller's pipe.
                 if (!IsConnected)
                 {
                     ResetConnection();
                     _pipeStream = new NamedPipeClientStream(".", PipeName, PipeDirection.InOut, PipeOptions.Asynchronous);
-                    await _pipeStream.ConnectAsync(2000, deadline.Token);
+                    await _pipeStream.ConnectAsync(2000, deadline.Token).ConfigureAwait(false);
                 }
                 var payloadBytes = Encoding.UTF8.GetBytes(command + "\n");
-                await _pipeStream!.WriteAsync(payloadBytes, deadline.Token);
-                await _pipeStream.FlushAsync(deadline.Token);
+                await _pipeStream!.WriteAsync(payloadBytes, deadline.Token).ConfigureAwait(false);
+                await _pipeStream.FlushAsync(deadline.Token).ConfigureAwait(false);
 
-                var response = await ReadResponseLineAsync(deadline.Token);
+                var response = await ReadResponseLineAsync(deadline.Token).ConfigureAwait(false);
                 if (response == null)
                 {
                     ResetConnection();
@@ -75,7 +100,7 @@ namespace WinCare.Infrastructure.IPC
 
                 return response;
             }
-            catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+            catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested && !_disposalCts.IsCancellationRequested)
             {
                 return null;
             }
@@ -93,7 +118,7 @@ namespace WinCare.Infrastructure.IPC
             finally
             {
                 ResetConnection();
-                _lock.Release();
+                try { _lock.Release(); } catch (ObjectDisposedException) { }
             }
         }
 
@@ -109,7 +134,7 @@ namespace WinCare.Infrastructure.IPC
             var chunk = new byte[256];
             while (true)
             {
-                int read = await _pipeStream!.ReadAsync(chunk, cancellationToken);
+                int read = await _pipeStream!.ReadAsync(chunk, cancellationToken).ConfigureAwait(false);
                 if (read == 0)
                 {
                     break;
@@ -140,21 +165,50 @@ namespace WinCare.Infrastructure.IPC
             _pipeStream = null;
         }
 
-        public async ValueTask DisposeAsync()
+        public ValueTask DisposeAsync() => DisposeAsync(CancellationToken.None);
+
+        public async ValueTask DisposeAsync(CancellationToken cancellationToken)
         {
-            await _lock.WaitAsync();
+            if (Interlocked.Exchange(ref _disposed, 1) != 0)
+            {
+                return;
+            }
+
+            // Cancel any in-flight Guard operations before waiting for the lock.
             try
             {
-                if (_pipeStream != null)
-                {
-                    await _pipeStream.DisposeAsync();
-                    _pipeStream = null;
-                }
+                _disposalCts.Cancel();
+            }
+            catch
+            {
+            }
+
+            // Reset the connection immediately so blocked I/O fails fast.
+            ResetConnection();
+
+            try
+            {
+                await _lock.WaitAsync(cancellationToken).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+                // Shutdown budget elapsed while waiting for in-flight handler to exit.
+                return;
+            }
+            catch (ObjectDisposedException)
+            {
+                return;
+            }
+
+            try
+            {
+                ResetConnection();
             }
             finally
             {
-                _lock.Release();
+                try { _lock.Release(); } catch { }
                 _lock.Dispose();
+                _disposalCts.Dispose();
             }
         }
     }

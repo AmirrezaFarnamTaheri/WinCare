@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "commandCount": 269,
+  "commandCount": 296,
   "commands": [
     {
       "id": "system",
@@ -4745,7 +4745,13 @@
       "restart": "No",
       "legacySource": "WinUtil functions/private/Get-WinUtilInstalledAPPX.ps1",
       "migrationStatus": "Implemented",
-      "keywords": ["appx", "installed", "inventory", "current user", "packages"]
+      "keywords": [
+        "appx",
+        "installed",
+        "inventory",
+        "current user",
+        "packages"
+      ]
     },
     {
       "id": "appx-provisioned-inventory",
@@ -4759,7 +4765,13 @@
       "restart": "No",
       "legacySource": "WinUtil functions/private/Remove-WinUtilProvisionedAPPX.ps1",
       "migrationStatus": "Implemented",
-      "keywords": ["appx", "provisioned", "inventory", "dism", "packages"]
+      "keywords": [
+        "appx",
+        "provisioned",
+        "inventory",
+        "dism",
+        "packages"
+      ]
     },
     {
       "id": "appx-installed-remove",
@@ -4773,16 +4785,33 @@
       "restart": "MayBeRequired",
       "legacySource": "Win11Debloat Scripts/AppRemoval/Remove-SelectedApps.ps1",
       "migrationStatus": "Implemented",
-      "keywords": ["appx", "installed", "remove", "winget", "packages"]
+      "keywords": [
+        "appx",
+        "installed",
+        "remove",
+        "winget",
+        "packages"
+      ]
     },
     {
       "id": "appx-registered-remove",
       "title": "Remove registered AppX package",
       "summary": "Remove exact current-user AppX package full names through the Windows deployment API after preview and approval.",
-      "area": "System care", "section": "Apps & startup", "risk": "High", "readOnly": false,
-      "administratorAccess": "No", "restart": "MayBeRequired",
-      "legacySource": "WinUtil functions/private/Remove-WinUtilAPPX.ps1", "migrationStatus": "Implemented",
-      "keywords": ["appx", "registered", "current user", "remove", "package full name"]
+      "area": "System care",
+      "section": "Apps & startup",
+      "risk": "High",
+      "readOnly": false,
+      "administratorAccess": "No",
+      "restart": "MayBeRequired",
+      "legacySource": "WinUtil functions/private/Remove-WinUtilAPPX.ps1",
+      "migrationStatus": "Implemented",
+      "keywords": [
+        "appx",
+        "registered",
+        "current user",
+        "remove",
+        "package full name"
+      ]
     },
     {
       "id": "appx-provisioned-remove",
@@ -4796,7 +4825,13 @@
       "restart": "MayBeRequired",
       "legacySource": "WinUtil functions/private/Remove-WinUtilProvisionedAPPX.ps1",
       "migrationStatus": "Implemented",
-      "keywords": ["appx", "provisioned", "remove", "dism", "packages"]
+      "keywords": [
+        "appx",
+        "provisioned",
+        "remove",
+        "dism",
+        "packages"
+      ]
     },
     {
       "id": "legacy-unsafe-profiles",
@@ -5314,7 +5349,14 @@
       "restart": "MayBeRequired",
       "legacySource": "WinPort recovery convergence",
       "migrationStatus": "Implemented",
-      "keywords": ["restore", "recovery", "remediation", "registry", "undo", "change records"]
+      "keywords": [
+        "restore",
+        "recovery",
+        "remediation",
+        "registry",
+        "undo",
+        "change records"
+      ]
     },
     {
       "id": "storage-report",
@@ -5377,6 +5419,493 @@
         "packages",
         "apps",
         "read only"
+      ]
+    },
+    {
+      "id": "cleaner-developer-uv",
+      "title": "Astral UV Python Cache Purge",
+      "summary": "Purges the Astral UV cache to reclaim space.",
+      "area": "System care",
+      "section": "Developer",
+      "risk": "Low",
+      "readOnly": false,
+      "administratorAccess": "No",
+      "restart": "No",
+      "legacySource": "None",
+      "migrationStatus": "Implemented",
+      "keywords": [
+        "developer",
+        "python",
+        "cache",
+        "storage"
+      ]
+    },
+    {
+      "id": "cleaner-ide-cursor-snapshots",
+      "title": "Cursor Shadow Git Pruner",
+      "summary": "Removes old AI IDE snapshots.",
+      "area": "System care",
+      "section": "Developer",
+      "risk": "Low",
+      "readOnly": false,
+      "administratorAccess": "No",
+      "restart": "No",
+      "legacySource": "None",
+      "migrationStatus": "Implemented",
+      "keywords": [
+        "developer",
+        "cursor",
+        "ai",
+        "storage"
+      ]
+    },
+    {
+      "id": "cleaner-ai-agent-ledgers",
+      "title": "Autonomous Agent Scratchpad Purge",
+      "summary": "Purges AI agent intermediate patches and trace logs.",
+      "area": "System care",
+      "section": "Developer",
+      "risk": "Low",
+      "readOnly": false,
+      "administratorAccess": "No",
+      "restart": "No",
+      "legacySource": "None",
+      "migrationStatus": "Implemented",
+      "keywords": [
+        "ai",
+        "agent",
+        "logs",
+        "storage"
+      ]
+    },
+    {
+      "id": "sqlite-vacuum",
+      "title": "SQLite .vscdb Vacuuming",
+      "summary": "Vacuums VS Code/Cursor SQLite databases.",
+      "area": "System care",
+      "section": "Developer",
+      "risk": "Low",
+      "readOnly": false,
+      "administratorAccess": "No",
+      "restart": "No",
+      "legacySource": "None",
+      "migrationStatus": "Implemented",
+      "keywords": [
+        "database",
+        "sqlite",
+        "vscode",
+        "storage"
+      ]
+    },
+    {
+      "id": "cleaner-servicing-remnants",
+      "title": "Windows Servicing Remnant Cleaner",
+      "summary": "Purges $WINDOWS.~BT, $WinREAgent, and Panther by taking ownership from TrustedInstaller.",
+      "area": "System care",
+      "section": "Servicing",
+      "risk": "Moderate",
+      "readOnly": false,
+      "administratorAccess": "Required",
+      "restart": "No",
+      "legacySource": "None",
+      "migrationStatus": "Implemented",
+      "keywords": [
+        "windows",
+        "servicing",
+        "trustedinstaller"
+      ]
+    },
+    {
+      "id": "cleaner-dism-component-store",
+      "title": "Real DISM Component Store Cleaner",
+      "summary": "Executes real streaming DISM Component Cleanup (/ResetBase).",
+      "area": "System care",
+      "section": "Servicing",
+      "risk": "Moderate",
+      "readOnly": false,
+      "administratorAccess": "Required",
+      "restart": "MayBeRequired",
+      "legacySource": "None",
+      "migrationStatus": "Implemented",
+      "keywords": [
+        "dism",
+        "servicing",
+        "cleanup"
+      ]
+    },
+    {
+      "id": "cleaner-windows-update-cache",
+      "title": "Windows Update Download Cache Coordinator",
+      "summary": "Pauses wuauserv, purges SoftwareDistribution/Download, and restarts the service.",
+      "area": "System care",
+      "section": "Servicing",
+      "risk": "Moderate",
+      "readOnly": false,
+      "administratorAccess": "Required",
+      "restart": "No",
+      "legacySource": "None",
+      "migrationStatus": "Implemented",
+      "keywords": [
+        "windows-update",
+        "cache",
+        "wuauserv"
+      ]
+    },
+    {
+      "id": "compress-compactos",
+      "title": "Transparent CompactOS Compression",
+      "summary": "Applies compression via compact.exe /compactos:always.",
+      "area": "System care",
+      "section": "Servicing",
+      "risk": "Low",
+      "readOnly": false,
+      "administratorAccess": "Required",
+      "restart": "No",
+      "legacySource": "None",
+      "migrationStatus": "Implemented",
+      "keywords": [
+        "compactos",
+        "compression",
+        "storage"
+      ]
+    },
+    {
+      "id": "wsl-disk-compact",
+      "title": "WSL2 Virtual Disk Compaction",
+      "summary": "Executes two-stage compaction (fstrim + host diskpart) on ext4.vhdx.",
+      "area": "System care",
+      "section": "Virtualization",
+      "risk": "Low",
+      "readOnly": false,
+      "administratorAccess": "No",
+      "restart": "No",
+      "legacySource": "None",
+      "migrationStatus": "Implemented",
+      "keywords": [
+        "wsl2",
+        "vhdx",
+        "compaction"
+      ]
+    },
+    {
+      "id": "docker-volume-prune",
+      "title": "Docker Desktop Volume Pruner",
+      "summary": "Removes dangling Docker volumes to reclaim space.",
+      "area": "System care",
+      "section": "Virtualization",
+      "risk": "Moderate",
+      "readOnly": false,
+      "administratorAccess": "No",
+      "restart": "No",
+      "legacySource": "None",
+      "migrationStatus": "Implemented",
+      "keywords": [
+        "docker",
+        "volumes",
+        "prune"
+      ]
+    },
+    {
+      "id": "storage-dedup-scan",
+      "title": "3-Phase Size & SHA-256 Hash Filter",
+      "summary": "Scans for duplicate files.",
+      "area": "System care",
+      "section": "Storage",
+      "risk": "ReadOnly",
+      "readOnly": true,
+      "administratorAccess": "No",
+      "restart": "No",
+      "legacySource": "None",
+      "migrationStatus": "Implemented",
+      "keywords": [
+        "dedup",
+        "scan",
+        "storage"
+      ]
+    },
+    {
+      "id": "storage-dedup-hardlink",
+      "title": "Non-Destructive NTFS Hardlink Consolidation",
+      "summary": "Consolidates duplicate files via NTFS hardlinks.",
+      "area": "System care",
+      "section": "Storage",
+      "risk": "Moderate",
+      "readOnly": false,
+      "administratorAccess": "No",
+      "restart": "No",
+      "legacySource": "None",
+      "migrationStatus": "Implemented",
+      "keywords": [
+        "dedup",
+        "hardlink",
+        "storage"
+      ]
+    },
+    {
+      "id": "perf-standby-purge",
+      "title": "Standby List Purge",
+      "summary": "Purges standby list via MemoryGovernor.",
+      "area": "System care",
+      "section": "Performance",
+      "risk": "Low",
+      "readOnly": false,
+      "administratorAccess": "Required",
+      "restart": "No",
+      "legacySource": "None",
+      "migrationStatus": "Implemented",
+      "keywords": [
+        "perf",
+        "memory",
+        "purge"
+      ]
+    },
+    {
+      "id": "perf-timer-half-ms",
+      "title": "0.5ms System Timer",
+      "summary": "Sets 0.5ms timer via SystemTimerGovernor.",
+      "area": "System care",
+      "section": "Performance",
+      "risk": "Low",
+      "readOnly": false,
+      "administratorAccess": "Required",
+      "restart": "No",
+      "legacySource": "None",
+      "migrationStatus": "Implemented",
+      "keywords": [
+        "perf",
+        "timer"
+      ]
+    },
+    {
+      "id": "perf-gpu-mpo-toggle",
+      "title": "GPU MPO & P-State Toggles",
+      "summary": "Toggles Multi-Plane Overlay and GPU P-States.",
+      "area": "System care",
+      "section": "Performance",
+      "risk": "Moderate",
+      "readOnly": false,
+      "administratorAccess": "Required",
+      "restart": "MayBeRequired",
+      "legacySource": "None",
+      "migrationStatus": "Implemented",
+      "keywords": [
+        "perf",
+        "gpu",
+        "mpo"
+      ]
+    },
+    {
+      "id": "perf-power-scheme-unlock",
+      "title": "Win32 Power Scheme Unlocker",
+      "summary": "Unlocks hidden Windows power schemes.",
+      "area": "System care",
+      "section": "Performance",
+      "risk": "Low",
+      "readOnly": false,
+      "administratorAccess": "Required",
+      "restart": "No",
+      "legacySource": "None",
+      "migrationStatus": "Implemented",
+      "keywords": [
+        "perf",
+        "power",
+        "scheme"
+      ]
+    },
+    {
+      "id": "win-shading-rollup",
+      "title": "Window Shading Rollup",
+      "summary": "Rolls up windows to their titlebars.",
+      "area": "System care",
+      "section": "Desktop",
+      "risk": "Low",
+      "readOnly": false,
+      "administratorAccess": "No",
+      "restart": "No",
+      "legacySource": "None",
+      "migrationStatus": "Implemented",
+      "keywords": [
+        "window",
+        "manager",
+        "shade"
+      ]
+    },
+    {
+      "id": "win-edge-snapping",
+      "title": "Dynamic Edge Snapping Resistance",
+      "summary": "Configures edge snapping resistance.",
+      "area": "System care",
+      "section": "Desktop",
+      "risk": "Low",
+      "readOnly": false,
+      "administratorAccess": "No",
+      "restart": "No",
+      "legacySource": "None",
+      "migrationStatus": "Implemented",
+      "keywords": [
+        "window",
+        "manager",
+        "snap"
+      ]
+    },
+    {
+      "id": "win-corner-styler",
+      "title": "Win11 Corner & Backdrop Styler",
+      "summary": "Customizes Win11 corners and backdrops.",
+      "area": "System care",
+      "section": "Desktop",
+      "risk": "Low",
+      "readOnly": false,
+      "administratorAccess": "No",
+      "restart": "No",
+      "legacySource": "None",
+      "migrationStatus": "Implemented",
+      "keywords": [
+        "window",
+        "manager",
+        "style"
+      ]
+    },
+    {
+      "id": "guard-promote-scm",
+      "title": "Promote wincare-guard to SCM Service",
+      "summary": "Installs the health guard as a Windows service.",
+      "area": "System care",
+      "section": "Guard",
+      "risk": "Moderate",
+      "readOnly": false,
+      "administratorAccess": "Required",
+      "restart": "No",
+      "legacySource": "None",
+      "migrationStatus": "Implemented",
+      "keywords": [
+        "guard",
+        "service",
+        "scm"
+      ]
+    },
+    {
+      "id": "guard-connect-pipe",
+      "title": "Connect GuardPipeClient",
+      "summary": "Connects AppRuntime to the guard pipe.",
+      "area": "System care",
+      "section": "Guard",
+      "risk": "Low",
+      "readOnly": false,
+      "administratorAccess": "No",
+      "restart": "No",
+      "legacySource": "None",
+      "migrationStatus": "Implemented",
+      "keywords": [
+        "guard",
+        "pipe",
+        "ipc"
+      ]
+    },
+    {
+      "id": "guard-toast-notify",
+      "title": "Interactive Windows Toast Notifications",
+      "summary": "Configures guard toast notifications.",
+      "area": "System care",
+      "section": "Guard",
+      "risk": "Low",
+      "readOnly": false,
+      "administratorAccess": "No",
+      "restart": "No",
+      "legacySource": "None",
+      "migrationStatus": "Implemented",
+      "keywords": [
+        "guard",
+        "toast",
+        "notify"
+      ]
+    },
+    {
+      "id": "cleaner-squirrel-releases",
+      "title": "Squirrel Superseded Release Pruner",
+      "summary": "Prunes old Squirrel application releases.",
+      "area": "System care",
+      "section": "Clean up",
+      "risk": "Low",
+      "readOnly": false,
+      "administratorAccess": "No",
+      "restart": "No",
+      "legacySource": "None",
+      "migrationStatus": "Implemented",
+      "keywords": [
+        "squirrel",
+        "cleanup",
+        "prune"
+      ]
+    },
+    {
+      "id": "cleaner-msi-package-cache",
+      "title": "MSI Package Cache Orphan Eliminator",
+      "summary": "Eliminates orphaned MSI installers from cache.",
+      "area": "System care",
+      "section": "Clean up",
+      "risk": "Moderate",
+      "readOnly": false,
+      "administratorAccess": "Required",
+      "restart": "No",
+      "legacySource": "None",
+      "migrationStatus": "Implemented",
+      "keywords": [
+        "msi",
+        "cleanup",
+        "cache"
+      ]
+    },
+    {
+      "id": "installer-cache-purge",
+      "title": "Installer Cache Purge",
+      "summary": "Actively purge stale installer caches.",
+      "area": "System care",
+      "section": "Clean up",
+      "risk": "Moderate",
+      "readOnly": false,
+      "administratorAccess": "Required",
+      "restart": "No",
+      "legacySource": "None",
+      "migrationStatus": "Implemented",
+      "keywords": [
+        "installer",
+        "cache",
+        "purge"
+      ]
+    },
+    {
+      "id": "app-residual-purge",
+      "title": "App Residual Purge",
+      "summary": "Actively remove uninstalled application residual files.",
+      "area": "System care",
+      "section": "Clean up",
+      "risk": "Moderate",
+      "readOnly": false,
+      "administratorAccess": "No",
+      "restart": "No",
+      "legacySource": "None",
+      "migrationStatus": "Implemented",
+      "keywords": [
+        "residual",
+        "purge"
+      ]
+    },
+    {
+      "id": "startup-optimize",
+      "title": "Startup Optimizer",
+      "summary": "Actively disables unnecessary startup applications.",
+      "area": "System care",
+      "section": "Apps & startup",
+      "risk": "Low",
+      "readOnly": false,
+      "administratorAccess": "No",
+      "restart": "No",
+      "legacySource": "None",
+      "migrationStatus": "Implemented",
+      "keywords": [
+        "startup",
+        "optimize"
       ]
     }
   ]

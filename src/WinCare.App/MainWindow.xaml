@@ -14,25 +14,42 @@
         <Grid
             x:Name="AppTitleBar"
             Grid.Row="0"
-            Padding="20,0,138,0"
+            Padding="24,0,138,0"
             Background="{ThemeResource TitleBarBackgroundBrush}">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="*" />
-                <ColumnDefinition x:Name="SearchColumn" Width="*" MinWidth="220" MaxWidth="420" />
+                <ColumnDefinition x:Name="SearchColumn" Width="*" MinWidth="300" MaxWidth="500" />
             </Grid.ColumnDefinitions>
 
-            <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
-                <Image Width="26" Height="26" Source="Assets/Square44x44Logo.png" />
-                <TextBlock x:Name="AppTitleText" Style="{StaticResource AppTitleTextStyle}" Text="WinCare" />
+            <StackPanel Orientation="Horizontal" Spacing="14" VerticalAlignment="Center">
+                <Image Width="28" Height="28" Source="Assets/Square44x44Logo.png" />
+                <TextBlock x:Name="AppTitleText" Style="{StaticResource AppTitleTextStyle}" Text="WinCare 4.0" FontWeight="SemiBold" FontSize="16" VerticalAlignment="Center" />
+                <Border x:Name="TitleStatusBadge"
+                        Background="{ThemeResource AccentChromeSubtleBrush}"
+                        BorderBrush="{ThemeResource BorderSubtleBrush}"
+                        BorderThickness="1"
+                        CornerRadius="{StaticResource RadiusPill}"
+                        Padding="8,3"
+                        VerticalAlignment="Center">
+                    <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                        <Ellipse Width="6" Height="6" Fill="{ThemeResource SuccessBrush}" VerticalAlignment="Center" />
+                        <TextBlock Text="DISPATCHER · ACTIVE"
+                                   FontFamily="{StaticResource TelemetryFontFamily}"
+                                   FontSize="10"
+                                   FontWeight="SemiBold"
+                                   Foreground="{ThemeResource AccentChromeBrush}"
+                                   VerticalAlignment="Center" />
+                    </StackPanel>
+                </Border>
             </StackPanel>
 
             <AutoSuggestBox
                 x:Name="GlobalSearchBox"
                 Grid.Column="2"
-                MinHeight="44"
+                MinHeight="48"
                 VerticalAlignment="Center"
-                PlaceholderText="Search WinCare (Ctrl+K)"
+                PlaceholderText="Search tasks and tools (Ctrl+K)"
                 TextChanged="GlobalSearchBox_TextChanged"
                 QuerySubmitted="GlobalSearchBox_QuerySubmitted"
                 AutomationProperties.AutomationId="GlobalSearch"
@@ -42,16 +59,16 @@
                 </AutoSuggestBox.KeyboardAccelerators>
                 <AutoSuggestBox.ItemTemplate>
                     <DataTemplate x:DataType="nav:GlobalSearchSuggestion">
-                        <Grid Padding="4,6" ColumnSpacing="14">
+                        <Grid Padding="8,8" ColumnSpacing="16">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
-                            <StackPanel Spacing="2">
-                                <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="{x:Bind Title}" />
-                                <TextBlock Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind Subtitle}" TextTrimming="CharacterEllipsis" />
+                            <StackPanel Spacing="4">
+                                <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="{x:Bind Title}" FontWeight="Medium" />
+                                <TextBlock Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind Subtitle}" TextTrimming="CharacterEllipsis" Opacity="0.7" />
                             </StackPanel>
-                            <TextBlock Grid.Column="1" Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind KindLabel}" VerticalAlignment="Center" />
+                            <TextBlock Grid.Column="1" Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind KindLabel}" VerticalAlignment="Center" Opacity="0.5" />
                         </Grid>
                     </DataTemplate>
                 </AutoSuggestBox.ItemTemplate>
@@ -68,6 +85,7 @@
                     </VisualState.StateTriggers>
                     <VisualState.Setters>
                         <Setter Target="AppTitleText.Visibility" Value="Collapsed" />
+                        <Setter Target="TitleStatusBadge.Visibility" Value="Collapsed" />
                     </VisualState.Setters>
                 </VisualState>
                 <VisualState x:Name="StandardTitleBar">
@@ -76,6 +94,7 @@
                     </VisualState.StateTriggers>
                     <VisualState.Setters>
                         <Setter Target="AppTitleText.Visibility" Value="Visible" />
+                        <Setter Target="TitleStatusBadge.Visibility" Value="Visible" />
                     </VisualState.Setters>
                 </VisualState>
             </VisualStateGroup>

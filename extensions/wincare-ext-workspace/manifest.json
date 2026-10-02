@@ -1,0 +1,6 @@
+{
+  "extensionId": "wincare-ext-workspace",
+  "version": "4.0.0",
+  "displayName": "Kinetic Workspace Manager",
+  "description": "Tiling window manager, layout geometry, and global hotkeys."
+}

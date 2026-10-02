@@ -280,7 +280,7 @@ public sealed class BatchTenPrimitivesTests
     [Fact]
     public void SensitiveCredentialMasker_masks_cards_and_keys()
     {
-        // Canonical Visa test number — genuinely passes Luhn (sum=60, divisible by 10)
+        // Canonical Visa test number: genuinely passes Luhn (sum=60, divisible by 10)
         string text = "Order payment processed with card 4111-1111-1111-1111 and auth sk-antigravitySecretToken1234567890.";
         Assert.True(SensitiveCredentialMasker.ContainsSensitiveData(text));
 
@@ -296,7 +296,7 @@ public sealed class BatchTenPrimitivesTests
         Assert.DoesNotContain("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9", maskedBearer);
         Assert.StartsWith("Authorization: Bearer ", maskedBearer);
 
-        // Luhn algorithm — canonical Visa test number passes; one check-digit off fails
+        // Luhn algorithm: canonical Visa test number passes; one check-digit off fails
         Assert.True(SensitiveCredentialMasker.IsValidLuhn("4111111111111111"));
         Assert.False(SensitiveCredentialMasker.IsValidLuhn("4111111111111112"));
     }

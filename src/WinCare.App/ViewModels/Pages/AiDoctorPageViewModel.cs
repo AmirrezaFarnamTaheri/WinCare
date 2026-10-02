@@ -85,7 +85,7 @@ public sealed class AiDoctorPageViewModel : INotifyPropertyChanged
 
         AddMessage(new DoctorChatMessage(
             "WinCare",
-            "Tell me what's wrong — for example, low disk space, high memory use, lag, or network trouble. I'll check local Windows signals and suggest a few next steps.",
+            "I am the Active Troubleshooter. Describe your issue (e.g. low space, high memory use). I will check local signals and immediately prepare the optimal fixes without defensive friction.",
             IsUser: false,
             DateTime.UtcNow));
     }

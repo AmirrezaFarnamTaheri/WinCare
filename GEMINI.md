@@ -1,4 +1,4 @@
-# WinCare — System & Codebase Guide
+# WinCare: System & Codebase Guide
 
 ## Tech Stack
 - **Languages:** C# 12 (.NET 8.0 SDK `8.0.416`), Rust 2021 (Rustc `1.97.1`), XAML (WinUI 3 / Windows App SDK 1.5)
@@ -29,15 +29,15 @@
   - `python tools/verify_palette_contrast.py`
 
 ## Project Structure
-- `src/WinCare.Domain/` — Domain primitives, command results, risk tier definitions, status models.
-- `src/WinCare.CommandCatalog/` — 269 native commands catalog, pack fragment loading, parameter validation.
-- `src/WinCare.Application/` — Dispatcher, admission gate, journal, plugin contracts, playbook engine.
-- `src/WinCare.Infrastructure/` — OS probes, registry/WMI/PowerShell providers, native P/Invoke bridges.
-- `src/WinCare.App/` — WinUI 3 UI, MVVM view models, kinetic design system, theme brushes.
-- `native/wincare-core/` — High-performance Rust engine exporting C ABI v1 for system diagnostics.
-- `native/wincare-guard/` — System protection and sandbox boundary monitor.
-- `tests/` — Automated xUnit tests for application logic, catalog validation, and infrastructure adapters.
-- `tools/` — Python automation for verification, release packaging, visual contrast, and screenshot capture.
+- `src/WinCare.Domain/`: Domain primitives, command results, risk tier definitions, status models.
+- `src/WinCare.CommandCatalog/`: Native command catalog with 296 commands across core and pack fragments, with parameter validation.
+- `src/WinCare.Application/`: Dispatcher, admission gate, journal, plugin contracts, playbook engine.
+- `src/WinCare.Infrastructure/`: OS probes, registry/WMI/PowerShell providers, native P/Invoke bridges.
+- `src/WinCare.App/`: WinUI 3 presentation layer, MVVM view models, fluent design system, theme brushes.
+- `native/wincare-core/`: High-performance Rust engine exporting C ABI v1 for system diagnostics.
+- `native/wincare-guard/`: System protection and sandbox boundary monitor.
+- `tests/`: Automated xUnit tests for application logic, catalog validation, and infrastructure adapters.
+- `tools/`: Python automation for verification, release packaging, visual contrast, and screenshot capture.
 
 ## Key Conventions
 - **Commands:** Declarative catalog definitions; the dispatcher owns admission, preview/approval, execution, and Activity evidence.

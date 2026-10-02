@@ -5,6 +5,8 @@ using WinCare.Application.Tools;
 using WinCare.Domain.Telemetry;
 using WinCare.Infrastructure.Commands;
 using WinCare.Infrastructure.Native;
+using WinCare.Infrastructure.IPC;
+
 using WinCare.Infrastructure.Plugins;
 using WinCare.Infrastructure.Storage;
 using WinCare.Application.Storage;
@@ -54,6 +56,7 @@ public sealed class AppRuntime
         CatalogService = new RemoteCatalogService();
         ToolCatalog = new ToolCatalogService(PluginRegistry);
         InstallerService = new PluginInstallerService();
+        GuardClient = new GuardPipeClient();
     }
 
     /// <summary>
@@ -64,6 +67,12 @@ public sealed class AppRuntime
     /// <summary>
     /// Gets the activity journal service instance.
     /// </summary>
+    
+    /// <summary>
+    /// Gets the Guard Pipe Client.
+    /// </summary>
+    public GuardPipeClient GuardClient { get; }
+
     public ActivityJournalService Journal { get; }
 
     /// <summary>
@@ -127,6 +136,7 @@ public sealed class AppRuntime
     /// </summary>
     public async Task ShutdownAsync(TimeSpan budget)
     {
+        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
         using CancellationTokenSource timeout = new(budget);
         CancellationToken token = timeout.Token;
         try
@@ -161,6 +171,33 @@ public sealed class AppRuntime
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"[AppRuntime] Executor dispose failed: {ex}");
+            }
+
+            // Bound GuardClient disposal by the remaining shutdown budget and observe late completion.
+            var elapsed = stopwatch.Elapsed;
+            var remaining = budget > elapsed ? budget - elapsed : TimeSpan.FromMilliseconds(50);
+            using var disposalTimeout = new CancellationTokenSource(remaining);
+
+            Task? disposalTask = null;
+            try
+            {
+                disposalTask = GuardClient.DisposeAsync(disposalTimeout.Token).AsTask();
+                await disposalTask.WaitAsync(remaining).ConfigureAwait(false);
+            }
+            catch (TimeoutException) when (disposalTask is { IsCompleted: false })
+            {
+                System.Diagnostics.Debug.WriteLine("[AppRuntime] GuardClient disposal exceeded remaining shutdown budget and was abandoned.");
+                _ = disposalTask.ContinueWith(
+                    task => System.Diagnostics.Debug.WriteLine($"[AppRuntime] Abandoned GuardClient disposal later faulted: {task.Exception?.InnerException?.Message}"),
+                    CancellationToken.None, TaskContinuationOptions.OnlyOnFaulted, TaskScheduler.Default);
+            }
+            catch (OperationCanceledException)
+            {
+                System.Diagnostics.Debug.WriteLine("[AppRuntime] GuardClient disposal cancelled within shutdown budget.");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[AppRuntime] GuardClient dispose failed: {ex}");
             }
         }
     }

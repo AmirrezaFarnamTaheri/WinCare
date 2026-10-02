@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""WCAG 2.1 AA contrast checker — reads deployed values from ThemeResources.xaml."""
+"""WCAG 2.1 AA contrast checker: reads deployed values from ThemeResources.xaml."""
 import sys
 try:
     import defusedxml.ElementTree as ET
@@ -13,7 +13,7 @@ THEME_FILE = ROOT / "src/WinCare.App/Styles/ThemeResources.xaml"
 XAML_NS = "http://schemas.microsoft.com/winfx/2006/xaml/presentation"
 X_NS = "http://schemas.microsoft.com/winfx/2006/xaml"
 
-# (label, fg_key, bg_key, theme) — pairs as ToolRowViewModel.StatusPill*ResourceKey
+# (label, fg_key, bg_key, theme), pairs as ToolRowViewModel.StatusPill*ResourceKey
 # actually composes them: read-only/mutating carry PillText, elevated/not-ready PillAltText.
 PAIRS_SPEC = [
     ("ReadOnly dark",       "PillTextBrush",    "PillReadOnlyBgBrush",  "Dark"),

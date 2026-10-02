@@ -1,0 +1,1712 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WinCare: Native Windows Checkup, Maintenance, and Repair</title>
+  <meta name="description" content="WinCare is a native WinUI 3, .NET 8 and Rust Windows workspace for system checkups, maintenance, recovery and evidence-led repair. Read-only checks stay separate from mutations.">
+  <meta name="color-scheme" content="light dark">
+
+  <!--
+    This showcase is intentionally self-contained: no fonts, CSS or JavaScript are
+    fetched from a CDN. WinCare is an offline-first native application, and its
+    documentation should not depend on third-party networks. Colors below are the
+    application's own semantic tokens (see src/WinCare.App/Styles/ThemeResources.xaml)
+    and typography follows DESIGN.md: Segoe UI Variable for prose, Cascadia Code only
+    for identifiers, paths and technical evidence.
+  -->
+
+  <style>
+    :root {
+      /* Light theme: mirrors ThemeResources.xaml "Light" */
+      --page-background: #EDF2F5;
+      --surface: #FFFFFF;
+      --surface-secondary: #F2F6F8;
+      --surface-hover: #E0EBF0;
+      --hero-background: #E5EFF4;
+      --navigation-rail: #E4ECF1;
+      --card-border: #CBD8E0;
+      --border-subtle: #CBD8E0;
+      --text-primary: #172D3B;
+      --text-secondary: #435C6B;
+      --text-on-accent: #FFFFFF;
+      --accent: #006B80;
+      --accent-subtle: #DCEFF2;
+      --success: #0F7B0F;
+      --warning: #8A5700;
+      --danger: #C42B1C;
+      --telemetry-frame: #E6EFF3;
+      --shadow-card: 0 1px 2px rgba(23, 45, 59, 0.06), 0 8px 24px rgba(23, 45, 59, 0.06);
+      --shadow-lift: 0 2px 8px rgba(23, 45, 59, 0.08), 0 18px 48px rgba(23, 45, 59, 0.10);
+      color-scheme: light;
+    }
+
+    html[data-theme="dark"] {
+      /* Dark theme: mirrors ThemeResources.xaml "Dark" */
+      --page-background: #101B24;
+      --surface: #182A35;
+      --surface-secondary: #203542;
+      --surface-hover: #2B4655;
+      --hero-background: #14232D;
+      --navigation-rail: #14232D;
+      --card-border: #36505E;
+      --border-subtle: #36505E;
+      --text-primary: #EEF5F7;
+      --text-secondary: #B0C4CE;
+      --text-on-accent: #06151C;
+      --accent: #70D6DF;
+      --accent-subtle: #203F4A;
+      --success: #75D36B;
+      --warning: #FFCB45;
+      --danger: #FF99A4;
+      --telemetry-frame: #14232D;
+      --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.24), 0 8px 24px rgba(0, 0, 0, 0.28);
+      --shadow-lift: 0 2px 8px rgba(0, 0, 0, 0.30), 0 18px 48px rgba(0, 0, 0, 0.36);
+      color-scheme: dark;
+    }
+
+    /* High contrast follows the Windows system theme, as the application does. */
+    @media (forced-colors: active) {
+      :root, html[data-theme="dark"] {
+        --page-background: Canvas; --surface: Canvas; --surface-secondary: Canvas;
+        --surface-hover: Highlight; --hero-background: Canvas; --navigation-rail: Canvas;
+        --card-border: CanvasText; --border-subtle: CanvasText;
+        --text-primary: CanvasText; --text-secondary: CanvasText; --text-on-accent: HighlightText;
+        --accent: Highlight; --accent-subtle: Canvas;
+        --success: CanvasText; --warning: CanvasText; --danger: CanvasText;
+        --shadow-card: none; --shadow-lift: none;
+      }
+      body { background-image: none !important; }
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+
+    html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+
+    body {
+      margin: 0;
+      background-color: var(--page-background);
+      background-image: radial-gradient(color-mix(in srgb, var(--accent) 7%, transparent) 1px, transparent 1px);
+      background-size: 24px 24px;
+      color: var(--text-primary);
+      font-family: "Segoe UI Variable Text", "Segoe UI", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+      font-size: 16px;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    h1, h2, h3, h4 {
+      font-family: "Segoe UI Variable Display", "Segoe UI", sans-serif;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+      margin: 0;
+      color: var(--text-primary);
+    }
+
+    p { margin: 0; }
+    a { color: var(--accent); }
+
+    :is(a, button, summary):focus-visible {
+      outline: 3px solid var(--accent);
+      outline-offset: 3px;
+      border-radius: 4px;
+    }
+
+    .telemetry {
+      font-family: "Cascadia Code", "Cascadia Mono", Consolas, "Courier New", monospace;
+    }
+
+    .shell {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    /* ---- Header: a calm nav rail, not a floating glass pill ---- */
+    .appbar {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      background-color: color-mix(in srgb, var(--navigation-rail) 92%, transparent);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .appbar-inner {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      min-height: 64px;
+    }
+
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+      color: var(--text-primary);
+      font-family: "Segoe UI Variable Display", "Segoe UI", sans-serif;
+      font-weight: 600;
+      font-size: 18px;
+    }
+
+    .brand-mark {
+      width: 32px;
+      height: 32px;
+      flex: none;
+      display: block;
+    }
+
+    .appbar nav { margin-left: auto; display: flex; align-items: center; gap: 4px; }
+
+    .nav-link {
+      display: inline-block;
+      padding: 8px 12px;
+      border-radius: 8px;
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 600;
+      transition: background-color 0.15s ease, color 0.15s ease;
+    }
+    .nav-link:hover { background-color: var(--surface-hover); color: var(--text-primary); }
+
+    .icon-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 40px;
+      height: 40px;
+      border-radius: 8px;
+      border: 1px solid var(--border-subtle);
+      background-color: var(--surface);
+      color: var(--text-primary);
+      cursor: pointer;
+      transition: background-color 0.15s ease;
+    }
+    .icon-button:hover { background-color: var(--surface-hover); }
+    .icon-button svg { width: 18px; height: 18px; }
+
+    /* ---- Buttons ---- */
+    .button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      min-height: 44px;
+      padding: 10px 18px;
+      border-radius: 8px;
+      border: 1px solid transparent;
+      font: inherit;
+      font-weight: 600;
+      font-size: 14px;
+      text-decoration: none;
+      cursor: pointer;
+      transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.05s ease;
+    }
+    .button:active { transform: translateY(1px); }
+
+    .button-primary {
+      background-color: var(--accent);
+      color: var(--text-on-accent);
+      box-shadow: var(--shadow-card);
+    }
+    .button-primary:hover { background-color: color-mix(in srgb, var(--accent) 88%, var(--text-primary)); }
+
+    .button-quiet {
+      background-color: var(--surface);
+      color: var(--text-primary);
+      border-color: var(--card-border);
+    }
+    .button-quiet:hover { background-color: var(--surface-hover); }
+
+    /* ---- Cards ---- */
+    .card {
+      background-color: var(--surface);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      box-shadow: var(--shadow-card);
+    }
+
+    .section { padding: 72px 0; }
+    .section + .section { border-top: 1px solid var(--border-subtle); }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 4px 10px;
+      border-radius: 4px;
+      background-color: var(--accent-subtle);
+      color: var(--accent);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .section-title { font-size: clamp(28px, 4vw, 40px); line-height: 1.15; margin-top: 16px; }
+    .section-lede { color: var(--text-secondary); font-size: 16px; max-width: 64ch; margin-top: 12px; }
+
+    /* ---- Status pills: the application's own admission taxonomy ---- */
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 4px;
+      border: 1px solid transparent;
+      font-size: 12px;
+      font-weight: 700;
+      line-height: 1;
+      white-space: nowrap;
+    }
+    .pill-safe { background-color: color-mix(in srgb, var(--success) 16%, var(--surface)); color: var(--success); border-color: color-mix(in srgb, var(--success) 32%, transparent); }
+    .pill-moderate { background-color: color-mix(in srgb, var(--warning) 16%, var(--surface)); color: var(--warning); border-color: color-mix(in srgb, var(--warning) 34%, transparent); }
+    .pill-destructive { background-color: color-mix(in srgb, var(--danger) 14%, var(--surface)); color: var(--danger); border-color: color-mix(in srgb, var(--danger) 34%, transparent); }
+    .pill-readonly { background-color: var(--accent-subtle); color: var(--accent); border-color: color-mix(in srgb, var(--accent) 32%, transparent); }
+
+    /* ---- Hero ---- */
+    .hero {
+      padding: 64px 0 72px;
+      background:
+        radial-gradient(120% 100% at 88% 0%, color-mix(in srgb, var(--accent) 8%, transparent) 0%, transparent 62%),
+        var(--hero-background);
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .hero-grid {
+      display: grid;
+      grid-template-columns: 1.15fr 0.85fr;
+      gap: 48px;
+      align-items: center;
+    }
+
+    .hero h1 { font-size: clamp(34px, 5.2vw, 56px); line-height: 1.06; margin-top: 20px; }
+    .hero-lede { color: var(--text-secondary); font-size: clamp(16px, 1.4vw, 19px); max-width: 56ch; margin-top: 16px; }
+    .hero-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 28px; }
+
+    .facts {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 16px;
+      margin-top: 36px;
+      padding-top: 24px;
+      border-top: 1px solid var(--border-subtle);
+    }
+    .fact-value { font-size: 22px; font-weight: 700; color: var(--text-primary); }
+    .fact-label { font-size: 12px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; margin-top: 2px; }
+
+    .hero-visual {
+      border-radius: 12px;
+      border: 1px solid var(--card-border);
+      background-color: var(--telemetry-frame);
+      box-shadow: var(--shadow-lift);
+      overflow: hidden;
+    }
+    .hero-visual canvas { display: block; width: 100%; height: auto; aspect-ratio: 1 / 1; }
+    .hero-visual figcaption {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 10px 14px;
+      border-top: 1px solid var(--border-subtle);
+      background-color: var(--surface);
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    /* ---- Capability grid ---- */
+    .grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; margin-top: 32px; }
+    .cap-card { padding: 24px; display: flex; flex-direction: column; gap: 12px; }
+    .cap-card h3 { font-size: 18px; }
+    .cap-card p { color: var(--text-secondary); font-size: 14px; }
+    .cap-icon {
+      width: 40px; height: 40px; flex: none;
+      display: grid; place-items: center;
+      border-radius: 8px;
+      background-color: var(--accent-subtle);
+      color: var(--accent);
+    }
+    .cap-icon svg { width: 20px; height: 20px; }
+
+    /* ---- Safety pipeline ---- */
+    .pipeline { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; margin-top: 32px; }
+    .stage { padding: 24px; display: flex; flex-direction: column; gap: 12px; }
+    .stage-number {
+      font-family: "Cascadia Code", "Cascadia Mono", Consolas, monospace;
+      font-size: 12px; font-weight: 700; color: var(--accent);
+      letter-spacing: 0.08em; text-transform: uppercase;
+    }
+    .stage h3 { font-size: 17px; }
+    .stage p { color: var(--text-secondary); font-size: 14px; }
+
+    .admission { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; margin-top: 20px; }
+    .admit-card { padding: 20px; display: flex; flex-direction: column; gap: 10px; }
+    .admit-card p { color: var(--text-secondary); font-size: 14px; }
+
+    /* ---- Terminal evidence card ---- */
+    .terminal {
+      margin-top: 32px;
+      border-radius: 12px;
+      border: 1px solid var(--card-border);
+      background-color: var(--telemetry-frame);
+      overflow: hidden;
+      box-shadow: var(--shadow-card);
+    }
+    .terminal-bar {
+      display: flex; align-items: center; gap: 12px;
+      padding: 10px 16px;
+      border-bottom: 1px solid var(--border-subtle);
+      background-color: var(--surface-secondary);
+      font-size: 12px; color: var(--text-secondary);
+    }
+    .terminal-dots { display: inline-flex; gap: 6px; }
+    .terminal-dots i { width: 10px; height: 10px; border-radius: 50%; background-color: var(--border-subtle); display: block; }
+    .terminal-body { padding: 18px 20px; font-size: 13px; line-height: 1.8; color: var(--text-primary); overflow-x: auto; }
+    .terminal-body .c-dim { color: var(--text-secondary); }
+    .terminal-body .c-accent { color: var(--accent); font-weight: 600; }
+    .terminal-body .c-ok { color: var(--success); font-weight: 600; }
+    .terminal-body .c-warn { color: var(--warning); font-weight: 600; }
+
+    /* ---- Tactile Registration Marks & Corner Crosshairs ---- */
+    .tactile-card {
+      position: relative;
+    }
+    .tactile-card::before, .tactile-card::after {
+      content: "+";
+      position: absolute;
+      font-family: "Cascadia Code", monospace;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--accent);
+      opacity: 0.45;
+      line-height: 1;
+      pointer-events: none;
+    }
+    .tactile-card::before { top: 8px; left: 10px; }
+    .tactile-card::after { top: 8px; right: 10px; }
+
+    /* ---- Sentry & Pixel Art Chassis ---- */
+    .sentry-grid {
+      display: grid;
+      grid-template-columns: 1.05fr 0.95fr;
+      gap: 28px;
+      align-items: stretch;
+      margin-top: 32px;
+    }
+    .sentry-bezel {
+      border-radius: 12px;
+      border: 1px solid var(--card-border);
+      background-color: var(--telemetry-frame);
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      box-shadow: var(--shadow-lift);
+      position: relative;
+      overflow: hidden;
+    }
+    .sentry-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .sentry-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .sentry-live-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background-color: var(--success);
+      box-shadow: 0 0 8px var(--success);
+      display: inline-block;
+    }
+    .sentry-img-wrap {
+      width: 100%;
+      background: #091218;
+      border-radius: 8px;
+      border: 1px solid var(--border-subtle);
+      padding: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+    .sentry-img-wrap img {
+      width: 100%;
+      max-width: 520px;
+      height: auto;
+      display: block;
+      image-rendering: pixelated;
+    }
+    .sentry-telemetry-strip {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      font-size: 11px;
+    }
+
+    /* Sentry Dialogue Tabs & Transcript */
+    .sentry-console {
+      display: flex;
+      flex-direction: column;
+      border-radius: 12px;
+      border: 1px solid var(--card-border);
+      background-color: var(--surface);
+      overflow: hidden;
+      box-shadow: var(--shadow-card);
+    }
+    .console-tab-bar {
+      display: flex;
+      background-color: var(--surface-secondary);
+      border-bottom: 1px solid var(--border-subtle);
+      overflow-x: auto;
+    }
+    .console-tab {
+      padding: 10px 14px;
+      border: none;
+      background: transparent;
+      color: var(--text-secondary);
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      border-bottom: 2px solid transparent;
+      white-space: nowrap;
+      transition: color 0.15s, background-color 0.15s;
+    }
+    .console-tab:hover {
+      color: var(--text-primary);
+      background-color: var(--surface-hover);
+    }
+    .console-tab.active {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+      background-color: var(--surface);
+    }
+    .console-pane {
+      padding: 20px;
+      font-size: 13px;
+      line-height: 1.7;
+      display: none;
+      flex-direction: column;
+      gap: 12px;
+      height: 100%;
+    }
+    .console-pane.active {
+      display: flex;
+    }
+    .dialogue-speaker {
+      font-weight: 700;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 2px;
+    }
+    .speaker-operator { color: var(--accent); }
+    .speaker-sentry { color: var(--success); }
+    .speaker-system { color: var(--warning); }
+    .dialogue-row {
+      padding: 10px 12px;
+      border-radius: 6px;
+      background-color: var(--surface-secondary);
+      border-left: 3px solid var(--border-subtle);
+    }
+    .dialogue-row.operator { border-left-color: var(--accent); }
+    .dialogue-row.sentry { border-left-color: var(--success); }
+    .dialogue-row.system { border-left-color: var(--warning); }
+
+    /* ---- Strategic Pillars Grid ---- */
+    .filter-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 24px;
+      margin-bottom: 24px;
+    }
+    .filter-chip {
+      padding: 6px 14px;
+      border-radius: 20px;
+      border: 1px solid var(--border-subtle);
+      background-color: var(--surface);
+      color: var(--text-secondary);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .filter-chip:hover {
+      background-color: var(--surface-hover);
+      color: var(--text-primary);
+    }
+    .filter-chip.active {
+      background-color: var(--accent);
+      color: var(--text-on-accent);
+      border-color: var(--accent);
+    }
+    .pillars-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 18px;
+    }
+    .pillar-card {
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      border-radius: 12px;
+      border: 1px solid var(--card-border);
+      background-color: var(--surface);
+      box-shadow: var(--shadow-card);
+      transition: transform 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease;
+      cursor: pointer;
+    }
+    .pillar-card:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-lift);
+      border-color: var(--accent);
+    }
+    .pillar-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 8px;
+    }
+    .pillar-icon-badge {
+      width: 32px;
+      height: 32px;
+      border-radius: 6px;
+      background-color: var(--accent-subtle);
+      color: var(--accent);
+      display: grid;
+      place-items: center;
+      flex: none;
+    }
+    .pillar-icon-badge svg {
+      width: 16px;
+      height: 16px;
+    }
+    .pillar-card h3 {
+      font-size: 15px;
+      line-height: 1.25;
+      font-weight: 700;
+    }
+    .pillar-card p {
+      font-size: 13px;
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+    .pillar-telemetry-tag {
+      margin-top: auto;
+      padding: 6px 8px;
+      background-color: var(--surface-secondary);
+      border-radius: 4px;
+      font-size: 11px;
+      border: 1px solid var(--border-subtle);
+      color: var(--accent);
+      word-break: break-all;
+    }
+    .pillar-drawer {
+      margin-top: 8px;
+      padding-top: 10px;
+      border-top: 1px dashed var(--border-subtle);
+      font-size: 12px;
+      color: var(--text-secondary);
+      display: none;
+    }
+    .pillar-card.expanded .pillar-drawer {
+      display: block;
+    }
+
+    /* ---- Interactive Architecture Explorer (Archify) ---- */
+    .arch-explorer {
+      margin-top: 36px;
+      border-radius: 12px;
+      border: 1px solid var(--card-border);
+      background-color: var(--surface);
+      overflow: hidden;
+      box-shadow: var(--shadow-lift);
+    }
+    .arch-explorer-top {
+      padding: 14px 20px;
+      background-color: var(--surface-secondary);
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .arch-explorer-frame-wrap {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 1103 / 771;
+      max-height: min(85vh, 820px);
+      min-height: 480px;
+      background-color: var(--surface);
+      overflow: hidden;
+    }
+    .arch-explorer-frame {
+      width: 100%;
+      height: 100%;
+      border: none;
+      display: block;
+    }
+    .arch-explorer-footer {
+      padding: 12px 20px;
+      background-color: var(--surface-secondary);
+      border-top: 1px solid var(--border-subtle);
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    /* ---- Tactile Command Simulator ---- */
+    .simulator-box {
+      margin-top: 32px;
+      border-radius: 12px;
+      border: 1px solid var(--card-border);
+      background-color: var(--surface);
+      overflow: hidden;
+      box-shadow: var(--shadow-lift);
+    }
+    .simulator-top {
+      padding: 14px 20px;
+      background-color: var(--surface-secondary);
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .sim-selector {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .sim-btn {
+      padding: 6px 12px;
+      border-radius: 6px;
+      border: 1px solid var(--border-subtle);
+      background-color: var(--surface);
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-primary);
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .sim-btn:hover {
+      background-color: var(--surface-hover);
+    }
+    .sim-btn.active {
+      border-color: var(--accent);
+      background-color: var(--accent-subtle);
+      color: var(--accent);
+    }
+    .sim-workspace {
+      display: grid;
+      grid-template-columns: 1fr 1.3fr;
+    }
+    .sim-details {
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      border-right: 1px solid var(--border-subtle);
+    }
+    .sim-meta-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+      padding: 6px 0;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .sim-meta-label {
+      color: var(--text-secondary);
+    }
+    .sim-action-area {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 12px;
+    }
+    .sim-terminal-pane {
+      background-color: var(--telemetry-frame);
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      font-size: 12px;
+      line-height: 1.8;
+      overflow-y: auto;
+      min-height: 320px;
+      max-height: 420px;
+    }
+
+    /* ---- Download ---- */
+    .download-panel {
+      padding: clamp(32px, 5vw, 56px);
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+      background:
+        radial-gradient(90% 120% at 50% 0%, color-mix(in srgb, var(--accent) 8%, transparent) 0%, transparent 60%),
+        var(--surface);
+    }
+    .download-panel h2 { font-size: clamp(26px, 3.6vw, 38px); }
+    .download-panel .section-lede { margin-inline: auto; text-align: center; }
+    .download-actions { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; }
+    .requirements { display: flex; flex-wrap: wrap; gap: 8px 20px; justify-content: center; font-size: 13px; color: var(--text-secondary); }
+
+    /* ---- Footer ---- */
+    .footer {
+      padding: 32px 0;
+      border-top: 1px solid var(--border-subtle);
+      color: var(--text-secondary);
+      font-size: 13px;
+    }
+    .footer-inner { display: flex; flex-wrap: wrap; gap: 16px; justify-content: space-between; align-items: center; }
+    .footer-links { display: flex; flex-wrap: wrap; gap: 8px 20px; }
+    .footer-links a { color: var(--text-secondary); text-decoration: none; font-weight: 600; }
+    .footer-links a:hover { color: var(--accent); }
+
+    .visually-hidden {
+      position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+      overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+    }
+
+    @media (max-width: 960px) {
+      .hero-grid { grid-template-columns: 1fr; }
+      .grid-3, .pipeline, .admission, .pillars-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .sentry-grid, .sim-workspace { grid-template-columns: 1fr; }
+      .sim-details { border-right: none; border-bottom: 1px solid var(--border-subtle); }
+    }
+    @media (max-width: 680px) {
+      .shell { padding: 0 20px; }
+      .appbar nav .nav-link { display: none; }
+      .grid-3, .pipeline, .admission, .facts, .pillars-grid { grid-template-columns: 1fr; }
+      .section { padding: 56px 0; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <a class="visually-hidden" href="#main">Skip to main content</a>
+
+  <header class="appbar">
+    <div class="shell appbar-inner">
+      <a class="brand" href="#main" aria-label="WinCare home">
+        <svg class="brand-mark" viewBox="0 0 512 512" role="img" aria-label="WinCare mark">
+          <path d="M110 128h292l-13 174c-3 42-34 76-133 143-99-67-130-101-133-143z" fill="var(--accent-subtle)" stroke="var(--accent)" stroke-width="18"/>
+          <path d="M158 230l49 103 49-82 49 82 49-103" fill="none" stroke="var(--accent)" stroke-width="44" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span>WinCare</span>
+      </a>
+      <nav aria-label="Main navigation">
+        <a class="nav-link" href="#architecture">Architecture</a>
+        <a class="nav-link" href="#capabilities">Capabilities</a>
+        <a class="nav-link" href="#safety">Safety model</a>
+        <a class="nav-link" href="#download">Releases</a>
+        <button class="icon-button" id="theme-toggle" type="button" aria-pressed="false" aria-label="Switch to dark theme" title="Switch theme">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+            <path d="M21 12.8A9 9 0 1111.2 3a7 7 0 009.8 9.8z"/>
+          </svg>
+        </button>
+        <a class="button button-quiet" href="https://github.com/AmirrezaFarnamTaheri/WinCare" target="_blank" rel="noopener noreferrer">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+          <span>Source</span>
+        </a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main">
+    <!-- HERO -->
+    <section class="hero" aria-labelledby="hero-title">
+      <div class="shell hero-grid">
+        <div>
+          <span class="eyebrow">WinUI 3 · .NET 8 · Rust core</span>
+          <h1 id="hero-title">Check, understand, act, and review on native Windows.</h1>
+          <p class="hero-lede">
+            WinCare unifies Windows checkups, maintenance, diagnostics, and recovery in a native
+            workspace. Read-only checks remain separate from system changes. Every mutating command
+            requires admission based on declared risk, and a local journal records what ran.
+          </p>
+          <div class="hero-actions">
+            <a class="button button-primary" href="#download">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 21h16"/></svg>
+              Get WinCare
+            </a>
+            <a class="button button-quiet" href="#safety">How the safety model works</a>
+          </div>
+          <div class="facts">
+            <div>
+              <div class="fact-value telemetry" id="fact-commands">296</div>
+              <div class="fact-label">Typed catalog commands</div>
+            </div>
+            <div>
+              <div class="fact-value telemetry">12</div>
+              <div class="fact-label">Reachable product routes</div>
+            </div>
+            <div>
+              <div class="fact-value telemetry">AA</div>
+              <div class="fact-label">Contrast verified, both themes</div>
+            </div>
+          </div>
+          <p class="section-lede telemetry" style="margin-top:14px;font-size:12px">
+            296 unique command IDs in <code>src/WinCare.CommandCatalog/Data/commands.json</code>;
+            12 routes in <code>PageService</code>; contrast per token checked by
+            <code>tools/verify_pill_contrast.py</code> and <code>tools/verify_palette_contrast.py</code>.
+          </p>
+        </div>
+
+        <figure class="hero-visual" style="margin:0">
+          <canvas id="core-canvas" width="640" height="640" role="img"
+                  aria-label="Diagram of the WinCare diagnostic core: read-only probes feeding the dispatcher that admits commands to bounded execution, which writes to the local activity journal."></canvas>
+          <figcaption>
+            <span>Execution lifecycle: probe, admit, execute, and record</span>
+            <span class="telemetry">Core flow</span>
+          </figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <!-- NATIVE ARCHITECTURE & PROBES -->
+    <section class="section" id="architecture" aria-labelledby="architecture-title">
+      <div class="shell">
+        <span class="eyebrow">Native Core &amp; Sentry</span>
+        <h2 class="section-title" id="architecture-title">Native WinUI 3 shell and low-overhead Rust probes.</h2>
+        <p class="section-lede">
+          WinCare separates UI workflows from kernel probes. WinUI 3 handles navigation and presentation,
+          while <code>wincare-core</code> and the native dispatcher run Event Tracing for Windows (ETW), low-level queries, and bounded child processes.
+        </p>
+
+        <div class="sentry-grid">
+          <!-- Left: Diagram Bezel -->
+          <div class="sentry-bezel">
+            <div class="sentry-header">
+              <span class="sentry-title">
+                <span class="sentry-live-dot" aria-hidden="true"></span>
+                KERNEL PROBES &amp; DISPATCH PIPELINE
+              </span>
+              <span class="pill pill-readonly">zero-allocation</span>
+            </div>
+            <div class="sentry-img-wrap">
+              <img src="images/wincare-pixel-art.svg" alt="WinCare WinUI 3 operator and Rust core ETW guard communication diagram">
+            </div>
+            <div class="sentry-telemetry-strip telemetry">
+              <span class="pill pill-safe">FFI: C-ABI BOUND</span>
+              <span class="pill pill-moderate">PROBE: ZERO-COPY</span>
+              <span class="pill pill-readonly">BUFFER: 64 KB RING</span>
+            </div>
+          </div>
+
+          <!-- Right: Interactive Console Dialogue -->
+          <div class="sentry-console" role="region" aria-label="Telemetry and diagnostic console">
+            <div class="console-tab-bar" role="tablist">
+              <button class="console-tab active" role="tab" aria-selected="true" aria-controls="pane-storage" id="tab-storage" type="button">
+                <span>Storage probe</span>
+              </button>
+              <button class="console-tab" role="tab" aria-selected="false" aria-controls="pane-memory" id="tab-memory" type="button">
+                <span>Memory topology</span>
+              </button>
+              <button class="console-tab" role="tab" aria-selected="false" aria-controls="pane-repair" id="tab-repair" type="button">
+                <span>Service recovery</span>
+              </button>
+            </div>
+
+            <!-- Pane 1: Storage -->
+            <div class="console-pane active" id="pane-storage" role="tabpanel" aria-labelledby="tab-storage">
+              <div class="dialogue-row operator">
+                <div class="dialogue-speaker speaker-operator">WinUI 3 Operator</div>
+                <div>Requesting low-overhead volume geometry and NTFS allocation map for <code>C:\</code>.</div>
+              </div>
+              <div class="dialogue-row sentry">
+                <div class="dialogue-speaker speaker-sentry">Rust Kernel Probe</div>
+                <div>Volume snapshot verified via <code>GetDiskFreeSpaceExW</code>. NTFS dirty bit: clear. Standby cache: 1.42 GB.</div>
+              </div>
+              <div class="dialogue-row system">
+                <div class="dialogue-speaker speaker-system">Admission Dispatcher</div>
+                <div>Read-only inquiry completed in 1.4 ms. Zero system state altered. 3 findings mapped to System Care.</div>
+              </div>
+            </div>
+
+            <!-- Pane 2: Memory -->
+            <div class="console-pane" id="pane-memory" role="tabpanel" aria-labelledby="tab-memory">
+              <div class="dialogue-row operator">
+                <div class="dialogue-speaker speaker-operator">WinUI 3 Operator</div>
+                <div>Querying physical RAM distribution: active working set, modified pages, and standby list.</div>
+              </div>
+              <div class="dialogue-row sentry">
+                <div class="dialogue-speaker speaker-sentry">Rust Kernel Probe</div>
+                <div>Enumerating page-frame database. Standby priority 0–7: 2,410 MB. Modified: 120 MB. Free: 480 MB.</div>
+              </div>
+              <div class="dialogue-row system">
+                <div class="dialogue-speaker speaker-system">Admission Dispatcher</div>
+                <div>Compaction candidate identified: <code>SystemMemoryListInformation</code> purge admitted under Moderate risk.</div>
+              </div>
+            </div>
+
+            <!-- Pane 3: Repair -->
+            <div class="console-pane" id="pane-repair" role="tabpanel" aria-labelledby="tab-repair">
+              <div class="dialogue-row operator">
+                <div class="dialogue-speaker speaker-operator">WinUI 3 Operator</div>
+                <div>Initiating component store diagnostic (DISM /CheckHealth) with bounded execution.</div>
+              </div>
+              <div class="dialogue-row sentry">
+                <div class="dialogue-speaker speaker-sentry">Rust Kernel Probe</div>
+                <div>Child process isolated with job object limits. Stdout streaming through asynchronous named pipe.</div>
+              </div>
+              <div class="dialogue-row system">
+                <div class="dialogue-speaker speaker-system">Admission Dispatcher</div>
+                <div>CBS log checked: no store corruption detected. Exit code 0 recorded to local activity journal.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- INTERACTIVE ARCHITECTURE EXPLORER (Archify) -->
+        <div class="arch-explorer" role="region" aria-label="Interactive architecture topology explorer">
+          <div class="arch-explorer-top">
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <span class="terminal-dots" aria-hidden="true"><i></i><i></i><i></i></span>
+              <span class="telemetry" style="font-weight: 600; font-size: 13px;">Architecture Topology</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <a href="architecture.html?present=1" target="_blank" rel="noopener" class="button button-quiet" style="font-size: 12px; padding: 6px 14px; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">
+                <span>Full-screen explorer</span>
+                <span aria-hidden="true">↗</span>
+              </a>
+              <a href="diagrams/plugin-admission.html?present=1" target="_blank" rel="noopener" class="button button-quiet" style="font-size: 12px; padding: 6px 14px; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">
+                <span>Plugin trust model</span>
+                <span aria-hidden="true">↗</span>
+              </a>
+            </div>
+          </div>
+          <div class="arch-explorer-frame-wrap">
+            <iframe class="arch-explorer-frame" src="architecture.html?embed=1" title="WinCare Architecture Diagram" loading="lazy" scrolling="no"></iframe>
+          </div>
+          <div class="arch-explorer-footer">
+            <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+              <span class="pill pill-safe">1-Click Flow</span>
+              <span class="pill pill-readonly">Telemetry Deck</span>
+              <span class="pill pill-moderate">Dual Packaging</span>
+              <span class="pill pill-readonly">Semantic Lens</span>
+            </div>
+            <span class="telemetry" style="font-size: 12px; color: var(--text-secondary);">
+              Explore nodes, inspect directed data paths, and trace subsystem boundaries.
+            </span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CAPABILITIES -->
+    <section class="section" id="capabilities" aria-labelledby="capabilities-title">
+      <div class="shell">
+        <span class="eyebrow">Capabilities</span>
+        <h2 class="section-title" id="capabilities-title">Built for specific administrative workflows.</h2>
+        <p class="section-lede">
+          Home surfaces the next useful action. Checkup inspects system state and routes findings to the
+          matching care page. Power tools exposes the complete typed catalog. Dedicated care pages filter commands
+          by catalog Area and Section, preventing tools from leaking into unrelated views.
+        </p>
+        <div class="grid-3">
+          <article class="card cap-card">
+            <span class="cap-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l3 8 4-16 3 8h4"/></svg></span>
+            <h3>Check system health</h3>
+            <p>Inspect system, storage, security, hardware, network, update, and runtime evidence. Displays measured coverage rather than an arbitrary score.</p>
+          </article>
+          <article class="card cap-card">
+            <span class="cap-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg></span>
+            <h3>Clean up and maintain</h3>
+            <p>Manage bounded cleanup targets, startup entries, packages, and maintenance tasks. Previews affected paths before deletion.</p>
+          </article>
+          <article class="card cap-card">
+            <span class="cap-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7z"/><path d="M9 12l2 2 4-4"/></svg></span>
+            <h3>Repair and recover</h3>
+            <p>Execute guarded repairs, remediation steps, and system recovery with explicit outcomes and portable playbooks.</p>
+          </article>
+          <article class="card cap-card">
+            <span class="cap-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h10"/><circle cx="19" cy="18" r="2.5"/></svg></span>
+            <h3>Work with advanced tools</h3>
+            <p>Access all 296 native commands with task search, Area and Section filters, Favorites, Recents, typed parameters, and Care plans.</p>
+          </article>
+          <article class="card cap-card">
+            <span class="cap-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/><circle cx="12" cy="12" r="9"/></svg></span>
+            <h3>Extend the app</h3>
+            <p>Add locally verified capabilities through Extensions. Remote installation remains fail-closed until verified by the configured catalog trust root.</p>
+          </article>
+          <article class="card cap-card">
+            <span class="cap-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8v4l3 2"/><circle cx="12" cy="12" r="9"/></svg></span>
+            <h3>Review history</h3>
+            <p>Review activity receipts, change records, and diagnostic evidence. Undo appears only when an executable compensator exists.</p>
+          </article>
+        </div>
+
+        <!-- SUBSYSTEMS & COMMAND DOMAINS -->
+        <div style="margin-top: 48px;">
+          <h3 style="font-size: 20px; font-weight: 700; margin-bottom: 8px;">Subsystems &amp; Command Domains</h3>
+          <p class="section-lede" style="margin-bottom: 16px;">
+            Every tool maps to an exact Area and Section in the catalog. Filter by subsystem or select a card to inspect admission details:
+          </p>
+
+          <div class="filter-bar" role="group" aria-label="Subsystem filters">
+            <button class="filter-chip active" type="button" aria-pressed="true" data-filter="all">All example domains (8 of 296 catalog commands)</button>
+            <button class="filter-chip" type="button" aria-pressed="false" data-filter="system">System care (2 examples)</button>
+            <button class="filter-chip" type="button" aria-pressed="false" data-filter="security">Security (2 examples)</button>
+            <button class="filter-chip" type="button" aria-pressed="false" data-filter="repair">Repair &amp; recovery (2 examples)</button>
+            <button class="filter-chip" type="button" aria-pressed="false" data-filter="diagnostics">Diagnostic probes (2 examples)</button>
+          </div>
+
+          <div class="pillars-grid" id="pillars-container">
+            <article class="pillar-card" data-category="system" tabindex="0" role="button" aria-expanded="false">
+              <div class="pillar-header">
+                <div class="pillar-icon-badge">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg>
+                </div>
+                <span class="pill pill-safe">Safe / Moderate</span>
+              </div>
+              <h3>Storage &amp; Disk Pressure</h3>
+              <p>Targeted disk cleanup, temporary directory analysis, and browser cache management without blind registry sweeping.</p>
+              <div class="pillar-telemetry-tag telemetry">cleaner-disk-pressure · storage-analyze</div>
+              <div class="pillar-drawer">
+                Dry-run preview enumerates affected directories (%TEMP%, Windows temp). Destructive deletion requires explicit operator approval.
+              </div>
+            </article>
+
+            <article class="pillar-card" data-category="system" tabindex="0" role="button" aria-expanded="false">
+              <div class="pillar-header">
+                <div class="pillar-icon-badge">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+                </div>
+                <span class="pill pill-safe">Safe</span>
+              </div>
+              <h3>Startup &amp; Background Services</h3>
+              <p>Inspect startup applications, scheduled tasks, and background services with recorded rollback state.</p>
+              <div class="pillar-telemetry-tag telemetry">startup-list · service-query</div>
+              <div class="pillar-drawer">
+                Queries Run registry keys, the Startup folder, and Task Scheduler. Disabling an item creates a recorded local rollback compensator.
+              </div>
+            </article>
+
+            <article class="pillar-card" data-category="security" tabindex="0" role="button" aria-expanded="false">
+              <div class="pillar-header">
+                <div class="pillar-icon-badge">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                </div>
+                <span class="pill pill-safe">Safe</span>
+              </div>
+              <h3>Defender &amp; Tamper Protection</h3>
+              <p>Verify antivirus definition freshness, real-time protection state, and active firewall network profiles.</p>
+              <div class="pillar-telemetry-tag telemetry">security-defender-status · firewall-audit</div>
+              <div class="pillar-drawer">
+                Uses WMI and Windows Security Center APIs. Read-only probes never disable security controls or bypass administrative policy.
+              </div>
+            </article>
+
+            <article class="pillar-card" data-category="security" tabindex="0" role="button" aria-expanded="false">
+              <div class="pillar-header">
+                <div class="pillar-icon-badge">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                </div>
+                <span class="pill pill-moderate">Moderate</span>
+              </div>
+              <h3>Network Isolation &amp; DNS</h3>
+              <p>Flush resolver caches, verify TLS cipher suites, and inspect active TCP listening sockets.</p>
+              <div class="pillar-telemetry-tag telemetry">network-dns-flush · tcp-listeners</div>
+              <div class="pillar-drawer">
+                Direct IP Helper API calls. Socket enumeration is read-only; resetting network stacks requires administrator approval.
+              </div>
+            </article>
+
+            <article class="pillar-card" data-category="repair" tabindex="0" role="button" aria-expanded="false">
+              <div class="pillar-header">
+                <div class="pillar-icon-badge">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+                </div>
+                <span class="pill pill-destructive">Destructive / Critical</span>
+              </div>
+              <h3>Component Store Servicing</h3>
+              <p>Execute DISM health checks, component store cleanup, and System File Checker (SFC) integrity scans.</p>
+              <div class="pillar-telemetry-tag telemetry">dism-checkhealth · sfc-scannow</div>
+              <div class="pillar-drawer">
+                Bounded execution with streaming process output. Captures CBS logs, checks exit codes, and logs operation receipts.
+              </div>
+            </article>
+
+            <article class="pillar-card" data-category="repair" tabindex="0" role="button" aria-expanded="false">
+              <div class="pillar-header">
+                <div class="pillar-icon-badge">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                </div>
+                <span class="pill pill-moderate">Moderate</span>
+              </div>
+              <h3>Windows Update Agent Reset</h3>
+              <p>Diagnose stalled downloads, repair the SoftwareDistribution catalog, and restart update services.</p>
+              <div class="pillar-telemetry-tag telemetry">wua-service-repair · catroot-reset</div>
+              <div class="pillar-drawer">
+                Stops BITS and WUA services before modifying catalog state. Emits receipt with before/after state to local journal.
+              </div>
+            </article>
+
+            <article class="pillar-card" data-category="diagnostics" tabindex="0" role="button" aria-expanded="false">
+              <div class="pillar-header">
+                <div class="pillar-icon-badge">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+                </div>
+                <span class="pill pill-safe">Safe</span>
+              </div>
+              <h3>Memory Topology &amp; Standby List</h3>
+              <p>Inspect physical page distribution and reclaim cached standby memory when system pressure rises.</p>
+              <div class="pillar-telemetry-tag telemetry">memory-topology · standby-purge</div>
+              <div class="pillar-drawer">
+                Direct native NT API call via wincare-core. Queries SystemMemoryListInformation with zero disk I/O.
+              </div>
+            </article>
+
+            <article class="pillar-card" data-category="diagnostics" tabindex="0" role="button" aria-expanded="false">
+              <div class="pillar-header">
+                <div class="pillar-icon-badge">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                </div>
+                <span class="pill pill-safe">Safe</span>
+              </div>
+              <h3>Hardware &amp; SMART Telemetry</h3>
+              <p>Read NVMe health, drive temperatures, battery wear, and CPU thermal throttling state.</p>
+              <div class="pillar-telemetry-tag telemetry">hardware-smart · battery-telemetry</div>
+              <div class="pillar-drawer">
+                Uses standard DeviceIoControl and kernel query structures. Read-only probes without vendor driver overhead.
+              </div>
+            </article>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SAFETY MODEL -->
+    <section class="section" id="safety" aria-labelledby="safety-title">
+      <div class="shell">
+        <span class="eyebrow">Safety model</span>
+        <h2 class="section-title" id="safety-title">Declared risk determines command admission.</h2>
+        <p class="section-lede">
+          The dispatcher enforces execution boundaries. Declared risk determines whether a command runs
+          directly, requires confirmation, or demands an approved preview plan. Failures are recorded as truthful evidence rather than masked.
+        </p>
+
+        <div class="admission">
+          <article class="card admit-card">
+            <span class="pill pill-safe">Safe</span>
+            <p>Direct execution for read-only and bounded queries. Collects evidence without modifying host state.</p>
+          </article>
+          <article class="card admit-card">
+            <span class="pill pill-moderate">Moderate</span>
+            <p>Confirmed execution for system modifications. Validates parameters and privilege requirements before running.</p>
+          </article>
+          <article class="card admit-card">
+            <span class="pill pill-destructive">Destructive</span>
+            <p>Preview and explicit approval for high-impact actions. Validates parameters, executes within bounds, and records outcome receipts.</p>
+          </article>
+        </div>
+
+        <div class="pipeline">
+          <article class="card stage">
+            <span class="stage-number">Phase 01</span>
+            <h3>Read-only observation</h3>
+            <p>Collects system, storage, security, hardware, network, and update evidence without modifying Windows. Checkup routes findings to the matching care page rather than mutating in place.</p>
+          </article>
+          <article class="card stage">
+            <span class="stage-number">Phase 02</span>
+            <h3>Admission and preview</h3>
+            <p>Validates risk tiers, typed parameters, and privilege requirements. High-impact operations enumerate target paths and require explicit plan approval.</p>
+          </article>
+          <article class="card stage">
+            <span class="stage-number">Phase 03</span>
+            <h3>Bounded execution</h3>
+            <p>Runs admitted commands through a single fail-closed executor with process job limits, timeouts, and captured output. Cancellation waits until execution settles.</p>
+          </article>
+          <article class="card stage">
+            <span class="stage-number">Phase 04</span>
+            <h3>Local evidence</h3>
+            <p>Records outcomes, duration, exit codes, and operational evidence to the local journal on disk.</p>
+          </article>
+          <article class="card stage">
+            <span class="stage-number">Phase 05</span>
+            <h3>Recovery only when real</h3>
+            <p>Exposes undo only when an executable compensator and sufficient captured state exist. Never promises unverified rollback.</p>
+          </article>
+          <article class="card stage">
+            <span class="stage-number">Phase 06</span>
+            <h3>Extensions, fail-closed</h3>
+            <p>Executes plugins within standard process permissions. Remote installation remains fail-closed until verified by the configured catalog trust root.</p>
+          </article>
+        </div>
+
+        <!-- INTERACTIVE ADMISSION SIMULATOR -->
+        <div class="simulator-box" role="region" aria-label="Interactive command admission simulator">
+          <div class="simulator-top">
+            <div class="sim-selector" role="radiogroup" aria-label="Command selection">
+              <button class="sim-btn active" type="button" role="radio" aria-checked="true" data-cmd="checkup">checkup.storage (Safe)</button>
+              <button class="sim-btn" type="button" role="radio" aria-checked="false" data-cmd="spooler">service.spooler-restart (Moderate)</button>
+              <button class="sim-btn" type="button" role="radio" aria-checked="false" data-cmd="cleanup">cleaner-disk-pressure (Destructive)</button>
+            </div>
+            <span class="pill pill-readonly telemetry">DISPATCHER SIMULATOR</span>
+          </div>
+
+          <div class="sim-workspace">
+            <div class="sim-details">
+              <div class="sim-meta-row">
+                <span class="sim-meta-label">Command ID</span>
+                <span class="telemetry" id="sim-disp-id" style="font-weight:600">checkup.storage</span>
+              </div>
+              <div class="sim-meta-row">
+                <span class="sim-meta-label">Risk tier</span>
+                <span id="sim-disp-risk"><span class="pill pill-safe">Safe</span></span>
+              </div>
+              <div class="sim-meta-row">
+                <span class="sim-meta-label">Privilege</span>
+                <span class="telemetry" id="sim-disp-priv">Standard user</span>
+              </div>
+              <div class="sim-meta-row">
+                <span class="sim-meta-label">Compensator</span>
+                <span class="telemetry" id="sim-disp-comp">None needed (read-only)</span>
+              </div>
+              <p id="sim-disp-desc" style="font-size:13px;color:var(--text-secondary);line-height:1.5;margin-top:4px">
+                Inspects volume geometry, mount points, and free space without modifying disk sectors or file tables.
+              </p>
+
+              <div class="sim-action-area">
+                <button class="button button-primary" id="sim-action-preview" type="button">Run Dry-Run Preview</button>
+                <button class="button button-quiet" id="sim-action-execute" type="button" disabled>Approve &amp; Execute</button>
+                <button class="button button-quiet" id="sim-action-reset" type="button" style="font-size:12px;padding:6px 12px">Clear Terminal</button>
+              </div>
+            </div>
+
+            <div class="sim-terminal-pane telemetry" id="sim-terminal" role="log" aria-live="polite">
+              <div><span class="c-dim"># Command Dispatcher initialized. Select a command and click 'Run Dry-Run Preview'.</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="terminal">
+          <div class="terminal-bar">
+            <span class="terminal-dots" aria-hidden="true"><i></i><i></i><i></i></span>
+            <span class="telemetry">activity journal: local operation evidence</span>
+            <span class="pill pill-readonly" style="margin-left:auto">read-only view</span>
+          </div>
+          <div class="terminal-body telemetry">
+            <div><span class="c-dim"># activity is stored locally; this is a sample of the record shape</span></div>
+            <div><span class="c-accent">checkup</span> <span class="c-dim">storage · </span><span class="c-ok">completed</span><span class="c-dim"> · 3 findings handed to System care</span></div>
+            <div><span class="c-accent">cleaner-disk-pressure</span> <span class="c-dim">preview · </span><span class="c-warn">awaiting approval</span><span class="c-dim"> · roots: %TEMP%, %LOCALAPPDATA%\Temp</span></div>
+            <div><span class="c-accent">cleaner-disk-pressure</span> <span class="c-dim">apply · </span><span class="c-ok">succeeded</span><span class="c-dim"> · receipt retained · compensator: not available</span></div>
+            <div><span class="c-accent">plugin.remote-install</span> <span class="c-dim">· </span><span class="c-warn">blocked</span><span class="c-dim"> · catalog trust root not configured</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- DOWNLOAD -->
+    <section class="section" id="download" aria-labelledby="download-title">
+      <div class="shell">
+        <div class="card download-panel">
+          <span class="eyebrow">Release candidate</span>
+          <h2 id="download-title">Install WinCare on Windows.</h2>
+          <p class="section-lede">
+            Packaged MSIX and portable standalone builds are available for x64 and ARM64. Review
+            high-impact changes before applying them; a release candidate is not a finished release.
+          </p>
+          <div class="download-actions">
+            <a class="button button-primary" href="https://github.com/AmirrezaFarnamTaheri/WinCare/releases" target="_blank" rel="noopener noreferrer">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 21h16"/></svg>
+              Download from Releases
+            </a>
+            <a class="button button-quiet" href="https://github.com/AmirrezaFarnamTaheri/WinCare#build-and-verify" target="_blank" rel="noopener noreferrer">Build and verify locally</a>
+          </div>
+          <div class="requirements telemetry">
+            <span>Windows 10 version 2004+ or Windows 11</span>
+            <span>·</span>
+            <span>x64 and ARM64</span>
+            <span>·</span>
+            <span>Apache-2.0</span>
+            <span>·</span>
+            <span>Offline-capable, no account</span>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="shell footer-inner">
+      <span>WinCare · Native Windows checkup, maintenance, and repair.</span>
+      <nav class="footer-links" aria-label="Footer">
+        <a href="#main">Top</a>
+        <a href="#capabilities">Capabilities</a>
+        <a href="#safety">Safety model</a>
+        <a href="https://github.com/AmirrezaFarnamTaheri/WinCare" target="_blank" rel="noopener noreferrer">GitHub</a>
+        <a href="https://github.com/AmirrezaFarnamTaheri/WinCare/issues" target="_blank" rel="noopener noreferrer">Report an issue</a>
+      </nav>
+    </div>
+  </footer>
+
+  <script>
+    (function () {
+      'use strict';
+
+      var root = document.documentElement;
+      var toggle = document.getElementById('theme-toggle');
+      var media = window.matchMedia('(prefers-color-scheme: dark)');
+
+      function apply(theme) {
+        if (theme === 'auto') theme = media.matches ? 'dark' : 'light';
+        root.setAttribute('data-theme', theme);
+        var dark = theme === 'dark';
+        toggle.setAttribute('aria-pressed', String(dark));
+        toggle.setAttribute('aria-label', dark ? 'Switch to light theme' : 'Switch to dark theme');
+        drawCore();
+      }
+
+      var stored = 'auto';
+      try { stored = localStorage.getItem('wincare-showcase-theme') || 'auto'; } catch (e) {}
+      apply(stored);
+
+      toggle.addEventListener('click', function () {
+        var next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+        try { localStorage.setItem('wincare-showcase-theme', next); } catch (e) {}
+        apply(next);
+      });
+      media.addEventListener('change', function () { if (stored === 'auto') apply('auto'); });
+
+      // Deterministic diagram of the diagnostic core. No animation loops on load:
+      // a static, high-contrast figure that respects reduced-motion preferences.
+      function css(name) {
+        return getComputedStyle(root).getPropertyValue(name).trim() ||
+          getComputedStyle(document.body).getPropertyValue(name).trim();
+      }
+
+      function drawCore() {
+        var canvas = document.getElementById('core-canvas');
+        if (!canvas) return;
+        var ctx = canvas.getContext('2d');
+        if (!ctx) return;
+
+        var dpr = Math.min(window.devicePixelRatio || 1, 2);
+        var size = 640;
+        canvas.width = size * dpr;
+        canvas.height = size * dpr;
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+        var accent = css('--accent') || '#006B80';
+        var subtle = css('--accent-subtle') || '#DCEFF2';
+        var frame = css('--telemetry-frame') || '#E6EFF3';
+        var primary = css('--text-primary') || '#172D3B';
+        var secondary = css('--text-secondary') || '#435C6B';
+        var border = css('--card-border') || '#CBD8E0';
+
+        ctx.fillStyle = frame;
+        ctx.fillRect(0, 0, size, size);
+
+        var cx = size / 2, cy = size / 2;
+
+        // Concentric rings: collection coverage around the core
+        [84, 148, 212, 268].forEach(function (r, idx) {
+          ctx.beginPath();
+          ctx.arc(cx, cy, r, 0, Math.PI * 2);
+          ctx.strokeStyle = idx % 2 === 0 ? hexA(accent, 0.35) : hexA(border, 0.9);
+          ctx.lineWidth = idx === 1 ? 1.6 : 1;
+          if (idx === 2) ctx.setLineDash([4, 7]); else ctx.setLineDash([]);
+          ctx.stroke();
+        });
+        ctx.setLineDash([]);
+
+        // Azimuth ticks
+        for (var a = 0; a < Math.PI * 2; a += Math.PI / 12) {
+          ctx.beginPath();
+          ctx.moveTo(cx + Math.cos(a) * 260, cy + Math.sin(a) * 260);
+          ctx.lineTo(cx + Math.cos(a) * 272, cy + Math.sin(a) * 272);
+          ctx.strokeStyle = hexA(accent, 0.45);
+          ctx.lineWidth = 1;
+          ctx.stroke();
+        }
+
+        // Octahedron wireframe: the diagnostic core
+        var fov = 420, scale = 128, rotX = 0.32, rotY = 0.5;
+        function project(x, y, z) {
+          var x1 = x * Math.cos(rotY) + z * Math.sin(rotY);
+          var z1 = -x * Math.sin(rotY) + z * Math.cos(rotY);
+          var y2 = y * Math.cos(rotX) - z1 * Math.sin(rotX);
+          var z2 = y * Math.sin(rotX) + z1 * Math.cos(rotX);
+          var p = fov / (fov + z2 * 80);
+          return [cx + x1 * scale * p, cy - y2 * scale * p];
+        }
+        var v = [[0,1.5,0],[0,-1.5,0],[1.3,0,0],[0,0,1.3],[-1.3,0,0],[0,0,-1.3]];
+        var edges = [[0,2],[0,3],[0,4],[0,5],[1,2],[1,3],[1,4],[1,5],[2,3],[3,4],[4,5],[5,2]];
+        ctx.strokeStyle = accent;
+        ctx.lineWidth = 2;
+        edges.forEach(function (e) {
+          var p1 = project(v[e[0]][0], v[e[0]][1], v[e[0]][2]);
+          var p2 = project(v[e[1]][0], v[e[1]][1], v[e[1]][2]);
+          ctx.beginPath();
+          ctx.moveTo(p1[0], p1[1]);
+          ctx.lineTo(p2[0], p2[1]);
+          ctx.stroke();
+        });
+
+        // Inner core
+        ctx.strokeStyle = hexA(primary, 0.55);
+        ctx.lineWidth = 1.3;
+        edges.forEach(function (e) {
+          var a = v[e[0]], b = v[e[1]];
+          var p1 = project(a[0] * .58, a[1] * .58, a[2] * .58);
+          var p2 = project(b[0] * .58, b[1] * .58, b[2] * .58);
+          ctx.beginPath();
+          ctx.moveTo(p1[0], p1[1]);
+          ctx.lineTo(p2[0], p2[1]);
+          ctx.stroke();
+        });
+
+        // Deterministic orbital evidence points (Fibonacci sphere)
+        var n = 120;
+        for (var i = 0; i < n; i++) {
+          var y = 1 - (i / (n - 1)) * 2;
+          var rAtY = Math.sqrt(Math.max(0, 1 - y * y));
+          var phi = i * 2.399963229728653;
+          var rr = 1.85 + (i % 5) * 0.09;
+          var pt = project(rr * Math.cos(phi) * rAtY, rr * y, rr * Math.sin(phi) * rAtY);
+          ctx.beginPath();
+          ctx.arc(pt[0], pt[1], i % 3 === 0 ? 2.1 : 1.3, 0, Math.PI * 2);
+          ctx.fillStyle = i % 4 === 0 ? hexA(primary, 0.7) : hexA(accent, 0.75);
+          ctx.fill();
+        }
+
+        // Labels: prose for state, monospace for identifiers, matching the app
+        ctx.font = '12px "Segoe UI Variable Text", "Segoe UI", sans-serif';
+        ctx.fillStyle = secondary;
+        ctx.fillText('read-only probes', 22, size - 46);
+        ctx.fillText('admission · bounded execution', 22, size - 28);
+        ctx.font = '11px "Cascadia Code", Consolas, monospace';
+        ctx.fillStyle = accent;
+        ctx.fillText('activity journal: local', 22, size - 12);
+      }
+
+      // Blend a hex color toward transparency over the page background.
+      function hexA(hex, alpha) {
+        var h = hex.replace('#', '');
+        if (h.length === 3) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
+        var r = parseInt(h.substr(0, 2), 16) || 0;
+        var g = parseInt(h.substr(2, 2), 16) || 0;
+        var b = parseInt(h.substr(4, 2), 16) || 0;
+        return 'rgba(' + r + ',' + g + ',' + b + ',' + alpha + ')';
+      }
+
+      // ---- Sentry Console Tabs ----
+      var consoleTabs = document.querySelectorAll('.console-tab');
+      var consolePanes = document.querySelectorAll('.console-pane');
+      consoleTabs.forEach(function (tab) {
+        tab.addEventListener('click', function () {
+          consoleTabs.forEach(function (t) {
+            t.classList.remove('active');
+            t.setAttribute('aria-selected', 'false');
+          });
+          consolePanes.forEach(function (p) {
+            p.classList.remove('active');
+          });
+          tab.classList.add('active');
+          tab.setAttribute('aria-selected', 'true');
+          var targetId = tab.getAttribute('aria-controls');
+          var targetPane = document.getElementById(targetId);
+          if (targetPane) targetPane.classList.add('active');
+        });
+      });
+
+      // ---- Subsystems Filter & Expandable Cards ----
+      var filterChips = document.querySelectorAll('.filter-chip');
+      var pillarCards = document.querySelectorAll('.pillar-card');
+      filterChips.forEach(function (chip) {
+        chip.addEventListener('click', function () {
+          filterChips.forEach(function (c) {
+            c.classList.remove('active');
+            c.setAttribute('aria-pressed', 'false');
+          });
+          chip.classList.add('active');
+          chip.setAttribute('aria-pressed', 'true');
+          var filter = chip.getAttribute('data-filter');
+          pillarCards.forEach(function (card) {
+            if (filter === 'all' || card.getAttribute('data-category') === filter) {
+              card.style.display = 'flex';
+            } else {
+              card.style.display = 'none';
+            }
+          });
+        });
+      });
+
+      pillarCards.forEach(function (card) {
+        function toggleExpand() {
+          var isExp = card.classList.toggle('expanded');
+          card.setAttribute('aria-expanded', String(isExp));
+        }
+        card.addEventListener('click', toggleExpand);
+        card.addEventListener('keydown', function (e) {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            toggleExpand();
+          }
+        });
+      });
+
+      // ---- Interactive Admission Simulator ----
+      var cmdData = {
+        checkup: {
+          id: 'checkup.storage',
+          risk: '<span class="pill pill-safe">Safe</span>',
+          priv: 'Standard user',
+          comp: 'None needed (read-only)',
+          desc: 'Inspects volume geometry, mount points, and free space without modifying disk sectors or file tables.'
+        },
+        spooler: {
+          id: 'service.spooler-restart',
+          risk: '<span class="pill pill-moderate">Moderate</span>',
+          priv: 'Elevated administrator',
+          comp: 'Restart service again',
+          desc: 'Stops and restarts the Print Spooler service, clearing stale pending job queues in system32.'
+        },
+        cleanup: {
+          id: 'cleaner-disk-pressure',
+          risk: '<span class="pill pill-destructive">Destructive</span>',
+          priv: 'Standard / Elevated for Windows Temp',
+          comp: 'Not available (hard deletion)',
+          desc: 'Deletes cache targets and aged temporary files across %TEMP% and %LOCALAPPDATA%\\Temp.'
+        }
+      };
+
+      var activeCmdKey = 'checkup';
+      var pendingExecutionTimer = null;
+      var simBtns = document.querySelectorAll('.sim-btn');
+      var dispId = document.getElementById('sim-disp-id');
+      var dispRisk = document.getElementById('sim-disp-risk');
+      var dispPriv = document.getElementById('sim-disp-priv');
+      var dispComp = document.getElementById('sim-disp-comp');
+      var dispDesc = document.getElementById('sim-disp-desc');
+      var btnPreview = document.getElementById('sim-action-preview');
+      var btnExecute = document.getElementById('sim-action-execute');
+      var btnReset = document.getElementById('sim-action-reset');
+      var terminal = document.getElementById('sim-terminal');
+
+      function printTerm(lineHtml) {
+        if (!terminal) return;
+        var div = document.createElement('div');
+        div.innerHTML = lineHtml;
+        terminal.appendChild(div);
+        terminal.scrollTop = terminal.scrollHeight;
+      }
+
+      function invalidatePendingExecution() {
+        if (pendingExecutionTimer !== null) {
+          window.clearTimeout(pendingExecutionTimer);
+          pendingExecutionTimer = null;
+        }
+      }
+
+      simBtns.forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          invalidatePendingExecution();
+          simBtns.forEach(function (b) {
+            b.classList.remove('active');
+            b.setAttribute('aria-checked', 'false');
+          });
+          btn.classList.add('active');
+          btn.setAttribute('aria-checked', 'true');
+          activeCmdKey = btn.getAttribute('data-cmd');
+          var d = cmdData[activeCmdKey];
+          if (dispId) dispId.textContent = d.id;
+          if (dispRisk) dispRisk.innerHTML = d.risk;
+          if (dispPriv) dispPriv.textContent = d.priv;
+          if (dispComp) dispComp.textContent = d.comp;
+          if (dispDesc) dispDesc.textContent = d.desc;
+          if (btnExecute) btnExecute.disabled = true;
+          printTerm('<span class="c-dim">--- Switched command target to: ' + d.id + ' (' + (activeCmdKey === 'checkup' ? 'Safe' : activeCmdKey === 'spooler' ? 'Moderate' : 'Destructive') + ') ---</span>');
+        });
+      });
+
+      if (btnPreview) {
+        btnPreview.addEventListener('click', function () {
+          invalidatePendingExecution();
+          var d = cmdData[activeCmdKey];
+          printTerm('<div><span class="c-accent">&gt; admission.inspect</span> <span class="c-dim">id: ' + d.id + '</span></div>');
+          printTerm('<div><span class="c-dim">[Phase 01] Validating command schema against catalog... </span><span class="c-ok">VALID</span></div>');
+          printTerm('<div><span class="c-dim">[Phase 02] Evaluating declared risk tier: </span>' + d.risk + '</div>');
+          if (activeCmdKey === 'checkup') {
+            printTerm('<div><span class="c-ok">[Admitted]</span> <span class="c-dim">Read-only execution permitted without elevation or confirmation.</span></div>');
+          } else if (activeCmdKey === 'spooler') {
+            printTerm('<div><span class="c-warn">[Admitted with confirmation]</span> <span class="c-dim">Requires process elevation check. Action plan generated.</span></div>');
+          } else {
+            printTerm('<div><span class="c-warn">[Admitted with review]</span> <span class="c-dim">Dry run preview complete: 14 targets identified (412 MB). Explicit approval required.</span></div>');
+          }
+          if (btnExecute) btnExecute.disabled = false;
+        });
+      }
+
+      if (btnExecute) {
+        btnExecute.addEventListener('click', function () {
+          if (pendingExecutionTimer !== null) return;
+          var executedCmdKey = activeCmdKey;
+          var d = cmdData[executedCmdKey];
+          printTerm('<div><span class="c-accent">&gt; dispatcher.execute</span> <span class="c-dim">id: ' + d.id + '</span></div>');
+          printTerm('<div><span class="c-dim">[Phase 03] Dispatching to bounded native executor...</span></div>');
+          btnExecute.disabled = true;
+          pendingExecutionTimer = window.setTimeout(function () {
+            pendingExecutionTimer = null;
+            printTerm('<div><span class="c-ok">[Phase 04] Completed in 42 ms. ExitCode: 0.</span></div>');
+            printTerm('<div><span class="c-dim">[Phase 05] Writing local journal receipt: </span><span class="c-accent">journal.rec.' + Date.now().toString(36) + '</span></div>');
+            if (executedCmdKey === 'spooler') {
+              printTerm('<div><span class="c-dim">[Compensator] Registered rollback compensator in session cache.</span></div>');
+            } else if (executedCmdKey === 'cleanup') {
+              printTerm('<div><span class="c-dim">[Compensator] No reversible state available for hard deletion. Marked irreversible.</span></div>');
+            }
+            if (btnExecute) btnExecute.disabled = true;
+          }, 180);
+        });
+      }
+
+      if (btnReset) {
+        btnReset.addEventListener('click', function () {
+          invalidatePendingExecution();
+          if (!terminal) return;
+          terminal.innerHTML = '<div><span class="c-dim"># Command Dispatcher initialized. Select a command and click \'Run Dry-Run Preview\'.</span></div>';
+          if (btnExecute) btnExecute.disabled = true;
+        });
+      }
+
+      drawCore();
+      var resizeTimer;
+      window.addEventListener('resize', function () {
+        window.clearTimeout(resizeTimer);
+        resizeTimer = window.setTimeout(drawCore, 150);
+      });
+    })();
+  </script>
+</body>
+</html>

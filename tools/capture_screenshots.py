@@ -29,7 +29,7 @@ IMAGES_DIR = DOCS_DIR / "images"
 
 CAPTURE_TARGETS = [
     (
-        DOCS_DIR / "showcase.html",
+        DOCS_DIR / "index.html",
         IMAGES_DIR / "showcase-preview.png",
         1440,
         900,
@@ -105,7 +105,7 @@ def _git_commit() -> str:
     """Short HEAD id, flagged when the working tree is dirty.
 
     A capture records the tree that rendered its images. When that tree carries
-    uncommitted changes the bare HEAD id misattributes them — a reader who checks
+    uncommitted changes the bare HEAD id misattributes them: a reader who checks
     out that commit does not see what the image shows.
     """
     try:
@@ -126,7 +126,7 @@ def _git_commit() -> str:
 
 # PE machine types this pipeline can capture. The portable build ships one of these.
 _PE_MACHINE_TYPES = {
-    0x014C: "x64",    # i386 — the .NET host for an x64 portable build
+    0x014C: "x64",    # i386: the .NET host for an x64 portable build
     0x8664: "x64",    # x64
     0x01C0: "ARM64",  # ARM
     0xAA64: "ARM64",  # ARM64
@@ -192,8 +192,8 @@ def _resolve_provenance(
 
     Version and architecture come from the executable's own sidecar (assembly version and
     RuntimeInformation.ProcessArchitecture), then the PE header independently confirms the
-    architecture. A mismatch means the checkout and the artifact disagree — a real condition
-    when someone points `--exe` at a build from a different tree — and it fails loudly rather
+    architecture. A mismatch means the checkout and the artifact disagree: a real condition
+    when someone points `--exe` at a build from a different tree, and it fails loudly rather
     than silently recording the checkout's facts next to another build's image.
     """
     exe_version = str(meta.get("version") or "").strip() or None
@@ -239,7 +239,7 @@ def capture_freshness_report(manifest: dict | None) -> dict:
     """Decides whether a checked-in capture still depicts the current source.
 
     Freshness is decided from provenance metadata, not pixels: the screens render real machine
-    data — drive sizes, Windows build numbers, memory amounts — that legitimately differs
+    data (drive sizes, Windows build numbers, memory amounts) that legitimately differs
     between the capture host and a CI runner, so a pixel diff cannot separate "the UI changed"
     from "the machine differs". The recorded commit, diffed against HEAD over the paths that
     change what a capture depicts, can.
@@ -412,15 +412,15 @@ DOC_TAIL = """\
 
 ### Diagnostic Core Showcase
 
-![WinCare interactive web showcase featuring holographic diagnostic topology, live telemetry dials, and tactile inspection](images/showcase-preview.png)
+![WinCare interactive web showcase featuring the diagnostic core topology diagram, execution pipeline, and command simulator](images/showcase-preview.png)
 
-**Interactive experience:** Open [`docs/showcase.html`](showcase.html) in any modern browser for the live holographic diagnostic topology, command simulator, and responsive telemetry panels.
+**Interactive experience:** Open [`docs/index.html`](index.html) in any modern browser for the diagnostic core topology diagram, command simulator, and safety model overview.
 
 ## Capture policy
 
 Capturing requires a Windows host with a built portable executable of the exact version being
 recorded; the source tree alone cannot produce runtime evidence. (Installed-MSIX capture is
-not yet implemented — only the portable build is supported.) Run:
+not yet implemented; only the portable build is supported.) Run:
 
 ```text
 python tools/capture_screenshots.py --runtime --exe artifacts/portable/win-x64/WinCare.App.exe

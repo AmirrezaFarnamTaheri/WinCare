@@ -2,8 +2,8 @@
   "assets": [
     {
       "path": "design/BRAND.md",
-      "sha256": "c3a64c66779b6e443fa704eea401dd5382ae514ee29fbb1bde9f5617c5a5d741",
-      "bytes": 1306
+      "sha256": "e284df498073f634e09e5b0a55e0503ec8e78ebc71bde54d7bf3831806240c17",
+      "bytes": 1142
     },
     {
       "path": "design/WinCare-Logo-512.png",
@@ -12,8 +12,8 @@
     },
     {
       "path": "design/WinCare-Logo.svg",
-      "sha256": "8770b99ff37e6561803826936e15da75363e8b4e89cb6cbb37b12c888c3f6e12",
-      "bytes": 7680
+      "sha256": "995cab3488ff38924161bdbb6a3eb932d31cf53e9328fe770334747d8a236876",
+      "bytes": 7611
     },
     {
       "path": "design/WinCare-Wordmark.svg",
