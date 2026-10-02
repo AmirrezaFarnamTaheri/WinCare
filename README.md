@@ -142,3 +142,4 @@ Automated checks do not replace human UI/accessibility inspection. Follow [Windo
 - Maintainer: Amirreza “Farnam” Taheri — [taherifarnam@gmail.com](mailto:taherifarnam@gmail.com)
 
 WinCare is licensed under the [Apache License 2.0](LICENSE). See [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md) for external dependency notices.
+foo
