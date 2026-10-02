@@ -93,17 +93,19 @@ public static class PortablePlaybookExchange
             if (isAllowedByPolicy is not null && !isAllowedByPolicy(command))
                 throw new PortablePlaybookValidationException($"Command '{command.Id}' is not permitted by the active policy.");
 
-            ValidateParameters(command.Id, step.Parameters);
+            ValidateParameters(command, step.Parameters);
         }
     }
 
-    private static void ValidateParameters(string commandId, JsonElement parameters)
+    private static void ValidateParameters(CommandDefinition command, JsonElement parameters)
     {
+        string commandId = command.Id;
         RequireObject(parameters, $"Parameters for '{commandId}'");
+        IReadOnlyList<CommandParameterDefinition>? schema = command.Parameters;
 
         // A JSON parameter is not permitted in an imported playbook: the import path cannot
         // re-check an arbitrary nested payload the way an interactive dispatch can.
-        foreach (CommandParameterDefinition jsonParameter in CommandParameterCatalog.For(commandId)
+        foreach (CommandParameterDefinition jsonParameter in (schema ?? CommandParameterCatalog.For(commandId))
                      .Where(parameter => parameter.Kind == CommandParameterKind.Json))
         {
             if (parameters.TryGetProperty(jsonParameter.Name, out _))
@@ -114,7 +116,7 @@ public static class PortablePlaybookExchange
 
         // Everything else (required presence, declared names, types, ranges, options) is shared with
         // the dispatch path through CommandParameterValidator so the two entry points agree.
-        foreach (string error in CommandParameterValidator.Validate(commandId, parameters))
+        foreach (string error in CommandParameterValidator.Validate(commandId, parameters, schema))
         {
             throw new PortablePlaybookValidationException(error);
         }

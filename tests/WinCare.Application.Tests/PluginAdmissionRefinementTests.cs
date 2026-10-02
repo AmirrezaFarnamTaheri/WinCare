@@ -20,17 +20,17 @@ public sealed class PluginAdmissionRefinementTests
     }
 
     [Fact]
-    public async Task Registered_plugin_mutation_completes_normal_preview_approval_flow()
+    public async Task Registered_destructive_plugin_mutation_completes_normal_preview_approval_flow()
     {
-        var definition = new PluginToolDefinition { Id = "plugin.sample", Title = "Sample" }
-            .ToCommandDefinition("sample") with { ExplicitRiskTier = null };
+        var definition = new PluginToolDefinition { Id = "plugin.sample", Title = "Sample", Risk = "High" }
+            .ToCommandDefinition("sample");
         var dispatcher = new CommandDispatcher([], []);
         var directory = Path.Combine(Path.GetTempPath(), "WinCare-admission-" + Guid.NewGuid().ToString("N"));
         var host = new DefaultPluginHost(dispatcher, directory, directory);
         var handler = new RecordingHandler(definition.Id);
         Assert.True(host.RegisterCommand(definition, handler));
         var registered = Assert.Single(host.RegisteredCommands);
-        Assert.Equal(RiskTier.Moderate, registered.RiskTier);
+        Assert.Equal(RiskTier.Destructive, registered.RiskTier);
         var vm = new ToolExecutionViewModel(dispatcher, _ => { });
         vm.SelectTool(new ToolRowViewModel(registered));
         Assert.True(vm.RequiresApprovalSwitch);
@@ -43,6 +43,28 @@ public sealed class PluginAdmissionRefinementTests
         Assert.True(vm.IsExecutionSuccess);
         Assert.True(handler.LastWasApply);
         Assert.Equal(2, handler.Calls);
+    }
+
+    [Fact]
+    public async Task Registered_moderate_plugin_mutation_executes_with_direct_action_confirmation()
+    {
+        var definition = new PluginToolDefinition { Id = "plugin.sample", Title = "Sample" }
+            .ToCommandDefinition("sample") with { ExplicitRiskTier = null };
+        var dispatcher = new CommandDispatcher([], []);
+        var directory = Path.Combine(Path.GetTempPath(), "WinCare-admission-" + Guid.NewGuid().ToString("N"));
+        var host = new DefaultPluginHost(dispatcher, directory, directory);
+        var handler = new RecordingHandler(definition.Id);
+        Assert.True(host.RegisterCommand(definition, handler));
+        var registered = Assert.Single(host.RegisteredCommands);
+        Assert.Equal(RiskTier.Moderate, registered.RiskTier);
+        var vm = new ToolExecutionViewModel(dispatcher, _ => { });
+        vm.SelectTool(new ToolRowViewModel(registered));
+        Assert.False(vm.RequiresApprovalSwitch);
+        Assert.Equal("Run action", vm.PrimaryActionLabel);
+        await vm.ExecuteSelectedToolCommand.ExecuteAsync(null);
+        Assert.True(vm.IsExecutionSuccess);
+        Assert.True(handler.LastWasApply);
+        Assert.Equal(1, handler.Calls);
     }
 
     private sealed class RecordingHandler(string commandId) : ICommandHandler

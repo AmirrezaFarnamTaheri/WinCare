@@ -2,12 +2,14 @@
     x:Class="WinCare.App.Views.Pages.SettingsPage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:WinCare.App.Controls"
     NavigationCacheMode="Required">
     <ScrollViewer VerticalScrollBarVisibility="Auto">
         <StackPanel Padding="28,28,28,32" MaxWidth="960" HorizontalAlignment="Left" Spacing="24">
+            <controls:PageHeaderControl
+                Title="Settings"
+                Description="Choose how WinCare looks and what it remembers on this PC." />
             <StackPanel Spacing="8">
-                <TextBlock x:Uid="SettingsPageTitle" Style="{StaticResource PageTitleTextStyle}" Text="Settings" />
-                <TextBlock MaxWidth="760" HorizontalAlignment="Left" Style="{StaticResource PageDescriptionTextStyle}" Text="Choose how WinCare looks and what it remembers on this PC." />
                 <InfoBar
                     IsOpen="{x:Bind ViewModel.HasPersistenceWarning, Mode=OneWay}"
                     IsClosable="False"

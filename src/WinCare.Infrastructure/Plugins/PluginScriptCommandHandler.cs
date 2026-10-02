@@ -182,7 +182,7 @@ namespace WinCare.Infrastructure.Plugins
             {
                 throw;
             }
-            catch (Exception ex)
+            catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or IOException or UnauthorizedAccessException or InvalidOperationException)
             {
                 return CommandHandlerOutcome.Failed("plugin.fault", $"Plugin script execution failed ({ex.GetType().Name}).");
             }

@@ -60,6 +60,41 @@ public sealed class PresentationRefinementTests
             .EnumerateArray().Select(item => item.GetString()).ToArray());
     }
 
+    [Fact]
+    public void SystemCarePageViewModel_selects_performance_section_properly()
+    {
+        var vm = new SystemCarePageViewModel();
+        Assert.False(vm.IsPerformanceSection);
+
+        vm.SelectSection(1);
+        Assert.True(vm.IsPerformanceSection);
+
+        vm.SelectSection(2);
+        Assert.False(vm.IsPerformanceSection);
+    }
+
+    [Fact]
+    public void ToolRowViewModel_exposes_accessible_status_pill_tokens()
+    {
+        var readOnlyCmd = new CommandDefinition("test-ro", "Read Only Tool", "Summary", "Area", "Section",
+            CommandRisk.ReadOnly, true, AdministratorAccess.No, RestartExpectation.No, "legacy", MigrationStatus.BehaviorVerified, []);
+        var roRow = new ToolRowViewModel(readOnlyCmd);
+        Assert.Equal("Read-only", roRow.RiskPillLabel);
+        Assert.Equal("PillReadOnlyBgBrush", roRow.StatusPillBackgroundResourceKey);
+
+        var moderateCmd = new CommandDefinition("test-mod", "Moderate Tool", "Summary", "Area", "Section",
+            CommandRisk.Moderate, false, AdministratorAccess.No, RestartExpectation.No, "legacy", MigrationStatus.BehaviorVerified, []);
+        var modRow = new ToolRowViewModel(moderateCmd);
+        Assert.Equal("Moderate", modRow.RiskPillLabel);
+        Assert.Equal("PillElevatedBgBrush", modRow.StatusPillBackgroundResourceKey);
+
+        var destructiveCmd = new CommandDefinition("test-dest", "Destructive Tool", "Summary", "Area", "Section",
+            CommandRisk.High, false, AdministratorAccess.No, RestartExpectation.No, "legacy", MigrationStatus.BehaviorVerified, []);
+        var destRow = new ToolRowViewModel(destructiveCmd);
+        Assert.Equal("Destructive", destRow.RiskPillLabel);
+        Assert.Equal("PillMutatingBgBrush", destRow.StatusPillBackgroundResourceKey);
+    }
+
     private static ToolExecutionViewModel Create(string id)
     {
         var vm = new ToolExecutionViewModel(new CommandDispatcher([], []), _ => { });

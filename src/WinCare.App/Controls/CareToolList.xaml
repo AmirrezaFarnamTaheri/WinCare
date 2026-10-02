@@ -11,7 +11,7 @@
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <TextBlock Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap" Text="Choosing a task opens its details in Power tools. It does not run it." />
+        <TextBlock Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap" Text="Select a task to review its options and run it in the inspector." />
 
         <Border Grid.Row="1" Style="{StaticResource SurfaceBorderStyle}" Visibility="{x:Bind views:LayoutVisibility.InvertBoolToVisibility(ViewModel.IsEmpty), Mode=OneWay}">
             <Grid>
@@ -43,7 +43,8 @@
                                     <TextBlock Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind Detail, Mode=OneWay}" />
                                     <TextBlock Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind LatestActivity}" Visibility="{x:Bind views:LayoutVisibility.BoolToVisibility(HasActivity)}" />
                                 </StackPanel>
-                                <FontIcon Grid.Column="1" Glyph="&#xE76C;" FontSize="12" Foreground="{ThemeResource TextSecondaryBrush}" VerticalAlignment="Center" AutomationProperties.AccessibilityView="Raw" />
+                                <FontIcon Grid.Column="1" Glyph="&#xE76C;" FontSize="12" Foreground="{ThemeResource TextSecondaryBrush}" VerticalAlignment="Center" AutomationProperties.AccessibilityView="Raw"
+                                          ToolTipService.ToolTip="Open in inspector to configure or run" />
                             </Grid>
                         </DataTemplate>
                     </ListView.ItemTemplate>

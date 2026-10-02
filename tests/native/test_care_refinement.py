@@ -65,7 +65,7 @@ class CareRefinementTests(unittest.TestCase):
         tree = ET.fromstring(page)
         borders = [node for node in tree.iter() if node.tag.endswith("}Border")]
         self.assertTrue(any("ViewModel.IsEmpty" in node.get("Visibility", "") for node in borders))
-        self.assertIn("Choosing a task opens its details in Power tools. It does not run it.", page)
+        self.assertIn("Select a task to review its options and run it in the inspector.", page)
 
     def test_owned_xaml_remains_well_formed(self):
         for path in ("Views/Pages/HomePage.xaml", "Views/Pages/CheckupPage.xaml",

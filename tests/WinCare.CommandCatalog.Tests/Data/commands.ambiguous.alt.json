@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "commandCount": 1,
+  "commands": [
+    {
+      "id": "ambiguous-b",
+      "title": "B",
+      "summary": "Second fragment for the same pack id.",
+      "area": "All tools",
+      "section": "Commands",
+      "risk": "ReadOnly",
+      "readOnly": true,
+      "administratorAccess": "No",
+      "restart": "No",
+      "legacySource": "testpack",
+      "migrationStatus": "Implemented"
+    }
+  ]
+}

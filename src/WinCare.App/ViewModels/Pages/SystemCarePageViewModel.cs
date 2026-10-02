@@ -13,6 +13,14 @@ public sealed class SystemCarePageViewModel : TabbedPageViewModel
         _ => new("System care", ["Routines", "Maintenance"]),
     };
 
+    public bool IsPerformanceSection => SelectedIndex == 1;
+
+    public override void SelectSection(int index)
+    {
+        base.SelectSection(index);
+        OnPropertyChanged(nameof(IsPerformanceSection));
+    }
+
     public SystemCarePageViewModel() : base([
         new PageSection("Clean up", "No cleanup tools are available in this section.", []),
         new PageSection("Performance", "No performance tools are available in this section.", []),

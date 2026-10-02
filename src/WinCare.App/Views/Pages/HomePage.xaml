@@ -8,10 +8,10 @@
     <ScrollViewer VerticalScrollBarVisibility="Auto">
         <Grid x:Name="PageLayout" Padding="32,28,32,36" RowSpacing="28" MaxWidth="1440" HorizontalAlignment="Stretch">
             <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
-            <StackPanel Spacing="6">
-                <TextBlock x:Uid="HomePageTitle" Style="{StaticResource PageTitleTextStyle}" Text="Home"/>
-                <TextBlock MaxWidth="760" HorizontalAlignment="Left" Style="{StaticResource PageDescriptionTextStyle}" Text="See what needs attention and get where you need to go."/>
-            </StackPanel>
+            <controls:PageHeaderControl
+                Title="Home"
+                Description="See what needs attention and get where you need to go." />
+
             <Border Grid.Row="1" Style="{StaticResource DashboardCardStyle}" Background="{ThemeResource HeroBackgroundBrush}">
                 <Grid x:Name="HeroLayout" ColumnSpacing="28" RowSpacing="18">
                     <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>

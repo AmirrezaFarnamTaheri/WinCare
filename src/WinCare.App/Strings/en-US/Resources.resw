@@ -13,13 +13,4 @@
 <data name="NavAbout.Content" xml:space="preserve"><value>About WinCare</value></data>
 <data name="NavSettings.Content" xml:space="preserve"><value>Settings</value></data>
 <data name="AboutPageTitle.Text" xml:space="preserve"><value>WinCare</value></data>
-<data name="ActivityPageTitle.Text" xml:space="preserve"><value>Activity</value></data>
-<data name="AllToolsPageTitle.Text" xml:space="preserve"><value>Power tools</value></data>
-<data name="CheckupPageTitle.Text" xml:space="preserve"><value>Checkup</value></data>
-<data name="HelpPageTitle.Text" xml:space="preserve"><value>Help</value></data>
-<data name="HomePageTitle.Text" xml:space="preserve"><value>Home</value></data>
-<data name="RepairRecoveryPageTitle.Text" xml:space="preserve"><value>Repair &amp; recovery</value></data>
-<data name="SecurityPageTitle.Text" xml:space="preserve"><value>Security</value></data>
-<data name="SettingsPageTitle.Text" xml:space="preserve"><value>Settings</value></data>
-<data name="SystemCarePageTitle.Text" xml:space="preserve"><value>System care</value></data>
 </root>

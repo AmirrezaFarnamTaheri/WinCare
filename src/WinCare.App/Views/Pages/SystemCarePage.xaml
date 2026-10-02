@@ -11,11 +11,9 @@
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
-
-        <StackPanel Spacing="6">
-            <TextBlock x:Uid="SystemCarePageTitle" Style="{StaticResource PageTitleTextStyle}" Text="System care" />
-            <TextBlock MaxWidth="760" HorizontalAlignment="Left" Style="{StaticResource PageDescriptionTextStyle}" Text="Clean up, improve responsiveness, manage apps, and maintain Windows." />
-        </StackPanel>
+        <controls:PageHeaderControl
+            Title="System care"
+            Description="Clean up, improve responsiveness, manage apps, and maintain Windows." />
 
         <SelectorBar
             x:Name="SectionSelector"
@@ -30,6 +28,18 @@
             <SelectorBarItem Text="Routines &amp; maintenance" AutomationProperties.Name="Routines and maintenance" />
         </SelectorBar>
 
-        <controls:CareToolList Grid.Row="2" ViewModel="{x:Bind ViewModel}" />
+        <Grid Grid.Row="2" RowSpacing="16">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <controls:MemoryTopologyAtlas
+                x:Name="MemoryAtlas"
+                Margin="0,0,0,4"
+                Visibility="{x:Bind views:LayoutVisibility.BoolToVisibility(ViewModel.IsPerformanceSection), Mode=OneWay}" />
+
+            <controls:CareToolList Grid.Row="1" ViewModel="{x:Bind ViewModel}" />
+        </Grid>
     </Grid>
 </Page>

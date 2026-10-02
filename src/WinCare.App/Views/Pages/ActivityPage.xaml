@@ -4,6 +4,7 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:views="using:WinCare.App.Views"
     xmlns:vm="using:WinCare.App.ViewModels.Pages"
+    xmlns:controls="using:WinCare.App.Controls"
     NavigationCacheMode="Required"
     SizeChanged="Page_SizeChanged">
     <Grid Padding="28,28,28,32" RowSpacing="20">
@@ -14,10 +15,10 @@
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <StackPanel Spacing="8">
-            <TextBlock x:Uid="ActivityPageTitle" Style="{StaticResource PageTitleTextStyle}" Text="Activity" />
-            <TextBlock MaxWidth="760" HorizontalAlignment="Left" Style="{StaticResource PageDescriptionTextStyle}" Text="See what's running, what finished, and what needs attention." />
-        </StackPanel>
+        <controls:PageHeaderControl
+            Title="Activity"
+            Description="See what's running, what finished, and what needs attention." />
+
 
         <StackPanel Grid.Row="1" Spacing="8">
             <InfoBar

@@ -9,5 +9,6 @@ namespace WinCare.CommandCatalog;
     PropertyNameCaseInsensitive = false,
     UseStringEnumConverter = true)]
 [JsonSerializable(typeof(CommandCatalogDocument))]
+[JsonSerializable(typeof(CommandPackFragment))]
 [JsonSerializable(typeof(RiskTier))]
 internal sealed partial class CommandCatalogJsonContext : JsonSerializerContext;

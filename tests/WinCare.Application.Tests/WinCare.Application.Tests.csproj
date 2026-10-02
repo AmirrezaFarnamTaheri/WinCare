@@ -37,4 +37,15 @@
     <Compile Include="..\..\src\WinCare.App\ViewModels\Pages\RepairRecoveryPageViewModel.cs" Link="ViewModels\RepairRecoveryPageViewModel.cs" />
     <Compile Include="..\..\src\WinCare.App\Services\AppPreferences.cs" Link="Services\AppPreferences.cs" />
   </ItemGroup>
+  <ItemGroup>
+    <!--
+      Fixtures for ICommandPack composition: the resource name must end with
+      commands.<packId>.json, matching CommandPackCatalog.FragmentResourceSuffix.
+      runtimepack backs RecordingPack; dupe-a/dupe-b both declare dupe-shared so the cross-pack
+      duplicate guard can fire after both fragments load.
+    -->
+    <EmbeddedResource Include="Data\commands.runtimepack.json" LogicalName="WinCare.Application.Tests.Data.commands.runtimepack.json" />
+    <EmbeddedResource Include="Data\commands.dupe-a.json" LogicalName="WinCare.Application.Tests.Data.commands.dupe-a.json" />
+    <EmbeddedResource Include="Data\commands.dupe-b.json" LogicalName="WinCare.Application.Tests.Data.commands.dupe-b.json" />
+  </ItemGroup>
 </Project>

@@ -356,7 +356,7 @@ public class RemoteCatalogService : IRemoteCatalogService
         {
             throw;
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             System.Diagnostics.Debug.WriteLine($"[RemoteCatalogService] Cache save error: {ex.Message}");
         }

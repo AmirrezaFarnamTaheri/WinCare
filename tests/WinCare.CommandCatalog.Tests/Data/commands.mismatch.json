@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "commandCount": 4,
+  "commands": [
+    {
+      "id": "mismatch-one",
+      "title": "One",
+      "summary": "Declared count exceeds the list.",
+      "area": "All tools",
+      "section": "Commands",
+      "risk": "ReadOnly",
+      "readOnly": true,
+      "administratorAccess": "No",
+      "restart": "No",
+      "legacySource": "testpack",
+      "migrationStatus": "Implemented"
+    },
+    {
+      "id": "mismatch-two",
+      "title": "Two",
+      "summary": "Declared count exceeds the list.",
+      "area": "All tools",
+      "section": "Commands",
+      "risk": "ReadOnly",
+      "readOnly": true,
+      "administratorAccess": "No",
+      "restart": "No",
+      "legacySource": "testpack",
+      "migrationStatus": "Implemented"
+    }
+  ]
+}

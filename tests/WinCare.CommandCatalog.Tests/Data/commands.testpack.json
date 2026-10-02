@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "commandCount": 2,
+  "commands": [
+    {
+      "id": "testpack-one",
+      "title": "One",
+      "summary": "First test pack command.",
+      "area": "All tools",
+      "section": "Commands",
+      "risk": "ReadOnly",
+      "readOnly": true,
+      "administratorAccess": "No",
+      "restart": "No",
+      "legacySource": "testpack",
+      "migrationStatus": "Implemented"
+    },
+    {
+      "id": "testpack-two",
+      "title": "Two",
+      "summary": "Second test pack command.",
+      "area": "All tools",
+      "section": "Commands",
+      "risk": "ReadOnly",
+      "readOnly": true,
+      "administratorAccess": "No",
+      "restart": "No",
+      "legacySource": "testpack",
+      "migrationStatus": "Implemented"
+    }
+  ]
+}

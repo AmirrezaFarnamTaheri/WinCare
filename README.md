@@ -93,7 +93,7 @@ tools/                  Validation, packaging, release and plugin tooling
 
 `wincare-guard` is **experimental** in this release candidate; production service lifecycle and complete app-notification delivery are not claimed as finished.
 
-For architecture and trust boundaries, see [docs/Architecture.md](docs/Architecture.md).
+For product invariants and positioning, see [PRODUCT.md](PRODUCT.md). For architecture and trust boundaries, see [docs/Architecture.md](docs/Architecture.md).
 
 ## Build and verify
 
@@ -124,6 +124,8 @@ Automated checks do not replace human UI/accessibility inspection. Follow [Windo
 
 | Document | Purpose |
 |---|---|
+| [Master Redesign Report](docs/MASTER_REDESIGN_REPORT.md) | Architectural deslop, three-tier admission model, and UI/UX evolution system of record. |
+| [Product Strategy](PRODUCT.md) | Product positioning, competitive alternatives, and differentiating invariants. |
 | [User guide](docs/User-Guide.md) | Installation, navigation, safe operation, and troubleshooting. |
 | [Screenshots](docs/Screenshots.md) | Runtime captures and interface references. |
 | [Architecture](docs/Architecture.md) | System boundaries, trust model, lifecycle, native integration, and packaging. |

@@ -29,7 +29,7 @@ namespace WinCare.Infrastructure.Commands;
 /// or <c>cmd.exe</c> on behalf of an admitted plugin, so "PowerShell is never invoked" holds for
 /// the built-in catalog but not for the plugin layer.
 /// </summary>
-internal sealed partial class WindowsCommandExecutor : ICommandOperationExecutor, IDisposable
+internal sealed partial class WindowsCommandExecutor : ICommandOperationExecutor, ICommandOperationContext, IDisposable
 {
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -52,6 +52,22 @@ internal sealed partial class WindowsCommandExecutor : ICommandOperationExecutor
     internal Func<string, IReadOnlyList<string>, CancellationToken, TimeSpan, Task<ProcessExecutionResult>>? AppxProcessRunnerSeam { get; set; }
     internal Func<string, CancellationToken, Task<AppxRegisteredRemovalResult>>? AppxRegisteredRemovalSeam { get; set; }
     internal Func<string, string?>? ExecutableFinderSeam { get; set; }
+
+    /// <summary>
+    /// Kernel service surface handed to extension packs. The executor is the host's operation
+    /// surface, so it publishes its own bounded services through the abstraction; a pack never
+    /// reaches past <see cref="ICommandOperationContext" />.
+    /// </summary>
+    ICommandStateStore ICommandOperationContext.State => _state;
+
+    /// <inheritdoc />
+    IBoundedProcessRunner ICommandOperationContext.Process => _process;
+
+    /// <inheritdoc />
+    INativeCoreService? ICommandOperationContext.NativeCore => _nativeCore;
+
+    /// <inheritdoc />
+    HttpClient ICommandOperationContext.HttpClient => _httpClient;
 
     /// <summary>
     /// Initializes a new instance of <see cref="WindowsCommandExecutor"/> bound to a custom state store root path.

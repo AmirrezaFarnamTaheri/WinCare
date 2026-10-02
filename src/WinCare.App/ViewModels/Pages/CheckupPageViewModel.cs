@@ -257,7 +257,7 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
         row.State = state;
         row.Detail = detail;
         row.StatusBrushKey = brushKey;
-        if (brushKey == "WarningBrush") SetNavigationAction(row, "Review updates", SystemCareRoute, "Network & updates");
+        if (brushKey == "WarningBrush") SetNavigationAction(row, "Check updates", SystemCareRoute, "Network & updates");
         else ClearNavigationAction(row);
     }
 
@@ -299,7 +299,7 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
                         {
                             storageRow.State = "Very low space";
                             storageRow.StatusBrushKey = "DangerBrush";
-                            SetNavigationAction(storageRow, "Review cleanup", SystemCareRoute, "Clean up");
+                            SetNavigationAction(storageRow, "Clean storage", SystemCareRoute, "Clean up");
                         }
                     }
                     else if (freeGb < WinCare.Domain.Assessment.AssessmentPolicy.DiskFreeWarningGb)
@@ -310,7 +310,7 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
                         {
                             storageRow.State = "Low space";
                             storageRow.StatusBrushKey = "WarningBrush";
-                            SetNavigationAction(storageRow, "Review cleanup", SystemCareRoute, "Clean up");
+                            SetNavigationAction(storageRow, "Clean storage", SystemCareRoute, "Clean up");
                         }
                     }
                 }
@@ -330,7 +330,7 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
                     {
                         securityRow.State = "Defender stopped";
                         securityRow.StatusBrushKey = "DangerBrush";
-                        SetNavigationAction(securityRow, "Review security", SecurityRoute, "Status");
+                        SetNavigationAction(securityRow, "Fix security", SecurityRoute, "Status");
                     }
                 }
 
@@ -342,7 +342,7 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
                     {
                         securityRow.State = "Firewall off";
                         securityRow.StatusBrushKey = "DangerBrush";
-                        SetNavigationAction(securityRow, "Review security", SecurityRoute, "Status");
+                        SetNavigationAction(securityRow, "Fix security", SecurityRoute, "Status");
                     }
                 }
             }

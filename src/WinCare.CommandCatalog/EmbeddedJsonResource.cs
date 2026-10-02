@@ -27,12 +27,12 @@ internal static class EmbeddedJsonResource
                 break;
             }
 
-            total = checked(total + read);
-            if (total > maximumBytes)
+            if (read > maximumBytes - total)
             {
                 throw new InvalidOperationException(
                     $"Embedded resource '{resourceName}' exceeds the {maximumBytes}-byte limit.");
             }
+            total += read;
             bounded.Write(buffer, 0, read);
         }
 

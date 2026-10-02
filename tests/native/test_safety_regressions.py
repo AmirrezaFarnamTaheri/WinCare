@@ -47,11 +47,16 @@ class SafetyRegressionTests(unittest.TestCase):
         for token in (
             "CanApproveReview",
             "value && CanApproveReview",
-            '"Apply changes"',
+            '"Apply destructive change"',
             "SetSuccessfulPreview(previewSuccess)",
             "ResetReviewState();",
         ):
             self.assertIn(token, view_model)
+
+        # ADR-001 narrows the two-phase gate to irreversible work only. Moderate
+        # maintenance runs on one click, so the approval switch must not be offered
+        # for it -- but a destructive command must never lose the gate.
+        self.assertIn("RequiresApprovalSwitch => IsDestructiveTool", view_model)
 
         xaml = self.read("src/WinCare.App/Views/Pages/AllToolsPage.xaml")
         self.assertIn(

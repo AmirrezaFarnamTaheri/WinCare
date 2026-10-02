@@ -26,12 +26,70 @@ public static class CommandCatalog
     public static IReadOnlyList<CommandDefinition> Load() => Commands.Value;
 
     /// <summary>
+    /// Returns the core catalog merged with every supplied extension-pack fragment. Fragment ids
+    /// must be disjoint from the core and from each other; a pack re-declaring an existing id is
+    /// rejected instead of silently shadowing it.
+    /// </summary>
+    public static IReadOnlyList<CommandDefinition> LoadWithPacks(IReadOnlyCollection<CommandPackFragment>? packs)
+    {
+        if (packs is null || packs.Count == 0)
+        {
+            return Load();
+        }
+
+        List<CommandDefinition> merged = new(Load());
+        HashSet<string> ids = new(merged.Count, StringComparer.OrdinalIgnoreCase);
+        foreach (CommandDefinition core in merged)
+        {
+            ids.Add(core.Id);
+        }
+
+        HashSet<string> packIds = new(StringComparer.OrdinalIgnoreCase);
+        foreach (CommandPackFragment pack in packs)
+        {
+            ArgumentNullException.ThrowIfNull(pack);
+            CommandPackCatalog.ValidatePackId(pack.PackId);
+            if (!packIds.Add(pack.PackId))
+            {
+                throw new InvalidOperationException($"Extension pack id '{pack.PackId}' is registered more than once.");
+            }
+            CommandPackCatalog.ValidateCommands(pack.PackId, pack.Commands);
+            foreach (CommandDefinition command in pack.Commands)
+            {
+                if (!ids.Add(command.Id))
+                {
+                    throw new InvalidOperationException(
+                        $"Extension pack '{pack.PackId}' re-declares command '{command.Id}' already owned by the core catalog or another pack.");
+                }
+                merged.Add(CommandPackCatalog.NormalizeCommand(command));
+            }
+        }
+
+        return Array.AsReadOnly(merged.ToArray());
+    }
+
+    /// <summary>
     /// Finds a single command definition by ID, or <c>null</c> when the ID is unknown.
     /// </summary>
     public static CommandDefinition? Find(string id)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(id);
         return CommandsById.Value.GetValueOrDefault(id);
+    }
+
+    /// <summary>
+    /// Finds a command definition by ID across the core catalog plus extension-pack fragments.
+    /// </summary>
+    public static CommandDefinition? FindIn(IReadOnlyCollection<CommandPackFragment>? packs, string id)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(id);
+        if (packs is null || packs.Count == 0)
+        {
+            return Find(id);
+        }
+
+        return LoadWithPacks(packs).FirstOrDefault(command =>
+            string.Equals(command.Id, id, StringComparison.OrdinalIgnoreCase));
     }
 
     private static IReadOnlyList<CommandDefinition> LoadCore()
@@ -53,13 +111,14 @@ public static class CommandCatalog
             throw new InvalidOperationException($"Unsupported command catalog schema {document.SchemaVersion}.");
         }
 
-        if (document.CommandCount != ExpectedCommandCount || document.Commands.Count != ExpectedCommandCount)
+        if (document.Commands is null ||
+            document.CommandCount != ExpectedCommandCount || document.Commands.Count != ExpectedCommandCount)
         {
             throw new InvalidOperationException(
                 $"The native command catalog must contain exactly {ExpectedCommandCount} commands.");
         }
 
-        HashSet<string> ids = new(StringComparer.Ordinal);
+        HashSet<string> ids = new(StringComparer.OrdinalIgnoreCase);
         foreach (CommandDefinition command in document.Commands)
         {
             if (string.IsNullOrWhiteSpace(command.Id) ||

@@ -84,6 +84,11 @@ public sealed class ToolExecutionViewModel : ObservableObject
 
     public string CancelActionLabel => IsCancellationRequested ? "Stopping…" : "Cancel";
 
+    /// <summary>
+    /// Cancels an in-flight tool execution, if any.
+    /// </summary>
+    public void CancelRunningExecution() => CancelSelectedTool();
+
     private void CancelSelectedTool()
     {
         if (_activeCts is null || IsCancellationRequested) return;
@@ -116,8 +121,8 @@ public sealed class ToolExecutionViewModel : ObservableObject
         {
             if (IsExecuting) return IsCancellationRequested ? "Stopping…" : "Running";
             if (IsSafeTool) return "Run tool";
-            if (IsDestructiveTool) return IsReviewApproved ? "Apply destructive change" : "Preview impact";
-            return IsReviewApproved ? "Apply changes" : "Review changes";
+            if (IsModerateTool) return "Run action";
+            return IsReviewApproved ? "Apply destructive change" : "Preview impact";
         }
     }
 
@@ -197,17 +202,19 @@ public sealed class ToolExecutionViewModel : ObservableObject
 
     public string ActionFlowTitle => IsSafeTool
         ? (IsMutatingTool ? "Direct, low-risk change" : "Read-only inspection")
-        : IsReviewApproved
-            ? "Reviewed and ready"
-            : "Preview before applying";
+        : IsModerateTool
+            ? "Routine system maintenance"
+            : (IsReviewApproved ? "Reviewed and ready" : "Preview before applying");
 
     public string ActionFlowDescription => IsSafeTool
         ? (IsMutatingTool
             ? "WinCare will run this bounded action and record the outcome in Activity."
             : "This tool gathers evidence without changing Windows. The result is recorded in Activity.")
-        : IsReviewApproved
-            ? "The approved preview matches the current inputs. Applying consumes this approval once and records the outcome."
-            : "Run a preview to resolve targets and impact. Review the result, then approve this exact plan to apply it.";
+        : IsModerateTool
+            ? "WinCare will run this bounded maintenance action directly and record the outcome in Activity."
+            : (IsReviewApproved
+                ? "The approved preview matches the current inputs. Applying consumes this approval once and records the outcome."
+                : "Run a preview to resolve targets and impact. Review the result, then approve this exact plan to apply it.");
 
     /// <summary>Raw JSON editor used only when Advanced parameter mode is enabled.</summary>
     public string ParameterJson
@@ -266,8 +273,8 @@ public sealed class ToolExecutionViewModel : ObservableObject
     public bool IsModerateTool => _selectedTool?.Definition.RiskTier == RiskTier.Moderate;
     public bool IsDestructiveTool => _selectedTool?.Definition.RiskTier == RiskTier.Destructive;
     public bool IsMutatingTool => _selectedTool?.Definition.ReadOnly == false;
-    public bool RequiresApprovalSwitch => IsMutatingTool && !IsSafeTool;
-    // Approval requires a successful preview before applying changes.
+    public bool RequiresApprovalSwitch => IsDestructiveTool;
+    // Approval toggle requires a successful preview before flipping.
     public bool CanApproveReview => IsMutatingTool && !IsExecuting && _hasSuccessfulPreview;
 
     public bool IsReviewApproved
@@ -375,9 +382,9 @@ public sealed class ToolExecutionViewModel : ObservableObject
         ToolRowViewModel? selected = _selectedTool;
         if (selected is null || !CanRunSelectedTool) return;
 
-        bool apply = IsMutatingTool && (IsSafeTool || IsReviewApproved);
+        bool apply = IsMutatingTool && (IsSafeTool || IsModerateTool || IsReviewApproved);
         long reviewVersion = _reviewVersion;
-        if (apply && !CanApproveReview && !IsSafeTool) return;
+        if (apply && IsDestructiveTool && !CanApproveReview) return;
 
         if (!TryBuildExecutionParameters(out JsonElement parameters, out string parameterError))
         {
@@ -394,7 +401,7 @@ public sealed class ToolExecutionViewModel : ObservableObject
         try
         {
             // Include any issued review plan with the execution request.
-            ApprovedMutationPlan? approval = (apply && !IsSafeTool) ? _lastApprovedPlan : null;
+            ApprovedMutationPlan? approval = (apply && IsDestructiveTool) ? _lastApprovedPlan : null;
             CommandRequest request = apply
                 ? CommandRequest.Execute(selected.Id, parameters, approval)
                 : CommandRequest.Preview(selected.Id, parameters);
@@ -688,8 +695,9 @@ public sealed class ToolExecutionViewModel : ObservableObject
                 },
                 ResultJsonOptions);
         }
-        catch (Exception)
+        catch (JsonException ex)
         {
+            System.Diagnostics.Debug.WriteLine($"[ToolExecutionViewModel] JSON serialization fault: {ex.Message}");
             _executionResultText = result.Message;
         }
         IsExecutionResultOpen = true;
