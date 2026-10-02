@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "commandCount": 269,
+  "commandCount": 296,
   "commands": [
     {
       "id": "system",
@@ -4745,7 +4745,13 @@
       "restart": "No",
       "legacySource": "WinUtil functions/private/Get-WinUtilInstalledAPPX.ps1",
       "migrationStatus": "Implemented",
-      "keywords": ["appx", "installed", "inventory", "current user", "packages"]
+      "keywords": [
+        "appx",
+        "installed",
+        "inventory",
+        "current user",
+        "packages"
+      ]
     },
     {
       "id": "appx-provisioned-inventory",
@@ -4759,7 +4765,13 @@
       "restart": "No",
       "legacySource": "WinUtil functions/private/Remove-WinUtilProvisionedAPPX.ps1",
       "migrationStatus": "Implemented",
-      "keywords": ["appx", "provisioned", "inventory", "dism", "packages"]
+      "keywords": [
+        "appx",
+        "provisioned",
+        "inventory",
+        "dism",
+        "packages"
+      ]
     },
     {
       "id": "appx-installed-remove",
@@ -4773,16 +4785,33 @@
       "restart": "MayBeRequired",
       "legacySource": "Win11Debloat Scripts/AppRemoval/Remove-SelectedApps.ps1",
       "migrationStatus": "Implemented",
-      "keywords": ["appx", "installed", "remove", "winget", "packages"]
+      "keywords": [
+        "appx",
+        "installed",
+        "remove",
+        "winget",
+        "packages"
+      ]
     },
     {
       "id": "appx-registered-remove",
       "title": "Remove registered AppX package",
       "summary": "Remove exact current-user AppX package full names through the Windows deployment API after preview and approval.",
-      "area": "System care", "section": "Apps & startup", "risk": "High", "readOnly": false,
-      "administratorAccess": "No", "restart": "MayBeRequired",
-      "legacySource": "WinUtil functions/private/Remove-WinUtilAPPX.ps1", "migrationStatus": "Implemented",
-      "keywords": ["appx", "registered", "current user", "remove", "package full name"]
+      "area": "System care",
+      "section": "Apps & startup",
+      "risk": "High",
+      "readOnly": false,
+      "administratorAccess": "No",
+      "restart": "MayBeRequired",
+      "legacySource": "WinUtil functions/private/Remove-WinUtilAPPX.ps1",
+      "migrationStatus": "Implemented",
+      "keywords": [
+        "appx",
+        "registered",
+        "current user",
+        "remove",
+        "package full name"
+      ]
     },
     {
       "id": "appx-provisioned-remove",
@@ -4796,7 +4825,13 @@
       "restart": "MayBeRequired",
       "legacySource": "WinUtil functions/private/Remove-WinUtilProvisionedAPPX.ps1",
       "migrationStatus": "Implemented",
-      "keywords": ["appx", "provisioned", "remove", "dism", "packages"]
+      "keywords": [
+        "appx",
+        "provisioned",
+        "remove",
+        "dism",
+        "packages"
+      ]
     },
     {
       "id": "legacy-unsafe-profiles",
@@ -5314,7 +5349,14 @@
       "restart": "MayBeRequired",
       "legacySource": "WinPort recovery convergence",
       "migrationStatus": "Implemented",
-      "keywords": ["restore", "recovery", "remediation", "registry", "undo", "change records"]
+      "keywords": [
+        "restore",
+        "recovery",
+        "remediation",
+        "registry",
+        "undo",
+        "change records"
+      ]
     },
     {
       "id": "storage-report",
@@ -5378,6 +5420,520 @@
         "apps",
         "read only"
       ]
+    },
+    {
+      "id": "cleaner-developer-uv",
+      "name": "Astral UV Python Cache Purge",
+      "description": "Purges the Astral UV cache to reclaim space.",
+      "area": "System care",
+      "section": "Developer",
+      "tags": [
+        "developer",
+        "python",
+        "cache",
+        "storage"
+      ],
+      "migrationStatus": "Implemented",
+      "title": "Astral UV Python Cache Purge",
+      "summary": "Purges the Astral UV cache to reclaim space.",
+      "risk": "Safe",
+      "readOnly": false,
+      "legacySource": "None",
+      "owner": "wincare-core"
+    },
+    {
+      "id": "cleaner-ide-cursor-snapshots",
+      "name": "Cursor Shadow Git Pruner",
+      "description": "Removes old AI IDE snapshots.",
+      "area": "System care",
+      "section": "Developer",
+      "tags": [
+        "developer",
+        "cursor",
+        "ai",
+        "storage"
+      ],
+      "migrationStatus": "Implemented",
+      "title": "Cursor Shadow Git Pruner",
+      "summary": "Removes old AI IDE snapshots.",
+      "risk": "Safe",
+      "readOnly": false,
+      "legacySource": "None",
+      "owner": "wincare-core"
+    },
+    {
+      "id": "cleaner-ai-agent-ledgers",
+      "name": "Autonomous Agent Scratchpad Purge",
+      "description": "Purges AI agent intermediate patches and trace logs.",
+      "area": "System care",
+      "section": "Developer",
+      "tags": [
+        "ai",
+        "agent",
+        "logs",
+        "storage"
+      ],
+      "migrationStatus": "Implemented",
+      "title": "Autonomous Agent Scratchpad Purge",
+      "summary": "Purges AI agent intermediate patches and trace logs.",
+      "risk": "Safe",
+      "readOnly": false,
+      "legacySource": "None",
+      "owner": "wincare-core"
+    },
+    {
+      "id": "sqlite-vacuum",
+      "name": "SQLite .vscdb Vacuuming",
+      "description": "Vacuums VS Code/Cursor SQLite databases.",
+      "area": "System care",
+      "section": "Developer",
+      "tags": [
+        "database",
+        "sqlite",
+        "vscode",
+        "storage"
+      ],
+      "migrationStatus": "Implemented",
+      "title": "SQLite .vscdb Vacuuming",
+      "summary": "Vacuums VS Code/Cursor SQLite databases.",
+      "risk": "Safe",
+      "readOnly": false,
+      "legacySource": "None",
+      "owner": "wincare-core"
+    },
+    {
+      "id": "cleaner-servicing-remnants",
+      "title": "Windows Servicing Remnant Cleaner",
+      "name": "Windows Servicing Remnant Cleaner",
+      "summary": "Purges $WINDOWS.~BT, $WinREAgent, and Panther by taking ownership from TrustedInstaller.",
+      "description": "Purges $WINDOWS.~BT, $WinREAgent, and Panther by taking ownership from TrustedInstaller.",
+      "area": "System care",
+      "section": "Servicing",
+      "tags": [
+        "windows",
+        "servicing",
+        "trustedinstaller"
+      ],
+      "risk": "Moderate",
+      "readOnly": false,
+      "legacySource": "None",
+      "owner": "wincare-core",
+      "migrationStatus": "Implemented"
+    },
+    {
+      "id": "cleaner-dism-component-store",
+      "title": "Real DISM Component Store Cleaner",
+      "name": "Real DISM Component Store Cleaner",
+      "summary": "Executes real streaming DISM Component Cleanup (/ResetBase).",
+      "description": "Executes real streaming DISM Component Cleanup (/ResetBase).",
+      "area": "System care",
+      "section": "Servicing",
+      "tags": [
+        "dism",
+        "servicing",
+        "cleanup"
+      ],
+      "risk": "Moderate",
+      "readOnly": false,
+      "legacySource": "None",
+      "owner": "wincare-core",
+      "migrationStatus": "Implemented"
+    },
+    {
+      "id": "cleaner-windows-update-cache",
+      "title": "Windows Update Download Cache Coordinator",
+      "name": "Windows Update Download Cache Coordinator",
+      "summary": "Pauses wuauserv, purges SoftwareDistribution/Download, and restarts the service.",
+      "description": "Pauses wuauserv, purges SoftwareDistribution/Download, and restarts the service.",
+      "area": "System care",
+      "section": "Servicing",
+      "tags": [
+        "windows-update",
+        "cache",
+        "wuauserv"
+      ],
+      "risk": "Moderate",
+      "readOnly": false,
+      "legacySource": "None",
+      "owner": "wincare-core",
+      "migrationStatus": "Implemented"
+    },
+    {
+      "id": "compress-compactos",
+      "title": "Transparent CompactOS Compression",
+      "name": "Transparent CompactOS Compression",
+      "summary": "Applies compression via compact.exe /compactos:always.",
+      "description": "Applies compression via compact.exe /compactos:always.",
+      "area": "System care",
+      "section": "Servicing",
+      "tags": [
+        "compactos",
+        "compression",
+        "storage"
+      ],
+      "risk": "Safe",
+      "readOnly": false,
+      "legacySource": "None",
+      "owner": "wincare-core",
+      "migrationStatus": "Implemented"
+    },
+    {
+      "id": "wsl-disk-compact",
+      "title": "WSL2 Virtual Disk Compaction",
+      "name": "WSL2 Virtual Disk Compaction",
+      "summary": "Executes two-stage compaction (fstrim + host diskpart) on ext4.vhdx.",
+      "description": "Executes two-stage compaction (fstrim + host diskpart) on ext4.vhdx.",
+      "area": "System care",
+      "section": "Virtualization",
+      "tags": [
+        "wsl2",
+        "vhdx",
+        "compaction"
+      ],
+      "risk": "Safe",
+      "readOnly": false,
+      "legacySource": "None",
+      "owner": "wincare-core",
+      "migrationStatus": "Implemented"
+    },
+    {
+      "id": "docker-volume-prune",
+      "title": "Docker Desktop Volume Pruner",
+      "name": "Docker Desktop Volume Pruner",
+      "summary": "Removes dangling Docker volumes to reclaim space.",
+      "description": "Removes dangling Docker volumes to reclaim space.",
+      "area": "System care",
+      "section": "Virtualization",
+      "tags": [
+        "docker",
+        "volumes",
+        "prune"
+      ],
+      "risk": "Moderate",
+      "readOnly": false,
+      "legacySource": "None",
+      "owner": "wincare-core",
+      "migrationStatus": "Implemented"
+    },
+    {
+      "id": "storage-dedup-scan",
+      "title": "3-Phase Size & SHA-256 Hash Filter",
+      "name": "3-Phase Size & SHA-256 Hash Filter",
+      "summary": "Scans for duplicate files.",
+      "description": "Scans for duplicate files using size and SHA-256.",
+      "area": "System care",
+      "section": "Storage",
+      "tags": [
+        "dedup",
+        "scan",
+        "storage"
+      ],
+      "risk": "Safe",
+      "readOnly": true,
+      "legacySource": "None",
+      "owner": "wincare-core",
+      "migrationStatus": "Implemented"
+    },
+    {
+      "id": "storage-dedup-hardlink",
+      "title": "Non-Destructive NTFS Hardlink Consolidation",
+      "name": "Non-Destructive NTFS Hardlink Consolidation",
+      "summary": "Consolidates duplicate files via NTFS hardlinks.",
+      "description": "Consolidates duplicate files via NTFS hardlinks.",
+      "area": "System care",
+      "section": "Storage",
+      "tags": [
+        "dedup",
+        "hardlink",
+        "storage"
+      ],
+      "risk": "Moderate",
+      "readOnly": false,
+      "legacySource": "None",
+      "owner": "wincare-core",
+      "migrationStatus": "Implemented"
+    },
+    {
+      "id": "perf-standby-purge",
+      "title": "Standby List Purge",
+      "name": "Standby List Purge",
+      "summary": "Purges standby list via MemoryGovernor.",
+      "description": "Purges standby list via MemoryGovernor.",
+      "area": "System care",
+      "section": "Performance",
+      "tags": [
+        "perf",
+        "memory",
+        "purge"
+      ],
+      "risk": "Safe",
+      "readOnly": false,
+      "legacySource": "None",
+      "owner": "wincare-core",
+      "migrationStatus": "Implemented"
+    },
+    {
+      "id": "perf-timer-half-ms",
+      "title": "0.5ms System Timer",
+      "name": "0.5ms System Timer",
+      "summary": "Sets 0.5ms timer via SystemTimerGovernor.",
+      "description": "Sets 0.5ms timer via SystemTimerGovernor.",
+      "area": "System care",
+      "section": "Performance",
+      "tags": [
+        "perf",
+        "timer"
+      ],
+      "risk": "Safe",
+      "readOnly": false,
+      "legacySource": "None",
+      "owner": "wincare-core",
+      "migrationStatus": "Implemented"
+    },
+    {
+      "id": "perf-gpu-mpo-toggle",
+      "title": "GPU MPO & P-State Toggles",
+      "name": "GPU MPO & P-State Toggles",
+      "summary": "Toggles Multi-Plane Overlay and GPU P-States.",
+      "description": "Toggles Multi-Plane Overlay and GPU P-States.",
+      "area": "System care",
+      "section": "Performance",
+      "tags": [
+        "perf",
+        "gpu",
+        "mpo"
+      ],
+      "risk": "Moderate",
+      "readOnly": false,
+      "legacySource": "None",
+      "owner": "wincare-core",
+      "migrationStatus": "Implemented"
+    },
+    {
+      "id": "perf-power-scheme-unlock",
+      "title": "Win32 Power Scheme Unlocker",
+      "name": "Win32 Power Scheme Unlocker",
+      "summary": "Unlocks hidden Windows power schemes.",
+      "description": "Unlocks hidden Windows power schemes.",
+      "area": "System care",
+      "section": "Performance",
+      "tags": [
+        "perf",
+        "power",
+        "scheme"
+      ],
+      "risk": "Safe",
+      "readOnly": false,
+      "legacySource": "None",
+      "owner": "wincare-core",
+      "migrationStatus": "Implemented"
+    },
+    {
+      "id": "win-shading-rollup",
+      "title": "Window Shading Rollup",
+      "name": "Window Shading Rollup",
+      "summary": "Rolls up windows to their titlebars.",
+      "description": "Rolls up windows to their titlebars.",
+      "area": "System care",
+      "section": "Desktop",
+      "tags": [
+        "window",
+        "manager",
+        "shade"
+      ],
+      "risk": "Safe",
+      "readOnly": false,
+      "legacySource": "None",
+      "owner": "wincare-core",
+      "migrationStatus": "Implemented"
+    },
+    {
+      "id": "win-edge-snapping",
+      "title": "Dynamic Edge Snapping Resistance",
+      "name": "Dynamic Edge Snapping Resistance",
+      "summary": "Configures edge snapping resistance.",
+      "description": "Configures edge snapping resistance.",
+      "area": "System care",
+      "section": "Desktop",
+      "tags": [
+        "window",
+        "manager",
+        "snap"
+      ],
+      "risk": "Safe",
+      "readOnly": false,
+      "legacySource": "None",
+      "owner": "wincare-core",
+      "migrationStatus": "Implemented"
+    },
+    {
+      "id": "win-corner-styler",
+      "title": "Win11 Corner & Backdrop Styler",
+      "name": "Win11 Corner & Backdrop Styler",
+      "summary": "Customizes Win11 corners and backdrops.",
+      "description": "Customizes Win11 corners and backdrops.",
+      "area": "System care",
+      "section": "Desktop",
+      "tags": [
+        "window",
+        "manager",
+        "style"
+      ],
+      "risk": "Safe",
+      "readOnly": false,
+      "legacySource": "None",
+      "owner": "wincare-core",
+      "migrationStatus": "Implemented"
+    },
+    {
+      "id": "guard-promote-scm",
+      "title": "Promote wincare-guard to SCM Service",
+      "name": "Promote wincare-guard to SCM Service",
+      "summary": "Installs the health guard as a Windows service.",
+      "description": "Installs the health guard as a Windows service.",
+      "area": "System care",
+      "section": "Guard",
+      "tags": [
+        "guard",
+        "service",
+        "scm"
+      ],
+      "risk": "Moderate",
+      "readOnly": false,
+      "legacySource": "None",
+      "owner": "wincare-core",
+      "migrationStatus": "Implemented"
+    },
+    {
+      "id": "guard-connect-pipe",
+      "title": "Connect GuardPipeClient",
+      "name": "Connect GuardPipeClient",
+      "summary": "Connects AppRuntime to the guard pipe.",
+      "description": "Connects AppRuntime to the guard pipe.",
+      "area": "System care",
+      "section": "Guard",
+      "tags": [
+        "guard",
+        "pipe",
+        "ipc"
+      ],
+      "risk": "Safe",
+      "readOnly": false,
+      "legacySource": "None",
+      "owner": "wincare-core",
+      "migrationStatus": "Implemented"
+    },
+    {
+      "id": "guard-toast-notify",
+      "title": "Interactive Windows Toast Notifications",
+      "name": "Interactive Windows Toast Notifications",
+      "summary": "Configures guard toast notifications.",
+      "description": "Configures guard toast notifications.",
+      "area": "System care",
+      "section": "Guard",
+      "tags": [
+        "guard",
+        "toast",
+        "notify"
+      ],
+      "risk": "Safe",
+      "readOnly": false,
+      "legacySource": "None",
+      "owner": "wincare-core",
+      "migrationStatus": "Implemented"
+    },
+    {
+      "id": "cleaner-squirrel-releases",
+      "title": "Squirrel Superseded Release Pruner",
+      "name": "Squirrel Superseded Release Pruner",
+      "summary": "Prunes old Squirrel application releases.",
+      "description": "Prunes old Squirrel application releases.",
+      "area": "System care",
+      "section": "Clean up",
+      "tags": [
+        "squirrel",
+        "cleanup",
+        "prune"
+      ],
+      "risk": "Safe",
+      "readOnly": false,
+      "legacySource": "None",
+      "owner": "wincare-core",
+      "migrationStatus": "Implemented"
+    },
+    {
+      "id": "cleaner-msi-package-cache",
+      "title": "MSI Package Cache Orphan Eliminator",
+      "name": "MSI Package Cache Orphan Eliminator",
+      "summary": "Eliminates orphaned MSI installers from cache.",
+      "description": "Eliminates orphaned MSI installers from cache.",
+      "area": "System care",
+      "section": "Clean up",
+      "tags": [
+        "msi",
+        "cleanup",
+        "cache"
+      ],
+      "risk": "Moderate",
+      "readOnly": false,
+      "legacySource": "None",
+      "owner": "wincare-core",
+      "migrationStatus": "Implemented"
+    },
+    {
+      "id": "installer-cache-purge",
+      "title": "Installer Cache Purge",
+      "name": "Installer Cache Purge",
+      "summary": "Actively purge stale installer caches.",
+      "description": "Removes stale installer caches (MSI, Squirrel, etc) actively.",
+      "area": "System care",
+      "section": "Clean up",
+      "tags": [
+        "installer",
+        "cache",
+        "purge"
+      ],
+      "risk": "Moderate",
+      "readOnly": false,
+      "legacySource": "None",
+      "owner": "wincare-core",
+      "migrationStatus": "Implemented"
+    },
+    {
+      "id": "app-residual-purge",
+      "title": "App Residual Purge",
+      "name": "App Residual Purge",
+      "summary": "Actively remove uninstalled application residual files.",
+      "description": "Purges residual files from previously uninstalled applications.",
+      "area": "System care",
+      "section": "Clean up",
+      "tags": [
+        "residual",
+        "purge"
+      ],
+      "risk": "Moderate",
+      "readOnly": false,
+      "legacySource": "None",
+      "owner": "wincare-core",
+      "migrationStatus": "Implemented"
+    },
+    {
+      "id": "startup-optimize",
+      "title": "Startup Optimizer",
+      "name": "Startup Optimizer",
+      "summary": "Actively disables unnecessary startup applications.",
+      "description": "Optimizes boot time by disabling non-essential startup applications.",
+      "area": "System care",
+      "section": "Apps & startup",
+      "tags": [
+        "startup",
+        "optimize"
+      ],
+      "risk": "Safe",
+      "readOnly": false,
+      "legacySource": "None",
+      "owner": "wincare-core",
+      "migrationStatus": "Implemented"
     }
   ]
 }

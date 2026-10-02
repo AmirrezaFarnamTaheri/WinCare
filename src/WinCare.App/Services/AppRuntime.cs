@@ -5,6 +5,8 @@ using WinCare.Application.Tools;
 using WinCare.Domain.Telemetry;
 using WinCare.Infrastructure.Commands;
 using WinCare.Infrastructure.Native;
+using WinCare.Infrastructure.IPC;
+
 using WinCare.Infrastructure.Plugins;
 using WinCare.Infrastructure.Storage;
 using WinCare.Application.Storage;
@@ -64,6 +66,12 @@ public sealed class AppRuntime
     /// <summary>
     /// Gets the activity journal service instance.
     /// </summary>
+    
+    /// <summary>
+    /// Gets the Guard Pipe Client.
+    /// </summary>
+    public GuardPipeClient GuardClient { get; }
+
     public ActivityJournalService Journal { get; }
 
     /// <summary>

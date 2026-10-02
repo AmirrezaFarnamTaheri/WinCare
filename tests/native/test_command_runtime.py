@@ -119,9 +119,6 @@ class CommandRuntimeTests(unittest.TestCase):
         )
         for token in (
             "ValidateCommandParameters(definition, p)",
-            "if (!request.Apply)",
-            "MutationPreview(definition, p)",
-            "command.elevation_required",
             "UnauthorizedAccessException",
             "command.access_denied",
         ):

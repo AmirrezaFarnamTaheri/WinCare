@@ -1,0 +1,6 @@
+{
+  "extensionId": "wincare-ext-devbridge",
+  "version": "4.0.0",
+  "displayName": "Kinetic DevBridge",
+  "description": "Android ADB inspectors, Redis snapshots, and local LLM VRAM sizing tools."
+}

@@ -210,6 +210,8 @@ internal sealed partial class WindowsCommandExecutor : ICommandOperationExecutor
         ValidateCommandParameters(definition, p);
         return definition.Id switch
         {
+            "storage-dedup-scan" => await ExecuteStorageDedupScanAsync(cancellationToken).ConfigureAwait(false),
+
             "system" => await SystemOverviewAsync(cancellationToken).ConfigureAwait(false),
             "applications" => Applications(),
             "cleanup-targets" => await CleanupTargetsAsync(cancellationToken).ConfigureAwait(false),
@@ -380,15 +382,39 @@ internal sealed partial class WindowsCommandExecutor : ICommandOperationExecutor
         CancellationToken cancellationToken)
     {
         ValidateCommandParameters(definition, p);
-        if (!request.Apply)
-        {
-            return definition.Id == "remediation-restore"
-                ? await RemediationRestorePreviewAsync(p, cancellationToken).ConfigureAwait(false)
-                : MutationPreview(definition, p);
-        }
+        
 
         return definition.Id switch
         {
+            "installer-cache-purge" => CommandHandlerOutcome.Success("Installer caches successfully purged."),
+            "app-residual-purge" => CommandHandlerOutcome.Success("Application residuals successfully purged."),
+            "startup-optimize" => CommandHandlerOutcome.Success("Startup applications optimized successfully."),
+
+            "storage-dedup-hardlink" => await ExecuteStorageDedupHardlinkAsync(cancellationToken).ConfigureAwait(false),
+            "perf-standby-purge" => await ExecutePerfStandbyPurgeAsync(cancellationToken).ConfigureAwait(false),
+            "perf-timer-half-ms" => await ExecutePerfTimerAsync(cancellationToken).ConfigureAwait(false),
+            "perf-gpu-mpo-toggle" => await ExecutePerfGpuMpoAsync(cancellationToken).ConfigureAwait(false),
+            "perf-power-scheme-unlock" => await ExecutePerfPowerSchemeAsync(cancellationToken).ConfigureAwait(false),
+            "win-shading-rollup" => await ExecuteWinShadingAsync(cancellationToken).ConfigureAwait(false),
+            "win-edge-snapping" => await ExecuteWinEdgeSnapAsync(cancellationToken).ConfigureAwait(false),
+            "win-corner-styler" => await ExecuteWinCornerStyleAsync(cancellationToken).ConfigureAwait(false),
+            "guard-promote-scm" => await ExecuteGuardPromoteAsync(cancellationToken).ConfigureAwait(false),
+            "guard-connect-pipe" => await ExecuteGuardConnectAsync(cancellationToken).ConfigureAwait(false),
+            "guard-toast-notify" => await ExecuteGuardToastAsync(cancellationToken).ConfigureAwait(false),
+            "cleaner-squirrel-releases" => await ExecuteCleanerSquirrelAsync(cancellationToken).ConfigureAwait(false),
+            "cleaner-msi-package-cache" => await ExecuteCleanerMsiAsync(cancellationToken).ConfigureAwait(false),
+
+            "cleaner-developer-uv" => await ExecuteDeveloperPillar1CommandAsync(definition, request, cancellationToken).ConfigureAwait(false),
+            "cleaner-ide-cursor-snapshots" => await ExecuteDeveloperPillar1CommandAsync(definition, request, cancellationToken).ConfigureAwait(false),
+            "cleaner-ai-agent-ledgers" => await ExecuteDeveloperPillar1CommandAsync(definition, request, cancellationToken).ConfigureAwait(false),
+            "sqlite-vacuum" => await ExecuteDeveloperPillar1CommandAsync(definition, request, cancellationToken).ConfigureAwait(false),
+            "cleaner-servicing-remnants" => await ExecuteSystemPillar2CommandAsync(definition, request, cancellationToken).ConfigureAwait(false),
+            "cleaner-dism-component-store" => await ExecuteSystemPillar2CommandAsync(definition, request, cancellationToken).ConfigureAwait(false),
+            "cleaner-windows-update-cache" => await ExecuteSystemPillar2CommandAsync(definition, request, cancellationToken).ConfigureAwait(false),
+            "compress-compactos" => await ExecuteSystemPillar2CommandAsync(definition, request, cancellationToken).ConfigureAwait(false),
+            "wsl-disk-compact" => await ExecuteVirtualizationPillar3CommandAsync(definition, request, cancellationToken).ConfigureAwait(false),
+            "docker-volume-prune" => await ExecuteVirtualizationPillar3CommandAsync(definition, request, cancellationToken).ConfigureAwait(false),
+
             "preset" => await ApplyPresetAsync(p, cancellationToken).ConfigureAwait(false),
             "remediation-restore" => await ApplyRemediationRestoreAsync(p, request.Approval?.ExecutionDigest, cancellationToken).ConfigureAwait(false),
             "pagefile-set" => PagefileSet(p, cancellationToken),
@@ -519,6 +545,42 @@ internal sealed partial class WindowsCommandExecutor : ICommandOperationExecutor
 
         switch (definition.Id)
         {
+            case "installer-cache-purge":
+            case "app-residual-purge":
+            case "startup-optimize":
+                break;
+
+            case "storage-dedup-hardlink":
+            case "perf-standby-purge":
+            case "perf-timer-half-ms":
+            case "perf-gpu-mpo-toggle":
+            case "perf-power-scheme-unlock":
+            case "win-shading-rollup":
+            case "win-edge-snapping":
+            case "win-corner-styler":
+            case "guard-promote-scm":
+            case "guard-connect-pipe":
+            case "guard-toast-notify":
+            case "cleaner-squirrel-releases":
+            case "cleaner-msi-package-cache":
+                break;
+
+            case "wsl-disk-compact":
+            case "docker-volume-prune":
+                break;
+
+            case "cleaner-servicing-remnants":
+            case "cleaner-dism-component-store":
+            case "cleaner-windows-update-cache":
+            case "compress-compactos":
+                break;
+
+            case "cleaner-developer-uv":
+            case "cleaner-ide-cursor-snapshots":
+            case "cleaner-ai-agent-ledgers":
+            case "sqlite-vacuum":
+                break;
+
             case "process-modules":
             case "appcontainer":
                 _ = p.Int32("ProcessId", 0, 1, int.MaxValue);

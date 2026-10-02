@@ -27,6 +27,9 @@
                 <NavigationViewItem.Icon><FontIcon Glyph="&#xE9D9;" /></NavigationViewItem.Icon>
             </NavigationViewItem>
 
+                        <NavigationViewItem x:Uid="NavAiDoctor" Content="Active Troubleshooter" Tag="ai-doctor" AutomationProperties.AutomationId="NavAiDoctor" AutomationProperties.Name="Active Troubleshooter">
+                <NavigationViewItem.Icon><FontIcon Glyph="&#xE730;" /></NavigationViewItem.Icon>
+            </NavigationViewItem>
             <NavigationViewItemHeader Content="Care" />
             <NavigationViewItem x:Uid="NavSystemCare" Content="System care" Tag="system-care" AutomationProperties.AutomationId="NavSystemCare" AutomationProperties.Name="System care">
                 <NavigationViewItem.Icon><FontIcon Glyph="&#xE90F;" /></NavigationViewItem.Icon>
@@ -50,9 +53,6 @@
         <NavigationView.FooterMenuItems>
             <NavigationViewItem x:Uid="NavPluginStore" Content="Extensions" Tag="plugin-store" AutomationProperties.AutomationId="NavPluginStore" AutomationProperties.Name="Extensions">
                 <NavigationViewItem.Icon><FontIcon Glyph="&#xEA86;" /></NavigationViewItem.Icon>
-            </NavigationViewItem>
-            <NavigationViewItem x:Uid="NavAiDoctor" Content="Troubleshoot" Tag="ai-doctor" AutomationProperties.AutomationId="NavAiDoctor" AutomationProperties.Name="Troubleshoot">
-                <NavigationViewItem.Icon><FontIcon Glyph="&#xE730;" /></NavigationViewItem.Icon>
             </NavigationViewItem>
             <NavigationViewItem x:Uid="NavSettings" Content="Settings" Tag="settings" AutomationProperties.AutomationId="NavSettings" AutomationProperties.Name="Settings">
                 <NavigationViewItem.Icon><FontIcon Glyph="&#xE713;" /></NavigationViewItem.Icon>

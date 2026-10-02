@@ -14,17 +14,17 @@
 </p>
 
 > [!IMPORTANT]
-> WinCare 3.0.0 is the current re-release line. The current catalog contains 269 commands. Operations that can change the system are admitted according to their declared risk and privilege requirements; review high-impact changes before applying them.
+> WinCare 4.0.0 is the current re-release line. The current catalog contains 269 commands. Operations that can change the system are admitted according to their declared risk and privilege requirements; review high-impact changes before applying them.
 
 ## Overview
 
 <p align="center">
-  <img src="docs/images/runtime-dashboard.png" alt="WinCare v3.0.0 Home e2e runtime capture" width="900" />
+  <img src="docs/images/runtime-dashboard.png" alt="WinCare v4.0.0 Home e2e runtime capture" width="900" />
 </p>
 
-<p align="center"><em>E2E runtime capture from the v3.0.0 x64 portable build; see <a href="docs/Screenshots.md">Screenshots</a> for capture provenance.</em></p>
+<p align="center"><em>E2E runtime capture from the v4.0.0 x64 portable build; see <a href="docs/Screenshots.md">Screenshots</a> for capture provenance.</em></p>
 
-WinCare brings Windows maintenance, diagnostics, recovery, and operational tooling into one native WinUI 3 application. Read-only checks remain separate from mutations, system-changing actions use explicit admission rules, and operation history is stored locally so users can see what ran and why.
+WinCare brings Windows maintenance, diagnostics, recovery, and operational tooling into one native WinUI 3 & Kinetic Glass Mesh application. Read-only checks remain separate from mutations, system-changing actions use explicit admission rules, and operation history is stored locally so users can see what ran and why.
 
 | Goal | WinCare |
 |---|---|
@@ -81,7 +81,7 @@ Plugins run with the permissions available to the WinCare process. Local package
 ## Architecture
 
 ```text
-WinCare.App             WinUI 3 shell, typed tool UI, accessibility and presentation
+WinCare.App             WinUI 3 & Kinetic Glass Mesh shell, typed tool UI, accessibility and presentation
 WinCare.Application     Dispatcher, admission, operation lifecycle, plugins, activity
 WinCare.Domain          Requests, results, policies, risk and evidence models
 WinCare.Infrastructure  Windows integration, persistence, bounded process execution, native interop

@@ -1,0 +1,6 @@
+{
+  "extensionId": "wincare-ext-downloader",
+  "version": "4.0.0",
+  "displayName": "Kinetic Segmented Downloader",
+  "description": "Multi-segment HTTP engine, HLS/ED2K scrapers, and token-bucket throttlers."
+}

@@ -1,0 +1,6 @@
+{
+  "extensionId": "wincare-ext-gamerig",
+  "version": "4.0.0",
+  "displayName": "Kinetic GameRig",
+  "description": "Steam shader cache reclamation, driver cache aggregators, and game runtime profilers."
+}
