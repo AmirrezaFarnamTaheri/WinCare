@@ -8,6 +8,31 @@ This history restarts at 3.0.0 with the Fluent redesign re-release. The safety m
 
 ## [Unreleased]
 
+## [4.0.0-rc1] - 2026-10-03
+
+### Kinetic Mission Control Overhaul
+
+- **Eight Strategic Kinetic Pillars (Zero-Stub Guarantee)**:
+  - Developer Workspaces (`cleaner-developer-uv`, `cleaner-ide-cursor-snapshots`, `cleaner-ai-agent-ledgers`, native SQLite database vacuuming via `winsqlite3.dll`).
+  - Servicing & OS Footprint (`cleaner-servicing-remnants` with elevated token privileges, DISM component store resetbase, Windows Update cache purging, CompactOS compression).
+  - Virtualization & Containers (WSL2 guest `fstrim -v /` across registered distros with host `ext4.vhdx` diskpart compact, Docker volume/builder pruning).
+  - Storage Deduplication (exact hash deduplication and safe storage cleanup).
+  - Hardware & Performance Optimization (Multi-Plane Overlay flags, multimedia timer resolution tuning to 0.5ms precision, Ultimate Performance power plan).
+  - Desktop Ergonomics & Shell Visuals (desktop drop shadows, snap assist, window corner rounding customization).
+  - Background Guard Service (IPC named pipe listener with token-based access control and native Rust ETW monitor integration).
+  - Application & MSI Remediation (application remnants and orphaned MSI installer cache cleanups).
+- **Subsystem Command Executor Architecture**:
+  - Implemented modular `ISubsystemCommandExecutor` and `SubsystemCommandRegistry` across Dism, Driver, Remediation, and Storage domains (`src/WinCare.Application/Commands/Subsystems/`).
+  - Enforced two-phase execution: mutating requests run validation and generate a concrete `MutationPreview` detailing affected resources before changes apply.
+  - Standardized file system traversal on `SafeRecursiveEnumeration` (`RecurseSubdirectories = true`, `IgnoreInaccessible = true`, `AttributesToSkip = FileAttributes.ReparsePoint`).
+- **Interactive Topology & Web Showcase**:
+  - Replaced legacy showcase with compiled semantic SVG topology diagram and interactive simulator at `docs/index.html`.
+  - Offline-first architecture with zero external CDN dependencies.
+- **Safety, Ergonomics & Memory Safety**:
+  - 1-click execution for Safe and Moderate operations; confirmation switches strictly bounded to Destructive actions.
+  - Complete memory safety audit (`docs/Memory-Safety-Audit.md`) covering native Rust boundary invariants and unsafe block containment.
+  - Rust ETW monitor (`native/wincare-guard/src/monitors/etw.rs`) for proactive system health tracking.
+
 ## [3.0.0]
 
 ### Design system

@@ -25,11 +25,11 @@ def _get_product_version() -> str:
     if props_path.is_file():
         import xml.etree.ElementTree as ET
         tree = ET.parse(props_path)
-        prefix = tree.findtext(".//VersionPrefix", "3.0.0")
+        prefix = tree.findtext(".//VersionPrefix", "4.0.0")
         suffix = tree.findtext(".//VersionSuffix", "")
         return f"{prefix}-{suffix}" if suffix else prefix
     # Keep the fallback aligned with Directory.Build.props (VersionPrefix/VersionSuffix).
-    return "3.0.0"
+    return "4.0.0"
 
 
 CHECKS = [

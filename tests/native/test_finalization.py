@@ -413,9 +413,9 @@ class FinalizationTests(unittest.TestCase):
         prefix = props.findtext(".//VersionPrefix")
         suffix = props.findtext(".//VersionSuffix")
         informational = props.findtext(".//InformationalVersion")
-        self.assertEqual("3.0.0", prefix)
-        self.assertIsNone(suffix)
-        self.assertEqual(prefix, informational)
+        self.assertEqual("4.0.0", prefix)
+        self.assertEqual("rc1", suffix)
+        self.assertEqual("4.0.0-rc1", informational)
 
         # The checked-in manifest carries the numeric fallback (VersionPrefix + ".0"); the
         # build-time StampAppxManifestVersion target derives the packaged version instead of

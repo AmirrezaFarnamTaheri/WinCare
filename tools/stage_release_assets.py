@@ -25,11 +25,11 @@ def _get_default_version() -> str:
     if props_path.is_file():
         import xml.etree.ElementTree as ET
         tree = ET.parse(props_path)
-        prefix = tree.findtext(".//VersionPrefix", "3.0.0")
+        prefix = tree.findtext(".//VersionPrefix", "4.0.0")
         suffix = tree.findtext(".//VersionSuffix", "")
         return f"v{prefix}-{suffix}" if suffix else f"v{prefix}"
     # Keep the fallback aligned with Directory.Build.props (VersionPrefix/VersionSuffix).
-    return "v3.0.0"
+    return "v4.0.0"
 
 
 def _read_expected_manifest(manifest_path: Path) -> dict[str, str]:
