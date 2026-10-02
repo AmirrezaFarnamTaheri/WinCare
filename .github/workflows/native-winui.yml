@@ -37,7 +37,13 @@ jobs:
         with:
           python-version: "3.13"
       - name: Run repository Python tests
-        run: python -m unittest discover -s tests -t . -v
+        run: python -m unittest discover -s tests -t . -v > test_output.log 2>&1 || { cat test_output.log; exit 1; }
+      - name: Upload test log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-log
+          path: test_output.log
       - name: Verify visual design tokens
         run: python tools/verify_visual_tokens.py
       - name: Verify contrast ratios
