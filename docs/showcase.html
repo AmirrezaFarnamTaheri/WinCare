@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>WinCare — Native Windows checkup, maintenance and repair</title>
+  <title>WinCare: Native Windows Checkup, Maintenance, and Repair</title>
   <meta name="description" content="WinCare is a native WinUI 3, .NET 8 and Rust Windows workspace for system checkups, maintenance, recovery and evidence-led repair. Read-only checks stay separate from mutations.">
   <meta name="color-scheme" content="light dark">
 
@@ -18,7 +18,7 @@
 
   <style>
     :root {
-      /* Light theme — mirrors ThemeResources.xaml "Light" */
+      /* Light theme: mirrors ThemeResources.xaml "Light" */
       --page-background: #EDF2F5;
       --surface: #FFFFFF;
       --surface-secondary: #F2F6F8;
@@ -42,7 +42,7 @@
     }
 
     html[data-theme="dark"] {
-      /* Dark theme — mirrors ThemeResources.xaml "Dark" */
+      /* Dark theme: mirrors ThemeResources.xaml "Dark" */
       --page-background: #101B24;
       --surface: #182A35;
       --surface-secondary: #203542;
@@ -528,7 +528,7 @@
     .dialogue-row.sentry { border-left-color: var(--success); }
     .dialogue-row.system { border-left-color: var(--warning); }
 
-    /* ---- Kinetic Strategic Pillars Matrix ---- */
+    /* ---- Strategic Pillars Grid ---- */
     .filter-bar {
       display: flex;
       flex-wrap: wrap;
@@ -628,6 +628,47 @@
     }
     .pillar-card.expanded .pillar-drawer {
       display: block;
+    }
+
+    /* ---- Interactive Architecture Explorer (Archify) ---- */
+    .arch-explorer {
+      margin-top: 36px;
+      border-radius: 12px;
+      border: 1px solid var(--card-border);
+      background-color: var(--surface);
+      overflow: hidden;
+      box-shadow: var(--shadow-lift);
+    }
+    .arch-explorer-top {
+      padding: 14px 20px;
+      background-color: var(--surface-secondary);
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .arch-explorer-frame-wrap {
+      position: relative;
+      height: 560px;
+      background-color: var(--surface);
+    }
+    .arch-explorer-frame {
+      width: 100%;
+      height: 100%;
+      border: none;
+      display: block;
+    }
+    .arch-explorer-footer {
+      padding: 12px 20px;
+      background-color: var(--surface-secondary);
+      border-top: 1px solid var(--border-subtle);
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
     }
 
     /* ---- Tactile Command Simulator ---- */
@@ -803,7 +844,7 @@
       <div class="shell hero-grid">
         <div>
           <span class="eyebrow">WinUI 3 · .NET 8 · Rust core</span>
-          <h1 id="hero-title">Check, understand, act and review — on native Windows.</h1>
+          <h1 id="hero-title">Check, understand, act, and review on native Windows.</h1>
           <p class="hero-lede">
             WinCare brings Windows checkups, maintenance, diagnostics and recovery into one native
             workspace. Read-only evidence stays separate from mutations, every system-changing action
@@ -818,7 +859,7 @@
           </div>
           <div class="facts">
             <div>
-              <div class="fact-value telemetry" id="fact-commands">269</div>
+              <div class="fact-value telemetry" id="fact-commands">296</div>
               <div class="fact-label">Typed catalog commands</div>
             </div>
             <div>
@@ -831,7 +872,7 @@
             </div>
           </div>
           <p class="section-lede telemetry" style="margin-top:14px;font-size:12px">
-            269 unique command IDs in <code>src/WinCare.CommandCatalog/Data/commands.json</code>;
+            296 unique command IDs in <code>src/WinCare.CommandCatalog/Data/commands.json</code>;
             12 routes in <code>PageService</code>; contrast per token checked by
             <code>tools/verify_pill_contrast.py</code> and <code>tools/verify_palette_contrast.py</code>.
           </p>
@@ -941,6 +982,40 @@
             </div>
           </div>
         </div>
+
+        <!-- INTERACTIVE ARCHITECTURE EXPLORER (Archify) -->
+        <div class="arch-explorer" role="region" aria-label="Interactive architecture topology explorer">
+          <div class="arch-explorer-top">
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <span class="terminal-dots" aria-hidden="true"><i></i><i></i><i></i></span>
+              <span class="telemetry" style="font-weight: 600; font-size: 13px;">TOPOLOGY EXPLORER · COMPILED SEMANTIC SVG</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <a href="architecture.html" target="_blank" rel="noopener" class="button button-quiet" style="font-size: 12px; padding: 6px 14px; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">
+                <span>Full-screen explorer</span>
+                <span aria-hidden="true">↗</span>
+              </a>
+              <a href="diagrams/plugin-admission.html" target="_blank" rel="noopener" class="button button-quiet" style="font-size: 12px; padding: 6px 14px; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">
+                <span>Plugin trust model</span>
+                <span aria-hidden="true">↗</span>
+              </a>
+            </div>
+          </div>
+          <div class="arch-explorer-frame-wrap">
+            <iframe class="arch-explorer-frame" src="architecture.html?embed=true" title="WinCare Architecture Diagram" loading="lazy"></iframe>
+          </div>
+          <div class="arch-explorer-footer">
+            <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+              <span class="pill pill-safe">1-Click Flow</span>
+              <span class="pill pill-readonly">Telemetry Deck</span>
+              <span class="pill pill-moderate">Dual Packaging</span>
+              <span class="pill pill-readonly">Semantic Lens</span>
+            </div>
+            <span class="telemetry" style="font-size: 12px; color: var(--text-secondary);">
+              Explore nodes, inspect directed data paths, and trace subsystem boundaries.
+            </span>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -958,12 +1033,12 @@
           <article class="card cap-card">
             <span class="cap-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l3 8 4-16 3 8h4"/></svg></span>
             <h3>Check system health</h3>
-            <p>Inspect system, storage, security, hardware, network, update and runtime evidence — collected coverage, never dressed up as a synthetic health score.</p>
+            <p>Inspect system, storage, security, hardware, network, update, and runtime evidence: collected coverage, not a synthetic health score.</p>
           </article>
           <article class="card cap-card">
             <span class="cap-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg></span>
             <h3>Clean up and maintain</h3>
-            <p>Review bounded cleanup targets, startup state, app and package state, and maintenance workflows — with a preview of exactly what a cleanup touches before it does.</p>
+            <p>Review bounded cleanup targets, startup state, app and package state, and maintenance workflows, with a preview of what a cleanup touches before it runs.</p>
           </article>
           <article class="card cap-card">
             <span class="cap-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7z"/><path d="M9 12l2 2 4-4"/></svg></span>
@@ -973,7 +1048,7 @@
           <article class="card cap-card">
             <span class="cap-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h10"/><circle cx="19" cy="18" r="2.5"/></svg></span>
             <h3>Work with advanced tools</h3>
-            <p>All 269 commands with task search, exact Area and Section filters, real category browsing, Favorites, Recent, typed parameters and Care plans.</p>
+            <p>All 296 commands with task search, exact Area and Section filters, real category browsing, Favorites, Recent, typed parameters and Care plans.</p>
           </article>
           <article class="card cap-card">
             <span class="cap-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/><circle cx="12" cy="12" r="9"/></svg></span>
@@ -994,12 +1069,12 @@
             Every tool maps to an exact Area and Section in the catalog. Filter by subsystem or select a card to inspect admission details:
           </p>
 
-          <div class="filter-bar" role="tablist" aria-label="Subsystem filters">
-            <button class="filter-chip active" type="button" data-filter="all">All subsystems (269)</button>
-            <button class="filter-chip" type="button" data-filter="system">System care (84)</button>
-            <button class="filter-chip" type="button" data-filter="security">Security (48)</button>
-            <button class="filter-chip" type="button" data-filter="repair">Repair &amp; recovery (62)</button>
-            <button class="filter-chip" type="button" data-filter="diagnostics">Diagnostic probes (75)</button>
+          <div class="filter-bar" role="group" aria-label="Subsystem filters">
+            <button class="filter-chip active" type="button" aria-pressed="true" data-filter="all">All example domains (8 of 296 catalog commands)</button>
+            <button class="filter-chip" type="button" aria-pressed="false" data-filter="system">System care (2 examples)</button>
+            <button class="filter-chip" type="button" aria-pressed="false" data-filter="security">Security (2 examples)</button>
+            <button class="filter-chip" type="button" aria-pressed="false" data-filter="repair">Repair &amp; recovery (2 examples)</button>
+            <button class="filter-chip" type="button" aria-pressed="false" data-filter="diagnostics">Diagnostic probes (2 examples)</button>
           </div>
 
           <div class="pillars-grid" id="pillars-container">
@@ -1171,7 +1246,7 @@
           <article class="card stage">
             <span class="stage-number">Phase 04</span>
             <h3>Local evidence</h3>
-            <p>Results and failures are recorded as operation evidence — actual outcomes, time and state — kept locally so you can see what ran and why.</p>
+            <p>Results and failures are recorded as operation evidence with actual outcomes, duration, and state, stored locally so you can see what ran and why.</p>
           </article>
           <article class="card stage">
             <span class="stage-number">Phase 05</span>
@@ -1191,7 +1266,7 @@
             <div class="sim-selector" role="radiogroup" aria-label="Command selection">
               <button class="sim-btn active" type="button" role="radio" aria-checked="true" data-cmd="checkup">checkup.storage (Safe)</button>
               <button class="sim-btn" type="button" role="radio" aria-checked="false" data-cmd="spooler">service.spooler-restart (Moderate)</button>
-              <button class="sim-btn" type="button" role="radio" aria-checked="false" data-cmd="cleanup">cleaner.disk-pressure (Destructive)</button>
+              <button class="sim-btn" type="button" role="radio" aria-checked="false" data-cmd="cleanup">cleaner-disk-pressure (Destructive)</button>
             </div>
             <span class="pill pill-readonly telemetry">DISPATCHER SIMULATOR</span>
           </div>
@@ -1225,7 +1300,7 @@
               </div>
             </div>
 
-            <div class="sim-terminal-pane telemetry" id="sim-terminal">
+            <div class="sim-terminal-pane telemetry" id="sim-terminal" role="log" aria-live="polite">
               <div><span class="c-dim"># Command Dispatcher initialized. Select a command and click 'Run Dry-Run Preview'.</span></div>
             </div>
           </div>
@@ -1234,7 +1309,7 @@
         <div class="terminal">
           <div class="terminal-bar">
             <span class="terminal-dots" aria-hidden="true"><i></i><i></i><i></i></span>
-            <span class="telemetry">activity journal — local operation evidence</span>
+            <span class="telemetry">activity journal: local operation evidence</span>
             <span class="pill pill-readonly" style="margin-left:auto">read-only view</span>
           </div>
           <div class="terminal-body telemetry">
@@ -1256,7 +1331,7 @@
           <h2 id="download-title">Take WinCare to your Windows machine.</h2>
           <p class="section-lede">
             Release candidates provide packaged and portable builds for x64 and ARM64. Review
-            high-impact changes before applying them — a release candidate is not a finished release.
+            high-impact changes before applying them; a release candidate is not a finished release.
           </p>
           <div class="download-actions">
             <a class="button button-primary" href="https://github.com/AmirrezaFarnamTaheri/WinCare/releases" target="_blank" rel="noopener noreferrer">
@@ -1422,7 +1497,7 @@
           ctx.fill();
         }
 
-        // Labels: prose for state, monospace for identifiers — as in the app
+        // Labels: prose for state, monospace for identifiers, matching the app
         ctx.font = '12px "Segoe UI Variable Text", "Segoe UI", sans-serif';
         ctx.fillStyle = secondary;
         ctx.fillText('read-only probes', 22, size - 46);
@@ -1467,8 +1542,12 @@
       var pillarCards = document.querySelectorAll('.pillar-card');
       filterChips.forEach(function (chip) {
         chip.addEventListener('click', function () {
-          filterChips.forEach(function (c) { c.classList.remove('active'); });
+          filterChips.forEach(function (c) {
+            c.classList.remove('active');
+            c.setAttribute('aria-pressed', 'false');
+          });
           chip.classList.add('active');
+          chip.setAttribute('aria-pressed', 'true');
           var filter = chip.getAttribute('data-filter');
           pillarCards.forEach(function (card) {
             if (filter === 'all' || card.getAttribute('data-category') === filter) {
@@ -1511,7 +1590,7 @@
           desc: 'Stops and restarts the Print Spooler service, clearing stale pending job queues in system32.'
         },
         cleanup: {
-          id: 'cleaner.disk-pressure',
+          id: 'cleaner-disk-pressure',
           risk: '<span class="pill pill-destructive">Destructive</span>',
           priv: 'Standard / Elevated for Windows Temp',
           comp: 'Not available (hard deletion)',
@@ -1520,6 +1599,7 @@
       };
 
       var activeCmdKey = 'checkup';
+      var pendingExecutionTimer = null;
       var simBtns = document.querySelectorAll('.sim-btn');
       var dispId = document.getElementById('sim-disp-id');
       var dispRisk = document.getElementById('sim-disp-risk');
@@ -1539,8 +1619,16 @@
         terminal.scrollTop = terminal.scrollHeight;
       }
 
+      function invalidatePendingExecution() {
+        if (pendingExecutionTimer !== null) {
+          window.clearTimeout(pendingExecutionTimer);
+          pendingExecutionTimer = null;
+        }
+      }
+
       simBtns.forEach(function (btn) {
         btn.addEventListener('click', function () {
+          invalidatePendingExecution();
           simBtns.forEach(function (b) {
             b.classList.remove('active');
             b.setAttribute('aria-checked', 'false');
@@ -1561,6 +1649,7 @@
 
       if (btnPreview) {
         btnPreview.addEventListener('click', function () {
+          invalidatePendingExecution();
           var d = cmdData[activeCmdKey];
           printTerm('<div><span class="c-accent">&gt; admission.inspect</span> <span class="c-dim">id: ' + d.id + '</span></div>');
           printTerm('<div><span class="c-dim">[Phase 01] Validating command schema against catalog... </span><span class="c-ok">VALID</span></div>');
@@ -1578,15 +1667,19 @@
 
       if (btnExecute) {
         btnExecute.addEventListener('click', function () {
-          var d = cmdData[activeCmdKey];
+          if (pendingExecutionTimer !== null) return;
+          var executedCmdKey = activeCmdKey;
+          var d = cmdData[executedCmdKey];
           printTerm('<div><span class="c-accent">&gt; dispatcher.execute</span> <span class="c-dim">id: ' + d.id + '</span></div>');
           printTerm('<div><span class="c-dim">[Phase 03] Dispatching to bounded native executor...</span></div>');
-          setTimeout(function () {
+          btnExecute.disabled = true;
+          pendingExecutionTimer = window.setTimeout(function () {
+            pendingExecutionTimer = null;
             printTerm('<div><span class="c-ok">[Phase 04] Completed in 42 ms. ExitCode: 0.</span></div>');
             printTerm('<div><span class="c-dim">[Phase 05] Writing local journal receipt: </span><span class="c-accent">journal.rec.' + Date.now().toString(36) + '</span></div>');
-            if (activeCmdKey === 'spooler') {
+            if (executedCmdKey === 'spooler') {
               printTerm('<div><span class="c-dim">[Compensator] Registered rollback compensator in session cache.</span></div>');
-            } else if (activeCmdKey === 'cleanup') {
+            } else if (executedCmdKey === 'cleanup') {
               printTerm('<div><span class="c-dim">[Compensator] No reversible state available for hard deletion. Marked irreversible.</span></div>');
             }
             if (btnExecute) btnExecute.disabled = true;
@@ -1596,6 +1689,7 @@
 
       if (btnReset) {
         btnReset.addEventListener('click', function () {
+          invalidatePendingExecution();
           if (!terminal) return;
           terminal.innerHTML = '<div><span class="c-dim"># Command Dispatcher initialized. Select a command and click \'Run Dry-Run Preview\'.</span></div>';
           if (btnExecute) btnExecute.disabled = true;

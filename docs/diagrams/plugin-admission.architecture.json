@@ -3,7 +3,7 @@
   "diagram_type": "architecture",
   "meta": {
     "title": "WinCare Plugin Admission Trust Flow",
-    "subtitle": "Verified current topology — unresolved trust gaps are shown explicitly",
+    "subtitle": "Verified current topology: unresolved trust gaps are shown explicitly",
     "output": "docs/diagrams/plugin-admission.html",
     "quality_profile": "showcase",
     "views": [
@@ -20,7 +20,7 @@
     { "id": "view-model", "type": "backend", "label": "Plugin Store", "sublabel": "UI revocation gate", "pos": [685, 95], "size": [155, 66] },
     { "id": "missing-root", "type": "security", "label": "Independent trust root", "sublabel": "Not implemented", "pos": [455, 225], "size": [175, 66], "tag": "Required" },
     { "id": "package-host", "type": "external", "label": "Package host", "sublabel": "HTTPS / local file", "pos": [35, 385], "size": [145, 66], "tag": "Untrusted bytes" },
-    { "id": "installer", "type": "security", "label": "PluginInstallerService", "sublabel": "Admission boundary", "pos": [300, 385], "size": [185, 70], "tag": "50 MB bound" },
+    { "id": "installer", "type": "security", "label": "PluginInstallerService", "sublabel": "Admission boundary", "pos": [300, 385], "size": [185, 66], "tag": "50 MB bound" },
     { "id": "plugin-dir", "type": "database", "label": "Plugin directory", "sublabel": "Staging → active", "pos": [555, 385], "size": [155, 66] },
     { "id": "registry", "type": "backend", "label": "Plugin registry", "sublabel": "In-process execution", "pos": [780, 385], "size": [165, 66], "tag": "Privilege boundary" }
   ],

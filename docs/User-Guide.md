@@ -54,17 +54,17 @@ Safe: direct execution  │  Moderate: preview + confirmation  │  Destructive:
 
 The main navigation is task-oriented:
 
-- **Home** — latest checkup results, recent activity, and common care shortcuts.
-- **Checkup** — a read-only look at a few important Windows areas.
-- **System care** — cleanup, performance, apps, startup, networking, updates, and maintenance.
-- **Security** — protection, privacy, and hardening tasks.
-- **Repair & recovery** — repair, restore, backup, reset, and recovery tasks.
-- **Power tools** — the complete command catalog with search, filters, categories, favorites, Recent, and Care plans.
-- **Troubleshoot** — describe a symptom and get local checks plus suggested next steps.
-- **Extensions** — manage installed optional features and browse the online list when it is available.
-- **Activity** — running work, items needing attention, finished work, and reports.
-- **Settings** — theme, window placement, and local-data access.
-- **Help** — getting started, the first-run tour, keyboard shortcuts, and common explanations.
+- **Home**: latest checkup results, recent activity, and common care shortcuts.
+- **Checkup**: a read-only look at a few important Windows areas.
+- **System care**: cleanup, performance, apps, startup, networking, updates, and maintenance.
+- **Security**: protection, privacy, and hardening tasks.
+- **Repair & recovery**: repair, restore, backup, reset, and recovery tasks.
+- **Power tools**: the complete command catalog with search, filters, categories, favorites, Recent, and Care plans.
+- **Troubleshoot**: describe a symptom and get local checks plus suggested next steps.
+- **Extensions**: manage installed optional features and browse the online list when it is available.
+- **Activity**: running work, items needing attention, finished work, and reports.
+- **Settings**: theme, window placement, and local-data access.
+- **Help**: getting started, the first-run tour, keyboard shortcuts, and common explanations.
 
 Use **Ctrl+K** to search pages and tools. In Power tools, **Ctrl+F** focuses tool search.
 
@@ -76,7 +76,7 @@ Extension widgets appear only when active. If a widget fails to load, WinCare sh
 
 ## 6. System Checkup
 
-Checkup lists four areas — **Windows and hardware**, **Storage**, **Security**, and **Updates** — and the same rows become the results when a check runs.
+Checkup lists four areas: **Windows and hardware**, **Storage**, **Security**, and **Updates**, and the same rows become the results when a check runs.
 
 The check looks at Windows/hardware basics, storage, security, and Windows Update without changing the PC. The fast system/storage/security probes run concurrently with bounded concurrency; Windows Update continues alongside them so a slow update search does not hold up the first results.
 
@@ -97,7 +97,7 @@ These pages group the command catalog around common jobs. They all hand actual e
 
 ## 8. Power tools
 
-Power tools exposes all 269 native command definitions without forcing the full catalog into the main navigation for everyday work.
+Power tools exposes all 296 native command definitions without forcing the full catalog into the main navigation for everyday work.
 
 ### Search and filters
 
@@ -134,7 +134,7 @@ Troubleshoot uses a local rule-based diagnostic engine. It is not a cloud chat m
 3. It runs relevant read-only checks.
 4. It explains what it found and suggests supported next steps.
 5. Open a suggested step in **Power tools** to review it.
-6. Power tools applies the normal risk-tier flow—direct read/low-risk execution or preview plus confirmation/approval for higher-impact mutations—and records the outcome in Activity.
+6. Power tools applies the normal risk-tier flow (direct read or low-risk execution, or preview plus confirmation/approval for higher-impact mutations) and records the outcome in Activity.
 
 Troubleshoot cannot create its own execution approval. Errors shown in the conversation are kept readable instead of dumping raw exception text into the UI.
 
@@ -166,10 +166,10 @@ Review and Add are separate actions. Uninstall requires confirmation. If an enab
 
 Activity shows what WinCare is doing and what it did recently.
 
-- **Running** — work currently in progress.
-- **Needs attention** — work that needs another look.
-- **History** — finished, failed, and cancelled operations with their real state preserved.
-- **Reports** — daily summaries rather than a duplicate of History.
+- **Running**: work currently in progress.
+- **Needs attention**: work that needs another look.
+- **History**: finished, failed, and cancelled operations with their real state preserved.
+- **Reports**: daily summaries rather than a duplicate of History.
 
 Activity updates when the journal changes instead of polling on a timer. If the history file cannot be saved, the app shows a warning; the current in-memory activity may still be visible until WinCare closes.
 
@@ -177,9 +177,9 @@ Activity updates when the journal changes instead of polling on a timer. If the 
 
 Settings is intentionally small and only exposes behavior the app actually saves:
 
-- **App theme** — System, Light, or Dark.
-- **Remember this window** — restore the last usable size, position, and maximized state; turning it off clears the stored placement.
-- **Local data** — open the WinCare data directory.
+- **App theme**: System, Light, or Dark.
+- **Remember this window**: restore the last usable size, position, and maximized state; turning it off clears the stored placement.
+- **Local data**: open the WinCare data directory.
 - A warning appears if settings cannot be loaded or saved.
 
 ## 13. WinCare Guard

@@ -54,7 +54,7 @@ C4Container
         Container(app, "WinCare.App", "WinUI 3 / XAML, .NET 8", "Task-first shell, Home, Checkup, care pages, Power tools, Activity, Extensions, Troubleshoot, Settings, Help.")
         Container(application, "WinCare.Application", "C# / .NET 8", "Command dispatcher, admission, catalog projection, diagnostics, extensions, activity journal.")
         Container(domain, "WinCare.Domain", "C# / .NET 8", "Typed requests/results, RiskTier policy, evidence and activity models.")
-        Container(catalog, "WinCare.CommandCatalog", "C# / embedded JSON", "269 command definitions, 259 frozen legacy IDs, presets, remediation metadata, typed parameter schemas.")
+        Container(catalog, "WinCare.CommandCatalog", "C# / embedded JSON", "296 command definitions, 259 frozen legacy IDs, presets, remediation metadata, typed parameter schemas.")
         Container(infrastructure, "WinCare.Infrastructure", "C# / .NET 8, P/Invoke", "Windows adapters, bounded processes, state persistence, extension verification, native bridge.")
         Container(rust_core, "wincare_core", "Rust 2024 / C ABI", "Bounded native primitives and system probes.")
         Container(guard, "wincare_guard", "Rust 2024", "Experimental local health/IPC boundary.")
@@ -92,7 +92,7 @@ C4Component
     Container_Boundary(app_core, "WinCare.Application") {
         Component(dispatcher, "CommandDispatcher", "C#", "Validates requests, enforces admission/risk semantics, owns command lifecycle.")
         Component(parallel_runner, "ParallelCommandProbeRunner", "C#", "Runs independent read-only probes with bounded concurrency.")
-        Component(catalog_service, "ToolCatalogService", "C#", "Indexes/searches all 269 command definitions and exact Area/Section metadata.")
+        Component(catalog_service, "ToolCatalogService", "C#", "Indexes/searches all 296 command definitions and exact Area/Section metadata.")
         Component(intent, "IntentTranslator", "C#", "Rule-based symptom interpretation and evidence-backed action planning.")
         Component(journal, "ActivityJournalService", "C#", "Records running, terminal, and needs-attention outcomes.")
     }
@@ -284,10 +284,10 @@ Extensions execute full-trust in process with the current user's privileges; dec
 
 Activity is the shared operation ledger:
 
-- **Running** — currently executing work.
-- **Needs attention** — an operation ended in a state requiring review or follow-up.
-- **Completed** — terminal completed/failed/cancelled outcomes.
-- **Reports** — aggregated daily summaries.
+- **Running**: currently executing work.
+- **Needs attention**: an operation ended in a state requiring review or follow-up.
+- **Completed**: terminal completed/failed/cancelled outcomes.
+- **Reports**: aggregated daily summaries.
 
 Infrastructure JSON state is committed through `CommandStateStore`. Mutations for the same root serialize through a process-wide per-root gate and an OS-wide named semaphore, so independent store instances and processes share one read-transform-write transaction boundary. A complete JSON value is flushed to a unique temporary file before replacement; if replacement fails, the intended value is rebuilt and retried rather than accepting an older destination file as a successful commit.
 

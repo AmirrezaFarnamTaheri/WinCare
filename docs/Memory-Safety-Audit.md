@@ -1,6 +1,6 @@
 # wincare-core Memory Safety & FFI Invariant Audit
 
-This document records the formal safety audit and invariants for all `unsafe` operations and exported C-ABI functions in `native/wincare-core/src/lib.rs`, fulfilling the safety requirement documented in `OVERHAUL_REPORT.md` §3 and `docs/Kinetic-Mission-Control-Spec.md` §2.
+This document records the formal safety audit and invariants for all `unsafe` operations and exported C-ABI functions in `native/wincare-core/src/lib.rs`, fulfilling the safety requirement for native engine memory isolation and `docs/Kinetic-Mission-Control-Spec.md` §2.
 
 ## Architectural Boundaries & Principles
 

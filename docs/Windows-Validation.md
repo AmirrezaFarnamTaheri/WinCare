@@ -15,7 +15,7 @@ NuGet dependency resolution is reproducible by contract. Every project commits i
 ## 1. Run source and unit gates
 
 ```bash
-# Verify native foundation and 269-command catalog coverage
+# Verify native foundation and 296-command catalog coverage
 python tools/verify_native_foundation.py
 
 # Run repository Python tests

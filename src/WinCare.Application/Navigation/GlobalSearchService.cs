@@ -6,7 +6,7 @@ namespace WinCare.Application.Navigation;
 
 /// <summary>
 /// Pure ranking engine behind the shell's global search box. Suggestions carry route keys that
-/// must match the routing table, so construction resolves the fixed routes once — a catalog
+/// must match the routing table, so construction resolves the fixed routes once; a catalog
 /// rename fails at startup instead of producing suggestions to nowhere.
 /// </summary>
 public sealed class GlobalSearchService

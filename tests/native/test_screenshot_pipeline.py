@@ -48,7 +48,7 @@ class ScreenshotPipelineContractTests(unittest.TestCase):
 
         Capture mode wraps the real dispatcher in CaptureModeCommandDispatcher, whose
         ExecuteAsync throws. A route that dispatches therefore fails the capture run
-        instead of mutating the machine — the source-text gate above can be defeated by
+        instead of mutating the machine; the source-text gate above can be defeated by
         an indirect call, this cannot.
         """
         runtime = (ROOT / "src/WinCare.App/Services/AppRuntime.cs").read_text(encoding="utf-8")

@@ -171,6 +171,15 @@ public sealed class AppRuntime
             {
                 System.Diagnostics.Debug.WriteLine($"[AppRuntime] Executor dispose failed: {ex}");
             }
+
+            try
+            {
+                await GuardClient.DisposeAsync().ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[AppRuntime] GuardClient dispose failed: {ex}");
+            }
         }
     }
 

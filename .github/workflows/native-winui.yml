@@ -466,7 +466,7 @@ jobs:
 
           # Freshness gate: the checked-in capture must still depict the source CI is building.
           # This must run BEFORE the e2e capture below, which rewrites the manifest with this
-          # build's commit — checking it afterwards would always read "fresh" and gate nothing.
+          # build's commit: checking it afterwards would always read "fresh" and gate nothing.
           # A capture whose recorded commit is behind HEAD on capture-affecting paths is
           # historical evidence wearing current labels, so this fails the run instead of
           # shipping an image that no longer matches the binary. Only enforced on x64, where

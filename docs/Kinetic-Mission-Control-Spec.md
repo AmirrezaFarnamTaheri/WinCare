@@ -1,14 +1,14 @@
-# WinCare 4.0: The Kinetic Mission Control Architecture
+# WinCare 4.0: System Architecture & Modernization Specification
 
-WinCare 4.0 transforms the application from a 1990s-style diagnostic utility into a high-performance Windows workspace. This design merges a micro-kernel architectural model, a hardware-accelerated WinUI 3 presentation layer, and a high-agency user experience that replaces defensive friction with optimistic execution and progressive disclosure.
+WinCare 4.0 structures the application as a task-first native Windows workspace. This design specifies the subsystem boundary model, the WinUI 3 presentation layer, and a fail-closed execution model with progressive disclosure.
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────────────────────────────┐
 │                                 PRESENTATION LAYER (WinUI 3 / XAML)                                     │
-│     Omni-Command Deck (Ctrl+K)  │  Kinetic Glass Mesh (Win2D)  │  Unified Adaptive Chrome              │
+│     Global Search (Ctrl+K)      │  Hardware-Accelerated Chrome │  High-Contrast AA Tokens               │
 ├─────────────────────────────────────────────────────────────────────────────────────────────────────────┤
-│                                 APPLICATION ORCHESTRATION & SAGA LAYER                                 │
-│     Optimistic Exec Engine  │  Saga Compensators  │  Playbook DAG Engine  │  Intent Routers             │
+│                                 APPLICATION ORCHESTRATION & DISPATCH                                    │
+│     Command Dispatcher      │  Compensators       │  Tool Catalog Index   │  Diagnostic Intents         │
 ├────────────────────────────┬────────────────────────────────────────────┬────────────────────────────────┤
 │       CORE EXECUTORS       │          ISOLATED PLUGIN HOSTS             │   TRANSACTIONAL PERSISTENCE    │
 │        (In-Process)        │        (Out-of-Process AppContainer)       │          (SQLite WAL)          │
@@ -20,25 +20,25 @@ WinCare 4.0 transforms the application from a 1990s-style diagnostic utility int
 └─────────────────────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
-## 1. Domain Decoupling & Micro-Kernel Deconstruction
+## 1. Domain Decoupling & Handlers
 
-### Alien Domain Pruning & Extension Extraction
-`WindowsCommandExecutor` and its helper classes currently bundle capabilities unrelated to core operating system health:
+### Domain Boundary Separation
+`WindowsCommandExecutor` and its helper classes separate core operating system health from optional utility capabilities:
 - **Window Management & Tiling**: `WindowManagerGeometry`, `WorkspaceTilingEngine` (master-stack, fair-grid, floating placement), and Win32 hotkey dispatch loops.
 - **Download & Streaming Engines**: `SegmentedDownloadEngine`, `TokenBucketThrottlerCalculator`, `PieceMapBitset`, `ParseHlsPlaylist`, and `ParseEd2kUri`.
 - **Mobile Diagnostics**: `AdbDiagnosticsHelper` (ADB device enumerator, Android mount-point parsers, battery telemetry).
-- **Machine Learning / Local LLM Tools**: `EstimateModelMemoryFit` (VRAM/RAM tier classification for 3B/8B/70B models), vector cosine similarity, and prompt context truncators.
+- **Machine Learning / Local Model Tools**: `EstimateModelMemoryFit` (VRAM/RAM tier classification for 3B/8B/70B models), vector cosine similarity, and prompt context bounds.
 - **Gaming Runtime Cleanup**: Steam VDF app manifest decoders and shader cache auditors (`DetectSteamGameInstall`, `AuditSteamDebris`).
-- **Credential & Secret Maskers**: Luhn credit card validation, Bearer token sanitizers, and clipboard memory scrapers (`ClipboardPrivacyGuard`, `SensitiveCredentialMasker`).
+- **Credential & Secret Maskers**: Luhn number validation, Bearer token sanitizers, and clipboard memory scrapers (`ClipboardPrivacyGuard`, `SensitiveCredentialMasker`).
 
-These utilities are extracted from the core binary into four independently versioned, out-of-process extensions:
+These utilities run outside the core binary in four isolated extensions:
 - **wincare-ext-workspace**: Tiling window manager, layout geometry, and global hotkeys.
 - **wincare-ext-downloader**: Multi-segment HTTP engine, HLS/ED2K scrapers, and token-bucket throttlers.
-- **wincare-ext-devbridge**: Android ADB inspectors, Redis snapshots, and local LLM VRAM sizing tools.
+- **wincare-ext-devbridge**: Android ADB inspectors, Redis snapshots, and local model VRAM sizing tools.
 - **wincare-ext-gamerig**: Steam shader cache reclamation, driver cache aggregators, and game runtime profilers.
 
-### Deconstructing the Monolithic Executor
-The monolithic `WindowsCommandExecutor` partial classes (`.System.cs`, `.Security.cs`, `.Desktop.cs`, `.Remediation.cs`, `.Experience.cs`, `.Productivity.cs`, `.State.cs`) are decommissioned. They are replaced by autonomous, single-responsibility handlers registered into the dependency injection container via `ISubsystemCommandExecutor`:
+### Subsystem Handlers
+The monolithic `WindowsCommandExecutor` partial classes are replaced by single-responsibility handlers registered into dependency injection via `ISubsystemCommandExecutor`:
 
 ```csharp
 public interface ISubsystemCommandExecutor
@@ -61,7 +61,7 @@ public interface ISubsystemCommandExecutor
 - **RemediationPolicyHandler**: Evaluates baseline deviations, applies registry policies, and executes compensating rollback transactions.
 
 ### Transactional SQLite WAL Persistence
-The file-based JSON persistence in `CommandStateStore` (relying on OS mutexes and full-file rewrites) is replaced with an embedded SQLite engine running in WAL (Write-Ahead Logging) mode via `Microsoft.Data.Sqlite`:
+Persistence uses an embedded SQLite engine running in WAL (Write-Ahead Logging) mode via `Microsoft.Data.Sqlite`:
 - **ActivityJournal**: Stores structured operation receipts, execution durations, user integrity levels, and affected resource snapshots.
 - **ApprovedPlans**: Tracks cryptographic receipts with SHA-256 parameter digests, time-to-live expirations, and single-use consumption states.
 - **CompensatorLedger**: Records reversible mutation journals with forward and reverse deltas (Registry DWORD/String values, service start types, and filesystem movements).
@@ -71,8 +71,8 @@ The file-based JSON persistence in `CommandStateStore` (relying on OS mutexes an
 ## 2. Native Systems Engineering & Sandboxing
 
 ### Rust Core (`wincare-core`) Memory Safety
-- **Audit Unsafe Blocks**: Audit and annotate the 107 unannotated unsafe blocks in `native/wincare-core/src/lib.rs` with formal `// SAFETY:` invariants, wrapping Win32 API interactions with RAII handles via `windows-rs`.
-- **Versioned ABI Surface**: Replace raw byte pointer passing (`*const u8` / `*mut u8`) with typed, versioned `repr(C)` ABI structs wrapped in panic-safe boundary harnesses:
+- **Audited Unsafe Blocks**: All `unsafe` blocks in `native/wincare-core/src/lib.rs` carry formal `// SAFETY:` invariants, wrapping Win32 API interactions with RAII handles via `windows-rs`.
+- **Versioned ABI Surface**: Typed, versioned `repr(C)` ABI structs wrapped in panic-safe boundary harnesses:
 
 ```rust
 #[repr(C)]
@@ -108,44 +108,44 @@ pub extern "C" fn wincare_core_calculate_entropy(
 ```
 
 ### Production SCM Service (`wincare-guard`)
-`wincare-guard` moves from an experimental local daemon using named pipes (`WinCareGuardIPC`) to a managed Windows Service registered with the Service Control Manager (SCM):
+`wincare-guard` runs as a managed Windows Service registered with the Service Control Manager (SCM):
 - **SCM Lifecycle Integration**: Implements native service event handlers via the Rust `windows-service` crate, handling system shutdown and power-state transitions cleanly.
-- **DACL-Hardened IPC**: Replaces default pipe permissions with an explicit SDDL descriptor restricting communication to callers holding the interactive logon SID.
-- **Real-time Kernel ETW Telemetry**: Replaces background polling with an Event Tracing for Windows (ETW) consumer subscribed to `Microsoft-Windows-Kernel-Process`, `Microsoft-Windows-Kernel-Disk`, and `Microsoft-Windows-WindowsUpdateClient`.
+- **DACL-Hardened IPC**: Restricts pipe permissions with an explicit SDDL descriptor limiting communication to callers holding the interactive logon SID.
+- **Real-time Kernel ETW Telemetry**: Uses an Event Tracing for Windows (ETW) consumer subscribed to `Microsoft-Windows-Kernel-Process`, `Microsoft-Windows-Kernel-Disk`, and `Microsoft-Windows-WindowsUpdateClient`.
 
 ### Out-of-Process Plugin Isolation & PKI
 - **Isolated Host Worker (`wincare-plugin-host.exe`)**: Extension discovery, script execution (`.cmd`, `.ps1`), and third-party assembly reflection execute inside an isolated low-privilege process.
 - **Restricted Job Object Sandboxing**: The host worker process is constrained within a Windows Job Object with a 256 MiB memory ceiling and a restricted token that denies privilege escalation.
 - **Dual-Key Catalog PKI**: Remote extension installation uses an anchored Ed25519 root trust key. Manifests must provide developer-signed packages counter-signed by the WinCare Official Catalog Root.
-- **Native CLI Tooling**: Decommission the Node.js CLI under `tools/wincare-plugin-cli`. Replace it with a compiled .NET tool (`dotnet-wincare`) that shares models directly with `WinCare.CommandCatalog`.
+- **Native CLI Tooling**: The CLI tool (`dotnet-wincare`) shares data contracts directly with `WinCare.CommandCatalog`.
 
 ---
 
 ## 3. High-Agency UX: Removing Cognitive & Defensive Burdens
 
 ```
-CURRENT DEFENSIVE FLOW (4-5 Actions, High Fatigue):
+REVIEW FLOW (Multi-Step Approvals for Irreversible Changes):
 [Tool Selected] ──► [Generate Preview] ──► [Inspect Receipt & Hashes] ──► [Confirm Approval] ──► [Execute]
 
-OPTIMISTIC HIGH-AGENCY FLOW (1 Action, Zero Fatigue):
-[One-Touch Execute] ──► (Instant Execution + Silent State Snapshot) ──► [Floating 10s Undo Toast]
+DIRECT FLOW (Reversible Safe Operations):
+[Direct Execution] ──► (State Snapshot Recorded) ──► [10s Undo Option Available]
 ```
 
-### Optimistic One-Touch Execution with Transient Undo
-- **Bypass Previews for Reversible Operations**: For Safe and Moderate risk operations (e.g., DNS flushing, temporary cache cleaning, explorer tweaks), eliminate upfront preview receipts. Actions run immediately on click while writing a delta snapshot to SQLite.
-- **Floating Undo Toasts**: Display a non-intrusive action toast: `System cache optimized (-2.4 GB). [ Undo (Ctrl+Z) ] • 10s`.
-- **Isolate Dual-Phase Approvals to Irreversible Boundaries**: Two-phase cryptographic approval (preview receipt validation, parameter digests, and signature checks) is reserved strictly for Destructive and Critical operations (e.g., BCD boot reconfiguration, disk zeroing, unrecoverable driver removals).
-- **Session-Wide Elevation**: Request administrator elevation once per session through a single User Account Control prompt rather than surfacing runtime privilege errors during execution.
+### Direct Execution with Reversible Snapshots
+- **Reversible Operations**: For Safe and Moderate risk operations (such as DNS flushing, temporary cache cleaning, and explorer preference adjustments), actions run on confirmation while writing a delta snapshot to SQLite.
+- **Undo Option**: Displays a non-intrusive action status: `System cache optimized (-2.4 GB). [ Undo (Ctrl+Z) ] (10s)`.
+- **Two-Phase Approval for Irreversible Operations**: Two-phase cryptographic approval (preview receipt validation, parameter digests, and signature checks) is reserved strictly for Destructive and Critical operations (such as BCD boot reconfiguration, disk zeroing, and unrecoverable driver removals).
+- **Session-Wide Elevation**: Requests administrator elevation once per session through a single User Account Control prompt rather than surfacing repeated runtime privilege errors during execution.
 
-### Progressive Disclosure: "Civilian View vs. Engineer Drawer"
-Low-level architecture metadata is removed from standard operational views:
+### Progressive Disclosure: Standard View vs. Technical Details Drawer
+Low-level architecture metadata is organized behind an expandable details surface:
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│ ⚡ Clean Storage Pressure                                                   │
+│ Clean Storage Pressure                                                      │
 │ Purges obsolete Windows caches and temporary setup files.                   │
 │                                                                             │
-│ [  Reclaim ~4.2 GB  ]                                 [ ⚙ Advanced Details ]│
+│ [  Reclaim ~4.2 GB  ]                                 [ Advanced Details ]  │
 └──────┬──────────────────────────────────────────────────────────────────────┘
        │ (Toggled via ~ or Ctrl+I)
        ▼
@@ -157,66 +157,66 @@ Low-level architecture metadata is removed from standard operational views:
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-- **The Default Surface (Human-First)**: Uses descriptive titles (e.g., "Uninstall Bing Weather" instead of `appx-registered-remove --name Microsoft.BingWeather`), concrete reclaimed space metrics, and clean status indicators.
-- **The Engineer Drawer**: Low-level metadata—such as `planDigest` hashes, JSON parameter contracts, and execution durations—remains accessible inside a collapsible tray or via the `~` / `Ctrl+I` shortcut.
+- **The Standard Surface**: Uses clear titles (for example, "Uninstall Bing Weather" instead of `appx-registered-remove --name Microsoft.BingWeather`), concrete reclaimed space metrics, and clean status indicators.
+- **The Technical Details Drawer**: Low-level metadata, such as `planDigest` hashes, JSON parameter contracts, and execution durations, remains accessible inside a collapsible tray or via the `~` / `Ctrl+I` shortcut.
 
-### Decisive Autonomous Co-Pilot
-- **Eliminate Advisory Hedging**: Remove noncommittal boilerplate warnings. Deliver clear assessments: what occurred, why it matters, and how to resolve it.
-- **Direct In-Place Remediation**: Eliminate page switching. Diagnostic discoveries on the Checkup or Troubleshoot pages include a direct "Resolve Instantly" action right on the finding card.
-- **Correlated Remediation Bundles**: Group related findings into a single fix plan with one execution button (e.g., stopping three orphaned telemetry services and purging their log buffers together).
+### Diagnostic Guidance & In-Place Remediation
+- **Direct Guidance**: Delivers clear assessments: what occurred, why it matters, and how to resolve it.
+- **In-Place Remediation**: Diagnostic discoveries on the Checkup or Troubleshoot pages include a direct resolution action right on the finding card.
+- **Correlated Remediation Plans**: Groups related findings into a single fix plan with one execution button (such as stopping orphaned telemetry services and purging their log buffers together).
 
 ---
 
-## 4. Visual Philosophy: The "Kinetic Glass" System
+## 4. Visual Architecture: Layered Presentation System
 
-WinCare replaces flat solid cards with a layered visual system utilizing Windows 11 Mica Alt, compositional lighting, and specular borders.
+WinCare uses Windows 11 Mica Alt, compositional lighting, and defined border contrast.
 
 ```
-[ Z-3: Floating HUD Layer ]      Global Command Palette (Ctrl+K), Notification Toasts, Modals
-[ Z-2: Active Workspace ]        Interactive DAG Playbook, Time-Machine Slider, Virtual Grids
-[ Z-1: Base Layout Chrome ]      Mica Alt Glass Surface, Floating Navigation Pill, Status Bar
-[ Z-0: Ambient Mesh Engine ]     Hardware-accelerated Direct2D / Win2D Topology Canvas
+[ Z-3: Floating Layer ]         Global Command Palette (Ctrl+K), Notification Toasts, Modals
+[ Z-2: Active Workspace ]        Interactive DAG Playbook, Mutation Timeline, Virtual Grids
+[ Z-1: Base Layout Chrome ]      Mica Alt Surface, Navigation Rail, Status Bar
+[ Z-0: Diagnostics Canvas ]      Hardware-accelerated Direct2D / Win2D Topology Canvas
 ```
 
 ```
 ┌────────────────────────────────────────────────────────────────────────────────────────────────────────┐
-│ [≡] ❖ WinCare OS Workspace     [ ⌘ Search actions, inspect registry, run playbooks (Ctrl+K) ]  _ □ ✕ │
+│ [=] WinCare Workspace          [ Search actions, inspect registry, run playbooks (Ctrl+K) ]    _ [] X  │
 ├───────┬────────────────────────────────────────────────────────────────────────────────────────────────┤
-│ ⌂     │  ACTIVE TELEMETRY TOPOLOGY                                                 [ Profile: Pro-Rig ]│
-│ ⛨     │  ┌───────────────────────┐  ┌───────────────────────┐  ┌─────────────────────────────────────┐ │
-│ 🛠    │  │ STORAGE INTEGRITY     │  │ KERNEL ATTACK SURFACE │  │ COMPENSATOR JOURNAL                 │ │
-│ 🛡    │  │ 78.4% Clean (21.4 GB) │  │ VBS: Active | HVCI: On│  │ 14 Reversible Snapshots             │ │
-│ ⟲     │  │ [===••••••••••••••••] │  │ 0 Vulnerable Drivers  │  │ Last: explorer.show-extensions      │ │
+│ Home  │  SYSTEM TOPOLOGY                                                           [ Profile: Pro-Rig ]│
+│ Check │  ┌───────────────────────┐  ┌───────────────────────┐  ┌─────────────────────────────────────┐ │
+│ Care  │  │ STORAGE INTEGRITY     │  │ KERNEL ATTACK SURFACE │  │ COMPENSATOR JOURNAL                 │ │
+│ Sec   │  │ 78.4% Clean (21.4 GB) │  │ VBS: Active | HVCI: On│  │ 14 Reversible Snapshots             │ │
+│ Rep   │  │ [===...............] │  │ 0 Vulnerable Drivers  │  │ Last: explorer.show-extensions      │ │
 │       │  └───────────────────────┘  └───────────────────────┘  └─────────────────────────────────────┘ │
-│ ───   │ ────────────────────────────────────────────────────────────────────────────────────────────── │
-│ ⚙     │  INTERACTIVE STATE-TIME MACHINE (SYSTEM RESTORE & MUTATION TIMELINE)                           │
-│ ≡     │  ●────────────●────────────────────────●───────────────────────● (NOW)                         │
+│ ---   │ ────────────────────────────────────────────────────────────────────────────────────────────── │
+│ Tools │  ACTIVITY & MUTATION TIMELINE                                                                  │
+│ Ext   │  o------------o------------------------o-----------------------o (NOW)                         │
 │       │  10:14 AM     11:30 AM                 02:15 PM                04:05 PM                        │
-│ ?     │  DeepClean    WinGet Upgrade           Disable Telemetry       AppX Provision Clean            │
+│ Help  │  DeepClean    WinGet Upgrade           Disable Telemetry       AppX Provision Clean            │
 │       │  [-1.2 GB]    [4 Packages Updated]     [2 Rules Applied]       [3 Apps Removed]                │
-│       │               [View Diff]              [Rollback State ↺]      [Inspect Receipt]               │
+│       │               [View Diff]              [Rollback State]        [Inspect Receipt]               │
 └───────┴────────────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ### Spacing Scale & Token System
-The 202 hardcoded spacing literals (inconsistent DIP values: 6, 10, 14, 18, 20, 28) are removed and standardized on an 8-point geometric scale:
+Spacing literals are standardized on an 8-point geometric scale:
 
 | Token | Light Value | Dark Value | Purpose |
 |---|---|---|---|
 | CanvasBackdrop | Mica Alt (#F3F3F3) | Mica Alt (#0D1117) | Ambient desktop-composited window base |
-| SurfaceGlass | rgba(255, 255, 255, 0.70) | rgba(22, 27, 34, 0.65) | Acrylic glassmorphism with 30px backdrop blur |
+| SurfaceGlass | rgba(255, 255, 255, 0.70) | rgba(22, 27, 34, 0.65) | Acrylic backdrop surface |
 | SurfaceElevated | #FFFFFF | #161B22 | Focus cards, active inspectors, dialog shells |
-| BorderSpecular | rgba(0, 0, 0, 0.08) | rgba(255, 255, 255, 0.12) | 1 DIP high-index edge highlight |
+| BorderSpecular | rgba(0, 0, 0, 0.08) | rgba(255, 255, 255, 0.12) | 1 DIP edge highlight |
 | AccentPrimary | System Accent / #0066FF | System Accent / #388BFD | Execution triggers, active nodes, focus outlines |
 | GlowSafe | #10B981 (Emerald) | #059669 | Bounded, verified read-only states |
 | GlowMutating | #F59E0B (Amber) | #D97706 | Confirmation-gated mutation states |
-| GlowHazard | #EF4444 (Crimson) | #DC2626 | Destructive preview & elevated boundaries |
+| GlowHazard | #EF4444 (Crimson) | #DC2626 | Destructive preview and elevated boundaries |
 
 - **Spacing Tokens**: SpacingXS (4px), SpacingS (8px), SpacingM (12px), SpacingL (16px), SpacingXL (24px), SpacingXXL (32px).
 - **Corner Radii**: Controls and input elements use 8 DIP; cards, flyouts, and layout containers use 12 DIP.
 
 ### Unified Page Chrome (`UnifiedPageHeader`)
-Consolidate the duplicated header layouts across all 12 XAML views into a single shared control:
+Consolidates header layouts across views into a shared control:
 
 ```xml
 <UserControl x:Class="WinCare.App.Controls.UnifiedPageHeader">
@@ -237,9 +237,9 @@ Consolidate the duplicated header layouts across all 12 XAML views into a single
 </UserControl>
 ```
 
-### High-Performance Rendering & Natural Motion
-- **Recycled ItemsRepeater**: Replace `ListView` in `AllToolsPage` and `ActivityPage` with virtualized `ItemsRepeater` controls using fixed layout recycling to ensure steady 60 FPS scrolling during search queries.
-- **Natural Spring Physics**: Replace linear UI transitions with hardware-accelerated spring animations via `Microsoft.UI.Composition`:
+### High-Performance Rendering & Fluid Transitions
+- **Recycled ItemsRepeater**: Uses virtualized `ItemsRepeater` controls with fixed layout recycling in `AllToolsPage` and `ActivityPage` for responsive scrolling.
+- **Natural Spring Transitions**: Hardware-accelerated animations via `Microsoft.UI.Composition`:
 
 ```csharp
 public static void ApplyNaturalSpring(UIElement element, Vector3 targetScale)
@@ -258,19 +258,19 @@ public static void ApplyNaturalSpring(UIElement element, Vector3 targetScale)
 
 ---
 
-## 5. The Four Pillar Experiences
+## 5. Primary Workspaces & Interfaces
 
-### Pillar A: Omni-Command Deck (`Ctrl+K`)
-Replaces the standard search box with an overlay command palette supporting natural language intents, inline execution, and diff inspections:
+### Command Palette (`Ctrl+K`)
+Provides global command search supporting structured queries, inline execution, and diff inspections:
 
 ```
 ┌────────────────────────────────────────────────────────────────────────┐
 │  > clean temp olderThan:7days --dry-run                                │
 ├────────────────────────────────────────────────────────────────────────┤
 │  SUGGESTED ACTIONS                                                     │
-│  ⚡ cleaner-disk-pressure       Purge temporary cache > 7 days  [Enter] │
-│  🔍 disk-storage-inventory      Analyze large footprint blocks  [Tab]   │
-│  🛡 audit-driver-store          Inspect obsolete OEM INF files  [Alt+1] │
+│  cleaner-disk-pressure          Purge temporary cache > 7 days  [Enter]│
+│  disk-storage-inventory         Analyze large footprint blocks  [Tab]  │
+│  audit-driver-store             Inspect obsolete OEM INF files  [Alt+1]│
 ├────────────────────────────────────────────────────────────────────────┤
 │  INLINE PARAMETER INSPECTOR & ADMISSION PREVIEW                        │
 │  Command: cleaner-disk-pressure [ID: disk.clean.pressure]              │
@@ -286,55 +286,55 @@ Replaces the standard search box with an overlay command palette supporting natu
 ```
 
 - **Syntax & Intent Tokenizer**: `>` switches to direct command execution; `@` scopes queries to system targets (`@services`, `@registry`, `@drivers`); `:` filters by risk level (`:readonly`, `:mutating`, `:destructive`).
-- **Natural Language Mapping**: Queries such as "my PC feels sluggish" automatically resolve to startup optimization, memory cache trimming, and thermal profile checks.
-- **In-Deck Execution**: Safe read-only diagnostics render inline summaries directly inside the palette without navigating away from the active screen.
+- **Symptom Mapping**: Queries such as "pc feels slow" map to startup optimization, memory cache trimming, and thermal profile checks.
+- **Inline Execution**: Safe read-only diagnostics render inline summaries directly inside the palette without navigating away from the active screen.
 
-### Pillar B: Kinetic Subsystem Canvas
-Replaces static rows on the Checkup page with an interactive subsystem node constellation powered by Win2D:
+### Subsystem Topology
+Provides an interactive subsystem node representation powered by Win2D:
 
 ```
         [ Security & VBS ]
              ( 98% )
-               │
-               ▼
-[ Storage ] ─── ❖ ─── [ Servicing & DISM ]
+                │
+                ▼
+[ Storage ] ─── * ─── [ Servicing & DISM ]
   ( 72% )      CORE     ( Update Pending )
-               ▲
-               │
-         [ Kernel Drivers ]
+                ▲
+                │
+          [ Kernel Drivers ]
              ( 100% )
 ```
 
-- **Status Indicators**: Solid emerald rings indicate verified health assertions; pulsating amber signals reversible anomalies (e.g., orphan component packages); strobing crimson indicates critical security drift (e.g., HVCI disabled).
-- **Fluid Transitions**: Selecting a subsystem node zooms into its diagnostic telemetry using a composition-backed `Vector3KeyFrameAnimation`.
+- **Status Indicators**: Solid emerald rings indicate verified health assertions; amber signals reversible anomalies (such as orphan component packages); crimson indicates security configuration drift (such as HVCI disabled).
+- **Transitions**: Selecting a subsystem node displays its diagnostic telemetry using a composition-backed `Vector3KeyFrameAnimation`.
 
-### Pillar C: State-Time Machine (Rollback Timeline)
-Replaces the tabular Activity view with a Git-like visual history tree:
+### Activity & Rollback Timeline
+Visual history view backed by SQLite WAL:
 
 ```
-(Time-Machine Scrub Bar)
-◄──[ 2026-09-20 14:00 ]──────[ 2026-09-21 09:30 ]──────[ 2026-09-22 18:00 (HEAD) ]──►
+(Timeline Scrub Bar)
+<---[ 2026-09-20 14:00 ]------[ 2026-09-21 09:30 ]------[ 2026-09-22 18:00 (HEAD) ]--->
 
-  ● Commit: #m-882193b - Applied Remediation Preset "Hardened"
-  │ Author: Elevation Admin • Duration: 420ms • Plan Digest: a9f8...12c0
-  │
-  ├─ [REGISTRY DIFF]
-  │  HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard
-  │  - "EnableVirtualizationBasedSecurity" = 0x00000000 (DWORD)
-  │  + "EnableVirtualizationBasedSecurity" = 0x00000001 (DWORD)
-  │
-  ├─ [SERVICES MODIFIED]
-  │  - DiagTrack (Connected User Experiences): Running -> Stopped & Disabled
-  │
-  └─ [COMPENSATOR HOOK: ACTIVE]
-     [ ↺ Rollback All Changes in This Snapshot ]   [ 📋 Export Audit JSON ]
+  o Commit: #m-882193b - Applied Remediation Preset "Hardened"
+  | Author: Elevation Admin | Duration: 420ms | Plan Digest: a9f8...12c0
+  |
+  +-- [REGISTRY DIFF]
+  |   HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard
+  |   - "EnableVirtualizationBasedSecurity" = 0x00000000 (DWORD)
+  |   + "EnableVirtualizationBasedSecurity" = 0x00000001 (DWORD)
+  |
+  +-- [SERVICES MODIFIED]
+  |   - DiagTrack (Connected User Experiences): Running -> Stopped & Disabled
+  |
+  +-- [COMPENSATOR HOOK: ACTIVE]
+      [ Rollback All Changes in This Snapshot ]   [ Export Audit JSON ]
 ```
 
-- **Property Diffs**: Displays side-by-side colorized diffs for registry modifications (Green `+`, Red `-`), service configuration adjustments, and removed package manifests.
-- **One-Click Compensator Execution**: Clicking "Rollback" triggers the snapshot's companion compensator directly from SQLite, validating the reverse mutation before writing the updated outcome to the journal.
+- **Property Diffs**: Displays side-by-side diffs for registry modifications (Green `+`, Red `-`), service configuration adjustments, and removed package manifests.
+- **Rollback Execution**: Clicking "Rollback" triggers the snapshot's companion compensator directly from SQLite, validating the reverse mutation before writing the updated outcome to the journal.
 
-### Pillar D: Node-Based Playbook Orchestrator
-Replaces the flat tool directory with a visual DAG builder, allowing power users to construct auditable maintenance pipelines:
+### Node-Based Playbook Pipelines
+Visual DAG builder for auditable maintenance pipelines:
 
 ```
 ┌─────────────────┐       ┌─────────────────┐       ┌──────────────────┐
@@ -349,68 +349,34 @@ Replaces the flat tool directory with a visual DAG builder, allowing power users
                                                     └──────────────────┘
 ```
 
-- **Pre-Flight Dry-Run**: The canvas runs read-only previews across the pipeline sequentially, highlighting node outputs before requesting batch approval.
-- **Shareable JSON Templates**: Completed playbooks export to deterministic JSON files for deployment across multi-machine environments.
+- **Pre-Flight Dry-Run**: The pipeline runs read-only previews sequentially, presenting node outputs before requesting batch approval.
+- **JSON Templates**: Playbooks export to deterministic JSON files for deployment across machines.
 
 ---
 
-## 6. Five Intent-Led Workspaces
+## 6. Functional Workspaces
 
-The 269 atomic commands are organized into five primary workspaces to eliminate decision paralysis:
+The 296 atomic commands are organized into five primary workspaces:
 
 ```
-┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐
-│   DISK DIET     │ │   BOOT BOOST    │ │ PRIVACY SHIELD  │ │   DEV RIG RUN   │ │  STABILITY FIX  │
-│ Reclaim storage │ │ Shave startup   │ │ Block telemetry │ │ Clean toolchain │ │ Repair DISM,    │
-│ & purge caches  │ │ delay & apps    │ │ & app tracking  │ │ caches & Docker │ │ BCD, SFC files  │
-└─────────────────┘ └─────────────────┘ └─────────────────┘ └─────────────────┘ └─────────────────┘
+┌──────────────────┐ ┌──────────────────┐ ┌──────────────────┐ ┌──────────────────┐ ┌──────────────────┐
+│ STORAGE          │ │ STARTUP &        │ │ TELEMETRY &      │ │ DEVELOPER        │ │ SYSTEM REPAIR &  │
+│ RECLAMATION      │ │ SERVICES         │ │ PRIVACY          │ │ ENVIRONMENTS     │ │ SERVICING        │
+│ Reclaim storage  │ │ Startup impact   │ │ Diagnostic data  │ │ Clean toolchain  │ │ Repair DISM,     │
+│ & purge caches   │ │ & background apps│ │ & app permissions│ │ caches & builds  │ │ BCD, SFC files   │
+└──────────────────┘ └──────────────────┘ └──────────────────┘ └──────────────────┘ └──────────────────┘
 ```
 
-- **Disk Diet (Storage Reclamation)**: Focuses on user and system cache purging, Delivery Optimization cleanup, and Component Store (WinSxS) compression. Features a single "Reclaim Safe Space" action.
-- **Boot Boost (Startup Optimization)**: Manages startup impact, delayed service initialization, and background task schedules without requiring registry exploration.
-- **Privacy Shield (Telemetry Hardening)**: Controls diagnostic tracking levels, telemetry domains via firewall/hosts, and camera/microphone privacy policies.
-- **Dev Rig Run (Developer Workstation Cleanup)**: Cleans stale `node_modules`, builds artifacts, Docker caches, and toolchain junk directories with safety safeguards.
-- **Stability Fix (System Repair & Servicing)**: Automates SFC integrity checks, online DISM component health remediation, and Windows Update cache repairs.
+- **Storage Reclamation**: User and system cache purging, Delivery Optimization cleanup, and Component Store (WinSxS) compression.
+- **Startup & Services**: Startup impact analysis, delayed service initialization, and background task schedules.
+- **Telemetry & Privacy**: Diagnostic tracking levels, telemetry domains via firewall/hosts, and camera/microphone privacy policies.
+- **Developer Environments**: Stale build artifacts, dependency directories (`node_modules`), package manager caches, and container storage.
+- **System Repair & Servicing**: SFC integrity checks, online DISM component health remediation, and Windows Update cache repairs.
 
 ---
 
-## 7. Phased Implementation Roadmap
+## 7. Preserved Architectural Invariants
 
-```
-PHASE 1: Domain Decoupling        PHASE 2: Core Refactor           PHASE 3: Native & Sandbox         PHASE 4: UX & Polish
-[ Month 1 ]                       [ Month 2 ]                      [ Month 3 ]                       [ Month 4 ]
-• Prune Alien Domains             • Deconstruct WindowsCommand-    • Annotate 107 Rust unsafe blocks • Migrate 202 spacing literals
-• Extract 4 Extension Packs       Executor into Handlers           • Promote wincare-guard to SCM    • Build UnifiedPageHeader
-• Port Plugin CLI to .NET Tool    • SQLite WAL Persistence Layer   • Out-of-process Plugin Host      • Ctrl+K Command Palette
-• Re-align Catalog to 5 Domains   • Formalize Saga Compensators    • Ed25519 PKI Trust Root          • Rollback Audit Timeline
-```
-
-### Phase 1: Domain Decoupling & Toolchain Unification
-- Extract window management, downloaders, ADB helpers, and LLM sizing utilities into standalone extension projects.
-- Reorganize the core catalog around the five intent domains.
-- Decommission `tools/wincare-plugin-cli` and deploy the `dotnet-wincare` CLI tool.
-
-### Phase 2: Core Refactoring & Persistence
-- Deconstruct `WindowsCommandExecutor` into autonomous subsystem handlers.
-- Replace file-based JSON persistence in `CommandStateStore` with SQLite in WAL mode.
-- Implement the Saga compensator engine tied directly to journal snapshots.
-
-### Phase 3: Native Hardening & Process Sandboxing
-- Audit and annotate the 107 undocumented unsafe blocks in `wincare-core`.
-- Convert `wincare-guard` into an SCM-managed Windows Service with SDDL IPC controls.
-- Deploy `wincare-plugin-host.exe` running within an AppContainer boundary.
-- Establish the Ed25519 root PKI for extension verification.
-
-### Phase 4: WinUI 3 Modernization & UI Polish
-- Replace the 202 hardcoded spacing literals with the standardized design tokens.
-- Replace the 12 view headers with `UnifiedPageHeader`.
-- Implement `ItemsRepeater` virtualization on data-heavy surfaces.
-- Deploy the Omni-Command Deck (`Ctrl+K`), the Kinetic Subsystem Canvas, and the State-Time Machine rollback timeline.
-
----
-
-## 8. Preserved Architectural Invariants
-
-- **Two-Phase Mutation Authority**: Mutation planning and execution remain strictly separated. Single-use `ApprovedMutationPlan` tokens continue to fail closed if modified, replayed, or expired.
+- **Two-Phase Mutation Authority**: Mutation planning and execution remain strictly separated. Single-use `ApprovedMutationPlan` tokens fail closed if modified, replayed, or expired.
 - **Verifiable Recovery Guarantees**: Rollback controls are exposed only when an executable compensator and a valid state snapshot exist.
 - **Fail-Closed Verification Gates**: Structural repository tests, WCAG AA contrast gates, and package signing checks remain enforced across CI pipelines.

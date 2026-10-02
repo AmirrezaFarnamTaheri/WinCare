@@ -14,7 +14,7 @@
 </p>
 
 > [!IMPORTANT]
-> WinCare 4.0.0 is the current re-release line. The current catalog contains 269 commands. Operations that can change the system are admitted according to their declared risk and privilege requirements; review high-impact changes before applying them.
+> WinCare 4.0.0 is the current re-release line. The current catalog contains 296 commands. Operations that can change the system are admitted according to their declared risk and privilege requirements; review high-impact changes before applying them.
 
 ## Overview
 
@@ -44,7 +44,7 @@ WinCare keeps common work out of the full command catalog:
 - **Home** surfaces the next useful action, common care tasks, recent activity, and links to advanced areas.
 - **Checkup** is read-only and hands findings off to the relevant care page instead of changing Windows itself.
 - **System care**, **Security**, and **Repair & recovery** use the catalog's exact Area/Section taxonomy so tools do not leak into unrelated tabs.
-- **Power tools** exposes all 269 native commands with task search, Area + Section filters, real category browsing, Favorites, Recent, typed parameters, and Care plans.
+- **Power tools** exposes all 296 native commands with task search, Area + Section filters, real category browsing, Favorites, Recent, typed parameters, and Care plans.
 - **Extensions** contains optional built-in and locally admitted capabilities; **Troubleshoot** is the local rule-based diagnostic assistant.
 - **Ctrl+K** searches pages, tools, extensions, and help topics from anywhere in the app.
 
@@ -85,7 +85,7 @@ WinCare.App             WinUI 3 desktop shell, typed tool UI, accessibility and 
 WinCare.Application     Dispatcher, admission, operation lifecycle, plugins, activity
 WinCare.Domain          Requests, results, policies, risk and evidence models
 WinCare.Infrastructure  Windows integration, persistence, bounded process execution, native interop
-WinCare.CommandCatalog  269 command definitions, schemas, presets and remediation data
+WinCare.CommandCatalog  296 command definitions, schemas, presets and remediation data
 native/wincare-core     Rust native primitives and C ABI
 native/wincare-guard    Experimental local health/IPC component
 tools/                  Validation, packaging, release and plugin tooling
@@ -124,7 +124,6 @@ Automated checks do not replace human UI/accessibility inspection. Follow [Windo
 
 | Document | Purpose |
 |---|---|
-| [Master Redesign Report](docs/MASTER_REDESIGN_REPORT.md) | Architectural deslop, three-tier admission model, and UI/UX evolution system of record. |
 | [Product Strategy](PRODUCT.md) | Product positioning, competitive alternatives, and differentiating invariants. |
 | [User guide](docs/User-Guide.md) | Installation, navigation, safe operation, and troubleshooting. |
 | [Screenshots](docs/Screenshots.md) | Runtime captures and interface references. |
@@ -139,6 +138,6 @@ Automated checks do not replace human UI/accessibility inspection. Follow [Windo
 
 - Report bugs and feature requests through [GitHub Issues](https://github.com/AmirrezaFarnamTaheri/WinCare/issues).
 - Report security vulnerabilities privately through [GitHub Private Vulnerability Reporting](https://github.com/AmirrezaFarnamTaheri/WinCare/security/advisories).
-- Maintainer: Amirreza “Farnam” Taheri — [taherifarnam@gmail.com](mailto:taherifarnam@gmail.com)
+- Maintainer: Amirreza “Farnam” Taheri ([taherifarnam@gmail.com](mailto:taherifarnam@gmail.com))
 
 WinCare is licensed under the [Apache License 2.0](LICENSE). See [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md) for external dependency notices.

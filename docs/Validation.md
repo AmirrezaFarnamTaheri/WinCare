@@ -53,14 +53,14 @@ The workflow downloads the actual versioned portable artifact, executes `--smoke
 - [x] **x64 portable runtime** on `windows-latest`.
 - [x] **ARM64 portable runtime** on `windows-11-vs2026-arm`.
 
-The smoke crosses WinUI startup/window activation, native Rust core loading, plugin/runtime initialization, and a read-only `system` dispatcher path before exiting successfully; the capture step additionally proves each documented route renders from the shipped binary and every PNG passes content integrity. This is meaningful packaged-runtime evidence, but it does not prove every WUA/COM path, arbitrary third-party plugin behavior, accessibility behavior, or all 269 command implementations. The committed `docs/images` runtime captures stay the documentation source of truth (currently the v3.0.0 x64 portable build at commit fb207ac); CI regenerates evidence per build and the verify gate keeps the checked-in doc and manifest in sync.
+The smoke crosses WinUI startup/window activation, native Rust core loading, plugin/runtime initialization, and a read-only `system` dispatcher path before exiting successfully; the capture step additionally proves each documented route renders from the shipped binary and every PNG passes content integrity. This is meaningful packaged-runtime evidence, but it does not prove every WUA/COM path, arbitrary third-party plugin behavior, accessibility behavior, or all 296 command implementations. The committed `docs/images` runtime captures stay the documentation source of truth (currently the v3.0.0 x64 portable build at commit fb207ac); CI regenerates evidence per build and the verify gate keeps the checked-in doc and manifest in sync.
 
 ### 4. Interactive / deployment / command evidence still required
 
 - [ ] **Narrator, keyboard-only navigation, High Contrast rendering, and 100–225% text scaling** on the release candidate.
 - [ ] **Production-certificate MSIX install, repair, upgrade, and uninstall cycles**.
 - [ ] **Broader ARM64 Windows integration behavior** beyond the hosted portable startup/core-flow smoke.
-- [ ] **Command-by-command Windows behavior comparison against the historical oracle**. Production promotion remains blocked until all 269 commands reach `BehaviorVerified`.
+- [ ] **Command-by-command Windows behavior comparison against the historical oracle**. Production promotion remains blocked until all 296 commands reach `BehaviorVerified`.
 
 ---
 
@@ -81,7 +81,7 @@ Hard-coded historical test counts are intentionally not used here because regres
 
 ## Product/data invariants
 
-- Command catalog: **269 commands / 269 unique IDs** (frozen IDs; 259 in the legacy-parity oracle).
+- Command catalog: **296 commands / 296 unique IDs** (frozen IDs; 259 in the legacy-parity oracle).
 - Care pages continue to derive from exact command-catalog Area/Section taxonomy.
 - Checkup remains read-only and routes findings to care surfaces.
 - Home remains presentation-only and exposes one primary Checkup CTA; its evidence rows match the actual Checkup evidence sources.
@@ -153,7 +153,7 @@ The finalizer produces:
 
 The structural regression suite exercises finalization. Ordinary PR/branch CI therefore does **not** create and upload another source-finalization bundle on every run.
 
-Production mode still exits non-zero until all 269 commands are `BehaviorVerified`. That contract is intentionally retained; CI no longer exposes an independent manual mode switch that can incorrectly ask an RC version to finalize as production.
+Production mode still exits non-zero until all 296 commands are `BehaviorVerified`. That contract is intentionally retained; CI no longer exposes an independent manual mode switch that can incorrectly ask an RC version to finalize as production.
 
 ---
 
@@ -161,10 +161,10 @@ Production mode still exits non-zero until all 269 commands are `BehaviorVerifie
 
 `.github/workflows/native-winui.yml` is the single CI/build/release workflow for pull requests, `master`/`main` pushes, release tags, and manual dispatches:
 
-1. **Verify** — one Python repository test invocation, checked-in screenshot integrity, and one product-version extraction.
-2. **Build matrix** — Rust format/lint/test/build plus managed restore/test, MSIX build/sign/verify, trimmed portable publish, size validation, and package artifact staging for x64 and ARM64.
-3. **Portable runtime smoke and capture** — runs the versioned portable executable on matching x64 and ARM64 hosted runners, then regenerates the e2e route captures and provenance manifest from that binary as an evidence artifact.
-4. **Release gate** — only for release tags or an explicit manual `publish_release=true`; downloads package artifacts, finalizes source/oracle evidence, stages release assets, and publishes or completes the matching GitHub release.
+1. **Verify**: one Python repository test invocation, checked-in screenshot integrity, and one product-version extraction.
+2. **Build matrix**: Rust format/lint/test/build plus managed restore/test, MSIX build/sign/verify, trimmed portable publish, size validation, and package artifact staging for x64 and ARM64.
+3. **Portable runtime smoke and capture**: runs the versioned portable executable on matching x64 and ARM64 hosted runners, then regenerates the e2e route captures and provenance manifest from that binary as an evidence artifact.
+4. **Release gate**: only for release tags or an explicit manual `publish_release=true`; downloads package artifacts, finalizes source/oracle evidence, stages release assets, and publishes or completes the matching GitHub release.
 
 Manual dispatch defaults to validation/build only. A supplied `release_tag` must exactly match `Directory.Build.props`. Finalization mode is derived from the checked-in product version: prerelease versions such as `3.0.0-rc1` use `rc`, while a stable version uses `production` and therefore still requires full `BehaviorVerified` command parity.
 

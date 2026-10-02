@@ -70,7 +70,7 @@ public sealed class Winapp2CleanerTests : IDisposable
     [Fact]
     public void CleanerWinapp2Run_respects_exclude_key_patterns()
     {
-        // Use the %LOCALAPPDATA%\Temp root — one of the two roots the implementation scans —
+        // Use the %LOCALAPPDATA%\Temp root (one of the two roots the implementation scans),
         // because it is always owned and enumerable by the current user. Path.GetTempPath()
         // can resolve to a shared folder that permits creating files but denies enumeration
         // (for example C:\Windows\Temp), which would make this test fail spuriously.

@@ -97,7 +97,7 @@ public sealed class PluginStateRepository : IPluginStateRepository
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException or ArgumentException)
         {
-            // Do not crash the host, but report that the save failed — the
+            // Do not crash the host, but report that the save failed: the
             // write failure leaves the previous state file intact and the error is
             // recorded so callers can inform the user.
             LastError = $"Plugin state could not be saved to '{_stateFilePath}': {ex.Message} " +

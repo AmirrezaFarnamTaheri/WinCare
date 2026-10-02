@@ -531,8 +531,8 @@ public sealed class PluginRegistryService : IPluginRegistry
             }
 
             var toolMap = manifest?.Tools?.ToDictionary(t => t.Id, StringComparer.OrdinalIgnoreCase);
-            // Admission tiers are derived before registration so the entry's command list — which the
-            // review cards are built from — cannot disagree with what the host registered.
+            // Admission tiers are derived before registration so the entry's command list, which the
+            // review cards are built from, cannot disagree with what the host registered.
             IReadOnlyList<CommandDefinition> effectiveCommands = EffectiveBuiltInCommands(entry, toolMap);
             if (!ReferenceEquals(effectiveCommands, entry.Commands))
             {

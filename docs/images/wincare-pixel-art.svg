@@ -25,7 +25,7 @@
     <line x1="0" y1="240" x2="860" y2="240"/>
   </g>
 
-  <!-- Left Character: WinCare Kinetic Operator (7px pixel grid) -->
+  <!-- Left Character: WinCare UI Operator (7px pixel grid) -->
   <g transform="translate(36, 90)">
     <!-- Row 0: Hair top -->
     <rect x="14" y="0" width="28" height="7" fill="#1e293b"/>

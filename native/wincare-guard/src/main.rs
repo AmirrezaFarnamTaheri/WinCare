@@ -1,4 +1,4 @@
-//! WinCare Guard — lightweight proactive system-health daemon.
+//! WinCare Guard: lightweight proactive system-health daemon.
 
 /// Named-pipe IPC server used by the WinCare app to query guard health.
 pub mod ipc;

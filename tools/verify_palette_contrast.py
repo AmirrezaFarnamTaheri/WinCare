@@ -6,7 +6,7 @@ product surface: primary/secondary text and accents over every background they a
 composed against in Light and Dark, per DESIGN.md. HighContrast follows Windows system
 colors and is intentionally excluded here (it is verified by the Windows validation pass).
 Primary buttons are also excluded: they compose WinUI's system accent resources, whose
-contrast the OS guarantees and a literal-hex gate cannot measure — see TEXT_PAIRS.
+contrast the OS guarantees and a literal-hex gate cannot measure: see TEXT_PAIRS.
 
 Reuses the XML parsing and luminance math from verify_pill_contrast.py.
 """
@@ -18,7 +18,7 @@ from verify_pill_contrast import MINIMUM, parse_theme_colors, ratio  # noqa: E40
 
 THEME_FILE = Path(__file__).resolve().parents[1] / "src/WinCare.App/Styles/ThemeResources.xaml"
 
-# (label, foreground brush, background brush) — composed as the UI actually composes them.
+# (label, foreground brush, background brush), composed as the UI actually composes them.
 # Body prose is 13–14px, so every pair must clear the 4.5:1 normal-text bar, not 3:1.
 #
 # Primary buttons are deliberately absent. AccentButtonStyle composes WinUI's own
@@ -53,7 +53,7 @@ def main() -> int:
 
     try:
         colors = parse_theme_colors(THEME_FILE)
-    except Exception as exc:  # noqa: BLE001 — match the sibling tool's error surface
+    except Exception as exc:  # noqa: BLE001 (match the sibling tool's error surface)
         print(f"FAIL: could not parse {THEME_FILE}: {exc}")
         return 1
 

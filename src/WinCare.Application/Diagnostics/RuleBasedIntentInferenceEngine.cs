@@ -21,7 +21,7 @@ namespace WinCare.Application.Diagnostics
     /// </summary>
     /// <remarks>
     /// This classifier is intentionally a keyword/heuristic matcher. It performs no neural
-    /// inference and requires no model weights — there is no ONNX Runtime or DirectML
+    /// inference and requires no model weights; there is no ONNX Runtime or DirectML
     /// dependency in this application. "Initialization" therefore only records the
     /// (near-zero) cold-start cost so callers and diagnostics can report it honestly.
     /// </remarks>

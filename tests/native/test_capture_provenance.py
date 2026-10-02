@@ -2,7 +2,7 @@
 
 A capture's manifest must describe the artifact it was rendered from, not the checkout
 that happened to build it. These tests pin the PE-header architecture reader and the
-freshness report — the two pieces that make the manifest self-validating.
+freshness report: the two pieces that make the manifest self-validating.
 """
 
 from __future__ import annotations

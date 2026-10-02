@@ -12,7 +12,7 @@ The native source distribution contains **zero PowerShell files**. Historical Po
 | `WinCare.Application` | Fail-closed command dispatcher, dispatcher-issued review receipts, exact catalog projection, extension host/registry, rule-based Troubleshoot orchestration, activity journal |
 | `WinCare.Domain` | Typed requests/results, risk/admission policy, evidence models, activity records |
 | `WinCare.Infrastructure` | Windows APIs, bounded process execution, persistent state, extension catalog/package verification, Rust FFI |
-| `WinCare.CommandCatalog` | 269-command catalog, preserving the 259 frozen legacy IDs, plus typed UI parameter schemas |
+| `WinCare.CommandCatalog` | 296-command catalog, preserving the 259 frozen legacy IDs, plus typed UI parameter schemas |
 | `native/wincare-core` | Bounded native primitives exposed through a versioned C ABI |
 | `native/wincare-guard` | **Experimental** local health daemon and local named-pipe endpoint; production SCM lifecycle and app notification consumption are not complete |
 | `tools/wincare-plugin-cli` | Extension/plugin development, validation, and packaging CLI for developers |
@@ -124,7 +124,7 @@ Run Checkup
   named handoff to the relevant care section when follow-up is useful
 ```
 
-Home consumes the same four evidence sources through the shared Activity journal—Windows & hardware, Storage, Security, and Windows Update—rather than inventing a second performance/health model.
+Home consumes the same four evidence sources through the shared Activity journal (Windows & hardware, Storage, Security, and Windows Update) rather than inventing a second performance/health model.
 
 ## 7. Activity, reports, persistence, and recovery
 
@@ -168,7 +168,7 @@ Long lists use WinUI virtualization, Power tools search is debounced, and stable
 
 ## 10. UI, adaptivity, and accessibility
 
-`LayoutVisibility.CompactBreakpointDip = 920` is the app-level compact boundary used by core task pages. Local component breakpoints may exist for a specific header/content fit—such as the Power tools table/inspector and Extensions header—but they do not redefine the product-wide compact state.
+`LayoutVisibility.CompactBreakpointDip = 920` is the app-level compact boundary used by core task pages. Local component breakpoints may exist for a specific header/content fit, such as the Power tools table/inspector and Extensions header, but they do not redefine the product-wide compact state.
 
 High Contrast uses system colors. The light diagnostic accent is chosen for small-text contrast. Interactive controls carry automation metadata, important layouts wrap rather than depending on fixed text heights, and Power tools avoids visual-tree/order discovery for named interactive controls.
 

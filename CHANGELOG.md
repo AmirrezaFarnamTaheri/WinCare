@@ -14,7 +14,7 @@ This history restarts at 3.0.0 with the Fluent redesign re-release. The safety m
 
 - Re-based the theme system on a Fluent-aligned palette for both Light and Dark, with surface, text, border, status, telemetry, and hero colors chosen against measured WCAG AA contrast (all 8 pill and 14 text foreground/background pairings measure ≥ 4.5:1 across Light and Dark, enforced by the `verify_pill_contrast` and `verify_palette_contrast` source gates).
 - Brand teal left the chrome: accent-colored surfaces now track the Windows system accent (`AccentFillColorDefaultBrush` / `TextOnAccentFillColorPrimaryBrush`), so WinCare's buttons and selection follow the user's Windows setting like a first-party app.
-- Status pills keep literal, gate-measured colors and gained a corrected composition (text/background pairs pinned to the runtime consumer mapping); high-contrast mode no longer collapses distinct statuses onto fill hue — state is carried by text and borders with system ink colors.
+- Status pills keep literal, gate-measured colors and gained a corrected composition (text/background pairs pinned to the runtime consumer mapping); high-contrast mode no longer collapses distinct statuses onto fill hue; state is carried by text and borders with system ink colors.
 - Added spacing tokens (`SpacingXS`–`XXL`, `GapXS`–`XL`) for use by future passes.
 - Landed the interface design pass across runtime chrome: Checkup consolidated to a single results section whose rows update in place, and Home, Help, AI Doctor, and All Tools layouts simplified without losing a live control.
 
@@ -24,7 +24,7 @@ This history restarts at 3.0.0 with the Fluent redesign re-release. The safety m
 
 ### Architecture
 
-- Extracted global-search ranking from `MainWindow` into `WinCare.Application.Navigation.GlobalSearchService` — same ranking behavior, now unit-tested (11 tests) and free of window code; route keys resolve through `NavigationCatalog` at construction so a catalog rename fails at startup instead of emitting dead suggestions.
+- Extracted global-search ranking from `MainWindow` into `WinCare.Application.Navigation.GlobalSearchService`, retaining identical ranking behavior, now unit-tested (11 tests) and free of window code; route keys resolve through `NavigationCatalog` at construction so a catalog rename fails at startup instead of emitting dead suggestions.
 
 ### Naming
 

@@ -324,22 +324,32 @@ internal sealed partial class WindowsCommandExecutor
                 {
                     long before = dbFile.Length;
                     int rc = SqliteNative.sqlite3_open16(dbFile.FullName, out nint db);
-                    if (rc == 0 && db != nint.Zero)
+                    if (db != nint.Zero)
                     {
                         try
                         {
-                            SqliteNative.sqlite3_exec(db, "VACUUM;", nint.Zero, nint.Zero, out _);
+                            if (rc == 0)
+                            {
+                                int execRc = SqliteNative.sqlite3_exec(db, "VACUUM;", nint.Zero, nint.Zero, out nint errmsg);
+                                if (errmsg != nint.Zero)
+                                {
+                                    SqliteNative.sqlite3_free(errmsg);
+                                }
+
+                                if (execRc == 0)
+                                {
+                                    dbFile.Refresh();
+                                    long after = dbFile.Length;
+                                    long reclaimed = Math.Max(0, before - after);
+                                    totalReclaimed += reclaimed;
+                                    vacuumedCount++;
+                                }
+                            }
                         }
                         finally
                         {
                             SqliteNative.sqlite3_close(db);
                         }
-
-                        dbFile.Refresh();
-                        long after = dbFile.Length;
-                        long reclaimed = Math.Max(0, before - after);
-                        totalReclaimed += reclaimed;
-                        vacuumedCount++;
                     }
                 }
                 catch
@@ -371,5 +381,8 @@ internal sealed partial class WindowsCommandExecutor
 
         [DllImport("winsqlite3.dll", EntryPoint = "sqlite3_close", CallingConvention = CallingConvention.Cdecl)]
         public static extern int sqlite3_close(nint db);
+
+        [DllImport("winsqlite3.dll", EntryPoint = "sqlite3_free", CallingConvention = CallingConvention.Cdecl)]
+        public static extern void sqlite3_free(nint ptr);
     }
 }

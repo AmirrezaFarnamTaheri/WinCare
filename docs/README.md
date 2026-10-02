@@ -5,7 +5,7 @@ This directory is the product-facing and engineering reference for WinCare. Star
 | Document | Purpose |
 |---|---|
 | [User guide](User-Guide.md) | Install safely, navigate the app, understand approvals, and troubleshoot. |
-| [Interface screenshots](Screenshots.md) | Runtime captures and interactive showcase previews for v2.5.0-rc5 alongside original design concepts. |
+| [Interface screenshots](Screenshots.md) | Runtime captures and interactive showcase previews for v4.0.0 alongside original design concepts. |
 | [Release page](https://github.com/AmirrezaFarnamTaheri/WinCare/releases) | Current x64 and ARM64 packages, portable archives, certificates, and release notes. |
 
 ## Build or review it
@@ -13,7 +13,7 @@ This directory is the product-facing and engineering reference for WinCare. Star
 | Document | Purpose |
 |---|---|
 | [Architecture](Architecture.md) | System boundaries, trust model, lifecycle, native integration, and packaging. |
-| [WinCare 4.0 Specification](Kinetic-Mission-Control-Spec.md) | WinCare 4.0 architecture specification and roadmap. |
+| [WinCare 4.0 Specification](Kinetic-Mission-Control-Spec.md) | WinCare 4.0 architecture and system design specification. |
 | [Memory safety audit](Memory-Safety-Audit.md) | Audit and formal invariants for native core unsafe operations and C-ABI boundaries. |
 | [Windows validation](Windows-Validation.md) | Repeatable Windows runtime and accessibility validation. |
 | [Validation](Validation.md) | Evidence model and verification categories. |
@@ -21,9 +21,9 @@ This directory is the product-facing and engineering reference for WinCare. Star
 
 ## Reference material
 
-- [Interactive Web Showcase](showcase.html) — interactive diagnostic simulation and telemetry visualization.
-- [Architecture Blueprint](architecture.html) — C4 model interactive governance diagram matching canonical architecture.
-- [Terminal REPL Preview](terminal-preview.html) — historical terminal exploration concept (WinCare ships exclusively as a WinUI 3 desktop shell).
-- [Command parity ledger](migration/command-parity-ledger.md) — native catalog accounting and evidence limits.
-- [Windows validation](migration/windows-validation.md) — Windows packaging and runtime-validation procedures.
-- [Design system](../DESIGN.md) — visual tokens, accessibility, and UI conventions.
+- [Interactive Web Showcase](showcase.html): interactive diagnostic simulation and telemetry visualization.
+- [Architecture Blueprint](architecture.html): C4 model interactive governance diagram matching canonical architecture.
+- [Terminal REPL Preview](terminal-preview.html): historical terminal exploration concept (WinCare ships as a WinUI 3 desktop shell).
+- [Command parity ledger](migration/command-parity-ledger.md): native catalog accounting and evidence limits.
+- [Windows validation](migration/windows-validation.md): Windows packaging and runtime-validation procedures.
+- [Design system](../DESIGN.md): visual tokens, accessibility, and UI conventions.

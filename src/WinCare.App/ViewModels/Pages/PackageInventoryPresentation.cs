@@ -84,7 +84,7 @@ public static class PackageInventoryPresentation
         {
             "Application residual evidence",
             $"{ReadInt32(data, "ApplicationsInspected"):N0} installed-app records inspected · {candidates.GetArrayLength():N0} candidates",
-            ReadBool(data, "IsPartial") ? "Partial evidence—review scan issues in Technical result." : "Discovery completed within its configured bounds.",
+            ReadBool(data, "IsPartial") ? "Partial evidence: review scan issues in Technical result." : "Discovery completed within its configured bounds.",
             "No files were selected, moved, or removed.",
         };
         lines.Add(string.Empty);
@@ -115,7 +115,7 @@ public static class PackageInventoryPresentation
         {
             "Windows Installer cache evidence",
             $"{files.GetArrayLength():N0} cache files inspected · {registered:N0} referenced · {unmatched:N0} unmatched",
-            ReadBool(data, "scanComplete") ? "The bounded evidence scan completed." : "Evidence is incomplete—review errors and truncation in Technical result.",
+            ReadBool(data, "scanComplete") ? "The bounded evidence scan completed." : "Evidence is incomplete: review errors and truncation in Technical result.",
             "Every file remains retained. An unmatched file is not a deletion recommendation.",
         };
         lines.Add(string.Empty);

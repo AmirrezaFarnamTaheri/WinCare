@@ -10,7 +10,7 @@ namespace WinCare.App.Converters;
 /// <remarks>
 /// Every XAML use is <c>Mode=OneWay</c> with <c>FallbackValue=True</c>. ConvertBack inverts too, which
 /// is the correct inverse for that direction, but it means a TwoWay binding would silently write the
-/// inverted value back — keep uses one-way.
+/// inverted value back; keep uses one-way.
 /// </remarks>
 public sealed class InverseBooleanConverter : IValueConverter
 {
