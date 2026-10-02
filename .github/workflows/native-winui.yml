@@ -37,15 +37,7 @@ jobs:
         with:
           python-version: "3.13"
       - name: Run repository Python tests
-        env:
-          GH_TOKEN: ${{ github.token }}
         run: python -m unittest discover -s tests -t . -v > test_output.log 2>&1 || { egrep -B 2 -A 10 "FAIL:|ERROR:" test_output.log | sed "s/^/::error::/" ; exit 1; }
-      - name: Upload test log
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: test-log
-          path: test_output.log
       - name: Verify visual design tokens
         run: python tools/verify_visual_tokens.py
       - name: Verify contrast ratios
