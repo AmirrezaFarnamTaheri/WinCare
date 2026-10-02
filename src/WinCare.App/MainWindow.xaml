@@ -4,35 +4,40 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:views="using:WinCare.App.Views"
     xmlns:nav="using:WinCare.Application.Navigation"
-    Title="WinCare">
-    <Grid x:Name="WindowRoot" Background="{ThemeResource PageBackgroundBrush}">
+    Title="WinCare 4.0 Kinetic Mission Control">
+    <Grid x:Name="WindowRoot" Background="Transparent">
+        <!-- Kinetic Glass Mesh background effect -->
+        <Grid.Background>
+            <SolidColorBrush Color="#1A1A1A" Opacity="0.8" />
+        </Grid.Background>
+        
         <Grid.RowDefinitions>
-            <RowDefinition Height="56" />
+            <RowDefinition Height="64" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
         <Grid
             x:Name="AppTitleBar"
             Grid.Row="0"
-            Padding="20,0,138,0"
-            Background="{ThemeResource TitleBarBackgroundBrush}">
+            Padding="24,0,138,0"
+            Background="Transparent">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="*" />
-                <ColumnDefinition x:Name="SearchColumn" Width="*" MinWidth="220" MaxWidth="420" />
+                <ColumnDefinition x:Name="SearchColumn" Width="*" MinWidth="300" MaxWidth="500" />
             </Grid.ColumnDefinitions>
 
-            <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
-                <Image Width="26" Height="26" Source="Assets/Square44x44Logo.png" />
-                <TextBlock x:Name="AppTitleText" Style="{StaticResource AppTitleTextStyle}" Text="WinCare" />
+            <StackPanel Orientation="Horizontal" Spacing="16" VerticalAlignment="Center">
+                <Image Width="32" Height="32" Source="Assets/Square44x44Logo.png" />
+                <TextBlock x:Name="AppTitleText" Style="{StaticResource AppTitleTextStyle}" Text="WinCare 4.0" FontWeight="SemiBold" FontSize="18" />
             </StackPanel>
 
             <AutoSuggestBox
                 x:Name="GlobalSearchBox"
                 Grid.Column="2"
-                MinHeight="44"
+                MinHeight="48"
                 VerticalAlignment="Center"
-                PlaceholderText="Search WinCare (Ctrl+K)"
+                PlaceholderText="Omni-Command Deck (Ctrl+K)"
                 TextChanged="GlobalSearchBox_TextChanged"
                 QuerySubmitted="GlobalSearchBox_QuerySubmitted"
                 AutomationProperties.AutomationId="GlobalSearch"
@@ -42,16 +47,16 @@
                 </AutoSuggestBox.KeyboardAccelerators>
                 <AutoSuggestBox.ItemTemplate>
                     <DataTemplate x:DataType="nav:GlobalSearchSuggestion">
-                        <Grid Padding="4,6" ColumnSpacing="14">
+                        <Grid Padding="8,8" ColumnSpacing="16">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
-                            <StackPanel Spacing="2">
-                                <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="{x:Bind Title}" />
-                                <TextBlock Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind Subtitle}" TextTrimming="CharacterEllipsis" />
+                            <StackPanel Spacing="4">
+                                <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="{x:Bind Title}" FontWeight="Medium" />
+                                <TextBlock Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind Subtitle}" TextTrimming="CharacterEllipsis" Opacity="0.7" />
                             </StackPanel>
-                            <TextBlock Grid.Column="1" Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind KindLabel}" VerticalAlignment="Center" />
+                            <TextBlock Grid.Column="1" Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind KindLabel}" VerticalAlignment="Center" Opacity="0.5" />
                         </Grid>
                     </DataTemplate>
                 </AutoSuggestBox.ItemTemplate>

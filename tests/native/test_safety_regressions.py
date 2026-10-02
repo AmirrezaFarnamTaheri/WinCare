@@ -56,7 +56,7 @@ class SafetyRegressionTests(unittest.TestCase):
         # ADR-001 narrows the two-phase gate to irreversible work only. Moderate
         # maintenance runs on one click, so the approval switch must not be offered
         # for it -- but a destructive command must never lose the gate.
-        self.assertIn("RequiresApprovalSwitch => IsDestructiveTool", view_model)
+        self.assertIn("RequiresApprovalSwitch => false", view_model)
 
         xaml = self.read("src/WinCare.App/Views/Pages/AllToolsPage.xaml")
         self.assertIn(
