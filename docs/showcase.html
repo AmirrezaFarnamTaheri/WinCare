@@ -651,8 +651,12 @@
     }
     .arch-explorer-frame-wrap {
       position: relative;
-      height: 560px;
+      width: 100%;
+      aspect-ratio: 1103 / 771;
+      max-height: min(85vh, 820px);
+      min-height: 480px;
       background-color: var(--surface);
+      overflow: hidden;
     }
     .arch-explorer-frame {
       width: 100%;
@@ -882,8 +886,8 @@
           <canvas id="core-canvas" width="640" height="640" role="img"
                   aria-label="Diagram of the WinCare diagnostic core: read-only probes feeding the dispatcher that admits commands to bounded execution, which writes to the local activity journal."></canvas>
           <figcaption>
-            <span>Read-only probes → admission → bounded execution → activity journal</span>
-            <span class="telemetry">static diagram</span>
+            <span>Execution lifecycle: probe, admit, execute, and record</span>
+            <span class="telemetry">Core flow</span>
           </figcaption>
         </figure>
       </div>
@@ -988,21 +992,21 @@
           <div class="arch-explorer-top">
             <div style="display: flex; align-items: center; gap: 12px;">
               <span class="terminal-dots" aria-hidden="true"><i></i><i></i><i></i></span>
-              <span class="telemetry" style="font-weight: 600; font-size: 13px;">TOPOLOGY EXPLORER · COMPILED SEMANTIC SVG</span>
+              <span class="telemetry" style="font-weight: 600; font-size: 13px;">Architecture Topology</span>
             </div>
             <div style="display: flex; align-items: center; gap: 8px;">
-              <a href="architecture.html" target="_blank" rel="noopener" class="button button-quiet" style="font-size: 12px; padding: 6px 14px; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">
+              <a href="architecture.html?present=1" target="_blank" rel="noopener" class="button button-quiet" style="font-size: 12px; padding: 6px 14px; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">
                 <span>Full-screen explorer</span>
                 <span aria-hidden="true">↗</span>
               </a>
-              <a href="diagrams/plugin-admission.html" target="_blank" rel="noopener" class="button button-quiet" style="font-size: 12px; padding: 6px 14px; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">
+              <a href="diagrams/plugin-admission.html?present=1" target="_blank" rel="noopener" class="button button-quiet" style="font-size: 12px; padding: 6px 14px; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">
                 <span>Plugin trust model</span>
                 <span aria-hidden="true">↗</span>
               </a>
             </div>
           </div>
           <div class="arch-explorer-frame-wrap">
-            <iframe class="arch-explorer-frame" src="architecture.html?embed=true" title="WinCare Architecture Diagram" loading="lazy"></iframe>
+            <iframe class="arch-explorer-frame" src="architecture.html?embed=1" title="WinCare Architecture Diagram" loading="lazy" scrolling="no"></iframe>
           </div>
           <div class="arch-explorer-footer">
             <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">

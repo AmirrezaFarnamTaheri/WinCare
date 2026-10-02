@@ -12,12 +12,16 @@
       try {
         var theme = null;
         try {
-          var param = new URLSearchParams(window.location.search).get('theme');
+          var urlParams = new URLSearchParams(window.location.search);
+          var param = urlParams.get('theme');
           if (param === 'light' || param === 'dark') theme = param;
-          if (new URLSearchParams(window.location.search).get('embed') === '1') {
+          var embedParam = urlParams.get('embed');
+          if (embedParam === '1' || embedParam === 'true') {
             document.documentElement.setAttribute('data-embed', 'true');
           }
-          if (new URLSearchParams(window.location.search).get('present') === '1') {
+          var presentParam = urlParams.get('present');
+          var fitParam = urlParams.get('fit');
+          if (presentParam === '1' || presentParam === 'true' || fitParam === '1' || fitParam === 'true') {
             document.documentElement.setAttribute('data-present', 'true');
           }
         } catch (_) {}
@@ -406,14 +410,51 @@
     html[data-embed="true"] .diagram-guide,
     html[data-embed="true"] .node-finder,
     html[data-embed="true"] .guided-views { display: none !important; }
-    html[data-embed="true"] .container { max-width: none; }
+    html[data-embed="true"],
+    html[data-embed="true"] body {
+      height: 100%;
+      width: 100%;
+      min-height: 0;
+      margin: 0;
+      padding: 0;
+      overflow: hidden !important;
+      background: var(--bg);
+      background-image: none;
+    }
+    html[data-embed="true"] .container {
+      width: 100%;
+      height: 100%;
+      max-width: none;
+      display: flex;
+      flex-direction: column;
+      margin: 0;
+      padding: 0;
+      overflow: hidden !important;
+    }
     html[data-embed="true"] .diagram-container {
+      flex: 1 1 auto;
+      width: 100%;
+      height: 100%;
+      min-height: 0;
+      min-width: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       padding: 0.5rem;
       border: 0;
       border-radius: 0;
       box-shadow: none;
+      overflow: hidden !important;
     }
-    html[data-embed="true"] .diagram-container svg { min-width: 0; }
+    html[data-embed="true"] .diagram-container svg {
+      width: 100%;
+      height: 100%;
+      max-width: 100%;
+      max-height: 100%;
+      min-width: 0;
+      object-fit: contain;
+      display: block;
+    }
 
     /* Share Chapter Cue lives in the HTML viewer layer, not inside the SVG.
        It gives one-shot embeds a title, authored note, truthful stop order,
@@ -587,11 +628,16 @@
       justify-content: center;
       min-height: 0;
       padding: 0.75rem;
+      overflow: hidden !important;
     }
     html[data-present="true"]:not([data-embed="true"]) .diagram-container > svg {
       width: 100%;
       height: 100%;
+      max-width: 100%;
+      max-height: 100%;
       min-width: 0;
+      object-fit: contain;
+      display: block;
     }
     html[data-present="true"]:not([data-embed="true"]) .cards,
     html[data-present="true"]:not([data-embed="true"]) .footer { display: none; }
