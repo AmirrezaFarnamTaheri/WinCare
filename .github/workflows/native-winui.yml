@@ -76,12 +76,12 @@ jobs:
       WINCARE_TIMESTAMP_URL: http://timestamp.digicert.com
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: dtolnay/rust-toolchain@02cb101ec7c40f2c49e1d9714d64511d8e1b74de # master 2026-08-05
+      - uses: dtolnay/rust-toolchain@7e38f4b43b4db5c8dd498af069a4f6196df1d067 # master 2026-08-05
         with:
           toolchain: 1.97.1
           targets: ${{ matrix.target }}
           components: rustfmt, clippy
-      - uses: actions/setup-dotnet@4d6fc87ace54e43d120cd7440feac76858850a21 # pinned commit
+      - uses: actions/setup-dotnet@e2cf7c663b93c38144629f5d40b62d3eaaa63a03 # pinned commit
         with:
           dotnet-version: "8.0.416"
           global-json-file: global.json
