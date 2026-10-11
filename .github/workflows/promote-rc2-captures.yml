@@ -37,6 +37,19 @@ jobs:
             echo "Refusing to promote a run that did not fully pass at the expected source SHA." >&2
             exit 1
           fi
+          # Pull-request jobs build GitHub's synthetic merge commit. The
+          # release branch is based on master, so prove the synthetic merge's
+          # source tree equals the branch tree before attributing the capture
+          # to the reachable PR head. Never rewrite provenance without this.
+          git fetch --no-tags origin master
+          git merge-base --is-ancestor origin/master "$CAPTURE_SHA"
+          merge_tree="$(git merge-tree --write-tree origin/master "$CAPTURE_SHA")"
+          source_tree="$(git rev-parse "${CAPTURE_SHA}^{tree}")"
+          if [[ "$merge_tree" != "$source_tree" ]] ||
+             [[ -n "$(git diff --name-only "$CAPTURE_SHA"..HEAD -- src/ tools/capture_screenshots.py)" ]]; then
+            echo "The verified PR merge is not source-identical to the release branch." >&2
+            exit 1
+          fi
           mkdir -p "$RUNNER_TEMP/rc2-captures"
           gh run download "$CAPTURE_RUN" --repo "$GITHUB_REPOSITORY" \
             --name runtime-capture-x64 --dir "$RUNNER_TEMP/rc2-captures"
@@ -53,11 +66,25 @@ jobs:
               assert info["architecture"] == "x64" and expected.startswith(info["commit"])
               assert image.read_bytes().startswith(b"\x89PNG\r\n\x1a\n") and image.stat().st_size > 10000
           assert (root / "Screenshots.md").is_file()
+          # Preserve the short synthetic-merge SHA as a separate audit field.
+          # The comparison above established identical source trees; use the
+          # reachable source commit as the freshness reference.
+          for info in meta["images"].values():
+              info["capture_checkout_commit"] = info["commit"]
+              info["commit"] = expected[:7]
+          (root / "images/runtime-captures.json").write_text(
+              json.dumps(meta, indent=2) + "\\n", encoding="utf-8")
           PY
           cp "$RUNNER_TEMP/rc2-captures/images/runtime-dashboard.png" docs/images/
           cp "$RUNNER_TEMP/rc2-captures/images/runtime-checkup.png" docs/images/
           cp "$RUNNER_TEMP/rc2-captures/images/runtime-captures.json" docs/images/
-          cp "$RUNNER_TEMP/rc2-captures/Screenshots.md" docs/
+          python - <<'PY'
+          import sys
+          from pathlib import Path
+          sys.path.insert(0, str(Path("tools").resolve()))
+          import capture_screenshots as captures
+          captures.write_screenshots_doc(captures.load_runtime_manifest())
+          PY
           python tools/capture_screenshots.py --verify-only
           python tools/capture_screenshots.py --check-freshness
       - name: Commit documented, verified capture bytes to the feature branch
