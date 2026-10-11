@@ -74,14 +74,14 @@
                         <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="*" />
                     </Grid.ColumnDefinitions>
-                    <Ellipse Width="8" Height="8" Fill="{ThemeResource SuccessBrush}" VerticalAlignment="Center" />
+                    <Ellipse Width="8" Height="8" Fill="{ThemeResource TextSecondaryBrush}" VerticalAlignment="Center" />
                     <StackPanel Grid.Column="1" Spacing="2">
-                        <TextBlock Text="RUST CORE · ACTIVE"
+                        <TextBlock Text="ON-DEVICE DIAGNOSTICS"
                                    FontFamily="{StaticResource TelemetryFontFamily}"
                                    FontSize="10"
                                    FontWeight="Bold"
                                    Foreground="{ThemeResource AccentChromeBrush}" />
-                        <TextBlock Text="296 Typed Commands"
+                        <TextBlock Text="Checkup is read-only"
                                    FontFamily="{StaticResource TelemetryFontFamily}"
                                    FontSize="9"
                                    Foreground="{ThemeResource TextSecondaryBrush}" />

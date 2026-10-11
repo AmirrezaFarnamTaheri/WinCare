@@ -14,6 +14,17 @@ public sealed class BoundedProcessRunnerTests
     }
 
     [Fact]
+    public async Task WindowsCancellationReapsStartedChildBeforeReturning()
+    {
+        if (!OperatingSystem.IsWindows()) return;
+        string ping = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), "ping.exe");
+        if (!File.Exists(ping)) return;
+        using CancellationTokenSource cancel = new(TimeSpan.FromMilliseconds(600));
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            new BoundedProcessRunner().RunAsync(ping, ["-n", "30", "127.0.0.1"], cancel.Token));
+    }
+
+    [Fact]
     public async Task InvalidTimeoutIsRejectedBeforeStartingExecutable()
     {
         await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() =>

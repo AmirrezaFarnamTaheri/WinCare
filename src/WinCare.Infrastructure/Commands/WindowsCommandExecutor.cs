@@ -220,7 +220,11 @@ internal sealed partial class WindowsCommandExecutor : ICommandOperationExecutor
         }
         catch (TimeoutException ex)
         {
-            return CommandHandlerOutcome.Failed("command.timeout", ex.Message);
+            return CommandHandlerOutcome.Failed(
+                definition.ReadOnly ? "command.timeout" : "command.timeout_state_unknown",
+                definition.ReadOnly
+                    ? ex.Message
+                    : $"{ex.Message} The command may have changed Windows before timing out. Inspect the affected system state before retrying.");
         }
         catch (Exception ex) when (ex is IOException or InvalidDataException or JsonException or System.ComponentModel.Win32Exception)
         {

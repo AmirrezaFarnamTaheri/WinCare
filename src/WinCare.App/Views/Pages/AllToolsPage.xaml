@@ -79,7 +79,7 @@
                                      Severity="Warning" Title="Not available in this build"
                                      Message="This action is currently disabled. Its safety and implementation must be verified before it can run." />
                             <InfoBar IsOpen="{x:Bind ViewModel.Execution.ShowDestructiveWarning, Mode=OneWay}" IsClosable="False" Severity="Error"
-                                     Title="Permanent change" Message="Review the exact targets and impact before approving this operation. Some changes cannot be undone." />
+                                     Title="Permanent change" Message="Check the reported targets and effects before approving. Some changes cannot be undone. If the preview is unclear, do not apply." />
                             <ToggleSwitch Header="I reviewed this change" OffContent="Not approved" OnContent="Approved" AutomationProperties.HelpText="Approval is required before a tool that makes permanent changes can run"
                                           IsEnabled="{x:Bind ViewModel.Execution.CanApproveReview, Mode=OneWay}"
                                           IsOn="{x:Bind ViewModel.Execution.IsReviewApproved, Mode=TwoWay}"
@@ -96,7 +96,7 @@
                             <StackPanel Orientation="Horizontal" Spacing="8">
                                 <Button Style="{StaticResource PrimaryActionButtonStyle}" Command="{x:Bind ViewModel.Execution.ExecuteSelectedToolCommand}"
                                         Content="{x:Bind ViewModel.Execution.PrimaryActionLabel, Mode=OneWay}" AccessKey="E"
-                                        AutomationProperties.AutomationId="ExecuteSelectedTool" AutomationProperties.Name="Run or review selected tool" />
+                                        AutomationProperties.AutomationId="ExecuteSelectedTool" AutomationProperties.Name="{x:Bind ViewModel.Execution.PrimaryActionLabel, Mode=OneWay}" AutomationProperties.HelpText="The button shows Run, Preview, Apply, or Unavailable according to this tool's safety and readiness." />
                                 <Button Style="{StaticResource QuietButtonStyle}" Command="{x:Bind ViewModel.Execution.CancelSelectedToolCommand}"
                                         Content="{x:Bind ViewModel.Execution.CancelActionLabel, Mode=OneWay}"
                                         Visibility="{x:Bind local:AllToolsPage.BoolToVisibility(ViewModel.Execution.IsExecuting), Mode=OneWay}"

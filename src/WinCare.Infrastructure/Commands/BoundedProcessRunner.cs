@@ -85,11 +85,19 @@ public sealed class BoundedProcessRunner : IBoundedProcessRunner
         }
         catch (OperationCanceledException)
         {
+            // Cancelling WaitForExitAsync does not stop the child. Request process-tree
+            // termination and independently confirm the parent exited, even when the
+            // linked cancellation/deadline token is already cancelled.
             TryKill(process);
+            bool exitObserved = await WaitForTerminatedProcessAsync(process).ConfigureAwait(false);
             await ObserveReaderCompletionAsync(stdout, stderr).ConfigureAwait(false);
+            if (!exitObserved)
+            {
+                throw new TimeoutException($"'{fileName}' was interrupted, but its process exit could not be confirmed within five seconds. Changes may still be in progress; verify system state before retrying.");
+            }
             if (timeoutCts.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
             {
-                throw new TimeoutException($"'{fileName}' exceeded the {(timeout ?? DefaultTimeout).TotalSeconds:0.#}-second limit.");
+                throw new TimeoutException($"'{fileName}' exceeded the {(timeout ?? DefaultTimeout).TotalSeconds:0.#}-second limit. The process exit was confirmed, but earlier host changes may remain.");
             }
             throw;
         }
@@ -195,6 +203,31 @@ public sealed class BoundedProcessRunner : IBoundedProcessRunner
         finally
         {
             System.Buffers.ArrayPool<char>.Shared.Return(rented);
+        }
+    }
+
+    private static async Task<bool> WaitForTerminatedProcessAsync(Process process)
+    {
+        using CancellationTokenSource reapDeadline = new(TimeSpan.FromSeconds(5));
+        try
+        {
+            await process.WaitForExitAsync(reapDeadline.Token).ConfigureAwait(false);
+            return process.HasExited;
+        }
+        catch (OperationCanceledException) when (reapDeadline.IsCancellationRequested)
+        {
+            return false;
+        }
+        catch (InvalidOperationException)
+        {
+            // A process handle can become invalid during exit; only an observed
+            // exit state counts as termination.
+            try { return process.HasExited; }
+            catch (InvalidOperationException) { return false; }
+        }
+        catch (System.ComponentModel.Win32Exception)
+        {
+            return false;
         }
     }
 
