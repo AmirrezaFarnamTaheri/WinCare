@@ -125,7 +125,7 @@ public sealed partial class ProcessesPage : Page
         {
             XamlRoot = XamlRoot,
             Title = $"End {item.Name}?",
-            Content = $"Process {item.Id} will be asked to close immediately. Unsaved work may be lost. This cannot be undone.",
+            Content = $"Windows will forcibly stop process {item.Id}. Unsaved work may be lost. This cannot be undone.",
             PrimaryButtonText = "End task",
             CloseButtonText = "Keep running",
             DefaultButton = ContentDialogButton.Close
