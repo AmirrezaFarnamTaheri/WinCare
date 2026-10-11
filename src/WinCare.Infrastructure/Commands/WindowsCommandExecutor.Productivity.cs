@@ -287,9 +287,18 @@ internal sealed partial class WindowsCommandExecutor
             }, cancellationToken).ConfigureAwait(false);
 
             using HttpRequestMessage request = new(HttpMethod.Get, uri);
-            if (existingBytes > 0)
+            // A prior partial is untrusted unless the caller supplied an end-to-end
+            // digest. Without one a changed response could silently concatenate
+            // different remote representations across requests.
+            if (existingBytes > 0 && expectedHash.Length > 0)
             {
                 request.Headers.Range = new System.Net.Http.Headers.RangeHeaderValue(existingBytes, null);
+                request.Headers.AcceptEncoding.Clear();
+                request.Headers.AcceptEncoding.ParseAdd("identity");
+            }
+            else
+            {
+                existingBytes = 0;
             }
 
             using HttpResponseMessage response = await _httpClient.SendAsync(
@@ -305,7 +314,8 @@ internal sealed partial class WindowsCommandExecutor
                 // return a different interval, or omit Content-Range entirely.
                 var range = response.Content.Headers.ContentRange;
                 if (!serverResumed || range?.Unit != "bytes" ||
-                    range.From != existingBytes || range.To < existingBytes)
+                    range.From != existingBytes || range.To < existingBytes ||
+                    !range.Length.HasValue || range.To >= range.Length.Value)
                 {
                     throw new InvalidDataException("Server returned an unexpected partial range; the existing download was left intact.");
                 }
@@ -313,6 +323,15 @@ internal sealed partial class WindowsCommandExecutor
             if (existingBytes > 0 && !serverResumed)
             {
                 existingBytes = 0;
+            }
+            if (response.Content.Headers.ContentEncoding.Count != 0 && serverResumed)
+            {
+                throw new InvalidDataException("Compressed HTTP responses cannot safely resume byte ranges.");
+            }
+            if (serverResumed && response.Content.Headers.ContentLength is long length &&
+                response.Content.Headers.ContentRange!.To!.Value - existingBytes + 1 != length)
+            {
+                throw new InvalidDataException("Server range length conflicts with the declared response length.");
             }
 
             long? responseBytes = response.Content.Headers.ContentLength;
@@ -382,6 +401,11 @@ internal sealed partial class WindowsCommandExecutor
             }
             await target.FlushAsync(operationCancellation.Token).ConfigureAwait(false);
             }
+
+            if (responseBytes.HasValue && total - existingBytes != responseBytes.Value)
+                throw new InvalidDataException("Downloaded payload length differs from the HTTP Content-Length.");
+            if (declaredTotalBytes.HasValue && total != declaredTotalBytes.Value)
+                throw new InvalidDataException("Downloaded payload length differs from the declared complete file size.");
 
             // The exclusive writer must be closed before hashing; the hash reader must
             // likewise be closed before Windows can rename the published partial file.
@@ -546,6 +570,8 @@ internal sealed partial class WindowsCommandExecutor
             return Success("download-cancel", "Download cancellation requested. Partial data will be removed by the active worker.", new { id, state = "CancelRequested" });
         }
         TryDeleteFile(partial);
+        if (File.Exists(partial))
+            return Block("download-cancel", "The partial file could not be deleted; the download remains available for cleanup.");
         await PatchStateItemAsync("downloads", id, node =>
         {
             node["state"] = "Cancelled";
@@ -574,7 +600,10 @@ internal sealed partial class WindowsCommandExecutor
         if (_operations.ContainsKey("download:" + id)) return Block("download-remove", "Stop the active download before removing its record.");
         JsonElement job = await FindStateItemAsync("downloads", id, cancellationToken).ConfigureAwait(false);
         string destination = job.GetProperty("destination").GetString()!;
-        TryDeleteFile(destination + ".wincare.download");
+        string partial = destination + ".wincare.download";
+        TryDeleteFile(partial);
+        if (File.Exists(partial))
+            return Block("download-remove", "The partial file could not be deleted. Resolve the file access issue before removing the job.");
         return await RemoveStateItemAsync("downloads", id, cancellationToken).ConfigureAwait(false);
     }
 
