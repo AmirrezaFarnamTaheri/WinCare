@@ -112,9 +112,32 @@ class ProductUiParityTests(unittest.TestCase):
         self.assertIn('Click="QuickIssue_Click"', ui)
         self.assertIn("PageNavigation.OpenTool", code)
         self.assertIn('MaxLength="500"', ui)
-        self.assertIn("public bool IsEmpty => !HasMessages", vm)
+        self.assertIn("public bool IsEmpty => !HasResults && !IsAnalyzing", vm)
         self.assertNotIn("I am the Active Troubleshooter", vm)
         self.assertNotIn("optimal fixes without defensive friction", vm)
+
+    def test_troubleshoot_does_not_keep_a_problem_transcript(self) -> None:
+        vm = self.read("src/WinCare.App/ViewModels/Pages/AiDoctorPageViewModel.cs")
+        ui = self.read("src/WinCare.App/Views/Pages/AiDoctorPage.xaml")
+        code = self.read("src/WinCare.App/Views/Pages/AiDoctorPage.xaml.cs")
+        self.assertIn("ObservableCollection<TroubleshootResult> Results", vm)
+        self.assertIn("Results.Clear();", vm)
+        self.assertIn("int version = ++_requestVersion;", vm)
+        self.assertNotIn("DoctorChatMessage", vm)
+        self.assertNotIn('new TroubleshootResult("Problem", prompt', vm)
+        self.assertIn("public void ClearSession()", vm)
+        self.assertIn("ViewModel.ClearSession();", code)
+        self.assertIn('Content="Cancel check"', ui)
+        self.assertIn('ItemsSource="{x:Bind ViewModel.Results, Mode=OneWay}"', ui)
+
+    def test_memory_widget_never_runs_native_mutation_directly(self) -> None:
+        code = self.read("src/WinCare.App/Controls/MemoryTopologyAtlas.xaml.cs")
+        ui = self.read("src/WinCare.App/Controls/MemoryTopologyAtlas.xaml")
+        self.assertNotIn("CompactSystemMemoryAsync", code)
+        self.assertIn('PageNavigation.OpenTool(this, "perf-standby-purge"', code)
+        self.assertNotIn('Text="Live telemetry"', ui)
+        self.assertIn('Text="Review memory cleanup"', ui)
+        self.assertIn('Memory reading unavailable', code)
 
     def test_care_rows_open_the_power_tools_inspector(self) -> None:
         control = self.read("src/WinCare.App/Controls/CareToolList.xaml.cs")

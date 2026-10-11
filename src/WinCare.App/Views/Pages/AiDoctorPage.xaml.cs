@@ -25,7 +25,7 @@ public sealed partial class AiDoctorPage : Page
 
     protected override void OnNavigatedFrom(NavigationEventArgs e)
     {
-        ViewModel.CancelAnalysis();
+        ViewModel.ClearSession();
         base.OnNavigatedFrom(e);
     }
 
@@ -34,13 +34,13 @@ public sealed partial class AiDoctorPage : Page
         if (sender is not Button { Tag: string problem } || ViewModel.IsAnalyzing) return;
         ViewModel.UserPrompt = problem;
         await ViewModel.SubmitPromptAsync();
-        ScrollToLatestMessage();
+        ScrollToResults();
     }
 
     private async void SendButton_Click(object sender, RoutedEventArgs e)
     {
         await ViewModel.SubmitPromptAsync();
-        ScrollToLatestMessage();
+        ScrollToResults();
     }
 
     private async void PromptTextBox_KeyDown(object sender, KeyRoutedEventArgs e)
@@ -48,14 +48,16 @@ public sealed partial class AiDoctorPage : Page
         if (e.Key != Windows.System.VirtualKey.Enter) return;
         e.Handled = true;
         await ViewModel.SubmitPromptAsync();
-        ScrollToLatestMessage();
+        ScrollToResults();
     }
 
-    private void ScrollToLatestMessage()
+    private void CancelCheck_Click(object sender, RoutedEventArgs e) => ViewModel.CancelAnalysis();
+
+    private void ScrollToResults()
     {
         try
         {
-            if (IsLoaded) ChatScrollViewer?.ChangeView(null, ChatScrollViewer.ScrollableHeight, null);
+            if (IsLoaded) ResultsScrollViewer?.ChangeView(null, ResultsScrollViewer.ScrollableHeight, null);
         }
         catch (Exception ex)
         {

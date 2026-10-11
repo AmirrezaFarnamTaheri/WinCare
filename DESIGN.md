@@ -85,3 +85,9 @@ The palette above is not decoration: `verify_visual_tokens.py` pins key presence
 - Troubleshoot is task-first, not an artificial chatbot. Common problems run the existing local diagnostic translator; results open the canonical Power tools inspector. No action is applied by the Troubleshoot page.
 - The guided tour is optional in Help. First launch never blocks the Home checkup behind a modal.
 - Controls use native Windows focus and semantic accent. Real theme, DPI, screen reader and keyboard validation still requires running the WinUI application.
+
+### Troubleshoot results and memory widget safety
+
+Troubleshoot shows a single result and suggested next actions, not a pretend assistant chat or a transcript of the user's input. Leaving the page clears the description and results, and a cancelled/stale check cannot repopulate it. Progress and cancellation are explicit. The memory usage widget is read-only; it opens the ordinary Power tools review flow for standby-memory cleanup instead of invoking native mutation directly. Memory metrics are sampled when the Performance section is opened, not labeled as live telemetry.
+
+- Shared page headers rely on typography and spacing rather than a decorative accent stripe; optional badges are reserved for meaningful status.

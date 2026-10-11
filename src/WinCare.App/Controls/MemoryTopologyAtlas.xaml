@@ -14,10 +14,7 @@
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
                 <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                    <TextBlock Text="Kernel memory topology" FontWeight="SemiBold" FontSize="13" Foreground="{ThemeResource TextPrimaryBrush}" />
-                    <Border Background="{ThemeResource AccentChromeSubtleBrush}" Padding="6,2" CornerRadius="{StaticResource RadiusPill}">
-                        <TextBlock Text="Live telemetry" FontFamily="{StaticResource TelemetryFontFamily}" FontSize="10" FontWeight="SemiBold" Foreground="{ThemeResource AccentChromeBrush}" />
-                    </Border>
+                    <TextBlock Text="Memory use" FontWeight="SemiBold" FontSize="14" Foreground="{ThemeResource TextPrimaryBrush}" />
                     <Border x:Name="PressureBorder" Background="{ThemeResource AccentChromeSubtleBrush}" Padding="6,2" CornerRadius="{StaticResource RadiusPill}">
                         <TextBlock x:Name="TxtPressure" Text="--% load" FontFamily="{StaticResource TelemetryFontFamily}" FontSize="10" FontWeight="SemiBold" Foreground="{ThemeResource AccentChromeBrush}" />
                     </Border>
@@ -26,7 +23,9 @@
                            FontFamily="{StaticResource TelemetryFontFamily}" FontSize="12" FontWeight="SemiBold" Foreground="{ThemeResource TextSecondaryBrush}" />
             </Grid>
 
-            <Grid Height="18" CornerRadius="{StaticResource RadiusPill}" Background="{ThemeResource SurfaceSecondaryBrush}" Margin="0,2">
+            <Grid x:Name="MemoryUsageBar" Height="14" CornerRadius="{StaticResource RadiusPill}"
+                  Background="{ThemeResource SurfaceSecondaryBrush}" Margin="0,2"
+                  AutomationProperties.Name="Memory in use and available">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition x:Name="ColActive" Width="1*" />
                     <ColumnDefinition x:Name="ColFree" Width="1*" />
@@ -55,15 +54,14 @@
                 </StackPanel>
 
                 <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
-                    <TextBlock x:Name="TxtStatus" VerticalAlignment="Center" FontFamily="{StaticResource TelemetryFontFamily}" FontSize="11" Foreground="{ThemeResource SuccessBrush}" Visibility="Collapsed" />
                     <Button x:Name="BtnCompact"
                             Style="{StaticResource QuietButtonStyle}"
                             Click="BtnCompact_Click"
-                            AutomationProperties.Name="Reclaim standby cache memory"
+                            AutomationProperties.Name="Review standby memory cleanup in Power tools"
                             FontSize="11" Padding="12,6" MinHeight="34">
                         <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
                             <FontIcon Glyph="&#xE74D;" FontSize="12" Foreground="{ThemeResource AccentChromeBrush}" VerticalAlignment="Center" AutomationProperties.AccessibilityView="Raw" />
-                            <TextBlock Text="Reclaim standby memory" VerticalAlignment="Center" />
+                            <TextBlock Text="Review memory cleanup" VerticalAlignment="Center" />
                         </StackPanel>
                     </Button>
                 </StackPanel>

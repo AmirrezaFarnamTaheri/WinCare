@@ -39,23 +39,32 @@
         </Border>
 
         <Grid Grid.Row="2">
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="14"
+                        Visibility="{x:Bind local:AiDoctorPage.BoolToVisibility(ViewModel.IsAnalyzing), Mode=OneWay}">
+                <ProgressRing Width="40" Height="40" HorizontalAlignment="Center"
+                              IsActive="{x:Bind ViewModel.IsAnalyzing, Mode=OneWay}" />
+                <TextBlock Text="Checking relevant Windows information…" Style="{StaticResource RowSecondaryTextStyle}"
+                           TextAlignment="Center" />
+                <Button Content="Cancel check" HorizontalAlignment="Center" Click="CancelCheck_Click"
+                        Style="{StaticResource QuietButtonStyle}" AutomationProperties.Name="Cancel troubleshooting check" />
+            </StackPanel>
             <StackPanel Spacing="8" Padding="0,18,0,0"
                         Visibility="{x:Bind local:AiDoctorPage.BoolToVisibility(ViewModel.IsEmpty), Mode=OneWay}">
                 <TextBlock Style="{StaticResource SectionHeaderTextStyle}" Text="Suggestions will appear here" />
                 <TextBlock Style="{StaticResource PageDescriptionTextStyle}"
                            Text="Select a common problem or enter a description to see what WinCare can check." />
             </StackPanel>
-            <ScrollViewer VerticalScrollBarVisibility="Auto" x:Name="ChatScrollViewer" Margin="0,0,0,8"
-                          Visibility="{x:Bind local:AiDoctorPage.BoolToVisibility(ViewModel.HasMessages), Mode=OneWay}">
-                <ItemsControl ItemsSource="{x:Bind ViewModel.Messages, Mode=OneWay}"
+            <ScrollViewer VerticalScrollBarVisibility="Auto" x:Name="ResultsScrollViewer" Margin="0,0,0,8"
+                          Visibility="{x:Bind local:AiDoctorPage.BoolToVisibility(ViewModel.HasResults), Mode=OneWay}">
+                <ItemsControl ItemsSource="{x:Bind ViewModel.Results, Mode=OneWay}"
                               AutomationProperties.LiveSetting="Polite" AutomationProperties.Name="Troubleshooting findings and suggested tools">
                     <ItemsControl.ItemTemplate>
-                        <DataTemplate x:DataType="vm:DoctorChatMessage">
+                        <DataTemplate x:DataType="vm:TroubleshootResult">
                             <Border Margin="0,0,0,12" Padding="20,16" MaxWidth="880" HorizontalAlignment="Stretch"
                                     Style="{StaticResource SurfaceBorderStyle}">
                                 <StackPanel Spacing="10">
-                                    <TextBlock Text="{x:Bind Sender}" Style="{StaticResource RowTitleTextStyle}" />
-                                    <TextBlock Text="{x:Bind Text}" Style="{StaticResource BodyTextStyle}" TextWrapping="Wrap" />
+                                    <TextBlock Text="{x:Bind Heading}" Style="{StaticResource RowTitleTextStyle}" />
+                                    <TextBlock Text="{x:Bind Summary}" Style="{StaticResource BodyTextStyle}" TextWrapping="Wrap" />
                                     <ItemsControl ItemsSource="{x:Bind ActionPlan.ProposedSteps, Mode=OneTime}" Margin="0,4,0,0">
                                         <ItemsControl.ItemTemplate>
                                             <DataTemplate x:DataType="diag:ProposedActionStep">
