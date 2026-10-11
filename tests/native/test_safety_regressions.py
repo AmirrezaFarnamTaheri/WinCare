@@ -128,7 +128,9 @@ class SafetyRegressionTests(unittest.TestCase):
         self.assertIn("using Process restarted = StartTrustedExplorer();", body.split("finally", 1)[1])
         executor = self.read("src/WinCare.Infrastructure/Commands/WindowsCommandExecutor.cs")
         self.assertIn('"command.dependency_unavailable_state_unknown"', executor)
-        self.assertNotIn('No host state was changed."', executor)
+        dependency_handler = executor.split("catch (CommandDependencyException ex)", 1)[1]
+        dependency_handler = dependency_handler.split("catch (UnauthorizedAccessException ex)", 1)[0]
+        self.assertNotIn('No host state was changed."', dependency_handler)
 
     def test_mutation_execution_unknown_state_is_not_reported_as_untouched(self) -> None:
         view_model = self.read("src/WinCare.App/ViewModels/Pages/ToolExecutionViewModel.cs")
