@@ -54,7 +54,7 @@ Status colors retain semantic meaning. Brand color is not a health result. Prima
 
 ## Composition
 
-Home is recommendation-led: one checkup action, three common care entry points, a compact evidence summary, and recent activity. Power tools, Extensions, and Troubleshoot live on the navigation rail; Home does not repeat them. Decorative hardware atlases and telemetry HUDs are not part of the runtime Home hierarchy.
+Home leads with a checkup, then common actions for maintenance, downloads, file browsing, and running processes. The compact evidence summary and recent activity remain visible without turning the page into a system dashboard. Power tools, Extensions, and Troubleshoot live on the navigation rail; Home does not repeat them. Decorative hardware atlases and telemetry HUDs are not part of the runtime Home hierarchy.
 
 Checkup is explicitly read-only. Its four areas are listed up front and their rows update in place when a check runs, and findings deep-link to the relevant care surface instead of performing maintenance in place. The summary is a checked-area status, not a synthetic health score.
 

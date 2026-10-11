@@ -6,6 +6,7 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Navigation;
 using WinCare.Application.Diagnostics;
+using WinCare.App.Services;
 
 namespace WinCare.App.Views.Pages;
 
@@ -16,7 +17,7 @@ public sealed partial class ProcessesPage : Page
     private readonly DispatcherTimer _timer = new() { Interval = TimeSpan.FromSeconds(5) };
     private readonly SemaphoreSlim _refreshGate = new(1, 1);
     private readonly Dictionary<int, ProcessDisplayRow> _rows = [];
-private CancellationTokenSource _life = new();
+    private CancellationTokenSource _life = new();
     private bool _visible;
     private IReadOnlyList<MonitoredProcess> _snapshot = [];
 
@@ -113,6 +114,11 @@ private CancellationTokenSource _life = new();
     private async void EndTask_Click(object sender, RoutedEventArgs e)
     {
         if (sender is not Button { Tag: ProcessDisplayRow row } || !row.CanEnd) return;
+        if (AppRuntime.CaptureModeEnabled)
+        {
+            ShowNotice("Ending tasks is unavailable while WinCare is capturing documentation.", InfoBarSeverity.Warning);
+            return;
+        }
         MonitoredProcess item = row.Snapshot;
         var confirmation = new ContentDialog
         {
@@ -124,13 +130,22 @@ private CancellationTokenSource _life = new();
             DefaultButton = ContentDialogButton.Close
         };
         if (await confirmation.ShowAsync() != ContentDialogResult.Primary) return;
+        var journal = AppRuntime.Current.Journal;
+        var operation = journal.Begin("process-end", $"End {item.Name} ({item.Id})");
         if (sender is Button button) button.IsEnabled = false;
         try
         {
             EndTaskResult result = await Task.Run(() => ProcessMonitorService.EndTask(item));
+            if (result.Succeeded) journal.Complete(operation.Id, result.Message);
+            else journal.RequireAttention(operation.Id, result.Message);
             if (!_visible) return;
             ShowNotice(result.Message, result.Succeeded ? InfoBarSeverity.Success : InfoBarSeverity.Warning);
             await RefreshAsync();
+        }
+        catch (Exception ex)
+        {
+            journal.RequireAttention(operation.Id, $"Task outcome could not be confirmed: {ex.Message}");
+            if (_visible) ShowNotice("Windows could not confirm the result. Refresh the process list to check the task.", InfoBarSeverity.Error);
         }
         finally
         {
