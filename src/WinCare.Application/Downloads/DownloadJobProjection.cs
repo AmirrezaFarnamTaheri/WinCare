@@ -28,6 +28,7 @@ public sealed record DownloadJobRow(
     public string ResumeAccessibleName => $"Resume download {Name}";
     public string CancelAccessibleName => $"Cancel download {Name}";
     public string RemoveAccessibleName => $"Remove download record for {Name}";
+    public string FolderAccessibleName => $"Browse the folder containing {Name}";
 }
 
 /// <summary>Decodes job state without displaying secret-bearing URLs, headers or query strings.</summary>

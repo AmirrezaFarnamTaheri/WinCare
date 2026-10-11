@@ -50,8 +50,11 @@ public sealed partial class StorageBrowserPage : Page
         }
         string initial = e.Parameter as string ?? _currentPath ??
             Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-        if (!Directory.Exists(initial) && File.Exists(initial))
-            initial = Path.GetDirectoryName(initial)!;
+        if (!Directory.Exists(initial))
+        {
+            string? folder = Path.GetDirectoryName(initial);
+            if (folder is not null && Directory.Exists(folder)) initial = folder;
+        }
         if (string.IsNullOrWhiteSpace(initial) && Drives.Count > 0) initial = Drives[0].Root;
         if (!string.IsNullOrWhiteSpace(initial)) await NavigateAsync(initial, remember: false);
     }

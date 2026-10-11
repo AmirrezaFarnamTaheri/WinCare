@@ -58,6 +58,11 @@ public sealed partial class DownloadsPage : Page
     private async void Resume_Click(object sender, RoutedEventArgs e) => await RunActionAsync(sender, "resume");
     private async void Cancel_Click(object sender, RoutedEventArgs e) => await RunActionAsync(sender, "cancel");
     private async void Remove_Click(object sender, RoutedEventArgs e) => await RunActionAsync(sender, "remove");
+    private void ShowFolder_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button { Tag: DownloadJobRow row } && !string.IsNullOrWhiteSpace(row.Destination))
+            PageNavigation.NavigateTo(this, "storage-browser", row.Destination);
+    }
 
     private void Page_SizeChanged(object sender, SizeChangedEventArgs e) =>
         ApplyLayout(e.NewSize.Width < CompactBreakpoint);

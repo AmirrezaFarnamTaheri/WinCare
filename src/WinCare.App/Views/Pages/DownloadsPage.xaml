@@ -144,6 +144,9 @@
                                                     Style="{StaticResource QuietButtonStyle}"
                                                     Visibility="{x:Bind local:DownloadsPage.BoolToVisibility(CanCancel)}"
                                                     AutomationProperties.Name="{x:Bind CancelAccessibleName}" />
+                                            <Button Content="Show folder" Click="ShowFolder_Click" Tag="{x:Bind}"
+                                                    Style="{StaticResource QuietButtonStyle}"
+                                                    AutomationProperties.Name="{x:Bind FolderAccessibleName}" />
                                             <Button Content="Remove record" Click="Remove_Click" Tag="{x:Bind}"
                                                     Style="{StaticResource QuietButtonStyle}"
                                                     Visibility="{x:Bind local:DownloadsPage.BoolToVisibility(CanRemove)}"

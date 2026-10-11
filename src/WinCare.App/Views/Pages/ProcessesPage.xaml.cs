@@ -16,8 +16,7 @@ public sealed partial class ProcessesPage : Page
     private readonly DispatcherTimer _timer = new() { Interval = TimeSpan.FromSeconds(5) };
     private readonly SemaphoreSlim _refreshGate = new(1, 1);
     private readonly Dictionary<int, ProcessDisplayRow> _rows = [];
-    private readonly List<CancellationTokenSource> _expiredTokens = [];
-    private CancellationTokenSource _life = new();
+private CancellationTokenSource _life = new();
     private bool _visible;
     private IReadOnlyList<MonitoredProcess> _snapshot = [];
 
@@ -33,7 +32,7 @@ public sealed partial class ProcessesPage : Page
     protected override void OnNavigatedTo(NavigationEventArgs e)
     {
         base.OnNavigatedTo(e);
-        _expiredTokens.Add(_life);
+        _life.Dispose();
         _life = new CancellationTokenSource();
         _visible = true;
         if (LiveRefresh.IsChecked == true) _timer.Start();

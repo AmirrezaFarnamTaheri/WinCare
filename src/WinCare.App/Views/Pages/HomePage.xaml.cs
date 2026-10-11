@@ -21,6 +21,8 @@ public sealed partial class HomePage : Page
         WinCare.App.Animations.KineticSpringAnimation.AttachSpringHover(StartupRecommendation, 1.015f);
         WinCare.App.Animations.KineticSpringAnimation.AttachSpringHover(NetworkRecommendation, 1.015f);
         WinCare.App.Animations.KineticSpringAnimation.AttachSpringHover(DownloadsRecommendation, 1.015f);
+        WinCare.App.Animations.KineticSpringAnimation.AttachSpringHover(FilesRecommendation, 1.015f);
+        WinCare.App.Animations.KineticSpringAnimation.AttachSpringHover(ProcessesRecommendation, 1.015f);
         WinCare.App.Animations.KineticSpringAnimation.AttachSpringHover(RunCheckupButton, 1.02f);
     }
 
@@ -72,6 +74,8 @@ public sealed partial class HomePage : Page
     private void RunCheckupButton_Click(object sender, RoutedEventArgs e) => NavigateTo("checkup");
     private void ViewActivityButton_Click(object sender, RoutedEventArgs e) => NavigateTo("activity");
     private void OpenDownloads_Click(object sender, RoutedEventArgs e) => NavigateTo("downloads");
+    private void OpenFiles_Click(object sender, RoutedEventArgs e) => NavigateTo("storage-browser");
+    private void OpenProcesses_Click(object sender, RoutedEventArgs e) => NavigateTo("processes");
     private void OpenCleanup_Click(object sender, RoutedEventArgs e) => PageNavigation.NavigateToSection(this, "system-care", "Clean up");
     private void OpenStartup_Click(object sender, RoutedEventArgs e) => PageNavigation.NavigateToSection(this, "system-care", "Apps & startup");
     private void OpenNetwork_Click(object sender, RoutedEventArgs e) => PageNavigation.NavigateToSection(this, "system-care", "Network & updates");
@@ -101,6 +105,8 @@ public sealed partial class HomePage : Page
         Grid.SetColumn(StartupRecommendation, compact ? 0 : 1); Grid.SetRow(StartupRecommendation, compact ? 1 : 0);
         Grid.SetColumn(NetworkRecommendation, 0); Grid.SetRow(NetworkRecommendation, compact ? 2 : 1);
         Grid.SetColumn(DownloadsRecommendation, compact ? 0 : 1); Grid.SetRow(DownloadsRecommendation, compact ? 3 : 1);
+        Grid.SetColumn(FilesRecommendation, 0); Grid.SetRow(FilesRecommendation, compact ? 4 : 2);
+        Grid.SetColumn(ProcessesRecommendation, compact ? 0 : 1); Grid.SetRow(ProcessesRecommendation, compact ? 5 : 2);
         OverviewGrid.ColumnDefinitions[0].Width = new GridLength(1, GridUnitType.Star);
         OverviewGrid.ColumnDefinitions[1].Width = compact ? new GridLength(0) : new GridLength(1, GridUnitType.Star);
         Grid.SetColumn(RecentActivityCard, compact ? 0 : 1); Grid.SetRow(RecentActivityCard, compact ? 1 : 0);

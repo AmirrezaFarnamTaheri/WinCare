@@ -33,7 +33,7 @@
                 </Grid>
             </Border>
             <StackPanel Grid.Row="2" Spacing="12"><TextBlock Style="{StaticResource SectionHeaderTextStyle}" Text="Common care"/>
-                <Grid x:Name="RecommendationsGrid" ColumnSpacing="14" RowSpacing="14"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                <Grid x:Name="RecommendationsGrid" ColumnSpacing="14" RowSpacing="14"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
                     <Button x:Name="CleanupRecommendation" Style="{StaticResource RecommendationButtonStyle}" Click="OpenCleanup_Click" HorizontalContentAlignment="Stretch" AutomationProperties.Name="Open storage cleanup">
                         <Grid ColumnSpacing="14">
                             <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
@@ -94,6 +94,32 @@
                             </StackPanel>
                             <FontIcon Grid.Column="2" Glyph="&#xE76C;" FontSize="12" VerticalAlignment="Center"
                                       AutomationProperties.AccessibilityView="Raw"/>
+                        </Grid>
+                    </Button>
+                    <Button x:Name="FilesRecommendation" Grid.Row="2" Grid.Column="0"
+                            Style="{StaticResource RecommendationButtonStyle}" Click="OpenFiles_Click"
+                            HorizontalContentAlignment="Stretch" AutomationProperties.Name="Browse files and storage">
+                        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="14">
+                            <Border Style="{StaticResource IconTileStyle}"><FontIcon Glyph="&#xE8B7;" FontSize="20"
+                                    Foreground="{ThemeResource AccentChromeBrush}" AutomationProperties.AccessibilityView="Raw" /></Border>
+                            <StackPanel Grid.Column="1" Spacing="4">
+                                <TextBlock Text="Files &amp; storage" Style="{StaticResource RowTitleTextStyle}" />
+                                <TextBlock Text="Browse drives, find files, and measure folders." Style="{StaticResource RowSecondaryTextStyle}" />
+                            </StackPanel>
+                            <FontIcon Grid.Column="2" Glyph="&#xE76C;" FontSize="12" VerticalAlignment="Center" AutomationProperties.AccessibilityView="Raw" />
+                        </Grid>
+                    </Button>
+                    <Button x:Name="ProcessesRecommendation" Grid.Row="2" Grid.Column="1"
+                            Style="{StaticResource RecommendationButtonStyle}" Click="OpenProcesses_Click"
+                            HorizontalContentAlignment="Stretch" AutomationProperties.Name="Monitor running processes">
+                        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="14">
+                            <Border Style="{StaticResource IconTileStyle}"><FontIcon Glyph="&#xE9CE;" FontSize="20"
+                                    Foreground="{ThemeResource AccentChromeBrush}" AutomationProperties.AccessibilityView="Raw" /></Border>
+                            <StackPanel Grid.Column="1" Spacing="4">
+                                <TextBlock Text="Processes" Style="{StaticResource RowTitleTextStyle}" />
+                                <TextBlock Text="See CPU and memory use. Close unresponsive tasks." Style="{StaticResource RowSecondaryTextStyle}" />
+                            </StackPanel>
+                            <FontIcon Grid.Column="2" Glyph="&#xE76C;" FontSize="12" VerticalAlignment="Center" AutomationProperties.AccessibilityView="Raw" />
                         </Grid>
                     </Button>
                 </Grid>
