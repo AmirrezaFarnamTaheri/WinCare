@@ -8,28 +8,94 @@
     xmlns:controls="using:WinCare.App.Controls"
     NavigationCacheMode="Required">
 
-    <Grid RowDefinitions="Auto,*,Auto" Padding="28,28,28,32">
+    <Grid x:Name="TroubleshootLayout" RowDefinitions="Auto,Auto,*,Auto" RowSpacing="16" Padding="28,28,28,32">
         <controls:PageHeaderControl
-            Grid.Row="0"
-            Margin="0,0,0,24"
             Title="Troubleshoot"
-            Description="Tell WinCare what's happening. It will suggest a few relevant tools to try." />
+            Description="Find relevant checks and tools for a Windows problem. Nothing is changed on this page." />
 
-        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" x:Name="ChatScrollViewer" Margin="0,0,0,16">
-            <ItemsControl ItemsSource="{x:Bind ViewModel.Messages, Mode=OneWay}">
-                <ItemsControl.ItemTemplate><DataTemplate x:DataType="vm:DoctorChatMessage"><Grid Margin="0,0,0,16"><Border CornerRadius="{StaticResource RadiusControl}" Padding="20,16" MaxWidth="800" HorizontalAlignment="{x:Bind local:AiDoctorPage.UserToHorizontalAlignment(IsUser), Mode=OneTime}" Background="{ThemeResource CardSurfaceBrush}" BorderBrush="{ThemeResource BorderSubtleBrush}" BorderThickness="1"><StackPanel Spacing="8">
-                    <TextBlock Text="{x:Bind Sender}" Style="{StaticResource RowSecondaryTextStyle}" Foreground="{ThemeResource AccentChromeBrush}" /><TextBlock Text="{x:Bind Text}" Style="{StaticResource BodyTextStyle}" />
-                    <ItemsControl ItemsSource="{x:Bind ActionPlan.ProposedSteps, Mode=OneTime}" Margin="0,8,0,0"><ItemsControl.ItemTemplate><DataTemplate x:DataType="diag:ProposedActionStep"><Border Margin="0,6,0,6" Padding="0,16,0,8" BorderBrush="{ThemeResource BorderSubtleBrush}" BorderThickness="0,1,0,0"><Grid RowDefinitions="Auto,Auto" RowSpacing="8">
-                        <Grid Grid.Row="0" ColumnDefinitions="*,Auto" ColumnSpacing="12"><StackPanel Grid.Column="0" Spacing="4"><TextBlock Text="{x:Bind Title}" Style="{StaticResource RowTitleTextStyle}"/><TextBlock Text="{x:Bind Description}" Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap"/></StackPanel><Button Grid.Column="1" Content="{x:Bind ActionButtonText}" Style="{StaticResource AccentButtonStyle}" VerticalAlignment="Center" Click="ExecuteStepButton_Click" Tag="{x:Bind}" AutomationProperties.Name="{x:Bind ActionAccessibleName}"/></Grid>
-                        <TextBlock Grid.Row="1" Text="{x:Bind ReviewContextText}" Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap" />
-                    </Grid></Border></DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
-                    <TextBlock Text="Open a step in Power tools for details and options." Style="{StaticResource RowSecondaryTextStyle}" Margin="0,4,0,0"/>
-                </StackPanel></Border></Grid></DataTemplate></ItemsControl.ItemTemplate>
-            </ItemsControl>
-        </ScrollViewer>
-        <Grid Grid.Row="2" ColumnDefinitions="*,Auto" ColumnSpacing="12">
-            <TextBox Grid.Column="0" MinHeight="44" PlaceholderText="What's going wrong?" Text="{x:Bind ViewModel.UserPrompt, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" KeyDown="PromptTextBox_KeyDown" IsEnabled="{x:Bind ViewModel.IsAnalyzing, Converter={StaticResource InverseBooleanConverter}, Mode=OneWay, FallbackValue=True}" AutomationProperties.AutomationId="DoctorPrompt" AutomationProperties.Name="Describe the Windows problem"/>
-            <Button Grid.Column="1" Style="{StaticResource AccentButtonStyle}" Click="SendButton_Click" IsEnabled="{x:Bind ViewModel.IsAnalyzing, Converter={StaticResource InverseBooleanConverter}, Mode=OneWay, FallbackValue=True}" AccessKey="C" AutomationProperties.AutomationId="DiagnoseProblem" AutomationProperties.Name="Check the described problem"><StackPanel Orientation="Horizontal" Spacing="8"><ProgressRing Width="16" Height="16" IsActive="{x:Bind ViewModel.IsAnalyzing, Mode=OneWay}" Visibility="{x:Bind local:AiDoctorPage.BoolToVisibility(ViewModel.IsAnalyzing), Mode=OneWay}" /><TextBlock Text="Check" /></StackPanel></Button>
+        <Border Grid.Row="1" Padding="20" Style="{StaticResource SurfaceBorderStyle}">
+            <StackPanel Spacing="12">
+                <StackPanel Spacing="4">
+                    <TextBlock Style="{StaticResource SectionHeaderTextStyle}" Text="What seems wrong?" />
+                    <TextBlock Style="{StaticResource RowSecondaryTextStyle}" Text="Start with a common issue or describe your own below." />
+                </StackPanel>
+                <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                        <Button Content="Storage is full" Style="{StaticResource QuietButtonStyle}"
+                                Tag="My C drive is almost full" Click="QuickIssue_Click"
+                                IsEnabled="{x:Bind ViewModel.IsAnalyzing, Converter={StaticResource InverseBooleanConverter}, Mode=OneWay}"
+                                AutomationProperties.AutomationId="TroubleshootStorage" AutomationProperties.Name="Check storage problems" />
+                        <Button Content="Computer is slow" Style="{StaticResource QuietButtonStyle}"
+                                Tag="RAM memory usage is high and apps lag" Click="QuickIssue_Click"
+                                IsEnabled="{x:Bind ViewModel.IsAnalyzing, Converter={StaticResource InverseBooleanConverter}, Mode=OneWay}"
+                                AutomationProperties.AutomationId="TroubleshootMemory" AutomationProperties.Name="Check a slow computer" />
+                        <Button Content="Network problems" Style="{StaticResource QuietButtonStyle}"
+                                Tag="Internet is slow or not working" Click="QuickIssue_Click"
+                                IsEnabled="{x:Bind ViewModel.IsAnalyzing, Converter={StaticResource InverseBooleanConverter}, Mode=OneWay}"
+                                AutomationProperties.AutomationId="TroubleshootNetwork" AutomationProperties.Name="Check network problems" />
+                    </StackPanel>
+                </ScrollViewer>
+            </StackPanel>
+        </Border>
+
+        <Grid Grid.Row="2">
+            <StackPanel Spacing="8" Padding="0,18,0,0"
+                        Visibility="{x:Bind local:AiDoctorPage.BoolToVisibility(ViewModel.IsEmpty), Mode=OneWay}">
+                <TextBlock Style="{StaticResource SectionHeaderTextStyle}" Text="Suggestions will appear here" />
+                <TextBlock Style="{StaticResource PageDescriptionTextStyle}"
+                           Text="Select a common problem or enter a description to see what WinCare can check." />
+            </StackPanel>
+            <ScrollViewer VerticalScrollBarVisibility="Auto" x:Name="ChatScrollViewer" Margin="0,0,0,8"
+                          Visibility="{x:Bind local:AiDoctorPage.BoolToVisibility(ViewModel.HasMessages), Mode=OneWay}">
+                <ItemsControl ItemsSource="{x:Bind ViewModel.Messages, Mode=OneWay}"
+                              AutomationProperties.LiveSetting="Polite" AutomationProperties.Name="Troubleshooting findings and suggested tools">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:DoctorChatMessage">
+                            <Border Margin="0,0,0,12" Padding="20,16" MaxWidth="880" HorizontalAlignment="Stretch"
+                                    Style="{StaticResource SurfaceBorderStyle}">
+                                <StackPanel Spacing="10">
+                                    <TextBlock Text="{x:Bind Sender}" Style="{StaticResource RowTitleTextStyle}" />
+                                    <TextBlock Text="{x:Bind Text}" Style="{StaticResource BodyTextStyle}" TextWrapping="Wrap" />
+                                    <ItemsControl ItemsSource="{x:Bind ActionPlan.ProposedSteps, Mode=OneTime}" Margin="0,4,0,0">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate x:DataType="diag:ProposedActionStep">
+                                                <Border Margin="0,4,0,4" Padding="0,14,0,6" BorderBrush="{ThemeResource BorderSubtleBrush}" BorderThickness="0,1,0,0">
+                                                    <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto" ColumnSpacing="16" RowSpacing="8">
+                                                        <StackPanel Spacing="4">
+                                                            <TextBlock Text="{x:Bind Title}" Style="{StaticResource RowTitleTextStyle}" />
+                                                            <TextBlock Text="{x:Bind Description}" Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap" />
+                                                        </StackPanel>
+                                                        <Button Grid.Column="1" Content="Review tool" Style="{StaticResource QuietButtonStyle}"
+                                                                Tag="{x:Bind}" Click="ExecuteStepButton_Click"
+                                                                AutomationProperties.Name="{x:Bind ActionAccessibleName}" />
+                                                        <TextBlock Grid.Row="1" Grid.ColumnSpan="2" Text="{x:Bind ReviewContextText}"
+                                                                   Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap" />
+                                                    </Grid>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+        </Grid>
+
+        <Grid Grid.Row="3" ColumnDefinitions="*,Auto" ColumnSpacing="12" RowSpacing="6">
+            <TextBox x:Name="ProblemInput" MinHeight="44" MaxLength="500"
+                     PlaceholderText="Describe a problem…"
+                     Text="{x:Bind ViewModel.UserPrompt, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                     KeyDown="PromptTextBox_KeyDown"
+                     IsEnabled="{x:Bind ViewModel.IsAnalyzing, Converter={StaticResource InverseBooleanConverter}, Mode=OneWay}"
+                     AutomationProperties.AutomationId="DoctorPrompt" AutomationProperties.Name="Describe a Windows problem" />
+            <Button Grid.Column="1" Content="Find steps" Style="{StaticResource PrimaryActionButtonStyle}"
+                    Click="SendButton_Click"
+                    IsEnabled="{x:Bind ViewModel.IsAnalyzing, Converter={StaticResource InverseBooleanConverter}, Mode=OneWay}"
+                    AutomationProperties.AutomationId="DiagnoseProblem" AutomationProperties.Name="Find troubleshooting steps" />
+            <TextBlock Grid.Row="1" Grid.ColumnSpan="2" Style="{StaticResource FieldHintTextStyle}"
+                       Text="Checks stay on this PC. Suggested actions open in Power tools so you can review the impact and options before running anything." />
         </Grid>
     </Grid>
 </Page>

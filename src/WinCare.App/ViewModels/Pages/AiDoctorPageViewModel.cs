@@ -29,6 +29,8 @@ public sealed class AiDoctorPageViewModel : INotifyPropertyChanged
 
     public event PropertyChangedEventHandler? PropertyChanged;
     public ObservableCollection<DoctorChatMessage> Messages { get; } = new();
+    public bool HasMessages => Messages.Count > 0;
+    public bool IsEmpty => !HasMessages;
 
     /// <summary>
     /// Cancels an in-flight diagnosis analysis, if any.
@@ -42,6 +44,8 @@ public sealed class AiDoctorPageViewModel : INotifyPropertyChanged
     private void AddMessage(DoctorChatMessage message)
     {
         Messages.Add(message);
+        OnPropertyChanged(nameof(HasMessages));
+        OnPropertyChanged(nameof(IsEmpty));
         while (Messages.Count > MaxKeptMessages) Messages.RemoveAt(0);
     }
 
@@ -80,23 +84,22 @@ public sealed class AiDoctorPageViewModel : INotifyPropertyChanged
 
     public AiDoctorPageViewModel(IIntentTranslator? intentTranslator = null)
     {
-        var inferenceEngine = new RuleBasedIntentInferenceEngine();
-        _intentTranslator = intentTranslator ?? new IntentTranslator(inferenceEngine, AppRuntime.Current.ToolCatalog);
-
-        AddMessage(new DoctorChatMessage(
-            "WinCare",
-            "I am the Active Troubleshooter. Describe your issue (e.g. low space, high memory use). I will check local signals and immediately prepare the optimal fixes without defensive friction.",
-            IsUser: false,
-            DateTime.UtcNow));
+        _intentTranslator = intentTranslator ??
+            new IntentTranslator(new RuleBasedIntentInferenceEngine(), AppRuntime.Current.ToolCatalog);
     }
 
     public async Task SubmitPromptAsync(CancellationToken cancellationToken = default)
     {
         string prompt = UserPrompt.Trim();
         if (prompt.Length == 0 || IsAnalyzing) return;
+        if (prompt.Length > 500)
+        {
+            AddMessage(new DoctorChatMessage("Input", "Keep the description under 500 characters.", false, DateTime.UtcNow));
+            return;
+        }
 
         UserPrompt = string.Empty;
-        AddMessage(new DoctorChatMessage("You", prompt, IsUser: true, DateTime.UtcNow));
+        AddMessage(new DoctorChatMessage("Problem", prompt, IsUser: true, DateTime.UtcNow));
 
         using CancellationTokenSource linkedCts = cancellationToken.CanBeCanceled
             ? CancellationTokenSource.CreateLinkedTokenSource(cancellationToken)
@@ -109,22 +112,24 @@ public sealed class AiDoctorPageViewModel : INotifyPropertyChanged
             DoctorActionPlan plan = await _intentTranslator.TranslateAsync(prompt, linkedCts.Token);
             CurrentPlan = plan;
 
-            string signalCount = $"{plan.MeasuredEvidence.Count} local signal{(plan.MeasuredEvidence.Count == 1 ? string.Empty : "s")}";
-            string findingCount = $"{plan.Findings.Count} item{(plan.Findings.Count == 1 ? string.Empty : "s")}";
-            string stepCount = $"{plan.ProposedSteps.Count} next step{(plan.ProposedSteps.Count == 1 ? string.Empty : "s")}";
-            string responseText = $"{plan.DiagnosisSummary}\n\nI checked {signalCount} and found {findingCount}. {stepCount} ready to review.";
-            AddMessage(new DoctorChatMessage("WinCare", responseText, IsUser: false, DateTime.UtcNow, plan));
+            string findings = plan.Findings.Count == 1 ? "1 finding" : $"{plan.Findings.Count} findings";
+            string steps = plan.ProposedSteps.Count == 1 ? "1 tool to review" : $"{plan.ProposedSteps.Count} tools to review";
+            string evidence = plan.MeasuredEvidence.Count == 0
+                ? "No local readings available for this result."
+                : $"Used {plan.MeasuredEvidence.Count} local reading{(plan.MeasuredEvidence.Count == 1 ? string.Empty : "s")}.";
+            string responseText = $"{plan.DiagnosisSummary}\n\n{evidence} {findings} · {steps}.";
+            AddMessage(new DoctorChatMessage("Suggestions", responseText, IsUser: false, DateTime.UtcNow, plan));
         }
         catch (OperationCanceledException)
         {
-            AddMessage(new DoctorChatMessage("WinCare", "Check cancelled.", IsUser: false, DateTime.UtcNow));
+            AddMessage(new DoctorChatMessage("Status", "Check cancelled.", IsUser: false, DateTime.UtcNow));
         }
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"[Troubleshoot] Check failed: {ex}");
             AddMessage(new DoctorChatMessage(
-                "WinCare",
-                "I couldn't finish that check. Nothing was changed. Try again, or open Activity if the problem keeps happening.",
+                "Status",
+                "That check could not finish. Try another description or open a relevant tool manually.",
                 IsUser: false,
                 DateTime.UtcNow));
         }

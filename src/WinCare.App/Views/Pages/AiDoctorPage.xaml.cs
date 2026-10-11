@@ -14,7 +14,6 @@ public sealed partial class AiDoctorPage : Page
     // Kept as a one-line delegation to the shared LayoutVisibility helper so the bool-to-
     // visibility pair has a single implementation; this wrapper exists for the XAML contract.
     public static Visibility BoolToVisibility(bool value) => LayoutVisibility.BoolToVisibility(value);
-    public static HorizontalAlignment UserToHorizontalAlignment(bool isUser) => isUser ? HorizontalAlignment.Right : HorizontalAlignment.Left;
 
     public AiDoctorPageViewModel ViewModel { get; }
 
@@ -28,6 +27,14 @@ public sealed partial class AiDoctorPage : Page
     {
         ViewModel.CancelAnalysis();
         base.OnNavigatedFrom(e);
+    }
+
+    private async void QuickIssue_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { Tag: string problem } || ViewModel.IsAnalyzing) return;
+        ViewModel.UserPrompt = problem;
+        await ViewModel.SubmitPromptAsync();
+        ScrollToLatestMessage();
     }
 
     private async void SendButton_Click(object sender, RoutedEventArgs e)

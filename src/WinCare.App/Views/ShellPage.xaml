@@ -27,7 +27,7 @@
                 <NavigationViewItem.Icon><FontIcon Glyph="&#xE9D9;" /></NavigationViewItem.Icon>
             </NavigationViewItem>
 
-                        <NavigationViewItem x:Uid="NavAiDoctor" Content="Active Troubleshooter" Tag="ai-doctor" AutomationProperties.AutomationId="NavAiDoctor" AutomationProperties.Name="Active Troubleshooter">
+            <NavigationViewItem x:Uid="NavAiDoctor" Content="Troubleshoot" Tag="ai-doctor" AutomationProperties.AutomationId="NavAiDoctor" AutomationProperties.Name="Troubleshoot">
                 <NavigationViewItem.Icon><FontIcon Glyph="&#xE730;" /></NavigationViewItem.Icon>
             </NavigationViewItem>
             <NavigationViewItemHeader Content="Care" />
@@ -61,34 +61,6 @@
                 <NavigationViewItem.Icon><FontIcon Glyph="&#xE897;" /></NavigationViewItem.Icon>
             </NavigationViewItem>
         </NavigationView.FooterMenuItems>
-
-        <NavigationView.PaneFooter>
-            <Border Margin="10,0,10,12"
-                    Padding="12,10"
-                    Background="{ThemeResource SurfaceSecondaryBrush}"
-                    BorderBrush="{ThemeResource BorderSubtleBrush}"
-                    BorderThickness="1"
-                    CornerRadius="{StaticResource RadiusControl}">
-                <Grid ColumnSpacing="10">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto" />
-                        <ColumnDefinition Width="*" />
-                    </Grid.ColumnDefinitions>
-                    <Ellipse Width="8" Height="8" Fill="{ThemeResource TextSecondaryBrush}" VerticalAlignment="Center" />
-                    <StackPanel Grid.Column="1" Spacing="2">
-                        <TextBlock Text="ON-DEVICE DIAGNOSTICS"
-                                   FontFamily="{StaticResource TelemetryFontFamily}"
-                                   FontSize="10"
-                                   FontWeight="Bold"
-                                   Foreground="{ThemeResource AccentChromeBrush}" />
-                        <TextBlock Text="Checkup is read-only"
-                                   FontFamily="{StaticResource TelemetryFontFamily}"
-                                   FontSize="9"
-                                   Foreground="{ThemeResource TextSecondaryBrush}" />
-                    </StackPanel>
-                </Grid>
-            </Border>
-        </NavigationView.PaneFooter>
 
         <Frame x:Name="ContentFrame" Navigated="ContentFrame_Navigated" />
     </NavigationView>

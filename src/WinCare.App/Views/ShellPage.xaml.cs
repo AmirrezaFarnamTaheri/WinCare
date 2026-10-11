@@ -63,29 +63,14 @@ public sealed partial class ShellPage : Page
         AppPreferences.MarkFirstRunTourSeen();
     }
 
-    private async void OnLoaded(object sender, RoutedEventArgs e)
+    private void OnLoaded(object sender, RoutedEventArgs e)
     {
         if (_initialized) return;
         _initialized = true;
 
-        // Look the home item up by route rather than trusting menu ordering.
         PrimaryNavigation.SelectedItem = FindNavigationItem(HomeKey);
         _pageService.Navigate(ContentFrame, HomeKey);
-
-        if (!AppPreferences.HasSeenFirstRunTour && !App.IsCaptureSession)
-        {
-            // Capture sessions skip the tour so it never overlays a route being documented.
-            // First run is the least error-tolerant moment of the session: a dialog fault must
-            // not escape the loaded path and take the shell down with it.
-            try
-            {
-                await ShowTourAsync();
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"[ShellPage] First-run tour failed: {ex}");
-            }
-        }
+        // Help offers the optional tour; first launch never blocks Home with a modal.
     }
 
     private void PrimaryNavigation_SelectionChanged(NavigationView sender, NavigationViewSelectionChangedEventArgs args)

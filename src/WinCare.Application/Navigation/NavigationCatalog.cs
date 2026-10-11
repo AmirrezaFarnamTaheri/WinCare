@@ -13,7 +13,7 @@ public static class NavigationCatalog
         new("all-tools", "Power tools", "NavAllTools", ["Tools", "Categories", "Favorites", "Recent", "Care plans"]),
         new("activity", "Activity", "NavActivity", ["Running", "Needs attention", "History", "Reports"]),
         new("plugin-store", "Extensions", "NavPluginStore", ["Search extensions", "Categories", "Installed extensions", "Online catalog"], IsFooter: true),
-        new("ai-doctor", "Active Troubleshooter", "NavAiDoctor", ["Describe a problem", "What WinCare found", "Suggested steps"], IsFooter: false),
+        new("ai-doctor", "Troubleshoot", "NavAiDoctor", ["Describe a problem", "Storage problems", "Slow computer", "Network problems", "Suggested steps"], IsFooter: false),
         new("settings", "Settings", "NavSettings", ["App theme", "Remember window", "Local data"], IsFooter: true),
         new("help", "Help", "NavHelp", ["Getting started", "Find a tool", "Before changes", "Keyboard"], IsFooter: true),
         new("about", "About WinCare", "NavAbout", ["Version", "Open source", "Support", "Donate"], IsHidden: true),
