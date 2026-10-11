@@ -14,7 +14,7 @@ The task-first workspace keeps the native safety/execution model while presentin
 | Confirmation | Dispatcher / execution view model | Existing risk-tier policy: direct safe actions, moderate confirmation, destructive preview receipt plus approval. |
 | Plugins | Trust and admission services | Remote installation disabled without approved trust root; widget failures stay visible. |
 
-Home's checkup button opens Checkup, never a repair. Common maintenance tasks open their care sections; file browsing and process monitoring open their native pages. Checkup is read-only and hands findings to care surfaces. Power tools keeps advanced execution details behind the inspector. Troubleshoot preserves catalog read-only/access metadata but never infers Undo; the canonical execution path owns review, approval, execution receipts and recovery claims.
+Home's checkup button opens Checkup, never a repair. Common maintenance tasks open their care sections; file browsing and process monitoring open their native pages. Up to four saved Power tools appear as Home shortcuts, with their real availability displayed; selecting one opens the canonical review UI without executing it. The Favorites link opens the actual Favorites tab. Checkup is read-only and hands findings to care surfaces. Power tools keeps advanced execution details behind the inspector. Troubleshoot preserves catalog read-only/access metadata but never infers Undo; the canonical execution path owns review, approval, execution receipts and recovery claims.
 
 The shell changes presentation without changing route identity. `LayoutVisibility.CompactBreakpointDip` remains the shared 920-DIP page boundary while measured components may use narrower fit breakpoints. Home's hero/evidence composition stacks below 820 DIP. Unknown, empty, pending, failed, partial and successful states remain distinct. A screenshot never substitutes for a live interface.
 
@@ -27,6 +27,7 @@ The shell changes presentation without changing route identity. `LayoutVisibilit
 
 ## Downloads
 
+- Downloads can be filtered by All / Active / Finished and searched by filename or source host without exposing signed links.
 - Home and primary navigation link to Downloads. The URL field is the only
   required input: WinCare selects the default Downloads folder and file name.
 - The Download button creates and starts a transfer. Start/resume/pause/cancel

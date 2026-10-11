@@ -371,3 +371,24 @@ class ProductUiParityTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+    def test_home_favorites_are_catalog_backed_links_not_fake_actions(self) -> None:
+        home = self.read("src/WinCare.App/Views/Pages/HomePage.xaml")
+        code = self.read("src/WinCare.App/Views/Pages/HomePage.xaml.cs")
+        power = self.read("src/WinCare.App/Views/Pages/AllToolsPage.xaml.cs")
+        self.assertIn('ItemsSource="{x:Bind FavoriteTools, Mode=OneWay}"', home)
+        self.assertIn("AppPreferences.FavoriteCommandIds", code)
+        self.assertIn("AppRuntime.Current.ToolCatalog.All", code)
+        self.assertIn("PageNavigation.OpenTool(this, selected.Id", code)
+        self.assertIn('new SectionNavigationRequest("Favorites")', code)
+        self.assertIn("e.Parameter is SectionNavigationRequest section", power)
+        self.assertNotIn("AppRuntime.Current.Dispatcher.ExecuteAsync(", code)
+
+    def test_download_search_uses_redacted_visible_file_and_host_fields(self) -> None:
+        page = self.read("src/WinCare.App/Views/Pages/DownloadsPage.xaml")
+        view_model = self.read("src/WinCare.App/ViewModels/Pages/DownloadsPageViewModel.cs")
+        self.assertIn('x:Name="DownloadSearchInput"', page)
+        self.assertIn("job.Name.Contains(_searchText", view_model)
+        self.assertIn("job.Host.Contains(_searchText", view_model)
+        self.assertNotIn("job.Url.Contains(_searchText", view_model)
+        self.assertIn("Synchronize(VisibleJobs, items.ToArray())", view_model)
