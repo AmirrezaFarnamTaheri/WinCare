@@ -6,7 +6,7 @@
     xmlns:views="using:WinCare.App.Views"
     xmlns:controls="using:WinCare.App.Controls"
     NavigationCacheMode="Required">
-    <Grid Padding="28,28,28,32" RowSpacing="20">
+    <Grid Padding="32,28,32,28" RowSpacing="20" MaxWidth="1320" HorizontalAlignment="Stretch">
         <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="*" /></Grid.RowDefinitions>
         <controls:PageHeaderControl
             Title="Repair &amp; recovery"

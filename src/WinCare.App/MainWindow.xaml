@@ -19,12 +19,12 @@
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="*" />
-                <ColumnDefinition x:Name="SearchColumn" Width="*" MinWidth="300" MaxWidth="500" />
+                <ColumnDefinition x:Name="SearchColumn" Width="*" MinWidth="190" MaxWidth="500" />
             </Grid.ColumnDefinitions>
 
             <StackPanel Orientation="Horizontal" Spacing="14" VerticalAlignment="Center">
                 <Image Width="28" Height="28" Source="Assets/Square44x44Logo.png" />
-                <TextBlock x:Name="AppTitleText" Style="{StaticResource AppTitleTextStyle}" Text="WinCare 4.0" FontWeight="SemiBold" FontSize="16" VerticalAlignment="Center" />
+                <TextBlock x:Name="AppTitleText" Style="{StaticResource AppTitleTextStyle}" Text="WinCare" FontWeight="SemiBold" FontSize="16" VerticalAlignment="Center" />
                 <Border x:Name="TitleStatusBadge"
                         Background="{ThemeResource AccentChromeSubtleBrush}"
                         BorderBrush="{ThemeResource BorderSubtleBrush}"
@@ -34,11 +34,11 @@
                         VerticalAlignment="Center">
                     <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
                         <Ellipse Width="6" Height="6" Fill="{ThemeResource AccentChromeBrush}" VerticalAlignment="Center" />
-                        <TextBlock Text="LOCAL WINDOWS TOOLS"
-                                   FontFamily="{StaticResource TelemetryFontFamily}"
-                                   FontSize="10"
+                        <TextBlock Text="This PC"
+                                   FontFamily="{StaticResource BodyFontFamily}"
+                                   FontSize="12"
                                    FontWeight="SemiBold"
-                                   Foreground="{ThemeResource AccentChromeBrush}"
+                                   Foreground="{ThemeResource TextSecondaryBrush}"
                                    VerticalAlignment="Center" />
                     </StackPanel>
                 </Border>
@@ -66,9 +66,9 @@
                             </Grid.ColumnDefinitions>
                             <StackPanel Spacing="4">
                                 <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="{x:Bind Title}" FontWeight="Medium" />
-                                <TextBlock Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind Subtitle}" TextTrimming="CharacterEllipsis" Opacity="0.7" />
+                                <TextBlock Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind Subtitle}" TextTrimming="CharacterEllipsis" />
                             </StackPanel>
-                            <TextBlock Grid.Column="1" Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind KindLabel}" VerticalAlignment="Center" Opacity="0.5" />
+                            <TextBlock Grid.Column="1" Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind KindLabel}" VerticalAlignment="Center" />
                         </Grid>
                     </DataTemplate>
                 </AutoSuggestBox.ItemTemplate>
