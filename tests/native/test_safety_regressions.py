@@ -64,6 +64,67 @@ class SafetyRegressionTests(unittest.TestCase):
             xaml,
         )
 
+    def test_hardlink_consolidation_is_explicitly_disabled_at_catalog_and_executor(self) -> None:
+        # Static defense-in-depth gate; behavioral admission is tested by the C# suites.
+        import json
+        catalog = json.loads(self.read("src/WinCare.CommandCatalog/Data/commands.json"))["commands"]
+        hardlink = next(item for item in catalog if item["id"] == "storage-dedup-hardlink")
+        self.assertEqual("ContractVerified", hardlink["migrationStatus"])
+        self.assertEqual("High", hardlink["risk"])
+        self.assertFalse(hardlink["readOnly"])
+        native = self.read("src/WinCare.Infrastructure/Commands/WindowsCommandExecutor.RemainingPillars.cs")
+        self.assertIn('"storage.dedup.hardlink_unavailable"', native)
+        self.assertNotIn("CreateHardLinkW", native)
+        executor = self.read("src/WinCare.Infrastructure/Commands/WindowsCommandExecutor.cs")
+        self.assertIn('definition.Id.Equals("storage-dedup-hardlink"', executor)
+        scanner = self.read("src/WinCare.Infrastructure/Commands/WindowsCommandExecutor.StorageDeduplication.cs")
+        self.assertIn("AttributesToSkip = FileAttributes.ReparsePoint", scanner)
+
+    def test_unsafe_or_incomplete_commands_are_suspended_consistently(self) -> None:
+        # Static check supplements (but does not replace) the Windows runtime tests.
+        import json
+        import re
+        catalog = {command["id"]: command for command in
+                   json.loads(self.read("src/WinCare.CommandCatalog/Data/commands.json"))["commands"]}
+        executor = self.read("src/WinCare.Infrastructure/Commands/WindowsCommandExecutor.cs")
+        suspended = set(re.findall(r'^        "([a-z0-9-]+)",$',
+                      executor.split("SuspendedMutationCommands", 1)[1].split("};", 1)[0],
+                      flags=re.MULTILINE))
+        self.assertGreaterEqual(len(suspended), 14)
+        self.assertEqual(suspended, {
+            identifier for identifier, command in catalog.items()
+            if command["migrationStatus"] == "ContractVerified" and not command["readOnly"]
+        })
+        for identifier in suspended:
+            with self.subTest(command=identifier):
+                self.assertEqual("ContractVerified", catalog[identifier]["migrationStatus"])
+                self.assertNotEqual("Low", catalog[identifier]["risk"])
+                self.assertIn("Unavailable:", catalog[identifier]["summary"])
+                self.assertIn("unavailable", catalog[identifier]["title"].lower())
+        self.assertIn('if (SuspendedMutationCommands.Contains(definition.Id))', executor)
+        # Console daemon lacks an SCM ServiceMain. Registry settings alone do not
+        # register a toast producer, so neither can be advertised as installed.
+        guard = self.read("src/WinCare.Infrastructure/Commands/WindowsCommandExecutor.RemainingPillars.cs")
+        rust = self.read("native/wincare-guard/src/main.rs")
+        self.assertIn('"guard.scm_unavailable"', guard)
+        self.assertIn('"guard.toast_unavailable"', guard)
+        self.assertNotIn('"sc.exe", ["create"', guard)
+        self.assertIn('fn main()', rust)
+        self.assertNotIn('CommandHandlerOutcome.Success("Installer caches successfully purged.")', executor)
+        self.assertNotIn('CommandHandlerOutcome.Success("Application residuals successfully purged.")', executor)
+        self.assertNotIn('CommandHandlerOutcome.Success("Startup applications optimized successfully.")', executor)
+
+    def test_high_risk_servicing_and_database_commands_require_review(self) -> None:
+        import json
+        catalog = {command["id"]: command for command in
+                   json.loads(self.read("src/WinCare.CommandCatalog/Data/commands.json"))["commands"]}
+        self.assertEqual("High", catalog["cleaner-dism-component-store"]["risk"])
+        for command_id in ("compress-compactos", "sqlite-vacuum"):
+            self.assertEqual("Moderate", catalog[command_id]["risk"])
+        executor = self.read("src/WinCare.Infrastructure/Commands/WindowsCommandExecutor.cs")
+        self.assertIn('"cleaner-dism-component-store" => new[]', executor)
+        self.assertIn('/ResetBase (prevents uninstalling existing updates)', executor)
+
     def test_native_directory_size_uses_iterative_walk(self) -> None:
         source = self.read("native/wincare-core/src/lib.rs")
         self.assertIn("let mut pending = vec![path.to_path_buf()]", source)

@@ -143,9 +143,10 @@ public sealed class BoundedProcessRunner : IBoundedProcessRunner
             }
         }
 
-        // Nothing could be resolved to an absolute path; let the OS attempt the launch so the
-        // existing missing-dependency failure mode is preserved.
-        return fileName;
+        // Never fall back to CreateProcess's implicit search, which includes the current
+        // working directory and can execute an attacker-supplied binary under elevated WinCare.
+        throw new CommandDependencyException(fileName,
+            $"Required executable '{fileName}' was not found in trusted system locations or PATH.");
     }
 
     private static async Task ObserveReaderCompletionAsync(Task stdout, Task stderr)

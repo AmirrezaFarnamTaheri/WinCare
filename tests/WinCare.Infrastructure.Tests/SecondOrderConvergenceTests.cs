@@ -123,6 +123,59 @@ public sealed class SecondOrderConvergenceTests
     }
 
     [Fact]
+    public void StorageDeduplication_ScanRejectsCancelledRequestsBeforeTouchingTheTree()
+    {
+        using CancellationTokenSource cts = new();
+        cts.Cancel();
+        Assert.Throws<OperationCanceledException>(() =>
+            WindowsCommandExecutor.StorageDeduplicationHelper.ScanDuplicateCandidates(
+                Path.GetTempPath(), cancellationToken: cts.Token));
+    }
+
+    [Fact]
+    public void StorageDeduplication_ScanNeverFollowsReparsePointsOutsideTheRoot()
+    {
+        string root = Path.Combine(Path.GetTempPath(), "wincare-dedup-root-" + Guid.NewGuid().ToString("N"));
+        string outside = Path.Combine(Path.GetTempPath(), "wincare-dedup-outside-" + Guid.NewGuid().ToString("N"));
+        string link = Path.Combine(root, "outside-link");
+        Directory.CreateDirectory(root);
+        Directory.CreateDirectory(outside);
+        try
+        {
+            byte[] content = new byte[4096];
+            new Random(123).NextBytes(content);
+            File.WriteAllBytes(Path.Combine(root, "first.bin"), content);
+            File.WriteAllBytes(Path.Combine(root, "second.bin"), content);
+            File.WriteAllBytes(Path.Combine(outside, "third.bin"), content);
+            try { Directory.CreateSymbolicLink(link, outside); }
+            catch (Exception ex) when (ex is UnauthorizedAccessException or IOException)
+            {
+                // A machine that forbids creating test symlinks cannot execute this host test.
+                return;
+            }
+
+            var report = WindowsCommandExecutor.StorageDeduplicationHelper.ScanDuplicateCandidates(root);
+            Assert.Equal(2, report.FilesAudited);
+            Assert.Single(report.DuplicateSets);
+            Assert.Equal(2, report.TotalDuplicateFiles);
+            Assert.DoesNotContain(report.DuplicateSets.SelectMany(set => set.FilePaths),
+                path => path.Contains("third.bin", StringComparison.Ordinal));
+            Assert.Throws<InvalidDataException>(() =>
+                WindowsCommandExecutor.StorageDeduplicationHelper.ScanDuplicateCandidates(link));
+        }
+        finally
+        {
+            // Remove the link itself first; cleanup must never traverse its external target.
+            if (Directory.Exists(link))
+            {
+                try { Directory.Delete(link); } catch { }
+            }
+            Directory.Delete(root, recursive: true);
+            Directory.Delete(outside, recursive: true);
+        }
+    }
+
+    [Fact]
     public void BinaryDiagnostics_InspectPeHeaders_parses_dotnet_executable_headers()
     {
         string currentExe = Environment.ProcessPath ?? typeof(SecondOrderConvergenceTests).Assembly.Location;

@@ -25,9 +25,9 @@ Stages are cumulative. A command listed at a stage has satisfied every weaker st
 |---|---|
 | Commands in catalog | 296 |
 | Frozen legacy-parity oracle | 259 |
-| Additional admitted native commands | 37 |
-| At `ContractVerified` or stronger | 0 |
-| At `Implemented` or stronger | 296 |
+| Additional cataloged native commands | 37 |
+| At `ContractVerified` or stronger | 296 |
+| At `Implemented` or stronger | 282 |
 | At `BehaviorVerified` | 0 |
 | Production blockers | 296 |
 | Production ready | no |
@@ -51,9 +51,9 @@ Behavior verification is most valuable on the commands that can do real damage, 
 | Risk | Commands | Behavior verified |
 |---|---:|---:|
 | Critical | 1 | 0 |
-| High | 20 | 0 |
-| Moderate | 84 | 0 |
-| Low | 29 | 0 |
+| High | 33 | 0 |
+| Moderate | 79 | 0 |
+| Low | 21 | 0 |
 | ReadOnly | 162 | 0 |
 
 ## Promoting a command
@@ -70,4 +70,5 @@ A command is only promoted on evidence from a real host. A command that is unrea
 
 | Stage | Commands |
 |---|---:|
-| `Implemented` | 296 |
+| `ContractVerified` | 14 |
+| `Implemented` | 282 |

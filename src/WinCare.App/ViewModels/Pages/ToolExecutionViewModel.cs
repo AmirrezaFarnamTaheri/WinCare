@@ -112,14 +112,17 @@ public sealed class ToolExecutionViewModel : ObservableObject
         set => SetProperty(ref _isExecutionResultOpen, value);
     }
 
-    public bool CanRunSelectedTool => !IsExecuting &&
-        (_selectedTool?.Definition.MigrationStatus is MigrationStatus.Implemented or MigrationStatus.BehaviorVerified);
+    public bool CanRunSelectedTool => !IsExecuting && IsSelectedToolImplemented;
+
+    private bool IsSelectedToolImplemented =>
+        _selectedTool?.Definition.MigrationStatus is MigrationStatus.Implemented or MigrationStatus.BehaviorVerified;
 
     public string PrimaryActionLabel
     {
         get
         {
             if (IsExecuting) return IsCancellationRequested ? "Stopping…" : "Running";
+            if (_selectedTool is not null && !IsSelectedToolImplemented) return "Unavailable";
             if (IsSafeTool) return "Run tool";
             if (IsModerateTool) return "Run action";
             return IsReviewApproved ? "Apply destructive change" : "Preview impact";
@@ -200,13 +203,17 @@ public sealed class ToolExecutionViewModel : ObservableObject
         PresetContents = builder.ToString();
     }
 
-    public string ActionFlowTitle => IsSafeTool
+    public string ActionFlowTitle => _selectedTool is not null && !IsSelectedToolImplemented
+        ? "This action is unavailable"
+        : IsSafeTool
         ? (IsMutatingTool ? "Direct, low-risk change" : "Read-only inspection")
         : IsModerateTool
             ? "Routine system maintenance"
             : (IsReviewApproved ? "Reviewed and ready" : "Preview before applying");
 
-    public string ActionFlowDescription => IsSafeTool
+    public string ActionFlowDescription => _selectedTool is not null && !IsSelectedToolImplemented
+        ? "This action cannot run in the current build. Its safety or implementation is not yet verified. No changes will be made."
+        : IsSafeTool
         ? (IsMutatingTool
             ? "WinCare will run this bounded action and record the outcome in Activity."
             : "This tool gathers evidence without changing Windows. The result is recorded in Activity.")

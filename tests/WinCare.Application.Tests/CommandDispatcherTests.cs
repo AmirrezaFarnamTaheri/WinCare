@@ -47,6 +47,31 @@ public sealed class CommandDispatcherTests
     }
 
     [Fact]
+    public async Task Suspended_hardlink_mutation_rejects_preview_and_apply_before_handler_execution()
+    {
+        CommandDefinition definition = WinCare.CommandCatalog.CommandCatalog.Find("storage-dedup-hardlink")!;
+        Assert.Equal(MigrationStatus.ContractVerified, definition.MigrationStatus);
+        Assert.Equal(RiskTier.Destructive, definition.RiskTier);
+        RecordingHandler handler = new(definition.Id);
+        CommandDispatcher dispatcher = CreateDispatcher([definition], [handler]);
+
+        foreach (CommandRequest request in new[]
+        {
+            CommandRequest.Preview(definition.Id),
+            CommandRequest.Execute(definition.Id),
+        })
+        {
+            CommandResult result = await dispatcher.ExecuteAsync(
+                request, new CommandExecutionOptions(ReviewApproved: true), CancellationToken.None);
+            Assert.Equal(CommandResultStatus.NotMigrated, result.Status);
+            Assert.Equal("command.migration_blocked", result.Code);
+            Assert.Null(result.ReviewPlan);
+        }
+
+        Assert.Equal(0, handler.InvocationCount);
+    }
+
+    [Fact]
     public async Task Parameters_must_be_a_json_object()
     {
         CommandDefinition definition = Definition("read", MigrationStatus.Implemented, readOnly: true);

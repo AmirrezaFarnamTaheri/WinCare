@@ -23,8 +23,12 @@ internal sealed partial class WindowsCommandExecutor
             IReadOnlyList<DuplicateCandidateSet> DuplicateSets,
             string Summary);
 
-        public static DuplicateScanReport ScanDuplicateCandidates(string directoryPath, int maxFilesToCheck = 500)
+        public static DuplicateScanReport ScanDuplicateCandidates(
+            string directoryPath, int maxFilesToCheck = 500, CancellationToken cancellationToken = default)
         {
+            ArgumentOutOfRangeException.ThrowIfLessThan(maxFilesToCheck, 1);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan(maxFilesToCheck, 100_000);
+            cancellationToken.ThrowIfCancellationRequested();
             if (string.IsNullOrWhiteSpace(directoryPath) || !Directory.Exists(directoryPath))
             {
                 return new DuplicateScanReport(
@@ -38,26 +42,30 @@ internal sealed partial class WindowsCommandExecutor
                     Summary: "Target directory does not exist.");
             }
 
-            var candidateFiles = new List<FileInfo>();
-            try
+            // Reject linked scan roots and never recurse into junctions, symlinks, mount points,
+            // or linked files. A user-profile scan must not escape into another volume or tree.
+            var dir = new DirectoryInfo(directoryPath);
+            if ((dir.Attributes & FileAttributes.ReparsePoint) != 0)
             {
-                var dir = new DirectoryInfo(directoryPath);
-                foreach (var file in dir.EnumerateFiles("*", new EnumerationOptions
-                {
-                    IgnoreInaccessible = true,
-                    RecurseSubdirectories = true
-                }))
-                {
-                    if (file.Length > 0)
-                    {
-                        candidateFiles.Add(file);
-                        if (candidateFiles.Count >= maxFilesToCheck) break;
-                    }
-                }
+                throw new InvalidDataException("Deduplication scan root is a reparse point.");
             }
-            catch
+
+            var candidateFiles = new List<FileInfo>();
+            foreach (var file in dir.EnumerateFiles("*", new EnumerationOptions
             {
-                // Fail-safe graceful degradation
+                IgnoreInaccessible = true,
+                RecurseSubdirectories = true,
+                AttributesToSkip = FileAttributes.ReparsePoint,
+                ReturnSpecialDirectories = false,
+            }))
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                if ((file.Attributes & FileAttributes.ReparsePoint) != 0) continue;
+                if (file.Length > 0)
+                {
+                    candidateFiles.Add(file);
+                    if (candidateFiles.Count >= maxFilesToCheck) break;
+                }
             }
 
             // Phase 1: Size grouping (files with unique sizes cannot be duplicates)
@@ -74,15 +82,20 @@ internal sealed partial class WindowsCommandExecutor
 
             foreach (var sizeGroup in sizeGroups)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 // Phase 2: 4KB Header hash filter
                 var headerGroups = new Dictionary<string, List<FileInfo>>(StringComparer.OrdinalIgnoreCase);
 
                 foreach (var file in sizeGroup)
                 {
+                    cancellationToken.ThrowIfCancellationRequested();
                     try
                     {
-                        using var fs = file.Open(FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
-                        int read = fs.Read(headerBuffer, 0, (int)Math.Min((long)headerBuffer.Length, file.Length));
+                        // Deny concurrent writes for the duration of a hash; if another writer
+                        // already holds the file, skip it rather than report a mixed snapshot.
+                        using var fs = file.Open(FileMode.Open, FileAccess.Read, FileShare.Read);
+                        if (fs.Length != sizeGroup.Key) continue;
+                        int read = fs.Read(headerBuffer, 0, (int)Math.Min((long)headerBuffer.Length, fs.Length));
                         string headerHash = Convert.ToHexString(SHA256.HashData(headerBuffer.AsSpan(0, read)));
 
                         if (!headerGroups.TryGetValue(headerHash, out var list))
@@ -92,23 +105,27 @@ internal sealed partial class WindowsCommandExecutor
                         }
                         list.Add(file);
                     }
-                    catch
+                    catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
                     {
-                        // Inaccessible file skipped
+                        // A file in use or made inaccessible during scanning is not evidence of a duplicate.
                     }
                 }
 
                 // Phase 3: Full SHA-256 for header collisions
                 foreach (var list in headerGroups.Values.Where(l => l.Count > 1))
                 {
+                    cancellationToken.ThrowIfCancellationRequested();
                     var fullHashGroups = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
 
                     foreach (var file in list)
                     {
+                        cancellationToken.ThrowIfCancellationRequested();
                         try
                         {
-                            using var fs = file.Open(FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+                            using var fs = file.Open(FileMode.Open, FileAccess.Read, FileShare.Read);
+                            if (fs.Length != sizeGroup.Key) continue;
                             byte[] hashBytes = SHA256.HashData(fs);
+                            if (fs.Length != sizeGroup.Key) continue;
                             string fullHash = Convert.ToHexString(hashBytes).ToLowerInvariant();
 
                             if (!fullHashGroups.TryGetValue(fullHash, out var paths))

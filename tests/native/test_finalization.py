@@ -69,7 +69,12 @@ class FinalizationTests(unittest.TestCase):
 
     def test_rc_finalization_separates_native_source_and_legacy_oracle(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
-            command_count = json.loads((ROOT / "src/WinCare.CommandCatalog/Data/commands.json").read_text(encoding="utf-8"))["commandCount"]
+            catalog = json.loads((ROOT / "src/WinCare.CommandCatalog/Data/commands.json").read_text(encoding="utf-8"))
+            command_count = catalog["commandCount"]
+            implemented_count = sum(
+                command["migrationStatus"] in {"Implemented", "BehaviorVerified"}
+                for command in catalog["commands"]
+            )
             output = Path(directory)
             result = finalize_release(ROOT, output, version="2.5.0-rc3", mode="rc")
 
@@ -78,9 +83,9 @@ class FinalizationTests(unittest.TestCase):
             self.assertTrue(result.report_path.is_file())
             self.assertTrue(result.manifest_path.is_file())
             self.assertEqual(command_count, result.readiness.cataloged)
-            self.assertEqual(command_count, result.readiness.implemented)
+            self.assertEqual(implemented_count, result.readiness.implemented)
             self.assertEqual(0, result.readiness.behavior_verified)
-            self.assertEqual(0, result.readiness.implementation_blockers)
+            self.assertEqual(command_count - implemented_count, result.readiness.implementation_blockers)
             self.assertEqual(command_count, result.readiness.production_blockers)
 
             with zipfile.ZipFile(result.native_archive) as archive:

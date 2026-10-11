@@ -37,6 +37,27 @@ internal sealed partial class WindowsCommandExecutor : ICommandOperationExecutor
         PropertyNameCaseInsensitive = true,
     };
 
+    // Defense in depth: these built-in operations must not run even if a caller provides
+    // a fabricated definition with MigrationStatus=Implemented. The catalog declares them
+    // ContractVerified; this guard also protects direct internal executor invocations.
+    internal static readonly IReadOnlySet<string> SuspendedMutationCommands = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+    {
+        "app-residual-purge",
+        "cleaner-ai-agent-ledgers",
+        "cleaner-ide-cursor-snapshots",
+        "cleaner-msi-package-cache",
+        "cleaner-servicing-remnants",
+        "cleaner-squirrel-releases",
+        "cleaner-windows-update-cache",
+        "docker-volume-prune",
+        "guard-promote-scm",
+        "guard-toast-notify",
+        "installer-cache-purge",
+        "startup-optimize",
+        "storage-dedup-hardlink",
+        "wsl-disk-compact",
+    };
+
     private readonly INativeCoreService? _nativeCore;
     private readonly BoundedProcessRunner _process;
     private readonly CommandStateStore _state;
@@ -117,6 +138,28 @@ internal sealed partial class WindowsCommandExecutor : ICommandOperationExecutor
 
         try
         {
+            if (!string.Equals(definition.Id, request.CommandId, StringComparison.OrdinalIgnoreCase))
+            {
+                return CommandHandlerOutcome.Blocked("command.definition_mismatch",
+                    "The command definition does not match the requested command ID.");
+            }
+
+            // Never rely on caller-provided migration metadata for a known-suspended command.
+            if (definition.Id.Equals("storage-dedup-hardlink", StringComparison.OrdinalIgnoreCase))
+            {
+                return await ExecuteStorageDedupHardlinkAsync(cancellationToken).ConfigureAwait(false);
+            }
+            if (SuspendedMutationCommands.Contains(definition.Id))
+            {
+                return CommandHandlerOutcome.Blocked("command.suspended",
+                    $"'{definition.Title}' is unavailable pending a target-specific safety review and behavioral verification. No operation was started.");
+            }
+            if (definition.MigrationStatus is not (MigrationStatus.Implemented or MigrationStatus.BehaviorVerified))
+            {
+                return CommandHandlerOutcome.Blocked("command.migration_blocked",
+                    $"'{definition.Id}' is not implemented and cannot execute.");
+            }
+
             var parameters = new CommandParameters(request.Parameters);
             if (!definition.ReadOnly && request.Apply && definition.AdministratorAccess == AdministratorAccess.Required && !IsAdministrator())
             {
@@ -392,9 +435,9 @@ internal sealed partial class WindowsCommandExecutor : ICommandOperationExecutor
 
         return definition.Id switch
         {
-            "installer-cache-purge" => CommandHandlerOutcome.Success("Installer caches successfully purged."),
-            "app-residual-purge" => CommandHandlerOutcome.Success("Application residuals successfully purged."),
-            "startup-optimize" => CommandHandlerOutcome.Success("Startup applications optimized successfully."),
+            "installer-cache-purge" => CommandHandlerOutcome.Blocked("command.unavailable", "Installer cleanup is not implemented."),
+            "app-residual-purge" => CommandHandlerOutcome.Blocked("command.unavailable", "Application residual cleanup is not implemented."),
+            "startup-optimize" => CommandHandlerOutcome.Blocked("command.unavailable", "Startup optimization is not implemented."),
 
             "storage-dedup-hardlink" => await ExecuteStorageDedupHardlinkAsync(cancellationToken).ConfigureAwait(false),
             "perf-standby-purge" => await ExecutePerfStandbyPurgeAsync(cancellationToken).ConfigureAwait(false),
@@ -821,6 +864,9 @@ internal sealed partial class WindowsCommandExecutor : ICommandOperationExecutor
         bool isReversible = IsCommandReversible(commandId);
         return commandId switch
         {
+            "cleaner-dism-component-store" => new[] { new { resourceType = "WindowsServicing", path = "dism.exe", target = "Online component store", proposedValue = "/Online /Cleanup-Image /StartComponentCleanup /ResetBase (prevents uninstalling existing updates)", reversible = false } },
+            "compress-compactos" => new[] { new { resourceType = "WindowsServicing", path = "compact.exe", target = "Windows CompactOS", proposedValue = "/compactos:always (may slow I/O or use CPU while compressing)", reversible = false } },
+            "sqlite-vacuum" => new[] { new { resourceType = "UserData", path = "%APPDATA%\\Code and Cursor\\User", target = "Installed editor SQLite .vscdb files", proposedValue = "VACUUM on discovered databases, without a per-database backup", reversible = false } },
             "pagefile-set" => new[] { new { resourceType = "Registry/WMI", path = @"HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management", target = "PagingFiles", proposedValue = p.String("Mode", "SystemManaged"), reversible = true } },
             "experience-power-apply" => new[] { new { resourceType = "PowerScheme", path = @"PowerCfg", target = "ActiveScheme", proposedValue = p.String("ProfileId", "balanced"), reversible = true } },
             "security-control-reduce" => new[] { new { resourceType = "SecurityControl", path = p.String("Control", "DefenderRealtime"), target = "State", proposedValue = "Disabled", durationMinutes = p.Int32("DurationMinutes", 15, 5, 1440), reversible = true } },
