@@ -5,7 +5,7 @@
     xmlns:views="using:WinCare.App.Views"
     xmlns:controls="using:WinCare.App.Controls"
     NavigationCacheMode="Required">
-    <Grid Padding="28,28,28,32" RowSpacing="20">
+    <Grid Padding="32,28,32,28" RowSpacing="20" MaxWidth="1320" HorizontalAlignment="Stretch">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
@@ -34,10 +34,11 @@
                 <RowDefinition Height="*" />
             </Grid.RowDefinitions>
 
-            <controls:MemoryTopologyAtlas
-                x:Name="MemoryAtlas"
-                Margin="0,0,0,4"
-                Visibility="{x:Bind views:LayoutVisibility.BoolToVisibility(ViewModel.IsPerformanceSection), Mode=OneWay}" />
+            <Expander x:Name="MemoryDetails" Header="Memory usage details" IsExpanded="False"
+                      Expanding="MemoryDetails_Expanding" AutomationProperties.Name="Show detailed memory usage"
+                      Visibility="{x:Bind views:LayoutVisibility.BoolToVisibility(ViewModel.IsPerformanceSection), Mode=OneWay}">
+                <controls:MemoryTopologyAtlas x:Name="MemoryAtlas" Margin="0,4,0,8" />
+            </Expander>
 
             <controls:CareToolList Grid.Row="1" ViewModel="{x:Bind ViewModel}" />
         </Grid>

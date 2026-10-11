@@ -105,6 +105,37 @@ namespace WinCare.Application.Tests
         }
 
         [Fact]
+        public async Task TranslateAsync_does_not_publish_after_collector_cancels()
+        {
+            using var cancellation = new System.Threading.CancellationTokenSource();
+            var translator = new IntentTranslator(_inferenceEngine, _catalogService,
+                new CancellingEvidenceCollector(cancellation));
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+                translator.TranslateAsync("My storage is nearly full", cancellation.Token));
+        }
+
+        private sealed class CancellingEvidenceCollector(System.Threading.CancellationTokenSource cancellation)
+            : IDiagnosticEvidenceCollector
+        {
+            public Task<IReadOnlyList<TelemetryEvidence>> CollectEvidenceAsync(
+                string intent, System.Threading.CancellationToken cancellationToken = default)
+            {
+                cancellation.Cancel();
+                return Task.FromResult<IReadOnlyList<TelemetryEvidence>>([]);
+            }
+        }
+
+        [Fact]
+        public async Task Cancelled_evidence_collection_cannot_produce_a_completed_check()
+        {
+            using var cancellation = new System.Threading.CancellationTokenSource();
+            cancellation.Cancel();
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+                new DiagnosticEvidenceCollector().CollectEvidenceAsync(
+                    DiagnosticIntents.StorageCleanup, cancellation.Token));
+        }
+
+        [Fact]
         public async Task Cancelled_classification_does_not_produce_an_intent()
         {
             using var cancellation = new System.Threading.CancellationTokenSource();

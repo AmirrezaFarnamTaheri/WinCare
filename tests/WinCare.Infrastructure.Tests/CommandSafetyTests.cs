@@ -9,6 +9,17 @@ namespace WinCare.Infrastructure.Tests;
 
 public sealed class CommandSafetyTests
 {
+    [Fact]
+    public void ExplorerLaunchUsesExplicitWindowsInstallationLocation()
+    {
+        if (!OperatingSystem.IsWindows()) return;
+        string path = WindowsCommandExecutor.ResolveTrustedExplorerPath();
+        Assert.True(Path.IsPathFullyQualified(path));
+        Assert.Equal("explorer.exe", Path.GetFileName(path), ignoreCase: true);
+        Assert.Equal(Path.GetFullPath(Environment.GetFolderPath(Environment.SpecialFolder.Windows)),
+            Path.GetDirectoryName(path), ignoreCase: true);
+    }
+
     [Theory]
     [InlineData("NaN")]
     [InlineData("Infinity")]
@@ -137,6 +148,48 @@ public sealed class CommandSafetyTests
         Assert.Equal(CommandResultStatus.Blocked, outcome.Status);
         Assert.Equal("unhandled-test-route-12345.blocked", outcome.Code);
         Assert.Contains("No concrete native inspection route implemented", outcome.Message);
+    }
+
+    [Fact]
+    public async Task Hardlink_mutation_preview_is_blocked_even_if_dispatcher_is_bypassed()
+    {
+        // A preview never mutates the host, so this is safe to run outside a disposable VM.
+        // It also catches a regression to the old generic, non-target-bound preview path.
+        using WindowsCommandExecutor executor = new();
+        CommandDefinition command = WinCare.CommandCatalog.CommandCatalog.Find("storage-dedup-hardlink")!;
+        CommandHandlerOutcome result = await executor.ExecuteAsync(
+            command, CommandRequest.Preview(command.Id), CancellationToken.None);
+
+        Assert.Equal(CommandResultStatus.Blocked, result.Status);
+        Assert.Equal("storage.dedup.hardlink_unavailable", result.Code);
+        Assert.False(result.UndoAvailable);
+    }
+
+    [Fact]
+    public async Task SuspendedCommands_RejectDirectExecutorCallsEvenWithForgedImplementedMetadata()
+    {
+        using WindowsCommandExecutor executor = new();
+        foreach (string id in WindowsCommandExecutor.SuspendedMutationCommands)
+        {
+            CommandDefinition original = WinCare.CommandCatalog.CommandCatalog.Find(id)!;
+            CommandDefinition forged = original with { MigrationStatus = MigrationStatus.Implemented };
+            CommandRequest request = CommandRequest.Preview(id);
+            CommandHandlerOutcome outcome = await executor.ExecuteAsync(forged, request, CancellationToken.None);
+            Assert.Equal(CommandResultStatus.Blocked, outcome.Status);
+            Assert.False(outcome.UndoAvailable);
+            Assert.DoesNotContain("success", outcome.Message, StringComparison.OrdinalIgnoreCase);
+        }
+    }
+
+    [Fact]
+    public async Task DirectExecutorRejectsMismatchedDefinitionAndCommandId()
+    {
+        using WindowsCommandExecutor executor = new();
+        CommandDefinition definition = WinCare.CommandCatalog.CommandCatalog.Find("system")!;
+        CommandHandlerOutcome outcome = await executor.ExecuteAsync(
+            definition, CommandRequest.Preview("storage"), CancellationToken.None);
+        Assert.Equal(CommandResultStatus.Blocked, outcome.Status);
+        Assert.Equal("command.definition_mismatch", outcome.Code);
     }
 
     [Fact]

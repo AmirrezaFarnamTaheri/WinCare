@@ -5,7 +5,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -35,84 +34,25 @@ internal sealed partial class WindowsCommandExecutor
                 scanDir = userProfile;
             }
 
-            var report = StorageDeduplicationHelper.ScanDuplicateCandidates(scanDir, maxFilesToCheck: 1000);
+            var report = StorageDeduplicationHelper.ScanDuplicateCandidates(scanDir, maxFilesToCheck: 1000, cancellationToken);
             return CommandHandlerOutcome.Success($"Storage Deduplication Scan completed on '{scanDir}': {report.Summary}");
         }, cancellationToken);
     }
 
-    private async Task<CommandHandlerOutcome> ExecuteStorageDedupHardlinkAsync(CancellationToken cancellationToken)
+    // The previous implementation renamed duplicate user files and replaced them with NTFS
+    // hardlinks after an unbound, best-effort scan. Between scanning and renaming, files could
+    // change; the backup was then deleted without proving the two files still matched. Hardlinks
+    // also change future write semantics and do not preserve independent file metadata. Until an
+    // exact-target, race-safe preview/apply protocol exists, reject both direct executor calls
+    // and requests that might bypass the migration admission gate.
+    private static Task<CommandHandlerOutcome> ExecuteStorageDedupHardlinkAsync(CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-
-        return await Task.Run(() =>
-        {
-            string userProfile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-            string targetDir = Path.Combine(userProfile, "Downloads");
-            if (!Directory.Exists(targetDir))
-            {
-                targetDir = userProfile;
-            }
-
-            var report = StorageDeduplicationHelper.ScanDuplicateCandidates(targetDir, maxFilesToCheck: 1000);
-            if (report.DuplicateSets.Count == 0)
-            {
-                return CommandHandlerOutcome.Success($"NTFS Hardlink Deduplication: No duplicate files identified in '{targetDir}'.");
-            }
-
-            int consolidatedFiles = 0;
-            ulong totalReclaimedBytes = 0;
-            var details = new StringBuilder();
-
-            foreach (var set in report.DuplicateSets)
-            {
-                if (cancellationToken.IsCancellationRequested) break;
-                if (set.FilePaths.Count < 2) continue;
-
-                string primaryFile = set.FilePaths[0];
-                if (!File.Exists(primaryFile)) continue;
-
-                string? primaryRoot = Path.GetPathRoot(primaryFile);
-
-                for (int i = 1; i < set.FilePaths.Count; i++)
-                {
-                    string dupFile = set.FilePaths[i];
-                    if (!File.Exists(dupFile)) continue;
-
-                    string? dupRoot = Path.GetPathRoot(dupFile);
-                    if (!string.Equals(primaryRoot, dupRoot, StringComparison.OrdinalIgnoreCase))
-                    {
-                        // Hardlinks cannot cross volume boundaries
-                        continue;
-                    }
-
-                    string tempBackup = dupFile + $".wincare_bak_{Guid.NewGuid():N}";
-                    try
-                    {
-                        File.Move(dupFile, tempBackup);
-                        bool linked = CreateHardLinkW(dupFile, primaryFile, nint.Zero);
-                        if (linked)
-                        {
-                            File.Delete(tempBackup);
-                            consolidatedFiles++;
-                            totalReclaimedBytes += (ulong)set.FileSizeBytes;
-                        }
-                        else
-                        {
-                            // Roll back original duplicate if hardlink failed
-                            File.Move(tempBackup, dupFile);
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        try { if (File.Exists(tempBackup) && !File.Exists(dupFile)) File.Move(tempBackup, dupFile); } catch { }
-                        details.Append($"Hardlink note ({Path.GetFileName(dupFile)}): {ex.Message}. ");
-                    }
-                }
-            }
-
-            return CommandHandlerOutcome.Success(
-                $"NTFS Hardlink Deduplication applied: Consolidated {consolidatedFiles} duplicate files. Reclaimed {FormatPillarBytes((long)totalReclaimedBytes)}. {details.ToString().Trim()}");
-        }, cancellationToken);
+        return Task.FromResult(CommandHandlerOutcome.Blocked(
+            "storage.dedup.hardlink_unavailable",
+            "Hardlink consolidation is unavailable: replacing original files without a verified, " +
+            "target-bound plan could lose changed data and permanently couple independent files. " +
+            "Use the read-only duplicate scan instead."));
     }
 
     // ==========================================
@@ -229,30 +169,32 @@ internal sealed partial class WindowsCommandExecutor
                 if (currentHeight <= 45)
                 {
                     // Restore window height to default standard height
-                    WindowsInterop.SetWindowPos(
+                    if (!WindowsInterop.SetWindowPos(
                         hwnd,
                         nint.Zero,
                         0,
                         0,
                         rect.Right - rect.Left,
                         600,
-                        WindowsInterop.SwpNoMove | WindowsInterop.SwpNoZOrder | WindowsInterop.SwpFrameChanged);
+                        WindowsInterop.SwpNoMove | WindowsInterop.SwpNoZOrder | WindowsInterop.SwpFrameChanged))
+                        return Task.FromResult(CommandHandlerOutcome.Failed("Windows refused to resize the foreground window."));
 
-                    return Task.FromResult(CommandHandlerOutcome.Success("Foreground window unshaded (restored to full viewport)."));
+                    return Task.FromResult(CommandHandlerOutcome.Success("Foreground window height set to 600 pixels (the previous height was not recorded)."));
                 }
                 else
                 {
                     // Roll up window to titlebar
-                    WindowsInterop.SetWindowPos(
+                    if (!WindowsInterop.SetWindowPos(
                         hwnd,
                         nint.Zero,
                         0,
                         0,
                         rect.Right - rect.Left,
                         titleBarHeight,
-                        WindowsInterop.SwpNoMove | WindowsInterop.SwpNoZOrder | WindowsInterop.SwpFrameChanged);
+                        WindowsInterop.SwpNoMove | WindowsInterop.SwpNoZOrder | WindowsInterop.SwpFrameChanged))
+                        return Task.FromResult(CommandHandlerOutcome.Failed("Windows refused to resize the foreground window."));
 
-                    return Task.FromResult(CommandHandlerOutcome.Success("Foreground window shaded (rolled up to titlebar)."));
+                    return Task.FromResult(CommandHandlerOutcome.Success("Foreground window height set to 36 pixels; original height was not saved."));
                 }
             }
 
@@ -275,7 +217,7 @@ internal sealed partial class WindowsCommandExecutor
                 desktopKey.SetValue("WindowArrangementActive", "1", RegistryValueKind.String);
                 desktopKey.SetValue("SnapSizing", "1", RegistryValueKind.String);
                 desktopKey.SetValue("DockMoving", "1", RegistryValueKind.String);
-                return Task.FromResult(CommandHandlerOutcome.Success("Dynamic edge snapping resistance configured and active across all desktop displays."));
+                return Task.FromResult(CommandHandlerOutcome.Success("Desktop snapping registry preferences saved. Windows may require signing out or restarting Explorer before changes take effect."));
             }
 
             return Task.FromResult(CommandHandlerOutcome.Failed("Failed to access user desktop configuration in registry."));
@@ -296,16 +238,20 @@ internal sealed partial class WindowsCommandExecutor
             {
                 // DWMWCP_ROUND = 2, DWMWCP_ROUNDSMALL = 3
                 int cornerPreference = 2;
-                WindowsInterop.DwmSetWindowAttribute(hwnd, WindowsInterop.DwmwaWindowCornerPreference, ref cornerPreference, sizeof(int));
+                int cornerResult = WindowsInterop.DwmSetWindowAttribute(hwnd, WindowsInterop.DwmwaWindowCornerPreference, ref cornerPreference, sizeof(int));
 
                 // DWM_SYSTEMBACKDROP_TYPE: 2 = Mica, 3 = Acrylic
                 int backdropType = 2;
-                WindowsInterop.DwmSetWindowAttribute(hwnd, WindowsInterop.DwmwaSystemBackdropType, ref backdropType, sizeof(int));
+                int backdropResult = WindowsInterop.DwmSetWindowAttribute(hwnd, WindowsInterop.DwmwaSystemBackdropType, ref backdropType, sizeof(int));
 
-                return Task.FromResult(CommandHandlerOutcome.Success("Windows 11 rounded corner styling (DWMWCP_ROUND) and Mica system backdrop applied to foreground window."));
+                if (cornerResult != 0 || backdropResult != 0)
+                    return Task.FromResult(CommandHandlerOutcome.Failed(
+                        $"Window styling incomplete: corner HRESULT=0x{cornerResult:X8}, backdrop HRESULT=0x{backdropResult:X8}."));
+
+                return Task.FromResult(CommandHandlerOutcome.Success("Rounded corners and Mica backdrop applied to the foreground window."));
             }
 
-            return Task.FromResult(CommandHandlerOutcome.Success("Windows 11 corner and backdrop styling engine verified."));
+            return Task.FromResult(CommandHandlerOutcome.Blocked("window.foreground_required", "No foreground window was found; no window styling was applied."));
         }
         catch (Exception ex)
         {
@@ -317,49 +263,16 @@ internal sealed partial class WindowsCommandExecutor
     // Pillar 7: Guard
     // ==========================================
 
-    private async Task<CommandHandlerOutcome> ExecuteGuardPromoteAsync(CancellationToken cancellationToken)
+    // The guard currently starts as a console daemon and has no SCM ServiceMain handler.
+    // Installing it with sc.exe can leave behind an auto-start service that cannot start.
+    // Both catalog admission and direct executor routing refuse this unsupported operation.
+    private static Task<CommandHandlerOutcome> ExecuteGuardPromoteAsync(CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        try
-        {
-            string appDir = AppContext.BaseDirectory;
-            string guardBinary = Path.Combine(appDir, "wincare-guard.exe");
-
-            if (!File.Exists(guardBinary))
-            {
-                string relativeRelease = Path.GetFullPath(Path.Combine(appDir, @"..\..\..\native\wincare-guard\target\release\wincare-guard.exe"));
-                if (File.Exists(relativeRelease))
-                {
-                    guardBinary = relativeRelease;
-                }
-            }
-
-            if (File.Exists(guardBinary))
-            {
-                var scResult = await _process.RunAsync(
-                    "sc.exe",
-                    ["create", "WinCareGuard", $"binPath= \"{guardBinary}\"", "start= auto", "DisplayName= \"WinCare Health Guard\""],
-                    cancellationToken,
-                    timeout: TimeSpan.FromSeconds(15)).ConfigureAwait(false);
-
-                try
-                {
-                    await _process.RunAsync("sc.exe", ["start", "WinCareGuard"], cancellationToken, timeout: TimeSpan.FromSeconds(15)).ConfigureAwait(false);
-                }
-                catch
-                {
-                }
-
-                return CommandHandlerOutcome.Success($"wincare-guard promoted to Windows SCM Service from '{guardBinary}'. Service registered and startup set to Automatic.");
-            }
-
-            return CommandHandlerOutcome.Success(
-                "wincare-guard SCM registration verified. Note: Run cargo build --release in native/wincare-guard to emit wincare-guard.exe binary for direct service execution.");
-        }
-        catch (Exception ex)
-        {
-            return CommandHandlerOutcome.Failed($"Guard SCM promotion failed: {ex.Message}");
-        }
+        return Task.FromResult(CommandHandlerOutcome.Blocked(
+            "guard.scm_unavailable",
+            "The Guard executable does not implement the Windows service lifecycle. " +
+            "Service registration is unavailable until SCM integration is implemented and verified."));
     }
 
     private async Task<CommandHandlerOutcome> ExecuteGuardConnectAsync(CancellationToken cancellationToken)
@@ -371,10 +284,12 @@ internal sealed partial class WindowsCommandExecutor
             if (await guard.TryConnectAsync(2000, cancellationToken).ConfigureAwait(false))
             {
                 string? response = await guard.SendCommandAsync("PING", cancellationToken).ConfigureAwait(false);
-                return CommandHandlerOutcome.Success($"GuardPipeClient connected to wincare-guard IPC pipe. Daemon response: {response ?? "PONG"}");
+                return string.Equals(response, "pong", StringComparison.OrdinalIgnoreCase)
+                    ? CommandHandlerOutcome.Success("wincare-guard replied to its health check.")
+                    : CommandHandlerOutcome.Failed("guard.unexpected_response", "Guard connection did not return the expected pong response.");
             }
 
-            return CommandHandlerOutcome.Success("GuardPipeClient tested: wincare-guard named pipe server is currently idle or offline.");
+            return CommandHandlerOutcome.Blocked("guard.unavailable", "wincare-guard is offline or its pipe is unavailable.");
         }
         catch (Exception ex)
         {
@@ -382,25 +297,15 @@ internal sealed partial class WindowsCommandExecutor
         }
     }
 
-    private Task<CommandHandlerOutcome> ExecuteGuardToastAsync(CancellationToken cancellationToken)
+    // Registry switches alone do not provide toast registration, delivery or a consumer
+    // for the Rust guard's queued alert XML files. Do not report notifications as enabled.
+    private static Task<CommandHandlerOutcome> ExecuteGuardToastAsync(CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        try
-        {
-            using var notifKey = Registry.CurrentUser.CreateSubKey(@"Software\Microsoft\Windows\CurrentVersion\Notifications\Settings\WinCare");
-            if (notifKey != null)
-            {
-                notifKey.SetValue("Enabled", 1, RegistryValueKind.DWord);
-                notifKey.SetValue("ShowInActionCenter", 1, RegistryValueKind.DWord);
-                return Task.FromResult(CommandHandlerOutcome.Success("Interactive Windows Toast Notifications configured for WinCare Guard."));
-            }
-
-            return Task.FromResult(CommandHandlerOutcome.Failed("Could not write notification preferences to registry."));
-        }
-        catch (Exception ex)
-        {
-            return Task.FromResult(CommandHandlerOutcome.Failed($"Guard toast notification setup failed: {ex.Message}"));
-        }
+        return Task.FromResult(CommandHandlerOutcome.Blocked(
+            "guard.toast_unavailable",
+            "Guard notifications are unavailable until the application can register and " +
+            "deliver actual Windows notifications from the alert queue."));
     }
 
     // ==========================================
@@ -571,7 +476,4 @@ internal sealed partial class WindowsCommandExecutor
         }, cancellationToken);
     }
 
-    [DllImport("kernel32.dll", EntryPoint = "CreateHardLinkW", SetLastError = true, CharSet = CharSet.Unicode)]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    private static extern bool CreateHardLinkW(string lpFileName, string lpExistingFileName, nint lpSecurityAttributes);
 }

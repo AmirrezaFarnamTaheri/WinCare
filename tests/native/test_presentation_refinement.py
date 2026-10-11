@@ -65,7 +65,7 @@ class PresentationRefinementTests(unittest.TestCase):
         self.assertIn("catch (Exception ex)", help_source)
         self.assertIn("TourError.IsOpen = true;", help_source)
         ET.fromstring(self.read("Views/Pages/HelpPage.xaml"))
-        ai = self.read("Views/Pages/AiDoctorPage.xaml.cs").split("private void ScrollToLatestMessage()", 1)[1]
+        ai = self.read("Views/Pages/AiDoctorPage.xaml.cs").split("private void ScrollToResults()", 1)[1]
         self.assertLess(ai.index("try"), ai.index("ChangeView"))
         self.assertIn("catch (Exception ex)", ai)
 

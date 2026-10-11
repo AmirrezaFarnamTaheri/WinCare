@@ -34,8 +34,16 @@ namespace WinCare.Application.Diagnostics
             if (string.IsNullOrWhiteSpace(prompt))
                 throw new ArgumentException("Describe the problem first.", nameof(prompt));
 
+            cancellationToken.ThrowIfCancellationRequested();
             var intent = await _inferenceEngine.PredictIntentAsync(prompt, cancellationToken);
-            var evidence = await _evidenceCollector.CollectEvidenceAsync(intent, cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
+            // Windows storage and network probes can block synchronously. Execute the
+            // read-only collector off the WinUI thread; cancellation is still checked
+            // after completion because cancelling Task.Run does not stop an active probe.
+            var evidence = await Task.Run(
+                () => _evidenceCollector.CollectEvidenceAsync(intent, cancellationToken),
+                cancellationToken).ConfigureAwait(false);
+            cancellationToken.ThrowIfCancellationRequested();
             var findings = new List<DiagnosticFinding>();
             var proposedSteps = new List<ProposedActionStep>();
             DiagnosticSeverity severity = DiagnosticSeverity.Information;
@@ -49,16 +57,16 @@ namespace WinCare.Application.Diagnostics
                 case DiagnosticIntents.StorageCleanup:
                     severity = hasMeasuredPressure ? DiagnosticSeverity.Warning : DiagnosticSeverity.Information;
                     summary = hasMeasuredPressure
-                        ? $"Your system drive is running low on space ({pressureEvidence!.MeasuredValue})."
+                        ? $"A drive is running low on space ({pressureEvidence!.MetricName}: {pressureEvidence.MeasuredValue})."
                         : "This sounds like a storage problem. Start by checking what is using space.";
                     findings.Add(new DiagnosticFinding(
                         "finding.storage.temp",
-                        hasMeasuredPressure ? "System drive is low on space" : "Storage may need cleanup",
+                        hasMeasuredPressure ? "A drive is low on space" : "Storage may need cleanup",
                         hasMeasuredPressure
                             ? $"Windows reports {pressureEvidence!.MeasuredValue}."
                             : "Check temporary files and other common space users before deleting anything.",
                         severity,
-                        "Storage (C:)",
+                        pressureEvidence?.MetricName ?? "Storage",
                         IsVerifiedByTelemetry: hasMeasuredPressure));
                     AddRecommendedSteps(proposedSteps,
                         "cleaner-preview-cards",
@@ -144,6 +152,7 @@ namespace WinCare.Application.Diagnostics
                 if (fallback is not null) proposedSteps.Add(CreateStep(fallback));
             }
 
+            cancellationToken.ThrowIfCancellationRequested();
             return new DoctorActionPlan
             {
                 PlanId = "plan_" + Guid.NewGuid().ToString("N")[..8],

@@ -17,7 +17,7 @@ public sealed class CommandCatalogTests
     [Theory]
     [InlineData("system", "System overview")]
     [InlineData("wua-install", "Install Windows updates")]
-    [InlineData("legacy-unsafe", "Winhance maximum profile")]
+    [InlineData("legacy-unsafe", "Legacy maintenance: DNS flush or Explorer restart")]
     [InlineData("quic-capability", "QUIC capability")]
     [InlineData("installer-cache-analysis", "Installer cache analysis")]
     [InlineData("storage-report", "Bounded storage report")]
@@ -59,6 +59,41 @@ public sealed class CommandCatalogTests
     {
         CommandDefinition command = Assert.IsType<CommandDefinition>(CommandCatalog.Find(id));
         Assert.Equal(expectedTier, command.RiskTier);
+    }
+
+    [Fact]
+    public void Hardlink_consolidation_is_not_claimed_to_be_a_safe_implemented_operation()
+    {
+        CommandDefinition hardlink = CommandCatalog.Find("storage-dedup-hardlink")!;
+        Assert.Equal(MigrationStatus.ContractVerified, hardlink.MigrationStatus);
+        Assert.Equal(CommandRisk.High, hardlink.Risk);
+        Assert.Equal(RiskTier.Destructive, hardlink.RiskTier);
+        Assert.False(hardlink.ReadOnly);
+        Assert.Contains("unavailable", hardlink.Title, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Non-Destructive", hardlink.Title, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Theory]
+    [InlineData("cleaner-ai-agent-ledgers")]
+    [InlineData("cleaner-ide-cursor-snapshots")]
+    [InlineData("cleaner-servicing-remnants")]
+    [InlineData("cleaner-windows-update-cache")]
+    [InlineData("cleaner-msi-package-cache")]
+    [InlineData("cleaner-squirrel-releases")]
+    [InlineData("guard-promote-scm")]
+    [InlineData("guard-toast-notify")]
+    [InlineData("wsl-disk-compact")]
+    [InlineData("docker-volume-prune")]
+    [InlineData("installer-cache-purge")]
+    [InlineData("app-residual-purge")]
+    [InlineData("startup-optimize")]
+    public void Unsafe_or_unimplemented_commands_require_reverification(string id)
+    {
+        CommandDefinition command = CommandCatalog.Find(id)!;
+        Assert.Equal(MigrationStatus.ContractVerified, command.MigrationStatus);
+        Assert.False(command.ReadOnly);
+        Assert.True(command.RiskTier >= RiskTier.Moderate);
+        Assert.Contains("unavailable", command.Title, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

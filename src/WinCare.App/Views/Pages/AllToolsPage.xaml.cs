@@ -13,8 +13,8 @@ namespace WinCare.App.Views.Pages;
 
 public sealed partial class AllToolsPage : Page
 {
-    private const double ToolTableCompactBreakpointDip = 840;
-    private const double InlineInspectorBreakpointDip = 1320;
+    private const double ToolTableCompactBreakpointDip = 1120;
+    private const double InlineInspectorBreakpointDip = 1640;
     private Control? _inspectorReturnFocus;
     private bool _viewModelSubscribed;
 
@@ -41,7 +41,13 @@ public sealed partial class AllToolsPage : Page
         ViewModel.Reactivate();
         SubscribeToViewModel();
         base.OnNavigatedTo(e);
-        if (e.Parameter is ToolNavigationRequest request)
+        if (e.Parameter is SectionNavigationRequest section)
+        {
+            SelectorBarItem? tab = ToolTabs.Items.OfType<SelectorBarItem>()
+                .FirstOrDefault(item => string.Equals(item.Text, section.SectionTitle, StringComparison.OrdinalIgnoreCase));
+            if (tab is not null) ToolTabs.SelectedItem = tab;
+        }
+        else if (e.Parameter is ToolNavigationRequest request)
         {
             ToolTabs.SelectedItem = ToolTabs.Items[0] as SelectorBarItem;
             ViewModel.OpenTool(request.CommandId, request.Parameters);
@@ -92,6 +98,7 @@ public sealed partial class AllToolsPage : Page
         if (sender.SelectedItem is not SelectorBarItem item) return;
         ViewModel.SelectTab(item.Text);
         SearchFilterGrid.Visibility = ViewModel.IsCatalogTab ? Visibility.Visible : Visibility.Collapsed;
+        QuickFilterBar.Visibility = SearchFilterGrid.Visibility;
     }
 
     private void CategoryCard_Click(object sender, RoutedEventArgs e)
@@ -161,34 +168,38 @@ public sealed partial class AllToolsPage : Page
             RebuildParameterEditor();
     }
 
+    private void ResetFilters_Click(object sender, RoutedEventArgs e)
+    {
+        ViewModel.ClearFilters();
+        ToolSearchBox.Focus(FocusState.Programmatic);
+    }
+
     private void ApplyFilterLayout(bool compact)
     {
         SearchFilterGrid.ColumnDefinitions.Clear();
         SearchFilterGrid.RowDefinitions.Clear();
+        ToolSearchBox.Margin = compact ? new Thickness(0) : new Thickness(0, 26, 0, 0);
 
         if (compact)
         {
             SearchFilterGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
             SearchFilterGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-            SearchFilterGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-            SearchFilterGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-            SearchFilterGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-            SearchFilterGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            for (int i = 0; i < 3; i++)
+                SearchFilterGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
             SearchFilterGrid.RowSpacing = 8;
             SearchFilterGrid.ColumnSpacing = 10;
             Grid.SetRow(ToolSearchBox, 0); Grid.SetColumn(ToolSearchBox, 0); Grid.SetColumnSpan(ToolSearchBox, 2);
             Grid.SetRow(AreaFilter, 1); Grid.SetColumn(AreaFilter, 0);
             Grid.SetRow(SectionFilter, 1); Grid.SetColumn(SectionFilter, 1);
-            Grid.SetRow(RiskFilter, 2); Grid.SetColumn(RiskFilter, 0);
-            Grid.SetRow(ReadOnlyFilter, 2); Grid.SetColumn(ReadOnlyFilter, 1);
-            Grid.SetRow(ResultCountText, 3); Grid.SetColumn(ResultCountText, 1);
-            ReadOnlyFilter.Margin = new Thickness(0, 4, 0, 0);
-            ResultCountText.Margin = new Thickness(0, 6, 0, 0);
-            ResultCountText.HorizontalAlignment = HorizontalAlignment.Right;
+            Grid.SetRow(RiskFilter, 2); Grid.SetColumn(RiskFilter, 0); Grid.SetColumnSpan(RiskFilter, 2);
+            QuickFilterActions.Orientation = Orientation.Vertical;
+            Grid.SetRow(ResultCountText, 1);
+            Grid.SetColumn(ResultCountText, 0);
+            ResultCountText.HorizontalAlignment = HorizontalAlignment.Left;
         }
         else
         {
-            foreach (GridLength width in new[] { new GridLength(2, GridUnitType.Star), new GridLength(190), new GridLength(190), new GridLength(160), GridLength.Auto, GridLength.Auto })
+            foreach (GridLength width in new[] { new GridLength(2, GridUnitType.Star), new GridLength(190), new GridLength(190), new GridLength(160) })
                 SearchFilterGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = width });
             SearchFilterGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
             SearchFilterGrid.RowSpacing = 0;
@@ -196,12 +207,11 @@ public sealed partial class AllToolsPage : Page
             Grid.SetRow(ToolSearchBox, 0); Grid.SetColumn(ToolSearchBox, 0); Grid.SetColumnSpan(ToolSearchBox, 1);
             Grid.SetRow(AreaFilter, 0); Grid.SetColumn(AreaFilter, 1);
             Grid.SetRow(SectionFilter, 0); Grid.SetColumn(SectionFilter, 2);
-            Grid.SetRow(RiskFilter, 0); Grid.SetColumn(RiskFilter, 3);
-            Grid.SetRow(ReadOnlyFilter, 0); Grid.SetColumn(ReadOnlyFilter, 4);
-            Grid.SetRow(ResultCountText, 0); Grid.SetColumn(ResultCountText, 5);
-            ReadOnlyFilter.Margin = new Thickness(0, 26, 0, 0);
-            ResultCountText.Margin = new Thickness(8, 28, 0, 0);
-            ResultCountText.HorizontalAlignment = HorizontalAlignment.Left;
+            Grid.SetRow(RiskFilter, 0); Grid.SetColumn(RiskFilter, 3); Grid.SetColumnSpan(RiskFilter, 1);
+            QuickFilterActions.Orientation = Orientation.Horizontal;
+            Grid.SetRow(ResultCountText, 0);
+            Grid.SetColumn(ResultCountText, 1);
+            ResultCountText.HorizontalAlignment = HorizontalAlignment.Right;
         }
     }
 

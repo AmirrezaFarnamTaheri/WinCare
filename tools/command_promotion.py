@@ -47,8 +47,8 @@ def load_commands(catalog: Path = CATALOG) -> list[dict]:
 
 
 def reached(stage: str) -> set[str]:
-    """Every stage a command at `stage` has satisfied, inclusive."""
-    return set(LADDER[: LADDER.index(stage) + 1])
+    """Command statuses that have reached at least the requested stage."""
+    return set(LADDER[LADDER.index(stage):])
 
 
 def readiness(commands: list[dict]) -> dict:
@@ -131,7 +131,7 @@ def render(commands: list[dict]) -> str:
         "|---|---|",
         f"| Commands in catalog | {state['total']} |",
         f"| Frozen legacy-parity oracle | {ORACLE_SIZE} |",
-        f"| Additional admitted native commands | {state['total'] - ORACLE_SIZE} |",
+        f"| Additional cataloged native commands | {state['total'] - ORACLE_SIZE} |",
         f"| At `ContractVerified` or stronger | {state['contract_verified']} |",
         f"| At `Implemented` or stronger | {state['implemented']} |",
         f"| At `BehaviorVerified` | {state['behavior_verified']} |",

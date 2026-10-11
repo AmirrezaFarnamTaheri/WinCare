@@ -1,6 +1,8 @@
-# WinCare 4.0: System Architecture & Modernization Specification
+# Historical architecture proposal (WinCare 4.0 planning)
 
-WinCare 4.0 structures the application as a task-first native Windows workspace. This design specifies the subsystem boundary model, the WinUI 3 presentation layer, and a fail-closed execution model with progressive disclosure.
+> **Reference only — not a description of the shipping implementation.** This earlier design explores possible subsystem splits, storage, plugins, persistence, and native service components. Some are implemented differently or remain proposals; diagrams and examples below must not be treated as evidence that a service, feature, sandbox, or integration currently exists. Use [Architecture](Architecture.md), the [User guide](User-Guide.md), and repository source/tests for the current implementation.
+
+This proposal records the original target direction. The task-oriented native Windows app continues to evolve, but unimplemented sections below are not feature promises.
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────────────────────────────┐

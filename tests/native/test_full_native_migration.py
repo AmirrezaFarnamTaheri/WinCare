@@ -14,17 +14,19 @@ class FullNativeMigrationTests(unittest.TestCase):
     def setUp(self) -> None:
         self.catalog = json.loads(CATALOG.read_text(encoding="utf-8"))["commands"]
 
-    def test_all_admitted_commands_are_implemented_or_behavior_verified(self) -> None:
+    def test_all_catalog_commands_have_valid_lifecycle_stages(self) -> None:
         document = json.loads(CATALOG.read_text(encoding="utf-8"))
         self.assertEqual(document["commandCount"], len(self.catalog))
         self.assertGreaterEqual(len(self.catalog), 259)
         self.assertEqual(len(self.catalog), len({item["id"] for item in self.catalog}))
-        incomplete = {
+        invalid = {
             item["id"]: item["migrationStatus"]
             for item in self.catalog
-            if item["migrationStatus"] not in {"Implemented", "BehaviorVerified"}
+            if item["migrationStatus"] not in {"Cataloged", "ContractVerified", "Implemented", "BehaviorVerified"}
         }
-        self.assertEqual({}, incomplete)
+        self.assertEqual({}, invalid)
+        self.assertEqual("ContractVerified", next(
+            item["migrationStatus"] for item in self.catalog if item["id"] == "storage-dedup-hardlink"))
 
     def test_every_catalog_command_has_an_explicit_executor_route(self) -> None:
         catalog_read_only = {item["id"] for item in self.catalog if item["readOnly"]}
@@ -84,7 +86,8 @@ class FullNativeMigrationTests(unittest.TestCase):
         self.assertIn('SetExecutionFailure(CommandResultStatus.Blocked, "command.parameters_invalid", message)', vm)
         failure_writer = vm[vm.index("private void SetExecutionFailure"):vm.index("private void ApplyExecutionResult")]
         self.assertIn("JsonSerializer.Serialize", failure_writer)
-        self.assertRegex(failure_writer, r"status,\s+code,\s+message,")
+        self.assertRegex(failure_writer, r"status,\s+code,\s+message = _executionMessage,")
+        self.assertIn("SafeResultPresentation.SanitizeText(message)", failure_writer)
         self.assertIn("RebuildParameterEditor", page)
         self.assertIn("CreateParameterField", page)
         self.assertIn("AdvancedParameterEditing", page)

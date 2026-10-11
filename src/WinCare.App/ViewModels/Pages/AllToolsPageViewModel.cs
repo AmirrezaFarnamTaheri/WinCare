@@ -24,6 +24,7 @@ public sealed class AllToolsPageViewModel : ObservableObject, IDisposable
     private SectionFilterOption _selectedSectionOption;
     private RiskFilterOption _selectedRiskOption;
     private bool _readOnlyOnly;
+    private bool _availableOnly = true;
     private string _selectedTab = "Tools";
     private ToolRowViewModel? _selectedTool;
     private bool _isDetailsOpen;
@@ -78,9 +79,10 @@ public sealed class AllToolsPageViewModel : ObservableObject, IDisposable
         _selectedSectionOption = SectionOptions[0];
         _selectedRiskOption = RiskOptions[0];
         _readOnlyOnly = false;
+        _availableOnly = false; // Explicit search/deep links must still show unavailable tools.
         _searchText = query;
         OnPropertyChanged(nameof(IsPresetTab)); OnPropertyChanged(nameof(IsCategoryTab)); OnPropertyChanged(nameof(IsCatalogTab));
-        OnPropertyChanged(nameof(SelectedAreaOption)); OnPropertyChanged(nameof(SelectedSectionOption)); OnPropertyChanged(nameof(SelectedRiskOption)); OnPropertyChanged(nameof(ReadOnlyOnly)); OnPropertyChanged(nameof(SearchText));
+        OnPropertyChanged(nameof(SelectedAreaOption)); OnPropertyChanged(nameof(SelectedSectionOption)); OnPropertyChanged(nameof(SelectedRiskOption)); OnPropertyChanged(nameof(ReadOnlyOnly)); OnPropertyChanged(nameof(AvailableOnly)); OnPropertyChanged(nameof(SearchText));
         Refresh();
         SelectedTool = VisibleTools.FirstOrDefault(tool => string.Equals(tool.Id, query, StringComparison.OrdinalIgnoreCase));
     }
@@ -119,6 +121,23 @@ public sealed class AllToolsPageViewModel : ObservableObject, IDisposable
     public SectionFilterOption SelectedSectionOption { get => _selectedSectionOption; set { if (value is not null && SetProperty(ref _selectedSectionOption, value)) Refresh(); } }
     public RiskFilterOption SelectedRiskOption { get => _selectedRiskOption; set { if (value is not null && SetProperty(ref _selectedRiskOption, value)) Refresh(); } }
     public bool ReadOnlyOnly { get => _readOnlyOnly; set { if (SetProperty(ref _readOnlyOnly, value)) Refresh(); } }
+    public bool AvailableOnly { get => _availableOnly; set { if (SetProperty(ref _availableOnly, value)) Refresh(); } }
+
+    public void ClearFilters()
+    {
+        _searchCts?.Cancel();
+        _searchText = string.Empty;
+        _selectedAreaOption = AreaOptions[0];
+        RebuildSectionOptions();
+        _selectedSectionOption = SectionOptions[0];
+        _selectedRiskOption = RiskOptions[0];
+        _readOnlyOnly = false;
+        _availableOnly = true;
+        OnPropertyChanged(nameof(SearchText)); OnPropertyChanged(nameof(SelectedAreaOption));
+        OnPropertyChanged(nameof(SelectedSectionOption)); OnPropertyChanged(nameof(SelectedRiskOption));
+        OnPropertyChanged(nameof(ReadOnlyOnly)); OnPropertyChanged(nameof(AvailableOnly));
+        Refresh();
+    }
 
     public ToolRowViewModel? SelectedTool
     {
@@ -136,10 +155,10 @@ public sealed class AllToolsPageViewModel : ObservableObject, IDisposable
     public bool IsCompactLayout { get => _isCompactLayout; private set => SetProperty(ref _isCompactLayout, value); }
     public string ResultCountText => VisibleTools.Count == 1 ? "1 tool" : $"{VisibleTools.Count} tools";
     public bool IsEmpty => VisibleTools.Count == 0;
-    public string EmptyMessage => _selectedTab switch { "Favorites" => "No favorites yet. Select a tool and add it to Favorites.", "Recent" => "Tools you run will appear here.", "Care plans" => "No care plans are available.", "Categories" => "No categories are available.", _ => "No tools match the current search and filters." };
+    public string EmptyMessage => _selectedTab switch { "Favorites" => "No favorites yet. Select a tool and add it to Favorites.", "Recent" => "Tools you run will appear here.", "Care plans" => "No care plans are available.", "Categories" => "No categories are available.", _ => _availableOnly ? "No available tools match these filters. Turn off Available only to include disabled tools." : "No tools match the current search and filters." };
     public string SelectedToolTitle => SelectedTool?.Title ?? "Select a tool";
     public string SelectedToolSummary => SelectedTool?.Summary ?? "Choose a task to understand what it does, what it needs, and what will happen before anything runs.";
-    public string SelectedToolMetadata => SelectedTool is null ? string.Empty : $"{SelectedTool.Area} · {SelectedTool.Section} · {SelectedTool.Risk} tier";
+    public string SelectedToolMetadata => SelectedTool is null ? string.Empty : $"{SelectedTool.Area} · {SelectedTool.Section} · {SelectedTool.Risk}";
     public string SelectedToolTechnicalDetails => SelectedTool is null ? string.Empty : $"Command ID: {SelectedTool.Id}\nCatalog risk: {SelectedTool.Definition.Risk}\nAdmission tier: {SelectedTool.Risk}\nAdministrator access: {SelectedTool.AdministratorAccess}\nRestart: {SelectedTool.Restart}\nMigration: {SelectedTool.MigrationState}\nLegacy source: {SelectedTool.Definition.LegacySource}";
     public bool IsSelectedToolFavorite => SelectedTool is not null && _favoriteIds.Contains(SelectedTool.Id);
     public string FavoriteActionLabel => IsSelectedToolFavorite ? "Remove from favorites" : "Add to favorites";
@@ -148,7 +167,16 @@ public sealed class AllToolsPageViewModel : ObservableObject, IDisposable
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(tab);
         if (string.Equals(_selectedTab, tab, StringComparison.Ordinal)) return;
-        _selectedTab = tab; _searchCts?.Cancel(); OnPropertyChanged(nameof(IsPresetTab)); OnPropertyChanged(nameof(IsCategoryTab)); OnPropertyChanged(nameof(IsCatalogTab)); Refresh();
+        _selectedTab = tab;
+        _searchCts?.Cancel();
+        // Favorites and history must show entries even when a command was suspended.
+        if (tab is "Favorites" or "Recent")
+        {
+            _availableOnly = false;
+            OnPropertyChanged(nameof(AvailableOnly));
+        }
+        OnPropertyChanged(nameof(IsPresetTab)); OnPropertyChanged(nameof(IsCategoryTab)); OnPropertyChanged(nameof(IsCatalogTab));
+        Refresh();
     }
 
     public void SelectPresetForReview(string presetId)
@@ -247,7 +275,8 @@ public sealed class AllToolsPageViewModel : ObservableObject, IDisposable
         _selectedSectionOption = sectionOption;
         _selectedRiskOption = RiskOptions[0];
         _readOnlyOnly = false;
-        OnPropertyChanged(nameof(IsPresetTab)); OnPropertyChanged(nameof(IsCategoryTab)); OnPropertyChanged(nameof(IsCatalogTab)); OnPropertyChanged(nameof(SearchText)); OnPropertyChanged(nameof(SelectedAreaOption)); OnPropertyChanged(nameof(SelectedSectionOption)); OnPropertyChanged(nameof(SelectedRiskOption)); OnPropertyChanged(nameof(ReadOnlyOnly)); Refresh();
+        _availableOnly = false; // A selected category should show its entire catalog.
+        OnPropertyChanged(nameof(IsPresetTab)); OnPropertyChanged(nameof(IsCategoryTab)); OnPropertyChanged(nameof(IsCatalogTab)); OnPropertyChanged(nameof(SearchText)); OnPropertyChanged(nameof(SelectedAreaOption)); OnPropertyChanged(nameof(SelectedSectionOption)); OnPropertyChanged(nameof(SelectedRiskOption)); OnPropertyChanged(nameof(ReadOnlyOnly)); OnPropertyChanged(nameof(AvailableOnly)); Refresh();
         return true;
     }
 
@@ -261,6 +290,8 @@ public sealed class AllToolsPageViewModel : ObservableObject, IDisposable
         IEnumerable<CommandDefinition> commands = _catalog.Search(SearchText, filter);
         if (SelectedRiskOption.Value is RiskTier tier)
             commands = commands.Where(command => command.RiskTier == tier);
+        if (_availableOnly)
+            commands = commands.Where(command => command.MigrationStatus is MigrationStatus.Implemented or MigrationStatus.BehaviorVerified);
         commands = _selectedTab switch { "Favorites" => commands.Where(command => _favoriteIds.Contains(command.Id)), "Recent" => commands.Where(command => _recentIds.Contains(command.Id)).OrderBy(command => _recentIds.IndexOf(command.Id)), _ => commands };
         string? previousSelectedId = SelectedTool?.Id;
         var previousRows = VisibleTools.ToDictionary(row => row.Id, StringComparer.Ordinal);

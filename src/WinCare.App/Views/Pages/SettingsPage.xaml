@@ -3,68 +3,82 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:controls="using:WinCare.App.Controls"
-    NavigationCacheMode="Required">
+    NavigationCacheMode="Required"
+    SizeChanged="Page_SizeChanged">
     <ScrollViewer VerticalScrollBarVisibility="Auto">
-        <StackPanel Padding="28,28,28,32" MaxWidth="960" HorizontalAlignment="Left" Spacing="24">
-            <controls:PageHeaderControl
-                Title="Settings"
-                Description="Choose how WinCare looks and what it remembers on this PC." />
+        <StackPanel x:Name="SettingsLayout" Padding="32,28,32,32" MaxWidth="980"
+                    HorizontalAlignment="Stretch" Spacing="14">
+            <controls:PageHeaderControl Title="Settings"
+                Description="Adjust how WinCare looks, opens, and stores its own data." />
             <StackPanel Spacing="8">
-                <InfoBar
-                    IsOpen="{x:Bind ViewModel.HasPersistenceWarning, Mode=OneWay}"
-                    IsClosable="False"
-                    Severity="Warning"
-                    Title="Settings aren't saving"
-                    Message="{x:Bind ViewModel.PersistenceWarningMessage, Mode=OneWay}"
-                    AutomationProperties.AutomationId="PreferencesPersistenceWarning"
-                    AutomationProperties.Name="Settings save warning" />
-                <InfoBar
-                    x:Name="FolderErrorInfoBar"
-                    IsOpen="False"
-                    IsClosable="True"
-                    Severity="Error"
-                    Title="Couldn't open the data folder"
-                    AutomationProperties.AutomationId="SettingsFolderError"
-                    AutomationProperties.Name="Data folder error" />
+                <InfoBar IsOpen="{x:Bind ViewModel.HasPersistenceWarning, Mode=OneWay}"
+                         IsClosable="False" Severity="Warning" Title="Settings aren't saving"
+                         Message="{x:Bind ViewModel.PersistenceWarningMessage, Mode=OneWay}"
+                         AutomationProperties.AutomationId="PreferencesPersistenceWarning"
+                         AutomationProperties.Name="Settings save warning" />
+                <InfoBar x:Name="FolderErrorInfoBar" IsOpen="False" IsClosable="True"
+                         Severity="Error" Title="Couldn't open the data folder"
+                         AutomationProperties.AutomationId="SettingsFolderError"
+                         AutomationProperties.Name="Data folder error" />
+                <InfoBar x:Name="CopiedPathInfoBar" IsOpen="False" IsClosable="True"
+                         Severity="Success" Title="Path copied"
+                         Message="The local data folder path is on your clipboard."
+                         AutomationProperties.Name="Data folder path copied" />
             </StackPanel>
-
-            <Border Style="{StaticResource DashboardCardStyle}">
-                <Grid RowSpacing="16">
-                    <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
+            <TextBlock Text="Appearance" Style="{StaticResource SectionHeaderTextStyle}" Margin="0,8,0,0" />
+            <Border Style="{StaticResource SurfaceBorderStyle}" Padding="20">
+                <Grid x:Name="ThemeRow" ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto"
+                      ColumnSpacing="18" RowSpacing="12">
                     <StackPanel Spacing="4" VerticalAlignment="Center">
-                        <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="App theme" />
-                        <TextBlock Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap" Text="Follow Windows, or keep WinCare light or dark." />
+                        <TextBlock Text="App theme" Style="{StaticResource RowTitleTextStyle}" />
+                        <TextBlock Text="Match Windows or choose a light or dark appearance."
+                                   Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap" />
                     </StackPanel>
-                    <ComboBox x:Name="ThemeSelector" Grid.Row="1" HorizontalAlignment="Left" ItemsSource="{x:Bind ViewModel.Themes}" SelectedItem="{x:Bind ViewModel.SelectedTheme, Mode=TwoWay}" SelectionChanged="ThemeSelector_SelectionChanged" AutomationProperties.AutomationId="ThemeSelector" AutomationProperties.Name="App theme" />
+                    <ComboBox x:Name="ThemeSelector" Grid.Column="1" MinWidth="164" MinHeight="44"
+                              VerticalAlignment="Center" HorizontalAlignment="Right"
+                              ItemsSource="{x:Bind ViewModel.Themes}"
+                              SelectedItem="{x:Bind ViewModel.SelectedTheme, Mode=TwoWay}"
+                              SelectionChanged="ThemeSelector_SelectionChanged"
+                              AutomationProperties.AutomationId="ThemeSelector"
+                              AutomationProperties.Name="App theme" />
                 </Grid>
             </Border>
-
-            <Border Style="{StaticResource DashboardCardStyle}">
-                <Grid RowSpacing="16">
-                    <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
+            <TextBlock Text="Startup" Style="{StaticResource SectionHeaderTextStyle}" Margin="0,8,0,0" />
+            <Border Style="{StaticResource SurfaceBorderStyle}" Padding="20">
+                <Grid x:Name="WindowRow" ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto"
+                      ColumnSpacing="18" RowSpacing="12">
                     <StackPanel Spacing="4" VerticalAlignment="Center">
-                        <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="Remember this window" />
-                        <TextBlock Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap" Text="Open WinCare at the same size and position next time." />
+                        <TextBlock Text="Remember this window" Style="{StaticResource RowTitleTextStyle}" />
+                        <TextBlock Text="Reopen at the same size and position."
+                                   Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap" />
                     </StackPanel>
-                    <ToggleSwitch Grid.Row="1" HorizontalAlignment="Left"
+                    <ToggleSwitch x:Name="WindowPlacementSwitch" Grid.Column="1" VerticalAlignment="Center"
+                                  HorizontalAlignment="Right"
                                   IsOn="{x:Bind ViewModel.RememberWindowPlacement, Mode=TwoWay}"
-                                  OnContent="Remember"
-                                  OffContent="Start fresh"
+                                  OnContent="Remember" OffContent="Start fresh"
                                   AutomationProperties.AutomationId="RememberWindowPlacement"
                                   AutomationProperties.Name="Remember window placement" />
                 </Grid>
             </Border>
-
-            <Border Style="{StaticResource DashboardCardStyle}">
-                <Grid RowSpacing="16">
-                    <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
-                    <StackPanel Spacing="4" VerticalAlignment="Center">
-                        <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="Local data" />
-                        <TextBlock Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap" Text="Open the folder where WinCare keeps settings, reports, activity, and diagnostic logs." />
-                        <TextBlock Style="{StaticResource RowSecondaryTextStyle}" FontFamily="{StaticResource TelemetryFontFamily}" Text="{x:Bind ViewModel.DataDirectory}" TextWrapping="Wrap" />
+            <TextBlock Text="Local data" Style="{StaticResource SectionHeaderTextStyle}" Margin="0,8,0,0" />
+            <Border Style="{StaticResource SurfaceBorderStyle}" Padding="20">
+                <StackPanel Spacing="12">
+                    <TextBlock Text="WinCare stores preferences, history, and reports in this folder."
+                               Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap" />
+                    <TextBlock Text="{x:Bind ViewModel.DataDirectory}" TextWrapping="Wrap"
+                               IsTextSelectionEnabled="True" FontFamily="{StaticResource TelemetryFontFamily}"
+                               Foreground="{ThemeResource TextPrimaryBrush}" FontSize="12"
+                               AutomationProperties.Name="WinCare local data folder path" />
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                        <Button Content="Open folder" Style="{StaticResource QuietButtonStyle}"
+                                Click="OpenDataFolderButton_Click"
+                                AutomationProperties.AutomationId="OpenDataFolder"
+                                AutomationProperties.Name="Open WinCare data folder" />
+                        <Button Content="Copy path" Style="{StaticResource QuietButtonStyle}"
+                                Click="CopyDataFolder_Click"
+                                AutomationProperties.Name="Copy WinCare data folder path" />
                     </StackPanel>
-                    <Button Grid.Row="1" HorizontalAlignment="Left" Content="Open folder" Style="{StaticResource QuietButtonStyle}" Click="OpenDataFolderButton_Click" AutomationProperties.AutomationId="OpenDataFolder" AutomationProperties.Name="Open WinCare data folder" />
-                </Grid>
+                </StackPanel>
             </Border>
         </StackPanel>
     </ScrollViewer>

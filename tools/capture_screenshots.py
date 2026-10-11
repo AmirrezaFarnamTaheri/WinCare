@@ -221,17 +221,19 @@ _CAPTURE_AFFECTING_PATHS = (
 )
 
 
-def _paths_changed_since(commit: str) -> list[str]:
-    """Capture-affecting source paths that changed between a recorded commit and HEAD."""
+def _paths_changed_since(commit: str) -> list[str] | None:
+    """Changed capture inputs, or None when provenance cannot be established."""
     if not commit or commit == "unknown":
-        return []
+        return None
     try:
         proc = subprocess.run(
             ["git", "diff", "--name-only", f"{commit}..HEAD", "--", *_CAPTURE_AFFECTING_PATHS],
             cwd=REPO_ROOT, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True, timeout=20,
         )
-    except Exception:
-        return []
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    if proc.returncode != 0:
+        return None
     return [line.strip() for line in proc.stdout.splitlines() if line.strip()]
 
 
@@ -253,6 +255,10 @@ def capture_freshness_report(manifest: dict | None) -> dict:
         return {"status": "unrecorded", "manifest_commit": None, "head": head, "changed": [],
                 "detail": "the manifest records no source commit"}
     changed = _paths_changed_since(manifest_commit)
+    if changed is None:
+        return {"status": "unverifiable", "manifest_commit": manifest_commit,
+                "head": head, "changed": [],
+                "detail": "capture commit cannot be verified against this checkout's Git history"}
     if not changed:
         return {"status": "fresh", "manifest_commit": manifest_commit, "head": head, "changed": [],
                 "detail": f"no capture-affecting source changed since {manifest_commit}"}
@@ -355,13 +361,6 @@ def format_runtime_status_line(image_name: str, manifest: dict | None) -> str:
             " Checkup reports checked-area evidence rather than a synthetic machine-health claim; "
             "fast read-only probes run concurrently while Windows Update readiness is checked in "
             "the background."
-        )
-    stale = capture_freshness_report(manifest)
-    if stale["status"] == "stale":
-        extra = (
-            f" **Stale:** capture-affecting source changed since commit {stale['manifest_commit']}"
-            f" ({len(stale['changed'])} capture-affecting path(s)); this image is historical "
-            f"evidence until recaptured.{extra}"
         )
     return (
         f"**Capture status:** captured {date} from the v{entry['version']} portable build "

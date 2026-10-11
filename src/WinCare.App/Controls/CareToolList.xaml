@@ -11,7 +11,7 @@
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <TextBlock Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap" Text="Select a task to review its options and run it in the inspector." />
+        <TextBlock Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap" Text="Choose a task to see what it does, its requirements, and available actions." />
 
         <Border Grid.Row="1" Style="{StaticResource SurfaceBorderStyle}" Visibility="{x:Bind views:LayoutVisibility.InvertBoolToVisibility(ViewModel.IsEmpty), Mode=OneWay}">
             <Grid>

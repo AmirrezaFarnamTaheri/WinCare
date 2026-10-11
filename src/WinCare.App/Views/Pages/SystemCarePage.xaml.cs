@@ -19,7 +19,7 @@ public sealed partial class SystemCarePage : Page
     private void SectionSelector_SelectionChanged(SelectorBar sender, SelectorBarSelectionChangedEventArgs args)
     {
         ViewModel.SelectSection(sender.Items.IndexOf(sender.SelectedItem));
-        if (ViewModel.IsPerformanceSection)
+        if (ViewModel.IsPerformanceSection && MemoryDetails.IsExpanded)
         {
             MemoryAtlas?.RefreshTopology();
         }
@@ -35,10 +35,13 @@ public sealed partial class SystemCarePage : Page
             SectionSelector.SelectedItem = SectionSelector.Items[sectionIndex] as SelectorBarItem;
             ViewModel.SelectSection(sectionIndex);
         }
-        if (ViewModel.IsPerformanceSection)
+        if (ViewModel.IsPerformanceSection && MemoryDetails.IsExpanded)
         {
             MemoryAtlas?.RefreshTopology();
         }
         ViewModel.ShowTools(WinCare.App.Services.AppRuntime.Current.ToolCatalog, ViewModel.ToolSelection, WinCare.App.Services.AppRuntime.Current.Journal);
     }
+    private void MemoryDetails_Expanding(Expander sender, ExpanderExpandingEventArgs args) =>
+        MemoryAtlas?.RefreshTopology();
+
 }

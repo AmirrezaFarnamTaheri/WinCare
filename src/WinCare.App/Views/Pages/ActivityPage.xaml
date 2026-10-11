@@ -7,7 +7,7 @@
     xmlns:controls="using:WinCare.App.Controls"
     NavigationCacheMode="Required"
     SizeChanged="Page_SizeChanged">
-    <Grid Padding="28,28,28,32" RowSpacing="20">
+    <Grid Padding="32,28,32,28" RowSpacing="20" MaxWidth="1320" HorizontalAlignment="Stretch">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />

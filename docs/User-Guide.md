@@ -32,7 +32,7 @@ Run the helper from an elevated terminal only when the certificate is not alread
 
 The self-contained `.exe` runs directly without installation. The portable ZIP can be extracted to any folder, which is useful for USB technician toolkits.
 
-The first time WinCare opens, a short tour explains Checkup, the care pages, Power tools, and Ctrl+K search. You can reopen the tour later from **Help**.
+WinCare opens to Home without a setup dialog. An optional tour is available from **Help**.
 
 WinCare can also restore the last usable window size and position. Turn this off under **Settings → Remember this window** if you prefer a fresh window each time.
 
@@ -59,14 +59,33 @@ The main navigation is task-oriented:
 - **System care**: cleanup, performance, apps, startup, networking, updates, and maintenance.
 - **Security**: protection, privacy, and hardening tasks.
 - **Repair & recovery**: repair, restore, backup, reset, and recovery tasks.
-- **Power tools**: the complete command catalog with search, filters, categories, favorites, Recent, and Care plans.
+- **Power tools**: the searchable command catalog with filters, favorites, Recent, and plans. Entries that are unavailable are labeled as such. Favorited tools also appear as shortcuts on Home.
+- **Files & storage**: see drive capacity, browse files and folders, and inspect the size of a folder.
+- **Processes**: review CPU and memory use, sort or search running tasks, and confirm before ending an ordinary process.
+- **Downloads**: start, pause, resume, and track downloads, or inspect their destination folder.
 - **Troubleshoot**: describe a symptom and get local checks plus suggested next steps.
 - **Extensions**: manage installed optional features and browse the online list when it is available.
 - **Activity**: running work, items needing attention, finished work, and reports.
 - **Settings**: theme, window placement, and local-data access.
 - **Help**: getting started, the first-run tour, keyboard shortcuts, and common explanations.
 
-Use **Ctrl+K** to search pages and tools. In Power tools, **Ctrl+F** focuses tool search.
+Use **Ctrl+K** to search pages and tools, including Files & storage and Processes. In Power tools, **Ctrl+F** focuses tool search.
+
+### Files & storage
+
+Select a drive or enter a folder path. Double-clicking is not required: select a folder in the list to open it. The listing loads at most 600 entries at a time and says when it is incomplete; use **Open in Explorer** for larger directories or file changes.
+
+**Measure folder** scans up to 20,000 entries and 12 folder levels without changing anything, shows the total size it found and its largest immediate subfolders, and labels incomplete results as partial. Hardlinks are accounted for where supported; this is not a promise of exact physical disk allocation. The scan does not automatically follow directory links.
+
+### Processes
+
+See running process names, PIDs, resident memory and sampled CPU usage. Refresh manually or enable **Live** for five-second updates. Sorting by CPU or memory is based on actual process readings, not a claimed system-wide share of memory.
+
+**End task** is for ordinary stuck applications. It requires confirmation because unsaved work can be lost. WinCare blocks known Windows system processes, refuses stale or unidentified PIDs, and records the outcome in Activity. Use Windows Task Manager for elevated or specialized process work.
+
+### Downloads
+
+Paste a direct HTTP(S) address and choose **Download**. Completed files stay on disk if you remove their history records. The **Show folder** action opens the file's destination in Files & storage; Windows Explorer remains available for moving or deleting downloaded files.
 
 ## 5. Home
 
@@ -136,7 +155,7 @@ Troubleshoot uses a local rule-based diagnostic engine. It is not a cloud chat m
 5. Open a suggested step in **Power tools** to review it.
 6. Power tools applies the normal risk-tier flow (direct read or low-risk execution, or preview plus confirmation/approval for higher-impact mutations) and records the outcome in Activity.
 
-Troubleshoot cannot create its own execution approval. Errors shown in the conversation are kept readable instead of dumping raw exception text into the UI.
+Troubleshoot cannot create its own execution approval. Errors are shown as plain-language status messages rather than raw exception dumps.
 
 ## 10. Extensions
 

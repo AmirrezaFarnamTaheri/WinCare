@@ -56,13 +56,109 @@ class SafetyRegressionTests(unittest.TestCase):
         # ADR-001 narrows the two-phase gate to irreversible work only. Moderate
         # maintenance runs on one click, so the approval switch must not be offered
         # for it -- but a destructive command must never lose the gate.
-        self.assertIn("RequiresApprovalSwitch => IsDestructiveTool", view_model)
+        self.assertIn("RequiresApprovalSwitch => ShowDestructiveWarning", view_model)
+        self.assertIn("ShowDestructiveWarning => IsDestructiveTool && !IsSelectedToolUnavailable", view_model)
 
         xaml = self.read("src/WinCare.App/Views/Pages/AllToolsPage.xaml")
         self.assertIn(
             'IsEnabled="{x:Bind ViewModel.Execution.CanApproveReview, Mode=OneWay}"',
             xaml,
         )
+
+    def test_hardlink_consolidation_is_explicitly_disabled_at_catalog_and_executor(self) -> None:
+        # Static defense-in-depth gate; behavioral admission is tested by the C# suites.
+        import json
+        catalog = json.loads(self.read("src/WinCare.CommandCatalog/Data/commands.json"))["commands"]
+        hardlink = next(item for item in catalog if item["id"] == "storage-dedup-hardlink")
+        self.assertEqual("ContractVerified", hardlink["migrationStatus"])
+        self.assertEqual("High", hardlink["risk"])
+        self.assertFalse(hardlink["readOnly"])
+        native = self.read("src/WinCare.Infrastructure/Commands/WindowsCommandExecutor.RemainingPillars.cs")
+        self.assertIn('"storage.dedup.hardlink_unavailable"', native)
+        self.assertNotIn("CreateHardLinkW", native)
+        executor = self.read("src/WinCare.Infrastructure/Commands/WindowsCommandExecutor.cs")
+        self.assertIn('definition.Id.Equals("storage-dedup-hardlink"', executor)
+        scanner = self.read("src/WinCare.Infrastructure/Commands/WindowsCommandExecutor.StorageDeduplication.cs")
+        self.assertIn("AttributesToSkip = FileAttributes.ReparsePoint", scanner)
+
+    def test_unsafe_or_incomplete_commands_are_suspended_consistently(self) -> None:
+        # Static check supplements (but does not replace) the Windows runtime tests.
+        import json
+        import re
+        catalog = {command["id"]: command for command in
+                   json.loads(self.read("src/WinCare.CommandCatalog/Data/commands.json"))["commands"]}
+        executor = self.read("src/WinCare.Infrastructure/Commands/WindowsCommandExecutor.cs")
+        suspended = set(re.findall(r'^        "([a-z0-9-]+)",$',
+                      executor.split("SuspendedMutationCommands", 1)[1].split("};", 1)[0],
+                      flags=re.MULTILINE))
+        self.assertGreaterEqual(len(suspended), 14)
+        self.assertEqual(suspended, {
+            identifier for identifier, command in catalog.items()
+            if command["migrationStatus"] == "ContractVerified" and not command["readOnly"]
+        })
+        for identifier in suspended:
+            with self.subTest(command=identifier):
+                self.assertEqual("ContractVerified", catalog[identifier]["migrationStatus"])
+                self.assertNotEqual("Low", catalog[identifier]["risk"])
+                self.assertIn("Unavailable:", catalog[identifier]["summary"])
+                self.assertIn("unavailable", catalog[identifier]["title"].lower())
+        self.assertIn('if (SuspendedMutationCommands.Contains(definition.Id))', executor)
+        # Console daemon lacks an SCM ServiceMain. Registry settings alone do not
+        # register a toast producer, so neither can be advertised as installed.
+        guard = self.read("src/WinCare.Infrastructure/Commands/WindowsCommandExecutor.RemainingPillars.cs")
+        rust = self.read("native/wincare-guard/src/main.rs")
+        self.assertIn('"guard.scm_unavailable"', guard)
+        self.assertIn('"guard.toast_unavailable"', guard)
+        self.assertNotIn('"sc.exe", ["create"', guard)
+        self.assertIn('fn main()', rust)
+        self.assertNotIn('CommandHandlerOutcome.Success("Installer caches successfully purged.")', executor)
+        self.assertNotIn('CommandHandlerOutcome.Success("Application residuals successfully purged.")', executor)
+        self.assertNotIn('CommandHandlerOutcome.Success("Startup applications optimized successfully.")', executor)
+
+    def test_explorer_relaunch_runs_after_partial_termination_failure(self) -> None:
+        # Source-level invariant only: never kill the actual desktop shell in CI.
+        source = self.read("src/WinCare.Infrastructure/Commands/WindowsCommandExecutor.Experience.cs")
+        body = source.split("private async Task<CommandHandlerOutcome> LegacyUnsafeAsync", 1)[1]
+        body = body.split("private async Task<CommandHandlerOutcome> SandboxConfigAsync", 1)[0]
+        self.assertIn("bool attemptedTermination = false;", body)
+        self.assertIn("attemptedTermination = true;", body)
+        self.assertIn("completedEnumeration = true;", body)
+        self.assertIn("finally", body)
+        self.assertIn("if (attemptedTermination || completedEnumeration)", body)
+        self.assertIn("using Process restarted = StartTrustedExplorer();", body.split("finally", 1)[1])
+        executor = self.read("src/WinCare.Infrastructure/Commands/WindowsCommandExecutor.cs")
+        self.assertIn('"command.dependency_unavailable_state_unknown"', executor)
+        dependency_handler = executor.split("catch (CommandDependencyException ex)", 1)[1]
+        dependency_handler = dependency_handler.split("catch (UnauthorizedAccessException ex)", 1)[0]
+        self.assertNotIn('No host state was changed."', dependency_handler)
+
+    def test_mutation_execution_unknown_state_is_not_reported_as_untouched(self) -> None:
+        view_model = self.read("src/WinCare.App/ViewModels/Pages/ToolExecutionViewModel.cs")
+        self.assertNotIn("Nothing was changed. Try again", view_model)
+        self.assertIn("Changes may have been applied; inspect Activity", view_model)
+        self.assertIn("A failed Recent-history write must", view_model)
+
+    def test_power_tools_responsive_filters_keep_search_usable(self) -> None:
+        layout = self.read("src/WinCare.App/Views/Pages/AllToolsPage.xaml.cs")
+        xaml = self.read("src/WinCare.App/Views/Pages/AllToolsPage.xaml")
+        self.assertIn("ToolTableCompactBreakpointDip = 1120", layout)
+        self.assertIn("InlineInspectorBreakpointDip = 1640", layout)
+        self.assertIn("ToolSearchBox.Margin = compact ?", layout)
+        self.assertIn('HelpText="Search by tool name, category, or command ID"', xaml)
+        self.assertIn('Header="Area" MinHeight="44"', xaml)
+        self.assertIn('Header="Section" MinHeight="44"', xaml)
+        self.assertIn('Header="Impact" MinHeight="44"', xaml)
+
+    def test_high_risk_servicing_and_database_commands_require_review(self) -> None:
+        import json
+        catalog = {command["id"]: command for command in
+                   json.loads(self.read("src/WinCare.CommandCatalog/Data/commands.json"))["commands"]}
+        self.assertEqual("High", catalog["cleaner-dism-component-store"]["risk"])
+        for command_id in ("compress-compactos", "sqlite-vacuum"):
+            self.assertEqual("Moderate", catalog[command_id]["risk"])
+        executor = self.read("src/WinCare.Infrastructure/Commands/WindowsCommandExecutor.cs")
+        self.assertIn('"cleaner-dism-component-store" => new[]', executor)
+        self.assertIn('/ResetBase (prevents uninstalling existing updates)', executor)
 
     def test_native_directory_size_uses_iterative_walk(self) -> None:
         source = self.read("native/wincare-core/src/lib.rs")

@@ -85,11 +85,19 @@ public sealed class BoundedProcessRunner : IBoundedProcessRunner
         }
         catch (OperationCanceledException)
         {
+            // Cancelling WaitForExitAsync does not stop the child. Request process-tree
+            // termination and independently confirm the parent exited, even when the
+            // linked cancellation/deadline token is already cancelled.
             TryKill(process);
+            bool exitObserved = await WaitForTerminatedProcessAsync(process).ConfigureAwait(false);
             await ObserveReaderCompletionAsync(stdout, stderr).ConfigureAwait(false);
+            if (!exitObserved)
+            {
+                throw new TimeoutException($"'{fileName}' was interrupted, but its process exit could not be confirmed within five seconds. Changes may still be in progress; verify system state before retrying.");
+            }
             if (timeoutCts.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
             {
-                throw new TimeoutException($"'{fileName}' exceeded the {(timeout ?? DefaultTimeout).TotalSeconds:0.#}-second limit.");
+                throw new TimeoutException($"'{fileName}' exceeded the {(timeout ?? DefaultTimeout).TotalSeconds:0.#}-second limit. The process exit was confirmed, but earlier host changes may remain.");
             }
             throw;
         }
@@ -133,7 +141,12 @@ public sealed class BoundedProcessRunner : IBoundedProcessRunner
             {
                 try
                 {
-                    string candidate = Path.Combine(directory.Trim('"'), fileName);
+                    string trustedSearchDirectory = directory.Trim('"');
+                    // Relative entries (including "." and drive-relative paths) resolve
+                    // against the caller's working directory and defeat explicit executable
+                    // lookup. Do not execute their contents under elevated WinCare.
+                    if (!Path.IsPathFullyQualified(trustedSearchDirectory)) continue;
+                    string candidate = Path.Combine(trustedSearchDirectory, fileName);
                     if (File.Exists(candidate))
                     {
                         return Path.GetFullPath(candidate);
@@ -143,20 +156,24 @@ public sealed class BoundedProcessRunner : IBoundedProcessRunner
             }
         }
 
-        // Nothing could be resolved to an absolute path; let the OS attempt the launch so the
-        // existing missing-dependency failure mode is preserved.
-        return fileName;
+        // Never fall back to CreateProcess's implicit search, which includes the current
+        // working directory and can execute an attacker-supplied binary under elevated WinCare.
+        throw new CommandDependencyException(fileName,
+            $"Required executable '{fileName}' was not found in trusted system locations or PATH.");
     }
 
     private static async Task ObserveReaderCompletionAsync(Task stdout, Task stderr)
     {
         try
         {
-            await Task.WhenAll(stdout, stderr).ConfigureAwait(false);
+            // Descendants may retain inherited stdout/stderr handles even after
+            // the original process exits. Never let reader-drain postpone the
+            // cancellation result indefinitely.
+            await Task.WhenAll(stdout, stderr).WaitAsync(TimeSpan.FromSeconds(2)).ConfigureAwait(false);
         }
-        catch (Exception ex) when (ex is OperationCanceledException or ObjectDisposedException or IOException)
+        catch (Exception ex) when (ex is OperationCanceledException or ObjectDisposedException or IOException or TimeoutException)
         {
-            // Cancellation already owns the command outcome; this only observes reader completion/faults.
+            // Process exit, not reader-drain completion, controls the outcome.
         }
     }
 
@@ -194,6 +211,31 @@ public sealed class BoundedProcessRunner : IBoundedProcessRunner
         finally
         {
             System.Buffers.ArrayPool<char>.Shared.Return(rented);
+        }
+    }
+
+    private static async Task<bool> WaitForTerminatedProcessAsync(Process process)
+    {
+        using CancellationTokenSource reapDeadline = new(TimeSpan.FromSeconds(5));
+        try
+        {
+            await process.WaitForExitAsync(reapDeadline.Token).ConfigureAwait(false);
+            return process.HasExited;
+        }
+        catch (OperationCanceledException) when (reapDeadline.IsCancellationRequested)
+        {
+            return false;
+        }
+        catch (InvalidOperationException)
+        {
+            // A process handle can become invalid during exit; only an observed
+            // exit state counts as termination.
+            try { return process.HasExited; }
+            catch (InvalidOperationException) { return false; }
+        }
+        catch (System.ComponentModel.Win32Exception)
+        {
+            return false;
         }
     }
 

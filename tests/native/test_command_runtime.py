@@ -34,7 +34,7 @@ class CommandRuntimeTests(unittest.TestCase):
         missing = [relative for relative in required if not (ROOT / relative).is_file()]
         self.assertEqual([], missing)
 
-    def test_all_catalog_commands_are_marked_implemented_or_behavior_verified(self) -> None:
+    def test_catalog_distinguishes_declared_commands_from_executable_commands(self) -> None:
         document = json.loads(
             (ROOT / "src/WinCare.CommandCatalog/Data/commands.json").read_text(encoding="utf-8")
         )
@@ -42,12 +42,9 @@ class CommandRuntimeTests(unittest.TestCase):
         self.assertEqual(document["commandCount"], len(commands))
         self.assertGreaterEqual(len(commands), 259)
         self.assertEqual(len(commands), len({command["id"] for command in commands}))
-        incomplete = {
-            command["id"]: command["migrationStatus"]
-            for command in commands
-            if command["migrationStatus"] not in {"Implemented", "BehaviorVerified"}
-        }
-        self.assertEqual({}, incomplete)
+        stages = {command["id"]: command["migrationStatus"] for command in commands}
+        self.assertTrue(set(stages.values()) <= {"Cataloged", "ContractVerified", "Implemented", "BehaviorVerified"})
+        self.assertEqual("ContractVerified", stages["storage-dedup-hardlink"])
 
     def test_embedded_catalog_data_matches_the_frozen_oracle_data(self) -> None:
         pairs = (

@@ -17,6 +17,9 @@ namespace WinCare.Infrastructure.Commands;
 
 internal sealed partial class WindowsCommandExecutor
 {
+    // Shared across executor instances in this process. Admission must check
+    // destination ownership under one lock, not check-then-append concurrently.
+    private static readonly SemaphoreSlim DownloadCreationGate = new(1, 1);
     private static readonly EnumerationOptions SafeRecursiveEnumeration = new()
     {
         RecurseSubdirectories = true,
@@ -184,16 +187,59 @@ internal sealed partial class WindowsCommandExecutor
 
     private async Task<CommandHandlerOutcome> DownloadCreateAsync(CommandParameters p, CancellationToken cancellationToken)
     {
+        await DownloadCreationGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
         Uri uri = RequiredHttpUri(p, "Url");
+        if (uri.UserInfo.Length != 0)
+            throw new CommandParameterException("Url", "Links containing embedded credentials cannot be stored as downloads.");
         string id = p.String("Id").Trim(); if (id.Length == 0) id = Guid.NewGuid().ToString("N");
-        string fileName = p.String("FileName").Trim(); if (fileName.Length == 0) fileName = SafeFileNameFromUri(uri);
-        string destination = p.String("Destination").Trim();
-        if (destination.Length == 0) destination = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads", fileName);
+        string fileName = p.String("FileName").Trim();
+        fileName = fileName.Length == 0
+            ? SafeFileNameFromUri(uri)
+            : DeveloperJunkHelper.SanitizeDownloadFilename(fileName).Sanitized;
+        string requestedDestination = p.String("Destination").Trim();
+        bool autoDestination = requestedDestination.Length == 0;
+        string destination = autoDestination
+            ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads", fileName)
+            : requestedDestination;
         destination = Path.GetFullPath(Environment.ExpandEnvironmentVariables(destination));
+
+        // Resolve collisions under the creation gate. Automatically choose a free
+        // "file (2).ext" for the default Downloads folder, but never silently
+        // change an explicitly selected destination.
+        JsonElement existingJobs = await _state.ReadArrayAsync("downloads", cancellationToken).ConfigureAwait(false);
+        string initialDestination = destination;
+        string parent = Path.GetDirectoryName(initialDestination)!;
+        string stem = Path.GetFileNameWithoutExtension(initialDestination);
+        string extension = Path.GetExtension(initialDestination);
+        bool foundAvailable = false;
+        for (int suffix = 0; suffix < (autoDestination ? 100 : 1); suffix++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            string candidate = suffix == 0
+                ? initialDestination
+                : Path.Combine(parent, $"{stem} ({suffix + 1}){extension}");
+            bool reserved = existingJobs.ValueKind == JsonValueKind.Array &&
+                existingJobs.EnumerateArray().Any(item =>
+                    item.TryGetProperty("destination", out JsonElement previous) &&
+                    string.Equals(previous.GetString(), candidate, StringComparison.OrdinalIgnoreCase));
+            if (reserved || File.Exists(candidate) || File.Exists(candidate + ".wincare.download"))
+                continue;
+            destination = candidate;
+            foundAvailable = true;
+            break;
+        }
+        if (!foundAvailable)
+            return Block("download-create", autoDestination
+                ? "Too many downloads use this file name. Remove an old queue record or choose a different name."
+                : "The selected destination is already used by a file or another download.");
         DateTimeOffset? dueAt = p.String("DueAt").Length == 0 ? null : p.DateTimeOffset("DueAt", DateTimeOffset.UtcNow);
         JsonElement record = Data(new { id, url = uri.AbsoluteUri, destination, state = "Pending", createdAt = DateTimeOffset.UtcNow, dueAt, sha256 = p.String("Sha256").Trim().ToLowerInvariant() });
         await AppendStateItemAsync("downloads", record, cancellationToken).ConfigureAwait(false);
         return Success("download-create", "Download job created.", record, undo: false);
+        }
+        finally { DownloadCreationGate.Release(); }
     }
 
     private async Task<CommandHandlerOutcome> DownloadStartAsync(CommandParameters p, CancellationToken cancellationToken)
@@ -201,6 +247,10 @@ internal sealed partial class WindowsCommandExecutor
         const long maximumBytes = 2L * 1024 * 1024 * 1024;
         string id = p.RequiredString("Id");
         JsonElement job = await FindStateItemAsync("downloads", id, cancellationToken).ConfigureAwait(false);
+        string recordedState = job.TryGetProperty("state", out JsonElement stateProperty)
+            ? stateProperty.GetString() ?? string.Empty : string.Empty;
+        if (recordedState is "Completed" or "Cancelled")
+            return Block("download-start", "This job is already finished. Add a new download if you need another copy.");
         Uri uri = new(job.GetProperty("url").GetString()!, UriKind.Absolute);
         string destination = job.GetProperty("destination").GetString()!;
         string expectedHash = job.TryGetProperty("sha256", out JsonElement hash) ? hash.GetString() ?? string.Empty : string.Empty;
@@ -209,7 +259,14 @@ internal sealed partial class WindowsCommandExecutor
 
         using CancellationTokenSource operationCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         string operationKey = "download:" + id;
-        if (!_operations.TryAdd(operationKey, operationCancellation)) return Block("download-start", $"Download '{id}' is already active.");
+        string destinationKey = "download-path:" + Path.GetFullPath(destination).ToUpperInvariant();
+        if (!_operations.TryAdd(operationKey, operationCancellation))
+            return Block("download-start", $"Download '{id}' is already active.");
+        if (!_operations.TryAdd(destinationKey, operationCancellation))
+        {
+            _operations.TryRemove(operationKey, out _);
+            return Block("download-start", "Another download is already writing to this destination.");
+        }
 
         try
         {
@@ -230,9 +287,18 @@ internal sealed partial class WindowsCommandExecutor
             }, cancellationToken).ConfigureAwait(false);
 
             using HttpRequestMessage request = new(HttpMethod.Get, uri);
-            if (existingBytes > 0)
+            // A prior partial is untrusted unless the caller supplied an end-to-end
+            // digest. Without one a changed response could silently concatenate
+            // different remote representations across requests.
+            if (existingBytes > 0 && expectedHash.Length > 0)
             {
                 request.Headers.Range = new System.Net.Http.Headers.RangeHeaderValue(existingBytes, null);
+                request.Headers.AcceptEncoding.Clear();
+                request.Headers.AcceptEncoding.ParseAdd("identity");
+            }
+            else
+            {
+                existingBytes = 0;
             }
 
             using HttpResponseMessage response = await _httpClient.SendAsync(
@@ -241,13 +307,47 @@ internal sealed partial class WindowsCommandExecutor
                 operationCancellation.Token).ConfigureAwait(false);
 
             bool serverResumed = existingBytes > 0 && response.StatusCode == System.Net.HttpStatusCode.PartialContent;
+            response.EnsureSuccessStatusCode();
+            if (response.StatusCode == System.Net.HttpStatusCode.PartialContent)
+            {
+                // A 206 response alone proves nothing. A server may ignore Range,
+                // return a different interval, or omit Content-Range entirely.
+                var range = response.Content.Headers.ContentRange;
+                if (!serverResumed || range?.Unit != "bytes" ||
+                    range.From != existingBytes || range.To < existingBytes ||
+                    !range.Length.HasValue || range.To >= range.Length.Value)
+                {
+                    throw new InvalidDataException("Server returned an unexpected partial range; the existing download was left intact.");
+                }
+            }
             if (existingBytes > 0 && !serverResumed)
             {
                 existingBytes = 0;
             }
-            response.EnsureSuccessStatusCode();
+            if (response.Content.Headers.ContentEncoding.Count != 0 && serverResumed)
+            {
+                throw new InvalidDataException("Compressed HTTP responses cannot safely resume byte ranges.");
+            }
+            if (serverResumed && response.Content.Headers.ContentLength is long length &&
+                response.Content.Headers.ContentRange!.To!.Value - existingBytes + 1 != length)
+            {
+                throw new InvalidDataException("Server range length conflicts with the declared response length.");
+            }
 
             long? responseBytes = response.Content.Headers.ContentLength;
+            long? declaredTotalBytes = serverResumed
+                ? response.Content.Headers.ContentRange?.Length
+                : responseBytes;
+            if (declaredTotalBytes > maximumBytes)
+            {
+                throw new InvalidDataException("Download exceeds the 2 GiB WinCare safety limit.");
+            }
+            await PatchStateItemAsync("downloads", id, node =>
+            {
+                node["expectedBytes"] = declaredTotalBytes;
+                node["partialBytes"] = existingBytes;
+                node["updatedAt"] = DateTimeOffset.UtcNow;
+            }, operationCancellation.Token);
             if (responseBytes.HasValue && existingBytes + responseBytes.Value > maximumBytes)
             {
                 throw new InvalidDataException("Download exceeds the 2 GiB WinCare safety limit.");
@@ -255,21 +355,36 @@ internal sealed partial class WindowsCommandExecutor
 
             await using Stream source = await response.Content.ReadAsStreamAsync(operationCancellation.Token).ConfigureAwait(false);
             FileMode mode = serverResumed ? FileMode.Append : FileMode.Create;
-            await using FileStream target = new(
+            long total = existingBytes;
+            await using (FileStream target = new(
                 partial,
                 mode,
                 FileAccess.Write,
                 FileShare.None,
                 128 * 1024,
-                FileOptions.Asynchronous | FileOptions.SequentialScan);
-
+                FileOptions.Asynchronous | FileOptions.SequentialScan))
+            {
             byte[] buffer = new byte[128 * 1024];
-            long total = existingBytes;
             long nextProgressCheckpoint = total + 4L * 1024 * 1024;
+            // A server can stop returning bytes after headers have arrived. Keep
+            // a sliding inactivity deadline so a stalled transfer does not remain
+            // "Running" indefinitely or leak a worker. Fast/slow active transfers
+            // are unaffected as long as bytes continue arriving.
+            using CancellationTokenSource idleTimeout = CancellationTokenSource.CreateLinkedTokenSource(operationCancellation.Token);
+            idleTimeout.CancelAfter(TimeSpan.FromSeconds(90));
             while (true)
             {
-                int read = await source.ReadAsync(buffer, operationCancellation.Token).ConfigureAwait(false);
+                int read;
+                try
+                {
+                    read = await source.ReadAsync(buffer, idleTimeout.Token).ConfigureAwait(false);
+                }
+                catch (OperationCanceledException) when (!operationCancellation.IsCancellationRequested)
+                {
+                    throw new TimeoutException("Download server stopped sending data. The partial file was retained for a later retry.");
+                }
                 if (read == 0) break;
+                idleTimeout.CancelAfter(TimeSpan.FromSeconds(90));
                 total += read;
                 if (total > maximumBytes) throw new InvalidDataException("Download exceeded the 2 GiB WinCare safety limit.");
                 await target.WriteAsync(buffer.AsMemory(0, read), operationCancellation.Token).ConfigureAwait(false);
@@ -285,27 +400,44 @@ internal sealed partial class WindowsCommandExecutor
                 }
             }
             await target.FlushAsync(operationCancellation.Token).ConfigureAwait(false);
+            }
 
-            await using FileStream hashStream = File.OpenRead(partial);
-            string actualHash = Convert.ToHexString(
-                await SHA256.HashDataAsync(hashStream, operationCancellation.Token).ConfigureAwait(false)).ToLowerInvariant();
+            if (responseBytes.HasValue && total - existingBytes != responseBytes.Value)
+                throw new InvalidDataException("Downloaded payload length differs from the HTTP Content-Length.");
+            if (declaredTotalBytes.HasValue && total != declaredTotalBytes.Value)
+                throw new InvalidDataException("Downloaded payload length differs from the declared complete file size.");
+
+            // The exclusive writer must be closed before hashing; the hash reader must
+            // likewise be closed before Windows can rename the published partial file.
+            string actualHash;
+            await using (FileStream hashStream = File.OpenRead(partial))
+            {
+                actualHash = Convert.ToHexString(
+                    await SHA256.HashDataAsync(hashStream, operationCancellation.Token).ConfigureAwait(false)).ToLowerInvariant();
+            }
             if (expectedHash.Length > 0 && !CryptographicOperations.FixedTimeEquals(
                     Encoding.ASCII.GetBytes(actualHash), Encoding.ASCII.GetBytes(expectedHash)))
             {
                 throw new InvalidDataException("Downloaded file SHA-256 does not match the requested digest.");
             }
 
-            File.Move(partial, destination, overwrite: true);
+            // An unrelated file may appear after the job was queued. Never
+            // overwrite it, even if the transfer completed and its digest matches.
+            File.Move(partial, destination, overwrite: false);
             await PatchStateItemAsync("downloads", id, node =>
             {
                 node["state"] = "Completed";
                 node["completedAt"] = DateTimeOffset.UtcNow;
                 node["updatedAt"] = DateTimeOffset.UtcNow;
                 node["bytes"] = total;
+                node["expectedBytes"] = total;
                 node["partialBytes"] = 0;
                 node["sha256Actual"] = actualHash;
             }, cancellationToken).ConfigureAwait(false);
-            return Success("download-start", "Download completed and verified.", new { id, destination, bytes = total, sha256 = actualHash, resumed = serverResumed });
+            string completionText = expectedHash.Length > 0
+                ? "Download completed; SHA-256 matched the expected checksum."
+                : "Download completed; SHA-256 recorded. No source checksum was supplied.";
+            return Success("download-start", completionText, new { id, destination, bytes = total, sha256 = actualHash, resumed = serverResumed });
         }
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
         {
@@ -353,6 +485,7 @@ internal sealed partial class WindowsCommandExecutor
         }
         finally
         {
+            _operations.TryRemove(destinationKey, out _);
             _operations.TryRemove(operationKey, out _);
         }
     }
@@ -412,15 +545,37 @@ internal sealed partial class WindowsCommandExecutor
         bool completeExists = File.Exists(destination);
         bool partialExists = File.Exists(partial);
         long bytes = completeExists ? new FileInfo(destination).Length : partialExists ? new FileInfo(partial).Length : 0;
-        string state = completeExists ? "Completed" : partialExists ? "Suspended" : "Pending";
+        string state = partialExists ? "Suspended" : "Pending";
+        string? actualHash = null;
+        if (completeExists)
+        {
+            // A filename collision does not establish ownership. Only a previously
+            // verified digest can identify a published file as this download.
+            string expectedHash = job.TryGetProperty("sha256", out JsonElement requestedHash)
+                ? requestedHash.GetString() ?? string.Empty : string.Empty;
+            if (expectedHash.Length == 0 && job.TryGetProperty("sha256Actual", out JsonElement publishedHash))
+                expectedHash = publishedHash.GetString() ?? string.Empty;
+            if (expectedHash.Length == 0)
+                return Block("download-reconcile", "A file exists at the destination but there is no verified digest to establish that it belongs to this download.");
+            await using (FileStream published = File.OpenRead(destination))
+            {
+                actualHash = Convert.ToHexString(
+                    await SHA256.HashDataAsync(published, cancellationToken).ConfigureAwait(false)).ToLowerInvariant();
+            }
+            if (!CryptographicOperations.FixedTimeEquals(
+                    Encoding.ASCII.GetBytes(actualHash), Encoding.ASCII.GetBytes(expectedHash)))
+                return Block("download-reconcile", "Destination hash does not match this download. The existing file and queue state were preserved.");
+            state = "Completed";
+        }
         await PatchStateItemAsync("downloads", id, node =>
         {
             node["state"] = state;
             node["bytes"] = completeExists ? bytes : 0;
             node["partialBytes"] = partialExists ? bytes : 0;
+            if (actualHash is not null) node["sha256Actual"] = actualHash;
             node["updatedAt"] = DateTimeOffset.UtcNow;
         }, cancellationToken).ConfigureAwait(false);
-        return Success("download-reconcile", "Download job reconciled with complete and partial filesystem state.", new { id, destination, partial, state, bytes });
+        return Success("download-reconcile", "Download job reconciled with verified filesystem state.", new { id, destination, partial, state, bytes });
     }
 
     private async Task<CommandHandlerOutcome> DownloadCancelAsync(CommandParameters p, CancellationToken cancellationToken)
@@ -440,6 +595,8 @@ internal sealed partial class WindowsCommandExecutor
             return Success("download-cancel", "Download cancellation requested. Partial data will be removed by the active worker.", new { id, state = "CancelRequested" });
         }
         TryDeleteFile(partial);
+        if (File.Exists(partial))
+            return Block("download-cancel", "The partial file could not be deleted; the download remains available for cleanup.");
         await PatchStateItemAsync("downloads", id, node =>
         {
             node["state"] = "Cancelled";
@@ -468,7 +625,10 @@ internal sealed partial class WindowsCommandExecutor
         if (_operations.ContainsKey("download:" + id)) return Block("download-remove", "Stop the active download before removing its record.");
         JsonElement job = await FindStateItemAsync("downloads", id, cancellationToken).ConfigureAwait(false);
         string destination = job.GetProperty("destination").GetString()!;
-        TryDeleteFile(destination + ".wincare.download");
+        string partial = destination + ".wincare.download";
+        TryDeleteFile(partial);
+        if (File.Exists(partial))
+            return Block("download-remove", "The partial file could not be deleted. Resolve the file access issue before removing the job.");
         return await RemoveStateItemAsync("downloads", id, cancellationToken).ConfigureAwait(false);
     }
 

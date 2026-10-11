@@ -231,7 +231,7 @@ internal sealed partial class WindowsCommandExecutor
                 string title = window.TryGetProperty("title", out JsonElement titleElement) ? titleElement.GetString() ?? string.Empty : string.Empty;
                 string path = ExtractPathLikeText(title);
                 if (path.Length == 0 || !Directory.Exists(path)) continue;
-                Process.Start(new ProcessStartInfo("explorer.exe") { UseShellExecute = false, ArgumentList = { path } });
+                using Process opened = StartTrustedExplorer(path);
                 restored++;
             }
         }

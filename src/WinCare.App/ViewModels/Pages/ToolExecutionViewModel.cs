@@ -112,14 +112,20 @@ public sealed class ToolExecutionViewModel : ObservableObject
         set => SetProperty(ref _isExecutionResultOpen, value);
     }
 
-    public bool CanRunSelectedTool => !IsExecuting &&
-        (_selectedTool?.Definition.MigrationStatus is MigrationStatus.Implemented or MigrationStatus.BehaviorVerified);
+    public bool CanRunSelectedTool => !IsExecuting && IsSelectedToolImplemented;
+
+    private bool IsSelectedToolImplemented =>
+        _selectedTool?.Definition.MigrationStatus is MigrationStatus.Implemented or MigrationStatus.BehaviorVerified;
+
+    public bool IsSelectedToolUnavailable => _selectedTool is not null && !IsSelectedToolImplemented;
+    public bool ShowDestructiveWarning => IsDestructiveTool && !IsSelectedToolUnavailable;
 
     public string PrimaryActionLabel
     {
         get
         {
             if (IsExecuting) return IsCancellationRequested ? "Stopping…" : "Running";
+            if (_selectedTool is not null && !IsSelectedToolImplemented) return "Unavailable";
             if (IsSafeTool) return "Run tool";
             if (IsModerateTool) return "Run action";
             return IsReviewApproved ? "Apply destructive change" : "Preview impact";
@@ -200,13 +206,17 @@ public sealed class ToolExecutionViewModel : ObservableObject
         PresetContents = builder.ToString();
     }
 
-    public string ActionFlowTitle => IsSafeTool
+    public string ActionFlowTitle => _selectedTool is not null && !IsSelectedToolImplemented
+        ? "This action is unavailable"
+        : IsSafeTool
         ? (IsMutatingTool ? "Direct, low-risk change" : "Read-only inspection")
         : IsModerateTool
             ? "Routine system maintenance"
             : (IsReviewApproved ? "Reviewed and ready" : "Preview before applying");
 
-    public string ActionFlowDescription => IsSafeTool
+    public string ActionFlowDescription => _selectedTool is not null && !IsSelectedToolImplemented
+        ? "This action cannot run in the current build. Its safety or implementation is not yet verified. No changes will be made."
+        : IsSafeTool
         ? (IsMutatingTool
             ? "WinCare will run this bounded action and record the outcome in Activity."
             : "This tool gathers evidence without changing Windows. The result is recorded in Activity.")
@@ -273,7 +283,7 @@ public sealed class ToolExecutionViewModel : ObservableObject
     public bool IsModerateTool => _selectedTool?.Definition.RiskTier == RiskTier.Moderate;
     public bool IsDestructiveTool => _selectedTool?.Definition.RiskTier == RiskTier.Destructive;
     public bool IsMutatingTool => _selectedTool?.Definition.ReadOnly == false;
-    public bool RequiresApprovalSwitch => IsDestructiveTool;
+    public bool RequiresApprovalSwitch => ShowDestructiveWarning;
     // Approval toggle requires a successful preview before flipping.
     public bool CanApproveReview => IsMutatingTool && !IsExecuting && _hasSuccessfulPreview;
 
@@ -420,7 +430,6 @@ public sealed class ToolExecutionViewModel : ObservableObject
                 _activeCts = null;
             }
 
-            _recordRecent(result.CommandId);
             if (reviewVersion == _reviewVersion && ReferenceEquals(_selectedTool, selected))
             {
                 ApplyExecutionResult(result);
@@ -439,11 +448,26 @@ public sealed class ToolExecutionViewModel : ObservableObject
                     }
                 }
             }
+            // The execution result is authoritative. A failed Recent-history write must
+            // never turn an already-applied operation into an apparent execution failure.
+            try
+            {
+                _recordRecent(result.CommandId);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[ToolExecutionViewModel] Unable to save Recent history: {ex}");
+            }
         }
         catch (OperationCanceledException)
         {
-            // Cancellation is a user action, not a failure: the dispatcher reports cancelled
-            // runs as results, and nothing outside the command boundary needs to fault.
+            // The dispatcher normally returns an explicit Cancelled result. A cancellation
+            // outside that boundary must still be visible, including possible side effects.
+            if (reviewVersion == _reviewVersion && ReferenceEquals(_selectedTool, selected))
+                SetExecutionFailure(CommandResultStatus.Cancelled, "command.cancelled_state_unknown",
+                    apply
+                        ? "Cancellation was requested while a change was running. Some changes may have occurred; verify the affected system state before retrying."
+                        : "The preview was cancelled; no changes were requested.");
         }
         catch (Exception ex)
         {
@@ -451,8 +475,11 @@ public sealed class ToolExecutionViewModel : ObservableObject
             // faults into results, but anything outside it must not escape to the
             // unhandled-exception handler and terminate the process.
             System.Diagnostics.Debug.WriteLine($"[ToolExecutionViewModel] Execution failed: {ex}");
-            SetExecutionFailure(CommandResultStatus.Failed, "command.execution_failed",
-                "This tool couldn't finish. Nothing was changed. Try again, and check Activity if it keeps happening.");
+            if (reviewVersion == _reviewVersion && ReferenceEquals(_selectedTool, selected))
+                SetExecutionFailure(CommandResultStatus.Failed, "command.execution_failed_state_unknown",
+                    apply
+                        ? "This action could not report a final result. Changes may have been applied; inspect Activity and verify the system state before retrying."
+                        : "The preview could not finish. No changes were requested; check Activity before retrying.");
         }
         finally
         {
@@ -660,12 +687,12 @@ public sealed class ToolExecutionViewModel : ObservableObject
     {
         _packageInventoryText = string.Empty;
         _executionStatus = status;
-        _executionMessage = message;
+        _executionMessage = SafeResultPresentation.SanitizeText(message);
         _executionResultText = JsonSerializer.Serialize(new
         {
             status,
             code,
-            message,
+            message = _executionMessage,
         }, ResultJsonOptions);
         IsExecutionResultOpen = true;
         NotifyExecutionResultChanged();
@@ -674,9 +701,10 @@ public sealed class ToolExecutionViewModel : ObservableObject
     private void ApplyExecutionResult(CommandResult result)
     {
         _isParameterError = false;
-        _packageInventoryText = PackageInventoryPresentation.Format(result.CommandId, result.Data);
+        _packageInventoryText = SafeResultPresentation.SanitizeText(
+            PackageInventoryPresentation.Format(result.CommandId, result.Data));
         _executionStatus = result.Status;
-        _executionMessage = result.Message;
+        _executionMessage = SafeResultPresentation.SanitizeText(result.Message);
         try
         {
             _executionResultText = JsonSerializer.Serialize(
@@ -686,12 +714,12 @@ public sealed class ToolExecutionViewModel : ObservableObject
                     correlationId = result.CorrelationId,
                     status = result.Status,
                     code = result.Code,
-                    message = result.Message,
+                    message = _executionMessage,
                     startedAt = result.StartedAt,
                     completedAt = result.CompletedAt,
                     durationMilliseconds = result.Duration.TotalMilliseconds,
                     undoAvailable = result.UndoAvailable,
-                    data = result.Data,
+                    data = SafeResultPresentation.SanitizeData(result.Data),
                 },
                 ResultJsonOptions);
         }
@@ -751,6 +779,8 @@ public sealed class ToolExecutionViewModel : ObservableObject
         OnPropertyChanged(nameof(IsSafeTool));
         OnPropertyChanged(nameof(IsModerateTool));
         OnPropertyChanged(nameof(IsDestructiveTool));
+        OnPropertyChanged(nameof(IsSelectedToolUnavailable));
+        OnPropertyChanged(nameof(ShowDestructiveWarning));
         OnPropertyChanged(nameof(RequiresApprovalSwitch));
         OnPropertyChanged(nameof(CanApproveReview));
         OnPropertyChanged(nameof(ActionFlowTitle));

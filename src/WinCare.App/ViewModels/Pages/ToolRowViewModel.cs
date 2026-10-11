@@ -59,13 +59,19 @@ public sealed class ToolRowViewModel : ObservableObject
         set => SetProperty(ref _isCompact, value);
     }
 
+    public bool IsAvailable => Definition.MigrationStatus is MigrationStatus.Implemented or MigrationStatus.BehaviorVerified;
+
     public string RiskPillLabel => Definition.ReadOnly ? "Read-only" : Risk;
 
-    public string StatusPillLabel => MigrationState switch
+    // Show availability first: a suspended destructive command is not an available action.
+    // Its full risk tier remains visible in inspector metadata and screen-reader labels.
+    public string ImpactPillLabel => IsAvailable ? RiskPillLabel : "Unavailable";
+
+    public string StatusPillLabel => Definition.MigrationStatus switch
     {
-        "Behavior verified" => "Verified",
-        "Implemented" => "Ready",
-        _ => "Not ready",
+        MigrationStatus.BehaviorVerified => "Verified",
+        MigrationStatus.Implemented => "Available",
+        _ => "Unavailable",
     };
 
     public string StatusPillBackgroundResourceKey
@@ -105,7 +111,7 @@ public sealed class ToolRowViewModel : ObservableObject
     /// <summary>
     /// Concise accessible name for the selectable row (title, area, and product-facing safety tier).
     /// </summary>
-    public string ToolAccessibleName => Definition.ReadOnly
-        ? $"{Title}, {Definition.Area}, {Risk} tier, read-only"
-        : $"{Title}, {Definition.Area}, {Risk} tier";
+    public string ToolAccessibleName => $"{Title}, {Definition.Area}, {Risk} tier"
+        + (Definition.ReadOnly ? ", read-only" : string.Empty)
+        + (IsAvailable ? string.Empty : ", unavailable in this build");
 }

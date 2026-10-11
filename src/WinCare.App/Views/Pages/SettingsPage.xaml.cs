@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using Windows.ApplicationModel.DataTransfer;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Navigation;
@@ -58,4 +59,35 @@ public sealed partial class SettingsPage : Page
             FolderErrorInfoBar.IsOpen = true;
         }
     }
+    private void CopyDataFolder_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var contents = new DataPackage();
+            contents.SetText(ViewModel.DataDirectory);
+            Clipboard.SetContent(contents);
+            FolderErrorInfoBar.IsOpen = false;
+            CopiedPathInfoBar.IsOpen = true;
+        }
+        catch (System.Runtime.InteropServices.COMException)
+        {
+            CopiedPathInfoBar.IsOpen = false;
+            FolderErrorInfoBar.Message = "The clipboard is busy. Select the folder path above to copy it manually.";
+            FolderErrorInfoBar.IsOpen = true;
+        }
+    }
+
+    private void Page_SizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        bool compact = e.NewSize.Width < 680;
+        SettingsLayout.Padding = compact ? new Thickness(16,18,16,24) : new Thickness(32,28,32,32);
+        Grid.SetRow(ThemeSelector, compact ? 1 : 0);
+        Grid.SetColumn(ThemeSelector, compact ? 0 : 1);
+        Grid.SetRow(WindowPlacementSwitch, compact ? 1 : 0);
+        Grid.SetColumn(WindowPlacementSwitch, compact ? 0 : 1);
+        ThemeSelector.HorizontalAlignment = compact ? HorizontalAlignment.Left : HorizontalAlignment.Right;
+        WindowPlacementSwitch.HorizontalAlignment = compact ? HorizontalAlignment.Left : HorizontalAlignment.Right;
+    }
+
+
 }

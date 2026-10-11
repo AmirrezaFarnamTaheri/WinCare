@@ -8,6 +8,57 @@ namespace WinCare.Application.Tests;
 public sealed class ToolExecutionViewModelTests
 {
     [Fact]
+    public void UnavailableToolExplainsWhyItCannotExecute()
+    {
+        CommandDefinition definition = WinCare.CommandCatalog.CommandCatalog.Find("storage-dedup-hardlink")!;
+        var vm = new ToolExecutionViewModel(new CommandDispatcher([definition], []), _ => { });
+        vm.SelectTool(new ToolRowViewModel(definition));
+        Assert.False(vm.CanRunSelectedTool);
+        Assert.False(vm.ExecuteSelectedToolCommand.CanExecute(null));
+        Assert.Equal("Unavailable", vm.PrimaryActionLabel);
+        Assert.Equal("This action is unavailable", vm.ActionFlowTitle);
+        Assert.Contains("No changes will be made", vm.ActionFlowDescription);
+    }
+
+    [Fact]
+    public void SuspendedToolIsMarkedUnavailableInListAndCannotAskForDestructiveApproval()
+    {
+        CommandDefinition definition = WinCare.CommandCatalog.CommandCatalog.Find("storage-dedup-hardlink")!;
+        var row = new ToolRowViewModel(definition);
+        Assert.False(row.IsAvailable);
+        Assert.Equal("Unavailable", row.ImpactPillLabel);
+        Assert.Equal("Unavailable", row.StatusPillLabel);
+        Assert.Contains("unavailable", row.ToolAccessibleName, StringComparison.OrdinalIgnoreCase);
+
+        var vm = new ToolExecutionViewModel(new CommandDispatcher([definition], []), _ => { });
+        vm.SelectTool(row);
+        Assert.True(vm.IsSelectedToolUnavailable);
+        Assert.False(vm.ShowDestructiveWarning);
+        Assert.False(vm.RequiresApprovalSwitch);
+        Assert.False(vm.CanApproveReview);
+    }
+
+    [Fact]
+    public async Task RecentHistoryPersistenceFailureNeverErasesSuccessfulExecution()
+    {
+        var definition = new CommandDefinition("safe-clean", "Safe Clean", "Safe Clean", "Area", "Section",
+            CommandRisk.Low, false, AdministratorAccess.No, RestartExpectation.No,
+            "test", MigrationStatus.Implemented, ["safe"], RiskTier.Safe);
+        var handler = new DirectHandler(definition.Id);
+        var vm = new ToolExecutionViewModel(
+            new CommandDispatcher([definition], [handler]),
+            _ => throw new IOException("Simulated history storage failure"));
+        vm.SelectTool(new ToolRowViewModel(definition));
+
+        await vm.ExecuteSelectedToolCommand.ExecuteAsync(null);
+
+        Assert.Equal(1, handler.CallCount);
+        Assert.True(handler.LastWasApply);
+        Assert.True(vm.IsExecutionSuccess);
+        Assert.Equal("Executed directly.", vm.ExecutionMessage);
+    }
+
+    [Fact]
     public async Task Cancellation_stays_pending_until_the_handler_finishes()
     {
         var definition = new CommandDefinition("test", "Test", "Test", "Test", "Test",

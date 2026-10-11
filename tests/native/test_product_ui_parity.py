@@ -55,7 +55,7 @@ class ProductUiParityTests(unittest.TestCase):
             self.assertNotIn(stale_owner, view_model)
         self.assertIn("Home never runs system commands", view_model)
         self.assertEqual(1, xaml.count('Content="Open checkup"'))
-        self.assertIn('Text="Common care"', xaml)
+        self.assertIn('Text="Quick actions"', xaml)
         self.assertIn("PageNavigation.NavigateToSection", code_behind)
         self.assertIn("CheckupCoverageText", view_model)
         self.assertIn("CheckupTimestamp", view_model)
@@ -103,6 +103,50 @@ class ProductUiParityTests(unittest.TestCase):
         self.assertIn("IsReadOnly: match.ReadOnly", translator)
         self.assertIn("AccessRequirement: match.AdministratorAccess", translator)
 
+    def test_troubleshoot_is_an_issue_first_surface_without_fake_assistant_chat(self) -> None:
+        ui = self.read("src/WinCare.App/Views/Pages/AiDoctorPage.xaml")
+        vm = self.read("src/WinCare.App/ViewModels/Pages/AiDoctorPageViewModel.cs")
+        code = self.read("src/WinCare.App/Views/Pages/AiDoctorPage.xaml.cs")
+        for title in ("Storage is full", "Computer is slow", "Network problems"):
+            self.assertIn(f'Content="{title}"', ui)
+        self.assertIn('Click="QuickIssue_Click"', ui)
+        self.assertIn("PageNavigation.OpenTool", code)
+        self.assertIn('MaxLength="500"', ui)
+        self.assertIn("public bool IsEmpty => !HasResults && !IsAnalyzing", vm)
+        self.assertNotIn("I am the Active Troubleshooter", vm)
+        self.assertNotIn("optimal fixes without defensive friction", vm)
+
+    def test_troubleshoot_discards_stale_cancellation_completions(self) -> None:
+        vm = self.read("src/WinCare.App/ViewModels/Pages/AiDoctorPageViewModel.cs")
+        self.assertIn("StopActiveAnalysis();", vm)
+        self.assertIn("++_requestVersion;", vm)
+        self.assertIn("ReferenceEquals(_activeCts, linkedCts)", vm)
+        self.assertIn("if (version != _requestVersion) return;", vm)
+        self.assertIn("linkedCts.Token.ThrowIfCancellationRequested();", vm)
+
+    def test_troubleshoot_does_not_keep_a_problem_transcript(self) -> None:
+        vm = self.read("src/WinCare.App/ViewModels/Pages/AiDoctorPageViewModel.cs")
+        ui = self.read("src/WinCare.App/Views/Pages/AiDoctorPage.xaml")
+        code = self.read("src/WinCare.App/Views/Pages/AiDoctorPage.xaml.cs")
+        self.assertIn("ObservableCollection<TroubleshootResult> Results", vm)
+        self.assertIn("Results.Clear();", vm)
+        self.assertIn("int version = ++_requestVersion;", vm)
+        self.assertNotIn("DoctorChatMessage", vm)
+        self.assertNotIn('new TroubleshootResult("Problem", prompt', vm)
+        self.assertIn("public void ClearSession()", vm)
+        self.assertIn("ViewModel.ClearSession();", code)
+        self.assertIn('Content="Cancel check"', ui)
+        self.assertIn('ItemsSource="{x:Bind ViewModel.Results, Mode=OneWay}"', ui)
+
+    def test_memory_widget_never_runs_native_mutation_directly(self) -> None:
+        code = self.read("src/WinCare.App/Controls/MemoryTopologyAtlas.xaml.cs")
+        ui = self.read("src/WinCare.App/Controls/MemoryTopologyAtlas.xaml")
+        self.assertNotIn("CompactSystemMemoryAsync", code)
+        self.assertIn('PageNavigation.OpenTool(this, "perf-standby-purge"', code)
+        self.assertNotIn('Text="Live telemetry"', ui)
+        self.assertIn('Text="Review memory cleanup"', ui)
+        self.assertIn('Memory reading unavailable', code)
+
     def test_care_rows_open_the_power_tools_inspector(self) -> None:
         control = self.read("src/WinCare.App/Controls/CareToolList.xaml.cs")
         xaml = self.read("src/WinCare.App/Controls/CareToolList.xaml")
@@ -112,7 +156,8 @@ class ProductUiParityTests(unittest.TestCase):
         self.assertIn("CommandParameters is JsonElement", control)
         # The care list points rows at the shared inspector without naming the
         # Power tools surface, so the copy stays accurate wherever the control is reused.
-        self.assertIn("run it in the inspector", xaml)
+        self.assertIn("Choose a task to see what it does", xaml)
+        self.assertIn("PageNavigation.OpenTool", control)
         self.assertNotIn("Power tools", xaml)
 
     def test_power_tools_uses_named_controls_and_product_safety_tiers(self) -> None:
@@ -121,7 +166,7 @@ class ProductUiParityTests(unittest.TestCase):
         view_model = self.read("src/WinCare.App/ViewModels/Pages/AllToolsPageViewModel.cs")
         row = self.read("src/WinCare.App/ViewModels/Pages/ToolRowViewModel.cs")
 
-        for name in ("AreaFilter", "SectionFilter", "RiskFilter", "ReadOnlyFilter", "ResultCountText", "ParameterExpander"):
+        for name in ("AreaFilter", "SectionFilter", "RiskFilter", "ReadOnlyFilter", "AvailableOnlyFilter", "ResultCountText", "ParameterExpander"):
             self.assertIn(f'x:Name="{name}"', xaml)
         self.assertIn('AutomationProperties.AutomationId="ExecuteSelectedTool"', xaml)
         self.assertIn('AutomationProperties.AutomationId="CommandResultDetails"', xaml)
@@ -164,7 +209,8 @@ class ProductUiParityTests(unittest.TestCase):
 
         self.assertIn("HasSeenFirstRunTour", preferences)
         self.assertIn("MarkFirstRunTourSeen", preferences)
-        self.assertIn("!AppPreferences.HasSeenFirstRunTour", shell)
+        # Starting WinCare must not be interrupted by a modal walkthrough.
+        self.assertNotIn("!AppPreferences.HasSeenFirstRunTour", shell)
         self.assertIn("new FirstRunTourDialog", shell)
         self.assertIn('Content="Take the tour"', help_xaml)
         self.assertIn("PageNavigation.ShowTourAsync", help_code)
@@ -321,6 +367,29 @@ class ProductUiParityTests(unittest.TestCase):
         self.assertIn("Home's hero/evidence composition stacks below 820 DIP", design)
         self.assertIn("Home's hero/evidence composition stacks below 820 DIP", ux_contract)
         self.assertNotIn("Home channels stack below 600 DIP", ux_contract)
+
+
+    def test_home_favorites_are_catalog_backed_links_not_fake_actions(self) -> None:
+        home = self.read("src/WinCare.App/Views/Pages/HomePage.xaml")
+        code = self.read("src/WinCare.App/Views/Pages/HomePage.xaml.cs")
+        power = self.read("src/WinCare.App/Views/Pages/AllToolsPage.xaml.cs")
+        self.assertIn('ItemsSource="{x:Bind FavoriteTools, Mode=OneWay}"', home)
+        self.assertIn("AppPreferences.FavoriteCommandIds", code)
+        self.assertIn("AppRuntime.Current.ToolCatalog.All", code)
+        self.assertIn("PageNavigation.OpenTool(this, selected.Id", code)
+        self.assertIn('new SectionNavigationRequest("Favorites")', code)
+        self.assertIn("e.Parameter is SectionNavigationRequest section", power)
+        self.assertNotIn("AppRuntime.Current.Dispatcher.ExecuteAsync(", code)
+
+    def test_download_search_uses_redacted_visible_file_and_host_fields(self) -> None:
+        page = self.read("src/WinCare.App/Views/Pages/DownloadsPage.xaml")
+        view_model = self.read("src/WinCare.App/ViewModels/Pages/DownloadsPageViewModel.cs")
+        projection = self.read("src/WinCare.Application/Downloads/DownloadJobProjection.cs")
+        self.assertIn('x:Name="DownloadSearchInput"', page)
+        self.assertIn("job.Name.Contains(query", projection)
+        self.assertIn("job.Host.Contains(query", projection)
+        self.assertNotIn("job.Url.Contains(query", projection)
+        self.assertIn("DownloadViewFilters.Apply(Jobs, _filter, _searchText)", view_model)
 
 
 if __name__ == "__main__":

@@ -87,10 +87,20 @@ public sealed class ToolCatalogServiceTests
         string[] labels = NavigationCatalog.Items.Select(item => item.Label).ToArray();
 
         Assert.Equal(
-            ["Home", "Checkup", "System care", "Security", "Repair & recovery", "Power tools", "Activity", "Extensions", "Active Troubleshooter", "Settings", "Help", "About WinCare"],
+            ["Home", "Checkup", "System care", "Security", "Repair & recovery", "Power tools", "Activity", "Downloads", "Files & storage", "Processes", "Extensions", "Troubleshoot", "Settings", "Help", "About WinCare"],
             labels);
         Assert.Equal(["Tools", "Categories", "Favorites", "Recent", "Care plans"],
             NavigationCatalog.Items.Single(item => item.Id == "all-tools").Tabs);
+        // Navigation IDs and UI automation IDs remain unique so routes and
+        // accessibility targets do not silently collide as workspaces expand.
+        Assert.Equal(NavigationCatalog.Items.Count,
+            NavigationCatalog.Items.Select(item => item.Id).Distinct(StringComparer.Ordinal).Count());
+        Assert.Equal(NavigationCatalog.Items.Count,
+            NavigationCatalog.Items.Select(item => item.AutomationId).Distinct(StringComparer.Ordinal).Count());
+        Assert.Equal("Files & storage",
+            NavigationCatalog.Items.Single(item => item.Id == "storage-browser").Label);
+        Assert.Equal("Processes",
+            NavigationCatalog.Items.Single(item => item.Id == "processes").Label);
         Assert.True(NavigationCatalog.Items.Single(item => item.Id == "about").IsHidden);
     }
 
