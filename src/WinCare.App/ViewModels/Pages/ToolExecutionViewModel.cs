@@ -430,7 +430,6 @@ public sealed class ToolExecutionViewModel : ObservableObject
                 _activeCts = null;
             }
 
-            _recordRecent(result.CommandId);
             if (reviewVersion == _reviewVersion && ReferenceEquals(_selectedTool, selected))
             {
                 ApplyExecutionResult(result);
@@ -449,11 +448,26 @@ public sealed class ToolExecutionViewModel : ObservableObject
                     }
                 }
             }
+            // The execution result is authoritative. A failed Recent-history write must
+            // never turn an already-applied operation into an apparent execution failure.
+            try
+            {
+                _recordRecent(result.CommandId);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[ToolExecutionViewModel] Unable to save Recent history: {ex}");
+            }
         }
         catch (OperationCanceledException)
         {
-            // Cancellation is a user action, not a failure: the dispatcher reports cancelled
-            // runs as results, and nothing outside the command boundary needs to fault.
+            // The dispatcher normally returns an explicit Cancelled result. A cancellation
+            // outside that boundary must still be visible, including possible side effects.
+            if (reviewVersion == _reviewVersion && ReferenceEquals(_selectedTool, selected))
+                SetExecutionFailure(CommandResultStatus.Cancelled, "command.cancelled_state_unknown",
+                    apply
+                        ? "Cancellation was requested while a change was running. Some changes may have occurred; verify the affected system state before retrying."
+                        : "The preview was cancelled; no changes were requested.");
         }
         catch (Exception ex)
         {
@@ -461,8 +475,11 @@ public sealed class ToolExecutionViewModel : ObservableObject
             // faults into results, but anything outside it must not escape to the
             // unhandled-exception handler and terminate the process.
             System.Diagnostics.Debug.WriteLine($"[ToolExecutionViewModel] Execution failed: {ex}");
-            SetExecutionFailure(CommandResultStatus.Failed, "command.execution_failed",
-                "This tool couldn't finish. Nothing was changed. Try again, and check Activity if it keeps happening.");
+            if (reviewVersion == _reviewVersion && ReferenceEquals(_selectedTool, selected))
+                SetExecutionFailure(CommandResultStatus.Failed, "command.execution_failed_state_unknown",
+                    apply
+                        ? "This action could not report a final result. Changes may have been applied; inspect Activity and verify the system state before retrying."
+                        : "The preview could not finish. No changes were requested; check Activity before retrying.");
         }
         finally
         {

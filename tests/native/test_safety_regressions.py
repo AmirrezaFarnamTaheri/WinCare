@@ -115,6 +115,12 @@ class SafetyRegressionTests(unittest.TestCase):
         self.assertNotIn('CommandHandlerOutcome.Success("Application residuals successfully purged.")', executor)
         self.assertNotIn('CommandHandlerOutcome.Success("Startup applications optimized successfully.")', executor)
 
+    def test_mutation_execution_unknown_state_is_not_reported_as_untouched(self) -> None:
+        view_model = self.read("src/WinCare.App/ViewModels/Pages/ToolExecutionViewModel.cs")
+        self.assertNotIn("Nothing was changed. Try again", view_model)
+        self.assertIn("Changes may have been applied; inspect Activity", view_model)
+        self.assertIn("A failed Recent-history write must", view_model)
+
     def test_power_tools_responsive_filters_keep_search_usable(self) -> None:
         layout = self.read("src/WinCare.App/Views/Pages/AllToolsPage.xaml.cs")
         xaml = self.read("src/WinCare.App/Views/Pages/AllToolsPage.xaml")

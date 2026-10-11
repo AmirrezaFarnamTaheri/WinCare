@@ -39,6 +39,26 @@ public sealed class ToolExecutionViewModelTests
     }
 
     [Fact]
+    public async Task RecentHistoryPersistenceFailureNeverErasesSuccessfulExecution()
+    {
+        var definition = new CommandDefinition("safe-clean", "Safe Clean", "Safe Clean", "Area", "Section",
+            CommandRisk.Low, false, AdministratorAccess.No, RestartExpectation.No,
+            "test", MigrationStatus.Implemented, ["safe"], RiskTier.Safe);
+        var handler = new DirectHandler(definition.Id);
+        var vm = new ToolExecutionViewModel(
+            new CommandDispatcher([definition], [handler]),
+            _ => throw new IOException("Simulated history storage failure"));
+        vm.SelectTool(new ToolRowViewModel(definition));
+
+        await vm.ExecuteSelectedToolCommand.ExecuteAsync(null);
+
+        Assert.Equal(1, handler.CallCount);
+        Assert.True(handler.LastWasApply);
+        Assert.True(vm.IsExecutionSuccess);
+        Assert.Equal("Executed directly.", vm.ExecutionMessage);
+    }
+
+    [Fact]
     public async Task Cancellation_stays_pending_until_the_handler_finishes()
     {
         var definition = new CommandDefinition("test", "Test", "Test", "Test", "Test",
