@@ -34,8 +34,11 @@ namespace WinCare.Application.Diagnostics
             if (string.IsNullOrWhiteSpace(prompt))
                 throw new ArgumentException("Describe the problem first.", nameof(prompt));
 
+            cancellationToken.ThrowIfCancellationRequested();
             var intent = await _inferenceEngine.PredictIntentAsync(prompt, cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
             var evidence = await _evidenceCollector.CollectEvidenceAsync(intent, cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
             var findings = new List<DiagnosticFinding>();
             var proposedSteps = new List<ProposedActionStep>();
             DiagnosticSeverity severity = DiagnosticSeverity.Information;
@@ -144,6 +147,7 @@ namespace WinCare.Application.Diagnostics
                 if (fallback is not null) proposedSteps.Add(CreateStep(fallback));
             }
 
+            cancellationToken.ThrowIfCancellationRequested();
             return new DoctorActionPlan
             {
                 PlanId = "plan_" + Guid.NewGuid().ToString("N")[..8],

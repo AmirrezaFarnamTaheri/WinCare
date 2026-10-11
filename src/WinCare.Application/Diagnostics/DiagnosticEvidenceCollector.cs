@@ -16,6 +16,7 @@ namespace WinCare.Application.Diagnostics
     {
         public Task<IReadOnlyList<TelemetryEvidence>> CollectEvidenceAsync(string intent, CancellationToken cancellationToken = default)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             var evidence = new List<TelemetryEvidence>();
 
             try
@@ -40,7 +41,7 @@ namespace WinCare.Application.Diagnostics
                         break;
                 }
             }
-            catch (Exception ex)
+            catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 evidence.Add(new TelemetryEvidence(
                     HasMeasuredEvidence: false,
@@ -55,6 +56,9 @@ namespace WinCare.Application.Diagnostics
                 ));
             }
 
+            // Probes may not support cancellation mid-call. Never publish their
+            // measurements as a completed check after the caller has cancelled.
+            cancellationToken.ThrowIfCancellationRequested();
             return Task.FromResult<IReadOnlyList<TelemetryEvidence>>(evidence);
         }
 

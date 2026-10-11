@@ -105,6 +105,16 @@ namespace WinCare.Application.Tests
         }
 
         [Fact]
+        public async Task Cancelled_evidence_collection_cannot_produce_a_completed_check()
+        {
+            using var cancellation = new System.Threading.CancellationTokenSource();
+            cancellation.Cancel();
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+                new DiagnosticEvidenceCollector().CollectEvidenceAsync(
+                    DiagnosticIntents.StorageCleanup, cancellation.Token));
+        }
+
+        [Fact]
         public async Task Cancelled_classification_does_not_produce_an_intent()
         {
             using var cancellation = new System.Threading.CancellationTokenSource();

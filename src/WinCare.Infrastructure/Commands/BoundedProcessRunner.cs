@@ -141,7 +141,12 @@ public sealed class BoundedProcessRunner : IBoundedProcessRunner
             {
                 try
                 {
-                    string candidate = Path.Combine(directory.Trim('"'), fileName);
+                    string trustedSearchDirectory = directory.Trim('"');
+                    // Relative entries (including "." and drive-relative paths) resolve
+                    // against the caller's working directory and defeat explicit executable
+                    // lookup. Do not execute their contents under elevated WinCare.
+                    if (!Path.IsPathFullyQualified(trustedSearchDirectory)) continue;
+                    string candidate = Path.Combine(trustedSearchDirectory, fileName);
                     if (File.Exists(candidate))
                     {
                         return Path.GetFullPath(candidate);
@@ -161,11 +166,14 @@ public sealed class BoundedProcessRunner : IBoundedProcessRunner
     {
         try
         {
-            await Task.WhenAll(stdout, stderr).ConfigureAwait(false);
+            // Descendants may retain inherited stdout/stderr handles even after
+            // the original process exits. Never let reader-drain postpone the
+            // cancellation result indefinitely.
+            await Task.WhenAll(stdout, stderr).WaitAsync(TimeSpan.FromSeconds(2)).ConfigureAwait(false);
         }
-        catch (Exception ex) when (ex is OperationCanceledException or ObjectDisposedException or IOException)
+        catch (Exception ex) when (ex is OperationCanceledException or ObjectDisposedException or IOException or TimeoutException)
         {
-            // Cancellation already owns the command outcome; this only observes reader completion/faults.
+            // Process exit, not reader-drain completion, controls the outcome.
         }
     }
 

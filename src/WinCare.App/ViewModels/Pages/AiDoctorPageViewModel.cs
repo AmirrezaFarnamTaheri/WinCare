@@ -33,19 +33,28 @@ public sealed class AiDoctorPageViewModel : INotifyPropertyChanged
     /// </summary>
     public void CancelAnalysis()
     {
-        if (_activeCts is null || !_isAnalyzing) return;
-        _activeCts.Cancel();
+        if (_activeCts is null) return;
+        StopActiveAnalysis();
+        ShowResult(new TroubleshootResult("Check cancelled", "No maintenance action was started."));
     }
 
-    // The page is cached by WinUI, but neither the user's description nor a
-    // running diagnosis is allowed to survive navigation away from Troubleshoot.
+    // Navigating away must not leave this cached page busy while a platform
+    // probe ignores cancellation. Invalidate the request before signalling it.
     public void ClearSession()
     {
-        _requestVersion++;
-        CancelAnalysis();
+        StopActiveAnalysis();
         UserPrompt = string.Empty;
-        CurrentPlan = null;
         ClearResults();
+    }
+
+    private void StopActiveAnalysis()
+    {
+        ++_requestVersion;
+        CancellationTokenSource? pending = _activeCts;
+        _activeCts = null;
+        IsAnalyzing = false;
+        CurrentPlan = null;
+        pending?.Cancel();
     }
 
     private void ClearResults()
@@ -152,8 +161,13 @@ public sealed class AiDoctorPageViewModel : INotifyPropertyChanged
         }
         finally
         {
-            _activeCts = null;
-            IsAnalyzing = false;
+            // The cancelled task may finish after navigation has started a new
+            // check. Only the task that owns the current token may clear the UI.
+            if (ReferenceEquals(_activeCts, linkedCts))
+            {
+                _activeCts = null;
+                IsAnalyzing = false;
+            }
         }
     }
 

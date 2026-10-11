@@ -116,6 +116,13 @@ class ProductUiParityTests(unittest.TestCase):
         self.assertNotIn("I am the Active Troubleshooter", vm)
         self.assertNotIn("optimal fixes without defensive friction", vm)
 
+    def test_troubleshoot_discards_stale_cancellation_completions(self) -> None:
+        vm = self.read("src/WinCare.App/ViewModels/Pages/AiDoctorPageViewModel.cs")
+        self.assertIn("StopActiveAnalysis();", vm)
+        self.assertIn("++_requestVersion;", vm)
+        self.assertIn("ReferenceEquals(_activeCts, linkedCts)", vm)
+        self.assertIn("if (version != _requestVersion) return;", vm)
+
     def test_troubleshoot_does_not_keep_a_problem_transcript(self) -> None:
         vm = self.read("src/WinCare.App/ViewModels/Pages/AiDoctorPageViewModel.cs")
         ui = self.read("src/WinCare.App/Views/Pages/AiDoctorPage.xaml")
