@@ -12,8 +12,8 @@ This directory is the product-facing and engineering reference for WinCare. Star
 
 | Document | Purpose |
 |---|---|
-| [Architecture](Architecture.md) | System boundaries, trust model, lifecycle, native integration, and packaging. |
-| [WinCare 4.0 Specification](Kinetic-Mission-Control-Spec.md) | WinCare 4.0 architecture and system design specification. |
+| [Architecture](Architecture.md) | Current system boundaries, trust model, lifecycle, native integration, and packaging. |
+| [Historical architecture proposal](Kinetic-Mission-Control-Spec.md) | Earlier target design; it includes ideas that were not implemented. For current behavior use the Architecture and User guide documents. |
 | [Memory safety audit](Memory-Safety-Audit.md) | Audit and formal invariants for native core unsafe operations and C-ABI boundaries. |
 | [Windows validation](Windows-Validation.md) | Repeatable Windows runtime and accessibility validation. |
 | [Validation](Validation.md) | Evidence model and verification categories. |
@@ -21,7 +21,7 @@ This directory is the product-facing and engineering reference for WinCare. Star
 
 ## Reference material
 
-- [Interactive Web Showcase](index.html): interactive diagnostic simulation and telemetry visualization.
+- [Interactive Web Showcase](index.html): website preview only; it is not the WinUI application or a runtime test.
 - [Architecture Blueprint](architecture.html): C4 model interactive governance diagram matching canonical architecture.
 - [Terminal REPL Preview](terminal-preview.html): historical terminal exploration concept (WinCare ships as a WinUI 3 desktop shell).
 - [Command parity ledger](migration/command-parity-ledger.md): native catalog accounting and evidence limits.
