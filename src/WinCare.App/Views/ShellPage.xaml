@@ -54,6 +54,9 @@
             <NavigationViewItem Content="Files &amp; storage" Tag="storage-browser" AutomationProperties.AutomationId="NavStorageBrowser" AutomationProperties.Name="Files and storage">
                 <NavigationViewItem.Icon><FontIcon Glyph="&#xE8B7;" /></NavigationViewItem.Icon>
             </NavigationViewItem>
+            <NavigationViewItem Content="Processes" Tag="processes" AutomationProperties.AutomationId="NavProcesses" AutomationProperties.Name="Processes and task monitor">
+                <NavigationViewItem.Icon><FontIcon Glyph="&#xE9CE;" /></NavigationViewItem.Icon>
+            </NavigationViewItem>
         </NavigationView.MenuItems>
 
         <NavigationView.FooterMenuItems>

@@ -14,6 +14,7 @@ public static class NavigationCatalog
         new("activity", "Activity", "NavActivity", ["Running", "Needs attention", "History", "Reports"]),
         new("downloads", "Downloads", "NavDownloads", ["Add download", "Active transfers", "History", "Pause", "Resume"]),
         new("storage-browser", "Files & storage", "NavStorageBrowser", ["Browse folders", "Disk space", "File explorer", "Folder sizes", "Drives"]),
+        new("processes", "Processes", "NavProcesses", ["Task manager", "CPU usage", "Memory usage", "End task", "Running processes"]),
         new("plugin-store", "Extensions", "NavPluginStore", ["Search extensions", "Categories", "Installed extensions", "Online catalog"], IsFooter: true),
         new("ai-doctor", "Troubleshoot", "NavAiDoctor", ["Describe a problem", "Storage problems", "Slow computer", "Network problems", "Suggested steps"], IsFooter: false),
         new("settings", "Settings", "NavSettings", ["App theme", "Remember window", "Local data"], IsFooter: true),
