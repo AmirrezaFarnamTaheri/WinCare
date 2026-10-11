@@ -81,14 +81,15 @@
             </Border>
         </Grid>
 
-        <Grid Grid.Row="3" ColumnDefinitions="*,Auto" ColumnSpacing="12">
+        <Grid x:Name="FiltersGrid" Grid.Row="3" ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto"
+              ColumnSpacing="12" RowSpacing="8">
             <SelectorBar x:Name="JobFilters" SelectionChanged="JobFilters_SelectionChanged"
                          AutomationProperties.Name="Filter downloads">
                 <SelectorBarItem Text="All" AutomationProperties.Name="All downloads" />
                 <SelectorBarItem Text="Active" AutomationProperties.Name="Active downloads" />
                 <SelectorBarItem Text="Finished" AutomationProperties.Name="Finished downloads" />
             </SelectorBar>
-            <Button Grid.Column="1" Content="Refresh" Click="Refresh_Click"
+            <Button x:Name="RefreshListButton" Grid.Column="1" Content="Refresh" Click="Refresh_Click"
                     Style="{StaticResource QuietButtonStyle}"
                     AutomationProperties.Name="Refresh download list" />
         </Grid>
@@ -125,34 +126,36 @@
                                 <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12" RowSpacing="8">
                                     <TextBlock Text="{x:Bind TransferLabel}" Style="{StaticResource RowSecondaryTextStyle}"
                                                VerticalAlignment="Center" />
-                                    <ScrollViewer Grid.Column="1" HorizontalScrollBarVisibility="Auto"
-                                                  VerticalScrollBarVisibility="Disabled">
-                                        <StackPanel Orientation="Horizontal" Spacing="8">
-                                            <Button Content="Start" Click="Start_Click" Tag="{x:Bind}"
-                                                    Style="{StaticResource QuietButtonStyle}"
-                                                    Visibility="{x:Bind local:DownloadsPage.BoolToVisibility(CanStart)}"
-                                                    AutomationProperties.Name="{x:Bind StartAccessibleName}" />
-                                            <Button Content="Pause" Click="Pause_Click" Tag="{x:Bind}"
-                                                    Style="{StaticResource QuietButtonStyle}"
-                                                    Visibility="{x:Bind local:DownloadsPage.BoolToVisibility(CanPause)}"
-                                                    AutomationProperties.Name="{x:Bind PauseAccessibleName}" />
-                                            <Button Content="Resume" Click="Resume_Click" Tag="{x:Bind}"
-                                                    Style="{StaticResource QuietButtonStyle}"
-                                                    Visibility="{x:Bind local:DownloadsPage.BoolToVisibility(CanResume)}"
-                                                    AutomationProperties.Name="{x:Bind ResumeAccessibleName}" />
-                                            <Button Content="Cancel" Click="Cancel_Click" Tag="{x:Bind}"
-                                                    Style="{StaticResource QuietButtonStyle}"
-                                                    Visibility="{x:Bind local:DownloadsPage.BoolToVisibility(CanCancel)}"
-                                                    AutomationProperties.Name="{x:Bind CancelAccessibleName}" />
-                                            <Button Content="Show folder" Click="ShowFolder_Click" Tag="{x:Bind}"
-                                                    Style="{StaticResource QuietButtonStyle}"
-                                                    AutomationProperties.Name="{x:Bind FolderAccessibleName}" />
-                                            <Button Content="Remove record" Click="Remove_Click" Tag="{x:Bind}"
-                                                    Style="{StaticResource QuietButtonStyle}"
-                                                    Visibility="{x:Bind local:DownloadsPage.BoolToVisibility(CanRemove)}"
-                                                    AutomationProperties.Name="{x:Bind RemoveAccessibleName}" />
-                                        </StackPanel>
-                                    </ScrollViewer>
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                                        <Button Content="Start" Click="Start_Click" Tag="{x:Bind}"
+                                                Style="{StaticResource QuietButtonStyle}"
+                                                Visibility="{x:Bind local:DownloadsPage.BoolToVisibility(CanStart)}"
+                                                AutomationProperties.Name="{x:Bind StartAccessibleName}" />
+                                        <Button Content="Pause" Click="Pause_Click" Tag="{x:Bind}"
+                                                Style="{StaticResource QuietButtonStyle}"
+                                                Visibility="{x:Bind local:DownloadsPage.BoolToVisibility(CanPause)}"
+                                                AutomationProperties.Name="{x:Bind PauseAccessibleName}" />
+                                        <Button Content="Resume" Click="Resume_Click" Tag="{x:Bind}"
+                                                Style="{StaticResource QuietButtonStyle}"
+                                                Visibility="{x:Bind local:DownloadsPage.BoolToVisibility(CanResume)}"
+                                                AutomationProperties.Name="{x:Bind ResumeAccessibleName}" />
+                                        <Button Content="More" Style="{StaticResource QuietButtonStyle}"
+                                                AutomationProperties.Name="{x:Bind ActionsAccessibleName}">
+                                            <Button.Flyout>
+                                                <MenuFlyout Placement="BottomEdgeAlignedRight">
+                                                    <MenuFlyoutItem Text="Show folder" Click="ShowFolder_Click" Tag="{x:Bind}"
+                                                                    AutomationProperties.Name="{x:Bind FolderAccessibleName}" />
+                                                    <MenuFlyoutSeparator />
+                                                    <MenuFlyoutItem Text="Cancel transfer" Click="Cancel_Click" Tag="{x:Bind}"
+                                                                    Visibility="{x:Bind local:DownloadsPage.BoolToVisibility(CanCancel)}"
+                                                                    AutomationProperties.Name="{x:Bind CancelAccessibleName}" />
+                                                    <MenuFlyoutItem Text="Remove record" Click="Remove_Click" Tag="{x:Bind}"
+                                                                    Visibility="{x:Bind local:DownloadsPage.BoolToVisibility(CanRemove)}"
+                                                                    AutomationProperties.Name="{x:Bind RemoveAccessibleName}" />
+                                                </MenuFlyout>
+                                            </Button.Flyout>
+                                        </Button>
+                                    </StackPanel>
                                 </Grid>
                             </StackPanel>
                         </Border>

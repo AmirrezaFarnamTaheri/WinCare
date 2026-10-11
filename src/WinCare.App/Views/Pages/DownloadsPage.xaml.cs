@@ -49,7 +49,7 @@ public sealed partial class DownloadsPage : Page
 
     private async Task RunActionAsync(object sender, string action)
     {
-        if (sender is Button { Tag: DownloadJobRow row })
+        if (sender is FrameworkElement { Tag: DownloadJobRow row })
             await ViewModel.RunActionAsync(row, action);
     }
 
@@ -60,7 +60,7 @@ public sealed partial class DownloadsPage : Page
     private async void Remove_Click(object sender, RoutedEventArgs e) => await RunActionAsync(sender, "remove");
     private void ShowFolder_Click(object sender, RoutedEventArgs e)
     {
-        if (sender is Button { Tag: DownloadJobRow row } && !string.IsNullOrWhiteSpace(row.Destination))
+        if (sender is FrameworkElement { Tag: DownloadJobRow row } && !string.IsNullOrWhiteSpace(row.Destination))
             PageNavigation.NavigateTo(this, "storage-browser", row.Destination);
     }
 
@@ -75,6 +75,10 @@ public sealed partial class DownloadsPage : Page
         Grid.SetColumn(AddButton, compact ? 0 : 1);
         Grid.SetRow(AddButton, compact ? 1 : 0);
         AddButton.HorizontalAlignment = compact ? HorizontalAlignment.Stretch : HorizontalAlignment.Right;
+        Grid.SetRow(RefreshListButton, compact ? 1 : 0);
+        Grid.SetColumn(RefreshListButton, compact ? 0 : 1);
+        Grid.SetColumnSpan(RefreshListButton, compact ? 2 : 1);
+        RefreshListButton.HorizontalAlignment = HorizontalAlignment.Right;
         for (int i = 0; i < 3; i++)
         {
             MetricsGrid.ColumnDefinitions[i].Width = compact && i > 0 ? new GridLength(0) : new GridLength(1, GridUnitType.Star);

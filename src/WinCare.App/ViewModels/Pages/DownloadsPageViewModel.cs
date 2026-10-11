@@ -103,8 +103,7 @@ public sealed class DownloadsPageViewModel : ObservableObject
                 return;
             }
             IReadOnlyList<DownloadJobRow> projected = DownloadJobProjection.Project(result.Data, _center.ActiveIds);
-            Jobs.Clear();
-            foreach (DownloadJobRow job in projected) Jobs.Add(job);
+            Synchronize(Jobs, projected);
             ApplyFilter();
             OnPropertyChanged(nameof(TotalText));
             OnPropertyChanged(nameof(InProgressText));
@@ -132,10 +131,39 @@ public sealed class DownloadsPageViewModel : ObservableObject
             "Finished" => Jobs.Where(j => j.State is "Completed" or "Cancelled" or "Failed"),
             _ => Jobs,
         };
-        VisibleJobs.Clear();
-        foreach (DownloadJobRow item in items) VisibleJobs.Add(item);
+        Synchronize(VisibleJobs, items.ToArray());
         OnPropertyChanged(nameof(IsEmpty));
         OnPropertyChanged(nameof(EmptyDescription));
+    }
+
+    // Keep unchanged visual rows in place. Rebuilding the ListView every two seconds
+    // used to reset keyboard focus, scroll position, and screen-reader position.
+    private static void Synchronize(ObservableCollection<DownloadJobRow> current, IReadOnlyList<DownloadJobRow> desired)
+    {
+        for (int i = 0; i < desired.Count; i++)
+        {
+            DownloadJobRow incoming = desired[i];
+            if (i < current.Count && current[i].Id == incoming.Id)
+            {
+                if (current[i] != incoming) current[i] = incoming;
+                continue;
+            }
+            int oldIndex = -1;
+            for (int j = i + 1; j < current.Count; j++)
+            {
+                if (current[j].Id == incoming.Id) { oldIndex = j; break; }
+            }
+            if (oldIndex >= 0)
+            {
+                current.Move(oldIndex, i);
+                if (current[i] != incoming) current[i] = incoming;
+            }
+            else
+            {
+                current.Insert(i, incoming);
+            }
+        }
+        while (current.Count > desired.Count) current.RemoveAt(current.Count - 1);
     }
 
     public async Task AddAsync()
