@@ -115,6 +115,21 @@ class SafetyRegressionTests(unittest.TestCase):
         self.assertNotIn('CommandHandlerOutcome.Success("Application residuals successfully purged.")', executor)
         self.assertNotIn('CommandHandlerOutcome.Success("Startup applications optimized successfully.")', executor)
 
+    def test_explorer_relaunch_runs_after_partial_termination_failure(self) -> None:
+        # Source-level invariant only: never kill the actual desktop shell in CI.
+        source = self.read("src/WinCare.Infrastructure/Commands/WindowsCommandExecutor.Experience.cs")
+        body = source.split("private async Task<CommandHandlerOutcome> LegacyUnsafeAsync", 1)[1]
+        body = body.split("private async Task<CommandHandlerOutcome> SandboxConfigAsync", 1)[0]
+        self.assertIn("bool attemptedTermination = false;", body)
+        self.assertIn("attemptedTermination = true;", body)
+        self.assertIn("completedEnumeration = true;", body)
+        self.assertIn("finally", body)
+        self.assertIn("if (attemptedTermination || completedEnumeration)", body)
+        self.assertIn("using Process restarted = StartTrustedExplorer();", body.split("finally", 1)[1])
+        executor = self.read("src/WinCare.Infrastructure/Commands/WindowsCommandExecutor.cs")
+        self.assertIn('"command.dependency_unavailable_state_unknown"', executor)
+        self.assertNotIn('No host state was changed."', executor)
+
     def test_mutation_execution_unknown_state_is_not_reported_as_untouched(self) -> None:
         view_model = self.read("src/WinCare.App/ViewModels/Pages/ToolExecutionViewModel.cs")
         self.assertNotIn("Nothing was changed. Try again", view_model)

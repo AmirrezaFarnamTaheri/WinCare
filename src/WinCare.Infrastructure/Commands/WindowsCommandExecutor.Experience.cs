@@ -965,33 +965,53 @@ internal sealed partial class WindowsCommandExecutor
             // termination is an uncertain partial result, not a successful restart.
             using Process currentProcess = Process.GetCurrentProcess();
             int sessionId = currentProcess.SessionId;
-            foreach (Process process in Process.GetProcessesByName("explorer"))
+            bool attemptedTermination = false;
+            bool completedEnumeration = false;
+            try
             {
-                using (process)
+                foreach (Process process in Process.GetProcessesByName("explorer"))
                 {
-                    cancellationToken.ThrowIfCancellationRequested();
-                    try
+                    using (process)
                     {
-                        if (process.SessionId != sessionId || process.HasExited) continue;
-                        process.Kill(entireProcessTree: false);
-                        using CancellationTokenSource stopTimeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-                        stopTimeout.CancelAfter(TimeSpan.FromSeconds(5));
+                        cancellationToken.ThrowIfCancellationRequested();
                         try
                         {
-                            await process.WaitForExitAsync(stopTimeout.Token).ConfigureAwait(false);
+                            if (process.SessionId != sessionId || process.HasExited) continue;
+                            // Mark the attempt before Kill: it may take effect even when
+                            // the OS reports a subsequent error or timeout.
+                            attemptedTermination = true;
+                            process.Kill(entireProcessTree: false);
+                            using CancellationTokenSource stopTimeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                            stopTimeout.CancelAfter(TimeSpan.FromSeconds(5));
+                            try
+                            {
+                                await process.WaitForExitAsync(stopTimeout.Token).ConfigureAwait(false);
+                            }
+                            catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+                            {
+                                throw new TimeoutException("Explorer did not exit within five seconds. The shell state is uncertain.");
+                            }
                         }
-                        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+                        catch (InvalidOperationException) when (process.HasExited)
                         {
-                            throw new TimeoutException("Explorer did not exit within five seconds. The shell state is uncertain.");
+                            // Explorer exited between enumeration and termination.
                         }
-                    }
-                    catch (InvalidOperationException) when (process.HasExited)
-                    {
-                        // Explorer exited between enumeration and termination.
                     }
                 }
+                completedEnumeration = true;
             }
-            using Process restarted = StartTrustedExplorer();
+            finally
+            {
+                // Do not leave the interactive desktop without a shell when one
+                // termination succeeded but a later process failed or timed out.
+                // Also preserve the former behavior when no Explorer was running.
+                // Windows Explorer is a per-session singleton: launch must not
+                // depend on whether a timed-out process still appears in the list.
+                if (attemptedTermination || completedEnumeration)
+                {
+                    using Process restarted = StartTrustedExplorer();
+                }
+            }
             return Success("legacy-unsafe", "Explorer restart requested for the current interactive session.", new { action, sessionId });
         }
         return Block("legacy-unsafe", "Requested legacy action is not in the native allowlist. WinCare intentionally refuses arbitrary legacy command execution.");

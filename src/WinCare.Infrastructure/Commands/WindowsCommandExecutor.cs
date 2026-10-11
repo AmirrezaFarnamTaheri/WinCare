@@ -196,9 +196,13 @@ internal sealed partial class WindowsCommandExecutor : ICommandOperationExecutor
         }
         catch (CommandDependencyException ex)
         {
-            return CommandHandlerOutcome.Blocked(
-                "command.dependency_unavailable",
-                $"{ex.Message} No host state was changed.");
+            // A missing dependency discovered after a preceding mutation (for
+            // example, during shell recovery) does not prove the host is untouched.
+            if (definition.ReadOnly)
+                return CommandHandlerOutcome.Blocked("command.dependency_unavailable", ex.Message);
+            return CommandHandlerOutcome.Failed(
+                "command.dependency_unavailable_state_unknown",
+                $"{ex.Message} An earlier step may have changed Windows; verify the affected state before retrying.");
         }
         catch (UnauthorizedAccessException ex)
         {

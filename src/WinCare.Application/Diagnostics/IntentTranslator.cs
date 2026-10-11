@@ -37,7 +37,12 @@ namespace WinCare.Application.Diagnostics
             cancellationToken.ThrowIfCancellationRequested();
             var intent = await _inferenceEngine.PredictIntentAsync(prompt, cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
-            var evidence = await _evidenceCollector.CollectEvidenceAsync(intent, cancellationToken);
+            // Windows storage and network probes can block synchronously. Execute the
+            // read-only collector off the WinUI thread; cancellation is still checked
+            // after completion because cancelling Task.Run does not stop an active probe.
+            var evidence = await Task.Run(
+                () => _evidenceCollector.CollectEvidenceAsync(intent, cancellationToken),
+                cancellationToken).ConfigureAwait(false);
             cancellationToken.ThrowIfCancellationRequested();
             var findings = new List<DiagnosticFinding>();
             var proposedSteps = new List<ProposedActionStep>();

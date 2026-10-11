@@ -122,6 +122,7 @@ class ProductUiParityTests(unittest.TestCase):
         self.assertIn("++_requestVersion;", vm)
         self.assertIn("ReferenceEquals(_activeCts, linkedCts)", vm)
         self.assertIn("if (version != _requestVersion) return;", vm)
+        self.assertIn("linkedCts.Token.ThrowIfCancellationRequested();", vm)
 
     def test_troubleshoot_does_not_keep_a_problem_transcript(self) -> None:
         vm = self.read("src/WinCare.App/ViewModels/Pages/AiDoctorPageViewModel.cs")

@@ -135,6 +135,7 @@ public sealed class AiDoctorPageViewModel : INotifyPropertyChanged
         try
         {
             DoctorActionPlan plan = await _intentTranslator.TranslateAsync(prompt, linkedCts.Token);
+            linkedCts.Token.ThrowIfCancellationRequested();
             if (version != _requestVersion) return; // Page was left while the check was running.
             CurrentPlan = plan;
 
