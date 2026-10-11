@@ -190,6 +190,20 @@ internal sealed partial class WindowsCommandExecutor
         string destination = p.String("Destination").Trim();
         if (destination.Length == 0) destination = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads", fileName);
         destination = Path.GetFullPath(Environment.ExpandEnvironmentVariables(destination));
+        // Two IDs must never share one destination or the same .wincare.download
+        // partial file: separate per-ID operation locks would not prevent corruption.
+        JsonElement existingJobs = await _state.ReadArrayAsync("downloads", cancellationToken).ConfigureAwait(false);
+        if (existingJobs.ValueKind == JsonValueKind.Array &&
+            existingJobs.EnumerateArray().Any(item =>
+                item.TryGetProperty("destination", out JsonElement previous) &&
+                string.Equals(previous.GetString(), destination, StringComparison.OrdinalIgnoreCase)))
+        {
+            return Block("download-create", "A download already targets this file. Choose another file name before adding it.");
+        }
+        if (File.Exists(destination) || File.Exists(destination + ".wincare.download"))
+        {
+            return Block("download-create", "That download name is already used by a file on disk. Choose another name.");
+        }
         DateTimeOffset? dueAt = p.String("DueAt").Length == 0 ? null : p.DateTimeOffset("DueAt", DateTimeOffset.UtcNow);
         JsonElement record = Data(new { id, url = uri.AbsoluteUri, destination, state = "Pending", createdAt = DateTimeOffset.UtcNow, dueAt, sha256 = p.String("Sha256").Trim().ToLowerInvariant() });
         await AppendStateItemAsync("downloads", record, cancellationToken).ConfigureAwait(false);
@@ -241,13 +255,37 @@ internal sealed partial class WindowsCommandExecutor
                 operationCancellation.Token).ConfigureAwait(false);
 
             bool serverResumed = existingBytes > 0 && response.StatusCode == System.Net.HttpStatusCode.PartialContent;
+            response.EnsureSuccessStatusCode();
+            if (response.StatusCode == System.Net.HttpStatusCode.PartialContent)
+            {
+                // A 206 response alone proves nothing. A server may ignore Range,
+                // return a different interval, or omit Content-Range entirely.
+                var range = response.Content.Headers.ContentRange;
+                if (!serverResumed || range?.Unit != "bytes" ||
+                    range.From != existingBytes || range.To < existingBytes)
+                {
+                    throw new InvalidDataException("Server returned an unexpected partial range; the existing download was left intact.");
+                }
+            }
             if (existingBytes > 0 && !serverResumed)
             {
                 existingBytes = 0;
             }
-            response.EnsureSuccessStatusCode();
 
             long? responseBytes = response.Content.Headers.ContentLength;
+            long? declaredTotalBytes = serverResumed
+                ? response.Content.Headers.ContentRange?.Length
+                : responseBytes;
+            if (declaredTotalBytes > maximumBytes)
+            {
+                throw new InvalidDataException("Download exceeds the 2 GiB WinCare safety limit.");
+            }
+            await PatchStateItemAsync("downloads", id, node =>
+            {
+                node["expectedBytes"] = declaredTotalBytes;
+                node["partialBytes"] = existingBytes;
+                node["updatedAt"] = DateTimeOffset.UtcNow;
+            }, operationCancellation.Token);
             if (responseBytes.HasValue && existingBytes + responseBytes.Value > maximumBytes)
             {
                 throw new InvalidDataException("Download exceeds the 2 GiB WinCare safety limit.");
@@ -295,13 +333,16 @@ internal sealed partial class WindowsCommandExecutor
                 throw new InvalidDataException("Downloaded file SHA-256 does not match the requested digest.");
             }
 
-            File.Move(partial, destination, overwrite: true);
+            // An unrelated file may appear after the job was queued. Never
+            // overwrite it, even if the transfer completed and its digest matches.
+            File.Move(partial, destination, overwrite: false);
             await PatchStateItemAsync("downloads", id, node =>
             {
                 node["state"] = "Completed";
                 node["completedAt"] = DateTimeOffset.UtcNow;
                 node["updatedAt"] = DateTimeOffset.UtcNow;
                 node["bytes"] = total;
+                node["expectedBytes"] = total;
                 node["partialBytes"] = 0;
                 node["sha256Actual"] = actualHash;
             }, cancellationToken).ConfigureAwait(false);

@@ -13,6 +13,8 @@ public sealed class DownloadCenterService
 {
     private readonly ICommandDispatcher _dispatcher;
     private readonly ConcurrentDictionary<string, Task<CommandResult>> _active = new(StringComparer.OrdinalIgnoreCase);
+    private readonly object _lifecycle = new();
+    private bool _closing;
 
     public DownloadCenterService(ICommandDispatcher dispatcher) =>
         _dispatcher = dispatcher ?? throw new ArgumentNullException(nameof(dispatcher));
@@ -25,12 +27,18 @@ public sealed class DownloadCenterService
     public Task<CommandResult> AddAsync(string url, CancellationToken cancellationToken = default)
     {
         if (!Uri.TryCreate(url, UriKind.Absolute, out Uri? parsed) ||
-            parsed.Scheme is not ("http" or "https"))
+            parsed.Scheme is not ("http" or "https") ||
+            !string.IsNullOrEmpty(parsed.UserInfo) ||
+            parsed.AbsoluteUri.Length > 2048)
             throw new ArgumentException("Enter an HTTP or HTTPS download link.", nameof(url));
 
         // A user clicking Add explicitly authorizes writing a local queue record, not
         // fetching bytes. The existing dispatcher enforces the catalog admission policy.
-        return DispatchAsync("download-create", new { Url = parsed.AbsoluteUri }, cancellationToken);
+        lock (_lifecycle)
+        {
+            if (_closing) throw new InvalidOperationException("Downloads are closing.");
+            return DispatchAsync("download-create", new { Url = parsed.AbsoluteUri }, cancellationToken);
+        }
     }
 
     public bool TryStart(string id, bool resume, out Task<CommandResult> completion)
@@ -40,8 +48,11 @@ public sealed class DownloadCenterService
         // cannot launch two workers for the same native job ID.
         var promise = new TaskCompletionSource<CommandResult>(TaskCreationOptions.RunContinuationsAsynchronously);
         completion = promise.Task;
-        if (!_active.TryAdd(id, completion)) return false;
-        _ = RunTransferAsync(id, resume, promise);
+        lock (_lifecycle)
+        {
+            if (_closing || !_active.TryAdd(id, completion)) return false;
+            _ = RunTransferAsync(id, resume, promise);
+        }
         return true;
     }
 
@@ -60,7 +71,8 @@ public sealed class DownloadCenterService
         }
         finally
         {
-            _active.TryRemove(new KeyValuePair<string, Task<CommandResult>>(id, promise.Task));
+            ((ICollection<KeyValuePair<string, Task<CommandResult>>>)_active)
+                .Remove(new KeyValuePair<string, Task<CommandResult>>(id, promise.Task));
         }
     }
 
@@ -75,6 +87,7 @@ public sealed class DownloadCenterService
 
     public async Task PauseActiveForShutdownAsync(CancellationToken token)
     {
+        lock (_lifecycle) _closing = true;
         foreach (string id in _active.Keys)
         {
             token.ThrowIfCancellationRequested();

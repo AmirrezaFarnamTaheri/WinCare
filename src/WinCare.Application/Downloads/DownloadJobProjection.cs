@@ -55,6 +55,9 @@ public static class DownloadJobProjection
                 ? address.IdnHost
                 : "Unknown source";
             string state = Text(item, "state");
+            // Invalid entries are retained as unknown status rather than treated
+            // as runnable queue operations.
+            if (state.Length == 0) continue;
             string label = state switch
             {
                 "Pending" => "Queued",

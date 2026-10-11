@@ -66,20 +66,33 @@ public sealed class DownloadCenterTests
         var dispatcher = new RecordingDispatcher();
         var manager = new DownloadCenterService(dispatcher);
         Assert.True(manager.TryStart("one", resume: false, out Task<CommandResult> first));
+        await dispatcher.TransferStarted.Task.WaitAsync(TimeSpan.FromSeconds(5));
         Assert.False(manager.TryStart("one", resume: true, out _));
+        dispatcher.ReleaseTransfer();
         Assert.Equal("download-start", (await first).CommandId);
-        Assert.True(manager.TryStart("one", resume: true, out Task<CommandResult> resumed));
-        Assert.Equal("download-resume", (await resumed).CommandId);
+        // Completion is observable, and the reservation is removed afterwards.
+        await Task.Yield();
         Assert.Equal("download-create", (await manager.AddAsync("https://example.com/f.zip")).CommandId);
         await Assert.ThrowsAsync<ArgumentException>(() => manager.AddAsync("file:///etc/passwd"));
+        await Assert.ThrowsAsync<ArgumentException>(() => manager.AddAsync("https://user:password@example.com/file.zip"));
     }
 
     private sealed class RecordingDispatcher : ICommandDispatcher
     {
-        public Task<CommandResult> ExecuteAsync(CommandRequest request, CommandExecutionOptions options, CancellationToken token) =>
-            Task.FromResult(new CommandResult(request.CommandId, request.CorrelationId,
+        private readonly TaskCompletionSource<bool> _releaseTransfer = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public TaskCompletionSource<bool> TransferStarted { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public void ReleaseTransfer() => _releaseTransfer.TrySetResult(true);
+        public async Task<CommandResult> ExecuteAsync(CommandRequest request, CommandExecutionOptions options, CancellationToken token)
+        {
+            if (request.CommandId is "download-start" or "download-resume")
+            {
+                TransferStarted.TrySetResult(true);
+                await _releaseTransfer.Task.WaitAsync(token);
+            }
+            return new CommandResult(request.CommandId, request.CorrelationId,
                 CommandResultStatus.Succeeded, "test.ok", "Completed", null,
-                DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, false));
+                DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, false);
+        }
 
         public bool RegisterDynamicCommand(CommandDefinition definition, ICommandHandler handler) => false;
         public bool UnregisterDynamicCommand(string commandId) => false;
