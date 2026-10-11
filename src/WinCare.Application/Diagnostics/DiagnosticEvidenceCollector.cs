@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -167,63 +168,76 @@ namespace WinCare.Application.Diagnostics
 
         private static List<TelemetryEvidence> ProbeMemoryUsage()
         {
-            var results = new List<TelemetryEvidence>();
+            if (!OperatingSystem.IsWindows())
+                return [MemoryUnavailable()];
+
             try
             {
-                var gcInfo = GC.GetGCMemoryInfo();
-                var totalBytes = gcInfo.TotalAvailableMemoryBytes;
-                var memoryLoadPercent = gcInfo.MemoryLoadBytes > 0 && totalBytes > 0
-                    ? (double)gcInfo.MemoryLoadBytes / totalBytes * 100.0
-                    : 0.0;
-
-                // GC bookkeeping describes the WinCare process, not machine-wide
-                // memory pressure; when the runtime reports no usable figures, mark unavailable.
-                if (totalBytes <= 0)
+                MemoryStatusEx status = new()
                 {
-                    results.Add(new TelemetryEvidence(
-                        HasMeasuredEvidence: false,
-                        MetricName: "Process Memory (WinCare)",
-                        MeasuredValue: "Memory metrics unavailable from the runtime",
-                        IndicatesPressure: false,
-                        Severity: DiagnosticSeverity.Information,
-                        Source: "WinCare Process Runtime",
-                        CommandId: "wincare.systemcare.ramoptimizer",
-                        Collector: "MemoryDiagnosticsCollector",
-                        CommandVersion: "1.2.0"
-                    ));
-                    return results;
-                }
-
-                var isHighMemory = memoryLoadPercent > WinCare.Domain.Assessment.AssessmentPolicy.MemoryHighLoadPercent;
-
-                results.Add(new TelemetryEvidence(
-                    HasMeasuredEvidence: true,
-                    MetricName: "Process Memory (WinCare)",
-                    MeasuredValue: $"{memoryLoadPercent:F0}% utilized ({gcInfo.MemoryLoadBytes / (1024 * 1024):N0} MB in use by the WinCare process, not the whole machine)",
-                    IndicatesPressure: isHighMemory,
-                    Severity: isHighMemory ? DiagnosticSeverity.Warning : DiagnosticSeverity.Healthy,
-                    Source: "WinCare Process Runtime",
-                    CommandId: "wincare.systemcare.ramoptimizer",
-                    Collector: "MemoryDiagnosticsCollector",
-                    CommandVersion: "1.2.0"
-                ));
+                    Length = (uint)Marshal.SizeOf<MemoryStatusEx>(),
+                };
+                return GlobalMemoryStatusEx(ref status)
+                    ? [MemoryEvidenceFromSnapshot(status.MemoryLoad, status.TotalPhys, status.AvailPhys)]
+                    : [MemoryUnavailable()];
             }
-            catch
+            catch (Exception ex) when (ex is DllNotFoundException or EntryPointNotFoundException or
+                System.ComponentModel.Win32Exception)
             {
-                results.Add(new TelemetryEvidence(
-                    HasMeasuredEvidence: false,
-                    MetricName: "Memory Probe",
-                    MeasuredValue: "Memory load metrics unavailable",
-                    IndicatesPressure: false,
-                    Severity: DiagnosticSeverity.Information,
-                    Source: "WinCare Process Runtime",
-                    CommandId: "wincare.systemcare.ramoptimizer",
-                    Collector: "MemoryDiagnosticsCollector",
-                    CommandVersion: "1.2.0"
-                ));
+                return [MemoryUnavailable()];
             }
-
-            return results;
         }
+
+        internal static TelemetryEvidence MemoryEvidenceFromSnapshot(uint load, ulong totalBytes, ulong availableBytes)
+        {
+            if (totalBytes == 0)
+                return MemoryUnavailable();
+
+            // The Windows memory-status API measures the whole machine, unlike
+            // GC.GetGCMemoryInfo, which only describes the managed runtime.
+            uint usage = Math.Min(100u, load);
+            ulong available = Math.Min(totalBytes, availableBytes);
+            bool pressure = usage >= WinCare.Domain.Assessment.AssessmentPolicy.MemoryHighLoadPercent;
+            return new TelemetryEvidence(
+                HasMeasuredEvidence: true,
+                MetricName: "System memory usage",
+                MeasuredValue: $"{usage}% in use; {available / 1_000_000_000d:F1} GB available of {totalBytes / 1_000_000_000d:F1} GB",
+                IndicatesPressure: pressure,
+                Severity: pressure ? DiagnosticSeverity.Warning : DiagnosticSeverity.Healthy,
+                Source: "Windows physical memory",
+                CommandId: "wincare.systemcare.ramoptimizer",
+                Collector: "MemoryDiagnosticsCollector",
+                CommandVersion: "1.2.0");
+        }
+
+        private static TelemetryEvidence MemoryUnavailable() => new(
+            HasMeasuredEvidence: false,
+            MetricName: "System memory usage",
+            MeasuredValue: "Windows memory readings were unavailable",
+            IndicatesPressure: false,
+            Severity: DiagnosticSeverity.Information,
+            Source: "Windows physical memory",
+            CommandId: "wincare.systemcare.ramoptimizer",
+            Collector: "MemoryDiagnosticsCollector",
+            CommandVersion: "1.2.0");
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct MemoryStatusEx
+        {
+            public uint Length;
+            public uint MemoryLoad;
+            public ulong TotalPhys;
+            public ulong AvailPhys;
+            public ulong TotalPageFile;
+            public ulong AvailPageFile;
+            public ulong TotalVirtual;
+            public ulong AvailVirtual;
+            public ulong AvailExtendedVirtual;
+        }
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool GlobalMemoryStatusEx(ref MemoryStatusEx status);
+
     }
 }

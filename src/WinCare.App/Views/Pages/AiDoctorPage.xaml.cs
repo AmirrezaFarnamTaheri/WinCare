@@ -14,6 +14,8 @@ public sealed partial class AiDoctorPage : Page
     // Kept as a one-line delegation to the shared LayoutVisibility helper so the bool-to-
     // visibility pair has a single implementation; this wrapper exists for the XAML contract.
     public static Visibility BoolToVisibility(bool value) => LayoutVisibility.BoolToVisibility(value);
+    public static Visibility PlanToVisibility(DoctorActionPlan? plan) =>
+        plan is null ? Visibility.Collapsed : Visibility.Visible;
 
     public AiDoctorPageViewModel ViewModel { get; }
 
@@ -75,4 +77,26 @@ public sealed partial class AiDoctorPage : Page
             : JsonSerializer.SerializeToElement(new { });
         PageNavigation.OpenTool(this, step.CommandId, parameters);
     }
+    private void Page_SizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        bool compact = e.NewSize.Width < 720;
+        TroubleshootLayout.Padding = compact ? new Thickness(16,18,16,20) : new Thickness(32,28,32,28);
+        for (int i = 0; i < 3; i++)
+            QuickIssuesGrid.ColumnDefinitions[i].Width = compact
+                ? i == 0 ? new GridLength(1, GridUnitType.Star) : new GridLength(0)
+                : new GridLength(1, GridUnitType.Star);
+        Button[] choices = [StorageIssue, MemoryIssue, NetworkIssue, UpdateIssue, PrivacyIssue];
+        for (int i = 0; i < choices.Length; i++)
+        {
+            Grid.SetRow(choices[i], compact ? i : i / 3);
+            Grid.SetColumn(choices[i], compact ? 0 : i % 3);
+        }
+        Grid.SetRow(FindStepsButton, compact ? 1 : 0);
+        Grid.SetColumn(FindStepsButton, compact ? 0 : 1);
+        Grid.SetColumnSpan(FindStepsButton, compact ? 2 : 1);
+        FindStepsButton.HorizontalAlignment = compact ? HorizontalAlignment.Stretch : HorizontalAlignment.Right;
+        Grid.SetRow(ProblemHint, compact ? 2 : 1);
+    }
+
+
 }

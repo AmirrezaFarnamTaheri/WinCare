@@ -6,9 +6,10 @@
     xmlns:vm="using:WinCare.App.ViewModels.Pages"
     xmlns:diag="using:WinCare.Application.Diagnostics"
     xmlns:controls="using:WinCare.App.Controls"
-    NavigationCacheMode="Required">
+    NavigationCacheMode="Required"
+    SizeChanged="Page_SizeChanged">
 
-    <Grid x:Name="TroubleshootLayout" RowDefinitions="Auto,Auto,*,Auto" RowSpacing="16" Padding="28,28,28,32">
+    <Grid x:Name="TroubleshootLayout" RowDefinitions="Auto,Auto,*,Auto" RowSpacing="16" Padding="32,28,32,28" MaxWidth="1320" HorizontalAlignment="Stretch">
         <controls:PageHeaderControl
             Title="Troubleshoot"
             Description="Find relevant checks and tools for a Windows problem. Nothing is changed on this page." />
@@ -19,22 +20,29 @@
                     <TextBlock Style="{StaticResource SectionHeaderTextStyle}" Text="What seems wrong?" />
                     <TextBlock Style="{StaticResource RowSecondaryTextStyle}" Text="Start with a common issue or describe your own below." />
                 </StackPanel>
-                <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
-                    <StackPanel Orientation="Horizontal" Spacing="10">
-                        <Button Content="Storage is full" Style="{StaticResource QuietButtonStyle}"
-                                Tag="My C drive is almost full" Click="QuickIssue_Click"
-                                IsEnabled="{x:Bind ViewModel.IsAnalyzing, Converter={StaticResource InverseBooleanConverter}, Mode=OneWay}"
-                                AutomationProperties.AutomationId="TroubleshootStorage" AutomationProperties.Name="Check storage problems" />
-                        <Button Content="Computer is slow" Style="{StaticResource QuietButtonStyle}"
-                                Tag="RAM memory usage is high and apps lag" Click="QuickIssue_Click"
-                                IsEnabled="{x:Bind ViewModel.IsAnalyzing, Converter={StaticResource InverseBooleanConverter}, Mode=OneWay}"
-                                AutomationProperties.AutomationId="TroubleshootMemory" AutomationProperties.Name="Check a slow computer" />
-                        <Button Content="Network problems" Style="{StaticResource QuietButtonStyle}"
-                                Tag="Internet is slow or not working" Click="QuickIssue_Click"
-                                IsEnabled="{x:Bind ViewModel.IsAnalyzing, Converter={StaticResource InverseBooleanConverter}, Mode=OneWay}"
-                                AutomationProperties.AutomationId="TroubleshootNetwork" AutomationProperties.Name="Check network problems" />
-                    </StackPanel>
-                </ScrollViewer>
+                <Grid x:Name="QuickIssuesGrid" ColumnDefinitions="*,*,*" ColumnSpacing="10"
+                      RowDefinitions="Auto,Auto,Auto,Auto,Auto" RowSpacing="10">
+                    <Button x:Name="StorageIssue" Content="Storage is full" Style="{StaticResource QuietButtonStyle}"
+                            Tag="My C drive is almost full" Click="QuickIssue_Click" HorizontalAlignment="Stretch"
+                            IsEnabled="{x:Bind ViewModel.IsAnalyzing, Converter={StaticResource InverseBooleanConverter}, Mode=OneWay}"
+                            AutomationProperties.AutomationId="TroubleshootStorage" AutomationProperties.Name="Check storage problems" />
+                    <Button x:Name="MemoryIssue" Grid.Column="1" Content="Computer is slow" Style="{StaticResource QuietButtonStyle}"
+                            Tag="RAM memory usage is high and apps lag" Click="QuickIssue_Click" HorizontalAlignment="Stretch"
+                            IsEnabled="{x:Bind ViewModel.IsAnalyzing, Converter={StaticResource InverseBooleanConverter}, Mode=OneWay}"
+                            AutomationProperties.AutomationId="TroubleshootMemory" AutomationProperties.Name="Check a slow computer" />
+                    <Button x:Name="NetworkIssue" Grid.Column="2" Content="Network problems" Style="{StaticResource QuietButtonStyle}"
+                            Tag="Internet is slow or not working" Click="QuickIssue_Click" HorizontalAlignment="Stretch"
+                            IsEnabled="{x:Bind ViewModel.IsAnalyzing, Converter={StaticResource InverseBooleanConverter}, Mode=OneWay}"
+                            AutomationProperties.AutomationId="TroubleshootNetwork" AutomationProperties.Name="Check network problems" />
+                    <Button x:Name="UpdateIssue" Grid.Row="1" Content="Windows Update" Style="{StaticResource QuietButtonStyle}"
+                            Tag="Windows Update is not working" Click="QuickIssue_Click" HorizontalAlignment="Stretch"
+                            IsEnabled="{x:Bind ViewModel.IsAnalyzing, Converter={StaticResource InverseBooleanConverter}, Mode=OneWay}"
+                            AutomationProperties.Name="Check Windows Update" />
+                    <Button x:Name="PrivacyIssue" Grid.Row="1" Grid.Column="1" Content="Privacy settings" Style="{StaticResource QuietButtonStyle}"
+                            Tag="Review Windows privacy and tracking settings" Click="QuickIssue_Click" HorizontalAlignment="Stretch"
+                            IsEnabled="{x:Bind ViewModel.IsAnalyzing, Converter={StaticResource InverseBooleanConverter}, Mode=OneWay}"
+                            AutomationProperties.Name="Review privacy settings" />
+                </Grid>
             </StackPanel>
         </Border>
 
@@ -65,6 +73,38 @@
                                 <StackPanel Spacing="10">
                                     <TextBlock Text="{x:Bind Heading}" Style="{StaticResource RowTitleTextStyle}" />
                                     <TextBlock Text="{x:Bind Summary}" Style="{StaticResource BodyTextStyle}" TextWrapping="Wrap" />
+                                    <StackPanel Spacing="10" Visibility="{x:Bind local:AiDoctorPage.PlanToVisibility(ActionPlan), Mode=OneWay}">
+                                        <TextBlock Text="What we found" Style="{StaticResource FieldLabelTextStyle}" Margin="0,8,0,0" />
+                                        <ItemsControl ItemsSource="{x:Bind ActionPlan.Findings, Mode=OneTime}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <StackPanel Spacing="3" Margin="0,0,0,8">
+                                                        <TextBlock Text="{Binding Title}" Style="{StaticResource RowTitleTextStyle}" />
+                                                        <TextBlock Text="{Binding Description}" Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap" />
+                                                    </StackPanel>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                        <Expander Header="Windows readings" IsExpanded="False"
+                                                  AutomationProperties.Name="Show Windows readings used for troubleshooting">
+                                            <StackPanel Spacing="8" Padding="2,10,2,8">
+                                                <TextBlock Text="Readings come from this PC. Missing measurements are not treated as normal."
+                                                           Style="{StaticResource FieldHintTextStyle}" />
+                                                <ItemsControl ItemsSource="{x:Bind ActionPlan.MeasuredEvidence, Mode=OneTime}">
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <Grid ColumnDefinitions="*,2*" ColumnSpacing="12" Padding="0,6">
+                                                                <TextBlock Text="{Binding MetricName}" Style="{StaticResource FieldLabelTextStyle}" TextWrapping="Wrap" />
+                                                                <TextBlock Grid.Column="1" Text="{Binding MeasuredValue}"
+                                                                           Style="{StaticResource BodyTextStyle}" TextWrapping="Wrap" />
+                                                            </Grid>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                            </StackPanel>
+                                        </Expander>
+                                        <TextBlock Text="Next steps" Style="{StaticResource FieldLabelTextStyle}" Margin="0,4,0,0" />
+                                    </StackPanel>
                                     <ItemsControl ItemsSource="{x:Bind ActionPlan.ProposedSteps, Mode=OneTime}" Margin="0,4,0,0">
                                         <ItemsControl.ItemTemplate>
                                             <DataTemplate x:DataType="diag:ProposedActionStep">
@@ -92,18 +132,18 @@
             </ScrollViewer>
         </Grid>
 
-        <Grid Grid.Row="3" ColumnDefinitions="*,Auto" ColumnSpacing="12" RowSpacing="6">
+        <Grid x:Name="ProblemEntryGrid" Grid.Row="3" ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="12" RowSpacing="6">
             <TextBox x:Name="ProblemInput" MinHeight="44" MaxLength="500"
                      PlaceholderText="Describe a problem…"
                      Text="{x:Bind ViewModel.UserPrompt, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                      KeyDown="PromptTextBox_KeyDown"
                      IsEnabled="{x:Bind ViewModel.IsAnalyzing, Converter={StaticResource InverseBooleanConverter}, Mode=OneWay}"
                      AutomationProperties.AutomationId="DoctorPrompt" AutomationProperties.Name="Describe a Windows problem" />
-            <Button Grid.Column="1" Content="Find steps" Style="{StaticResource PrimaryActionButtonStyle}"
+            <Button x:Name="FindStepsButton" Grid.Column="1" Content="Find steps" Style="{StaticResource PrimaryActionButtonStyle}"
                     Click="SendButton_Click"
                     IsEnabled="{x:Bind ViewModel.IsAnalyzing, Converter={StaticResource InverseBooleanConverter}, Mode=OneWay}"
                     AutomationProperties.AutomationId="DiagnoseProblem" AutomationProperties.Name="Find troubleshooting steps" />
-            <TextBlock Grid.Row="1" Grid.ColumnSpan="2" Style="{StaticResource FieldHintTextStyle}"
+            <TextBlock x:Name="ProblemHint" Grid.Row="1" Grid.ColumnSpan="2" Style="{StaticResource FieldHintTextStyle}"
                        Text="Checks stay on this PC. Suggested actions open in Power tools so you can review the impact and options before running anything." />
         </Grid>
     </Grid>

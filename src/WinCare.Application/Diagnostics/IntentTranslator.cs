@@ -57,16 +57,16 @@ namespace WinCare.Application.Diagnostics
                 case DiagnosticIntents.StorageCleanup:
                     severity = hasMeasuredPressure ? DiagnosticSeverity.Warning : DiagnosticSeverity.Information;
                     summary = hasMeasuredPressure
-                        ? $"Your system drive is running low on space ({pressureEvidence!.MeasuredValue})."
+                        ? $"A drive is running low on space ({pressureEvidence!.MetricName}: {pressureEvidence.MeasuredValue})."
                         : "This sounds like a storage problem. Start by checking what is using space.";
                     findings.Add(new DiagnosticFinding(
                         "finding.storage.temp",
-                        hasMeasuredPressure ? "System drive is low on space" : "Storage may need cleanup",
+                        hasMeasuredPressure ? "A drive is low on space" : "Storage may need cleanup",
                         hasMeasuredPressure
                             ? $"Windows reports {pressureEvidence!.MeasuredValue}."
                             : "Check temporary files and other common space users before deleting anything.",
                         severity,
-                        "Storage (C:)",
+                        pressureEvidence?.MetricName ?? "Storage",
                         IsVerifiedByTelemetry: hasMeasuredPressure));
                     AddRecommendedSteps(proposedSteps,
                         "cleaner-preview-cards",
