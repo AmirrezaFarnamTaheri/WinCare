@@ -17,3 +17,10 @@ The task-first workspace keeps the native safety/execution model while presentin
 Home's checkup button opens Checkup, never a repair. Recommended tasks deep-link to the matching structured care section. Checkup is read-only and hands findings to care surfaces. Power tools keeps advanced execution details behind the inspector. Troubleshoot preserves catalog read-only/access metadata but never infers Undo; the canonical execution path owns review, approval, execution receipts and recovery claims.
 
 The shell changes presentation without changing route identity. `LayoutVisibility.CompactBreakpointDip` remains the shared 920-DIP page boundary while measured components may use narrower fit breakpoints. Home's hero/evidence composition stacks below 820 DIP. Unknown, empty, pending, failed, partial and successful states remain distinct. A screenshot never substitutes for a live interface.
+
+## Task-first flow refinement
+
+- First run presents Home immediately; the tour is a voluntary Help action.
+- Troubleshoot offers one-click common issue checks or a short free-text description. Its suggestions never bypass Power tools admission, and no fabricated assistant conversation appears on startup.
+- Power tools defaults to available commands, but explicit category and command links expose unavailable entries with clear status. Reset clears all filters and restores the available-only view.
+- Compact Power tools stacks search and taxonomy filters while keeping quick filters and reset accessible.

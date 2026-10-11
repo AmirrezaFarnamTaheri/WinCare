@@ -10,29 +10,14 @@
             <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
             <controls:PageHeaderControl
                 Title="Home"
-                Description="See what needs attention and get where you need to go." />
+                Description="See recent results and choose what to do next." />
 
             <Border Grid.Row="1" Style="{StaticResource DashboardCardStyle}" Background="{ThemeResource HeroBackgroundBrush}">
                 <Grid x:Name="HeroLayout" ColumnSpacing="28" RowSpacing="18">
                     <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                     <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
                     <StackPanel Spacing="12" MaxWidth="760">
-                        <Border Background="{ThemeResource AccentChromeSubtleBrush}"
-                                BorderBrush="{ThemeResource BorderSubtleBrush}"
-                                BorderThickness="1"
-                                CornerRadius="{StaticResource RadiusPill}"
-                                Padding="8,3"
-                                HorizontalAlignment="Left">
-                            <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                                <Ellipse Width="6" Height="6" Fill="{ThemeResource AccentChromeBrush}" VerticalAlignment="Center" />
-                                <TextBlock Text="CHECKUP · READ-ONLY"
-                                           FontFamily="{StaticResource TelemetryFontFamily}"
-                                           FontSize="10"
-                                           FontWeight="SemiBold"
-                                           Foreground="{ThemeResource AccentChromeBrush}"
-                                           VerticalAlignment="Center" />
-                            </StackPanel>
-                        </Border>
+                        <TextBlock Text="YOUR CHECKUP" Style="{StaticResource FieldLabelTextStyle}" />
                         <TextBlock Style="{StaticResource HeroTitleTextStyle}" Text="{x:Bind ViewModel.CheckupTitle, Mode=OneWay}"/>
                         <TextBlock Style="{StaticResource PageDescriptionTextStyle}" Text="{x:Bind ViewModel.CheckupSummary, Mode=OneWay}"/>
                         <StackPanel Orientation="Horizontal" Spacing="10">
@@ -43,7 +28,7 @@
                     <StackPanel x:Name="HeroStats" Grid.Column="2" Spacing="6" MinWidth="170" VerticalAlignment="Center">
                         <TextBlock Style="{StaticResource MetricTextStyle}" Text="{x:Bind ViewModel.CheckupCoverageText, Mode=OneWay}"/>
                         <TextBlock Style="{StaticResource FieldLabelTextStyle}" Text="Checkup coverage"/>
-                        <TextBlock Style="{StaticResource TelemetryTextStyle}" FontSize="10" Text="NO CHANGES TO WINDOWS" Foreground="{ThemeResource TextSecondaryBrush}" Margin="0,2,0,0" />
+                        <TextBlock Style="{StaticResource TelemetryTextStyle}" FontSize="10" Text="Read-only checks" Foreground="{ThemeResource TextSecondaryBrush}" Margin="0,2,0,0" />
                     </StackPanel>
                 </Grid>
             </Border>
@@ -56,9 +41,7 @@
                             <StackPanel Grid.Column="1" Spacing="4">
                                 <StackPanel Orientation="Horizontal" Spacing="8">
                                     <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="Clean up storage"/>
-                                    <Border Background="{ThemeResource AccentChromeSubtleBrush}" Padding="6,1" CornerRadius="{StaticResource RadiusPill}" VerticalAlignment="Center">
-                                        <TextBlock Text="STORAGE" FontFamily="{StaticResource TelemetryFontFamily}" FontSize="9" FontWeight="SemiBold" Foreground="{ThemeResource AccentChromeBrush}" />
-                                    </Border>
+
                                 </StackPanel>
                                 <TextBlock Style="{StaticResource RowSecondaryTextStyle}" Text="Free up space and see what's taking room."/>
                             </StackPanel>
@@ -72,9 +55,7 @@
                             <StackPanel Grid.Column="1" Spacing="4">
                                 <StackPanel Orientation="Horizontal" Spacing="8">
                                     <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="Apps &amp; startup"/>
-                                    <Border Background="{ThemeResource AccentChromeSubtleBrush}" Padding="6,1" CornerRadius="{StaticResource RadiusPill}" VerticalAlignment="Center">
-                                        <TextBlock Text="STARTUP" FontFamily="{StaticResource TelemetryFontFamily}" FontSize="9" FontWeight="SemiBold" Foreground="{ThemeResource AccentChromeBrush}" />
-                                    </Border>
+
                                 </StackPanel>
                                 <TextBlock Style="{StaticResource RowSecondaryTextStyle}" Text="Manage installed apps and what starts with Windows."/>
                             </StackPanel>
@@ -88,9 +69,7 @@
                             <StackPanel Grid.Column="1" Spacing="4">
                                 <StackPanel Orientation="Horizontal" Spacing="8">
                                     <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="Network &amp; updates"/>
-                                    <Border Background="{ThemeResource AccentChromeSubtleBrush}" Padding="6,1" CornerRadius="{StaticResource RadiusPill}" VerticalAlignment="Center">
-                                        <TextBlock Text="NETWORK" FontFamily="{StaticResource TelemetryFontFamily}" FontSize="9" FontWeight="SemiBold" Foreground="{ThemeResource AccentChromeBrush}" />
-                                    </Border>
+
                                 </StackPanel>
                                 <TextBlock Style="{StaticResource RowSecondaryTextStyle}" Text="Check connectivity, DNS, and Windows Update."/>
                             </StackPanel>
@@ -103,8 +82,8 @@
                 <Border Style="{StaticResource DashboardCardStyle}">
                     <StackPanel Spacing="14">
                         <StackPanel Spacing="4">
-                            <TextBlock Style="{StaticResource SectionHeaderTextStyle}" Text="System at a glance"/>
-                            <TextBlock Style="{StaticResource RowSecondaryTextStyle}" Text="The latest result from each Checkup area."/>
+                            <TextBlock Style="{StaticResource SectionHeaderTextStyle}" Text="Latest checkup"/>
+                            <TextBlock Style="{StaticResource RowSecondaryTextStyle}" Text="The last recorded result for each area."/>
                         </StackPanel>
                         <Button Style="{StaticResource StatusRowButtonStyle}" Click="NavCategory_System_Click" HorizontalContentAlignment="Stretch" AutomationProperties.Name="Open system checkup details">
                             <Grid ColumnSpacing="12">
@@ -113,7 +92,7 @@
                                     <Ellipse Width="6" Height="6" Fill="{ThemeResource TextSecondaryBrush}" VerticalAlignment="Center"/>
                                     <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="Windows &amp; hardware"/>
                                 </StackPanel>
-                                <TextBlock Grid.Column="1" Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind ViewModel.SystemStatus, Mode=OneWay}" FontFamily="{StaticResource TelemetryFontFamily}" FontSize="12"/>
+                                <TextBlock Grid.Column="1" Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind ViewModel.SystemStatus, Mode=OneWay}" />
                             </Grid>
                         </Button>
                         <Button Style="{StaticResource StatusRowButtonStyle}" Click="NavCategory_Storage_Click" HorizontalContentAlignment="Stretch" AutomationProperties.Name="Open storage cleanup">
@@ -123,7 +102,7 @@
                                     <Ellipse Width="6" Height="6" Fill="{ThemeResource TextSecondaryBrush}" VerticalAlignment="Center"/>
                                     <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="Storage"/>
                                 </StackPanel>
-                                <TextBlock Grid.Column="1" Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind ViewModel.StorageStatus, Mode=OneWay}" FontFamily="{StaticResource TelemetryFontFamily}" FontSize="12"/>
+                                <TextBlock Grid.Column="1" Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind ViewModel.StorageStatus, Mode=OneWay}" />
                             </Grid>
                         </Button>
                         <Button Style="{StaticResource StatusRowButtonStyle}" Click="NavCategory_Security_Click" HorizontalContentAlignment="Stretch" AutomationProperties.Name="Open security care">
@@ -133,7 +112,7 @@
                                     <Ellipse Width="6" Height="6" Fill="{ThemeResource TextSecondaryBrush}" VerticalAlignment="Center"/>
                                     <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="Security"/>
                                 </StackPanel>
-                                <TextBlock Grid.Column="1" Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind ViewModel.SecurityStatus, Mode=OneWay}" FontFamily="{StaticResource TelemetryFontFamily}" FontSize="12"/>
+                                <TextBlock Grid.Column="1" Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind ViewModel.SecurityStatus, Mode=OneWay}" />
                             </Grid>
                         </Button>
                         <Button Style="{StaticResource StatusRowButtonStyle}" Click="NavCategory_Updates_Click" HorizontalContentAlignment="Stretch" AutomationProperties.Name="Open network and update care">
@@ -143,7 +122,7 @@
                                     <Ellipse Width="6" Height="6" Fill="{ThemeResource TextSecondaryBrush}" VerticalAlignment="Center"/>
                                     <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="Windows Update"/>
                                 </StackPanel>
-                                <TextBlock Grid.Column="1" Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind ViewModel.UpdatesStatus, Mode=OneWay}" FontFamily="{StaticResource TelemetryFontFamily}" FontSize="12"/>
+                                <TextBlock Grid.Column="1" Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind ViewModel.UpdatesStatus, Mode=OneWay}" />
                             </Grid>
                         </Button>
                     </StackPanel>
@@ -157,7 +136,7 @@
                         </Grid>
                         <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="{x:Bind ViewModel.RecentActivityTitle, Mode=OneWay}"/>
                         <TextBlock Style="{StaticResource PageDescriptionTextStyle}" Text="{x:Bind ViewModel.RecentActivitySummary, Mode=OneWay}"/>
-                        <TextBlock Style="{StaticResource RowSecondaryTextStyle}" FontFamily="{StaticResource TelemetryFontFamily}" FontSize="11" Text="{x:Bind ViewModel.ActivityStatus, Mode=OneWay}"/>
+                        <TextBlock Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind ViewModel.ActivityStatus, Mode=OneWay}"/>
                         <Button Click="ViewActivityButton_Click" Style="{StaticResource QuietButtonStyle}" HorizontalAlignment="Left" Content="Open activity" AutomationProperties.Name="Open activity history"/>
                     </StackPanel>
                 </Border>

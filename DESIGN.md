@@ -77,3 +77,11 @@ Activity uses a theme-aware document illustration and a separate empty compositi
 ## Verification
 
 The palette above is not decoration: `verify_visual_tokens.py` pins key presence per theme dictionary, and `verify_pill_contrast.py` plus `verify_palette_contrast.py`/`tests/native/test_visual_contrast.py` enforce WCAG 2.1 AA (≥4.5:1) on the measured literal pairs. Route and chrome-label parity across catalog/XAML/resources is gated by `verify_native_foundation.py` and `tests/native/test_product_ui_parity.py`. Build/source checks do not establish runtime accessibility: follow `docs/Windows-Validation.md` for the maintained Windows interaction, theme, scaling, keyboard, Narrator, packaging, and release-validation procedure. Historical captures remain labeled by build, and generated art never counts as execution evidence.
+
+## 4.0 interface refinement
+
+- Home starts with a read-only checkup and real last-check states. Technical engine labels are not shown as health or readiness claims.
+- Power tools opens with available actions. Users can include unavailable catalog entries when inspecting a specific command, category or search deep link; a one-click reset restores the default filters.
+- Troubleshoot is task-first, not an artificial chatbot. Common problems run the existing local diagnostic translator; results open the canonical Power tools inspector. No action is applied by the Troubleshoot page.
+- The guided tour is optional in Help. First launch never blocks the Home checkup behind a modal.
+- Controls use native Windows focus and semantic accent. Real theme, DPI, screen reader and keyboard validation still requires running the WinUI application.

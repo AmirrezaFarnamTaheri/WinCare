@@ -103,6 +103,19 @@ class ProductUiParityTests(unittest.TestCase):
         self.assertIn("IsReadOnly: match.ReadOnly", translator)
         self.assertIn("AccessRequirement: match.AdministratorAccess", translator)
 
+    def test_troubleshoot_is_an_issue_first_surface_without_fake_assistant_chat(self) -> None:
+        ui = self.read("src/WinCare.App/Views/Pages/AiDoctorPage.xaml")
+        vm = self.read("src/WinCare.App/ViewModels/Pages/AiDoctorPageViewModel.cs")
+        code = self.read("src/WinCare.App/Views/Pages/AiDoctorPage.xaml.cs")
+        for title in ("Storage is full", "Computer is slow", "Network problems"):
+            self.assertIn(f'Content="{title}"', ui)
+        self.assertIn('Click="QuickIssue_Click"', ui)
+        self.assertIn("PageNavigation.OpenTool", code)
+        self.assertIn('MaxLength="500"', ui)
+        self.assertIn("public bool IsEmpty => !HasMessages", vm)
+        self.assertNotIn("I am the Active Troubleshooter", vm)
+        self.assertNotIn("optimal fixes without defensive friction", vm)
+
     def test_care_rows_open_the_power_tools_inspector(self) -> None:
         control = self.read("src/WinCare.App/Controls/CareToolList.xaml.cs")
         xaml = self.read("src/WinCare.App/Controls/CareToolList.xaml")
@@ -121,7 +134,7 @@ class ProductUiParityTests(unittest.TestCase):
         view_model = self.read("src/WinCare.App/ViewModels/Pages/AllToolsPageViewModel.cs")
         row = self.read("src/WinCare.App/ViewModels/Pages/ToolRowViewModel.cs")
 
-        for name in ("AreaFilter", "SectionFilter", "RiskFilter", "ReadOnlyFilter", "ResultCountText", "ParameterExpander"):
+        for name in ("AreaFilter", "SectionFilter", "RiskFilter", "ReadOnlyFilter", "AvailableOnlyFilter", "ResultCountText", "ParameterExpander"):
             self.assertIn(f'x:Name="{name}"', xaml)
         self.assertIn('AutomationProperties.AutomationId="ExecuteSelectedTool"', xaml)
         self.assertIn('AutomationProperties.AutomationId="CommandResultDetails"', xaml)
@@ -164,7 +177,8 @@ class ProductUiParityTests(unittest.TestCase):
 
         self.assertIn("HasSeenFirstRunTour", preferences)
         self.assertIn("MarkFirstRunTourSeen", preferences)
-        self.assertIn("!AppPreferences.HasSeenFirstRunTour", shell)
+        # Starting WinCare must not be interrupted by a modal walkthrough.
+        self.assertNotIn("!AppPreferences.HasSeenFirstRunTour", shell)
         self.assertIn("new FirstRunTourDialog", shell)
         self.assertIn('Content="Take the tour"', help_xaml)
         self.assertIn("PageNavigation.ShowTourAsync", help_code)
