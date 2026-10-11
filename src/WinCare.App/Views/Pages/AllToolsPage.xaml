@@ -49,7 +49,8 @@
                       AutomationProperties.AutomationId="RiskFilter" AutomationProperties.Name="Filter tools by impact" />
         </Grid>
 
-        <Grid x:Name="QuickFilterBar" Grid.Row="2" ColumnDefinitions="*,Auto" ColumnSpacing="12">
+        <Grid x:Name="QuickFilterBar" Grid.Row="2" ColumnDefinitions="*,Auto"
+              RowDefinitions="Auto,Auto" ColumnSpacing="12" RowSpacing="8">
             <StackPanel x:Name="QuickFilterActions" Orientation="Horizontal" Spacing="14">
                 <CheckBox x:Name="AvailableOnlyFilter" Content="Available only"
                           IsChecked="{x:Bind ViewModel.AvailableOnly, Mode=TwoWay}"

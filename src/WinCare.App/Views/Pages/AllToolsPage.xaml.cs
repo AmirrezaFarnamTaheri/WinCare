@@ -193,6 +193,9 @@ public sealed partial class AllToolsPage : Page
             Grid.SetRow(SectionFilter, 1); Grid.SetColumn(SectionFilter, 1);
             Grid.SetRow(RiskFilter, 2); Grid.SetColumn(RiskFilter, 0); Grid.SetColumnSpan(RiskFilter, 2);
             QuickFilterActions.Orientation = Orientation.Vertical;
+            Grid.SetRow(ResultCountText, 1);
+            Grid.SetColumn(ResultCountText, 0);
+            ResultCountText.HorizontalAlignment = HorizontalAlignment.Left;
         }
         else
         {
@@ -206,6 +209,9 @@ public sealed partial class AllToolsPage : Page
             Grid.SetRow(SectionFilter, 0); Grid.SetColumn(SectionFilter, 2);
             Grid.SetRow(RiskFilter, 0); Grid.SetColumn(RiskFilter, 3); Grid.SetColumnSpan(RiskFilter, 1);
             QuickFilterActions.Orientation = Orientation.Horizontal;
+            Grid.SetRow(ResultCountText, 0);
+            Grid.SetColumn(ResultCountText, 1);
+            ResultCountText.HorizontalAlignment = HorizontalAlignment.Right;
         }
     }
 

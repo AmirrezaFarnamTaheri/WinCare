@@ -59,7 +59,7 @@ The main navigation is task-oriented:
 - **System care**: cleanup, performance, apps, startup, networking, updates, and maintenance.
 - **Security**: protection, privacy, and hardening tasks.
 - **Repair & recovery**: repair, restore, backup, reset, and recovery tasks.
-- **Power tools**: the searchable command catalog with filters, favorites, Recent, and plans. Entries that are unavailable are labeled as such.
+- **Power tools**: the searchable command catalog with filters, favorites, Recent, and plans. Entries that are unavailable are labeled as such. Favorited tools also appear as shortcuts on Home.
 - **Files & storage**: see drive capacity, browse files and folders, and inspect the size of a folder.
 - **Processes**: review CPU and memory use, sort or search running tasks, and confirm before ending an ordinary process.
 - **Downloads**: start, pause, resume, and track downloads, or inspect their destination folder.
