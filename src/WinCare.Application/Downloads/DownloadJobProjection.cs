@@ -144,3 +144,25 @@ public static class DownloadJobProjection
         value.ValueKind == JsonValueKind.Number && value.TryGetInt64(out long number)
             ? number : 0;
 }
+
+
+/// <summary>Simple, privacy-safe view filtering over already-redacted job rows.</summary>
+public static class DownloadViewFilters
+{
+    public static IReadOnlyList<DownloadJobRow> Apply(IEnumerable<DownloadJobRow> jobs, string filter, string? search)
+    {
+        ArgumentNullException.ThrowIfNull(jobs);
+        IEnumerable<DownloadJobRow> items = filter switch
+        {
+            "Active" => jobs.Where(j => j.State is "Pending" or "Running" or "SuspendRequested" or "Suspended" or "Interrupted" or "CancelRequested"),
+            "Finished" => jobs.Where(j => j.State is "Completed" or "Cancelled" or "Failed"),
+            _ => jobs,
+        };
+        string query = search?.Trim() ?? string.Empty;
+        if (query.Length > 0)
+            items = items.Where(job =>
+                job.Name.Contains(query, StringComparison.OrdinalIgnoreCase) ||
+                job.Host.Contains(query, StringComparison.OrdinalIgnoreCase));
+        return items.ToArray();
+    }
+}

@@ -23,6 +23,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\WinCare.Application\WinCare.Application.csproj" />
     <Compile Include="..\..\src\WinCare.App\ViewModels\Pages\ToolExecutionViewModel.cs" Link="ViewModels\ToolExecutionViewModel.cs" />
+    <Compile Include="..\..\src\WinCare.App\ViewModels\Pages\SafeResultPresentation.cs" Link="ViewModels\SafeResultPresentation.cs" />
     <Compile Include="..\..\src\WinCare.App\ViewModels\Pages\PackageInventoryPresentation.cs" Link="ViewModels\PackageInventoryPresentation.cs" />
     <Compile Include="..\..\src\WinCare.App\ViewModels\Pages\PluginStorePageViewModel.cs" Link="ViewModels\PluginStorePageViewModel.cs" />
     <Compile Include="..\..\src\WinCare.App\ViewModels\Pages\PluginCardViewModel.cs" Link="ViewModels\PluginCardViewModel.cs" />

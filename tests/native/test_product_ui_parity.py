@@ -384,11 +384,12 @@ class ProductUiParityTests(unittest.TestCase):
     def test_download_search_uses_redacted_visible_file_and_host_fields(self) -> None:
         page = self.read("src/WinCare.App/Views/Pages/DownloadsPage.xaml")
         view_model = self.read("src/WinCare.App/ViewModels/Pages/DownloadsPageViewModel.cs")
+        projection = self.read("src/WinCare.Application/Downloads/DownloadJobProjection.cs")
         self.assertIn('x:Name="DownloadSearchInput"', page)
-        self.assertIn("job.Name.Contains(_searchText", view_model)
-        self.assertIn("job.Host.Contains(_searchText", view_model)
-        self.assertNotIn("job.Url.Contains(_searchText", view_model)
-        self.assertIn("Synchronize(VisibleJobs, items.ToArray())", view_model)
+        self.assertIn("job.Name.Contains(query", projection)
+        self.assertIn("job.Host.Contains(query", projection)
+        self.assertNotIn("job.Url.Contains(query", projection)
+        self.assertIn("DownloadViewFilters.Apply(Jobs, _filter, _searchText)", view_model)
 
 
 if __name__ == "__main__":

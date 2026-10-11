@@ -134,17 +134,7 @@ public sealed class DownloadsPageViewModel : ObservableObject
 
     private void ApplyFilter()
     {
-        IEnumerable<DownloadJobRow> items = _filter switch
-        {
-            "Active" => Jobs.Where(j => j.State is "Pending" or "Running" or "SuspendRequested" or "Suspended" or "Interrupted" or "CancelRequested"),
-            "Finished" => Jobs.Where(j => j.State is "Completed" or "Cancelled" or "Failed"),
-            _ => Jobs,
-        };
-        if (_searchText.Length > 0)
-            items = items.Where(job =>
-                job.Name.Contains(_searchText, StringComparison.OrdinalIgnoreCase) ||
-                job.Host.Contains(_searchText, StringComparison.OrdinalIgnoreCase));
-        Synchronize(VisibleJobs, items.ToArray());
+        Synchronize(VisibleJobs, DownloadViewFilters.Apply(Jobs, _filter, _searchText));
         OnPropertyChanged(nameof(IsEmpty));
         OnPropertyChanged(nameof(EmptyDescription));
     }
