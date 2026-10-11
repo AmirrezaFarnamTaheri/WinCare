@@ -1,0 +1,76 @@
+name: Promote WinCare RC2 captures
+
+# Temporary one-shot release preparation. Removed after the verified captures
+# have been committed back to the PR branch and before merging.
+on:
+  push:
+    branches: [fix/dedup-hardlink-safety-20261011]
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  promote:
+    if: github.repository == 'AmirrezaFarnamTaheri/WinCare'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 50
+          persist-credentials: true
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: '3.13'
+      - name: Verify source run and download its real Windows captures
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CAPTURE_RUN: '38175951432'
+          CAPTURE_SHA: 'b614fc23f9d866c948e120d1c0c78c3f5b758776'
+        run: |
+          set -euo pipefail
+          run_sha="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$CAPTURE_RUN" --jq '.head_sha')"
+          run_conclusion="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$CAPTURE_RUN" --jq '.conclusion')"
+          if [[ "$run_sha" != "$CAPTURE_SHA" || "$run_conclusion" != "success" ]]; then
+            echo "Refusing to promote a run that did not fully pass at the expected source SHA." >&2
+            exit 1
+          fi
+          mkdir -p "$RUNNER_TEMP/rc2-captures"
+          gh run download "$CAPTURE_RUN" --repo "$GITHUB_REPOSITORY" \
+            --name runtime-capture-x64 --dir "$RUNNER_TEMP/rc2-captures"
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          root = Path(os.environ["RUNNER_TEMP"]) / "rc2-captures"
+          meta = json.loads((root / "images/runtime-captures.json").read_text(encoding="utf-8"))
+          expected = os.environ["CAPTURE_SHA"]
+          for filename, route in (("runtime-dashboard.png", "home"), ("runtime-checkup.png", "checkup")):
+              image = root / "images" / filename
+              info = meta["images"][filename]
+              assert info["route"] == route and info["source"] == "portable"
+              assert info["architecture"] == "x64" and expected.startswith(info["commit"])
+              assert image.read_bytes().startswith(b"\x89PNG\r\n\x1a\n") and image.stat().st_size > 10000
+          assert (root / "Screenshots.md").is_file()
+          PY
+          cp "$RUNNER_TEMP/rc2-captures/images/runtime-dashboard.png" docs/images/
+          cp "$RUNNER_TEMP/rc2-captures/images/runtime-checkup.png" docs/images/
+          cp "$RUNNER_TEMP/rc2-captures/images/runtime-captures.json" docs/images/
+          cp "$RUNNER_TEMP/rc2-captures/Screenshots.md" docs/
+          python tools/capture_screenshots.py --verify-only
+          python tools/capture_screenshots.py --check-freshness
+      - name: Commit documented, verified capture bytes to the feature branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/images/runtime-dashboard.png docs/images/runtime-checkup.png \
+            docs/images/runtime-captures.json docs/Screenshots.md
+          if git diff --cached --quiet; then
+            echo "The reviewed runtime captures are already committed."
+            exit 0
+          fi
+          git commit -m "docs(release): promote verified WinCare rc2 runtime captures"
+          git push origin "HEAD:refs/heads/fix/dedup-hardlink-safety-20261011"
