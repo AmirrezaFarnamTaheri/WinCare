@@ -84,9 +84,9 @@
         <Grid Grid.Row="3" ColumnDefinitions="*,Auto" ColumnSpacing="12">
             <SelectorBar x:Name="JobFilters" SelectionChanged="JobFilters_SelectionChanged"
                          AutomationProperties.Name="Filter downloads">
-                <SelectorBarItem Text="All" />
-                <SelectorBarItem Text="Active" />
-                <SelectorBarItem Text="Finished" />
+                <SelectorBarItem Text="All" AutomationProperties.Name="All downloads" />
+                <SelectorBarItem Text="Active" AutomationProperties.Name="Active downloads" />
+                <SelectorBarItem Text="Finished" AutomationProperties.Name="Finished downloads" />
             </SelectorBar>
             <Button Grid.Column="1" Content="Refresh" Click="Refresh_Click"
                     Style="{StaticResource QuietButtonStyle}"

@@ -34,6 +34,39 @@ public sealed class NativeDownloadWorkspaceTests
     }
 
     [Fact]
+    public async Task Successful_http_transfer_publishes_verified_bytes_and_removes_partial()
+    {
+        if (!OperatingSystem.IsWindows()) return;
+        string root = TemporaryRoot();
+        try
+        {
+            string destination = Path.Combine(root, "complete.bin");
+            byte[] bytes = Enumerable.Range(0, 8192).Select(i => (byte)(i % 251)).ToArray();
+            using var http = new HttpClient(new SuccessfulTransferHandler(bytes));
+            using WindowsCommandExecutor executor = new(null, null, new CommandStateStore(root), http);
+            var created = await executor.ExecuteAsync(
+                WinCare.CommandCatalog.CommandCatalog.Find("download-create")!,
+                CommandRequest.Execute("download-create", JsonSerializer.SerializeToElement(
+                    new { Url = "https://example.com/complete.bin", Destination = destination })),
+                CancellationToken.None);
+            Assert.Equal(CommandResultStatus.Succeeded, created.Status);
+            string id = created.Data!.Value.GetProperty("id").GetString()!;
+
+            var result = await executor.ExecuteAsync(
+                WinCare.CommandCatalog.CommandCatalog.Find("download-start")!,
+                CommandRequest.Execute("download-start", JsonSerializer.SerializeToElement(new { Id = id })),
+                CancellationToken.None);
+
+            Assert.Equal(CommandResultStatus.Succeeded, result.Status);
+            Assert.Equal(bytes, await File.ReadAllBytesAsync(destination));
+            Assert.False(File.Exists(destination + ".wincare.download"));
+            var state = await new CommandStateStore(root).ReadArrayAsync("downloads", CancellationToken.None);
+            Assert.Equal("Completed", Assert.Single(state.EnumerateArray()).GetProperty("state").GetString());
+        }
+        finally { Directory.Delete(root, recursive: true); }
+    }
+
+    [Fact]
     public async Task Incorrect_http_resume_range_never_appends_to_existing_partial()
     {
         if (!OperatingSystem.IsWindows()) return;
@@ -70,6 +103,16 @@ public sealed class NativeDownloadWorkspaceTests
         string root = Path.Combine(Path.GetTempPath(), "WinCareDownloads_" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);
         return root;
+    }
+
+    private sealed class SuccessfulTransferHandler(byte[] body) : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request, CancellationToken cancellationToken) =>
+            Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new ByteArrayContent(body),
+            });
     }
 
     private sealed class InvalidRangeHandler : HttpMessageHandler

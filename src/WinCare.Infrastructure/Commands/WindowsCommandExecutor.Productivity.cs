@@ -336,16 +336,16 @@ internal sealed partial class WindowsCommandExecutor
 
             await using Stream source = await response.Content.ReadAsStreamAsync(operationCancellation.Token).ConfigureAwait(false);
             FileMode mode = serverResumed ? FileMode.Append : FileMode.Create;
-            await using FileStream target = new(
+            long total = existingBytes;
+            await using (FileStream target = new(
                 partial,
                 mode,
                 FileAccess.Write,
                 FileShare.None,
                 128 * 1024,
-                FileOptions.Asynchronous | FileOptions.SequentialScan);
-
+                FileOptions.Asynchronous | FileOptions.SequentialScan))
+            {
             byte[] buffer = new byte[128 * 1024];
-            long total = existingBytes;
             long nextProgressCheckpoint = total + 4L * 1024 * 1024;
             // A server can stop returning bytes after headers have arrived. Keep
             // a sliding inactivity deadline so a stalled transfer does not remain
@@ -381,10 +381,16 @@ internal sealed partial class WindowsCommandExecutor
                 }
             }
             await target.FlushAsync(operationCancellation.Token).ConfigureAwait(false);
+            }
 
-            await using FileStream hashStream = File.OpenRead(partial);
-            string actualHash = Convert.ToHexString(
-                await SHA256.HashDataAsync(hashStream, operationCancellation.Token).ConfigureAwait(false)).ToLowerInvariant();
+            // The exclusive writer must be closed before hashing; the hash reader must
+            // likewise be closed before Windows can rename the published partial file.
+            string actualHash;
+            await using (FileStream hashStream = File.OpenRead(partial))
+            {
+                actualHash = Convert.ToHexString(
+                    await SHA256.HashDataAsync(hashStream, operationCancellation.Token).ConfigureAwait(false)).ToLowerInvariant();
+            }
             if (expectedHash.Length > 0 && !CryptographicOperations.FixedTimeEquals(
                     Encoding.ASCII.GetBytes(actualHash), Encoding.ASCII.GetBytes(expectedHash)))
             {
