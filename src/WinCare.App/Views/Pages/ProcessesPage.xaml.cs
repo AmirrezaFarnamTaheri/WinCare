@@ -109,6 +109,7 @@ public sealed partial class ProcessesPage : Page
         while (VisibleRows.Count > desired.Length)
             VisibleRows.RemoveAt(VisibleRows.Count - 1);
         ShownCount.Text = $"{VisibleRows.Count:N0} shown";
+        EmptyProcessesText.Visibility = VisibleRows.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
     }
 
     private async void EndTask_Click(object sender, RoutedEventArgs e)
@@ -173,8 +174,14 @@ public sealed partial class ProcessesPage : Page
     }
 
     private async void Refresh_Click(object sender, RoutedEventArgs e) => await RefreshAsync();
-    private void FilterInput_TextChanged(object sender, TextChangedEventArgs e) => ApplyFilterAndSort();
-    private void SortPicker_SelectionChanged(object sender, SelectionChangedEventArgs e) => ApplyFilterAndSort();
+    private void FilterInput_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        if (ShownCount is not null && EmptyProcessesText is not null) ApplyFilterAndSort();
+    }
+    private void SortPicker_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (ShownCount is not null && EmptyProcessesText is not null) ApplyFilterAndSort();
+    }
     private void LiveRefresh_Changed(object sender, RoutedEventArgs e)
     {
         if (_visible && LiveRefresh.IsChecked == true) _timer.Start();
@@ -185,6 +192,10 @@ public sealed partial class ProcessesPage : Page
     {
         bool compact = e.NewSize.Width < CompactWidth;
         PageLayout.Padding = compact ? new Thickness(16, 18, 16, 20) : new Thickness(32, 28, 32, 28);
+        Grid.SetRow(OpenTaskManagerButton, compact ? 1 : 0);
+        Grid.SetColumn(OpenTaskManagerButton, compact ? 0 : 2);
+        Grid.SetColumnSpan(OpenTaskManagerButton, compact ? 3 : 1);
+        OpenTaskManagerButton.HorizontalAlignment = compact ? HorizontalAlignment.Stretch : HorizontalAlignment.Right;
         ActionsGrid.RowDefinitions.Clear();
         ActionsGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         if (compact) ActionsGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });

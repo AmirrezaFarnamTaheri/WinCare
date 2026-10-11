@@ -17,7 +17,8 @@
             Description="See what's running, compare CPU and memory use, and close a task when needed." />
 
         <Border Grid.Row="1" Style="{StaticResource SurfaceBorderStyle}" Padding="18">
-            <Grid ColumnDefinitions="*,*,Auto" ColumnSpacing="22">
+            <Grid x:Name="ProcessMetricsLayout" ColumnDefinitions="*,*,Auto" ColumnSpacing="22" RowSpacing="10">
+                <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
                 <StackPanel Spacing="4">
                     <TextBlock Text="Running tasks" Style="{StaticResource FieldLabelTextStyle}" />
                     <TextBlock x:Name="TaskCount" Text="—" Style="{StaticResource MetricTextStyle}" />
@@ -26,7 +27,7 @@
                     <TextBlock Text="Last updated" Style="{StaticResource FieldLabelTextStyle}" />
                     <TextBlock x:Name="UpdatedTime" Text="Not yet" Style="{StaticResource MetricTextStyle}" />
                 </StackPanel>
-                <Button Grid.Column="2" Content="Windows Task Manager"
+                <Button x:Name="OpenTaskManagerButton" Grid.Column="2" Content="Windows Task Manager"
                         Click="OpenTaskManager_Click" Style="{StaticResource QuietButtonStyle}"
                         VerticalAlignment="Center" AutomationProperties.Name="Open Windows Task Manager" />
             </Grid>
@@ -96,6 +97,11 @@
                         </DataTemplate>
                     </ListView.ItemTemplate>
                 </ListView>
+                <TextBlock x:Name="EmptyProcessesText" Grid.Row="1"
+                           Text="No running processes match this search."
+                           Style="{StaticResource RowSecondaryTextStyle}"
+                           TextAlignment="Center" HorizontalAlignment="Center" VerticalAlignment="Center"
+                           Margin="24" Visibility="Collapsed" AutomationProperties.LiveSetting="Polite" />
             </Grid>
         </Border>
         <StackPanel Grid.Row="5" Spacing="4">

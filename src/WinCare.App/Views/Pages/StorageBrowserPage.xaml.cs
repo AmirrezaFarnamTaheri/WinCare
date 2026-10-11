@@ -127,7 +127,7 @@ public sealed partial class StorageBrowserPage : Page
 
     private void UpdateFilteredEntries()
     {
-        if (FolderTitle is null || CountText is null) return;
+        if (FolderTitle is null || CountText is null || EmptyFolderText is null) return;
         string term = FilterInput.Text.Trim();
         IEnumerable<StorageBrowserItem> filtered = term.Length == 0 ? _allEntries :
             _allEntries.Where(item => item.Name.Contains(term, StringComparison.OrdinalIgnoreCase));
@@ -135,6 +135,8 @@ public sealed partial class StorageBrowserPage : Page
         foreach (StorageBrowserItem item in filtered) VisibleEntries.Add(item);
         FolderTitle.Text = _currentPath is null ? "Folder contents" : Path.GetFileName(Path.TrimEndingDirectorySeparator(_currentPath)) is string name && name.Length > 0 ? name : _currentPath;
         CountText.Text = $"{VisibleEntries.Count:N0} shown / {_allEntries.Count:N0} loaded";
+        EmptyFolderText.Visibility = VisibleEntries.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+        EmptyFolderText.Text = _allEntries.Count == 0 ? "This folder is empty." : "No items match your filter.";
     }
 
     private async void DrivePicker_SelectionChanged(object sender, SelectionChangedEventArgs e)

@@ -107,6 +107,9 @@
                         </DataTemplate>
                     </ListView.ItemTemplate>
                 </ListView>
+                <TextBlock x:Name="EmptyFolderText" Grid.Row="1" Text="This folder is empty."
+                           Style="{StaticResource RowSecondaryTextStyle}" HorizontalAlignment="Center"
+                           VerticalAlignment="Center" Margin="24" Visibility="Collapsed" />
             </Grid>
         </Border>
         <Expander x:Name="HotspotsExpander" Grid.Row="6" Header="Largest subfolders found" IsExpanded="False"
