@@ -42,6 +42,9 @@ public sealed partial class DownloadsPage : Page
 
     private async void Add_Click(object sender, RoutedEventArgs e) => await ViewModel.AddAsync();
     private async void Refresh_Click(object sender, RoutedEventArgs e) => await ViewModel.RefreshAsync();
+    private void DownloadSearch_TextChanged(object sender, TextChangedEventArgs e) =>
+        ViewModel.SetSearch(DownloadSearchInput.Text);
+
     private void JobFilters_SelectionChanged(SelectorBar sender, SelectorBarSelectionChangedEventArgs args)
     {
         if (sender.SelectedItem is SelectorBarItem item) ViewModel.SetFilter(item.Text);
@@ -75,7 +78,8 @@ public sealed partial class DownloadsPage : Page
         Grid.SetColumn(AddButton, compact ? 0 : 1);
         Grid.SetRow(AddButton, compact ? 1 : 0);
         AddButton.HorizontalAlignment = compact ? HorizontalAlignment.Stretch : HorizontalAlignment.Right;
-        Grid.SetRow(RefreshListButton, compact ? 1 : 0);
+        Grid.SetColumnSpan(DownloadSearchInput, compact ? 2 : 1);
+        Grid.SetRow(RefreshListButton, compact ? 2 : 1);
         Grid.SetColumn(RefreshListButton, compact ? 0 : 1);
         Grid.SetColumnSpan(RefreshListButton, compact ? 2 : 1);
         RefreshListButton.HorizontalAlignment = HorizontalAlignment.Right;

@@ -20,6 +20,7 @@ public sealed class DownloadsPageViewModel : ObservableObject
     private string _newUrl = string.Empty;
     private string _notice = string.Empty;
     private string _filter = "All";
+    private string _searchText = string.Empty;
 
     public DownloadsPageViewModel() : this(Services.AppRuntime.Current.Downloads) { }
     public DownloadsPageViewModel(DownloadCenterService center) =>
@@ -58,7 +59,7 @@ public sealed class DownloadsPageViewModel : ObservableObject
     public bool IsEmpty => VisibleJobs.Count == 0 && !IsLoading;
     public string EmptyDescription => Jobs.Count == 0
         ? "No downloads yet. Paste a link above to create your first download."
-        : "Nothing matches this view. Switch to All to see the full queue.";
+        : "No downloads match. Try a different search or switch to All.";
     public string TotalText => Jobs.Count.ToString(System.Globalization.CultureInfo.CurrentCulture);
     public string InProgressText => Jobs.Count(j => j.State is "Pending" or "Running" or "SuspendRequested" or "Suspended" or "Interrupted" or "CancelRequested")
         .ToString(System.Globalization.CultureInfo.CurrentCulture);
@@ -85,6 +86,14 @@ public sealed class DownloadsPageViewModel : ObservableObject
     public void SetFilter(string filter)
     {
         _filter = filter is "Active" or "Finished" ? filter : "All";
+        ApplyFilter();
+    }
+
+    public void SetSearch(string? search)
+    {
+        string normalized = search?.Trim() ?? string.Empty;
+        if (string.Equals(_searchText, normalized, StringComparison.OrdinalIgnoreCase)) return;
+        _searchText = normalized;
         ApplyFilter();
     }
 
@@ -131,6 +140,10 @@ public sealed class DownloadsPageViewModel : ObservableObject
             "Finished" => Jobs.Where(j => j.State is "Completed" or "Cancelled" or "Failed"),
             _ => Jobs,
         };
+        if (_searchText.Length > 0)
+            items = items.Where(job =>
+                job.Name.Contains(_searchText, StringComparison.OrdinalIgnoreCase) ||
+                job.Host.Contains(_searchText, StringComparison.OrdinalIgnoreCase));
         Synchronize(VisibleJobs, items.ToArray());
         OnPropertyChanged(nameof(IsEmpty));
         OnPropertyChanged(nameof(EmptyDescription));

@@ -81,15 +81,19 @@
             </Border>
         </Grid>
 
-        <Grid x:Name="FiltersGrid" Grid.Row="3" ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto"
+        <Grid x:Name="FiltersGrid" Grid.Row="3" ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto"
               ColumnSpacing="12" RowSpacing="8">
-            <SelectorBar x:Name="JobFilters" SelectionChanged="JobFilters_SelectionChanged"
+            <SelectorBar x:Name="JobFilters" Grid.ColumnSpan="2" SelectionChanged="JobFilters_SelectionChanged"
                          AutomationProperties.Name="Filter downloads">
                 <SelectorBarItem Text="All" AutomationProperties.Name="All downloads" />
                 <SelectorBarItem Text="Active" AutomationProperties.Name="Active downloads" />
                 <SelectorBarItem Text="Finished" AutomationProperties.Name="Finished downloads" />
             </SelectorBar>
-            <Button x:Name="RefreshListButton" Grid.Column="1" Content="Refresh" Click="Refresh_Click"
+            <TextBox x:Name="DownloadSearchInput" Grid.Row="1" MinHeight="44"
+                     MaxLength="120" PlaceholderText="Search downloads by filename or website"
+                     TextChanged="DownloadSearch_TextChanged"
+                     AutomationProperties.Name="Search downloads by file name or source" />
+            <Button x:Name="RefreshListButton" Grid.Row="1" Grid.Column="1" Content="Refresh" Click="Refresh_Click"
                     Style="{StaticResource QuietButtonStyle}"
                     AutomationProperties.Name="Refresh download list" />
         </Grid>
