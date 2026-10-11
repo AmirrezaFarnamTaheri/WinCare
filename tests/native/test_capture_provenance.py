@@ -131,6 +131,12 @@ class FreshnessReportTests(unittest.TestCase):
         # appends the uncommitted marker; the base SHA is what matters.
         self.assertEqual(report["head"].split("+")[0], self._head())
 
+    def test_pr_capture_freshness_warning_clears_native_exit_code(self) -> None:
+        workflow = (ROOT / ".github/workflows/native-winui.yml").read_text(encoding="utf-8")
+        self.assertIn('Write-Warning $message', workflow)
+        self.assertIn('$global:LASTEXITCODE = 0', workflow)
+        self.assertIn('throw "$message Commit reviewed capture images', workflow)
+
     def test_unresolvable_capture_commit_fails_closed(self) -> None:
         manifest = {"images": {"runtime-dashboard.png": {"commit": "not-a-real-git-sha"}}}
         report = self.generator.capture_freshness_report(manifest)

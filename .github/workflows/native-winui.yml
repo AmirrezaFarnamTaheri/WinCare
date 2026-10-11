@@ -495,6 +495,9 @@ jobs:
               # produced new captures. They must not be published as current release images.
               Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value "**Screenshots need updating before release:** $message"
               Write-Warning $message
+              # PowerShell's GitHub Actions wrapper otherwise exits with the nonzero code
+              # from --check-freshness even after the PR warning branch handled it.
+              $global:LASTEXITCODE = 0
             }
             else {
               throw "$message Commit reviewed capture images and provenance before release promotion."
