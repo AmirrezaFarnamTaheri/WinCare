@@ -30,6 +30,7 @@ class DownloadsWorkspaceTests(unittest.TestCase):
         self.assertIn('ItemsSource="{x:Bind ViewModel.VisibleJobs, Mode=OneWay}"', page)
         self.assertIn("ViewModel.Deactivate();", code)
         self.assertIn("AppRuntime.Current.Downloads", view_model)
+        self.assertIn("_center.TryStart(id, resume: false", view_model)
         self.assertNotIn("new HttpClient(", code)
         ET.fromstring(page)
         home = self.read("src/WinCare.App/Views/Pages/HomePage.xaml")
@@ -45,6 +46,7 @@ class DownloadsWorkspaceTests(unittest.TestCase):
             "download-path:", "File.Move(partial, destination, overwrite: false)",
             'node["expectedBytes"]', "Download job created.",
             "Too many downloads use this file name",
+            "idleTimeout.CancelAfter(TimeSpan.FromSeconds(90))",
         ):
             self.assertIn(contract, executor)
         self.assertNotIn("File.Move(partial, destination, overwrite: true)", executor)

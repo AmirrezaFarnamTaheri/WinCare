@@ -347,10 +347,25 @@ internal sealed partial class WindowsCommandExecutor
             byte[] buffer = new byte[128 * 1024];
             long total = existingBytes;
             long nextProgressCheckpoint = total + 4L * 1024 * 1024;
+            // A server can stop returning bytes after headers have arrived. Keep
+            // a sliding inactivity deadline so a stalled transfer does not remain
+            // "Running" indefinitely or leak a worker. Fast/slow active transfers
+            // are unaffected as long as bytes continue arriving.
+            using CancellationTokenSource idleTimeout = CancellationTokenSource.CreateLinkedTokenSource(operationCancellation.Token);
+            idleTimeout.CancelAfter(TimeSpan.FromSeconds(90));
             while (true)
             {
-                int read = await source.ReadAsync(buffer, operationCancellation.Token).ConfigureAwait(false);
+                int read;
+                try
+                {
+                    read = await source.ReadAsync(buffer, idleTimeout.Token).ConfigureAwait(false);
+                }
+                catch (OperationCanceledException) when (!operationCancellation.IsCancellationRequested)
+                {
+                    throw new TimeoutException("Download server stopped sending data. The partial file was retained for a later retry.");
+                }
                 if (read == 0) break;
+                idleTimeout.CancelAfter(TimeSpan.FromSeconds(90));
                 total += read;
                 if (total > maximumBytes) throw new InvalidDataException("Download exceeded the 2 GiB WinCare safety limit.");
                 await target.WriteAsync(buffer.AsMemory(0, read), operationCancellation.Token).ConfigureAwait(false);

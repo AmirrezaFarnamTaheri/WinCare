@@ -58,7 +58,8 @@ public static class DownloadJobProjection
                 ? address.IdnHost
                 : "Unknown source";
             string state = Text(item, "state");
-            if (active is not null && state is "Running" or "SuspendRequested" or "CancelRequested" &&
+            if (active is not null &&
+                (state is "Running" or "SuspendRequested" or "CancelRequested") &&
                 !active.Contains(id))
             {
                 // A process crash can leave a durable Running marker even though

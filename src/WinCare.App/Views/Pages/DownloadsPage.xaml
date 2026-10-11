@@ -34,7 +34,7 @@
                     </Grid.RowDefinitions>
                     <StackPanel Spacing="4">
                         <TextBlock Text="New download" Style="{StaticResource SectionHeaderTextStyle}" />
-                        <TextBlock Text="Paste an HTTP or HTTPS link to queue a file."
+                        <TextBlock Text="Paste a direct HTTP or HTTPS link. WinCare saves it to your Downloads folder."
                                    Style="{StaticResource RowSecondaryTextStyle}" />
                     </StackPanel>
                 </Grid>
@@ -48,10 +48,10 @@
                              Text="{x:Bind ViewModel.NewUrl, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                              PlaceholderText="https://example.com/file.zip"
                              AutomationProperties.Name="Download link" AutomationProperties.AutomationId="DownloadUrl" />
-                    <Button x:Name="AddButton" Grid.Column="1" Content="Add to queue"
+                    <Button x:Name="AddButton" Grid.Column="1" Content="Download"
                             Style="{StaticResource PrimaryActionButtonStyle}" Click="Add_Click"
                             IsEnabled="{x:Bind ViewModel.CanAdd, Mode=OneWay}"
-                            AutomationProperties.Name="Add download link to the queue" AutomationProperties.AutomationId="AddDownload" />
+                            AutomationProperties.Name="Download the linked file" AutomationProperties.AutomationId="AddDownload" />
                 </Grid>
                 <TextBlock Style="{StaticResource FieldHintTextStyle}"
                            Text="Files are saved to your Downloads folder. Existing files are not replaced. Maximum size: 2 GB." />

@@ -38,3 +38,11 @@ The shell changes presentation without changing route identity. `LayoutVisibilit
   must not silently abort work. Shutdown requests pause, subject to its budget.
 - Native commands and the same Activity journal remain authoritative; no
   unreviewed duplicate downloader, browser download hijacking, or fake queue.
+
+### Direct download action
+
+Pressing Download creates a persisted queue record and starts it immediately.
+The separate Start action remains for interrupted or explicitly queued jobs.
+A stalled remote server fails after 90 seconds without arriving bytes and
+keeps the verified partial file for retry; neither a truncated response nor
+a resumed response with mismatched Content-Range is published as complete.

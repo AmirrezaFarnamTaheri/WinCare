@@ -149,9 +149,20 @@ public sealed class DownloadsPageViewModel : ObservableObject
             if (result.Status == CommandResultStatus.Succeeded)
             {
                 NewUrl = string.Empty;
-                Notice = "Download added to the queue. Choose Start when ready.";
+                string? id = result.Data is System.Text.Json.JsonElement record &&
+                    record.TryGetProperty("id", out System.Text.Json.JsonElement idValue)
+                    ? idValue.GetString() : null;
+                if (id is not null && _center.TryStart(id, resume: false, out Task<CommandResult> completion))
+                {
+                    Notice = "Download started. You can keep using WinCare.";
+                    _ = ObserveTransferAsync(completion);
+                }
+                else
+                {
+                    Notice = "Download queued. Select Start to begin the transfer.";
+                }
             }
-            else Notice = "Could not add this download. The destination may already be in use.";
+            else Notice = "Could not add this download. Try another link or review your download folder.";
             await RefreshAsync();
         }
         catch (OperationCanceledException) { }
