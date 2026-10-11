@@ -369,9 +369,6 @@ class ProductUiParityTests(unittest.TestCase):
         self.assertNotIn("Home channels stack below 600 DIP", ux_contract)
 
 
-if __name__ == "__main__":
-    unittest.main()
-
     def test_home_favorites_are_catalog_backed_links_not_fake_actions(self) -> None:
         home = self.read("src/WinCare.App/Views/Pages/HomePage.xaml")
         code = self.read("src/WinCare.App/Views/Pages/HomePage.xaml.cs")
@@ -392,3 +389,7 @@ if __name__ == "__main__":
         self.assertIn("job.Host.Contains(_searchText", view_model)
         self.assertNotIn("job.Url.Contains(_searchText", view_model)
         self.assertIn("Synchronize(VisibleJobs, items.ToArray())", view_model)
+
+
+if __name__ == "__main__":
+    unittest.main()
