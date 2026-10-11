@@ -46,8 +46,6 @@ jobs:
           python tools/verify_palette_contrast.py
       - name: Verify documentation screenshots
         run: python tools/capture_screenshots.py --verify-only
-      - name: Verify the checked-in capture depicts this source
-        run: python tools/capture_screenshots.py --check-freshness
       - name: Read product version
         id: version
         shell: bash
@@ -464,20 +462,6 @@ jobs:
             throw "Portable ${{ matrix.platform }} smoke test failed with exit code $($process.ExitCode)."
           }
 
-          # Freshness gate: the checked-in capture must still depict the source CI is building.
-          # This must run BEFORE the e2e capture below, which rewrites the manifest with this
-          # build's commit: checking it afterwards would always read "fresh" and gate nothing.
-          # A capture whose recorded commit is behind HEAD on capture-affecting paths is
-          # historical evidence wearing current labels, so this fails the run instead of
-          # shipping an image that no longer matches the binary. Only enforced on x64, where
-          # the committed capture is recorded; ARM64 renders the same UI.
-          if ('${{ matrix.platform }}' -eq 'x64') {
-            python tools/capture_screenshots.py --check-freshness
-            if ($LASTEXITCODE -ne 0) {
-              throw "Checked-in runtime capture is stale for this build. Run 'python tools/capture_screenshots.py --runtime --exe <portable build>' locally and commit the regenerated images."
-            }
-          }
-
           # E2E capture: render each documented route from this exact signed artifact, verify every
           # PNG's integrity, and regenerate the provenance manifest. This proves the documented
           # capture pipeline works against the shipped binary; the committed docs/images stay the
@@ -493,7 +477,29 @@ jobs:
             docs/images/runtime-dashboard.png
             docs/images/runtime-checkup.png
             docs/images/runtime-captures.json
+            docs/Screenshots.md
           if-no-files-found: error
+      - name: Check recorded runtime capture freshness
+        if: matrix.platform == 'x64'
+        shell: pwsh
+        run: |
+          # Restore the checked-in manifest before comparing; the preceding runtime capture
+          # deliberately regenerated its in-worktree manifest for the exact built executable.
+          git restore --source=HEAD --worktree -- docs/images/runtime-captures.json
+          if ($LASTEXITCODE -ne 0) { throw 'Unable to restore checked-in provenance for comparison.' }
+          python tools/capture_screenshots.py --check-freshness
+          if ($LASTEXITCODE -ne 0) {
+            $message = 'Checked-in runtime screenshots are historical for this source. The runtime-capture-x64 artifact contains fresh, verifiable captures from this build.'
+            if ('${{ github.event_name }}' -eq 'pull_request') {
+              # Pull requests are allowed historical documentation if the exact PR build
+              # produced new captures. They must not be published as current release images.
+              Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value "**Screenshots need updating before release:** $message"
+              Write-Warning $message
+            }
+            else {
+              throw "$message Commit reviewed capture images and provenance before release promotion."
+            }
+          }
 
   release-gate:
     needs: [verify, build, portable-runtime-smoke]

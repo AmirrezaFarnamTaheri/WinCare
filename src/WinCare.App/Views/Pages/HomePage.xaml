@@ -24,8 +24,8 @@
                                 Padding="8,3"
                                 HorizontalAlignment="Left">
                             <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                                <Ellipse Width="6" Height="6" Fill="{ThemeResource SuccessBrush}" VerticalAlignment="Center" />
-                                <TextBlock Text="NATIVE PROBE ENGINE · READY"
+                                <Ellipse Width="6" Height="6" Fill="{ThemeResource AccentChromeBrush}" VerticalAlignment="Center" />
+                                <TextBlock Text="CHECKUP · READ-ONLY"
                                            FontFamily="{StaticResource TelemetryFontFamily}"
                                            FontSize="10"
                                            FontWeight="SemiBold"
@@ -43,7 +43,7 @@
                     <StackPanel x:Name="HeroStats" Grid.Column="2" Spacing="6" MinWidth="170" VerticalAlignment="Center">
                         <TextBlock Style="{StaticResource MetricTextStyle}" Text="{x:Bind ViewModel.CheckupCoverageText, Mode=OneWay}"/>
                         <TextBlock Style="{StaticResource FieldLabelTextStyle}" Text="Checkup coverage"/>
-                        <TextBlock Style="{StaticResource TelemetryTextStyle}" FontSize="10" Text="READ-ONLY EVIDENCE" Foreground="{ThemeResource TextSecondaryBrush}" Margin="0,2,0,0" />
+                        <TextBlock Style="{StaticResource TelemetryTextStyle}" FontSize="10" Text="NO CHANGES TO WINDOWS" Foreground="{ThemeResource TextSecondaryBrush}" Margin="0,2,0,0" />
                     </StackPanel>
                 </Grid>
             </Border>
@@ -57,7 +57,7 @@
                                 <StackPanel Orientation="Horizontal" Spacing="8">
                                     <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="Clean up storage"/>
                                     <Border Background="{ThemeResource AccentChromeSubtleBrush}" Padding="6,1" CornerRadius="{StaticResource RadiusPill}" VerticalAlignment="Center">
-                                        <TextBlock Text="NTFS / TEMP" FontFamily="{StaticResource TelemetryFontFamily}" FontSize="9" FontWeight="SemiBold" Foreground="{ThemeResource AccentChromeBrush}" />
+                                        <TextBlock Text="STORAGE" FontFamily="{StaticResource TelemetryFontFamily}" FontSize="9" FontWeight="SemiBold" Foreground="{ThemeResource AccentChromeBrush}" />
                                     </Border>
                                 </StackPanel>
                                 <TextBlock Style="{StaticResource RowSecondaryTextStyle}" Text="Free up space and see what's taking room."/>
@@ -73,7 +73,7 @@
                                 <StackPanel Orientation="Horizontal" Spacing="8">
                                     <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="Apps &amp; startup"/>
                                     <Border Background="{ThemeResource AccentChromeSubtleBrush}" Padding="6,1" CornerRadius="{StaticResource RadiusPill}" VerticalAlignment="Center">
-                                        <TextBlock Text="RUN / TASKS" FontFamily="{StaticResource TelemetryFontFamily}" FontSize="9" FontWeight="SemiBold" Foreground="{ThemeResource AccentChromeBrush}" />
+                                        <TextBlock Text="STARTUP" FontFamily="{StaticResource TelemetryFontFamily}" FontSize="9" FontWeight="SemiBold" Foreground="{ThemeResource AccentChromeBrush}" />
                                     </Border>
                                 </StackPanel>
                                 <TextBlock Style="{StaticResource RowSecondaryTextStyle}" Text="Manage installed apps and what starts with Windows."/>
@@ -89,7 +89,7 @@
                                 <StackPanel Orientation="Horizontal" Spacing="8">
                                     <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="Network &amp; updates"/>
                                     <Border Background="{ThemeResource AccentChromeSubtleBrush}" Padding="6,1" CornerRadius="{StaticResource RadiusPill}" VerticalAlignment="Center">
-                                        <TextBlock Text="DNS / WUA" FontFamily="{StaticResource TelemetryFontFamily}" FontSize="9" FontWeight="SemiBold" Foreground="{ThemeResource AccentChromeBrush}" />
+                                        <TextBlock Text="NETWORK" FontFamily="{StaticResource TelemetryFontFamily}" FontSize="9" FontWeight="SemiBold" Foreground="{ThemeResource AccentChromeBrush}" />
                                     </Border>
                                 </StackPanel>
                                 <TextBlock Style="{StaticResource RowSecondaryTextStyle}" Text="Check connectivity, DNS, and Windows Update."/>
@@ -110,7 +110,7 @@
                             <Grid ColumnSpacing="12">
                                 <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                                 <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                                    <Ellipse Width="6" Height="6" Fill="{ThemeResource SuccessBrush}" VerticalAlignment="Center"/>
+                                    <Ellipse Width="6" Height="6" Fill="{ThemeResource TextSecondaryBrush}" VerticalAlignment="Center"/>
                                     <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="Windows &amp; hardware"/>
                                 </StackPanel>
                                 <TextBlock Grid.Column="1" Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind ViewModel.SystemStatus, Mode=OneWay}" FontFamily="{StaticResource TelemetryFontFamily}" FontSize="12"/>
@@ -120,7 +120,7 @@
                             <Grid ColumnSpacing="12">
                                 <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                                 <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                                    <Ellipse Width="6" Height="6" Fill="{ThemeResource SuccessBrush}" VerticalAlignment="Center"/>
+                                    <Ellipse Width="6" Height="6" Fill="{ThemeResource TextSecondaryBrush}" VerticalAlignment="Center"/>
                                     <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="Storage"/>
                                 </StackPanel>
                                 <TextBlock Grid.Column="1" Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind ViewModel.StorageStatus, Mode=OneWay}" FontFamily="{StaticResource TelemetryFontFamily}" FontSize="12"/>
@@ -130,7 +130,7 @@
                             <Grid ColumnSpacing="12">
                                 <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                                 <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                                    <Ellipse Width="6" Height="6" Fill="{ThemeResource SuccessBrush}" VerticalAlignment="Center"/>
+                                    <Ellipse Width="6" Height="6" Fill="{ThemeResource TextSecondaryBrush}" VerticalAlignment="Center"/>
                                     <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="Security"/>
                                 </StackPanel>
                                 <TextBlock Grid.Column="1" Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind ViewModel.SecurityStatus, Mode=OneWay}" FontFamily="{StaticResource TelemetryFontFamily}" FontSize="12"/>
@@ -140,7 +140,7 @@
                             <Grid ColumnSpacing="12">
                                 <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                                 <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                                    <Ellipse Width="6" Height="6" Fill="{ThemeResource SuccessBrush}" VerticalAlignment="Center"/>
+                                    <Ellipse Width="6" Height="6" Fill="{ThemeResource TextSecondaryBrush}" VerticalAlignment="Center"/>
                                     <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="Windows Update"/>
                                 </StackPanel>
                                 <TextBlock Grid.Column="1" Style="{StaticResource RowSecondaryTextStyle}" Text="{x:Bind ViewModel.UpdatesStatus, Mode=OneWay}" FontFamily="{StaticResource TelemetryFontFamily}" FontSize="12"/>

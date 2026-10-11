@@ -21,6 +21,24 @@ public sealed class ToolExecutionViewModelTests
     }
 
     [Fact]
+    public void SuspendedToolIsMarkedUnavailableInListAndCannotAskForDestructiveApproval()
+    {
+        CommandDefinition definition = WinCare.CommandCatalog.CommandCatalog.Find("storage-dedup-hardlink")!;
+        var row = new ToolRowViewModel(definition);
+        Assert.False(row.IsAvailable);
+        Assert.Equal("Unavailable", row.ImpactPillLabel);
+        Assert.Equal("Unavailable", row.StatusPillLabel);
+        Assert.Contains("unavailable", row.ToolAccessibleName, StringComparison.OrdinalIgnoreCase);
+
+        var vm = new ToolExecutionViewModel(new CommandDispatcher([definition], []), _ => { });
+        vm.SelectTool(row);
+        Assert.True(vm.IsSelectedToolUnavailable);
+        Assert.False(vm.ShowDestructiveWarning);
+        Assert.False(vm.RequiresApprovalSwitch);
+        Assert.False(vm.CanApproveReview);
+    }
+
+    [Fact]
     public async Task Cancellation_stays_pending_until_the_handler_finishes()
     {
         var definition = new CommandDefinition("test", "Test", "Test", "Test", "Test",

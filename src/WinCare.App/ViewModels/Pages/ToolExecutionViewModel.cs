@@ -117,6 +117,9 @@ public sealed class ToolExecutionViewModel : ObservableObject
     private bool IsSelectedToolImplemented =>
         _selectedTool?.Definition.MigrationStatus is MigrationStatus.Implemented or MigrationStatus.BehaviorVerified;
 
+    public bool IsSelectedToolUnavailable => _selectedTool is not null && !IsSelectedToolImplemented;
+    public bool ShowDestructiveWarning => IsDestructiveTool && !IsSelectedToolUnavailable;
+
     public string PrimaryActionLabel
     {
         get
@@ -280,7 +283,7 @@ public sealed class ToolExecutionViewModel : ObservableObject
     public bool IsModerateTool => _selectedTool?.Definition.RiskTier == RiskTier.Moderate;
     public bool IsDestructiveTool => _selectedTool?.Definition.RiskTier == RiskTier.Destructive;
     public bool IsMutatingTool => _selectedTool?.Definition.ReadOnly == false;
-    public bool RequiresApprovalSwitch => IsDestructiveTool;
+    public bool RequiresApprovalSwitch => ShowDestructiveWarning;
     // Approval toggle requires a successful preview before flipping.
     public bool CanApproveReview => IsMutatingTool && !IsExecuting && _hasSuccessfulPreview;
 
@@ -758,6 +761,8 @@ public sealed class ToolExecutionViewModel : ObservableObject
         OnPropertyChanged(nameof(IsSafeTool));
         OnPropertyChanged(nameof(IsModerateTool));
         OnPropertyChanged(nameof(IsDestructiveTool));
+        OnPropertyChanged(nameof(IsSelectedToolUnavailable));
+        OnPropertyChanged(nameof(ShowDestructiveWarning));
         OnPropertyChanged(nameof(RequiresApprovalSwitch));
         OnPropertyChanged(nameof(CanApproveReview));
         OnPropertyChanged(nameof(ActionFlowTitle));
