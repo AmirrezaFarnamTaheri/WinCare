@@ -14,7 +14,7 @@
 </p>
 
 > [!IMPORTANT]
-> WinCare 4.0.0 is the current release line. The current catalog contains 296 commands. Operations that can change the system are admitted according to their declared risk and privilege requirements; review high-impact changes before applying them.
+> WinCare **v4.0.0-rc2** is a prerelease, not a stable production-certified build. The current catalog contains 296 commands. Operations that can change the system are admitted according to their declared risk and privilege requirements; review high-impact changes before applying them.
 
 ## Overview
 
@@ -63,7 +63,7 @@ Download the current build from [Releases](https://github.com/AmirrezaFarnamTahe
 | `WinCare-v<version>-x64.exe` / `...-ARM64.exe` | Self-contained single-file executable. |
 | `WinCare-v<version>-x64-portable.zip` / `...-ARM64-portable.zip` | Portable/offline package. |
 
-Development-signed MSIX artifacts include a matching certificate and install helper. The helper validates the package signer and imports only the supplied certificate into `LocalMachine\TrustedPeople`; run it from an elevated terminal. See the [user guide](docs/User-Guide.md) for installation and safety details.
+**Release-candidate binaries are development-signed using a different temporary certificate on each CI build; they are not signed by a production-trusted publisher.** Development-signed MSIX artifacts include a matching certificate and install helper. The helper validates the package signer and imports only the supplied certificate into `LocalMachine\TrustedPeople`; run it from an elevated terminal. See the [user guide](docs/User-Guide.md) for installation and safety details.
 
 ## Safety model
 

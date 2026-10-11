@@ -419,13 +419,14 @@ class FinalizationTests(unittest.TestCase):
         suffix = props.findtext(".//VersionSuffix")
         informational = props.findtext(".//InformationalVersion")
         self.assertEqual("4.0.0", prefix)
-        self.assertEqual("rc1", suffix)
-        self.assertEqual("4.0.0-rc1", informational)
+        self.assertEqual("rc2", suffix)
+        self.assertEqual("4.0.0-rc2", informational)
+        self.assertEqual("4.0.0.2", props.findtext(".//AppxPackageVersion"))
 
         # The checked-in manifest carries the numeric fallback (VersionPrefix + ".0"); the
         # build-time StampAppxManifestVersion target derives the packaged version instead of
         # trusting a literal.
-        self.assertIn(f'Version="{prefix}.0"', manifest)
+        self.assertIn(f'Version="{prefix}.2"', manifest)
         self.assertIn("StampAppxManifestVersion", csproj)
         self.assertIn("AppxPackageVersion", csproj)
         self.assertIn(f'version = "{prefix}"', cargo)
@@ -461,6 +462,8 @@ class FinalizationTests(unittest.TestCase):
         self.assertNotIn("--clobber", workflow)
         self.assertNotIn("git tag -f", workflow)
         self.assertNotIn("git push origin -f", workflow)
+        self.assertIn('--notes-file "$notes_file"', workflow)
+        self.assertIn('if [[ ! -f "$notes_file" ]]', workflow)
 
     def test_workflow_is_consolidated_without_internal_artifact_hops(self) -> None:
         workflow = (ROOT / ".github/workflows/native-winui.yml").read_text(encoding="utf-8")
@@ -548,6 +551,9 @@ class FinalizationTests(unittest.TestCase):
         self.assertIn("default: false", workflow)
         self.assertIn("startsWith(github.ref, 'refs/tags/v')", workflow)
         self.assertIn("github.event_name == 'workflow_dispatch'", workflow)
+        self.assertIn("github.ref == 'refs/heads/master'", workflow)
+        self.assertIn("github.event.head_commit.message", workflow)
+        self.assertIn("format('release: WinCare v{0}', needs.verify.outputs.product_version)", workflow)
 
 
 if __name__ == "__main__":
