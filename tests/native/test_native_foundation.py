@@ -126,7 +126,14 @@ class NativeFoundationTests(unittest.TestCase):
             for element in document.iter():
                 control = element.tag.rsplit("}", 1)[-1]
                 if control in {"Button", "ToggleButton", "HyperlinkButton", "MenuFlyoutItem"}:
-                    if not any(name.rsplit("}", 1)[-1] in {"Click", "Command", "NavigateUri"} for name in element.attrib):
+                    direct_action = any(name.rsplit("}", 1)[-1] in {"Click", "Command", "NavigateUri"}
+                                        for name in element.attrib)
+                    flyout_action = control == "Button" and any(
+                        child.tag.rsplit("}", 1)[-1] == "MenuFlyoutItem"
+                        and any(key.rsplit("}", 1)[-1] in {"Click", "Command"} for key in child.attrib)
+                        for child in element.iter()
+                    )
+                    if not (direct_action or flyout_action):
                         inert_controls.append(f"{path.name}: {control} {element.attrib.get('Content', '')}")
 
         self.assertEqual([], inert_controls)

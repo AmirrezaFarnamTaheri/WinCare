@@ -63,7 +63,9 @@ class DownloadsWorkspaceTests(unittest.TestCase):
         self.assertNotIn('Text="{x:Bind Destination}"', page)
         self.assertIn('Text="{x:Bind Host}"', page)
         self.assertIn('AutomationProperties.Name="{x:Bind AccessibleName}"', page)
-        self.assertIn('Content="Remove record"', page)
+        self.assertIn('MenuFlyoutItem Text="Remove record" Click="Remove_Click"', page)
+        self.assertIn('Content="More"', page)
+        self.assertNotIn('HorizontalScrollBarVisibility="Auto"', page)
         self.assertIn('IsIndeterminate="{x:Bind IsIndeterminate}"', page)
 
 

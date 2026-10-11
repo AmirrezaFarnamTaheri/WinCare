@@ -77,10 +77,10 @@
                                         <TextBlock Text="What we found" Style="{StaticResource FieldLabelTextStyle}" Margin="0,8,0,0" />
                                         <ItemsControl ItemsSource="{x:Bind ActionPlan.Findings, Mode=OneTime}">
                                             <ItemsControl.ItemTemplate>
-                                                <DataTemplate>
+                                                <DataTemplate x:DataType="diag:DiagnosticFinding">
                                                     <StackPanel Spacing="3" Margin="0,0,0,8">
-                                                        <TextBlock Text="{Binding Title}" Style="{StaticResource RowTitleTextStyle}" />
-                                                        <TextBlock Text="{Binding Description}" Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap" />
+                                                        <TextBlock Text="{x:Bind Title}" Style="{StaticResource RowTitleTextStyle}" />
+                                                        <TextBlock Text="{x:Bind Description}" Style="{StaticResource RowSecondaryTextStyle}" TextWrapping="Wrap" />
                                                     </StackPanel>
                                                 </DataTemplate>
                                             </ItemsControl.ItemTemplate>
@@ -92,10 +92,10 @@
                                                            Style="{StaticResource FieldHintTextStyle}" />
                                                 <ItemsControl ItemsSource="{x:Bind ActionPlan.MeasuredEvidence, Mode=OneTime}">
                                                     <ItemsControl.ItemTemplate>
-                                                        <DataTemplate>
+                                                        <DataTemplate x:DataType="diag:TelemetryEvidence">
                                                             <Grid ColumnDefinitions="*,2*" ColumnSpacing="12" Padding="0,6">
-                                                                <TextBlock Text="{Binding MetricName}" Style="{StaticResource FieldLabelTextStyle}" TextWrapping="Wrap" />
-                                                                <TextBlock Grid.Column="1" Text="{Binding MeasuredValue}"
+                                                                <TextBlock Text="{x:Bind MetricName}" Style="{StaticResource FieldLabelTextStyle}" TextWrapping="Wrap" />
+                                                                <TextBlock Grid.Column="1" Text="{x:Bind MeasuredValue}"
                                                                            Style="{StaticResource BodyTextStyle}" TextWrapping="Wrap" />
                                                             </Grid>
                                                         </DataTemplate>
