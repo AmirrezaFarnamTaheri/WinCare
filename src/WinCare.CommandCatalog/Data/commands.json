@@ -4856,8 +4856,8 @@
     },
     {
       "id": "legacy-unsafe",
-      "title": "Winhance maximum profile",
-      "summary": "Execute the broad Winhance-derived hardening, debloat, AppX, service, task, privacy, update, cleanup, and capability reduction composition through WinCare's typed Legacy Unsafe plane.",
+      "title": "Legacy maintenance: DNS flush or Explorer restart",
+      "summary": "Limited actions only: flush the DNS resolver cache or restart Explorer for the current desktop session after reviewing the impact. Broader historical Winhance operations are not implemented.",
       "area": "Repair & recovery",
       "section": "Reset & media",
       "risk": "Critical",

@@ -13,8 +13,8 @@ namespace WinCare.App.Views.Pages;
 
 public sealed partial class AllToolsPage : Page
 {
-    private const double ToolTableCompactBreakpointDip = 840;
-    private const double InlineInspectorBreakpointDip = 1320;
+    private const double ToolTableCompactBreakpointDip = 1120;
+    private const double InlineInspectorBreakpointDip = 1640;
     private Control? _inspectorReturnFocus;
     private bool _viewModelSubscribed;
 
@@ -165,6 +165,9 @@ public sealed partial class AllToolsPage : Page
     {
         SearchFilterGrid.ColumnDefinitions.Clear();
         SearchFilterGrid.RowDefinitions.Clear();
+        // Align the search field with the filter inputs that have headers in a
+        // wide row. In the stacked layout, search owns its row and needs no offset.
+        ToolSearchBox.Margin = compact ? new Thickness(0) : new Thickness(0, 26, 0, 0);
 
         if (compact)
         {

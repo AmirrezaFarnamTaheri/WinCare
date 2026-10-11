@@ -17,7 +17,7 @@ public sealed class CommandCatalogTests
     [Theory]
     [InlineData("system", "System overview")]
     [InlineData("wua-install", "Install Windows updates")]
-    [InlineData("legacy-unsafe", "Winhance maximum profile")]
+    [InlineData("legacy-unsafe", "Legacy maintenance: DNS flush or Explorer restart")]
     [InlineData("quic-capability", "QUIC capability")]
     [InlineData("installer-cache-analysis", "Installer cache analysis")]
     [InlineData("storage-report", "Bounded storage report")]

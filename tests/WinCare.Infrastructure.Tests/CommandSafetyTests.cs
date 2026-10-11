@@ -9,6 +9,17 @@ namespace WinCare.Infrastructure.Tests;
 
 public sealed class CommandSafetyTests
 {
+    [Fact]
+    public void ExplorerLaunchUsesExplicitWindowsInstallationLocation()
+    {
+        if (!OperatingSystem.IsWindows()) return;
+        string path = WindowsCommandExecutor.ResolveTrustedExplorerPath();
+        Assert.True(Path.IsPathFullyQualified(path));
+        Assert.Equal("explorer.exe", Path.GetFileName(path), ignoreCase: true);
+        Assert.Equal(Path.GetFullPath(Environment.GetFolderPath(Environment.SpecialFolder.Windows)),
+            Path.GetDirectoryName(path), ignoreCase: true);
+    }
+
     [Theory]
     [InlineData("NaN")]
     [InlineData("Infinity")]

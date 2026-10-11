@@ -28,16 +28,17 @@
             <TextBox x:Name="ToolSearchBox" MinHeight="44" TabIndex="1"
                      PlaceholderText="What do you want to do?"
                      Text="{x:Bind ViewModel.SearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                     AutomationProperties.AutomationId="ToolSearch" AutomationProperties.Name="Search power tools">
+                     AutomationProperties.AutomationId="ToolSearch" AutomationProperties.Name="Search power tools"
+                     AutomationProperties.HelpText="Search by tool name, category, or command ID">
                 <TextBox.KeyboardAccelerators>
                     <KeyboardAccelerator Modifiers="Control" Key="F" Invoked="ToolSearch_FocusAccelerator" />
                 </TextBox.KeyboardAccelerators>
             </TextBox>
-            <ComboBox x:Name="AreaFilter" Grid.Column="1" Header="Area" TabIndex="2" ItemsSource="{x:Bind ViewModel.AreaOptions, Mode=OneWay}" DisplayMemberPath="Label"
+            <ComboBox x:Name="AreaFilter" Grid.Column="1" Header="Area" MinHeight="44" TabIndex="2" ItemsSource="{x:Bind ViewModel.AreaOptions, Mode=OneWay}" DisplayMemberPath="Label"
                       SelectedItem="{x:Bind ViewModel.SelectedAreaOption, Mode=TwoWay}" AutomationProperties.AutomationId="AreaFilter" AutomationProperties.Name="Filter power tools by area" />
-            <ComboBox x:Name="SectionFilter" Grid.Column="2" Header="Section" TabIndex="3" ItemsSource="{x:Bind ViewModel.SectionOptions, Mode=OneWay}" DisplayMemberPath="Label"
+            <ComboBox x:Name="SectionFilter" Grid.Column="2" Header="Section" MinHeight="44" TabIndex="3" ItemsSource="{x:Bind ViewModel.SectionOptions, Mode=OneWay}" DisplayMemberPath="Label"
                       SelectedItem="{x:Bind ViewModel.SelectedSectionOption, Mode=TwoWay}" AutomationProperties.AutomationId="SectionFilter" AutomationProperties.Name="Filter power tools by section" />
-            <ComboBox x:Name="RiskFilter" Grid.Column="3" Header="Impact" TabIndex="4" AutomationProperties.HelpText="Impact describes how much a tool can change this PC: read-only, moderate, or permanent" ItemsSource="{x:Bind ViewModel.RiskOptions, Mode=OneWay}" DisplayMemberPath="Label"
+            <ComboBox x:Name="RiskFilter" Grid.Column="3" Header="Impact" MinHeight="44" TabIndex="4" AutomationProperties.HelpText="Impact describes how much a tool can change this PC: read-only, moderate, or permanent" ItemsSource="{x:Bind ViewModel.RiskOptions, Mode=OneWay}" DisplayMemberPath="Label"
                       SelectedItem="{x:Bind ViewModel.SelectedRiskOption, Mode=TwoWay}" AutomationProperties.AutomationId="RiskFilter" AutomationProperties.Name="Filter power tools by impact" />
             <CheckBox x:Name="ReadOnlyFilter" Grid.Column="4" Margin="0,26,0,0" VerticalAlignment="Center" Content="Read-only" TabIndex="5"
                       IsChecked="{x:Bind ViewModel.ReadOnlyOnly, Mode=TwoWay}" AutomationProperties.AutomationId="ReadOnlyFilter" AutomationProperties.Name="Show only read-only power tools" />

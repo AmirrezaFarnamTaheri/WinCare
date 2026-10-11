@@ -287,12 +287,36 @@ internal sealed partial class WindowsCommandExecutor
         return Success("appx-launch-targets", $"Found {rows.Count} matching AppX activation packages.", rows);
     }
 
+    // Explorer is a Windows shell binary, not a PATH-resolved utility. Use the Windows
+    // installation directory returned by the OS instead of CreateProcess's relative-name
+    // lookup, which can execute a working-directory lookalike under WinCare's token.
+    internal static string ResolveTrustedExplorerPath()
+    {
+        if (!OperatingSystem.IsWindows())
+            throw new PlatformNotSupportedException("Explorer is available only on Windows.");
+        string windows = Environment.GetFolderPath(Environment.SpecialFolder.Windows);
+        if (string.IsNullOrWhiteSpace(windows))
+            throw new CommandDependencyException("explorer.exe", "Windows installation directory is unavailable.");
+        string executable = Path.Combine(windows, "explorer.exe");
+        if (!File.Exists(executable))
+            throw new CommandDependencyException("explorer.exe", "Windows Explorer executable is unavailable.");
+        return executable;
+    }
+
+    private static Process StartTrustedExplorer(params string[] arguments)
+    {
+        var startInfo = new ProcessStartInfo(ResolveTrustedExplorerPath()) { UseShellExecute = false };
+        foreach (string argument in arguments)
+            startInfo.ArgumentList.Add(argument);
+        return Process.Start(startInfo) ?? throw new InvalidOperationException("Windows Explorer did not start.");
+    }
+
     private CommandHandlerOutcome AppxLaunch(CommandParameters p)
     {
         string appUserModelId = p.RequiredString("AppUserModelId");
         if (appUserModelId.Length > 512 || appUserModelId.IndexOfAny(['\r', '\n', '"']) >= 0) throw new CommandParameterException("AppUserModelId", "AppUserModelId contains unsupported characters.");
         string target = "shell:AppsFolder\\" + appUserModelId;
-        Process.Start(new ProcessStartInfo("explorer.exe") { UseShellExecute = false, ArgumentList = { target } });
+        using Process process = StartTrustedExplorer(target);
         return Success("appx-launch", "AppX application activation requested through shell:AppsFolder.", new { appUserModelId, target });
     }
 
@@ -309,9 +333,19 @@ internal sealed partial class WindowsCommandExecutor
 
     private CommandHandlerOutcome TerminalEnvironment()
     {
-        var env = Environment.GetEnvironmentVariables().Cast<System.Collections.DictionaryEntry>().Select(entry => new { name = Convert.ToString(entry.Key), value = Convert.ToString(entry.Value) }).OrderBy(entry => entry.name, StringComparer.OrdinalIgnoreCase).ToArray();
+        // This diagnostic flows into Activity/export records. Environment values can contain
+        // credentials even under apparently harmless names (including OS and PATH when modified
+        // by a launcher). No name-based exemption is safe; expose names without any raw values.
+        var env = Environment.GetEnvironmentVariables().Keys.Cast<object>()
+            .Select(key => new
+            {
+                name = Convert.ToString(key, CultureInfo.InvariantCulture) ?? string.Empty,
+                value = "[hidden: may contain private data]",
+            })
+            .OrderBy(entry => entry.name, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
         var shells = new[] { "cmd.exe", "wt.exe", "wezterm.exe", "bash.exe", "wsl.exe" }.Select(name => new { name, path = FindExecutable(name) }).ToArray();
-        return Success("terminal-environment", "Terminal environment and shell capabilities inspected.", new { currentDirectory = Environment.CurrentDirectory, shells, variables = env });
+        return Success("terminal-environment", "Shell capabilities inspected. Environment values are hidden to protect credentials in Activity and exports.", new { currentDirectory = Environment.CurrentDirectory, shells, variables = env });
     }
 
     private async Task<CommandHandlerOutcome> TerminalExportAsync(CommandParameters p, CancellationToken cancellationToken)
@@ -842,8 +876,8 @@ internal sealed partial class WindowsCommandExecutor
     private CommandHandlerOutcome ExplorerQuick(CommandParameters p)
     {
         string path = RequireExistingDirectory(p.RequiredString("Path"));
-        Process.Start(new ProcessStartInfo("explorer.exe") { UseShellExecute = false, ArgumentList = { path } });
-        return Success("explorer-quick", "Explorer opened at validated directory.", new { path });
+        using Process process = StartTrustedExplorer(path);
+        return Success("explorer-quick", "Explorer launch requested for the validated directory.", new { path });
     }
 
     private async Task<CommandHandlerOutcome> OfflineReductionAssessAsync(CommandParameters p, CancellationToken cancellationToken)
@@ -927,23 +961,38 @@ internal sealed partial class WindowsCommandExecutor
         }
         if (action.Equals("restart-explorer", StringComparison.OrdinalIgnoreCase))
         {
+            // Never terminate Explorer in another desktop/logon session. Any unsuccessful
+            // termination is an uncertain partial result, not a successful restart.
+            using Process currentProcess = Process.GetCurrentProcess();
+            int sessionId = currentProcess.SessionId;
             foreach (Process process in Process.GetProcessesByName("explorer"))
             {
                 using (process)
                 {
+                    cancellationToken.ThrowIfCancellationRequested();
                     try
                     {
+                        if (process.SessionId != sessionId || process.HasExited) continue;
                         process.Kill(entireProcessTree: false);
                         using CancellationTokenSource stopTimeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
                         stopTimeout.CancelAfter(TimeSpan.FromSeconds(5));
-                        await process.WaitForExitAsync(stopTimeout.Token).ConfigureAwait(false);
+                        try
+                        {
+                            await process.WaitForExitAsync(stopTimeout.Token).ConfigureAwait(false);
+                        }
+                        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+                        {
+                            throw new TimeoutException("Explorer did not exit within five seconds. The shell state is uncertain.");
+                        }
                     }
-                    catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested) { }
-                    catch (Exception ex) when (ex is InvalidOperationException or System.ComponentModel.Win32Exception) { }
+                    catch (InvalidOperationException) when (process.HasExited)
+                    {
+                        // Explorer exited between enumeration and termination.
+                    }
                 }
             }
-            Process.Start(new ProcessStartInfo("explorer.exe") { UseShellExecute = false });
-            return Success("legacy-unsafe", "Explorer shell restarted for current interactive session.", new { action });
+            using Process restarted = StartTrustedExplorer();
+            return Success("legacy-unsafe", "Explorer restart requested for the current interactive session.", new { action, sessionId });
         }
         return Block("legacy-unsafe", "Requested legacy action is not in the native allowlist. WinCare intentionally refuses arbitrary legacy command execution.");
     }

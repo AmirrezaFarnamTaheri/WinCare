@@ -115,6 +115,17 @@ class SafetyRegressionTests(unittest.TestCase):
         self.assertNotIn('CommandHandlerOutcome.Success("Application residuals successfully purged.")', executor)
         self.assertNotIn('CommandHandlerOutcome.Success("Startup applications optimized successfully.")', executor)
 
+    def test_power_tools_responsive_filters_keep_search_usable(self) -> None:
+        layout = self.read("src/WinCare.App/Views/Pages/AllToolsPage.xaml.cs")
+        xaml = self.read("src/WinCare.App/Views/Pages/AllToolsPage.xaml")
+        self.assertIn("ToolTableCompactBreakpointDip = 1120", layout)
+        self.assertIn("InlineInspectorBreakpointDip = 1640", layout)
+        self.assertIn("ToolSearchBox.Margin = compact ?", layout)
+        self.assertIn('HelpText="Search by tool name, category, or command ID"', xaml)
+        self.assertIn('Header="Area" MinHeight="44"', xaml)
+        self.assertIn('Header="Section" MinHeight="44"', xaml)
+        self.assertIn('Header="Impact" MinHeight="44"', xaml)
+
     def test_high_risk_servicing_and_database_commands_require_review(self) -> None:
         import json
         catalog = {command["id"]: command for command in
