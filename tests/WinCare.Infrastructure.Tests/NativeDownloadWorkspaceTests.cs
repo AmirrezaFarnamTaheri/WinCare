@@ -79,7 +79,8 @@ public sealed class NativeDownloadWorkspaceTests
             var created = await executor.ExecuteAsync(
                 WinCare.CommandCatalog.CommandCatalog.Find("download-create")!,
                 CommandRequest.Execute("download-create", JsonSerializer.SerializeToElement(
-                    new { Url = "https://example.com/payload.bin", Destination = destination })),
+                    new { Url = "https://example.com/payload.bin", Destination = destination,
+                    Sha256 = new string('a', 64) })),
                 CancellationToken.None);
             Assert.Equal(CommandResultStatus.Succeeded, created.Status);
             string id = created.Data!.Value.GetProperty("id").GetString()!;
