@@ -51,18 +51,9 @@ public sealed class StorageHotspot(
 public sealed record StorageBrowserListing(
     string Path, IReadOnlyList<StorageBrowserItem> Items, bool Truncated, int UnreadableEntries);
 
-/// <summary>A subfolder size derived from a bounded, potentially partial scan.</summary>
-public sealed record StorageHotspot(string Name, string FullPath, ulong ScannedBytes, ulong ScannedTotalBytes, bool IsPartial)
-{
-    public double SharePercent => ScannedTotalBytes == 0 ? 0 :
-        Math.Clamp(100d * ScannedBytes / ScannedTotalBytes, 0, 100);
-    public string SizeLabel => StorageExplorer.FormatBytes(ScannedBytes) + (IsPartial ? " scanned" : "");
-    public string AccessibleName => $"{Name}, {SizeLabel}";
-}
-
 /// <summary>
-/// Read-only file navigation. No deletion, writes, symbolic-link traversal, or background
-/// indexing. The caller runs Browse off the UI thread; the entry cap bounds memory.
+/// Read-only file navigation. No deletion, writes, automatic descent into
+/// symbolic-link entries, or background indexing. The caller runs Browse off the UI thread; the entry cap bounds memory.
 /// </summary>
 public static class StorageExplorer
 {
