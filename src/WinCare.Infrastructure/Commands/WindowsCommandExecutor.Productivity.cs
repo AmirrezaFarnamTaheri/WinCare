@@ -542,15 +542,37 @@ internal sealed partial class WindowsCommandExecutor
         bool completeExists = File.Exists(destination);
         bool partialExists = File.Exists(partial);
         long bytes = completeExists ? new FileInfo(destination).Length : partialExists ? new FileInfo(partial).Length : 0;
-        string state = completeExists ? "Completed" : partialExists ? "Suspended" : "Pending";
+        string state = partialExists ? "Suspended" : "Pending";
+        string? actualHash = null;
+        if (completeExists)
+        {
+            // A filename collision does not establish ownership. Only a previously
+            // verified digest can identify a published file as this download.
+            string expectedHash = job.TryGetProperty("sha256", out JsonElement requestedHash)
+                ? requestedHash.GetString() ?? string.Empty : string.Empty;
+            if (expectedHash.Length == 0 && job.TryGetProperty("sha256Actual", out JsonElement publishedHash))
+                expectedHash = publishedHash.GetString() ?? string.Empty;
+            if (expectedHash.Length == 0)
+                return Block("download-reconcile", "A file exists at the destination but there is no verified digest to establish that it belongs to this download.");
+            await using (FileStream published = File.OpenRead(destination))
+            {
+                actualHash = Convert.ToHexString(
+                    await SHA256.HashDataAsync(published, cancellationToken).ConfigureAwait(false)).ToLowerInvariant();
+            }
+            if (!CryptographicOperations.FixedTimeEquals(
+                    Encoding.ASCII.GetBytes(actualHash), Encoding.ASCII.GetBytes(expectedHash)))
+                return Block("download-reconcile", "Destination hash does not match this download. The existing file and queue state were preserved.");
+            state = "Completed";
+        }
         await PatchStateItemAsync("downloads", id, node =>
         {
             node["state"] = state;
             node["bytes"] = completeExists ? bytes : 0;
             node["partialBytes"] = partialExists ? bytes : 0;
+            if (actualHash is not null) node["sha256Actual"] = actualHash;
             node["updatedAt"] = DateTimeOffset.UtcNow;
         }, cancellationToken).ConfigureAwait(false);
-        return Success("download-reconcile", "Download job reconciled with complete and partial filesystem state.", new { id, destination, partial, state, bytes });
+        return Success("download-reconcile", "Download job reconciled with verified filesystem state.", new { id, destination, partial, state, bytes });
     }
 
     private async Task<CommandHandlerOutcome> DownloadCancelAsync(CommandParameters p, CancellationToken cancellationToken)
