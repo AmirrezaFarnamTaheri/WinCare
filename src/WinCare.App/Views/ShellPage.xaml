@@ -51,6 +51,9 @@
             <NavigationViewItem x:Uid="NavDownloads" Content="Downloads" Tag="downloads" AutomationProperties.AutomationId="NavDownloads" AutomationProperties.Name="Downloads">
                 <NavigationViewItem.Icon><FontIcon Glyph="&#xE896;" /></NavigationViewItem.Icon>
             </NavigationViewItem>
+            <NavigationViewItem Content="Files &amp; storage" Tag="storage-browser" AutomationProperties.AutomationId="NavStorageBrowser" AutomationProperties.Name="Files and storage">
+                <NavigationViewItem.Icon><FontIcon Glyph="&#xE8B7;" /></NavigationViewItem.Icon>
+            </NavigationViewItem>
         </NavigationView.MenuItems>
 
         <NavigationView.FooterMenuItems>

@@ -18,6 +18,7 @@ public sealed class PageService
         ["all-tools"] = typeof(AllToolsPage),
         ["activity"] = typeof(ActivityPage),
         ["downloads"] = typeof(DownloadsPage),
+        ["storage-browser"] = typeof(StorageBrowserPage),
         ["plugin-store"] = typeof(PluginStorePage),
         ["ai-doctor"] = typeof(AiDoctorPage),
         ["settings"] = typeof(SettingsPage),
