@@ -30,6 +30,8 @@ WinCare brings Windows maintenance, diagnostics, recovery, and operational tooli
 |---|---|
 | Check system health | Inspect system, storage, security, hardware, network, update, and runtime evidence. |
 | Clean up and maintain | Review bounded cleanup targets, startup state, app/package state, and maintenance workflows. |
+| Find files and free space | Browse local folders and drives, inspect sizes, and identify the largest subfolders from a bounded read-only scan. |
+| Check running tasks | Compare process CPU and working-set memory, search by name or PID, and confirm before ending an ordinary task. |
 | Repair and recover | Use guarded repair, remediation, restore, and recovery operations with explicit outcomes. |
 | Work with advanced tools | Use Power tools for the complete typed catalog, including diagnostics, automation, window/workspace tools, developer utilities, native helpers, and download tooling. |
 | Extend the app | Add and manage locally admitted capabilities through Extensions. |
@@ -44,8 +46,11 @@ WinCare keeps common work out of the full command catalog:
 - **Home** surfaces the next useful action, common care tasks, recent activity, and links to advanced areas.
 - **Checkup** is read-only and hands findings off to the relevant care page instead of changing Windows itself.
 - **System care**, **Security**, and **Repair & recovery** use the catalog's exact Area/Section taxonomy so tools do not leak into unrelated tabs.
-- **Power tools** exposes all 296 native commands with task search, Area + Section filters, real category browsing, Favorites, Recent, typed parameters, and Care plans.
-- **Extensions** contains optional built-in and locally admitted capabilities; **Troubleshoot** is the local rule-based diagnostic assistant.
+- **Power tools** lists 296 command contracts, including unavailable actions that are clearly marked. Search by task or category; edit typed parameters and review execution requirements before making changes.
+- **Files & storage** browses folders and drives without changing them. Folder-size totals are bounded and explicitly labeled partial when incomplete.
+- **Processes** shows live task readings and protects critical Windows processes from the End task action.
+- **Downloads** manages transfers, including opening their destination folders in Files & storage.
+- **Extensions** contains optional built-in and locally admitted capabilities; **Troubleshoot** runs local guided checks and proposes next steps.
 - **Ctrl+K** searches pages, tools, extensions, and help topics from anywhere in the app.
 
 ## Install

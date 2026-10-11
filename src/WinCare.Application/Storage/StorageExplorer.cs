@@ -21,6 +21,13 @@ public sealed record StorageBrowserItem(
 public sealed record StorageBrowserListing(
     string Path, IReadOnlyList<StorageBrowserItem> Items, bool Truncated, int UnreadableEntries);
 
+/// <summary>A subfolder size derived from a bounded, potentially partial scan.</summary>
+public sealed record StorageHotspot(string Name, string FullPath, ulong ScannedBytes, bool IsPartial)
+{
+    public string SizeLabel => StorageExplorer.FormatBytes(ScannedBytes) + (IsPartial ? " scanned" : "");
+    public string AccessibleName => $"{Name}, {SizeLabel}";
+}
+
 /// <summary>
 /// Read-only file navigation. No deletion, writes, symbolic-link traversal, or background
 /// indexing. The caller runs Browse off the UI thread; the entry cap bounds memory.

@@ -19,18 +19,24 @@ The 2026-09 redesign concept studies were retired with the 3.0.0 re-release; thi
 
 | Role / resource | Light | Dark |
 |---|---|---|
-| PageBackgroundBrush | #F2F4F7 | #1C2733 |
-| SurfaceBrush / CardSurfaceBrush | #FFFFFF | #26313D |
-| SurfaceSecondaryBrush | #EDF1F5 | #2E3B49 |
-| SurfaceHoverBrush | #E1E8EE | #374656 |
-| HeroBackgroundBrush | #DFEAF2 | #202B37 |
-| NavigationRailBrush / TitleBarBackgroundBrush | #EAEEF2 | #202B37 |
-| CardBorderBrush / BorderSubtleBrush | #D5DDE4 | #46586A |
-| TextPrimaryBrush | #14202B | #EAF0F5 |
-| TextSecondaryBrush | #3D5568 | #AFC0CD |
-| AccentChromeBrush / AccentBrush | #005FB8 | #60CDFF |
-| AccentChromeSubtleBrush | #D6EAF7 | #1E3B4F |
-| TextOnAccentBrush | #FFFFFF | #0A1E2C |
+| PageBackgroundBrush | #F7F7F2 | #161F1B |
+| SurfaceBrush | #FFFFFF | #202B26 |
+| CardSurfaceBrush | #FFFFFF | #202B26 |
+| SurfaceSecondaryBrush | #EDF1EB | #293A32 |
+| SurfaceHoverBrush | #E1E7DF | #374A3E |
+| HeroBackgroundBrush | #E5EFE6 | #263F32 |
+| NavigationRailBrush | #EFF1EC | #1B2A23 |
+| TitleBarBackgroundBrush | #ECEFE8 | #18241F |
+| CardBorderBrush | #D3DBD0 | #455B4F |
+| BorderSubtleBrush | #CCD5C9 | #455B4F |
+| TextPrimaryBrush | #1D2925 | #F2F5EC |
+| TextSecondaryBrush | #425950 | #C0CEBE |
+| AccentChromeBrush | #0E6254 | #7CDFB5 |
+| AccentChromeSubtleBrush | #DCEEE7 | #253F35 |
+| TextOnAccentBrush | #FFFFFF | #0C2319 |
+| SuccessBrush | #176342 | #8BE0A6 |
+| WarningBrush | #78500F | #FFD08C |
+| DangerBrush | #A92B35 | #FFB0A7 |
 
 Status colors retain semantic meaning. Brand color is not a health result. Primary-action styles use WinUI's native `AccentFillColorDefaultBrush`/`TextOnAccentFillColorPrimaryBrush`, so buttons and links follow the user's system accent; the static `AccentBrush`/`AccentChromeBrush` values above carry the Windows default accent for view-model-bound brushes. Status-pill pairs (`PillReadOnlyBg`/`PillMutatingBg`/`PillElevatedBg`/`PillNotReadyBg` with `PillText`/`PillAltText`) stay literal hex so the contrast gates can measure them; runtime composition is pinned in `verify_pill_contrast.py`. High contrast uses Windows system colors: the not-ready pill drops to the window ground and HC pills carry meaning through text and borders, never fill hue alone. Native caption controls follow appearance too.
 
@@ -38,11 +44,11 @@ Status colors retain semantic meaning. Brand color is not a health result. Prima
 
 - Segoe UI Variable Display for headings, Segoe UI Variable Text for controls and prose. Native Windows legibility is intentional.
 - Cascadia Code / Cascadia Mono / Consolas only for measurements, identifiers and technical evidence.
-- Page title 34 DIP; section 20; row title 15; body 14 with 21-DIP line height; secondary prose 13 with 18-DIP line height. No decorative labels above page headings.
-- Status masthead 40 DIP with 48-DIP line height (`HeroTitleTextStyle`) carries the Home verdict and the Checkup action heading, which is the only type permitted to outrank a page title, and the sole full-strength display moment per page. Coverage and last-status render as an inline stat (metric, caption, 1-DIP `BorderSubtleBrush` hairline divider) inside the hero enclosure, never a nested card; compact stacks the stat and drops the hairline.
+- Page title 31 DIP; section 19; row title 15; body 14 with 21-DIP line height; secondary prose 13 with 18-DIP line height. No decorative labels above page headings.
+- Status masthead 36 DIP with 44-DIP line height (`HeroTitleTextStyle`) carries the Home verdict and the Checkup action heading, which is the only type permitted to outrank a page title, and the sole full-strength display moment per page. Coverage and last-status render as an inline stat (metric, caption, 1-DIP `BorderSubtleBrush` hairline divider) inside the hero enclosure, never a nested card; compact stacks the stat and drops the hairline.
 - Entry-point icons sit in 40-DIP `IconTileStyle` tiles (`AccentChromeSubtleBrush` ground, `AccentChromeBrush` glyph), the system's recurring structural device, built only from the existing accent pair.
 - Spacing tokens `SpacingXS` to `XXL` (4/8/12/16/24/32) and `GapXS` to `XL` exist in `ControlStyles.xaml` for new work; existing page markup still uses a 6 to 28 DIP mix that does not sit on that scale. Migrating page literals is a deferred, render-verified pass; replacing values blind would be a redesign, not a cleanup.
-- Desktop inset 32 DIP; compact 20. Outer panels 12-DIP corners, inner panels and controls 8, status labels 4. One enclosure per functional group.
+- Desktop inset 32 DIP; compact pages use 16–20. Outer panels have 14-DIP corners, inner panels and controls 8, status labels 6. One enclosure per functional group.
 - Primary actions use the Windows system accent via native WinUI accent brushes. Secondary actions use QuietButtonStyle. Diagnostic channels share a native button style with visible focus.
 - Preserve native hover, pressed, disabled and busy states. No perpetual animation or delayed feedback for effect.
 

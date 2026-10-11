@@ -28,6 +28,7 @@ public sealed partial class StorageBrowserPage : Page
 
     public ObservableCollection<StorageBrowserDrive> Drives { get; } = [];
     public ObservableCollection<StorageBrowserItem> VisibleEntries { get; } = [];
+    public ObservableCollection<StorageHotspot> LargestFolders { get; } = [];
 
     protected override async void OnNavigatedTo(NavigationEventArgs e)
     {
@@ -86,6 +87,8 @@ public sealed partial class StorageBrowserPage : Page
             UpButton.IsEnabled = Path.GetDirectoryName(listing.Path) is not null;
             _allEntries.Clear();
             _allEntries.AddRange(listing.Items);
+            LargestFolders.Clear();
+            HotspotsExpander.Visibility = Visibility.Collapsed;
             UpdateFilteredEntries();
             NoticeBar.IsOpen = false;
             ScanSummaryText.Text = listing.Truncated
@@ -206,6 +209,16 @@ public sealed partial class StorageBrowserPage : Page
             StorageReport report = await AppRuntime.Current.StorageReports.CreateReportAsync(
                 new StorageReportRequest(root, MaxEntries: 20_000, MaxDepth: 12), cancellation.Token);
             if (!_visible || cancellation.IsCancellationRequested || _currentPath != root) return;
+            LargestFolders.Clear();
+            foreach (StorageDirectoryEntry directory in report.Directories
+                .Where(item => item.Depth == 1)
+                .OrderByDescending(item => item.AccountedBytes).Take(8))
+            {
+                LargestFolders.Add(new StorageHotspot(
+                    Path.GetFileName(Path.TrimEndingDirectorySeparator(directory.Path)),
+                    directory.Path, directory.AccountedBytes, report.IsPartial));
+            }
+            HotspotsExpander.Visibility = LargestFolders.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
             string scope = report.IsPartial ? "Partial scan" : "Folder total";
             ScanSummaryText.Text = $"{scope}: {StorageExplorer.FormatBytes(report.AccountedBytes)} across {report.FilesSeen:N0} files. " +
                 (report.IsPartial ? "Some entries were skipped or a scan limit was reached." : "Read-only; no files changed.");
@@ -225,6 +238,12 @@ public sealed partial class StorageBrowserPage : Page
             }
             cancellation.Dispose();
         }
+    }
+
+    private async void Hotspot_ItemClick(object sender, ItemClickEventArgs e)
+    {
+        if (e.ClickedItem is StorageHotspot folder)
+            await NavigateAsync(folder.FullPath);
     }
 
     private void ShowError(string message)
@@ -253,5 +272,9 @@ public sealed partial class StorageBrowserPage : Page
         Grid.SetColumnSpan(FilterInput, compact ? 4 : 1);
         DriveSpaceText.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
         DriveUsageBar.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
+        Grid.SetRow(OpenExplorerButton, compact ? 1 : 0);
+        Grid.SetColumn(OpenExplorerButton, compact ? 0 : 2);
+        Grid.SetColumnSpan(OpenExplorerButton, compact ? 3 : 1);
+        OpenExplorerButton.HorizontalAlignment = compact ? HorizontalAlignment.Stretch : HorizontalAlignment.Right;
     }
 }

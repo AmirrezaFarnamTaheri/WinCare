@@ -11,13 +11,14 @@
             <RowDefinition Height="Auto" /><RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" /><RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" /><RowDefinition Height="*" />
-            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" /><RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
         <controls:PageHeaderControl Title="Files &amp; storage"
             Description="Find files, check drive space, and inspect folders. Browsing and size checks never change your files." />
 
         <Border Grid.Row="1" Style="{StaticResource SurfaceBorderStyle}" Padding="16">
-            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="18" RowSpacing="8">
+            <Grid x:Name="DriveLayout" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="18" RowSpacing="8">
+                <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
                 <StackPanel Spacing="4" MinWidth="240">
                     <TextBlock Text="Drive" Style="{StaticResource FieldLabelTextStyle}" />
                     <ComboBox x:Name="DrivePicker" ItemsSource="{x:Bind Drives, Mode=OneWay}"
@@ -31,7 +32,7 @@
                     <ProgressBar x:Name="DriveUsageBar" Maximum="100" Value="0" MinHeight="6"
                                  AutomationProperties.Name="Drive space used, percent" />
                 </StackPanel>
-                <Button Grid.Column="2" Content="Open in Explorer" Click="OpenLocation_Click"
+                <Button x:Name="OpenExplorerButton" Grid.Column="2" Content="Open in Explorer" Click="OpenLocation_Click"
                         Style="{StaticResource QuietButtonStyle}" VerticalAlignment="Center"
                         AutomationProperties.Name="Open the current folder in Windows File Explorer" />
             </Grid>
@@ -108,7 +109,25 @@
                 </ListView>
             </Grid>
         </Border>
-        <Grid Grid.Row="6" ColumnDefinitions="Auto,*" ColumnSpacing="10">
+        <Expander x:Name="HotspotsExpander" Grid.Row="6" Header="Largest subfolders found" IsExpanded="False"
+                  Visibility="Collapsed">
+            <ListView Height="196" ItemsSource="{x:Bind LargestFolders, Mode=OneWay}"
+                      IsItemClickEnabled="True" SelectionMode="None" ItemClick="Hotspot_ItemClick"
+                      AutomationProperties.Name="Largest subfolders in the latest read-only scan">
+                <ListView.ItemTemplate>
+                    <DataTemplate x:DataType="storage:StorageHotspot">
+                        <Grid ColumnDefinitions="*,Auto" Padding="12,8" ColumnSpacing="12"
+                              AutomationProperties.Name="{x:Bind AccessibleName}">
+                            <TextBlock Text="{x:Bind Name}" Style="{StaticResource RowTitleTextStyle}"
+                                       TextTrimming="CharacterEllipsis" />
+                            <TextBlock Grid.Column="1" Text="{x:Bind SizeLabel}"
+                                       Style="{StaticResource RowSecondaryTextStyle}" />
+                        </Grid>
+                    </DataTemplate>
+                </ListView.ItemTemplate>
+            </ListView>
+        </Expander>
+        <Grid Grid.Row="7" ColumnDefinitions="Auto,*" ColumnSpacing="10">
             <ProgressRing x:Name="ScanProgress" Width="20" Height="20" IsActive="False" Visibility="Collapsed"
                           AutomationProperties.Name="Working" />
             <TextBlock x:Name="ScanSummaryText" Grid.Column="1" Text="Select a folder, or measure its size to see what it contains."
