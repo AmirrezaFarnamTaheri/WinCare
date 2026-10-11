@@ -17,6 +17,9 @@ namespace WinCare.Infrastructure.Commands;
 
 internal sealed partial class WindowsCommandExecutor
 {
+    // Shared across executor instances in this process. Admission must check
+    // destination ownership under one lock, not check-then-append concurrently.
+    private static readonly SemaphoreSlim DownloadCreationGate = new(1, 1);
     private static readonly EnumerationOptions SafeRecursiveEnumeration = new()
     {
         RecurseSubdirectories = true,
@@ -184,7 +187,12 @@ internal sealed partial class WindowsCommandExecutor
 
     private async Task<CommandHandlerOutcome> DownloadCreateAsync(CommandParameters p, CancellationToken cancellationToken)
     {
+        await DownloadCreationGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
         Uri uri = RequiredHttpUri(p, "Url");
+        if (uri.UserInfo.Length != 0)
+            throw new CommandParameterException("Url", "Links containing embedded credentials cannot be stored as downloads.");
         string id = p.String("Id").Trim(); if (id.Length == 0) id = Guid.NewGuid().ToString("N");
         string fileName = p.String("FileName").Trim(); if (fileName.Length == 0) fileName = SafeFileNameFromUri(uri);
         string destination = p.String("Destination").Trim();
@@ -208,6 +216,8 @@ internal sealed partial class WindowsCommandExecutor
         JsonElement record = Data(new { id, url = uri.AbsoluteUri, destination, state = "Pending", createdAt = DateTimeOffset.UtcNow, dueAt, sha256 = p.String("Sha256").Trim().ToLowerInvariant() });
         await AppendStateItemAsync("downloads", record, cancellationToken).ConfigureAwait(false);
         return Success("download-create", "Download job created.", record, undo: false);
+        }
+        finally { DownloadCreationGate.Release(); }
     }
 
     private async Task<CommandHandlerOutcome> DownloadStartAsync(CommandParameters p, CancellationToken cancellationToken)
@@ -215,6 +225,10 @@ internal sealed partial class WindowsCommandExecutor
         const long maximumBytes = 2L * 1024 * 1024 * 1024;
         string id = p.RequiredString("Id");
         JsonElement job = await FindStateItemAsync("downloads", id, cancellationToken).ConfigureAwait(false);
+        string recordedState = job.TryGetProperty("state", out JsonElement stateProperty)
+            ? stateProperty.GetString() ?? string.Empty : string.Empty;
+        if (recordedState is "Completed" or "Cancelled")
+            return Block("download-start", "This job is already finished. Add a new download if you need another copy.");
         Uri uri = new(job.GetProperty("url").GetString()!, UriKind.Absolute);
         string destination = job.GetProperty("destination").GetString()!;
         string expectedHash = job.TryGetProperty("sha256", out JsonElement hash) ? hash.GetString() ?? string.Empty : string.Empty;
@@ -223,7 +237,14 @@ internal sealed partial class WindowsCommandExecutor
 
         using CancellationTokenSource operationCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         string operationKey = "download:" + id;
-        if (!_operations.TryAdd(operationKey, operationCancellation)) return Block("download-start", $"Download '{id}' is already active.");
+        string destinationKey = "download-path:" + Path.GetFullPath(destination).ToUpperInvariant();
+        if (!_operations.TryAdd(operationKey, operationCancellation))
+            return Block("download-start", $"Download '{id}' is already active.");
+        if (!_operations.TryAdd(destinationKey, operationCancellation))
+        {
+            _operations.TryRemove(operationKey, out _);
+            return Block("download-start", "Another download is already writing to this destination.");
+        }
 
         try
         {
@@ -394,6 +415,7 @@ internal sealed partial class WindowsCommandExecutor
         }
         finally
         {
+            _operations.TryRemove(destinationKey, out _);
             _operations.TryRemove(operationKey, out _);
         }
     }

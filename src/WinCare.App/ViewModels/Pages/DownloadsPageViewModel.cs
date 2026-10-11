@@ -60,7 +60,7 @@ public sealed class DownloadsPageViewModel : ObservableObject
         ? "No downloads yet. Paste a link above to create your first download."
         : "Nothing matches this view. Switch to All to see the full queue.";
     public string TotalText => Jobs.Count.ToString(System.Globalization.CultureInfo.CurrentCulture);
-    public string InProgressText => Jobs.Count(j => j.State is "Pending" or "Running" or "SuspendRequested" or "Suspended" or "CancelRequested")
+    public string InProgressText => Jobs.Count(j => j.State is "Pending" or "Running" or "SuspendRequested" or "Suspended" or "Interrupted" or "CancelRequested")
         .ToString(System.Globalization.CultureInfo.CurrentCulture);
     public string FinishedText => Jobs.Count(j => j.State is "Completed" or "Cancelled" or "Failed")
         .ToString(System.Globalization.CultureInfo.CurrentCulture);
@@ -102,7 +102,7 @@ public sealed class DownloadsPageViewModel : ObservableObject
                 Notice = "Download history could not be loaded. Try Refresh.";
                 return;
             }
-            IReadOnlyList<DownloadJobRow> projected = DownloadJobProjection.Project(result.Data);
+            IReadOnlyList<DownloadJobRow> projected = DownloadJobProjection.Project(result.Data, _center.ActiveIds);
             Jobs.Clear();
             foreach (DownloadJobRow job in projected) Jobs.Add(job);
             ApplyFilter();
@@ -128,7 +128,7 @@ public sealed class DownloadsPageViewModel : ObservableObject
     {
         IEnumerable<DownloadJobRow> items = _filter switch
         {
-            "Active" => Jobs.Where(j => j.State is "Pending" or "Running" or "SuspendRequested" or "Suspended" or "CancelRequested"),
+            "Active" => Jobs.Where(j => j.State is "Pending" or "Running" or "SuspendRequested" or "Suspended" or "Interrupted" or "CancelRequested"),
             "Finished" => Jobs.Where(j => j.State is "Completed" or "Cancelled" or "Failed"),
             _ => Jobs,
         };

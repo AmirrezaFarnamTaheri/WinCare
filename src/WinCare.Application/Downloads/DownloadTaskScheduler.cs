@@ -275,7 +275,9 @@ public sealed class DownloadTaskScheduler : IDisposable
                         lock (task.SyncRoot)
                         {
                             if (!IsCurrentAttempt(task, epoch)) return;
-                            File.Move(tempPath, task.DestinationPath, overwrite: true);
+                            // Keep the same no-overwrite guarantee as the native
+                            // persisted download executor.
+                            File.Move(tempPath, task.DestinationPath, overwrite: false);
                             task.Status = DownloadStatus.Completed;
                             task.ErrorMessage = null;
                         }

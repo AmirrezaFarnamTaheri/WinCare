@@ -35,8 +35,11 @@ public static class DownloadJobProjection
 {
     private const int MaxVisibleJobs = 250;
 
-    public static IReadOnlyList<DownloadJobRow> Project(JsonElement? payload)
+    public static IReadOnlyList<DownloadJobRow> Project(
+        JsonElement? payload, IReadOnlyCollection<string>? activeIds = null)
     {
+        HashSet<string>? active = activeIds is null
+            ? null : new HashSet<string>(activeIds, StringComparer.OrdinalIgnoreCase);
         if (payload is not JsonElement data || data.ValueKind != JsonValueKind.Array) return [];
         var jobs = new List<DownloadJobRow>();
         foreach (JsonElement item in data.EnumerateArray())
@@ -55,6 +58,14 @@ public static class DownloadJobProjection
                 ? address.IdnHost
                 : "Unknown source";
             string state = Text(item, "state");
+            if (active is not null && state is "Running" or "SuspendRequested" or "CancelRequested" &&
+                !active.Contains(id))
+            {
+                // A process crash can leave a durable Running marker even though
+                // its network worker no longer exists. Resuming reuses native
+                // partial-file validation; never show a fake live transfer.
+                state = "Interrupted";
+            }
             // Invalid entries are retained as unknown status rather than treated
             // as runnable queue operations.
             if (state.Length == 0) continue;
@@ -64,6 +75,7 @@ public static class DownloadJobProjection
                 "Running" => "Downloading",
                 "SuspendRequested" => "Pausing",
                 "Suspended" => "Paused",
+                "Interrupted" => "Interrupted — ready to resume",
                 "CancelRequested" => "Cancelling",
                 "Cancelled" => "Cancelled",
                 "Completed" => "Completed",
@@ -93,8 +105,8 @@ public static class DownloadJobProjection
                 isRunning && !hasKnownTotal, showProgress,
                 state is "Pending" or "Failed",
                 state == "Running",
-                state == "Suspended",
-                state is "Pending" or "Running" or "Suspended",
+                state is "Suspended" or "Interrupted",
+                state is "Pending" or "Running" or "Suspended" or "Interrupted",
                 state is "Completed" or "Cancelled" or "Failed",
                 created));
         }

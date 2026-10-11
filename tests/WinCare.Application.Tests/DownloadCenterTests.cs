@@ -36,6 +36,22 @@ public sealed class DownloadCenterTests
     }
 
     [Fact]
+    public void Projection_recovers_interrupted_jobs_without_inventing_live_workers()
+    {
+        using var data = JsonDocument.Parse("""
+            [{"id":"stale","state":"Running","partialBytes":4096,
+              "destination":"archive.bin","url":"https://example.com/archive.bin"}]
+            """);
+        var paused = Assert.Single(DownloadJobProjection.Project(data.RootElement, []));
+        Assert.Equal("Interrupted", paused.State);
+        Assert.True(paused.CanResume);
+        Assert.False(paused.CanPause);
+        var active = Assert.Single(DownloadJobProjection.Project(data.RootElement, ["stale"]));
+        Assert.Equal("Running", active.State);
+        Assert.True(active.CanPause);
+    }
+
+    [Fact]
     public void Projection_does_not_invent_a_percentage_when_total_is_unknown()
     {
         using var document = JsonDocument.Parse("""
