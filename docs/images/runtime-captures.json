@@ -1,5 +1,5 @@
 {
-  "captured_utc": "2026-10-02T23:39:05+00:00",
+  "captured_utc": "2026-10-11T21:26:13+00:00",
   "images": {
     "runtime-dashboard.png": {
       "route": "home",
@@ -7,11 +7,12 @@
       "architecture": "x64",
       "version": "4.0.0",
       "version_source": "executable",
-      "commit": "fae3f91",
-      "captured_utc": "2026-10-02T23:39:05+00:00",
+      "commit": "b614fc2",
+      "captured_utc": "2026-10-11T21:26:13+00:00",
       "appearance": "Light",
       "window_dips": "1280x800",
-      "exe": "WinCare.App.exe"
+      "exe": "WinCare-v4.0.0-rc2-x64.exe",
+      "capture_checkout_commit": "83538ae"
     },
     "runtime-checkup.png": {
       "route": "checkup",
@@ -19,11 +20,12 @@
       "architecture": "x64",
       "version": "4.0.0",
       "version_source": "executable",
-      "commit": "fae3f91",
-      "captured_utc": "2026-10-02T23:39:05+00:00",
+      "commit": "b614fc2",
+      "captured_utc": "2026-10-11T21:26:13+00:00",
       "appearance": "Light",
       "window_dips": "1280x800",
-      "exe": "WinCare.App.exe"
+      "exe": "WinCare-v4.0.0-rc2-x64.exe",
+      "capture_checkout_commit": "83538ae"
     }
   }
 }
