@@ -194,24 +194,46 @@ internal sealed partial class WindowsCommandExecutor
         if (uri.UserInfo.Length != 0)
             throw new CommandParameterException("Url", "Links containing embedded credentials cannot be stored as downloads.");
         string id = p.String("Id").Trim(); if (id.Length == 0) id = Guid.NewGuid().ToString("N");
-        string fileName = p.String("FileName").Trim(); if (fileName.Length == 0) fileName = SafeFileNameFromUri(uri);
-        string destination = p.String("Destination").Trim();
-        if (destination.Length == 0) destination = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads", fileName);
+        string fileName = p.String("FileName").Trim();
+        fileName = fileName.Length == 0
+            ? SafeFileNameFromUri(uri)
+            : DeveloperJunkHelper.SanitizeDownloadFilename(fileName).Sanitized;
+        string requestedDestination = p.String("Destination").Trim();
+        bool autoDestination = requestedDestination.Length == 0;
+        string destination = autoDestination
+            ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads", fileName)
+            : requestedDestination;
         destination = Path.GetFullPath(Environment.ExpandEnvironmentVariables(destination));
-        // Two IDs must never share one destination or the same .wincare.download
-        // partial file: separate per-ID operation locks would not prevent corruption.
+
+        // Resolve collisions under the creation gate. Automatically choose a free
+        // "file (2).ext" for the default Downloads folder, but never silently
+        // change an explicitly selected destination.
         JsonElement existingJobs = await _state.ReadArrayAsync("downloads", cancellationToken).ConfigureAwait(false);
-        if (existingJobs.ValueKind == JsonValueKind.Array &&
-            existingJobs.EnumerateArray().Any(item =>
-                item.TryGetProperty("destination", out JsonElement previous) &&
-                string.Equals(previous.GetString(), destination, StringComparison.OrdinalIgnoreCase)))
+        string initialDestination = destination;
+        string parent = Path.GetDirectoryName(initialDestination)!;
+        string stem = Path.GetFileNameWithoutExtension(initialDestination);
+        string extension = Path.GetExtension(initialDestination);
+        bool foundAvailable = false;
+        for (int suffix = 0; suffix < (autoDestination ? 100 : 1); suffix++)
         {
-            return Block("download-create", "A download already targets this file. Choose another file name before adding it.");
+            cancellationToken.ThrowIfCancellationRequested();
+            string candidate = suffix == 0
+                ? initialDestination
+                : Path.Combine(parent, $"{stem} ({suffix + 1}){extension}");
+            bool reserved = existingJobs.ValueKind == JsonValueKind.Array &&
+                existingJobs.EnumerateArray().Any(item =>
+                    item.TryGetProperty("destination", out JsonElement previous) &&
+                    string.Equals(previous.GetString(), candidate, StringComparison.OrdinalIgnoreCase));
+            if (reserved || File.Exists(candidate) || File.Exists(candidate + ".wincare.download"))
+                continue;
+            destination = candidate;
+            foundAvailable = true;
+            break;
         }
-        if (File.Exists(destination) || File.Exists(destination + ".wincare.download"))
-        {
-            return Block("download-create", "That download name is already used by a file on disk. Choose another name.");
-        }
+        if (!foundAvailable)
+            return Block("download-create", autoDestination
+                ? "Too many downloads use this file name. Remove an old queue record or choose a different name."
+                : "The selected destination is already used by a file or another download.");
         DateTimeOffset? dueAt = p.String("DueAt").Length == 0 ? null : p.DateTimeOffset("DueAt", DateTimeOffset.UtcNow);
         JsonElement record = Data(new { id, url = uri.AbsoluteUri, destination, state = "Pending", createdAt = DateTimeOffset.UtcNow, dueAt, sha256 = p.String("Sha256").Trim().ToLowerInvariant() });
         await AppendStateItemAsync("downloads", record, cancellationToken).ConfigureAwait(false);
