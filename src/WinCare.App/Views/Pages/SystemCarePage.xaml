@@ -34,10 +34,11 @@
                 <RowDefinition Height="*" />
             </Grid.RowDefinitions>
 
-            <controls:MemoryTopologyAtlas
-                x:Name="MemoryAtlas"
-                Margin="0,0,0,4"
-                Visibility="{x:Bind views:LayoutVisibility.BoolToVisibility(ViewModel.IsPerformanceSection), Mode=OneWay}" />
+            <Expander x:Name="MemoryDetails" Header="Memory usage details" IsExpanded="False"
+                      Expanding="MemoryDetails_Expanding" AutomationProperties.Name="Show detailed memory usage"
+                      Visibility="{x:Bind views:LayoutVisibility.BoolToVisibility(ViewModel.IsPerformanceSection), Mode=OneWay}">
+                <controls:MemoryTopologyAtlas x:Name="MemoryAtlas" Margin="0,4,0,8" />
+            </Expander>
 
             <controls:CareToolList Grid.Row="1" ViewModel="{x:Bind ViewModel}" />
         </Grid>

@@ -7,7 +7,7 @@
     xmlns:controls="using:WinCare.App.Controls"
     NavigationCacheMode="Required"
     SizeChanged="Page_SizeChanged">
-    <Grid Padding="28,28,28,32" RowSpacing="18" KeyDown="Inspector_KeyDown">
+    <Grid Padding="32,28,32,28" MaxWidth="1360" HorizontalAlignment="Stretch" RowSpacing="16" KeyDown="Inspector_KeyDown">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
@@ -197,7 +197,12 @@
                         </ListView.ItemTemplate>
                     </ListView>
                     <InfoBar Grid.Row="1" Margin="12" VerticalAlignment="Top" IsOpen="{x:Bind ViewModel.IsEmpty, Mode=OneWay}"
-                             IsClosable="False" Severity="Informational" Title="No matching tools" Message="{x:Bind ViewModel.EmptyMessage, Mode=OneWay}" />
+                             IsClosable="False" Severity="Informational" Title="No matching tools" Message="{x:Bind ViewModel.EmptyMessage, Mode=OneWay}">
+                        <InfoBar.ActionButton>
+                            <Button Content="Reset filters" Click="ResetFilters_Click" MinHeight="44"
+                                    AutomationProperties.Name="Clear tool search and filters" />
+                        </InfoBar.ActionButton>
+                    </InfoBar>
                 </Grid>
 
                 <ScrollViewer Background="{ThemeResource PageBackgroundBrush}" VerticalScrollBarVisibility="Auto"

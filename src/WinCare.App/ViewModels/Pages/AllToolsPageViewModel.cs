@@ -158,7 +158,7 @@ public sealed class AllToolsPageViewModel : ObservableObject, IDisposable
     public string EmptyMessage => _selectedTab switch { "Favorites" => "No favorites yet. Select a tool and add it to Favorites.", "Recent" => "Tools you run will appear here.", "Care plans" => "No care plans are available.", "Categories" => "No categories are available.", _ => _availableOnly ? "No available tools match these filters. Turn off Available only to include disabled tools." : "No tools match the current search and filters." };
     public string SelectedToolTitle => SelectedTool?.Title ?? "Select a tool";
     public string SelectedToolSummary => SelectedTool?.Summary ?? "Choose a task to understand what it does, what it needs, and what will happen before anything runs.";
-    public string SelectedToolMetadata => SelectedTool is null ? string.Empty : $"{SelectedTool.Area} · {SelectedTool.Section} · {SelectedTool.Risk} tier";
+    public string SelectedToolMetadata => SelectedTool is null ? string.Empty : $"{SelectedTool.Area} · {SelectedTool.Section} · {SelectedTool.Risk}";
     public string SelectedToolTechnicalDetails => SelectedTool is null ? string.Empty : $"Command ID: {SelectedTool.Id}\nCatalog risk: {SelectedTool.Definition.Risk}\nAdmission tier: {SelectedTool.Risk}\nAdministrator access: {SelectedTool.AdministratorAccess}\nRestart: {SelectedTool.Restart}\nMigration: {SelectedTool.MigrationState}\nLegacy source: {SelectedTool.Definition.LegacySource}";
     public bool IsSelectedToolFavorite => SelectedTool is not null && _favoriteIds.Contains(SelectedTool.Id);
     public string FavoriteActionLabel => IsSelectedToolFavorite ? "Remove from favorites" : "Add to favorites";
