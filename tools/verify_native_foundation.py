@@ -164,7 +164,7 @@ def verify() -> list[Finding]:
     execution_view_model_path = ROOT / "src/WinCare.App/ViewModels/Pages/ToolExecutionViewModel.cs"
     if execution_view_model_path.is_file():
         execution_view_model = execution_view_model_path.read_text(encoding="utf-8")
-        for token in ("correlationId = result.CorrelationId", "status = result.Status", "code = result.Code", "durationMilliseconds = result.Duration.TotalMilliseconds", "undoAvailable = result.UndoAvailable", "data = result.Data"):
+        for token in ("correlationId = result.CorrelationId", "status = result.Status", "code = result.Code", "durationMilliseconds = result.Duration.TotalMilliseconds", "undoAvailable = result.UndoAvailable", "data = SafeResultPresentation.SanitizeData(result.Data)"):
             if token not in execution_view_model: findings.append(Finding("execution-result-envelope", f"missing {token}"))
 
     handlers_root = ROOT / "src/WinCare.Application/Commands/Handlers"

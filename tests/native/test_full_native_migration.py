@@ -86,7 +86,8 @@ class FullNativeMigrationTests(unittest.TestCase):
         self.assertIn('SetExecutionFailure(CommandResultStatus.Blocked, "command.parameters_invalid", message)', vm)
         failure_writer = vm[vm.index("private void SetExecutionFailure"):vm.index("private void ApplyExecutionResult")]
         self.assertIn("JsonSerializer.Serialize", failure_writer)
-        self.assertRegex(failure_writer, r"status,\s+code,\s+message,")
+        self.assertRegex(failure_writer, r"status,\s+code,\s+message = _executionMessage,")
+        self.assertIn("SafeResultPresentation.SanitizeText(message)", failure_writer)
         self.assertIn("RebuildParameterEditor", page)
         self.assertIn("CreateParameterField", page)
         self.assertIn("AdvancedParameterEditing", page)
