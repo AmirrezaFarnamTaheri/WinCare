@@ -32,6 +32,9 @@ class DownloadsWorkspaceTests(unittest.TestCase):
         self.assertIn("AppRuntime.Current.Downloads", view_model)
         self.assertNotIn("new HttpClient(", code)
         ET.fromstring(page)
+        home = self.read("src/WinCare.App/Views/Pages/HomePage.xaml")
+        self.assertIn('x:Name="DownloadsRecommendation"', home)
+        self.assertIn('AutomationProperties.AutomationId="HomeDownloads"', home)
 
     def test_native_downloads_never_overwrite_a_destination_or_trust_bad_ranges(self) -> None:
         executor = self.read("src/WinCare.Infrastructure/Commands/WindowsCommandExecutor.Productivity.cs")

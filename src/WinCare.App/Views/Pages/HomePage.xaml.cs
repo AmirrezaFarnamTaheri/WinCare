@@ -20,6 +20,7 @@ public sealed partial class HomePage : Page
         WinCare.App.Animations.KineticSpringAnimation.AttachSpringHover(CleanupRecommendation, 1.015f);
         WinCare.App.Animations.KineticSpringAnimation.AttachSpringHover(StartupRecommendation, 1.015f);
         WinCare.App.Animations.KineticSpringAnimation.AttachSpringHover(NetworkRecommendation, 1.015f);
+        WinCare.App.Animations.KineticSpringAnimation.AttachSpringHover(DownloadsRecommendation, 1.015f);
         WinCare.App.Animations.KineticSpringAnimation.AttachSpringHover(RunCheckupButton, 1.02f);
     }
 
@@ -96,10 +97,11 @@ public sealed partial class HomePage : Page
         HeroStats.MinWidth = compact ? 0 : 170;
         RecommendationsGrid.ColumnDefinitions[0].Width = new GridLength(1, GridUnitType.Star);
         RecommendationsGrid.ColumnDefinitions[1].Width = compact ? new GridLength(0) : new GridLength(1, GridUnitType.Star);
-        RecommendationsGrid.ColumnDefinitions[2].Width = compact ? new GridLength(0) : new GridLength(1, GridUnitType.Star);
+        RecommendationsGrid.ColumnDefinitions[2].Width = new GridLength(0);
         Grid.SetColumn(CleanupRecommendation, 0); Grid.SetRow(CleanupRecommendation, 0);
         Grid.SetColumn(StartupRecommendation, compact ? 0 : 1); Grid.SetRow(StartupRecommendation, compact ? 1 : 0);
-        Grid.SetColumn(NetworkRecommendation, compact ? 0 : 2); Grid.SetRow(NetworkRecommendation, compact ? 2 : 0);
+        Grid.SetColumn(NetworkRecommendation, 0); Grid.SetRow(NetworkRecommendation, compact ? 2 : 1);
+        Grid.SetColumn(DownloadsRecommendation, compact ? 0 : 1); Grid.SetRow(DownloadsRecommendation, compact ? 3 : 1);
         OverviewGrid.ColumnDefinitions[0].Width = new GridLength(1, GridUnitType.Star);
         OverviewGrid.ColumnDefinitions[1].Width = compact ? new GridLength(0) : new GridLength(1, GridUnitType.Star);
         Grid.SetColumn(RecentActivityCard, compact ? 0 : 1); Grid.SetRow(RecentActivityCard, compact ? 1 : 0);
