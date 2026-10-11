@@ -121,6 +121,7 @@ public sealed partial class StorageBrowserPage : Page
 
     private void UpdateFilteredEntries()
     {
+        if (FolderTitle is null || CountText is null) return;
         string term = FilterInput.Text.Trim();
         IEnumerable<StorageBrowserItem> filtered = term.Length == 0 ? _allEntries :
             _allEntries.Where(item => item.Name.Contains(term, StringComparison.OrdinalIgnoreCase));
@@ -237,10 +238,9 @@ public sealed partial class StorageBrowserPage : Page
         SearchActions.RowDefinitions.Clear();
         SearchActions.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         if (compact) SearchActions.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-        for (int i = 0; i < 4; i++)
-            SearchActions.ColumnDefinitions[i].Width = compact
-                ? i == 0 ? new GridLength(1, GridUnitType.Star) : GridLength.Auto
-                : i == 0 ? new GridLength(1, GridUnitType.Star) : GridLength.Auto;
+        SearchActions.ColumnDefinitions[0].Width = new GridLength(1, GridUnitType.Star);
+        for (int i = 1; i < 4; i++)
+            SearchActions.ColumnDefinitions[i].Width = GridLength.Auto;
         Grid.SetRow(ScanButton, compact ? 1 : 0);
         Grid.SetRow(RefreshButton, compact ? 1 : 0);
         Grid.SetRow(CopyPathButton, compact ? 1 : 0);

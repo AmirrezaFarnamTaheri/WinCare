@@ -8,6 +8,8 @@
 <data name="NavRepairRecovery.Content" xml:space="preserve"><value>Repair &amp; recovery</value></data>
 <data name="NavActivity.Content" xml:space="preserve"><value>Activity</value></data>
 <data name="NavDownloads.Content" xml:space="preserve"><value>Downloads</value></data>
+<data name="NavStorageBrowser.Content" xml:space="preserve"><value>Files &amp; storage</value></data>
+<data name="NavProcesses.Content" xml:space="preserve"><value>Processes</value></data>
 <data name="NavPluginStore.Content" xml:space="preserve"><value>Extensions</value></data>
 <data name="NavAiDoctor.Content" xml:space="preserve"><value>Troubleshoot</value></data>
 <data name="NavHelp.Content" xml:space="preserve"><value>Help</value></data>

@@ -47,7 +47,7 @@
             <CheckBox x:Name="LiveRefresh" Grid.Column="2" Content="Live" IsChecked="True"
                       VerticalAlignment="Center" Checked="LiveRefresh_Changed" Unchecked="LiveRefresh_Changed"
                       AutomationProperties.Name="Update process readings automatically" />
-            <Button Grid.Column="3" Content="Refresh" Click="Refresh_Click"
+            <Button x:Name="RefreshProcessesButton" Grid.Column="3" Content="Refresh" Click="Refresh_Click"
                     Style="{StaticResource QuietButtonStyle}"
                     AutomationProperties.Name="Refresh process readings" />
         </Grid>
