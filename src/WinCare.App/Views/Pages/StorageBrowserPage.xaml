@@ -110,6 +110,7 @@
             </Grid>
         </Border>
         <Expander x:Name="HotspotsExpander" Grid.Row="6" Header="Largest subfolders found" IsExpanded="False"
+                  AutomationProperties.Name="Largest subfolders found"
                   Visibility="Collapsed">
             <ListView Height="196" ItemsSource="{x:Bind LargestFolders, Mode=OneWay}"
                       IsItemClickEnabled="True" SelectionMode="None" ItemClick="Hotspot_ItemClick"
