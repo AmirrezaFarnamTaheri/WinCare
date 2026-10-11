@@ -108,3 +108,17 @@ projects native persisted job state, and the view never owns a transfer task.
 A page can navigate away without interrupting a file; closing the application
 requests a pause and retains partial files. The transport is limited to HTTP(S),
 uses source and destination checks, and does not silently overwrite existing files.
+
+## Mineral / evergreen visual system
+
+The current brand palette uses soft mineral neutrals for surfaces and deliberate
+evergreen accents only for navigation, selection and primary emphasis. It avoids
+artificial neon indicators, dashboard wallpaper, gratuitous gradients, technobabble
+and decorative badge repetition. Text uses Segoe UI Variable; size and contrast do
+the hierarchical work, not uppercase telemetry labels. Corners and spacing stay
+consistent with Fluent controls and the native Windows accessibility system.
+
+All 26 documented foreground/surface combinations, eight status-pill contrast
+pairs, and the full primary/secondary text surface matrix were tested against a
+minimum 4.5:1 ratio on Light and Dark; high-contrast keeps Windows system colors.
+Accent semantics remain text-and-shape distinguishable, not color-only.

@@ -13,7 +13,7 @@
         IsTitleBarAutoPaddingEnabled="False"
         PaneDisplayMode="LeftCompact"
         PaneTitle="WinCare"
-        OpenPaneLength="244"
+        OpenPaneLength="256"
         CompactPaneLength="56"
         Background="{ThemeResource PageBackgroundBrush}"
         SelectionChanged="PrimaryNavigation_SelectionChanged"

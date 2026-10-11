@@ -10,62 +10,62 @@
             status pills there carry meaning via text and borders, not fill hues.
         -->
         <ResourceDictionary x:Key="Light">
-            <SolidColorBrush x:Key="PageBackgroundBrush" Color="#F2F4F7" />
-            <SolidColorBrush x:Key="TitleBarBackgroundBrush" Color="#EAEEF2" />
+            <SolidColorBrush x:Key="PageBackgroundBrush" Color="#F7F7F2" />
+            <SolidColorBrush x:Key="TitleBarBackgroundBrush" Color="#ECEFE8" />
             <SolidColorBrush x:Key="SurfaceBrush" Color="#FFFFFF" />
-            <SolidColorBrush x:Key="SurfaceSecondaryBrush" Color="#EDF1F5" />
-            <SolidColorBrush x:Key="SurfaceHoverBrush" Color="#E1E8EE" />
-            <SolidColorBrush x:Key="BorderSubtleBrush" Color="#D5DDE4" />
-            <SolidColorBrush x:Key="TextPrimaryBrush" Color="#14202B" />
-            <SolidColorBrush x:Key="TextSecondaryBrush" Color="#3D5568" />
+            <SolidColorBrush x:Key="SurfaceSecondaryBrush" Color="#EDF1EB" />
+            <SolidColorBrush x:Key="SurfaceHoverBrush" Color="#E1E7DF" />
+            <SolidColorBrush x:Key="BorderSubtleBrush" Color="#CCD5C9" />
+            <SolidColorBrush x:Key="TextPrimaryBrush" Color="#1D2925" />
+            <SolidColorBrush x:Key="TextSecondaryBrush" Color="#425950" />
             <SolidColorBrush x:Key="TextOnAccentBrush" Color="#FFFFFF" />
-            <SolidColorBrush x:Key="SuccessBrush" Color="#0E700E" />
-            <SolidColorBrush x:Key="WarningBrush" Color="#7A4B00" />
-            <SolidColorBrush x:Key="DangerBrush" Color="#B42318" />
-            <SolidColorBrush x:Key="AccentChromeBrush" Color="#005FB8" />
-            <SolidColorBrush x:Key="AccentChromeSubtleBrush" Color="#D6EAF7" />
+            <SolidColorBrush x:Key="SuccessBrush" Color="#176342" />
+            <SolidColorBrush x:Key="WarningBrush" Color="#78500F" />
+            <SolidColorBrush x:Key="DangerBrush" Color="#A92B35" />
+            <SolidColorBrush x:Key="AccentChromeBrush" Color="#0E6254" />
+            <SolidColorBrush x:Key="AccentChromeSubtleBrush" Color="#DCEEE7" />
             <SolidColorBrush x:Key="CardSurfaceBrush" Color="#FFFFFF" />
-            <SolidColorBrush x:Key="TelemetryFrameBrush" Color="#E9EFF4" />
-            <SolidColorBrush x:Key="NavigationRailBrush" Color="#EAEEF2" />
-            <SolidColorBrush x:Key="CardBorderBrush" Color="#D5DDE4" />
-            <SolidColorBrush x:Key="HeroBackgroundBrush" Color="#DFEAF2" />
-            <SolidColorBrush x:Key="AccentBrush" Color="#005FB8" />
-            <SolidColorBrush x:Key="PillReadOnlyBgBrush" Color="#0E700E" />
-            <SolidColorBrush x:Key="PillMutatingBgBrush" Color="#B42318" />
-            <SolidColorBrush x:Key="PillElevatedBgBrush" Color="#C97A0A" />
-            <SolidColorBrush x:Key="PillVerifiedBorderBrush" Color="#0E700E" />
-            <SolidColorBrush x:Key="PillNotReadyBgBrush" Color="#E2E8F0" />
+            <SolidColorBrush x:Key="TelemetryFrameBrush" Color="#EEF2EB" />
+            <SolidColorBrush x:Key="NavigationRailBrush" Color="#EFF1EC" />
+            <SolidColorBrush x:Key="CardBorderBrush" Color="#D3DBD0" />
+            <SolidColorBrush x:Key="HeroBackgroundBrush" Color="#E5EFE6" />
+            <SolidColorBrush x:Key="AccentBrush" Color="#0E6254" />
+            <SolidColorBrush x:Key="PillReadOnlyBgBrush" Color="#155A48" />
+            <SolidColorBrush x:Key="PillMutatingBgBrush" Color="#A92B35" />
+            <SolidColorBrush x:Key="PillElevatedBgBrush" Color="#CA8E32" />
+            <SolidColorBrush x:Key="PillVerifiedBorderBrush" Color="#155A48" />
+            <SolidColorBrush x:Key="PillNotReadyBgBrush" Color="#E2EAE2" />
             <SolidColorBrush x:Key="PillTextBrush" Color="#FFFFFF" />
-            <SolidColorBrush x:Key="PillAltTextBrush" Color="#14202B" />
+            <SolidColorBrush x:Key="PillAltTextBrush" Color="#1D2925" />
         </ResourceDictionary>
         <ResourceDictionary x:Key="Dark">
-            <SolidColorBrush x:Key="PageBackgroundBrush" Color="#1C2733" />
-            <SolidColorBrush x:Key="TitleBarBackgroundBrush" Color="#1C2733" />
-            <SolidColorBrush x:Key="SurfaceBrush" Color="#26313D" />
-            <SolidColorBrush x:Key="SurfaceSecondaryBrush" Color="#2E3B49" />
-            <SolidColorBrush x:Key="SurfaceHoverBrush" Color="#374656" />
-            <SolidColorBrush x:Key="BorderSubtleBrush" Color="#46586A" />
-            <SolidColorBrush x:Key="TextPrimaryBrush" Color="#EAF0F5" />
-            <SolidColorBrush x:Key="TextSecondaryBrush" Color="#AFC0CD" />
-            <SolidColorBrush x:Key="TextOnAccentBrush" Color="#0A1E2C" />
-            <SolidColorBrush x:Key="SuccessBrush" Color="#7BD389" />
-            <SolidColorBrush x:Key="WarningBrush" Color="#FFCF8F" />
-            <SolidColorBrush x:Key="DangerBrush" Color="#FF9C94" />
-            <SolidColorBrush x:Key="AccentChromeBrush" Color="#60CDFF" />
-            <SolidColorBrush x:Key="AccentChromeSubtleBrush" Color="#1E3B4F" />
-            <SolidColorBrush x:Key="CardSurfaceBrush" Color="#26313D" />
-            <SolidColorBrush x:Key="TelemetryFrameBrush" Color="#202B37" />
-            <SolidColorBrush x:Key="NavigationRailBrush" Color="#202B37" />
-            <SolidColorBrush x:Key="CardBorderBrush" Color="#46586A" />
-            <SolidColorBrush x:Key="HeroBackgroundBrush" Color="#202B37" />
-            <SolidColorBrush x:Key="AccentBrush" Color="#60CDFF" />
-            <SolidColorBrush x:Key="PillReadOnlyBgBrush" Color="#124F12" />
-            <SolidColorBrush x:Key="PillMutatingBgBrush" Color="#8E1B13" />
-            <SolidColorBrush x:Key="PillElevatedBgBrush" Color="#6B4100" />
-            <SolidColorBrush x:Key="PillVerifiedBorderBrush" Color="#7BD389" />
-            <SolidColorBrush x:Key="PillNotReadyBgBrush" Color="#374656" />
+            <SolidColorBrush x:Key="PageBackgroundBrush" Color="#161F1B" />
+            <SolidColorBrush x:Key="TitleBarBackgroundBrush" Color="#18241F" />
+            <SolidColorBrush x:Key="SurfaceBrush" Color="#202B26" />
+            <SolidColorBrush x:Key="SurfaceSecondaryBrush" Color="#293A32" />
+            <SolidColorBrush x:Key="SurfaceHoverBrush" Color="#374A3E" />
+            <SolidColorBrush x:Key="BorderSubtleBrush" Color="#455B4F" />
+            <SolidColorBrush x:Key="TextPrimaryBrush" Color="#F2F5EC" />
+            <SolidColorBrush x:Key="TextSecondaryBrush" Color="#C0CEBE" />
+            <SolidColorBrush x:Key="TextOnAccentBrush" Color="#0C2319" />
+            <SolidColorBrush x:Key="SuccessBrush" Color="#8BE0A6" />
+            <SolidColorBrush x:Key="WarningBrush" Color="#FFD08C" />
+            <SolidColorBrush x:Key="DangerBrush" Color="#FFB0A7" />
+            <SolidColorBrush x:Key="AccentChromeBrush" Color="#7CDFB5" />
+            <SolidColorBrush x:Key="AccentChromeSubtleBrush" Color="#253F35" />
+            <SolidColorBrush x:Key="CardSurfaceBrush" Color="#202B26" />
+            <SolidColorBrush x:Key="TelemetryFrameBrush" Color="#1C3027" />
+            <SolidColorBrush x:Key="NavigationRailBrush" Color="#1B2A23" />
+            <SolidColorBrush x:Key="CardBorderBrush" Color="#455B4F" />
+            <SolidColorBrush x:Key="HeroBackgroundBrush" Color="#263F32" />
+            <SolidColorBrush x:Key="AccentBrush" Color="#7CDFB5" />
+            <SolidColorBrush x:Key="PillReadOnlyBgBrush" Color="#155A48" />
+            <SolidColorBrush x:Key="PillMutatingBgBrush" Color="#8F2530" />
+            <SolidColorBrush x:Key="PillElevatedBgBrush" Color="#664B16" />
+            <SolidColorBrush x:Key="PillVerifiedBorderBrush" Color="#8BE0A6" />
+            <SolidColorBrush x:Key="PillNotReadyBgBrush" Color="#384A3E" />
             <SolidColorBrush x:Key="PillTextBrush" Color="#FFFFFF" />
-            <SolidColorBrush x:Key="PillAltTextBrush" Color="#F2F5F8" />
+            <SolidColorBrush x:Key="PillAltTextBrush" Color="#F2F5EC" />
         </ResourceDictionary>
         <ResourceDictionary x:Key="HighContrast">
             <SolidColorBrush x:Key="PageBackgroundBrush" Color="{ThemeResource SystemColorWindowColor}" />

@@ -17,7 +17,7 @@
                     <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                     <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
                     <StackPanel Spacing="12" MaxWidth="760">
-                        <TextBlock Text="YOUR CHECKUP" Style="{StaticResource FieldLabelTextStyle}" />
+                        <TextBlock Text="CHECKUP" Style="{StaticResource FieldLabelTextStyle}" />
                         <TextBlock Style="{StaticResource HeroTitleTextStyle}" Text="{x:Bind ViewModel.CheckupTitle, Mode=OneWay}"/>
                         <TextBlock Style="{StaticResource PageDescriptionTextStyle}" Text="{x:Bind ViewModel.CheckupSummary, Mode=OneWay}"/>
                         <StackPanel Orientation="Horizontal" Spacing="10">
