@@ -55,7 +55,7 @@ public sealed class ProcessMonitorService
             TimeSpan? cpuTime = Read(() => process.TotalProcessorTime);
             DateTimeOffset? started = Read(() => new DateTimeOffset(process.StartTime.ToUniversalTime()));
             double? cpu = null;
-            if (cpuTime.HasValue && _previous.TryGetValue(pid, out PreviousSample previous) &&
+            if (cpuTime.HasValue && _previous.TryGetValue(pid, out PreviousSample? previous) && previous is not null &&
                 previous.StartedAt == started && elapsed > TimeSpan.Zero)
             {
                 cpu = CalculateCpuPercent(previous.CpuTime, cpuTime, elapsed, Environment.ProcessorCount);
