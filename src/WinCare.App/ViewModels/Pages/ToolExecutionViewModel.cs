@@ -687,12 +687,12 @@ public sealed class ToolExecutionViewModel : ObservableObject
     {
         _packageInventoryText = string.Empty;
         _executionStatus = status;
-        _executionMessage = message;
+        _executionMessage = SafeResultPresentation.SanitizeText(message);
         _executionResultText = JsonSerializer.Serialize(new
         {
             status,
             code,
-            message,
+            message = _executionMessage,
         }, ResultJsonOptions);
         IsExecutionResultOpen = true;
         NotifyExecutionResultChanged();
@@ -701,9 +701,10 @@ public sealed class ToolExecutionViewModel : ObservableObject
     private void ApplyExecutionResult(CommandResult result)
     {
         _isParameterError = false;
-        _packageInventoryText = PackageInventoryPresentation.Format(result.CommandId, result.Data);
+        _packageInventoryText = SafeResultPresentation.SanitizeText(
+            PackageInventoryPresentation.Format(result.CommandId, result.Data));
         _executionStatus = result.Status;
-        _executionMessage = result.Message;
+        _executionMessage = SafeResultPresentation.SanitizeText(result.Message);
         try
         {
             _executionResultText = JsonSerializer.Serialize(
@@ -713,12 +714,12 @@ public sealed class ToolExecutionViewModel : ObservableObject
                     correlationId = result.CorrelationId,
                     status = result.Status,
                     code = result.Code,
-                    message = result.Message,
+                    message = _executionMessage,
                     startedAt = result.StartedAt,
                     completedAt = result.CompletedAt,
                     durationMilliseconds = result.Duration.TotalMilliseconds,
                     undoAvailable = result.UndoAvailable,
-                    data = result.Data,
+                    data = SafeResultPresentation.SanitizeData(result.Data),
                 },
                 ResultJsonOptions);
         }
