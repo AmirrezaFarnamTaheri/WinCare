@@ -434,7 +434,10 @@ internal sealed partial class WindowsCommandExecutor
                 node["partialBytes"] = 0;
                 node["sha256Actual"] = actualHash;
             }, cancellationToken).ConfigureAwait(false);
-            return Success("download-start", "Download completed and verified.", new { id, destination, bytes = total, sha256 = actualHash, resumed = serverResumed });
+            string completionText = expectedHash.Length > 0
+                ? "Download completed; SHA-256 matched the expected checksum."
+                : "Download completed; SHA-256 recorded. No source checksum was supplied.";
+            return Success("download-start", completionText, new { id, destination, bytes = total, sha256 = actualHash, resumed = serverResumed });
         }
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
         {

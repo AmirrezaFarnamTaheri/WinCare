@@ -52,6 +52,19 @@ public sealed class DownloadCenterTests
     }
 
     [Fact]
+    public void Projection_extracts_Windows_file_name_independent_of_test_platform()
+    {
+        using var data = JsonDocument.Parse("""
+            [{"id":"portable","state":"Completed","bytes":1234,
+              "destination":"C:\\\\Users\\\\Example\\\\Downloads\\\\movie.mp4",
+              "url":"https://example.com/movie.mp4"}]
+            """);
+        DownloadJobRow row = Assert.Single(DownloadJobProjection.Project(data.RootElement));
+        Assert.Equal("movie.mp4", row.Name);
+        Assert.DoesNotContain("Users", row.AccessibleName);
+    }
+
+    [Fact]
     public void Projection_does_not_invent_a_percentage_when_total_is_unknown()
     {
         using var document = JsonDocument.Parse("""

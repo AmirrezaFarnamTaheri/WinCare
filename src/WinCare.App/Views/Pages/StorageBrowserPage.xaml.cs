@@ -19,6 +19,8 @@ public sealed partial class StorageBrowserPage : Page
     private string? _currentPath;
     private bool _loadingDrives;
     private bool _visible;
+    private bool _browseBusy;
+    private bool _scanBusy;
     private int _navigationVersion;
 
     public StorageBrowserPage()
@@ -65,19 +67,21 @@ public sealed partial class StorageBrowserPage : Page
         _visible = false;
         _navigationVersion++;
         _reportCancellation?.Cancel();
+        _browseBusy = false;
+        UpdateScanProgress();
         base.OnNavigatedFrom(e);
     }
 
-    private async Task NavigateAsync(string path, bool remember = true)
+    private async Task<bool> NavigateAsync(string path, bool remember = true)
     {
         int version = ++_navigationVersion;
         _reportCancellation?.Cancel();
-        ScanProgress.Visibility = Visibility.Visible;
-        ScanProgress.IsActive = true;
+        _browseBusy = true;
+        UpdateScanProgress();
         try
         {
             StorageBrowserListing listing = await Task.Run(() => StorageExplorer.Browse(path));
-            if (!_visible || version != _navigationVersion) return;
+            if (!_visible || version != _navigationVersion) return false;
             if (remember && _currentPath is not null &&
                 !string.Equals(listing.Path, _currentPath, StringComparison.OrdinalIgnoreCase))
                 _back.Push(_currentPath);
@@ -110,19 +114,30 @@ public sealed partial class StorageBrowserPage : Page
                 }
             }
             finally { _loadingDrives = false; }
+            return true;
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException or System.Security.SecurityException)
         {
             if (_visible && version == _navigationVersion) ShowError(ex.Message);
+            return false;
         }
         finally
         {
             if (version == _navigationVersion)
             {
-                ScanProgress.IsActive = false;
-                ScanProgress.Visibility = Visibility.Collapsed;
+                _browseBusy = false;
+                UpdateScanProgress();
             }
         }
+    }
+
+    private void UpdateScanProgress()
+    {
+        // Folder navigation and optional size scans share this indicator. The
+        // completion of one operation must not hide the other still-running job.
+        bool busy = _visible && (_browseBusy || _scanBusy);
+        ScanProgress.IsActive = busy;
+        ScanProgress.Visibility = busy ? Visibility.Visible : Visibility.Collapsed;
     }
 
     private void UpdateFilteredEntries()
@@ -167,7 +182,14 @@ public sealed partial class StorageBrowserPage : Page
     }
     private async void Back_Click(object sender, RoutedEventArgs e)
     {
-        if (_back.Count > 0) await NavigateAsync(_back.Pop(), remember: false);
+        if (_back.Count == 0) return;
+        string previous = _back.Peek();
+        if (await NavigateAsync(previous, remember: false) &&
+            _back.Count > 0 && string.Equals(_back.Peek(), previous, StringComparison.OrdinalIgnoreCase))
+        {
+            _back.Pop();
+            BackButton.IsEnabled = _back.Count > 0;
+        }
     }
     private void PathInput_KeyDown(object sender, KeyRoutedEventArgs e)
     {
@@ -177,10 +199,26 @@ public sealed partial class StorageBrowserPage : Page
 
     private void OpenLocation_Click(object sender, RoutedEventArgs e)
     {
-        string? path = (EntriesList.SelectedItem as StorageBrowserItem)?.FullPath;
-        path = path is not null && File.Exists(path) ? Path.GetDirectoryName(path) : path ?? _currentPath;
-        if (path is null) return;
-        try { Process.Start(new ProcessStartInfo(path) { UseShellExecute = true }); }
+        string? selected = (EntriesList.SelectedItem as StorageBrowserItem)?.FullPath ?? _currentPath;
+        if (selected is null) return;
+        // Execute a trusted Explorer binary, never the selected file or a
+        // user-supplied shell target. A moved/deleted file opens its parent.
+        string? folder = Directory.Exists(selected) ? selected : Path.GetDirectoryName(selected);
+        if (folder is null || !Directory.Exists(folder))
+        {
+            ShowError("That folder is no longer available. Refresh to see its current location.");
+            return;
+        }
+        try
+        {
+            string explorer = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "explorer.exe");
+            using Process? launched = Process.Start(new ProcessStartInfo(explorer)
+            {
+                UseShellExecute = false,
+                ArgumentList = { folder }
+            });
+            if (launched is null) ShowError("Windows Explorer did not start.");
+        }
         catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or IOException or InvalidOperationException)
         { ShowError($"Windows could not open this location: {ex.Message}"); }
     }
@@ -203,8 +241,8 @@ public sealed partial class StorageBrowserPage : Page
         var cancellation = new CancellationTokenSource();
         _reportCancellation = cancellation;
         ScanButton.IsEnabled = false;
-        ScanProgress.Visibility = Visibility.Visible;
-        ScanProgress.IsActive = true;
+        _scanBusy = true;
+        UpdateScanProgress();
         ScanSummaryText.Text = "Measuring folder contents…";
         try
         {
@@ -225,7 +263,13 @@ public sealed partial class StorageBrowserPage : Page
             ScanSummaryText.Text = $"{scope}: {StorageExplorer.FormatBytes(report.AccountedBytes)} across {report.FilesSeen:N0} files. " +
                 (report.IsPartial ? "Some entries were skipped or a scan limit was reached." : "Read-only; no files changed.");
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException)
+        catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
+        {
+            // Page navigation and explicit cancellation leave the prior scan
+            // intentionally unpublished. async-void must not surface the token
+            // exception to WinUI's unhandled-exception handler.
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException or System.Security.SecurityException)
         {
             if (_visible && !cancellation.IsCancellationRequested) ShowError(ex.Message);
         }
@@ -234,9 +278,9 @@ public sealed partial class StorageBrowserPage : Page
             if (ReferenceEquals(_reportCancellation, cancellation))
             {
                 ScanButton.IsEnabled = true;
-                ScanProgress.IsActive = false;
-                ScanProgress.Visibility = Visibility.Collapsed;
+                _scanBusy = false;
                 _reportCancellation = null;
+                UpdateScanProgress();
             }
             cancellation.Dispose();
         }

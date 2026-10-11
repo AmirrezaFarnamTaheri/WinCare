@@ -50,9 +50,11 @@ public static class DownloadJobProjection
             string id = Text(item, "id");
             if (id.Length is 0 or > 128) continue;
             string destination = Text(item, "destination");
-            string name;
-            try { name = Path.GetFileName(destination); }
-            catch (ArgumentException) { name = string.Empty; }
+            // Persisted Windows paths may be inspected in cross-platform tests.
+            // Never expose an entire home-directory path when the host's native
+            // Path.GetFileName separator rules differ from Windows.
+            int lastSeparator = destination.LastIndexOfAny(['\\', '/']);
+            string name = destination[(lastSeparator + 1)..].Trim();
             if (string.IsNullOrWhiteSpace(name)) name = "Untitled file";
             string url = Text(item, "url");
             string host = Uri.TryCreate(url, UriKind.Absolute, out Uri? address) &&
