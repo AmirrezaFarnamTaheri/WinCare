@@ -216,7 +216,7 @@ public sealed partial class StorageBrowserPage : Page
             {
                 LargestFolders.Add(new StorageHotspot(
                     Path.GetFileName(Path.TrimEndingDirectorySeparator(directory.Path)),
-                    directory.Path, directory.AccountedBytes, report.IsPartial));
+                    directory.Path, directory.AccountedBytes, report.AccountedBytes, report.IsPartial));
             }
             HotspotsExpander.Visibility = LargestFolders.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
             string scope = report.IsPartial ? "Partial scan" : "Folder total";

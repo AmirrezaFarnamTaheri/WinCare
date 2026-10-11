@@ -22,8 +22,10 @@ public sealed record StorageBrowserListing(
     string Path, IReadOnlyList<StorageBrowserItem> Items, bool Truncated, int UnreadableEntries);
 
 /// <summary>A subfolder size derived from a bounded, potentially partial scan.</summary>
-public sealed record StorageHotspot(string Name, string FullPath, ulong ScannedBytes, bool IsPartial)
+public sealed record StorageHotspot(string Name, string FullPath, ulong ScannedBytes, ulong ScannedTotalBytes, bool IsPartial)
 {
+    public double SharePercent => ScannedTotalBytes == 0 ? 0 :
+        Math.Clamp(100d * ScannedBytes / ScannedTotalBytes, 0, 100);
     public string SizeLabel => StorageExplorer.FormatBytes(ScannedBytes) + (IsPartial ? " scanned" : "");
     public string AccessibleName => $"{Name}, {SizeLabel}";
 }
