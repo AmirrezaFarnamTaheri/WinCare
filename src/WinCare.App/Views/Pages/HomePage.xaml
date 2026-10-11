@@ -3,6 +3,7 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:controls="using:WinCare.App.Controls"
+    xmlns:local="using:WinCare.App.Views.Pages"
     NavigationCacheMode="Required"
     SizeChanged="Page_SizeChanged">
     <ScrollViewer VerticalScrollBarVisibility="Auto">
@@ -123,6 +124,41 @@
                         </Grid>
                     </Button>
                 </Grid>
+                <StackPanel x:Name="FavoriteToolsPanel" Spacing="8" Visibility="Collapsed" Margin="0,16,0,0">
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12" Margin="0,0,0,4">
+                        <TextBlock Text="Your saved tools" Style="{StaticResource SectionHeaderTextStyle}" />
+                        <Button Grid.Column="1" Content="See all favorites" Style="{StaticResource QuietButtonStyle}"
+                                Click="SeeFavorites_Click" AutomationProperties.Name="Open all favorite power tools" />
+                    </Grid>
+                    <ItemsControl ItemsSource="{x:Bind FavoriteTools, Mode=OneWay}"
+                                  AutomationProperties.Name="Favorite power tools">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="local:HomeFavoriteTool">
+                                <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
+                                        Style="{StaticResource StatusRowButtonStyle}" Click="FavoriteTool_Click"
+                                        Tag="{x:Bind}" AutomationProperties.Name="{x:Bind AccessibleName}">
+                                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="14">
+                                        <Border Background="{ThemeResource AccentChromeSubtleBrush}" Width="40" Height="40"
+                                                CornerRadius="{StaticResource RadiusControl}">
+                                            <FontIcon Glyph="&#xE8B7;" FontSize="18"
+                                                      Foreground="{ThemeResource AccentChromeBrush}"
+                                                      AutomationProperties.AccessibilityView="Raw" />
+                                        </Border>
+                                        <StackPanel Grid.Column="1" Spacing="3" VerticalAlignment="Center">
+                                            <TextBlock Text="{x:Bind Title}" Style="{StaticResource RowTitleTextStyle}"
+                                                       TextTrimming="CharacterEllipsis" />
+                                            <TextBlock Text="{x:Bind Subtitle}" Style="{StaticResource RowSecondaryTextStyle}"
+                                                       TextTrimming="CharacterEllipsis" />
+                                        </StackPanel>
+                                        <FontIcon Grid.Column="2" Glyph="&#xE76C;" VerticalAlignment="Center"
+                                                  Foreground="{ThemeResource TextSecondaryBrush}" FontSize="12"
+                                                  AutomationProperties.AccessibilityView="Raw" />
+                                    </Grid>
+                                </Button>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
             </StackPanel>
             <Grid x:Name="OverviewGrid" Grid.Row="3" ColumnSpacing="18" RowSpacing="18"><Grid.ColumnDefinitions><ColumnDefinition Width="1.6*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
                 <Border Style="{StaticResource DashboardCardStyle}">

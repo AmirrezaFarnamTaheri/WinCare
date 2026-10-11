@@ -156,7 +156,8 @@ class ProductUiParityTests(unittest.TestCase):
         self.assertIn("CommandParameters is JsonElement", control)
         # The care list points rows at the shared inspector without naming the
         # Power tools surface, so the copy stays accurate wherever the control is reused.
-        self.assertIn("run it in the inspector", xaml)
+        self.assertIn("Choose a task to see what it does", xaml)
+        self.assertIn("PageNavigation.OpenTool", code)
         self.assertNotIn("Power tools", xaml)
 
     def test_power_tools_uses_named_controls_and_product_safety_tiers(self) -> None:

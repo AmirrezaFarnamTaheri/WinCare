@@ -41,7 +41,13 @@ public sealed partial class AllToolsPage : Page
         ViewModel.Reactivate();
         SubscribeToViewModel();
         base.OnNavigatedTo(e);
-        if (e.Parameter is ToolNavigationRequest request)
+        if (e.Parameter is SectionNavigationRequest section)
+        {
+            SelectorBarItem? tab = ToolTabs.Items.OfType<SelectorBarItem>()
+                .FirstOrDefault(item => string.Equals(item.Text, section.SectionTitle, StringComparison.OrdinalIgnoreCase));
+            if (tab is not null) ToolTabs.SelectedItem = tab;
+        }
+        else if (e.Parameter is ToolNavigationRequest request)
         {
             ToolTabs.SelectedItem = ToolTabs.Items[0] as SelectorBarItem;
             ViewModel.OpenTool(request.CommandId, request.Parameters);

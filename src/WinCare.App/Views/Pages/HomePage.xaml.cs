@@ -1,9 +1,12 @@
+using System.Collections.ObjectModel;
+using System.Text.Json;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Navigation;
 using WinCare.App.Services;
 using WinCare.App.ViewModels.Pages;
 using WinCare.App.Views;
+using WinCare.CommandCatalog.Models;
 
 namespace WinCare.App.Views.Pages;
 
@@ -27,12 +30,14 @@ public sealed partial class HomePage : Page
     }
 
     public HomePageViewModel ViewModel { get; }
+    public ObservableCollection<HomeFavoriteTool> FavoriteTools { get; } = [];
 
     protected override void OnNavigatedTo(NavigationEventArgs e)
     {
         base.OnNavigatedTo(e);
         _isVisible = true;
         ViewModel.RefreshActivity(AppRuntime.Current.Journal.GetAll());
+        RefreshFavoriteTools();
         AppRuntime.Current.Journal.Changed += JournalChanged;
         AppRuntime.Current.PluginRegistry.RegistryChanged += RegistryChanged;
         _ = RefreshWidgetsAsync();
@@ -48,7 +53,12 @@ public sealed partial class HomePage : Page
     }
 
     private void JournalChanged(object? sender, EventArgs e) => DispatcherQueue.TryEnqueue(() => { if (_isVisible) ViewModel.RefreshActivity(AppRuntime.Current.Journal.GetAll()); });
-    private void RegistryChanged(object? sender, EventArgs e) => DispatcherQueue.TryEnqueue(() => { if (_isVisible) _ = RefreshWidgetsAsync(); });
+    private void RegistryChanged(object? sender, EventArgs e) => DispatcherQueue.TryEnqueue(() =>
+    {
+        if (!_isVisible) return;
+        RefreshFavoriteTools();
+        _ = RefreshWidgetsAsync();
+    });
 
     private async Task RefreshWidgetsAsync()
     {
@@ -70,6 +80,40 @@ public sealed partial class HomePage : Page
             System.Diagnostics.Debug.WriteLine($"[HomePage] Widget refresh failed: {ex}");
         }
     }
+
+    private void RefreshFavoriteTools()
+    {
+        IReadOnlyDictionary<string, CommandDefinition> byId = AppRuntime.Current.ToolCatalog.All
+            .GroupBy(item => item.Id, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(group => group.Key, group => group.First(), StringComparer.OrdinalIgnoreCase);
+        HomeFavoriteTool[] desired = AppPreferences.FavoriteCommandIds
+            .Where(byId.ContainsKey).Take(4)
+            .Select(id =>
+            {
+                CommandDefinition command = byId[id];
+                bool available = command.MigrationStatus is MigrationStatus.Implemented or MigrationStatus.BehaviorVerified;
+                return new HomeFavoriteTool
+                {
+                    Id = command.Id,
+                    Title = command.Title,
+                    Subtitle = available ? command.Area + " · " + command.Section : "Unavailable in this build",
+                    Available = available,
+                };
+            }).ToArray();
+
+        FavoriteTools.Clear();
+        foreach (HomeFavoriteTool tool in desired) FavoriteTools.Add(tool);
+        FavoriteToolsPanel.Visibility = desired.Length > 0 ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    private void FavoriteTool_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button { Tag: HomeFavoriteTool selected })
+            PageNavigation.OpenTool(this, selected.Id, JsonSerializer.SerializeToElement(new { }));
+    }
+
+    private void SeeFavorites_Click(object sender, RoutedEventArgs e) =>
+        PageNavigation.NavigateTo(this, "all-tools", new SectionNavigationRequest("Favorites"));
 
     private void RunCheckupButton_Click(object sender, RoutedEventArgs e) => NavigateTo("checkup");
     private void ViewActivityButton_Click(object sender, RoutedEventArgs e) => NavigateTo("activity");
@@ -111,4 +155,13 @@ public sealed partial class HomePage : Page
         OverviewGrid.ColumnDefinitions[1].Width = compact ? new GridLength(0) : new GridLength(1, GridUnitType.Star);
         Grid.SetColumn(RecentActivityCard, compact ? 0 : 1); Grid.SetRow(RecentActivityCard, compact ? 1 : 0);
     }
+}
+
+public sealed class HomeFavoriteTool
+{
+    public string Id { get; set; } = string.Empty;
+    public string Title { get; set; } = string.Empty;
+    public string Subtitle { get; set; } = string.Empty;
+    public bool Available { get; set; }
+    public string AccessibleName => $"{Title}, {Subtitle}. Open tool details";
 }
