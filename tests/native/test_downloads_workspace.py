@@ -35,6 +35,8 @@ class DownloadsWorkspaceTests(unittest.TestCase):
         ET.fromstring(page)
         home = self.read("src/WinCare.App/Views/Pages/HomePage.xaml")
         self.assertIn('x:Name="DownloadsRecommendation"', home)
+        self.assertIn('<RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/>', home)
+        self.assertNotIn('RecommendationsGrid.ColumnDefinitions[2]', self.read("src/WinCare.App/Views/Pages/HomePage.xaml.cs"))
         self.assertIn('AutomationProperties.AutomationId="HomeDownloads"', home)
 
     def test_native_downloads_never_overwrite_a_destination_or_trust_bad_ranges(self) -> None:

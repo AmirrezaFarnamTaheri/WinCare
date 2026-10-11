@@ -97,7 +97,6 @@ public sealed partial class HomePage : Page
         HeroStats.MinWidth = compact ? 0 : 170;
         RecommendationsGrid.ColumnDefinitions[0].Width = new GridLength(1, GridUnitType.Star);
         RecommendationsGrid.ColumnDefinitions[1].Width = compact ? new GridLength(0) : new GridLength(1, GridUnitType.Star);
-        RecommendationsGrid.ColumnDefinitions[2].Width = new GridLength(0);
         Grid.SetColumn(CleanupRecommendation, 0); Grid.SetRow(CleanupRecommendation, 0);
         Grid.SetColumn(StartupRecommendation, compact ? 0 : 1); Grid.SetRow(StartupRecommendation, compact ? 1 : 0);
         Grid.SetColumn(NetworkRecommendation, 0); Grid.SetRow(NetworkRecommendation, compact ? 2 : 1);
