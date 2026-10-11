@@ -12,6 +12,7 @@ public static class NavigationCatalog
         new("repair-recovery", "Repair & recovery", "NavRepairRecovery", ["Repair", "Restore", "Backup", "Reset & media", "Portable playbooks"]),
         new("all-tools", "Power tools", "NavAllTools", ["Tools", "Categories", "Favorites", "Recent", "Care plans"]),
         new("activity", "Activity", "NavActivity", ["Running", "Needs attention", "History", "Reports"]),
+        new("downloads", "Downloads", "NavDownloads", ["Add download", "Active transfers", "History", "Pause", "Resume"]),
         new("plugin-store", "Extensions", "NavPluginStore", ["Search extensions", "Categories", "Installed extensions", "Online catalog"], IsFooter: true),
         new("ai-doctor", "Troubleshoot", "NavAiDoctor", ["Describe a problem", "Storage problems", "Slow computer", "Network problems", "Suggested steps"], IsFooter: false),
         new("settings", "Settings", "NavSettings", ["App theme", "Remember window", "Local data"], IsFooter: true),

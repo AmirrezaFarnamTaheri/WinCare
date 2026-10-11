@@ -70,6 +70,7 @@ public sealed partial class HomePage : Page
 
     private void RunCheckupButton_Click(object sender, RoutedEventArgs e) => NavigateTo("checkup");
     private void ViewActivityButton_Click(object sender, RoutedEventArgs e) => NavigateTo("activity");
+    private void OpenDownloads_Click(object sender, RoutedEventArgs e) => NavigateTo("downloads");
     private void OpenCleanup_Click(object sender, RoutedEventArgs e) => PageNavigation.NavigateToSection(this, "system-care", "Clean up");
     private void OpenStartup_Click(object sender, RoutedEventArgs e) => PageNavigation.NavigateToSection(this, "system-care", "Apps & startup");
     private void OpenNetwork_Click(object sender, RoutedEventArgs e) => PageNavigation.NavigateToSection(this, "system-care", "Network & updates");

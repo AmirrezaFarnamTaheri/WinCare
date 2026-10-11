@@ -1,5 +1,6 @@
 using WinCare.Application.Activity;
 using WinCare.Application.Commands;
+using WinCare.Application.Downloads;
 using WinCare.Application.Plugins;
 using WinCare.Application.Tools;
 using WinCare.Domain.Telemetry;
@@ -45,6 +46,7 @@ public sealed class AppRuntime
         // execution while still registering plugin commands, so the documented catalog matches
         // what a real session shows.
         Dispatcher = captureMode ? new CaptureModeCommandDispatcher(dispatcher) : dispatcher;
+        Downloads = new DownloadCenterService(Dispatcher);
         PluginState = new PluginStateRepository();
         PluginHost = new DefaultPluginHost(Dispatcher);
         PluginRegistry = new PluginRegistryService(
@@ -101,6 +103,9 @@ public sealed class AppRuntime
     /// </summary>
     public ICommandDispatcher Dispatcher { get; }
 
+    /// <summary>One download controller for every page, backed by the native command journal.</summary>
+    public DownloadCenterService Downloads { get; }
+
     /// <summary>
     /// Gets the plugin state repository instance.
     /// </summary>
@@ -151,6 +156,9 @@ public sealed class AppRuntime
                 await initialization.WaitAsync(token).ConfigureAwait(false);
             }
 
+            // Transfers outlive pages, not the process. Request a persisted pause before
+            // shutting down the native executor, then flush the activity journal.
+            await Downloads.PauseActiveForShutdownAsync(token).ConfigureAwait(false);
             await Journal.FlushAsync(token).ConfigureAwait(false);
         }
         catch (OperationCanceledException)

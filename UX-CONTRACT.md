@@ -24,3 +24,17 @@ The shell changes presentation without changing route identity. `LayoutVisibilit
 - Troubleshoot offers one-click common issue checks or a short free-text description. Its suggestions never bypass Power tools admission, and no fabricated assistant conversation appears on startup.
 - Power tools defaults to available commands, but explicit category and command links expose unavailable entries with clear status. Reset clears all filters and restores the available-only view.
 - Compact Power tools stacks search and taxonomy filters while keeping quick filters and reset accessible.
+
+## Downloads
+
+- Home and primary navigation link to Downloads. The URL field is the only
+  required input: WinCare selects the default Downloads folder and file name.
+- Add creates a queued job, but does not start transfer. Start/resume/pause/cancel
+  are explicit actions on that job. Remove record never deletes a completed file.
+- The list shows file name, source host (never URL credentials/query), persisted
+  state, transferred size, and real percentage only if the server declared total
+  length. Unknown length is indeterminate, not 0%-done.
+- Transfers belong to the process lifetime, not the page lifetime. Navigation
+  must not silently abort work. Shutdown requests pause, subject to its budget.
+- Native commands and the same Activity journal remain authoritative; no
+  unreviewed duplicate downloader, browser download hijacking, or fake queue.

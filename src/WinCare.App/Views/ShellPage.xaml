@@ -48,6 +48,9 @@
             <NavigationViewItem x:Uid="NavActivity" Content="Activity" Tag="activity" AutomationProperties.AutomationId="NavActivity" AutomationProperties.Name="Activity">
                 <NavigationViewItem.Icon><FontIcon Glyph="&#xE81C;" /></NavigationViewItem.Icon>
             </NavigationViewItem>
+            <NavigationViewItem x:Uid="NavDownloads" Content="Downloads" Tag="downloads" AutomationProperties.AutomationId="NavDownloads" AutomationProperties.Name="Downloads">
+                <NavigationViewItem.Icon><FontIcon Glyph="&#xE896;" /></NavigationViewItem.Icon>
+            </NavigationViewItem>
         </NavigationView.MenuItems>
 
         <NavigationView.FooterMenuItems>

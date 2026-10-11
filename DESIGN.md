@@ -91,3 +91,20 @@ The palette above is not decoration: `verify_visual_tokens.py` pins key presence
 Troubleshoot shows a single result and suggested next actions, not a pretend assistant chat or a transcript of the user's input. Leaving the page clears the description and results, and a cancelled/stale check cannot repopulate it. Progress and cancellation are explicit. The memory usage widget is read-only; it opens the ordinary Power tools review flow for standby-memory cleanup instead of invoking native mutation directly. Memory metrics are sampled when the Performance section is opened, not labeled as live telemetry.
 
 - Shared page headers rely on typography and spacing rather than a decorative accent stripe; optional badges are reserved for meaningful status.
+
+## Downloads workspace (native WinUI)
+
+Downloads is a top-level application destination and a Home shortcut, not a plugin
+or a second HTTP client. The layout follows an editorial hierarchy: practical
+entry field first, factual queue counts second, compact filter tabs and a native
+virtualized list third. Use the existing semantic theme brushes, 4-DIP spacing
+scale, clear focus rings, and system type. Never show URLs with query credentials,
+session-bearing paths, or artificial transfer speeds. Every control is keyboard
+reachable and has a useful automation name.
+
+The process-wide DownloadCenterService is constructed by AppRuntime from the same
+ICommandDispatcher used in Power tools and Activity. The DownloadsPageViewModel
+projects native persisted job state, and the view never owns a transfer task.
+A page can navigate away without interrupting a file; closing the application
+requests a pause and retains partial files. The transport is limited to HTTP(S),
+uses source and destination checks, and does not silently overwrite existing files.

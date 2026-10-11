@@ -22,6 +22,8 @@
                         <TextBlock Style="{StaticResource PageDescriptionTextStyle}" Text="{x:Bind ViewModel.CheckupSummary, Mode=OneWay}"/>
                         <StackPanel Orientation="Horizontal" Spacing="10">
                             <Button x:Name="RunCheckupButton" Click="RunCheckupButton_Click" Style="{StaticResource PrimaryActionButtonStyle}" Content="Open checkup" AccessKey="O" AutomationProperties.AutomationId="HomeRunCheckup" AutomationProperties.Name="Open checkup"/>
+                            <Button x:Name="OpenDownloadsButton" Click="OpenDownloads_Click" Style="{StaticResource QuietButtonStyle}" Content="Downloads"
+                                    AutomationProperties.AutomationId="HomeDownloads" AutomationProperties.Name="Open the download manager"/>
                         </StackPanel>
                     </StackPanel>
                     <Border x:Name="HeroDivider" Grid.Column="1" Width="1" Background="{ThemeResource BorderSubtleBrush}" VerticalAlignment="Stretch"/>
