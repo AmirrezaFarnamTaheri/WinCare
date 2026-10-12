@@ -20,6 +20,8 @@ internal sealed partial class WindowsCommandExecutor
 {
     // Shared across executor instances in this process. Admission must check
     // destination ownership under one lock, not check-then-append concurrently.
+    internal Action<string>? DownloadOriginWriterSeam { get; set; }
+
     private static readonly SemaphoreSlim DownloadCreationGate = new(1, 1);
     private static readonly EnumerationOptions SafeRecursiveEnumeration = new()
     {
@@ -435,6 +437,7 @@ internal sealed partial class WindowsCommandExecutor
                 }
             }
             await target.FlushAsync(operationCancellation.Token).ConfigureAwait(false);
+            target.Flush(flushToDisk: true);
             }
 
             if (responseBytes.HasValue && total - existingBytes != responseBytes.Value)
@@ -457,7 +460,6 @@ internal sealed partial class WindowsCommandExecutor
             }
 
             operationCancellation.Token.ThrowIfCancellationRequested();
-            DownloadFileOrigin.MarkInternet(partial);
             // Durable publication intent closes the rename-before-digest recovery window.
             // Once Publishing is committed, pause/cancel must not change this decision.
             await PatchStateItemAsync("downloads", id, node =>
@@ -467,8 +469,9 @@ internal sealed partial class WindowsCommandExecutor
                 node["state"] = "Publishing";
                 node["sha256Actual"] = actualHash;
                 node["bytes"] = total;
-                node["origin"] = "Internet";
+                node["origin"] = "Pending";
             }, operationCancellation.Token).ConfigureAwait(false);
+            MarkDownloadOrigin(partial);
 
             // An unrelated file may appear after the job was queued. Never
             // overwrite it, even if the transfer completed and its digest matches.
@@ -477,6 +480,7 @@ internal sealed partial class WindowsCommandExecutor
             await PatchStateItemAsync("downloads", id, node =>
             {
                 node["state"] = "Completed";
+                node["origin"] = "Internet";
                 node["completedAt"] = DateTimeOffset.UtcNow;
                 node["updatedAt"] = DateTimeOffset.UtcNow;
                 node["bytes"] = total;
@@ -605,6 +609,8 @@ internal sealed partial class WindowsCommandExecutor
         job = await FindStateItemAsync("downloads", id, cancellationToken).ConfigureAwait(false);
         bool completeExists = File.Exists(destination);
         bool partialExists = File.Exists(partial);
+        if (partialExists && (File.GetAttributes(partial) & FileAttributes.ReparsePoint) != 0)
+            return Block("download-reconcile", "Partial download cannot be a reparse point.");
         long bytes = completeExists ? new FileInfo(destination).Length : partialExists ? new FileInfo(partial).Length : 0;
         string priorState = job.GetProperty("state").GetString() ?? string.Empty;
         if (priorState == "Completed" && !completeExists)
@@ -619,7 +625,7 @@ internal sealed partial class WindowsCommandExecutor
                 actualHash = Convert.ToHexString(await SHA256.HashDataAsync(input, cancellationToken).ConfigureAwait(false)).ToLowerInvariant();
             if (!string.Equals(actualHash, evidence.GetString(), StringComparison.OrdinalIgnoreCase))
                 return Block("download-reconcile", "Partial bytes do not match the saved publication digest. No file was published.");
-            DownloadFileOrigin.MarkInternet(partial);
+            MarkDownloadOrigin(partial);
             cancellationToken.ThrowIfCancellationRequested();
             File.Move(partial, destination, overwrite: false);
             completeExists = true;
@@ -644,7 +650,7 @@ internal sealed partial class WindowsCommandExecutor
             if (!CryptographicOperations.FixedTimeEquals(
                     Encoding.ASCII.GetBytes(actualHash), Encoding.ASCII.GetBytes(expectedHash)))
                 return Block("download-reconcile", "Destination hash does not match this download. The existing file and queue state were preserved.");
-            DownloadFileOrigin.MarkInternet(destination);
+            MarkDownloadOrigin(destination);
             state = "Completed";
         }
         await PatchStateItemAsync("downloads", id, node =>
@@ -702,6 +708,8 @@ internal sealed partial class WindowsCommandExecutor
         JsonElement job = await FindStateItemAsync("downloads", id, cancellationToken).ConfigureAwait(false);
         return job.TryGetProperty("state", out JsonElement state) ? state.GetString() ?? string.Empty : string.Empty;
     }
+
+    private void MarkDownloadOrigin(string path) => (DownloadOriginWriterSeam ?? DownloadFileOrigin.MarkInternet)(path);
 
     private string DownloadOwner(string id) => Convert.ToHexString(SHA256.HashData(
         Encoding.UTF8.GetBytes(Path.GetFullPath(_state.Root).ToUpperInvariant() + "\n" + id.ToUpperInvariant())));

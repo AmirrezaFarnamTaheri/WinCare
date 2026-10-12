@@ -137,6 +137,7 @@ public sealed class DownloadHardeningTests
             {
                 try { Directory.Delete(root, true); break; }
                 catch (IOException) when (attempt < 100) { await Task.Delay(25); }
+                catch (IOException) { break; } // Preserve the test assertion instead of masking it with cleanup.
             }
         }
     }
@@ -194,6 +195,35 @@ public sealed class DownloadHardeningTests
             var failed = await Run(executor, "download-start", new { Id = created.Data!.Value.GetProperty("id").GetString()! });
             Assert.Equal(CommandResultStatus.Failed, failed.Status);
             Assert.DoesNotContain("SECRET", failed.Message);
+        }
+        finally { Directory.Delete(root, true); }
+    }
+
+    [Fact]
+    public async Task Origin_failure_never_publishes_and_retry_recovers_without_fetching_again()
+    {
+        if (!OperatingSystem.IsWindows()) return;
+        string root = Root();
+        try
+        {
+            int requests = 0;
+            using var http = new HttpClient(new Handler(_ =>
+            {
+                Assert.Equal(1, Interlocked.Increment(ref requests));
+                return new(HttpStatusCode.OK) { Content = new ByteArrayContent([7, 8, 9]) };
+            }));
+            using var executor = new WindowsCommandExecutor(null, null, new CommandStateStore(root), http);
+            string destination = Path.Combine(root, "origin.bin");
+            var created = await Run(executor, "download-create", new { Url = "https://example.com/file", Destination = destination });
+            string id = created.Data!.Value.GetProperty("id").GetString()!;
+            executor.DownloadOriginWriterSeam = _ => throw new IOException("No alternate stream support.");
+            Assert.Equal(CommandResultStatus.Failed, (await Run(executor, "download-start", new { Id = id })).Status);
+            Assert.False(File.Exists(destination));
+            Assert.Equal(new byte[] { 7, 8, 9 }, await File.ReadAllBytesAsync(destination + ".wincare.download"));
+            executor.DownloadOriginWriterSeam = null;
+            Assert.Equal(CommandResultStatus.Succeeded, (await Run(executor, "download-resume", new { Id = id })).Status);
+            Assert.Equal(1, requests);
+            Assert.Contains("ZoneId=3", await File.ReadAllTextAsync(destination + ":Zone.Identifier"));
         }
         finally { Directory.Delete(root, true); }
     }
