@@ -266,6 +266,14 @@ internal sealed partial class WindowsCommandExecutor
             ? stateProperty.GetString() ?? string.Empty : string.Empty;
         if (recordedState is "Completed" or "Cancelled")
             return Block("download-start", "This job is already finished. Add a new download if you need another copy.");
+        if (job.TryGetProperty("sha256Actual", out JsonElement publicationHash) && !string.IsNullOrEmpty(publicationHash.GetString()))
+        {
+            // Resume also completes a durable publication interrupted before/after rename.
+            CommandHandlerOutcome recovered = await DownloadReconcileAsync(p, cancellationToken).ConfigureAwait(false);
+            if (recovered.Status != CommandResultStatus.Succeeded ||
+                recovered.Data?.GetProperty("state").GetString() == "Completed") return recovered;
+            job = await FindStateItemAsync("downloads", id, cancellationToken).ConfigureAwait(false);
+        }
         Uri uri = DownloadProtection.TransferUri(job);
         string destination = job.GetProperty("destination").GetString()!;
         using DownloadDestinationLease? destinationLease = DownloadDestinationLease.TryAcquire(destination);
@@ -603,6 +611,21 @@ internal sealed partial class WindowsCommandExecutor
             return Block("download-reconcile", "The completed file is missing. Add a new download to fetch another copy.");
         string state = priorState == "Cancelled" ? "Cancelled" : partialExists ? "Suspended" : "Pending";
         string? actualHash = null;
+        bool recoveredPublication = false;
+        if (!completeExists && partialExists && priorState != "Cancelled" &&
+            job.TryGetProperty("sha256Actual", out JsonElement evidence) && !string.IsNullOrEmpty(evidence.GetString()))
+        {
+            await using (FileStream input = File.OpenRead(partial))
+                actualHash = Convert.ToHexString(await SHA256.HashDataAsync(input, cancellationToken).ConfigureAwait(false)).ToLowerInvariant();
+            if (!string.Equals(actualHash, evidence.GetString(), StringComparison.OrdinalIgnoreCase))
+                return Block("download-reconcile", "Partial bytes do not match the saved publication digest. No file was published.");
+            DownloadFileOrigin.MarkInternet(partial);
+            cancellationToken.ThrowIfCancellationRequested();
+            File.Move(partial, destination, overwrite: false);
+            completeExists = true;
+            partialExists = false;
+            recoveredPublication = true;
+        }
         if (completeExists)
         {
             // A filename collision does not establish ownership. Only a previously
@@ -616,7 +639,7 @@ internal sealed partial class WindowsCommandExecutor
             await using (FileStream published = File.OpenRead(destination))
             {
                 actualHash = Convert.ToHexString(
-                    await SHA256.HashDataAsync(published, cancellationToken).ConfigureAwait(false)).ToLowerInvariant();
+                    await SHA256.HashDataAsync(published, recoveredPublication ? CancellationToken.None : cancellationToken).ConfigureAwait(false)).ToLowerInvariant();
             }
             if (!CryptographicOperations.FixedTimeEquals(
                     Encoding.ASCII.GetBytes(actualHash), Encoding.ASCII.GetBytes(expectedHash)))
@@ -632,7 +655,7 @@ internal sealed partial class WindowsCommandExecutor
             node["partialBytes"] = !completeExists && partialExists ? bytes : 0;
             if (actualHash is not null) node["sha256Actual"] = actualHash;
             node["updatedAt"] = DateTimeOffset.UtcNow;
-        }, cancellationToken).ConfigureAwait(false);
+        }, recoveredPublication ? CancellationToken.None : cancellationToken).ConfigureAwait(false);
         return Success("download-reconcile", "Download job reconciled with verified filesystem state.", new { id, destination, partial, state, bytes });
     }
 

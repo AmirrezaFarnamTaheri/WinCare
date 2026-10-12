@@ -124,19 +124,39 @@ public sealed class DownloadHardeningTests
             foreach (string command in new[] { "download-start", "download-reconcile", "download-cancel", "download-remove" })
                 Assert.Equal(CommandResultStatus.Blocked, (await Run(executor, command, new { Id = id })).Status);
             Assert.Equal(new byte[] { 1, 2, 3 }, await File.ReadAllBytesAsync(destination + ".wincare.download"));
-            child.Kill(); await child.WaitForExitAsync();
+            child.Kill(entireProcessTree: true); await child.WaitForExitAsync();
+            // Kernel cleanup can outlive the process-exit notification briefly.
+            using (var released = await WaitForLease(destination)) Assert.NotNull(released);
             Assert.Equal(CommandResultStatus.Succeeded, (await Run(executor, "download-cancel", new { Id = id })).Status);
             Assert.False(File.Exists(destination + ".wincare.download"));
         }
         finally
         {
-            if (child is not null) { if (!child.HasExited) { child.Kill(); await child.WaitForExitAsync(); } child.Dispose(); }
-            Directory.Delete(root, true);
+            if (child is not null) { if (!child.HasExited) { child.Kill(entireProcessTree: true); await child.WaitForExitAsync(); } child.Dispose(); }
+            for (int attempt = 0; ; attempt++)
+            {
+                try { Directory.Delete(root, true); break; }
+                catch (IOException) when (attempt < 100) { await Task.Delay(25); }
+            }
         }
     }
 
-    [Fact]
-    public async Task Interrupted_publication_reconciles_digest_and_origin_without_source_checksum()
+    private static async Task<DownloadDestinationLease> WaitForLease(string destination)
+    {
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        while (true)
+        {
+            timeout.Token.ThrowIfCancellationRequested();
+            var lease = DownloadDestinationLease.TryAcquire(destination);
+            if (lease is not null) return lease;
+            await Task.Delay(25, timeout.Token);
+        }
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Interrupted_publication_reconciles_digest_and_origin_without_source_checksum(bool beforeRename)
     {
         if (!OperatingSystem.IsWindows()) return;
         string root = Root();
@@ -149,9 +169,12 @@ public sealed class DownloadHardeningTests
             await store.WriteAsync("downloads", JsonSerializer.SerializeToElement(new[] {
                 new { id = "interrupted", url = "https://example.com/file", state = "Publishing", destination, sha256Actual = digest, sha256 = "" }
             }), CancellationToken.None);
-            await File.WriteAllBytesAsync(destination, bytes);
-            using var executor = new WindowsCommandExecutor(null, null, store);
-            Assert.Equal(CommandResultStatus.Succeeded, (await Run(executor, "download-reconcile", new { Id = "interrupted" })).Status);
+            await File.WriteAllBytesAsync(beforeRename ? destination + ".wincare.download" : destination, bytes);
+            using var http = new HttpClient(new Handler(_ => throw new InvalidOperationException("Recovery must not fetch already verified bytes.")));
+            using var executor = new WindowsCommandExecutor(null, null, store, http);
+            Assert.Equal(CommandResultStatus.Succeeded, (await Run(executor, "download-resume", new { Id = "interrupted" })).Status);
+            Assert.False(File.Exists(destination + ".wincare.download"));
+            Assert.Equal(bytes, await File.ReadAllBytesAsync(destination));
             Assert.Contains("ZoneId=3", await File.ReadAllTextAsync(destination + ":Zone.Identifier"));
             Assert.Equal("Completed", Assert.Single((await store.ReadArrayAsync("downloads", CancellationToken.None)).EnumerateArray()).GetProperty("state").GetString());
         }
