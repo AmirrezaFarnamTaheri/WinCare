@@ -581,7 +581,7 @@ internal sealed partial class WindowsCommandExecutor
             node["updatedAt"] = DateTimeOffset.UtcNow;
         }, cancellationToken).ConfigureAwait(false);
         if (!requested) return Block("download-suspend", "The download is finishing or already stopped.");
-        source.Cancel();
+        try { source.Cancel(); } catch (ObjectDisposedException) { /* Worker already stopped. */ }
         return Success("download-suspend", $"Suspend requested for download '{id}'. Partial data will be retained for resume.", new { id, state = "SuspendRequested" });
     }
 
@@ -598,7 +598,10 @@ internal sealed partial class WindowsCommandExecutor
         bool completeExists = File.Exists(destination);
         bool partialExists = File.Exists(partial);
         long bytes = completeExists ? new FileInfo(destination).Length : partialExists ? new FileInfo(partial).Length : 0;
-        string state = job.GetProperty("state").GetString() == "Cancelled" ? "Cancelled" : partialExists ? "Suspended" : "Pending";
+        string priorState = job.GetProperty("state").GetString() ?? string.Empty;
+        if (priorState == "Completed" && !completeExists)
+            return Block("download-reconcile", "The completed file is missing. Add a new download to fetch another copy.");
+        string state = priorState == "Cancelled" ? "Cancelled" : partialExists ? "Suspended" : "Pending";
         string? actualHash = null;
         if (completeExists)
         {
@@ -626,7 +629,7 @@ internal sealed partial class WindowsCommandExecutor
             node["state"] = state;
             if (completeExists) node["origin"] = "Internet";
             node["bytes"] = completeExists ? bytes : 0;
-            node["partialBytes"] = partialExists ? bytes : 0;
+            node["partialBytes"] = !completeExists && partialExists ? bytes : 0;
             if (actualHash is not null) node["sha256Actual"] = actualHash;
             node["updatedAt"] = DateTimeOffset.UtcNow;
         }, cancellationToken).ConfigureAwait(false);
@@ -650,7 +653,7 @@ internal sealed partial class WindowsCommandExecutor
                 node["updatedAt"] = DateTimeOffset.UtcNow;
             }, cancellationToken).ConfigureAwait(false);
             if (!requested) return Block("download-cancel", "The download is finishing or already stopped.");
-            source.Cancel();
+            try { source.Cancel(); } catch (ObjectDisposedException) { /* Worker already stopped. */ }
             return Success("download-cancel", "Download cancellation requested. Partial data will be removed by the active worker.", new { id, state = "CancelRequested" });
         }
         using DownloadDestinationLease? lease = DownloadDestinationLease.TryAcquire(destination);

@@ -175,6 +175,79 @@ public sealed class DownloadHardeningTests
         finally { Directory.Delete(root, true); }
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Active_pause_preserves_resume_bytes_and_cancel_removes_them(bool cancel)
+    {
+        if (!OperatingSystem.IsWindows()) return;
+        string root = Root();
+        try
+        {
+            byte[] bytes = [1, 2, 3, 4, 5, 6, 7, 8];
+            var stream = new PausableStream(bytes[..4]);
+            int requests = 0;
+            using var http = new HttpClient(new Handler(request =>
+            {
+                if (Interlocked.Increment(ref requests) == 1)
+                    return new(HttpStatusCode.OK) { Content = new StreamContent(stream) };
+                Assert.Equal(4, Assert.Single(request.Headers.Range!.Ranges).From);
+                var response = new HttpResponseMessage(HttpStatusCode.PartialContent) { Content = new ByteArrayContent(bytes[4..]) };
+                response.Content.Headers.ContentRange = new System.Net.Http.Headers.ContentRangeHeaderValue(4, 7, 8);
+                return response;
+            }));
+            var store = new CommandStateStore(root);
+            using var executor = new WindowsCommandExecutor(null, null, store, http);
+            string destination = Path.Combine(root, "resume.bin");
+            var created = await Run(executor, "download-create", new { Url = "https://example.com/file?signature=SECRET", Destination = destination,
+                Sha256 = Convert.ToHexString(SHA256.HashData(bytes)).ToLowerInvariant() });
+            string id = created.Data!.Value.GetProperty("id").GetString()!;
+            Task<CommandHandlerOutcome> running = Run(executor, "download-start", new { Id = id });
+            await stream.Waiting.Task.WaitAsync(TimeSpan.FromSeconds(10));
+            Assert.Equal(CommandResultStatus.Succeeded, (await Run(executor, cancel ? "download-cancel" : "download-suspend", new { Id = id })).Status);
+            await running.WaitAsync(TimeSpan.FromSeconds(10));
+            var job = Assert.Single((await store.ReadArrayAsync("downloads", CancellationToken.None)).EnumerateArray());
+            Assert.Equal(cancel ? "Cancelled" : "Suspended", job.GetProperty("state").GetString());
+            Assert.False(File.Exists(destination));
+            if (cancel)
+            {
+                Assert.False(File.Exists(destination + ".wincare.download"));
+                Assert.False(job.TryGetProperty("protectedUrl", out _));
+            }
+            else
+            {
+                Assert.Equal(bytes[..4], await File.ReadAllBytesAsync(destination + ".wincare.download"));
+                Assert.Equal(CommandResultStatus.Succeeded, (await Run(executor, "download-resume", new { Id = id })).Status);
+                Assert.Equal(bytes, await File.ReadAllBytesAsync(destination));
+                Assert.Contains("ZoneId=3", await File.ReadAllTextAsync(destination + ":Zone.Identifier"));
+            }
+        }
+        finally { Directory.Delete(root, true); }
+    }
+
+    private sealed class PausableStream(byte[] prefix) : Stream
+    {
+        private bool _sent;
+        internal TaskCompletionSource<bool> Waiting { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public override bool CanRead => true;
+        public override bool CanSeek => false;
+        public override bool CanWrite => false;
+        public override long Length => throw new NotSupportedException();
+        public override long Position { get => throw new NotSupportedException(); set => throw new NotSupportedException(); }
+        public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken token = default)
+        {
+            if (!_sent) { _sent = true; prefix.AsMemory().CopyTo(buffer); return prefix.Length; }
+            Waiting.TrySetResult(true);
+            await Task.Delay(Timeout.Infinite, token);
+            return 0;
+        }
+        public override int Read(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+        public override void Flush() => throw new NotSupportedException();
+        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+        public override void SetLength(long value) => throw new NotSupportedException();
+        public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+    }
+
     private sealed class Handler(Func<HttpRequestMessage, HttpResponseMessage> respond) : HttpMessageHandler
     {
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken token) => Task.FromResult(respond(request));
