@@ -9,7 +9,7 @@ namespace WinCare.Infrastructure.Downloads;
 /// <summary>Private transfer URLs and public queue projections have separate representations.</summary>
 internal static class DownloadProtection
 {
-    internal static string DisplayUrl(Uri uri) => uri.GetLeftPart(UriPartial.Authority) + "/";
+    internal static string DisplayUrl(Uri uri) => uri.GetComponents(UriComponents.SchemeAndServer, UriFormat.UriEscaped) + "/";
 
     internal static JsonElement ProtectRecords(JsonElement records)
     {
@@ -20,7 +20,7 @@ internal static class DownloadProtection
             bool terminal = item["state"]?.GetValue<string>() is "Completed" or "Cancelled";
             if (!terminal && item["protectedUrl"] is null && !string.IsNullOrEmpty(url))
                 item["protectedUrl"] = Protect(url);
-            if (Uri.TryCreate(url, UriKind.Absolute, out Uri? uri)) item["url"] = DisplayUrl(uri);
+            item["url"] = Uri.TryCreate(url, UriKind.Absolute, out Uri? uri) ? DisplayUrl(uri) : string.Empty;
             if (terminal) item.Remove("protectedUrl");
         }
         return JsonSerializer.SerializeToElement(array);
@@ -104,6 +104,8 @@ internal sealed class DownloadDestinationLease : IDisposable
     internal static DownloadDestinationLease? TryAcquire(string destination)
     {
         string path = Path.GetFullPath(destination);
+        if (path.EndsWith(".wincare.download", StringComparison.OrdinalIgnoreCase) || path.EndsWith(".wincare.lock", StringComparison.OrdinalIgnoreCase))
+            throw new InvalidDataException("Download destination uses a name reserved for transfer metadata.");
         if (path[Path.GetPathRoot(path)!.Length..].Contains(':') || Path.GetFileName(path).EndsWith('.') || Path.GetFileName(path).EndsWith(' '))
             throw new InvalidDataException("Download destination cannot contain streams or ambiguous names.");
         string stem = Path.GetFileName(path).Split('.')[0].TrimEnd(' ', '.').ToUpperInvariant();

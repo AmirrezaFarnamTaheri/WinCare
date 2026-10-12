@@ -81,6 +81,32 @@ public sealed class DownloadHardeningTests
         finally { Directory.Delete(root, true); }
     }
 
+    [Theory]
+    [InlineData("payload.wincare.download")]
+    [InlineData("payload.wincare.lock")]
+    [InlineData("NUL.bin")]
+    [InlineData("payload.bin:secret")]
+    [InlineData("payload.bin.")]
+    public async Task Destination_cannot_alias_transfer_metadata_or_windows_device_streams(string filename)
+    {
+        if (!OperatingSystem.IsWindows()) return;
+        string root = Root();
+        try
+        {
+            using var executor = new WindowsCommandExecutor(root);
+            var result = await Run(executor, "download-create", new { Url = "https://example.com/file", Destination = Path.Combine(root, filename) });
+            Assert.NotEqual(CommandResultStatus.Succeeded, result.Status);
+            Assert.Empty((await new CommandStateStore(root).ReadArrayAsync("downloads", CancellationToken.None)).EnumerateArray());
+        }
+        finally { Directory.Delete(root, true); }
+    }
+
+    [Fact]
+    public void Public_origin_strips_legacy_credentials_query_fragment_and_path()
+    {
+        Assert.Equal("https://example.com/", DownloadProtection.DisplayUrl(new Uri("https://user:password@example.com/path?signature=SECRET#fragment")));
+    }
+
     [Fact]
     public async Task Concurrent_creators_reserve_exactly_one_explicit_destination_across_roots()
     {
