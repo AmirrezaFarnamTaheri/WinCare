@@ -1,3 +1,4 @@
+using WinCare.Infrastructure.Downloads;
 using System.Text.RegularExpressions;
 using System.Net;
 using System.Diagnostics;
@@ -182,7 +183,7 @@ internal sealed partial class WindowsCommandExecutor
         JsonElement[] due = downloads.ValueKind == JsonValueKind.Array
             ? downloads.EnumerateArray().Where(item => IsDownloadDue(item, now)).Select(item => item.Clone()).ToArray()
             : [];
-        return Success("downloads-due", $"Found {due.Length} due download jobs.", due);
+        return Success("downloads-due", $"Found {due.Length} due download jobs.", DownloadProtection.PublicRecords(Data(due)));
     }
 
     private async Task<CommandHandlerOutcome> DownloadCreateAsync(CommandParameters p, CancellationToken cancellationToken)
@@ -208,36 +209,50 @@ internal sealed partial class WindowsCommandExecutor
         // Resolve collisions under the creation gate. Automatically choose a free
         // "file (2).ext" for the default Downloads folder, but never silently
         // change an explicitly selected destination.
-        JsonElement existingJobs = await _state.ReadArrayAsync("downloads", cancellationToken).ConfigureAwait(false);
-        string initialDestination = destination;
-        string parent = Path.GetDirectoryName(initialDestination)!;
-        string stem = Path.GetFileNameWithoutExtension(initialDestination);
-        string extension = Path.GetExtension(initialDestination);
+        DateTimeOffset? dueAt = p.String("DueAt").Length == 0 ? null : p.DateTimeOffset("DueAt", DateTimeOffset.UtcNow);
+        JsonElement record = default;
         bool foundAvailable = false;
-        for (int suffix = 0; suffix < (autoDestination ? 100 : 1); suffix++)
+        DownloadDestinationLease? reservation = null;
+        try
         {
-            cancellationToken.ThrowIfCancellationRequested();
-            string candidate = suffix == 0
-                ? initialDestination
-                : Path.Combine(parent, $"{stem} ({suffix + 1}){extension}");
-            bool reserved = existingJobs.ValueKind == JsonValueKind.Array &&
-                existingJobs.EnumerateArray().Any(item =>
-                    item.TryGetProperty("destination", out JsonElement previous) &&
-                    string.Equals(previous.GetString(), candidate, StringComparison.OrdinalIgnoreCase));
-            if (reserved || File.Exists(candidate) || File.Exists(candidate + ".wincare.download"))
-                continue;
-            destination = candidate;
-            foundAvailable = true;
-            break;
+            await _state.UpdateAsync("downloads", Data(Array.Empty<object>()), current =>
+            {
+                var jobs = JsonNode.Parse(current.GetRawText())!.AsArray();
+                if (jobs.OfType<JsonObject>().Any(item => string.Equals(item["id"]?.GetValue<string>(), id, StringComparison.OrdinalIgnoreCase)))
+                    throw new CommandParameterException("Id", "This download ID is already reserved.");
+                string parent = Path.GetDirectoryName(destination)!;
+                string stem = Path.GetFileNameWithoutExtension(destination);
+                string extension = Path.GetExtension(destination);
+                for (int suffix = 0; suffix < (autoDestination ? 100 : 1); suffix++)
+                {
+                    string candidate = suffix == 0 ? destination : Path.Combine(parent, $"{stem} ({suffix + 1}){extension}");
+                    if (jobs.OfType<JsonObject>().Any(item => string.Equals(item["destination"]?.GetValue<string>(), candidate, StringComparison.OrdinalIgnoreCase)) ||
+                        File.Exists(candidate) || File.Exists(candidate + ".wincare.download")) continue;
+                    reservation = DownloadDestinationLease.TryAcquire(candidate);
+                    if (reservation is null) continue;
+                    if (!reservation.Reserve(DownloadOwner(id))) { reservation.Dispose(); reservation = null; continue; }
+                    destination = candidate;
+                    foundAvailable = true;
+                    record = Data(new { id, url = DownloadProtection.DisplayUrl(uri), protectedUrl = DownloadProtection.Protect(uri.AbsoluteUri), destination,
+                        state = "Pending", createdAt = DateTimeOffset.UtcNow, dueAt, sha256 = p.String("Sha256").Trim().ToLowerInvariant() });
+                    jobs.Add(JsonNode.Parse(record.GetRawText()));
+                    break;
+                }
+                return JsonSerializer.SerializeToElement(jobs);
+            }, cancellationToken).ConfigureAwait(false);
         }
+        catch
+        {
+            // A reservation without a committed queue record must not strand the path.
+            if (foundAvailable) reservation?.ReleaseReservation();
+            throw;
+        }
+        finally { reservation?.Dispose(); }
         if (!foundAvailable)
             return Block("download-create", autoDestination
                 ? "Too many downloads use this file name. Remove an old queue record or choose a different name."
                 : "The selected destination is already used by a file or another download.");
-        DateTimeOffset? dueAt = p.String("DueAt").Length == 0 ? null : p.DateTimeOffset("DueAt", DateTimeOffset.UtcNow);
-        JsonElement record = Data(new { id, url = uri.AbsoluteUri, destination, state = "Pending", createdAt = DateTimeOffset.UtcNow, dueAt, sha256 = p.String("Sha256").Trim().ToLowerInvariant() });
-        await AppendStateItemAsync("downloads", record, cancellationToken).ConfigureAwait(false);
-        return Success("download-create", "Download job created.", record, undo: false);
+        return Success("download-create", "Download job created.", DownloadProtection.PublicRecords(record), undo: false);
         }
         finally { DownloadCreationGate.Release(); }
     }
@@ -251,8 +266,15 @@ internal sealed partial class WindowsCommandExecutor
             ? stateProperty.GetString() ?? string.Empty : string.Empty;
         if (recordedState is "Completed" or "Cancelled")
             return Block("download-start", "This job is already finished. Add a new download if you need another copy.");
-        Uri uri = new(job.GetProperty("url").GetString()!, UriKind.Absolute);
+        Uri uri = DownloadProtection.TransferUri(job);
         string destination = job.GetProperty("destination").GetString()!;
+        using DownloadDestinationLease? destinationLease = DownloadDestinationLease.TryAcquire(destination);
+        if (destinationLease is null || !destinationLease.Reserve(DownloadOwner(id)))
+            return Block("download-start", "Another process owns this destination. Use its Downloads workspace or wait for it to stop.");
+        // Re-read after acquisition: cancellation/removal may have won while we waited.
+        job = await FindStateItemAsync("downloads", id, cancellationToken).ConfigureAwait(false);
+        if (job.GetProperty("state").GetString() is "Completed" or "Cancelled")
+            return Block("download-start", "This download is already finished.");
         string expectedHash = job.TryGetProperty("sha256", out JsonElement hash) ? hash.GetString() ?? string.Empty : string.Empty;
         Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
         string partial = destination + ".wincare.download";
@@ -268,8 +290,11 @@ internal sealed partial class WindowsCommandExecutor
             return Block("download-start", "Another download is already writing to this destination.");
         }
 
+        bool published = false;
         try
         {
+            if (File.Exists(partial) && (File.GetAttributes(partial) & FileAttributes.ReparsePoint) != 0)
+                throw new InvalidDataException("Partial download cannot be a reparse point.");
             long existingBytes = File.Exists(partial) ? new FileInfo(partial).Length : 0;
             if (existingBytes > maximumBytes)
             {
@@ -279,6 +304,8 @@ internal sealed partial class WindowsCommandExecutor
             await PatchStateItemAsync("downloads", id, node =>
             {
                 node["state"] = "Running";
+                node.Remove("sha256Actual");
+                node.Remove("origin");
                 node["startedAt"] ??= DateTimeOffset.UtcNow;
                 if (existingBytes > 0) node["resumedAt"] = DateTimeOffset.UtcNow;
                 else node.Remove("resumedAt");
@@ -421,9 +448,24 @@ internal sealed partial class WindowsCommandExecutor
                 throw new InvalidDataException("Downloaded file SHA-256 does not match the requested digest.");
             }
 
+            operationCancellation.Token.ThrowIfCancellationRequested();
+            DownloadFileOrigin.MarkInternet(partial);
+            // Durable publication intent closes the rename-before-digest recovery window.
+            // Once Publishing is committed, pause/cancel must not change this decision.
+            await PatchStateItemAsync("downloads", id, node =>
+            {
+                if (node["state"]?.GetValue<string>() != "Running")
+                    throw new OperationCanceledException(operationCancellation.Token);
+                node["state"] = "Publishing";
+                node["sha256Actual"] = actualHash;
+                node["bytes"] = total;
+                node["origin"] = "Internet";
+            }, operationCancellation.Token).ConfigureAwait(false);
+
             // An unrelated file may appear after the job was queued. Never
             // overwrite it, even if the transfer completed and its digest matches.
             File.Move(partial, destination, overwrite: false);
+            published = true;
             await PatchStateItemAsync("downloads", id, node =>
             {
                 node["state"] = "Completed";
@@ -433,13 +475,13 @@ internal sealed partial class WindowsCommandExecutor
                 node["expectedBytes"] = total;
                 node["partialBytes"] = 0;
                 node["sha256Actual"] = actualHash;
-            }, cancellationToken).ConfigureAwait(false);
+            }, CancellationToken.None).ConfigureAwait(false);
             string completionText = expectedHash.Length > 0
                 ? "Download completed; SHA-256 matched the expected checksum."
                 : "Download completed; SHA-256 recorded. No source checksum was supplied.";
             return Success("download-start", completionText, new { id, destination, bytes = total, sha256 = actualHash, resumed = serverResumed });
         }
-        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        catch (OperationCanceledException) when (!published && !cancellationToken.IsCancellationRequested)
         {
             string requestedState = await GetDownloadStateAsync(id, CancellationToken.None).ConfigureAwait(false);
             bool suspended = requestedState.Equals("SuspendRequested", StringComparison.OrdinalIgnoreCase);
@@ -449,10 +491,10 @@ internal sealed partial class WindowsCommandExecutor
             if (cancelled)
             {
                 TryDeleteFile(partial);
-                partialBytes = 0;
+                partialBytes = File.Exists(partial) ? new FileInfo(partial).Length : 0;
             }
 
-            string finalState = suspended ? "Suspended" : "Cancelled";
+            string finalState = suspended ? "Suspended" : cancelled && partialBytes == 0 ? "Cancelled" : "Suspended";
             await PatchStateItemAsync("downloads", id, node =>
             {
                 node["state"] = finalState;
@@ -461,7 +503,7 @@ internal sealed partial class WindowsCommandExecutor
             }, CancellationToken.None).ConfigureAwait(false);
             return Block("download-start", suspended ? $"Download '{id}' was suspended with {partialBytes} partial byte(s) retained." : $"Download '{id}' was cancelled.");
         }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        catch (OperationCanceledException) when (!published && cancellationToken.IsCancellationRequested)
         {
             long partialBytes = File.Exists(partial) ? new FileInfo(partial).Length : 0;
             await PatchStateItemAsync("downloads", id, node =>
@@ -472,7 +514,7 @@ internal sealed partial class WindowsCommandExecutor
             }, CancellationToken.None).ConfigureAwait(false);
             throw;
         }
-        catch
+        catch (Exception ex) when (!published)
         {
             long partialBytes = File.Exists(partial) ? new FileInfo(partial).Length : 0;
             await PatchStateItemAsync("downloads", id, node =>
@@ -481,7 +523,10 @@ internal sealed partial class WindowsCommandExecutor
                 node["partialBytes"] = partialBytes;
                 node["updatedAt"] = DateTimeOffset.UtcNow;
             }, CancellationToken.None).ConfigureAwait(false);
-            throw;
+            // HTTP handler exception messages may embed the full signed request URL.
+            // Never attach the original exception to a durable/displayed outcome.
+            return new CommandHandlerOutcome(CommandResultStatus.Failed, "download-start.failed",
+                $"Download failed ({ex.GetType().Name}). Partial bytes were retained; retry or reconcile the job.", null, UndoAvailable: false);
         }
         finally
         {
@@ -527,11 +572,15 @@ internal sealed partial class WindowsCommandExecutor
                 ? Success("download-suspend", $"Download '{id}' is already suspended.", new { id, state })
                 : Block("download-suspend", $"Download '{id}' is not currently active and cannot be suspended.");
         }
+        bool requested = false;
         await PatchStateItemAsync("downloads", id, node =>
         {
+            if (node["state"]?.GetValue<string>() != "Running") return;
+            requested = true;
             node["state"] = "SuspendRequested";
             node["updatedAt"] = DateTimeOffset.UtcNow;
         }, cancellationToken).ConfigureAwait(false);
+        if (!requested) return Block("download-suspend", "The download is finishing or already stopped.");
         source.Cancel();
         return Success("download-suspend", $"Suspend requested for download '{id}'. Partial data will be retained for resume.", new { id, state = "SuspendRequested" });
     }
@@ -542,10 +591,14 @@ internal sealed partial class WindowsCommandExecutor
         JsonElement job = await FindStateItemAsync("downloads", id, cancellationToken).ConfigureAwait(false);
         string destination = job.GetProperty("destination").GetString()!;
         string partial = destination + ".wincare.download";
+        using DownloadDestinationLease? lease = DownloadDestinationLease.TryAcquire(destination);
+        if (lease is null || !lease.Reserve(DownloadOwner(id)))
+            return Block("download-control", "Another process owns this destination. Stop it before changing or recovering this job.");
+        job = await FindStateItemAsync("downloads", id, cancellationToken).ConfigureAwait(false);
         bool completeExists = File.Exists(destination);
         bool partialExists = File.Exists(partial);
         long bytes = completeExists ? new FileInfo(destination).Length : partialExists ? new FileInfo(partial).Length : 0;
-        string state = partialExists ? "Suspended" : "Pending";
+        string state = job.GetProperty("state").GetString() == "Cancelled" ? "Cancelled" : partialExists ? "Suspended" : "Pending";
         string? actualHash = null;
         if (completeExists)
         {
@@ -565,11 +618,13 @@ internal sealed partial class WindowsCommandExecutor
             if (!CryptographicOperations.FixedTimeEquals(
                     Encoding.ASCII.GetBytes(actualHash), Encoding.ASCII.GetBytes(expectedHash)))
                 return Block("download-reconcile", "Destination hash does not match this download. The existing file and queue state were preserved.");
+            DownloadFileOrigin.MarkInternet(destination);
             state = "Completed";
         }
         await PatchStateItemAsync("downloads", id, node =>
         {
             node["state"] = state;
+            if (completeExists) node["origin"] = "Internet";
             node["bytes"] = completeExists ? bytes : 0;
             node["partialBytes"] = partialExists ? bytes : 0;
             if (actualHash is not null) node["sha256Actual"] = actualHash;
@@ -586,14 +641,24 @@ internal sealed partial class WindowsCommandExecutor
         string partial = destination + ".wincare.download";
         if (_operations.TryGetValue("download:" + id, out CancellationTokenSource? source))
         {
+            bool requested = false;
             await PatchStateItemAsync("downloads", id, node =>
             {
+                if (node["state"]?.GetValue<string>() != "Running") return;
+                requested = true;
                 node["state"] = "CancelRequested";
                 node["updatedAt"] = DateTimeOffset.UtcNow;
             }, cancellationToken).ConfigureAwait(false);
+            if (!requested) return Block("download-cancel", "The download is finishing or already stopped.");
             source.Cancel();
             return Success("download-cancel", "Download cancellation requested. Partial data will be removed by the active worker.", new { id, state = "CancelRequested" });
         }
+        using DownloadDestinationLease? lease = DownloadDestinationLease.TryAcquire(destination);
+        if (lease is null || !lease.Reserve(DownloadOwner(id)))
+            return Block("download-control", "Another process owns this destination. Stop it before changing or recovering this job.");
+        job = await FindStateItemAsync("downloads", id, cancellationToken).ConfigureAwait(false);
+        if (job.GetProperty("state").GetString() == "Completed" || File.Exists(destination))
+            return Block("download-cancel", "A published file must be reconciled or its record removed; cancellation does not delete completed files.");
         TryDeleteFile(partial);
         if (File.Exists(partial))
             return Block("download-cancel", "The partial file could not be deleted; the download remains available for cleanup.");
@@ -612,6 +677,9 @@ internal sealed partial class WindowsCommandExecutor
         return job.TryGetProperty("state", out JsonElement state) ? state.GetString() ?? string.Empty : string.Empty;
     }
 
+    private string DownloadOwner(string id) => Convert.ToHexString(SHA256.HashData(
+        Encoding.UTF8.GetBytes(Path.GetFullPath(_state.Root).ToUpperInvariant() + "\n" + id.ToUpperInvariant())));
+
     private static void TryDeleteFile(string path)
     {
         try { if (File.Exists(path)) File.Delete(path); }
@@ -626,10 +694,16 @@ internal sealed partial class WindowsCommandExecutor
         JsonElement job = await FindStateItemAsync("downloads", id, cancellationToken).ConfigureAwait(false);
         string destination = job.GetProperty("destination").GetString()!;
         string partial = destination + ".wincare.download";
+        using DownloadDestinationLease? lease = DownloadDestinationLease.TryAcquire(destination);
+        if (lease is null || !lease.Reserve(DownloadOwner(id)))
+            return Block("download-control", "Another process owns this destination. Stop it before changing or recovering this job.");
+        job = await FindStateItemAsync("downloads", id, cancellationToken).ConfigureAwait(false);
         TryDeleteFile(partial);
         if (File.Exists(partial))
             return Block("download-remove", "The partial file could not be deleted. Resolve the file access issue before removing the job.");
-        return await RemoveStateItemAsync("downloads", id, cancellationToken).ConfigureAwait(false);
+        var result = await RemoveStateItemAsync("downloads", id, cancellationToken).ConfigureAwait(false);
+        lease.ReleaseReservation();
+        return result;
     }
 
     private async Task<CommandHandlerOutcome> DownloadBatchAsync(CommandParameters p, CancellationToken cancellationToken)
