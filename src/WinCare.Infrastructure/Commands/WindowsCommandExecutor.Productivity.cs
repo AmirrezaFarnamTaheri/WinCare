@@ -206,7 +206,10 @@ internal sealed partial class WindowsCommandExecutor
         string destination = autoDestination
             ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads", fileName)
             : requestedDestination;
-        destination = Path.GetFullPath(Environment.ExpandEnvironmentVariables(destination));
+        destination = Environment.ExpandEnvironmentVariables(destination);
+        if (destination.EndsWith('.') || destination.EndsWith(' '))
+            throw new CommandParameterException("Destination", "Download destination cannot end in a dot or space.");
+        destination = Path.GetFullPath(destination);
 
         // Resolve collisions under the creation gate. Automatically choose a free
         // "file (2).ext" for the default Downloads folder, but never silently
