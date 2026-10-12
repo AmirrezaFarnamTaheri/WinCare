@@ -1,5 +1,12 @@
 # Changelog & Release Notes
 
+## Unreleased — native Downloads hardening
+
+- Protect private transfer URLs with Windows user-scoped DPAPI; migrate legacy queues, omit private URLs from queue responses, and remove them on completion/cancellation.
+- Serialize destination reservations and hold crash-released handles across transfer and filesystem recovery; reject competing processes and unsafe path aliases.
+- Save verified publication evidence before rename and require Internet-zone origin metadata before publication or completed-file recovery.
+- See [behavior, recovery limits and validation status](docs/releases/download-hardening.md). Development signing and unperformed device-level acceptance remain separate from production certification.
+
 All notable changes to WinCare are documented in this file in accordance with [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) principles.
 
 This history restarts at 3.0.0 with the Fluent redesign re-release. The safety model is unchanged: risk-tiered admission (Safe/Moderate/Destructive/Critical), dispatcher-issued single-use approval capabilities, fail-closed command dispatch, the frozen 269-command catalog, and plugin trust/signing all behave exactly as before; 3.0.0 marks the design-system and code-hygiene reset, not a change in what the app is willing to touch.
