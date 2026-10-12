@@ -311,8 +311,11 @@ internal sealed partial class WindowsCommandExecutor
                 throw new InvalidDataException("Existing partial download exceeds the 2 GiB WinCare safety limit.");
             }
 
+            operationCancellation.Token.ThrowIfCancellationRequested();
             await PatchStateItemAsync("downloads", id, node =>
             {
+                if (node["state"]?.GetValue<string>() is "SuspendRequested" or "CancelRequested")
+                    throw new OperationCanceledException(operationCancellation.Token);
                 node["state"] = "Running";
                 node.Remove("sha256Actual");
                 node.Remove("origin");
@@ -513,7 +516,7 @@ internal sealed partial class WindowsCommandExecutor
                 node["partialBytes"] = partialBytes;
                 node["updatedAt"] = DateTimeOffset.UtcNow;
             }, CancellationToken.None).ConfigureAwait(false);
-            return Block("download-start", suspended ? $"Download '{id}' was suspended with {partialBytes} partial byte(s) retained." : $"Download '{id}' was cancelled.");
+            return Block("download-start", finalState == "Suspended" ? $"Download '{id}' was suspended with {partialBytes} partial byte(s) retained." : $"Download '{id}' was cancelled.");
         }
         catch (OperationCanceledException) when (!published && cancellationToken.IsCancellationRequested)
         {
