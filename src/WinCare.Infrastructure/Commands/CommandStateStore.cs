@@ -21,7 +21,8 @@ public sealed class CommandStateStore : ICommandStateStore
     private readonly string _root;
     private readonly SemaphoreSlim _gate = new(1, 1);
     private readonly SemaphoreSlim _processWriteGate;
-    private readonly Semaphore _crossProcessGate;
+    private readonly string _crossProcessLockPath;
+    private FileStream? _crossProcessHandle;
 
     /// <summary>
     /// Bounded wait for the cross-process state lock.
@@ -55,12 +56,9 @@ public sealed class CommandStateStore : ICommandStateStore
             _root,
             static _ => new SemaphoreSlim(initialCount: 1, maxCount: 1));
 
-        // One OS-wide lock name per data root: every process pointed at the same root shares
-        // the same write lock. A named Semaphore is used because async continuations can resume
-        // on any thread; semaphores have no thread affinity and the OS restores the count if a
-        // holder process exits unexpectedly.
-        string rootHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(_root)))[..16];
-        _crossProcessGate = new Semaphore(initialCount: 1, maximumCount: 1, @"Local\WinCare.StateStore." + rootHash);
+        // An exclusive file handle is released by the OS after a crash. Named semaphores
+        // do not restore their count when a holder dies and can permanently wedge writes.
+        _crossProcessLockPath = Path.Combine(_root, ".state-write.lock");
     }
 
     /// <summary>
@@ -73,6 +71,8 @@ public sealed class CommandStateStore : ICommandStateStore
     /// </summary>
     public async Task<JsonElement> ReadAsync(string key, JsonElement fallback, CancellationToken cancellationToken)
     {
+        if (key == "downloads")
+            return await UpdateAsync(key, fallback, static value => value, cancellationToken).ConfigureAwait(false);
         string path = PathFor(key);
         await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
@@ -143,7 +143,17 @@ public sealed class CommandStateStore : ICommandStateStore
     /// <returns>True when the lock was acquired; the caller must release it in finally.</returns>
     private bool TryAcquireCrossProcessGate()
     {
-        return _crossProcessGate.WaitOne(CrossProcessLockTimeout);
+        var deadline = System.Diagnostics.Stopwatch.StartNew();
+        do
+        {
+            try
+            {
+                _crossProcessHandle = new FileStream(_crossProcessLockPath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
+                return true;
+            }
+            catch (IOException) { Thread.Sleep(20); }
+        } while (deadline.Elapsed < CrossProcessLockTimeout);
+        return false;
     }
 
     /// <summary>
@@ -172,7 +182,8 @@ public sealed class CommandStateStore : ICommandStateStore
         {
             if (crossProcessLockHeld)
             {
-                _crossProcessGate.Release();
+                _crossProcessHandle?.Dispose();
+                _crossProcessHandle = null;
             }
             if (processLockHeld)
             {
@@ -220,15 +231,21 @@ public sealed class CommandStateStore : ICommandStateStore
                 }
             }
 
+            JsonElement original = current;
+            if (key == "downloads") current = WinCare.Infrastructure.Downloads.DownloadProtection.ProtectRecords(current);
             JsonElement updated = transform(current);
-            await CommitAsync(key, path, updated, cancellationToken).ConfigureAwait(false);
+            if (key == "downloads") updated = WinCare.Infrastructure.Downloads.DownloadProtection.ProtectRecords(updated);
+            if (key != "downloads" || !System.Text.Json.Nodes.JsonNode.DeepEquals(
+                    System.Text.Json.Nodes.JsonNode.Parse(original.GetRawText()), System.Text.Json.Nodes.JsonNode.Parse(updated.GetRawText())))
+                await CommitAsync(key, path, updated, cancellationToken).ConfigureAwait(false);
             return updated;
         }
         finally
         {
             if (crossProcessLockHeld)
             {
-                _crossProcessGate.Release();
+                _crossProcessHandle?.Dispose();
+                _crossProcessHandle = null;
             }
             if (processLockHeld)
             {
@@ -283,6 +300,7 @@ public sealed class CommandStateStore : ICommandStateStore
     /// </summary>
     private async Task CommitAsync(string key, string path, JsonElement value, CancellationToken cancellationToken)
     {
+        if (key == "downloads") value = WinCare.Infrastructure.Downloads.DownloadProtection.ProtectRecords(value);
         const int maxCommitAttempts = 3;
         IOException? lastIoError = null;
 
@@ -304,6 +322,7 @@ public sealed class CommandStateStore : ICommandStateStore
                     // call SensitiveCredentialMasker explicitly; durable state stays byte-exact.
                     await JsonSerializer.SerializeAsync(stream, value, JsonOptions, cancellationToken).ConfigureAwait(false);
                     await stream.FlushAsync(cancellationToken).ConfigureAwait(false);
+                    stream.Flush(flushToDisk: true);
                 }
 
                 MoveWithRetry(temp, path);

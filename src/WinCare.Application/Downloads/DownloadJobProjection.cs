@@ -63,7 +63,7 @@ public static class DownloadJobProjection
                 : "Unknown source";
             string state = Text(item, "state");
             if (active is not null &&
-                (state is "Running" or "SuspendRequested" or "CancelRequested") &&
+                (state is "Running" or "Publishing" or "SuspendRequested" or "CancelRequested") &&
                 !active.Contains(id))
             {
                 // A process crash can leave a durable Running marker even though
@@ -78,6 +78,7 @@ public static class DownloadJobProjection
             {
                 "Pending" => "Queued",
                 "Running" => "Downloading",
+                "Publishing" => "Finishing",
                 "SuspendRequested" => "Pausing",
                 "Suspended" => "Paused",
                 "Interrupted" => "Interrupted — ready to resume",
@@ -91,7 +92,7 @@ public static class DownloadJobProjection
             long partialBytes = Math.Max(0, Number(item, "partialBytes"));
             long expectedBytes = Math.Max(0, Number(item, "expectedBytes"));
             long transferred = state == "Completed" ? completeBytes : partialBytes;
-            bool isRunning = state is "Running" or "SuspendRequested" or "CancelRequested";
+            bool isRunning = state is "Running" or "Publishing" or "SuspendRequested" or "CancelRequested";
             bool hasKnownTotal = expectedBytes > 0;
             double percent = hasKnownTotal
                 ? Math.Clamp((double)transferred / expectedBytes * 100d, 0d, 100d)

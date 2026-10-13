@@ -585,6 +585,7 @@ internal sealed partial class WindowsCommandExecutor
     private async Task<CommandHandlerOutcome> ReadStateAsync(string key, CancellationToken cancellationToken)
     {
         JsonElement data = await _state.ReadArrayAsync(key, cancellationToken).ConfigureAwait(false);
+        if (key == "downloads") data = WinCare.Infrastructure.Downloads.DownloadProtection.PublicRecords(data);
         return CommandHandlerOutcome.Succeeded(key + ".ok", $"Loaded WinCare state '{key}'.", data);
     }
 
