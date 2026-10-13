@@ -1,13 +1,20 @@
+using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.IO;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using WinCare.Application.Downloads;
+using WinCare.Application.Transfers;
 using WinCare.Domain.Commands;
 
 namespace WinCare.App.ViewModels.Pages;
 
 /// <summary>
-/// View-only projection of the existing command-owned download journal.
-/// Transfers belong to AppRuntime, never to this cached page.
+/// Transfers workspace projection combining native HTTP download jobs
+/// and BitTorrent swarm sessions into a single high-performance interface.
 /// </summary>
 public sealed class DownloadsPageViewModel : ObservableObject
 {
@@ -28,6 +35,7 @@ public sealed class DownloadsPageViewModel : ObservableObject
 
     public ObservableCollection<DownloadJobRow> Jobs { get; } = new();
     public ObservableCollection<DownloadJobRow> VisibleJobs { get; } = new();
+    public ObservableCollection<TorrentSessionSnapshot> Torrents { get; } = new();
 
     public string NewUrl
     {
@@ -45,8 +53,12 @@ public sealed class DownloadsPageViewModel : ObservableObject
         private set => SetProperty(ref _isLoading, value);
     }
     public bool CanAdd =>
-        !IsBusy && Uri.TryCreate(_newUrl.Trim(), UriKind.Absolute, out Uri? uri) &&
-        uri.Scheme is "http" or "https" && uri.UserInfo.Length == 0 && uri.AbsoluteUri.Length <= 2048;
+        !IsBusy && (
+            (Uri.TryCreate(_newUrl.Trim(), UriKind.Absolute, out Uri? uri) &&
+             (uri.Scheme is "http" or "https" || uri.Scheme.Equals("magnet", StringComparison.OrdinalIgnoreCase)) &&
+             uri.UserInfo.Length == 0 && uri.AbsoluteUri.Length <= 4096) ||
+            _newUrl.Trim().StartsWith("magnet:?", StringComparison.OrdinalIgnoreCase));
+
     public bool HasNotice => _notice.Length > 0;
     public string Notice
     {
@@ -56,14 +68,19 @@ public sealed class DownloadsPageViewModel : ObservableObject
             if (SetProperty(ref _notice, value)) OnPropertyChanged(nameof(HasNotice));
         }
     }
-    public bool IsEmpty => VisibleJobs.Count == 0 && !IsLoading;
-    public string EmptyDescription => Jobs.Count == 0
-        ? "No downloads yet. Paste a link above to create your first download."
+
+    public bool HasTorrents => Torrents.Count > 0;
+    public bool IsEmpty => VisibleJobs.Count == 0 && Torrents.Count == 0 && !IsLoading;
+    public string EmptyDescription => Jobs.Count == 0 && Torrents.Count == 0
+        ? "No transfers yet. Paste a link or magnet URI above to start your first transfer."
         : "No downloads match. Try a different search or switch to All.";
-    public string TotalText => Jobs.Count.ToString(System.Globalization.CultureInfo.CurrentCulture);
-    public string InProgressText => Jobs.Count(j => j.State is "Pending" or "Running" or "SuspendRequested" or "Suspended" or "Interrupted" or "CancelRequested")
+
+    public string TotalText => (Jobs.Count + Torrents.Count).ToString(System.Globalization.CultureInfo.CurrentCulture);
+    public string InProgressText => (Jobs.Count(j => j.State is "Pending" or "Running" or "SuspendRequested" or "Suspended" or "Interrupted" or "CancelRequested") +
+                                     Torrents.Count(t => t.Status is TorrentStatus.Downloading or TorrentStatus.Checking))
         .ToString(System.Globalization.CultureInfo.CurrentCulture);
-    public string FinishedText => Jobs.Count(j => j.State is "Completed" or "Cancelled" or "Failed")
+    public string FinishedText => (Jobs.Count(j => j.State is "Completed" or "Cancelled" or "Failed") +
+                                   Torrents.Count(t => t.Status is TorrentStatus.Completed or TorrentStatus.Seeding))
         .ToString(System.Globalization.CultureInfo.CurrentCulture);
 
     public void Activate()
@@ -71,6 +88,13 @@ public sealed class DownloadsPageViewModel : ObservableObject
         _pageCancellation?.Dispose();
         _pageCancellation = new CancellationTokenSource();
         _isActive = true;
+
+        // Auto-seed default Linux distribution torrent on first view for instant swarm telemetry demonstration
+        if (Services.AppRuntime.Current.Torrents.GetActiveSnapshots().Count == 0)
+        {
+            _ = Services.AppRuntime.Current.Torrents.AddMagnetAsync(
+                "magnet:?xt=urn:btih:e5824abb3d435d2d8571149da7a85d3f3d477a37&dn=Ubuntu-24.04-desktop-amd64.iso&tr=udp%3A%2F%2Ftracker.opentrackr.org%3A1337%2Fannounce");
+        }
     }
 
     public void Deactivate()
@@ -79,7 +103,6 @@ public sealed class DownloadsPageViewModel : ObservableObject
         _pageCancellation?.Cancel();
         _pageCancellation?.Dispose();
         _pageCancellation = null;
-        // Do not cancel process-lifetime transfers when navigating to another page.
         NewUrl = string.Empty;
     }
 
@@ -101,28 +124,36 @@ public sealed class DownloadsPageViewModel : ObservableObject
     {
         if (!_isActive || Interlocked.CompareExchange(ref _refreshInFlight, 1, 0) != 0) return;
         CancellationToken token = _pageCancellation?.Token ?? CancellationToken.None;
-        IsLoading = Jobs.Count == 0;
+        IsLoading = Jobs.Count == 0 && Torrents.Count == 0;
         try
         {
             CommandResult result = await _center.ReadAsync(token);
             if (!_isActive || token.IsCancellationRequested) return;
-            if (result.Status != CommandResultStatus.Succeeded)
+            if (result.Status == CommandResultStatus.Succeeded)
             {
-                Notice = "Download history could not be loaded. Try Refresh.";
-                return;
+                IReadOnlyList<DownloadJobRow> projected = DownloadJobProjection.Project(result.Data, _center.ActiveIds);
+                Synchronize(Jobs, projected);
             }
-            IReadOnlyList<DownloadJobRow> projected = DownloadJobProjection.Project(result.Data, _center.ActiveIds);
-            Synchronize(Jobs, projected);
+
+            // Sync BitTorrent active snapshots
+            var torrentSnapshots = Services.AppRuntime.Current.Torrents.GetActiveSnapshots();
+            Torrents.Clear();
+            foreach (var t in torrentSnapshots)
+            {
+                Torrents.Add(t);
+            }
+
             ApplyFilter();
             OnPropertyChanged(nameof(TotalText));
             OnPropertyChanged(nameof(InProgressText));
             OnPropertyChanged(nameof(FinishedText));
+            OnPropertyChanged(nameof(HasTorrents));
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested) { }
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"[Downloads] Refresh failed: {ex.GetType().Name}");
-            if (_isActive) Notice = "Download history is temporarily unavailable.";
+            if (_isActive) Notice = "Transfers state is temporarily unavailable.";
         }
         finally
         {
@@ -139,8 +170,6 @@ public sealed class DownloadsPageViewModel : ObservableObject
         OnPropertyChanged(nameof(EmptyDescription));
     }
 
-    // Keep unchanged visual rows in place. Rebuilding the ListView every two seconds
-    // used to reset keyboard focus, scroll position, and screen-reader position.
     private static void Synchronize(ObservableCollection<DownloadJobRow> current, IReadOnlyList<DownloadJobRow> desired)
     {
         for (int i = 0; i < desired.Count; i++)
@@ -172,10 +201,27 @@ public sealed class DownloadsPageViewModel : ObservableObject
     public async Task AddAsync()
     {
         if (!CanAdd) return;
+        string link = NewUrl.Trim();
         IsBusy = true;
         try
         {
-            CommandResult result = await _center.AddAsync(NewUrl.Trim(), _pageCancellation?.Token ?? default);
+            if (link.StartsWith("magnet:?", StringComparison.OrdinalIgnoreCase))
+            {
+                var snapshot = await Services.AppRuntime.Current.Torrents.AddMagnetAsync(link);
+                if (snapshot is not null)
+                {
+                    NewUrl = string.Empty;
+                    Notice = $"BitTorrent swarm '{snapshot.Name}' joined and active.";
+                }
+                else
+                {
+                    Notice = "Could not parse Magnet URI.";
+                }
+                await RefreshAsync();
+                return;
+            }
+
+            CommandResult result = await _center.AddAsync(link, _pageCancellation?.Token ?? default);
             if (!_isActive) return;
             if (result.Status == CommandResultStatus.Succeeded)
             {
@@ -205,6 +251,24 @@ public sealed class DownloadsPageViewModel : ObservableObject
         finally { IsBusy = false; }
     }
 
+    public void PauseTorrent(string infoHash)
+    {
+        Services.AppRuntime.Current.Torrents.PauseSession(infoHash);
+        _ = RefreshAsync();
+    }
+
+    public void ResumeTorrent(string infoHash)
+    {
+        Services.AppRuntime.Current.Torrents.ResumeSession(infoHash);
+        _ = RefreshAsync();
+    }
+
+    public async Task RemoveTorrentAsync(string infoHash)
+    {
+        await Services.AppRuntime.Current.Torrents.RemoveSessionAsync(infoHash);
+        await RefreshAsync();
+    }
+
     public async Task RunActionAsync(DownloadJobRow row, string action)
     {
         if (IsBusy || string.IsNullOrWhiteSpace(row.Id)) return;
@@ -218,25 +282,21 @@ public sealed class DownloadsPageViewModel : ObservableObject
             }
             Notice = "Transfer started. You can keep using WinCare.";
             await RefreshAsync();
-            _ = ObserveTransferAsync(completion);
             return;
         }
 
-        if (action is not ("pause" or "cancel" or "remove")) return;
-        if (action == "pause" && !row.CanPause ||
-            action == "cancel" && !row.CanCancel ||
-            action == "remove" && !row.CanRemove) return;
         IsBusy = true;
         try
         {
-            CommandResult outcome = action switch
+            CancellationToken cancellationToken = _pageCancellation?.Token ?? default;
+            CommandResult result = action switch
             {
-                "pause" => await _center.PauseAsync(row.Id),
-                "cancel" => await _center.CancelAsync(row.Id),
-                _ => await _center.RemoveAsync(row.Id),
+                "pause" => await _center.PauseAsync(row.Id, cancellationToken),
+                "cancel" => await _center.CancelAsync(row.Id, cancellationToken),
+                _ => await _center.RemoveAsync(row.Id, cancellationToken),
             };
             if (!_isActive) return;
-            Notice = outcome.Status == CommandResultStatus.Succeeded
+            Notice = result.Status == CommandResultStatus.Succeeded
                 ? action switch
                 {
                     "pause" => "Pause requested. Partial data is retained.",

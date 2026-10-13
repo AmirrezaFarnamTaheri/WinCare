@@ -1,5 +1,5 @@
 [workspace]
-members = ["wincare-core", "wincare-guard"]
+members = ["wincare-core"]
 resolver = "2"
 
 [workspace.package]

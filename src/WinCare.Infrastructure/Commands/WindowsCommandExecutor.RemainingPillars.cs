@@ -12,7 +12,6 @@ using Microsoft.Win32;
 using WinCare.Application.Commands;
 using WinCare.CommandCatalog.Models;
 using WinCare.Domain.Commands;
-using WinCare.Infrastructure.IPC;
 using WinCare.Infrastructure.Native;
 
 internal sealed partial class WindowsCommandExecutor
@@ -275,26 +274,12 @@ internal sealed partial class WindowsCommandExecutor
             "Service registration is unavailable until SCM integration is implemented and verified."));
     }
 
-    private async Task<CommandHandlerOutcome> ExecuteGuardConnectAsync(CancellationToken cancellationToken)
+    private static Task<CommandHandlerOutcome> ExecuteGuardConnectAsync(CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        try
-        {
-            await using var guard = new GuardPipeClient();
-            if (await guard.TryConnectAsync(2000, cancellationToken).ConfigureAwait(false))
-            {
-                string? response = await guard.SendCommandAsync("PING", cancellationToken).ConfigureAwait(false);
-                return string.Equals(response, "pong", StringComparison.OrdinalIgnoreCase)
-                    ? CommandHandlerOutcome.Success("wincare-guard replied to its health check.")
-                    : CommandHandlerOutcome.Failed("guard.unexpected_response", "Guard connection did not return the expected pong response.");
-            }
-
-            return CommandHandlerOutcome.Blocked("guard.unavailable", "wincare-guard is offline or its pipe is unavailable.");
-        }
-        catch (Exception ex)
-        {
-            return CommandHandlerOutcome.Failed($"Guard pipe connection error: {ex.Message}");
-        }
+        return Task.FromResult(CommandHandlerOutcome.Blocked(
+            "guard.unavailable",
+            "wincare-guard background service is not installed on this system."));
     }
 
     // Registry switches alone do not provide toast registration, delivery or a consumer

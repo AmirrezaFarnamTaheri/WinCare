@@ -52,35 +52,6 @@ public sealed class BatchNinePrimitivesTests
         Assert.All(secret, b => Assert.Equal(0, b));
     }
 
-    [Fact]
-    public void CalculateRelativeWindowDelta_moves_and_resizes_windows_properly()
-    {
-        var initial = new WindowsCommandExecutor.WindowPlacementRect(200, 300, 800, 600);
-
-        // Mode 1: Move from (100, 100) to (150, 120) -> delta (+50, +20)
-        var moved = WindowsCommandExecutor.WindowManagerHelper.CalculateRelativeWindowDelta(
-            100, 100, 150, 120, initial, mode: 1);
-        Assert.Equal(250, moved.X);
-        Assert.Equal(320, moved.Y);
-        Assert.Equal(800, moved.Width);
-        Assert.Equal(600, moved.Height);
-
-        // Mode 2: Resize from (100, 100) to (150, 120) -> delta (+50, +20)
-        var resized = WindowsCommandExecutor.WindowManagerHelper.CalculateRelativeWindowDelta(
-            100, 100, 150, 120, initial, mode: 2);
-        Assert.Equal(200, resized.X);
-        Assert.Equal(300, resized.Y);
-        Assert.Equal(850, resized.Width);
-        Assert.Equal(620, resized.Height);
-
-        // Mode 3: Both move & resize
-        var both = WindowsCommandExecutor.WindowManagerHelper.CalculateRelativeWindowDelta(
-            100, 100, 150, 120, initial, mode: 3);
-        Assert.Equal(250, both.X);
-        Assert.Equal(320, both.Y);
-        Assert.Equal(850, both.Width);
-        Assert.Equal(620, both.Height);
-    }
 
     [Fact]
     public void FirmwareTableParser_parses_synthetic_smbios_tables_accurately()

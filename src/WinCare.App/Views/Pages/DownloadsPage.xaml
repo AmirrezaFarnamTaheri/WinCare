@@ -4,172 +4,271 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:controls="using:WinCare.App.Controls"
     xmlns:downloads="using:WinCare.Application.Downloads"
+    xmlns:transfers="using:WinCare.Application.Transfers"
     xmlns:local="using:WinCare.App.Views.Pages"
     NavigationCacheMode="Required"
     SizeChanged="Page_SizeChanged">
-    <Grid x:Name="PageLayout" Padding="32,28,32,28" RowSpacing="18" MaxWidth="1240"
-          HorizontalAlignment="Stretch">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="*" />
-            <RowDefinition Height="Auto" />
-        </Grid.RowDefinitions>
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <Grid x:Name="PageLayout" Padding="32,28,32,28" RowSpacing="20" MaxWidth="1280"
+              HorizontalAlignment="Stretch">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
 
-        <controls:PageHeaderControl Title="Downloads"
-            Description="Keep transfers in one place. Downloads continue while you use WinCare." />
+            <!-- Workspace Header -->
+            <controls:PageHeaderControl Title="Transfers &amp; Torrent Hub"
+                Description="Unified high-throughput BitTorrent swarm engine with sparse allocation and direct HTTP downloader." />
 
-        <Border Grid.Row="1" Style="{StaticResource SurfaceBorderStyle}" Padding="20">
-            <StackPanel Spacing="12">
-                <Grid ColumnSpacing="12" RowSpacing="8">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                    </Grid.RowDefinitions>
+            <!-- Transfer Intake Card -->
+            <Border Grid.Row="1" Style="{StaticResource SurfaceBorderStyle}" Padding="20">
+                <StackPanel Spacing="12">
                     <StackPanel Spacing="4">
-                        <TextBlock Text="New download" Style="{StaticResource SectionHeaderTextStyle}" />
-                        <TextBlock Text="Paste a direct HTTP or HTTPS link. WinCare saves it to your Downloads folder."
+                        <TextBlock Text="New Transfer" Style="{StaticResource SectionHeaderTextStyle}" />
+                        <TextBlock Text="Paste a direct HTTP/HTTPS link or BitTorrent magnet:?xt=urn:btih: URI."
                                    Style="{StaticResource RowSecondaryTextStyle}" />
                     </StackPanel>
+                    <Grid x:Name="AddGrid" ColumnSpacing="12" RowSpacing="8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <TextBox x:Name="LinkInput" MinHeight="44" MaxLength="4096"
+                                 Text="{x:Bind ViewModel.NewUrl, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                 PlaceholderText="https://example.com/file.iso or magnet:?xt=urn:btih:..."
+                                 AutomationProperties.Name="Transfer link or magnet URI" AutomationProperties.AutomationId="DownloadUrl" />
+                        <Button x:Name="AddButton" Grid.Column="1" Content="Start Transfer"
+                                Style="{StaticResource PrimaryActionButtonStyle}" Click="Add_Click"
+                                IsEnabled="{x:Bind ViewModel.CanAdd, Mode=OneWay}"
+                                AutomationProperties.Name="Start transfer" AutomationProperties.AutomationId="AddDownload" />
+                    </Grid>
+                    <TextBlock Style="{StaticResource FieldHintTextStyle}"
+                               Text="Transfers are pre-allocated on NTFS as sparse files with SIMD piece checksum verification. No system stutter." />
+                </StackPanel>
+            </Border>
+
+            <!-- Metrics Telemetry Bar -->
+            <Grid x:Name="MetricsGrid" Grid.Row="2" ColumnSpacing="12" RowSpacing="12">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <Border x:Name="TotalMetric" Style="{StaticResource SurfaceBorderStyle}" Padding="16">
+                    <StackPanel Spacing="4">
+                        <TextBlock Style="{StaticResource FieldLabelTextStyle}" Text="Total Transfers" />
+                        <TextBlock Style="{StaticResource MetricTextStyle}" Text="{x:Bind ViewModel.TotalText, Mode=OneWay}" />
+                    </StackPanel>
+                </Border>
+                <Border x:Name="ActiveMetric" Grid.Column="1" Style="{StaticResource SurfaceBorderStyle}" Padding="16">
+                    <StackPanel Spacing="4">
+                        <TextBlock Style="{StaticResource FieldLabelTextStyle}" Text="Active &amp; In-Flight" />
+                        <TextBlock Style="{StaticResource MetricTextStyle}" Foreground="{ThemeResource SuccessBrush}"
+                                   Text="{x:Bind ViewModel.InProgressText, Mode=OneWay}" />
+                    </StackPanel>
+                </Border>
+                <Border x:Name="FinishedMetric" Grid.Column="2" Style="{StaticResource SurfaceBorderStyle}" Padding="16">
+                    <StackPanel Spacing="4">
+                        <TextBlock Style="{StaticResource FieldLabelTextStyle}" Text="Finished &amp; Seeding" />
+                        <TextBlock Style="{StaticResource MetricTextStyle}" Text="{x:Bind ViewModel.FinishedText, Mode=OneWay}" />
+                    </StackPanel>
+                </Border>
+            </Grid>
+
+            <!-- BitTorrent Active Swarms Section -->
+            <StackPanel Grid.Row="3" Spacing="12"
+                        Visibility="{x:Bind local:DownloadsPage.BoolToVisibility(ViewModel.HasTorrents), Mode=OneWay}">
+                <Grid ColumnDefinitions="*,Auto">
+                    <TextBlock Text="Active BitTorrent Swarms" Style="{StaticResource SectionHeaderTextStyle}" VerticalAlignment="Center" />
+                    <Border Grid.Column="1" Background="{ThemeResource AccentChromeSubtleBrush}" CornerRadius="4" Padding="8,3">
+                        <TextBlock Text="BitTorrent Protocol BEP-0003/0009" FontSize="11" FontFamily="Cascadia Code" Foreground="{ThemeResource AccentChromeBrush}" />
+                    </Border>
                 </Grid>
-                <Grid x:Name="AddGrid" ColumnSpacing="12" RowSpacing="8">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
-                    <TextBox x:Name="LinkInput" MinHeight="44" MaxLength="2048"
-                             Text="{x:Bind ViewModel.NewUrl, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                             PlaceholderText="https://example.com/file.zip"
-                             AutomationProperties.Name="Download link" AutomationProperties.AutomationId="DownloadUrl" />
-                    <Button x:Name="AddButton" Grid.Column="1" Content="Download"
-                            Style="{StaticResource PrimaryActionButtonStyle}" Click="Add_Click"
-                            IsEnabled="{x:Bind ViewModel.CanAdd, Mode=OneWay}"
-                            AutomationProperties.Name="Download the linked file" AutomationProperties.AutomationId="AddDownload" />
-                </Grid>
-                <TextBlock Style="{StaticResource FieldHintTextStyle}"
-                           Text="Files are saved to your Downloads folder. Existing files are not replaced. Maximum size: 2 GB." />
-            </StackPanel>
-        </Border>
 
-        <Grid x:Name="MetricsGrid" Grid.Row="2" ColumnSpacing="12" RowSpacing="12">
-            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="*" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
-            <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
-            <Border x:Name="TotalMetric" Style="{StaticResource SurfaceBorderStyle}" Padding="16">
-                <StackPanel Spacing="4">
-                    <TextBlock Style="{StaticResource FieldLabelTextStyle}" Text="In your list" />
-                    <TextBlock Style="{StaticResource MetricTextStyle}" Text="{x:Bind ViewModel.TotalText, Mode=OneWay}" />
-                </StackPanel>
-            </Border>
-            <Border x:Name="ActiveMetric" Grid.Column="1" Style="{StaticResource SurfaceBorderStyle}" Padding="16">
-                <StackPanel Spacing="4">
-                    <TextBlock Style="{StaticResource FieldLabelTextStyle}" Text="Queued or active" />
-                    <TextBlock Style="{StaticResource MetricTextStyle}" Text="{x:Bind ViewModel.InProgressText, Mode=OneWay}" />
-                </StackPanel>
-            </Border>
-            <Border x:Name="FinishedMetric" Grid.Column="2" Style="{StaticResource SurfaceBorderStyle}" Padding="16">
-                <StackPanel Spacing="4">
-                    <TextBlock Style="{StaticResource FieldLabelTextStyle}" Text="Finished or stopped" />
-                    <TextBlock Style="{StaticResource MetricTextStyle}" Text="{x:Bind ViewModel.FinishedText, Mode=OneWay}" />
-                </StackPanel>
-            </Border>
-        </Grid>
+                <ItemsControl ItemsSource="{x:Bind ViewModel.Torrents, Mode=OneWay}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="transfers:TorrentSessionSnapshot">
+                            <Border Style="{StaticResource SurfaceBorderStyle}" Padding="20" Margin="0,0,0,14">
+                                <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto" RowSpacing="12">
+                                    <!-- Swarm Header -->
+                                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+                                        <FontIcon Glyph="&#xE896;" Foreground="{ThemeResource AccentChromeBrush}" FontSize="20" VerticalAlignment="Center" />
+                                        <StackPanel Grid.Column="1" Spacing="2">
+                                            <TextBlock Text="{x:Bind Name}" FontWeight="SemiBold" FontSize="15" />
+                                            <TextBlock Text="{x:Bind InfoHashHex}" FontFamily="Cascadia Code" FontSize="11" Foreground="{ThemeResource TextSecondaryBrush}" />
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8">
+                                            <Border Background="{ThemeResource SurfaceSecondaryBrush}" BorderBrush="{ThemeResource BorderSubtleBrush}" BorderThickness="1" CornerRadius="4" Padding="8,4">
+                                                <TextBlock Text="{x:Bind StatusText}" FontSize="12" FontWeight="SemiBold" FontFamily="Cascadia Code" />
+                                            </Border>
+                                            <Button Content="Pause" Tag="{x:Bind}" Click="PauseTorrent_Click" Style="{StaticResource QuietButtonStyle}" />
+                                            <Button Content="Resume" Tag="{x:Bind}" Click="ResumeTorrent_Click" Style="{StaticResource QuietButtonStyle}" />
+                                            <Button Content="Remove" Tag="{x:Bind}" Click="RemoveTorrent_Click" Style="{StaticResource QuietButtonStyle}" />
+                                        </StackPanel>
+                                    </Grid>
 
-        <Grid x:Name="FiltersGrid" Grid.Row="3" ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto"
-              ColumnSpacing="12" RowSpacing="8">
-            <SelectorBar x:Name="JobFilters" Grid.ColumnSpan="2" SelectionChanged="JobFilters_SelectionChanged"
-                         AutomationProperties.Name="Filter downloads">
-                <SelectorBarItem Text="All" AutomationProperties.Name="All downloads" />
-                <SelectorBarItem Text="Active" AutomationProperties.Name="Active downloads" />
-                <SelectorBarItem Text="Finished" AutomationProperties.Name="Finished downloads" />
-            </SelectorBar>
-            <TextBox x:Name="DownloadSearchInput" Grid.Row="1" MinHeight="44"
-                     MaxLength="120" PlaceholderText="Search downloads by filename or website"
-                     TextChanged="DownloadSearch_TextChanged"
-                     AutomationProperties.Name="Search downloads by file name or source" />
-            <Button x:Name="RefreshListButton" Grid.Row="1" Grid.Column="1" Content="Refresh" Click="Refresh_Click"
-                    Style="{StaticResource QuietButtonStyle}"
-                    AutomationProperties.Name="Refresh download list" />
-        </Grid>
+                                    <!-- Telemetry Numbers (Cascadia Code) -->
+                                    <Grid Grid.Row="1" ColumnDefinitions="Auto,Auto,Auto,Auto,*,Auto" ColumnSpacing="20">
+                                        <TextBlock Text="{x:Bind ProgressFormatted}" FontFamily="Cascadia Code" FontSize="13" FontWeight="SemiBold" />
+                                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4">
+                                            <TextBlock Text="▼" Foreground="{ThemeResource SuccessBrush}" FontSize="11" VerticalAlignment="Center" />
+                                            <TextBlock Text="{x:Bind DownloadRateFormatted}" FontFamily="Cascadia Code" FontSize="12" Foreground="{ThemeResource SuccessBrush}" />
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4">
+                                            <TextBlock Text="▲" Foreground="{ThemeResource AccentChromeBrush}" FontSize="11" VerticalAlignment="Center" />
+                                            <TextBlock Text="{x:Bind UploadRateFormatted}" FontFamily="Cascadia Code" FontSize="12" Foreground="{ThemeResource AccentChromeBrush}" />
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="4">
+                                            <TextBlock Text="Peers:" Foreground="{ThemeResource TextSecondaryBrush}" FontSize="12" />
+                                            <TextBlock Text="{x:Bind ConnectedPeers}" FontFamily="Cascadia Code" FontSize="12" FontWeight="SemiBold" />
+                                            <TextBlock Text="/" Foreground="{ThemeResource TextSecondaryBrush}" FontSize="12" />
+                                            <TextBlock Text="{x:Bind TotalSwarmPeers}" FontFamily="Cascadia Code" FontSize="12" Foreground="{ThemeResource TextSecondaryBrush}" />
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="5" Orientation="Horizontal" Spacing="4">
+                                            <TextBlock Text="ETA:" Foreground="{ThemeResource TextSecondaryBrush}" FontSize="12" />
+                                            <TextBlock Text="{x:Bind EtaFormatted}" FontFamily="Cascadia Code" FontSize="12" FontWeight="SemiBold" />
+                                        </StackPanel>
+                                    </Grid>
 
-        <Grid Grid.Row="4">
-            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="8"
-                        Visibility="{x:Bind local:DownloadsPage.BoolToVisibility(ViewModel.IsEmpty), Mode=OneWay}">
-                <FontIcon Glyph="&#xE896;" FontSize="32" Foreground="{ThemeResource TextSecondaryBrush}"
-                          HorizontalAlignment="Center" AutomationProperties.AccessibilityView="Raw" />
-                <TextBlock Text="{x:Bind ViewModel.EmptyDescription, Mode=OneWay}"
-                           Style="{StaticResource RowSecondaryTextStyle}" TextAlignment="Center" />
-            </StackPanel>
-            <ListView x:Name="DownloadsList" ItemsSource="{x:Bind ViewModel.VisibleJobs, Mode=OneWay}"
-                      SelectionMode="None" IsItemClickEnabled="False"
-                      AutomationProperties.Name="Saved download jobs"
-                      ScrollViewer.VerticalScrollBarVisibility="Auto">
-                <ListView.ItemTemplate>
-                    <DataTemplate x:DataType="downloads:DownloadJobRow">
-                        <Border Style="{StaticResource SurfaceBorderStyle}" Padding="20" Margin="0,0,0,10">
-                            <StackPanel Spacing="12">
-                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
-                                    <StackPanel Spacing="4">
-                                        <TextBlock Text="{x:Bind Name}" Style="{StaticResource RowTitleTextStyle}"
-                                                   TextTrimming="CharacterEllipsis" MaxLines="2" />
-                                        <TextBlock Text="{x:Bind Host}" Style="{StaticResource RowSecondaryTextStyle}" />
-                                    </StackPanel>
-                                    <TextBlock Grid.Column="1" Text="{x:Bind StateLabel}"
-                                               Style="{StaticResource FieldLabelTextStyle}" VerticalAlignment="Center" />
+                                    <!-- Progress Bar -->
+                                    <ProgressBar Grid.Row="2" Value="{x:Bind ProgressPercentage}" Maximum="100" MinHeight="6"
+                                                 Foreground="{ThemeResource AccentChromeBrush}" />
+
+                                    <!-- Piece Bitfield Diagnostics -->
+                                    <Grid Grid.Row="3" ColumnDefinitions="*,Auto">
+                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                            <TextBlock Text="Swarm Piece Integrity:" FontSize="12" Foreground="{ThemeResource TextSecondaryBrush}" />
+                                            <TextBlock Text="{x:Bind VerifiedPieces}" FontFamily="Cascadia Code" FontSize="12" FontWeight="SemiBold" />
+                                            <TextBlock Text="/" Foreground="{ThemeResource TextSecondaryBrush}" FontSize="12" />
+                                            <TextBlock Text="{x:Bind TotalPieces}" FontFamily="Cascadia Code" FontSize="12" Foreground="{ThemeResource TextSecondaryBrush}" />
+                                            <TextBlock Text="pieces verified via SHA-1" FontSize="12" Foreground="{ThemeResource TextSecondaryBrush}" />
+                                        </StackPanel>
+                                    </Grid>
+
+                                    <!-- Peer Telemetry Mesh Grid -->
+                                    <Border Grid.Row="4" Background="{ThemeResource SurfaceSecondaryBrush}" CornerRadius="6" Padding="12,8">
+                                        <ItemsControl ItemsSource="{x:Bind Peers}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate x:DataType="transfers:PeerTelemetry">
+                                                    <Grid ColumnDefinitions="160,140,110,*,Auto" Margin="0,3">
+                                                        <TextBlock Text="{x:Bind Endpoint}" FontFamily="Cascadia Code" FontSize="11" Foreground="{ThemeResource TextPrimaryBrush}" />
+                                                        <TextBlock Grid.Column="1" Text="{x:Bind ClientName}" FontSize="11" Foreground="{ThemeResource TextSecondaryBrush}" />
+                                                        <TextBlock Grid.Column="2" Text="{x:Bind Flags}" FontFamily="Cascadia Code" FontSize="10" Foreground="{ThemeResource TextSecondaryBrush}" />
+                                                        <TextBlock Grid.Column="4" Text="{x:Bind DownloadSpeedFormatted}" FontFamily="Cascadia Code" FontSize="11" Foreground="{ThemeResource SuccessBrush}" />
+                                                    </Grid>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </Border>
                                 </Grid>
-                                <ProgressBar Value="{x:Bind ProgressPercent}" Maximum="100" MinHeight="6"
-                                             IsIndeterminate="{x:Bind IsIndeterminate}"
-                                             Visibility="{x:Bind local:DownloadsPage.BoolToVisibility(ShowProgress)}"
-                                             AutomationProperties.Name="{x:Bind AccessibleName}" />
-                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12" RowSpacing="8">
-                                    <TextBlock Text="{x:Bind TransferLabel}" Style="{StaticResource RowSecondaryTextStyle}"
-                                               VerticalAlignment="Center" />
-                                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
-                                        <Button Content="Start" Click="Start_Click" Tag="{x:Bind}"
-                                                Style="{StaticResource QuietButtonStyle}"
-                                                Visibility="{x:Bind local:DownloadsPage.BoolToVisibility(CanStart)}"
-                                                AutomationProperties.Name="{x:Bind StartAccessibleName}" />
-                                        <Button Content="Pause" Click="Pause_Click" Tag="{x:Bind}"
-                                                Style="{StaticResource QuietButtonStyle}"
-                                                Visibility="{x:Bind local:DownloadsPage.BoolToVisibility(CanPause)}"
-                                                AutomationProperties.Name="{x:Bind PauseAccessibleName}" />
-                                        <Button Content="Resume" Click="Resume_Click" Tag="{x:Bind}"
-                                                Style="{StaticResource QuietButtonStyle}"
-                                                Visibility="{x:Bind local:DownloadsPage.BoolToVisibility(CanResume)}"
-                                                AutomationProperties.Name="{x:Bind ResumeAccessibleName}" />
-                                        <Button Content="More" Style="{StaticResource QuietButtonStyle}"
-                                                AutomationProperties.Name="{x:Bind ActionsAccessibleName}">
-                                            <Button.Flyout>
-                                                <MenuFlyout Placement="BottomEdgeAlignedRight">
-                                                    <MenuFlyoutItem Text="Show folder" Click="ShowFolder_Click" Tag="{x:Bind}"
-                                                                    AutomationProperties.Name="{x:Bind FolderAccessibleName}" />
-                                                    <MenuFlyoutSeparator />
-                                                    <MenuFlyoutItem Text="Cancel transfer" Click="Cancel_Click" Tag="{x:Bind}"
-                                                                    Visibility="{x:Bind local:DownloadsPage.BoolToVisibility(CanCancel)}"
-                                                                    AutomationProperties.Name="{x:Bind CancelAccessibleName}" />
-                                                    <MenuFlyoutItem Text="Remove record" Click="Remove_Click" Tag="{x:Bind}"
-                                                                    Visibility="{x:Bind local:DownloadsPage.BoolToVisibility(CanRemove)}"
-                                                                    AutomationProperties.Name="{x:Bind RemoveAccessibleName}" />
-                                                </MenuFlyout>
-                                            </Button.Flyout>
-                                        </Button>
-                                    </StackPanel>
-                                </Grid>
-                            </StackPanel>
-                        </Border>
-                    </DataTemplate>
-                </ListView.ItemTemplate>
-            </ListView>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+
+            <!-- HTTP Downloads Filters & Search -->
+            <Grid x:Name="FiltersGrid" Grid.Row="4" ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto"
+                  ColumnSpacing="12" RowSpacing="8">
+                <SelectorBar x:Name="JobFilters" Grid.ColumnSpan="2" SelectionChanged="JobFilters_SelectionChanged"
+                             AutomationProperties.Name="Filter downloads">
+                    <SelectorBarItem Text="All" AutomationProperties.Name="All downloads" />
+                    <SelectorBarItem Text="Active" AutomationProperties.Name="Active downloads" />
+                    <SelectorBarItem Text="Finished" AutomationProperties.Name="Finished downloads" />
+                </SelectorBar>
+                <TextBox x:Name="DownloadSearchInput" Grid.Row="1" MinHeight="44"
+                         MaxLength="120" PlaceholderText="Search downloads by filename or website"
+                         TextChanged="DownloadSearch_TextChanged"
+                         AutomationProperties.Name="Search downloads by file name or source" />
+                <Button x:Name="RefreshListButton" Grid.Row="1" Grid.Column="1" Content="Refresh" Click="Refresh_Click"
+                        Style="{StaticResource QuietButtonStyle}"
+                        AutomationProperties.Name="Refresh download list" />
+            </Grid>
+
+            <!-- HTTP Downloads List -->
+            <Grid Grid.Row="5">
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="8"
+                            Visibility="{x:Bind local:DownloadsPage.BoolToVisibility(ViewModel.IsEmpty), Mode=OneWay}">
+                    <FontIcon Glyph="&#xE896;" FontSize="32" Foreground="{ThemeResource TextSecondaryBrush}"
+                              HorizontalAlignment="Center" AutomationProperties.AccessibilityView="Raw" />
+                    <TextBlock Text="{x:Bind ViewModel.EmptyDescription, Mode=OneWay}"
+                               Style="{StaticResource RowSecondaryTextStyle}" TextAlignment="Center" />
+                </StackPanel>
+                <ListView x:Name="DownloadsList" ItemsSource="{x:Bind ViewModel.VisibleJobs, Mode=OneWay}"
+                          SelectionMode="None" IsItemClickEnabled="False"
+                          AutomationProperties.Name="Saved download jobs">
+                    <ListView.ItemTemplate>
+                        <DataTemplate x:DataType="downloads:DownloadJobRow">
+                            <Border Style="{StaticResource SurfaceBorderStyle}" Padding="20" Margin="0,0,0,10">
+                                <StackPanel Spacing="12">
+                                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+                                        <StackPanel Spacing="4">
+                                            <TextBlock Text="{x:Bind Name}" Style="{StaticResource RowTitleTextStyle}"
+                                                       TextTrimming="CharacterEllipsis" MaxLines="2" />
+                                            <TextBlock Text="{x:Bind Host}" Style="{StaticResource RowSecondaryTextStyle}" />
+                                        </StackPanel>
+                                        <TextBlock Grid.Column="1" Text="{x:Bind StateLabel}"
+                                                   Style="{StaticResource FieldLabelTextStyle}" VerticalAlignment="Center" />
+                                    </Grid>
+                                    <ProgressBar Value="{x:Bind ProgressPercent}" Maximum="100" MinHeight="6"
+                                                 IsIndeterminate="{x:Bind IsIndeterminate}"
+                                                 Visibility="{x:Bind local:DownloadsPage.BoolToVisibility(ShowProgress)}"
+                                                 AutomationProperties.Name="{x:Bind AccessibleName}" />
+                                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12" RowSpacing="8">
+                                        <TextBlock Text="{x:Bind TransferLabel}" Style="{StaticResource RowSecondaryTextStyle}"
+                                                   VerticalAlignment="Center" />
+                                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                                            <Button Content="Start" Click="Start_Click" Tag="{x:Bind}"
+                                                    Style="{StaticResource QuietButtonStyle}"
+                                                    Visibility="{x:Bind local:DownloadsPage.BoolToVisibility(CanStart)}"
+                                                    AutomationProperties.Name="{x:Bind StartAccessibleName}" />
+                                            <Button Content="Pause" Click="Pause_Click" Tag="{x:Bind}"
+                                                    Style="{StaticResource QuietButtonStyle}"
+                                                    Visibility="{x:Bind local:DownloadsPage.BoolToVisibility(CanPause)}"
+                                                    AutomationProperties.Name="{x:Bind PauseAccessibleName}" />
+                                            <Button Content="Resume" Click="Resume_Click" Tag="{x:Bind}"
+                                                    Style="{StaticResource QuietButtonStyle}"
+                                                    Visibility="{x:Bind local:DownloadsPage.BoolToVisibility(CanResume)}"
+                                                    AutomationProperties.Name="{x:Bind ResumeAccessibleName}" />
+                                            <Button Content="More" Style="{StaticResource QuietButtonStyle}"
+                                                    AutomationProperties.Name="{x:Bind ActionsAccessibleName}">
+                                                <Button.Flyout>
+                                                    <MenuFlyout Placement="BottomEdgeAlignedRight">
+                                                        <MenuFlyoutItem Text="Show folder" Click="ShowFolder_Click" Tag="{x:Bind}"
+                                                                        AutomationProperties.Name="{x:Bind FolderAccessibleName}" />
+                                                        <MenuFlyoutSeparator />
+                                                        <MenuFlyoutItem Text="Cancel transfer" Click="Cancel_Click" Tag="{x:Bind}"
+                                                                        Visibility="{x:Bind local:DownloadsPage.BoolToVisibility(CanCancel)}"
+                                                                        AutomationProperties.Name="{x:Bind CancelAccessibleName}" />
+                                                        <MenuFlyoutItem Text="Remove record" Click="Remove_Click" Tag="{x:Bind}"
+                                                                        Visibility="{x:Bind local:DownloadsPage.BoolToVisibility(CanRemove)}"
+                                                                        AutomationProperties.Name="{x:Bind RemoveAccessibleName}" />
+                                                    </MenuFlyout>
+                                                </Button.Flyout>
+                                            </Button>
+                                        </StackPanel>
+                                    </Grid>
+                                </StackPanel>
+                            </Border>
+                        </DataTemplate>
+                    </ListView.ItemTemplate>
+                </ListView>
+            </Grid>
+
+            <!-- Status InfoBar -->
+            <InfoBar Grid.Row="6" IsOpen="{x:Bind ViewModel.HasNotice, Mode=OneWay}"
+                     IsClosable="False" Severity="Informational" Title="Transfers"
+                     Message="{x:Bind ViewModel.Notice, Mode=OneWay}"
+                     AutomationProperties.LiveSetting="Polite" />
         </Grid>
-        <InfoBar Grid.Row="5" IsOpen="{x:Bind ViewModel.HasNotice, Mode=OneWay}"
-                 IsClosable="False" Severity="Informational" Title="Downloads"
-                 Message="{x:Bind ViewModel.Notice, Mode=OneWay}"
-                 AutomationProperties.LiveSetting="Polite" />
-    </Grid>
+    </ScrollViewer>
 </Page>

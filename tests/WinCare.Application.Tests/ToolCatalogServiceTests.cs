@@ -87,7 +87,7 @@ public sealed class ToolCatalogServiceTests
         string[] labels = NavigationCatalog.Items.Select(item => item.Label).ToArray();
 
         Assert.Equal(
-            ["Home", "Checkup", "System care", "Security", "Repair & recovery", "Power tools", "Activity", "Downloads", "Files & storage", "Processes", "Extensions", "Troubleshoot", "Settings", "Help", "About WinCare"],
+            ["Home", "Checkup", "System care", "Security", "Repair & recovery", "Power tools", "Activity", "Transfers", "Files & storage", "Processes", "Extensions", "Troubleshoot", "Settings", "Help", "About WinCare"],
             labels);
         Assert.Equal(["Tools", "Categories", "Favorites", "Recent", "Care plans"],
             NavigationCatalog.Items.Single(item => item.Id == "all-tools").Tabs);

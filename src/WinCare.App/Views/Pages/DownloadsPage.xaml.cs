@@ -1,9 +1,12 @@
+using System;
+using System.Threading.Tasks;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Navigation;
 using WinCare.App.ViewModels.Pages;
 using WinCare.App.Views;
 using WinCare.Application.Downloads;
+using WinCare.Application.Transfers;
 
 namespace WinCare.App.Views.Pages;
 
@@ -61,6 +64,25 @@ public sealed partial class DownloadsPage : Page
     private async void Resume_Click(object sender, RoutedEventArgs e) => await RunActionAsync(sender, "resume");
     private async void Cancel_Click(object sender, RoutedEventArgs e) => await RunActionAsync(sender, "cancel");
     private async void Remove_Click(object sender, RoutedEventArgs e) => await RunActionAsync(sender, "remove");
+
+    private void PauseTorrent_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement { Tag: TorrentSessionSnapshot t })
+            ViewModel.PauseTorrent(t.InfoHashHex);
+    }
+
+    private void ResumeTorrent_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement { Tag: TorrentSessionSnapshot t })
+            ViewModel.ResumeTorrent(t.InfoHashHex);
+    }
+
+    private async void RemoveTorrent_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement { Tag: TorrentSessionSnapshot t })
+            await ViewModel.RemoveTorrentAsync(t.InfoHashHex);
+    }
+
     private void ShowFolder_Click(object sender, RoutedEventArgs e)
     {
         if (sender is FrameworkElement { Tag: DownloadJobRow row } && !string.IsNullOrWhiteSpace(row.Destination))
