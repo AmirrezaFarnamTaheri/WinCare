@@ -152,7 +152,18 @@ public static class CommandPackCatalog
         }
     }
 
-    public static CommandDefinition NormalizeCommand(CommandDefinition command) => command with
+    /// <summary>
+    /// Normalizes a pack-supplied command definition.
+    /// </summary>
+    /// <remarks>
+    /// This is the single normalization point for every path a pack definition can take:
+    /// an embedded fragment loaded through <see cref="Load" />, a programmatic definition
+    /// returned by a pack's own command loader, and the merge performed by
+    /// <see cref="CommandCatalog.LoadWithPacks" />. Applying the host-owned risk floor here
+    /// means a mutating command a pack declares as low risk can never derive the Safe tier
+    /// and run without a confirmation, on any of those paths.
+    /// </remarks>
+    public static CommandDefinition NormalizeCommand(CommandDefinition command) => HostRiskPolicy.ApplyFloor(command with
     {
         Keywords = Array.AsReadOnly((command.Keywords ?? Array.Empty<string>()).ToArray()),
         Parameters = command.Parameters is null
@@ -163,7 +174,7 @@ public static class CommandPackCatalog
                     Options = parameter.Options is null ? null : Array.AsReadOnly(parameter.Options.ToArray())
                 })
                 .ToArray())
-    };
+    });
 
     private static void ValidateParameterSchema(string packId, CommandDefinition command)
     {

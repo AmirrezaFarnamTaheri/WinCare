@@ -1,6 +1,5 @@
 using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
-using System.Security.Principal;
 using System.Text.Json;
 using WinCare.Application.Activity;
 using WinCare.Application.Native;
@@ -40,7 +39,7 @@ public sealed class CommandDispatcher : ICommandDispatcher
     /// <param name="journal">Optional activity journal receiving dispatch records.</param>
     /// <param name="isProcessElevated">
     /// Optional override for the process elevation probe used by the administrator-access gate.
-    /// Production callers omit it and get the real <see cref="WindowsPrincipal"/> check; tests that
+    /// Production callers omit it and get the shared <see cref="ElevationProbe"/> answer; tests that
     /// exercise elevated commands supply a deterministic value instead of depending on how the test
     /// host was launched. The gate itself is enforced either way.
     /// </param>
@@ -55,7 +54,7 @@ public sealed class CommandDispatcher : ICommandDispatcher
         ArgumentNullException.ThrowIfNull(definitions);
         ArgumentNullException.ThrowIfNull(handlers);
         _journal = journal;
-        _isProcessElevated = isProcessElevated ?? IsCurrentProcessElevated;
+        _isProcessElevated = isProcessElevated ?? ElevationProbe.IsElevated;
 
         if (nativeCore is not null)
         {
@@ -450,7 +449,7 @@ public sealed class CommandDispatcher : ICommandDispatcher
         return digest.GetString();
     }
 
-    private static string? CurrentExecutionDigest(string commandId, JsonElement parameters, string? submittedExecutionDigest)
+    private string? CurrentExecutionDigest(string commandId, JsonElement parameters, string? submittedExecutionDigest)
     {
         if (commandId.Equals(CommandIds.RemediationRestore, StringComparison.OrdinalIgnoreCase))
             return submittedExecutionDigest;
@@ -461,25 +460,24 @@ public sealed class CommandDispatcher : ICommandDispatcher
             return null;
         }
 
+        // Use the injected elevation probe, exactly like the admission gate. The static
+        // probe reads the real process token, so a test host that injects a deterministic
+        // value would otherwise see the gate and the digest disagree about whether the
+        // preset is executable, and the two would compute different plans.
         RemediationPresetPlan plan = RemediationPresetPlanner.Create(
             presetId.GetString()!,
             WinCare.CommandCatalog.RemediationCatalog.LoadPresets(),
             WinCare.CommandCatalog.RemediationCatalog.LoadRules(),
             Environment.OSVersion.Version.Build,
-            IsCurrentProcessElevated());
+            _isProcessElevated());
         return plan.IsExecutable ? plan.Digest : null;
     }
 
     /// <summary>
-    /// Reports whether the current process runs with administrator privileges. Both the admission
-    /// gate and the preset execution digest use this single probe so the two never disagree.
+    /// Reports whether the current process runs with administrator privileges. The admission
+    /// gate, the preset execution digest, and the native executor all read the one shared
+    /// <see cref="ElevationProbe"/> answer, so they can never disagree.
     /// </summary>
-    private static bool IsCurrentProcessElevated()
-    {
-        using WindowsIdentity identity = WindowsIdentity.GetCurrent();
-        return new WindowsPrincipal(identity).IsInRole(WindowsBuiltInRole.Administrator);
-    }
-
     private CommandResult CreateResult(
         CommandRequest request,
         CommandResultStatus status,

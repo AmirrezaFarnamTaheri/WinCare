@@ -247,6 +247,57 @@ public sealed class ToolExecutionViewModelTests
         Assert.True(handler.LastWasApply);
     }
 
+    [Fact]
+    public async Task Destructive_approval_surface_appears_only_after_a_successful_preview()
+    {
+        // Before a preview there is nothing to review, so the surface must not stack a
+        // permanent-change warning and an approval switch on top of the preview button.
+        var destDef = new CommandDefinition("dest-wipe", "Destructive Wipe", "Destructive Wipe", "Area", "Section",
+            CommandRisk.Critical, false, AdministratorAccess.No, RestartExpectation.No,
+            "test", MigrationStatus.Implemented, ["dest"], RiskTier.Destructive);
+
+        var handler = new DirectHandler("dest-wipe");
+        var viewModel = new ToolExecutionViewModel(new CommandDispatcher([destDef], [handler]), _ => { });
+        viewModel.SelectTool(new ToolRowViewModel(destDef));
+
+        Assert.True(viewModel.RequiresApprovalSwitch);
+        Assert.False(viewModel.IsApprovalStage);
+        Assert.False(viewModel.CanApproveReview);
+        Assert.Equal("Preview before applying", viewModel.ActionFlowTitle);
+
+        await viewModel.ExecuteSelectedToolCommand.ExecuteAsync(null);
+
+        Assert.True(viewModel.IsApprovalStage);
+        Assert.True(viewModel.CanApproveReview);
+        Assert.Equal("Approve to apply", viewModel.ActionFlowTitle);
+        Assert.Contains("approval applies once", viewModel.ActionFlowDescription);
+
+        // Editing the inputs invalidates the preview, so the approval surface goes away again.
+        viewModel.ParameterJson = "{\"changed\":true}";
+        Assert.False(viewModel.IsApprovalStage);
+        Assert.False(viewModel.CanApproveReview);
+        Assert.Equal("Preview before applying", viewModel.ActionFlowTitle);
+    }
+
+    [Fact]
+    public async Task Failed_preview_does_not_open_the_approval_surface()
+    {
+        // A failed preview resolves no targets, so nothing may be approved on the strength of it.
+        var destDef = new CommandDefinition("dest-wipe", "Destructive Wipe", "Destructive Wipe", "Area", "Section",
+            CommandRisk.Critical, false, AdministratorAccess.No, RestartExpectation.No,
+            "test", MigrationStatus.Implemented, ["dest"], RiskTier.Destructive);
+
+        var handler = new FailingHandler("dest-wipe");
+        var viewModel = new ToolExecutionViewModel(new CommandDispatcher([destDef], [handler]), _ => { });
+        viewModel.SelectTool(new ToolRowViewModel(destDef));
+
+        await viewModel.ExecuteSelectedToolCommand.ExecuteAsync(null);
+
+        Assert.True(viewModel.IsExecutionError);
+        Assert.False(viewModel.IsApprovalStage);
+        Assert.False(viewModel.CanApproveReview);
+    }
+
     private sealed class DirectHandler(string commandId) : ICommandHandler
     {
         public string CommandId { get; } = commandId;
@@ -274,5 +325,13 @@ public sealed class ToolExecutionViewModelTests
             Started.SetResult();
             return Completion.Task;
         }
+    }
+
+    private sealed class FailingHandler(string commandId) : ICommandHandler
+    {
+        public string CommandId { get; } = commandId;
+
+        public Task<CommandHandlerOutcome> ExecuteAsync(CommandRequest request, CancellationToken cancellationToken) =>
+            Task.FromResult(CommandHandlerOutcome.Failed("test.failed", "The preview could not resolve its targets."));
     }
 }

@@ -15,6 +15,24 @@ This history restarts at 3.0.0 with the Fluent redesign re-release. The safety m
 
 ## [Unreleased]
 
+### Safety
+
+- Extension packs and extension manifests now share one host-owned admission floor (`HostRiskPolicy`): a mutating command declared by third-party code can no longer derive the Safe tier, so it is always admitted through the Moderate tier and requires an explicit user confirmation. Read-only commands stay Safe, unreadable risk tiers are preserved for explicit dispatcher rejection, and contradictory metadata (a read-only risk tier declared with `readOnly=false`) cannot buy a bypass.
+- Preset execution digests are now recomputed with the dispatcher's own elevation probe, so the admission gate and the digest can no longer disagree about whether a preset is executable.
+- The plugin trust store now reads the same shared elevation answer as the dispatcher, preset digest, and native executor. A second private copy of that probe could answer differently for one process, which would let a trust anchor be decided by a different answer than the command gate that depends on it.
+- Documented the host-owned admission floor in `docs/Architecture.md`.
+- The shared parameter validator no longer faults a dispatch on a malformed schema. A declared numeric bound that cannot be parsed, and a schema that declares one parameter name twice under different casing, are now reported as blocked requests instead of throwing out of the validator before the dispatcher's own error handling could run.
+- Numeric bounds are now compared exactly. A 64-bit value above 2^53 does not survive a round trip through a double, so a value and its declared limit that differed by one collapsed onto the same number and an out-of-range value was admitted. Integral bounds are compared with arbitrary-precision integers.
+- The required-parameter check now matches the case-insensitive lookup used for every other parameter. A payload supplying `packagenames` for a declared `PackageNames` was accepted by the value check and then rejected as missing the parameter.
+
+### User experience
+
+- The destructive-change approval surface no longer appears before there is anything to review. The permanent-change warning and the "I reviewed this change" switch now open only after a successful preview has resolved the real targets, instead of stacking a warning, a switch, and a procedure paragraph on top of a "Preview impact" button that had nothing to approve yet.
+- A failed preview resolves no targets and therefore opens no approval surface: nothing can be approved on the strength of a preview that did not succeed.
+- The tool inspector's flow heading now reads "Approve to apply" at the approval stage instead of continuing to say "Preview before applying" when the preview was already done.
+- The review-approval explanation now states plainly that the approval applies once to the current inputs.
+
+
 ## [4.0.0-rc1] - 2026-10-03
 
 ### Kinetic Mission Control Overhaul

@@ -40,6 +40,8 @@ Request
 - **Destructive:** High-impact operations require a successful read-only preview and an issued, parameter-bound review plan before execution.
 - If a mutating handler faults during execution, WinCare records the outcome accurately and indicates when host state may have been partially modified.
 
+The catalog may declare a command's own risk, but the **host owns the admission floor** for every definition that third-party code supplies. `HostRiskPolicy` applies one rule to extension packs and extension manifests alike: a mutating command can never derive the Safe tier, so it is always admitted through the Moderate tier and needs an explicit user confirmation before it runs. A read-only command stays Safe, a tier the host cannot read is preserved so the dispatcher rejects it explicitly, and contradictory metadata (a declared read-only risk tier with `readOnly=false`) cannot buy a bypass because the read-only flag is authoritative. The rule lives in the catalog layer so the tier the catalog displays and the tier the dispatcher enforces cannot disagree.
+
 Power tools renders typed UI inputs generated from `CommandParameterCatalog`. Raw JSON remains available as an Advanced mode; it does not bypass admission, validation, or risk policy. Raw catalog risk values remain implementation/technical-detail data while the normal UI uses the domain's Safe / Moderate / Destructive tiers.
 
 ## 3. Presentation ownership and navigation

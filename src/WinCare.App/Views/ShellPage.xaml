@@ -56,38 +56,62 @@
             AutomationProperties.Name="Primary navigation">
 
             <NavigationView.MenuItems>
-                <NavigationViewItem x:Uid="NavHome" Content="Nexus" Tag="home" ToolTipService.ToolTip="System Nexus"
-                                    AutomationProperties.AutomationId="NavHome" AutomationProperties.Name="Nexus">
+                <NavigationViewItem x:Uid="NavHome" Content="Home" Tag="home" ToolTipService.ToolTip="Home"
+                                    AutomationProperties.AutomationId="NavHome" AutomationProperties.Name="Home">
                     <NavigationViewItem.Icon><FontIcon Glyph="&#xE80F;" /></NavigationViewItem.Icon>
                 </NavigationViewItem>
-                <NavigationViewItem x:Uid="NavSystemCare" Content="System Care" Tag="system-care" ToolTipService.ToolTip="System Care &amp; Health"
-                                    AutomationProperties.AutomationId="NavSystemCare" AutomationProperties.Name="System care">
+                <NavigationViewItem x:Uid="NavCheckup" Content="Checkup" Tag="checkup" ToolTipService.ToolTip="Checkup"
+                                    AutomationProperties.AutomationId="NavCheckup" AutomationProperties.Name="Checkup">
                     <NavigationViewItem.Icon><FontIcon Glyph="&#xE9D9;" /></NavigationViewItem.Icon>
                 </NavigationViewItem>
-                <NavigationViewItem x:Uid="NavDownloads" Content="Transfers" Tag="downloads" ToolTipService.ToolTip="Downloads &amp; Torrent Swarms"
-                                    AutomationProperties.AutomationId="NavDownloads" AutomationProperties.Name="Transfers">
-                    <NavigationViewItem.Icon><FontIcon Glyph="&#xE896;" /></NavigationViewItem.Icon>
+                <NavigationViewItem x:Uid="NavSystemCare" Content="System care" Tag="system-care" ToolTipService.ToolTip="System care"
+                                    AutomationProperties.AutomationId="NavSystemCare" AutomationProperties.Name="System care">
+                    <NavigationViewItem.Icon><FontIcon Glyph="&#xE74D;" /></NavigationViewItem.Icon>
                 </NavigationViewItem>
-                <NavigationViewItem x:Uid="NavAllTools" Content="Power Tools" Tag="all-tools" ToolTipService.ToolTip="Power Tools &amp; Command Catalog"
+                <NavigationViewItem x:Uid="NavSecurity" Content="Security" Tag="security" ToolTipService.ToolTip="Security"
+                                    AutomationProperties.AutomationId="NavSecurity" AutomationProperties.Name="Security">
+                    <NavigationViewItem.Icon><FontIcon Glyph="&#xE72E;" /></NavigationViewItem.Icon>
+                </NavigationViewItem>
+                <NavigationViewItem x:Uid="NavRepairRecovery" Content="Repair &amp; recovery" Tag="repair-recovery" ToolTipService.ToolTip="Repair &amp; recovery"
+                                    AutomationProperties.AutomationId="NavRepairRecovery" AutomationProperties.Name="Repair &amp; recovery">
+                    <NavigationViewItem.Icon><FontIcon Glyph="&#xE90F;" /></NavigationViewItem.Icon>
+                </NavigationViewItem>
+                <NavigationViewItem x:Uid="NavAllTools" Content="Power tools" Tag="all-tools" ToolTipService.ToolTip="Power tools"
                                     AutomationProperties.AutomationId="NavAllTools" AutomationProperties.Name="Power tools">
                     <NavigationViewItem.Icon><FontIcon Glyph="&#xE71D;" /></NavigationViewItem.Icon>
                 </NavigationViewItem>
-                <NavigationViewItem x:Uid="NavActivity" Content="Audit Journal" Tag="activity" ToolTipService.ToolTip="Cryptographic Activity Log"
-                                    AutomationProperties.AutomationId="NavActivity" AutomationProperties.Name="Audit journal">
+                <NavigationViewItem x:Uid="NavActivity" Content="Activity" Tag="activity" ToolTipService.ToolTip="Activity"
+                                    AutomationProperties.AutomationId="NavActivity" AutomationProperties.Name="Activity">
                     <NavigationViewItem.Icon><FontIcon Glyph="&#xE81C;" /></NavigationViewItem.Icon>
+                </NavigationViewItem>
+                <NavigationViewItem x:Uid="NavDownloads" Content="Downloads" Tag="downloads" ToolTipService.ToolTip="Downloads"
+                                    AutomationProperties.AutomationId="NavDownloads" AutomationProperties.Name="Downloads">
+                    <NavigationViewItem.Icon><FontIcon Glyph="&#xE896;" /></NavigationViewItem.Icon>
+                </NavigationViewItem>
+                <NavigationViewItem x:Uid="NavStorageBrowser" Content="Files &amp; storage" Tag="storage-browser" ToolTipService.ToolTip="Files &amp; storage"
+                                    AutomationProperties.AutomationId="NavStorageBrowser" AutomationProperties.Name="Files &amp; storage">
+                    <NavigationViewItem.Icon><FontIcon Glyph="&#xE8B7;" /></NavigationViewItem.Icon>
+                </NavigationViewItem>
+                <NavigationViewItem x:Uid="NavProcesses" Content="Processes" Tag="processes" ToolTipService.ToolTip="Processes"
+                                    AutomationProperties.AutomationId="NavProcesses" AutomationProperties.Name="Processes">
+                    <NavigationViewItem.Icon><FontIcon Glyph="&#xE9CE;" /></NavigationViewItem.Icon>
+                </NavigationViewItem>
+                <NavigationViewItem x:Uid="NavAiDoctor" Content="Troubleshoot" Tag="ai-doctor" ToolTipService.ToolTip="Troubleshoot"
+                                    AutomationProperties.AutomationId="NavAiDoctor" AutomationProperties.Name="Troubleshoot">
+                    <NavigationViewItem.Icon><FontIcon Glyph="&#xE721;" /></NavigationViewItem.Icon>
                 </NavigationViewItem>
             </NavigationView.MenuItems>
 
             <NavigationView.FooterMenuItems>
-                <NavigationViewItem x:Uid="NavPluginStore" Content="Extensions" Tag="plugin-store" ToolTipService.ToolTip="Extension Marketplace"
+                <NavigationViewItem x:Uid="NavPluginStore" Content="Extensions" Tag="plugin-store" ToolTipService.ToolTip="Extensions"
                                     AutomationProperties.AutomationId="NavPluginStore" AutomationProperties.Name="Extensions">
                     <NavigationViewItem.Icon><FontIcon Glyph="&#xEA86;" /></NavigationViewItem.Icon>
                 </NavigationViewItem>
-                <NavigationViewItem x:Uid="NavSettings" Content="Settings" Tag="settings" ToolTipService.ToolTip="App Settings"
+                <NavigationViewItem x:Uid="NavSettings" Content="Settings" Tag="settings" ToolTipService.ToolTip="Settings"
                                     AutomationProperties.AutomationId="NavSettings" AutomationProperties.Name="Settings">
                     <NavigationViewItem.Icon><FontIcon Glyph="&#xE713;" /></NavigationViewItem.Icon>
                 </NavigationViewItem>
-                <NavigationViewItem x:Uid="NavHelp" Content="Help" Tag="help" ToolTipService.ToolTip="Documentation &amp; Hotkeys"
+                <NavigationViewItem x:Uid="NavHelp" Content="Help" Tag="help" ToolTipService.ToolTip="Help"
                                     AutomationProperties.AutomationId="NavHelp" AutomationProperties.Name="Help">
                     <NavigationViewItem.Icon><FontIcon Glyph="&#xE897;" /></NavigationViewItem.Icon>
                 </NavigationViewItem>

@@ -101,12 +101,12 @@
                             <InfoBar IsOpen="{x:Bind ViewModel.Execution.IsSelectedToolUnavailable, Mode=OneWay}" IsClosable="False"
                                      Severity="Warning" Title="Not available in this build"
                                      Message="This action is currently disabled. Its safety and implementation must be verified before it can run." />
-                            <InfoBar IsOpen="{x:Bind ViewModel.Execution.ShowDestructiveWarning, Mode=OneWay}" IsClosable="False" Severity="Error"
+                            <InfoBar IsOpen="{x:Bind ViewModel.Execution.IsApprovalStage, Mode=OneWay}" IsClosable="False" Severity="Error"
                                      Title="Permanent change" Message="Check the reported targets and effects before approving. Some changes cannot be undone. If the preview is unclear, do not apply." />
                             <ToggleSwitch Header="I reviewed this change" OffContent="Not approved" OnContent="Approved" AutomationProperties.HelpText="Approval is required before a tool that makes permanent changes can run"
                                           IsEnabled="{x:Bind ViewModel.Execution.CanApproveReview, Mode=OneWay}"
                                           IsOn="{x:Bind ViewModel.Execution.IsReviewApproved, Mode=TwoWay}"
-                                          Visibility="{x:Bind local:AllToolsPage.BoolToVisibility(ViewModel.Execution.RequiresApprovalSwitch), Mode=OneWay}"
+                                          Visibility="{x:Bind local:AllToolsPage.BoolToVisibility(ViewModel.Execution.IsApprovalStage), Mode=OneWay}"
                                           AutomationProperties.Name="Approve the reviewed tool change" />
                             <Expander Header="Plan details and recovery" IsExpanded="True"
                                       Visibility="{x:Bind local:AllToolsPage.BoolToVisibility(ViewModel.Execution.IsPresetTool), Mode=OneWay}"

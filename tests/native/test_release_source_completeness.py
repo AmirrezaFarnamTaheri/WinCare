@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import re
 import tempfile
 import unittest
@@ -27,6 +28,10 @@ def _local_markdown_targets(markdown: Path, staging_root: Path) -> list[tuple[st
         if not relative_path:
             continue
         resolved = (staging_root / relative_path.lstrip("/")) if relative_path.startswith("/") else (markdown.parent / relative_path)
+        # Normalize the ".." segments lexically. Windows extended-length paths
+        # ("\\?\" prefixes) are not normalized by the OS, so a raw parent-relative
+        # target would look missing even though the file is staged.
+        resolved = Path(os.path.normpath(str(resolved)))
         if not resolved.exists():
             missing.append((raw_target, resolved))
     return missing

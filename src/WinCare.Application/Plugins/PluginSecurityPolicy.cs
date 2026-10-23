@@ -5,6 +5,7 @@ using System.Text;
 using System.Text.Json.Serialization;
 using System.Security.Principal;
 using System.Security.AccessControl;
+using WinCare.Application.Commands;
 
 /// <summary>
 /// Security record persisted outside an installed plugin directory after package admission.
@@ -393,20 +394,13 @@ public static class PluginAdmissionTrustStore
     /// user-scoped record is rewritable by the same account that can swap the plugin bytes, so it
     /// cannot be the trust anchor for code that runs with administrator privileges.
     /// </summary>
-    public static bool IsCurrentProcessElevated()
-    {
-        try
-        {
-            using WindowsIdentity identity = WindowsIdentity.GetCurrent();
-            return new WindowsPrincipal(identity).IsInRole(WindowsBuiltInRole.Administrator);
-        }
-        catch (Exception ex) when (ex is ArgumentException or PlatformNotSupportedException)
-        {
-            // Without an interactive Windows token there is no elevation to gate on; fail closed by
-            // reporting elevated only when the token can actually be examined.
-            return false;
-        }
-    }
+    /// <remarks>
+    /// This delegates to the shared <see cref="ElevationProbe"/> instead of reading the process
+    /// token itself. Two independent probes could answer differently for the same process, and a
+    /// trust anchor that is decided by one probe while a command gate is decided by the other is
+    /// exactly the disagreement this repository removes elsewhere.
+    /// </remarks>
+    public static bool IsCurrentProcessElevated() => ElevationProbe.IsElevated;
 
     private static (string pluginDirectoryName, string pluginsRoot) SplitPluginDirectory(string pluginDirectoryPath)
     {

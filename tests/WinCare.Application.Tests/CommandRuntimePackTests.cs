@@ -75,6 +75,36 @@ public class CommandRuntimePackTests
         public IEnumerable<ICommandHandler> CreateHandlers(ICommandOperationContext context) => _handlers;
     }
 
+    /// <summary>
+    /// A pack that declares one mutating command as low risk, so the host-owned admission
+    /// floor is the only thing standing between a third party and a one-click mutation.
+    /// </summary>
+    private sealed class LowRiskPack : ICommandPack
+    {
+        public string PackId => "lowriskpack";
+
+        public IReadOnlyList<CommandDefinition> LoadCommands() => new[]
+        {
+            new CommandDefinition(
+                "packlow-mutating",
+                "Pack mutating command",
+                "Summary",
+                "All tools",
+                "Commands",
+                CommandRisk.Low,
+                ReadOnly: false,
+                AdministratorAccess.No,
+                RestartExpectation.No,
+                "lowriskpack",
+                MigrationStatus.Implemented,
+                Array.Empty<string>(),
+                ExplicitRiskTier: null),
+        };
+
+        public IEnumerable<ICommandHandler> CreateHandlers(ICommandOperationContext context) =>
+            new[] { new StubHandler("packlow-mutating") };
+    }
+
     private sealed class StubHandler : ICommandHandler
     {
         public StubHandler(string commandId) => CommandId = commandId;
@@ -347,5 +377,77 @@ public class CommandRuntimePackTests
 
         Assert.Equal(CommandResultStatus.Succeeded, result.Status);
         Assert.Contains("runtimepack-one", pack.Invocations);
+    }
+
+    [Fact]
+    public void PackCommand_DeclaredLowRiskCannotDeriveTheSafeTier()
+    {
+        // A pack may declare its own risk, but the host owns the admission floor: a mutating
+        // command a pack declares as low risk must still be admitted through the Moderate tier,
+        // which requires an explicit user confirmation before it runs. Without the floor a pack
+        // could ship a mutating command that derives Safe and executes on one click.
+        CommandDefinition declared = new(
+            "packlow-mutating",
+            "Pack mutating command",
+            "Summary",
+            "All tools",
+            "Commands",
+            CommandRisk.Low,
+            ReadOnly: false,
+            AdministratorAccess.No,
+            RestartExpectation.No,
+            "pack",
+            MigrationStatus.Implemented,
+            Array.Empty<string>(),
+            ExplicitRiskTier: null);
+
+        CommandDefinition normalized = CommandPackCatalog.NormalizeCommand(declared);
+
+        Assert.Equal(RiskTier.Moderate, normalized.RiskTier);
+    }
+
+    [Fact]
+    public void PackCommand_ReadOnlyLowRiskKeepsTheSafeTier()
+    {
+        // The floor must not touch read-only commands: a pack that only inspects state stays
+        // directly runnable, exactly like a core read-only command.
+        CommandDefinition declared = new(
+            "packlow-readonly",
+            "Pack read-only command",
+            "Summary",
+            "All tools",
+            "Commands",
+            CommandRisk.Low,
+            ReadOnly: true,
+            AdministratorAccess.No,
+            RestartExpectation.No,
+            "pack",
+            MigrationStatus.Implemented,
+            Array.Empty<string>(),
+            ExplicitRiskTier: null);
+
+        CommandDefinition normalized = CommandPackCatalog.NormalizeCommand(declared);
+
+        Assert.Equal(RiskTier.Safe, normalized.RiskTier);
+    }
+
+    [Fact]
+    public async Task PackCommand_MutatingLowRiskIsBlockedWithoutReviewApproval()
+    {
+        // The end-to-end consequence of the floor: a pack command declared low risk is refused
+        // by the dispatcher when no confirmation evidence accompanies it.
+        var pack = new LowRiskPack();
+        StubExecutor executor = new();
+
+        CommandDispatcher dispatcher = CommandRuntime.CreateDefault(
+            executor, new ICommandPack[] { pack }, executor);
+
+        CommandResult result = await dispatcher.ExecuteAsync(
+            CommandRequest.Execute("packlow-mutating", JsonDocument.Parse("{}").RootElement.Clone()),
+            new CommandExecutionOptions(ReviewApproved: false),
+            CancellationToken.None);
+
+        Assert.Equal(CommandResultStatus.Blocked, result.Status);
+        Assert.Equal("command.review_required", result.Code);
     }
 }

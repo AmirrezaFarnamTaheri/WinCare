@@ -65,25 +65,15 @@
             <!-- Bento Subsystems: Quick Actions Matrix -->
             <StackPanel Grid.Row="2" Spacing="14">
                 <Grid ColumnDefinitions="*,Auto">
-                    <TextBlock Style="{StaticResource SectionHeaderTextStyle}" Text="Primary Care &amp; Transfer Workspaces" VerticalAlignment="Center"/>
+                    <TextBlock Style="{StaticResource SectionHeaderTextStyle}" Text="Quick actions" VerticalAlignment="Center"/>
                     <Border Grid.Column="1" Background="{ThemeResource SurfaceSecondaryBrush}" BorderBrush="{ThemeResource BorderSubtleBrush}" BorderThickness="1" CornerRadius="4" Padding="8,3">
                         <TextBlock Text="6 Unified Nodes" FontSize="11" FontFamily="Cascadia Code" Foreground="{ThemeResource TextSecondaryBrush}"/>
                     </Border>
                 </Grid>
 
                 <Grid x:Name="RecommendationsGrid" ColumnSpacing="14" RowSpacing="14">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="*"/>
-                    </Grid.ColumnDefinitions>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
 
                     <!-- Storage Reclamation -->
                     <Button x:Name="CleanupRecommendation" Style="{StaticResource RecommendationButtonStyle}"

@@ -212,7 +212,11 @@ public sealed class ToolExecutionViewModel : ObservableObject
         ? (IsMutatingTool ? "Direct, low-risk change" : "Read-only inspection")
         : IsModerateTool
             ? "Routine system maintenance"
-            : (IsReviewApproved ? "Reviewed and ready" : "Preview before applying");
+            : (IsReviewApproved
+                ? "Reviewed and ready"
+                : IsApprovalStage
+                    ? "Approve to apply"
+                    : "Preview before applying");
 
     public string ActionFlowDescription => _selectedTool is not null && !IsSelectedToolImplemented
         ? "This action cannot run in the current build. Its safety or implementation is not yet verified. No changes will be made."
@@ -224,7 +228,9 @@ public sealed class ToolExecutionViewModel : ObservableObject
             ? "WinCare will run this bounded maintenance action directly and record the outcome in Activity."
             : (IsReviewApproved
                 ? "The approved preview matches the current inputs. Applying consumes this approval once and records the outcome."
-                : "Run a preview to resolve targets and impact. Review the result, then approve this exact plan to apply it.");
+                : IsApprovalStage
+                    ? "Approve this exact plan to apply it. The approval applies once, to the current inputs."
+                    : "Run a preview to resolve the targets and impact of this change before applying it.");
 
     /// <summary>Raw JSON editor used only when Advanced parameter mode is enabled.</summary>
     public string ParameterJson
@@ -284,6 +290,11 @@ public sealed class ToolExecutionViewModel : ObservableObject
     public bool IsDestructiveTool => _selectedTool?.Definition.RiskTier == RiskTier.Destructive;
     public bool IsMutatingTool => _selectedTool?.Definition.ReadOnly == false;
     public bool RequiresApprovalSwitch => ShowDestructiveWarning;
+    // The approval stage is the moment the user is actually asked to approve: a successful
+    // preview exists, so the reported targets are on screen and can be checked. Before that
+    // point there is nothing to review, so the surface does not stack a warning, a switch,
+    // and a procedure paragraph on top of the "Preview impact" button.
+    public bool IsApprovalStage => RequiresApprovalSwitch && _hasSuccessfulPreview;
     // Approval toggle requires a successful preview before flipping.
     public bool CanApproveReview => IsMutatingTool && !IsExecuting && _hasSuccessfulPreview;
 
@@ -782,6 +793,7 @@ public sealed class ToolExecutionViewModel : ObservableObject
         OnPropertyChanged(nameof(IsSelectedToolUnavailable));
         OnPropertyChanged(nameof(ShowDestructiveWarning));
         OnPropertyChanged(nameof(RequiresApprovalSwitch));
+        OnPropertyChanged(nameof(IsApprovalStage));
         OnPropertyChanged(nameof(CanApproveReview));
         OnPropertyChanged(nameof(ActionFlowTitle));
         OnPropertyChanged(nameof(ActionFlowDescription));

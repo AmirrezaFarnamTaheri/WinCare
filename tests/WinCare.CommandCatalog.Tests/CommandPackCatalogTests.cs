@@ -228,4 +228,84 @@ public class CommandPackCatalogTests
         HashSet<string> coreIds = new(CommandCatalog.Load().Select(command => command.Id), StringComparer.Ordinal);
         Assert.DoesNotContain(fragment.Commands, command => coreIds.Contains(command.Id));
     }
+
+    [Fact]
+    public void NormalizeCommand_AppliesTheHostOwnedRiskFloor()
+    {
+        // The host owns the admission floor for every third-party definition. A mutating command
+        // declared as low risk must be admitted through the Moderate tier so it cannot execute
+        // on one click without a confirmation, and a read-only command must stay Safe.
+        CommandDefinition mutating = new(
+            "pack-mutating",
+            "Pack mutating",
+            "Summary",
+            "All tools",
+            "Commands",
+            CommandRisk.Low,
+            ReadOnly: false,
+            AdministratorAccess.No,
+            RestartExpectation.No,
+            "pack",
+            MigrationStatus.Implemented,
+            Array.Empty<string>(),
+            ExplicitRiskTier: null);
+
+        CommandDefinition readOnly = mutating with { Id = "pack-readonly", ReadOnly = true, Risk = CommandRisk.ReadOnly };
+
+        Assert.Equal(RiskTier.Moderate, CommandPackCatalog.NormalizeCommand(mutating).RiskTier);
+        Assert.Equal(RiskTier.Safe, CommandPackCatalog.NormalizeCommand(readOnly).RiskTier);
+    }
+
+    [Fact]
+    public void NormalizeCommand_PreservesAnUnrecognizedTierForExplicitRejection()
+    {
+        // An unrecognized tier must reach the dispatcher's admission gate unchanged so it is
+        // rejected explicitly, not silently rewritten into something executable.
+        CommandDefinition invalid = new(
+            "pack-invalid-tier",
+            "Pack invalid tier",
+            "Summary",
+            "All tools",
+            "Commands",
+            CommandRisk.Low,
+            ReadOnly: false,
+            AdministratorAccess.No,
+            RestartExpectation.No,
+            "pack",
+            MigrationStatus.Implemented,
+            Array.Empty<string>(),
+            ExplicitRiskTier: (RiskTier)99);
+
+        CommandDefinition normalized = CommandPackCatalog.NormalizeCommand(invalid);
+
+        Assert.Equal((RiskTier)99, normalized.RiskTier);
+    }
+
+    [Fact]
+    public void NormalizeCommand_ContradictoryReadOnlyRiskTierCannotDeriveTheSafeTier()
+    {
+        // A third-party pack may declare a read-only risk tier while declaring readOnly=false.
+        // The two statements contradict each other, and trusting the risk tier would let the
+        // command derive the Safe tier and mutate on one click with no confirmation. The
+        // ReadOnly flag is the authoritative answer, so the floor still applies.
+        CommandDefinition contradictory = new(
+            "pack-contradictory",
+            "Pack contradictory",
+            "Summary",
+            "All tools",
+            "Commands",
+            CommandRisk.ReadOnly,
+            ReadOnly: false,
+            AdministratorAccess.No,
+            RestartExpectation.No,
+            "pack",
+            MigrationStatus.Implemented,
+            Array.Empty<string>(),
+            ExplicitRiskTier: null);
+
+        CommandDefinition normalized = CommandPackCatalog.NormalizeCommand(contradictory);
+
+        Assert.False(normalized.ReadOnly);
+        Assert.Equal(RiskTier.Moderate, normalized.RiskTier);
+    }
 }

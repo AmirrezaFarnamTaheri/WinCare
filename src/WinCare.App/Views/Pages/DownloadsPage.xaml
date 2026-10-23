@@ -110,9 +110,12 @@
                                             <Border Background="{ThemeResource SurfaceSecondaryBrush}" BorderBrush="{ThemeResource BorderSubtleBrush}" BorderThickness="1" CornerRadius="4" Padding="8,4">
                                                 <TextBlock Text="{x:Bind StatusText}" FontSize="12" FontWeight="SemiBold" FontFamily="Cascadia Code" />
                                             </Border>
-                                            <Button Content="Pause" Tag="{x:Bind}" Click="PauseTorrent_Click" Style="{StaticResource QuietButtonStyle}" />
-                                            <Button Content="Resume" Tag="{x:Bind}" Click="ResumeTorrent_Click" Style="{StaticResource QuietButtonStyle}" />
-                                            <Button Content="Remove" Tag="{x:Bind}" Click="RemoveTorrent_Click" Style="{StaticResource QuietButtonStyle}" />
+                                            <Button Content="Pause" Tag="{x:Bind}" Click="PauseTorrent_Click" Style="{StaticResource QuietButtonStyle}"
+                                                    AutomationProperties.Name="Pause torrent" />
+                                            <Button Content="Resume" Tag="{x:Bind}" Click="ResumeTorrent_Click" Style="{StaticResource QuietButtonStyle}"
+                                                    AutomationProperties.Name="Resume torrent" />
+                                            <Button Content="Remove" Tag="{x:Bind}" Click="RemoveTorrent_Click" Style="{StaticResource QuietButtonStyle}"
+                                                    AutomationProperties.Name="Remove torrent" />
                                         </StackPanel>
                                     </Grid>
 

@@ -59,9 +59,22 @@ class SafetyRegressionTests(unittest.TestCase):
         self.assertIn("RequiresApprovalSwitch => ShowDestructiveWarning", view_model)
         self.assertIn("ShowDestructiveWarning => IsDestructiveTool && !IsSelectedToolUnavailable", view_model)
 
+        # The approval surface is the moment the user is asked to approve. Before a
+        # successful preview there is nothing to review, so the permanent-change
+        # warning and the approval switch must stay hidden until then.
+        self.assertIn("IsApprovalStage => RequiresApprovalSwitch && _hasSuccessfulPreview", view_model)
+
         xaml = self.read("src/WinCare.App/Views/Pages/AllToolsPage.xaml")
         self.assertIn(
             'IsEnabled="{x:Bind ViewModel.Execution.CanApproveReview, Mode=OneWay}"',
+            xaml,
+        )
+        self.assertIn(
+            'Visibility="{x:Bind local:AllToolsPage.BoolToVisibility(ViewModel.Execution.IsApprovalStage), Mode=OneWay}"',
+            xaml,
+        )
+        self.assertIn(
+            'IsOpen="{x:Bind ViewModel.Execution.IsApprovalStage, Mode=OneWay}"',
             xaml,
         )
 

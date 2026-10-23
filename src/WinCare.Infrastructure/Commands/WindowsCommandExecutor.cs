@@ -160,14 +160,13 @@ internal sealed partial class WindowsCommandExecutor : ICommandOperationExecutor
                     $"'{definition.Id}' is not implemented and cannot execute.");
             }
 
+            // The administrator-access admission gate already ran on the dispatcher's own
+            // elevation probe before this handler was reached. Repeating the check here with
+            // a second, static probe produced two different answers for the same request: a
+            // host that injects a deterministic probe for the gate would still be refused by
+            // this copy. The dispatcher is the single authority for elevation admission, so
+            // the executor does not re-probe it.
             var parameters = new CommandParameters(request.Parameters);
-            if (!definition.ReadOnly && request.Apply && definition.AdministratorAccess == AdministratorAccess.Required && !IsAdministrator())
-            {
-                return CommandHandlerOutcome.Blocked(
-                    "command.elevation_required",
-                    $"'{definition.Title}' requires administrator access. Restart WinCare elevated, then review and apply again.");
-            }
-
             if (definition.Id is "catalog" or "presets")
             {
                 return ExecuteEmbeddedCatalog(definition.Id);
@@ -948,11 +947,12 @@ internal sealed partial class WindowsCommandExecutor : ICommandOperationExecutor
         }).ToArray();
     }
 
-    private static bool IsAdministrator()
-    {
-        using WindowsIdentity identity = WindowsIdentity.GetCurrent();
-        return new WindowsPrincipal(identity).IsInRole(WindowsBuiltInRole.Administrator);
-    }
+    /// <summary>
+    /// Reports whether the current process runs with administrator privileges. This reads the one
+    /// shared <see cref="ElevationProbe"/> answer, so the dispatcher's admission gate, the preset
+    /// execution digest, and this per-rule check can never disagree about the same request.
+    /// </summary>
+    private static bool IsAdministrator() => ElevationProbe.IsElevated;
 
     private static JsonElement Data(object value) => JsonSerializer.SerializeToElement(value, JsonOptions);
 

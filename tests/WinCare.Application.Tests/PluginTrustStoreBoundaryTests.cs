@@ -163,6 +163,21 @@ public sealed class PluginTrustStoreBoundaryTests
         }
     }
 
+    [Fact]
+    public void Elevation_probe_is_the_single_shared_answer()
+    {
+        // The trust store, the command dispatcher's admission gate, and the preset digest all ask
+        // the same question. A second private copy of that probe could answer differently from the
+        // shared one, and then a trust anchor would be decided by a different answer than the
+        // command gate that depends on it.
+        Assert.Equal(
+            WinCare.Application.Commands.ElevationProbe.IsElevated,
+            PluginAdmissionTrustStore.IsCurrentProcessElevated());
+        Assert.Equal(
+            WinCare.Application.Commands.ElevationProbe.Refresh(),
+            PluginAdmissionTrustStore.IsCurrentProcessElevated());
+    }
+
     private static string CreateTempTrustRoot()
         => Path.Combine(Path.GetTempPath(), "wincare-trust-boundary-" + Guid.NewGuid().ToString("N"));
 
