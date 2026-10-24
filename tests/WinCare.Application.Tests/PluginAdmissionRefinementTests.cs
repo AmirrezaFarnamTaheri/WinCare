@@ -46,7 +46,7 @@ public sealed class PluginAdmissionRefinementTests
     }
 
     [Fact]
-    public async Task Registered_moderate_plugin_mutation_executes_with_direct_action_confirmation()
+    public async Task Registered_moderate_plugin_mutation_requires_reviewed_plan()
     {
         var definition = new PluginToolDefinition { Id = "plugin.sample", Title = "Sample" }
             .ToCommandDefinition("sample") with { ExplicitRiskTier = null };
@@ -59,12 +59,17 @@ public sealed class PluginAdmissionRefinementTests
         Assert.Equal(RiskTier.Moderate, registered.RiskTier);
         var vm = new ToolExecutionViewModel(dispatcher, _ => { });
         vm.SelectTool(new ToolRowViewModel(registered));
-        Assert.False(vm.RequiresApprovalSwitch);
-        Assert.Equal("Run action", vm.PrimaryActionLabel);
+        Assert.True(vm.RequiresApprovalSwitch);
+        Assert.Equal("Preview impact", vm.PrimaryActionLabel);
+        await vm.ExecuteSelectedToolCommand.ExecuteAsync(null);
+        Assert.True(vm.IsExecutionSuccess);
+        Assert.False(handler.LastWasApply);
+        Assert.True(vm.CanApproveReview);
+        vm.IsReviewApproved = true;
         await vm.ExecuteSelectedToolCommand.ExecuteAsync(null);
         Assert.True(vm.IsExecutionSuccess);
         Assert.True(handler.LastWasApply);
-        Assert.Equal(1, handler.Calls);
+        Assert.Equal(2, handler.Calls);
     }
 
     private sealed class RecordingHandler(string commandId) : ICommandHandler

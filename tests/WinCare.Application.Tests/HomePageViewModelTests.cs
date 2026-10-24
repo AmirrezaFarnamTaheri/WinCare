@@ -1,4 +1,5 @@
 using WinCare.App.ViewModels.Pages;
+using WinCare.Application.Checkups;
 using WinCare.Domain.Activity;
 
 namespace WinCare.Application.Tests;
@@ -20,28 +21,33 @@ public sealed class HomePageViewModelTests
         };
 
         vm.RefreshActivity([recent, old]);
-
         Assert.Equal("Latest check", vm.RecentActivityTitle);
         Assert.Contains("Check completed", vm.RecentActivitySummary);
         Assert.Equal("2 records", vm.ActivityStatus);
 
         vm.RefreshActivity([]);
-
         Assert.Equal("No activity recorded", vm.RecentActivityTitle);
         Assert.Equal("No activity yet", vm.ActivityStatus);
     }
 
     [Fact]
-    public void Home_projects_exact_checkup_coverage_without_duplicate_status_signals()
+    public void Home_refuses_to_combine_unrelated_activity_into_a_fake_checkup()
     {
-        DateTimeOffset now = DateTimeOffset.UtcNow;
         var vm = new HomePageViewModel();
-        vm.RefreshActivity([
-            Completed("system", "System", now),
-            Completed("storage", "Storage", now),
-            Completed("security", "Security", now),
-            Completed("wua-search", "Updates", now),
-        ]);
+        vm.RefreshActivity(CheckupSessionStore.ProbeIds.Select(id =>
+            new ActivityRecord(Guid.NewGuid(), id, id, ActivityState.Completed,
+                DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, "Done", false)).ToArray());
+
+        Assert.Equal("0 of 4 areas", vm.CheckupCoverageText);
+        Assert.Equal("Start with a checkup", vm.CheckupTitle);
+        Assert.Equal("Not checked", vm.SystemStatus);
+    }
+
+    [Fact]
+    public void Home_projects_exact_coverage_from_a_single_completed_session()
+    {
+        var vm = new HomePageViewModel();
+        vm.RefreshActivity([], Session(DateTimeOffset.UtcNow.AddMinutes(-2), DateTimeOffset.UtcNow, "Completed"));
 
         Assert.Equal("4 of 4 areas", vm.CheckupCoverageText);
         Assert.Equal("Your latest checkup is ready", vm.CheckupTitle);
@@ -52,69 +58,66 @@ public sealed class HomePageViewModelTests
     }
 
     [Fact]
-    public void Home_marks_old_completed_checkup_results_as_out_of_date_and_does_not_call_them_ready()
+    public void Home_marks_a_completed_old_session_as_out_of_date()
     {
-        DateTimeOffset old = DateTimeOffset.UtcNow.AddHours(-2);
         var vm = new HomePageViewModel();
-        vm.RefreshActivity([
-            Completed("system", "System", old),
-            Completed("storage", "Storage", old),
-            Completed("security", "Security", old),
-            Completed("wua-search", "Updates", old),
-        ]);
+        DateTimeOffset old = DateTimeOffset.UtcNow.AddHours(-2);
+        vm.RefreshActivity([], Session(old.AddMinutes(-1), old, "Completed"));
 
-        Assert.StartsWith("Out of date", vm.SystemStatus);
+        Assert.Equal("Out of date", vm.SystemStatus);
         Assert.Equal("4 of 4 areas", vm.CheckupCoverageText);
-        Assert.Equal("Your checkup is getting old", vm.CheckupTitle);
-        Assert.Contains("over 30 minutes old", vm.CheckupSummary);
+        Assert.Equal("Checkup results are out of date", vm.CheckupTitle);
+        Assert.Contains("refresh", vm.CheckupSummary);
     }
 
     [Fact]
-    public void Home_uses_completion_time_for_checkup_freshness()
+    public void Home_uses_the_session_completion_not_start_time_for_freshness()
     {
-        DateTimeOffset started = DateTimeOffset.UtcNow.AddHours(-2);
-        DateTimeOffset completed = DateTimeOffset.UtcNow.AddMinutes(-2);
         var vm = new HomePageViewModel();
-        vm.RefreshActivity([
-            Completed("system", "System", started, completed),
-            Completed("storage", "Storage", started, completed),
-            Completed("security", "Security", started, completed),
-            Completed("wua-search", "Updates", started, completed),
-        ]);
+        vm.RefreshActivity([], Session(
+            DateTimeOffset.UtcNow.AddHours(-2), DateTimeOffset.UtcNow.AddMinutes(-2), "Completed"));
 
         Assert.Equal("Your latest checkup is ready", vm.CheckupTitle);
         Assert.Equal("Checked", vm.SystemStatus);
     }
 
     [Theory]
-    [InlineData(ActivityState.Completed)]
-    [InlineData(ActivityState.Cancelled)]
-    public void Home_calls_inactive_partial_checks_incomplete(ActivityState state)
+    [InlineData("Incomplete", "Checkup incomplete")]
+    [InlineData("Cancelled", "Checkup stopped")]
+    [InlineData("Interrupted", "Checkup incomplete")]
+    public void Home_reports_nonrunning_partial_sessions_truthfully(string state, string title)
     {
         var vm = new HomePageViewModel();
-        var record = Completed("system", "System", DateTimeOffset.UtcNow.AddMinutes(-1)) with { State = state };
+        var session = Session(DateTimeOffset.UtcNow.AddMinutes(-1), DateTimeOffset.UtcNow, state)
+            with { Areas = Areas("Checked", "Interrupted", "Interrupted", "Interrupted") };
+        vm.RefreshActivity([], session);
 
-        vm.RefreshActivity([record]);
-
-        Assert.Equal("Checkup is incomplete", vm.CheckupTitle);
+        Assert.Equal(title, vm.CheckupTitle);
+        Assert.Equal("1 of 4 areas", vm.CheckupCoverageText);
         Assert.Contains("Run Checkup", vm.CheckupSummary);
     }
 
     [Fact]
-    public void Home_calls_only_running_checks_in_progress()
+    public void Home_reports_only_an_active_session_as_running()
     {
         var vm = new HomePageViewModel();
-        var record = Completed("system", "System", DateTimeOffset.UtcNow) with
-        {
-            State = ActivityState.Running,
-            CompletedAt = null
-        };
+        var session = Session(DateTimeOffset.UtcNow, null, "Running")
+            with { Areas = Areas("Checked", "Running", "Running", "Running") };
+        vm.RefreshActivity([], session);
 
-        vm.RefreshActivity([record]);
-
-        Assert.Equal("Checkup is still in progress", vm.CheckupTitle);
+        Assert.Equal("Checkup in progress", vm.CheckupTitle);
+        Assert.Equal("1 of 4 areas", vm.CheckupCoverageText);
+        Assert.Equal("Checking…", vm.StorageStatus);
     }
 
-    private static ActivityRecord Completed(string commandId, string title, DateTimeOffset startedAt, DateTimeOffset? completedAt = null) =>
-        new(Guid.NewGuid(), commandId, title, ActivityState.Completed, startedAt, completedAt ?? startedAt.AddSeconds(1), "Check completed", false);
+    private static CheckupSessionSnapshot Session(DateTimeOffset started, DateTimeOffset? completed, string state) =>
+        new(1, Guid.NewGuid(), started, completed, state, Areas("Checked", "Checked", "Checked", "Checked"));
+
+    private static CheckupAreaSnapshot[] Areas(string system, string storage, string security, string updates) =>
+    [
+        new("system", system),
+        new("storage", storage),
+        new("security", security),
+        new("wua-search", updates),
+    ];
 }

@@ -192,9 +192,8 @@ public sealed class ToolExecutionViewModelTests
     }
 
     [Fact]
-    public async Task Moderate_tool_executes_in_one_click_with_direct_confirmation()
+    public async Task Moderate_tool_previews_and_consumes_one_use_review_approval()
     {
-        // In the tools view, Moderate tools execute directly with 1-click explicit confirmation.
         var moderateDef = new CommandDefinition("moderate-change", "Moderate Change", "Moderate Change", "Area", "Section",
             CommandRisk.Moderate, false, AdministratorAccess.No, RestartExpectation.No,
             "test", MigrationStatus.Implemented, ["moderate"], RiskTier.Moderate);
@@ -204,15 +203,23 @@ public sealed class ToolExecutionViewModelTests
         viewModel.SelectTool(new ToolRowViewModel(moderateDef));
 
         Assert.True(viewModel.IsModerateTool);
-        Assert.False(viewModel.RequiresApprovalSwitch);
+        Assert.True(viewModel.RequiresApprovalSwitch);
         Assert.False(viewModel.CanApproveReview);
-        Assert.Equal("Run action", viewModel.PrimaryActionLabel);
+        Assert.Equal("Preview impact", viewModel.PrimaryActionLabel);
 
+        await viewModel.ExecuteSelectedToolCommand.ExecuteAsync(null);
+        Assert.True(viewModel.IsExecutionSuccess);
+        Assert.False(handler.LastWasApply);
+        Assert.True(viewModel.CanApproveReview);
+
+        viewModel.IsReviewApproved = true;
+        Assert.Equal("Apply reviewed change", viewModel.PrimaryActionLabel);
         await viewModel.ExecuteSelectedToolCommand.ExecuteAsync(null);
 
         Assert.True(viewModel.IsExecutionSuccess);
-        Assert.Equal(1, handler.CallCount);
+        Assert.Equal(2, handler.CallCount);
         Assert.True(handler.LastWasApply);
+        Assert.False(viewModel.IsReviewApproved);
     }
 
     [Fact]

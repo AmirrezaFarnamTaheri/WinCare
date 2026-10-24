@@ -65,10 +65,10 @@ public sealed class RiskTierAdmissionTests
     }
 
     [Fact]
-    public async Task Moderate_mutating_command_executes_with_direct_confirmation()
+    public async Task Moderate_mutating_command_requires_preview_plan()
     {
-        // Tier 2 (Moderate): Requires explicit ReviewApproved confirmation from the user,
-        // but does not require a preflight preview or single-use plan unless provided.
+        // Tier 2 (Moderate): requires explicit confirmation AND a current,
+        // one-use preview plan bound to the exact command parameters.
         CommandDefinition modDef = CreateDef("mod-service", RiskTier.Moderate);
         EchoHandler handler = new("mod-service");
         CommandDispatcher dispatcher = new([modDef], [handler]);
@@ -84,16 +84,17 @@ public sealed class RiskTierAdmissionTests
         Assert.Equal("command.review_required", blocked.Code);
         Assert.Equal(0, handler.InvocationCount);
 
-        // 2. Direct execution with ReviewApproved = true succeeds without a preview plan
+        // 2. A Boolean approval alone is not bound to the target and must fail.
         CommandResult confirmed = await dispatcher.ExecuteAsync(
             new CommandRequest("mod-service", parameters, Apply: true, Guid.NewGuid()),
             new CommandExecutionOptions(ReviewApproved: true),
             CancellationToken.None);
 
-        Assert.Equal(CommandResultStatus.Succeeded, confirmed.Status);
-        Assert.Equal(1, handler.InvocationCount);
+        Assert.Equal(CommandResultStatus.Blocked, confirmed.Status);
+        Assert.Equal("command.approval_plan_invalid", confirmed.Code);
+        Assert.Equal(0, handler.InvocationCount);
 
-        // 3. If a preview plan is issued, execution with it also succeeds
+        // 3. Preview issues the single-use target-bound plan
         CommandResult preview = await dispatcher.ExecuteAsync(
             CommandRequest.Preview("mod-service", parameters),
             CommandExecutionOptions.Default,
@@ -101,7 +102,7 @@ public sealed class RiskTierAdmissionTests
 
         Assert.Equal(CommandResultStatus.Succeeded, preview.Status);
         Assert.NotNull(preview.ReviewPlan);
-        Assert.Equal(2, handler.InvocationCount);
+        Assert.Equal(1, handler.InvocationCount);
 
         CommandResult executed = await dispatcher.ExecuteAsync(
             CommandRequest.Execute("mod-service", parameters, preview.ReviewPlan),
@@ -109,7 +110,7 @@ public sealed class RiskTierAdmissionTests
             CancellationToken.None);
 
         Assert.Equal(CommandResultStatus.Succeeded, executed.Status);
-        Assert.Equal(3, handler.InvocationCount);
+        Assert.Equal(2, handler.InvocationCount);
     }
 
     [Fact]
@@ -199,7 +200,8 @@ public sealed class RiskTierAdmissionTests
         { RiskTier.Safe, false, false, CommandResultStatus.Succeeded, "safe.ok" },
         { RiskTier.Safe, true, false, CommandResultStatus.Succeeded, "safe.ok" },
         { RiskTier.Moderate, false, false, CommandResultStatus.Blocked, "command.review_required" },
-        { RiskTier.Moderate, true, false, CommandResultStatus.Succeeded, "moderate.ok" },
+        { RiskTier.Moderate, true, false, CommandResultStatus.Blocked, "command.approval_plan_invalid" },
+        { RiskTier.Moderate, true, true, CommandResultStatus.Succeeded, "moderate.ok" },
         { RiskTier.Destructive, false, false, CommandResultStatus.Blocked, "command.review_required" },
         { RiskTier.Destructive, true, false, CommandResultStatus.Blocked, "command.approval_plan_invalid" },
     };
@@ -235,7 +237,8 @@ public sealed class RiskTierAdmissionTests
 
         Assert.Equal(expectedStatus, result.Status);
         Assert.Equal(expectedCodeFragment, result.Code);
-        int expectedInvocations = expectedStatus == CommandResultStatus.Succeeded ? 1 : 0;
+        int expectedInvocations = (planSupplied ? 1 : 0) +
+            (expectedStatus == CommandResultStatus.Succeeded ? 1 : 0);
         Assert.Equal(expectedInvocations, handler.InvocationCount);
     }
 
