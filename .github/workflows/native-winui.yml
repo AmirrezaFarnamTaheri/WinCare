@@ -86,7 +86,7 @@ jobs:
           components: rustfmt, clippy
       - uses: actions/setup-dotnet@e2cf7c663b93c38144629f5d40b62d3eaaa63a03 # pinned commit
         with:
-          dotnet-version: "8.0.416"
+          dotnet-version: "10.0.402"
           global-json-file: global.json
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
@@ -547,7 +547,9 @@ jobs:
 
   installed-lifecycle-acceptance:
     needs: [verify, build]
-    if: github.event_name == 'workflow_dispatch' && inputs.run_installed_acceptance == true
+    if: >-
+      (github.event_name == 'workflow_dispatch' && inputs.run_installed_acceptance == true) ||
+      (github.event_name == 'pull_request' && github.head_ref == 'migration/net10-lts-20261024')
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 20
     strategy:
