@@ -25,6 +25,7 @@ public sealed class DownloadsPageViewModel : ObservableObject
     private int _refreshInFlight;
     private CancellationTokenSource? _pageCancellation;
     private string _newUrl = string.Empty;
+    private string _expectedSha256 = string.Empty;
     private string _notice = string.Empty;
     private string _filter = "All";
     private string _searchText = string.Empty;
@@ -42,6 +43,29 @@ public sealed class DownloadsPageViewModel : ObservableObject
         get => _newUrl;
         set { if (SetProperty(ref _newUrl, value ?? string.Empty)) OnPropertyChanged(nameof(CanAdd)); }
     }
+    /// <summary>Optional expected digest. Blank means restart instead of unchecked byte-range continuation.</summary>
+    public string ExpectedSha256
+    {
+        get => _expectedSha256;
+        set
+        {
+            if (SetProperty(ref _expectedSha256, value ?? string.Empty))
+            {
+                OnPropertyChanged(nameof(IsExpectedSha256Valid));
+                OnPropertyChanged(nameof(CanAdd));
+            }
+        }
+    }
+
+    public bool IsExpectedSha256Valid
+    {
+        get
+        {
+            string digest = _expectedSha256.Trim();
+            return digest.Length == 0 || (digest.Length == 64 && digest.All(Uri.IsHexDigit));
+        }
+    }
+
     public bool IsBusy
     {
         get => _isBusy;
@@ -56,7 +80,8 @@ public sealed class DownloadsPageViewModel : ObservableObject
         !IsBusy &&
         Uri.TryCreate(_newUrl.Trim(), UriKind.Absolute, out Uri? uri) &&
         uri.Scheme is "http" or "https" &&
-        uri.UserInfo.Length == 0 && uri.AbsoluteUri.Length <= 2048;
+        uri.UserInfo.Length == 0 && uri.AbsoluteUri.Length <= 2048 &&
+        IsExpectedSha256Valid;
 
     public bool HasNotice => _notice.Length > 0;
     public string Notice
@@ -98,6 +123,7 @@ public sealed class DownloadsPageViewModel : ObservableObject
         _pageCancellation?.Dispose();
         _pageCancellation = null;
         NewUrl = string.Empty;
+        ExpectedSha256 = string.Empty;
     }
 
     public void SetFilter(string filter)
@@ -205,11 +231,13 @@ public sealed class DownloadsPageViewModel : ObservableObject
                 return;
             }
 
-            CommandResult result = await _center.AddAsync(link, _pageCancellation?.Token ?? default);
+            CommandResult result = await _center.AddAsync(
+                link, ExpectedSha256, _pageCancellation?.Token ?? default);
             if (!_isActive) return;
             if (result.Status == CommandResultStatus.Succeeded)
             {
                 NewUrl = string.Empty;
+                ExpectedSha256 = string.Empty;
                 string? id = result.Data is System.Text.Json.JsonElement record &&
                     record.TryGetProperty("id", out System.Text.Json.JsonElement idValue)
                     ? idValue.GetString() : null;

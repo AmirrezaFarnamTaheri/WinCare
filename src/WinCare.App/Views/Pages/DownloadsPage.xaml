@@ -42,7 +42,7 @@
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" />
                         </Grid.RowDefinitions>
-                        <TextBox x:Name="LinkInput" MinHeight="44" MaxLength="4096"
+                        <TextBox x:Name="LinkInput" MinHeight="44" MaxLength="2048"
                                  Text="{x:Bind ViewModel.NewUrl, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                  PlaceholderText="https://example.com/file.zip"
                                  AutomationProperties.Name="HTTP or HTTPS download link" AutomationProperties.AutomationId="DownloadUrl" />
@@ -51,8 +51,20 @@
                                 IsEnabled="{x:Bind ViewModel.CanAdd, Mode=OneWay}"
                                 AutomationProperties.Name="Start download" AutomationProperties.AutomationId="AddDownload" />
                     </Grid>
+                    <Expander Header="Advanced: verify with SHA-256 (optional)" IsExpanded="False"
+                              AutomationProperties.Name="Optional SHA-256 verification">
+                        <StackPanel Spacing="6" Padding="0,8,0,4">
+                            <TextBox x:Name="ExpectedSha256Input" MaxLength="64" MinHeight="40"
+                                     Text="{x:Bind ViewModel.ExpectedSha256, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                     PlaceholderText="64 hexadecimal characters"
+                                     AutomationProperties.Name="Expected file SHA-256 checksum"
+                                     AutomationProperties.AutomationId="DownloadSha256" />
+                            <TextBlock Style="{StaticResource FieldHintTextStyle}" TextWrapping="Wrap"
+                                       Text="When provided, WinCare verifies the final file and can continue partial data if the server supports safe ranges. Leave blank to start retries from the beginning." />
+                        </StackPanel>
+                    </Expander>
                     <TextBlock Style="{StaticResource FieldHintTextStyle}"
-                               Text="You can keep using WinCare while downloads run. Paused transfers may restart from the beginning." />
+                               Text="You can keep using WinCare while downloads run. Unverified transfers restart from the beginning." />
                 </StackPanel>
             </Border>
 
