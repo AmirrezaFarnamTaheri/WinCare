@@ -54,7 +54,7 @@ public sealed class CommandDispatcher : ICommandDispatcher
         ArgumentNullException.ThrowIfNull(definitions);
         ArgumentNullException.ThrowIfNull(handlers);
         _journal = journal;
-        _isProcessElevated = isProcessElevated ?? ElevationProbe.IsElevated;
+        _isProcessElevated = isProcessElevated ?? (() => ElevationProbe.IsElevated);
 
         if (nativeCore is not null)
         {
