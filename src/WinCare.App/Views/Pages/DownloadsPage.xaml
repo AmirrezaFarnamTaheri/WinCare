@@ -60,7 +60,7 @@
                                      AutomationProperties.Name="Expected file SHA-256 checksum"
                                      AutomationProperties.AutomationId="DownloadSha256" />
                             <TextBlock Style="{StaticResource FieldHintTextStyle}" TextWrapping="Wrap"
-                                       Text="When provided, WinCare verifies the final file and can continue partial data if the server supports safe ranges. Leave blank to start retries from the beginning." />
+                                       Text="{x:Bind ViewModel.ChecksumHint, Mode=OneWay}" />
                         </StackPanel>
                     </Expander>
                     <TextBlock Style="{StaticResource FieldHintTextStyle}"

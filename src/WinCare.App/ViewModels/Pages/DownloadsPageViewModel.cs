@@ -52,6 +52,7 @@ public sealed class DownloadsPageViewModel : ObservableObject
             if (SetProperty(ref _expectedSha256, value ?? string.Empty))
             {
                 OnPropertyChanged(nameof(IsExpectedSha256Valid));
+                OnPropertyChanged(nameof(ChecksumHint));
                 OnPropertyChanged(nameof(CanAdd));
             }
         }
@@ -65,6 +66,10 @@ public sealed class DownloadsPageViewModel : ObservableObject
             return digest.Length == 0 || (digest.Length == 64 && digest.All(Uri.IsHexDigit));
         }
     }
+
+    public string ChecksumHint => IsExpectedSha256Valid
+        ? "Optional. A known checksum verifies the complete file; otherwise retries restart."
+        : "Enter exactly 64 hexadecimal characters (0–9, A–F), or leave blank.";
 
     public bool IsBusy
     {
