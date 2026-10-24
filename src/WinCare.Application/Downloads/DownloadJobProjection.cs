@@ -25,7 +25,7 @@ public sealed record DownloadJobRow(
     public string AccessibleName => $"{Name}, {Host}, {StateLabel}, {TransferLabel}";
     public string StartAccessibleName => $"Start download {Name}";
     public string PauseAccessibleName => $"Pause download {Name}";
-    public string ResumeAccessibleName => $"Resume download {Name}";
+    public string ResumeAccessibleName => $"Restart download {Name} from the beginning";
     public string CancelAccessibleName => $"Cancel download {Name}";
     public string RemoveAccessibleName => $"Remove download record for {Name}";
     public string ActionsAccessibleName => $"More actions for {Name}";
@@ -81,7 +81,7 @@ public static class DownloadJobProjection
                 "Publishing" => "Finishing",
                 "SuspendRequested" => "Pausing",
                 "Suspended" => "Paused",
-                "Interrupted" => "Interrupted — ready to resume",
+                "Interrupted" => "Interrupted — restart available",
                 "CancelRequested" => "Cancelling",
                 "Cancelled" => "Cancelled",
                 "Completed" => "Completed",
