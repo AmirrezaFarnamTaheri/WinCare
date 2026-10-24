@@ -18,8 +18,8 @@
 
             <!-- Workspace Header -->
             <controls:PageHeaderControl
-                Title="System Nexus"
-                Description="Central intelligence hub for hardware diagnostics, high-throughput transfers, and system care." />
+                Title="Your PC at a glance"
+                Description="Review recent checks, find maintenance tools, and see what needs attention." />
 
             <!-- Bento Hero: Diagnostic Telemetry Status -->
             <Border Grid.Row="1" Style="{StaticResource DashboardCardStyle}" Background="{ThemeResource HeroBackgroundBrush}" Padding="24">
@@ -36,10 +36,10 @@
                     <StackPanel Spacing="12" MaxWidth="760">
                         <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
                             <Border Background="{ThemeResource AccentChromeSubtleBrush}" CornerRadius="4" Padding="6,2">
-                                <TextBlock Text="TELEMETRY SCANNER" FontFamily="Cascadia Code" FontSize="10" FontWeight="SemiBold"
+                                <TextBlock Text="READ-ONLY CHECKS" FontFamily="Cascadia Code" FontSize="10" FontWeight="SemiBold"
                                            Foreground="{ThemeResource AccentChromeBrush}"/>
                             </Border>
-                            <TextBlock Text="SYSTEM PROBE STATUS" Style="{StaticResource FieldLabelTextStyle}"
+                            <TextBlock Text="RECENT RESULTS" Style="{StaticResource FieldLabelTextStyle}"
                                        FontFamily="Cascadia Code" FontSize="11" VerticalAlignment="Center"/>
                         </StackPanel>
                         <TextBlock Style="{StaticResource HeroTitleTextStyle}" Text="{x:Bind ViewModel.CheckupTitle, Mode=OneWay}"/>
@@ -57,7 +57,7 @@
                                    Text="{x:Bind ViewModel.CheckupCoverageText, Mode=OneWay}"/>
                         <TextBlock Style="{StaticResource FieldLabelTextStyle}" Text="Checkup coverage"/>
                         <TextBlock Style="{StaticResource TelemetryTextStyle}" FontFamily="Cascadia Code" FontSize="11"
-                                   Text="4 Read-Only Probes" Foreground="{ThemeResource TextSecondaryBrush}" Margin="0,2,0,0" />
+                                   Text="Four areas checked" Foreground="{ThemeResource TextSecondaryBrush}" Margin="0,2,0,0" />
                     </StackPanel>
                 </Grid>
             </Border>
@@ -67,7 +67,7 @@
                 <Grid ColumnDefinitions="*,Auto">
                     <TextBlock Style="{StaticResource SectionHeaderTextStyle}" Text="Quick actions" VerticalAlignment="Center"/>
                     <Border Grid.Column="1" Background="{ThemeResource SurfaceSecondaryBrush}" BorderBrush="{ThemeResource BorderSubtleBrush}" BorderThickness="1" CornerRadius="4" Padding="8,3">
-                        <TextBlock Text="6 Unified Nodes" FontSize="11" FontFamily="Cascadia Code" Foreground="{ThemeResource TextSecondaryBrush}"/>
+                        <TextBlock Text="Explore tools" FontSize="11" FontFamily="Cascadia Code" Foreground="{ThemeResource TextSecondaryBrush}"/>
                     </Border>
                 </Grid>
 
@@ -141,7 +141,7 @@
                         </Grid>
                     </Button>
 
-                    <!-- BitTorrent & High-Throughput Transfers Hub -->
+                    <!-- HTTP and HTTPS download workspace -->
                     <Button x:Name="DownloadsRecommendation" Grid.Row="1" Grid.Column="1"
                             Style="{StaticResource RecommendationButtonStyle}" Click="OpenDownloads_Click"
                             HorizontalContentAlignment="Stretch" AutomationProperties.AutomationId="HomeDownloads"
@@ -158,14 +158,14 @@
                             </Border>
                             <StackPanel Grid.Column="1" Spacing="4">
                                 <StackPanel Orientation="Horizontal" Spacing="8">
-                                    <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="Transfers &amp; Swarms"/>
+                                    <TextBlock Style="{StaticResource RowTitleTextStyle}" Text="Downloads"/>
                                     <Border Background="{ThemeResource AccentChromeSubtleBrush}" CornerRadius="3" Padding="4,1">
-                                        <TextBlock Text="BT / HTTP" FontFamily="Cascadia Code" FontSize="10" FontWeight="SemiBold"
+                                        <TextBlock Text="HTTP / HTTPS" FontFamily="Cascadia Code" FontSize="10" FontWeight="SemiBold"
                                                    Foreground="{ThemeResource AccentChromeBrush}"/>
                                     </Border>
                                 </StackPanel>
                                 <TextBlock Style="{StaticResource RowSecondaryTextStyle}"
-                                           Text="BitTorrent P2P swarm engine with sparse allocation and direct HTTP."/>
+                                           Text="Download files using HTTP or HTTPS and check their progress."/>
                             </StackPanel>
                             <FontIcon Grid.Column="2" Glyph="&#xE76C;" FontSize="12" Foreground="{ThemeResource TextSecondaryBrush}" VerticalAlignment="Center" AutomationProperties.AccessibilityView="Raw"/>
                         </Grid>
@@ -260,7 +260,7 @@
                     <StackPanel Spacing="16">
                         <StackPanel Spacing="4">
                             <TextBlock Style="{StaticResource SectionHeaderTextStyle}" Text="Subsystems Diagnostics"/>
-                            <TextBlock Style="{StaticResource RowSecondaryTextStyle}" Text="Latest recorded health telemetry across core Windows subsystems."/>
+                            <TextBlock Style="{StaticResource RowSecondaryTextStyle}" Text="Latest recorded results from individual Windows checks."/>
                         </StackPanel>
                         <Button Style="{StaticResource StatusRowButtonStyle}" Click="NavCategory_System_Click"
                                 HorizontalContentAlignment="Stretch" AutomationProperties.Name="Open system checkup details">
