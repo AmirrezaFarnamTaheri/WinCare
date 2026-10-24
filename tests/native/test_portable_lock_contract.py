@@ -106,11 +106,9 @@ class PortableLockContractTests(unittest.TestCase):
                 for dependency_key in lock["dependencies"]
                 if "/" in dependency_key
             }
-            # Every variant must contain its selected RID; NuGet may also restore
-            # the other declared RID in the same file depending on project-graph
-            # evaluation. Both shapes are sound if actual locked publish succeeds.
-            self.assertIn(runtime, runtime_keys, relative)
-            self.assertTrue(runtime_keys.issubset(expected_runtimes), relative)
+            # Locked single-file publishing uses the app's declared dual-RID
+            # graph. A lock containing only the selected architecture fails NU1004.
+            self.assertEqual(expected_runtimes, runtime_keys, relative)
 
     def test_no_portable_lock_bootstrap_workflow_remains(self) -> None:
         self.assertFalse((ROOT / ".github/workflows/bootstrap-portable-lockfiles.yml").exists())

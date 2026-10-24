@@ -28,6 +28,66 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' || (github.event_name == 'push' && !startsWith(github.ref, 'refs/tags/v')) }}
 
 jobs:
+  # One-time migration repair: WinCare.App declares both RIDs; a portable
+  # per-architecture lockfile must cover both when used by locked publishing.
+  net10-app-portable-lock-bootstrap:
+    if: github.event_name == 'pull_request' && github.head_ref == 'migration/net10-lts-20261024' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: windows-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: actions/setup-dotnet@e2cf7c663b93c38144629f5d40b62d3eaaa63a03
+        with:
+          dotnet-version: "10.0.402"
+          global-json-file: global.json
+      - name: Regenerate dual-RID app portable dependency locks
+        shell: bash
+        run: |
+          set -euo pipefail
+          for runtime in win-x64 win-arm64; do
+            dotnet restore src/WinCare.App/WinCare.App.csproj \
+              -p:Platform=x64 -p:WindowsPackageType=None \
+              -p:PublishSingleFile=true -p:RestoreLockedMode=false \
+              --lock-file-path "packages.portable.$runtime.lock.json" \
+              --no-dependencies --force --force-evaluate
+          done
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          expected = {"win-x64", "win-arm64"}
+          for runtime in sorted(expected):
+              path = Path(f"src/WinCare.App/packages.portable.{runtime}.lock.json")
+              locks = json.loads(path.read_text(encoding="utf-8-sig"))
+              keys = list(locks["dependencies"])
+              actual = {key.rsplit("/", 1)[-1] for key in keys if "/" in key}
+              if actual != expected or not all(key.startswith("net10.0") for key in keys):
+                  raise SystemExit(f"{path}: invalid dual-RID .NET 10 graph: {keys}")
+              print(f"Validated {path}: {sorted(actual)}")
+          PY
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: net10-dual-rid-app-locks
+          path: src/WinCare.App/packages.portable.*.lock.json
+          if-no-files-found: error
+          retention-days: 3
+      - name: Commit the validated app portable graphs
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- src/WinCare.App/packages.portable.win-x64.lock.json src/WinCare.App/packages.portable.win-arm64.lock.json
+          if git diff --cached --quiet; then
+            echo 'Already matches the declared dual-RID graph.'
+            exit 0
+          fi
+          git commit -m 'build(net10): correct app portable dual-runtime dependency locks'
+          git push origin HEAD:refs/heads/migration/net10-lts-20261024
+
   verify:
     runs-on: ubuntu-latest
     timeout-minutes: 10
