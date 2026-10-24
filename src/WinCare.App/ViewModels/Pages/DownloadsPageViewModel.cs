@@ -53,11 +53,10 @@ public sealed class DownloadsPageViewModel : ObservableObject
         private set => SetProperty(ref _isLoading, value);
     }
     public bool CanAdd =>
-        !IsBusy && (
-            (Uri.TryCreate(_newUrl.Trim(), UriKind.Absolute, out Uri? uri) &&
-             (uri.Scheme is "http" or "https") &&
-             uri.UserInfo.Length == 0 && uri.AbsoluteUri.Length <= 4096) ||
-            false);
+        !IsBusy &&
+        Uri.TryCreate(_newUrl.Trim(), UriKind.Absolute, out Uri? uri) &&
+        uri.Scheme is "http" or "https" &&
+        uri.UserInfo.Length == 0 && uri.AbsoluteUri.Length <= 4096;
 
     public bool HasNotice => _notice.Length > 0;
     public string Notice
@@ -265,7 +264,9 @@ public sealed class DownloadsPageViewModel : ObservableObject
                 Notice = "That download is already running.";
                 return;
             }
-            Notice = "Transfer started. You can keep using WinCare.";
+            Notice = action == "resume"
+                ? "Download restarting from the beginning. The previous partial file is not reused without verification."
+                : "Download started. You can keep using WinCare.";
             await RefreshAsync();
             return;
         }
