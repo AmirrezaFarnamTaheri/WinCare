@@ -43,6 +43,13 @@ public sealed class PluginAdmissionRecord
     public string? AssemblySha256 { get; init; }
 
     /// <summary>
+    /// Digest of every admitted payload path and its bytes (not just the manifest).
+    /// Script plugins without this binding require reinstall before execution.
+    /// </summary>
+    [JsonPropertyName("packageTreeSha256")]
+    public string? PackageTreeSha256 { get; init; }
+
+    /// <summary>
     /// Trust scope of this record: "machine" for a record anchored in the machine trust store by an
     /// elevated install, or "user" for a per-user fallback written beside the plugin bytes. Discovery
     /// refuses a user-scoped record when loading with administrator privileges, because the account
@@ -80,6 +87,48 @@ public static class PluginAdmissionTrustStore
     private static readonly UTF8Encoding StrictUtf8 = new(
         encoderShouldEmitUTF8Identifier: false,
         throwOnInvalidBytes: true);
+
+    /// <summary>
+    /// Binds all files and relative names in an admitted plugin package. No external
+    /// trust record is stored under this directory, so the digest is path-independent.
+    /// Reject reparse points instead of hashing bytes outside the plugin package.
+    /// </summary>
+    public static string ComputePluginPayloadDigest(string directory)
+    {
+        string root = Path.GetFullPath(directory);
+        if (!Directory.Exists(root) || (File.GetAttributes(root) & FileAttributes.ReparsePoint) != 0)
+            throw new InvalidDataException("Plugin payload directory is missing or redirected.");
+
+        using IncrementalHash digest = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
+        int entries = 0;
+        foreach (string entry in Directory.EnumerateFileSystemEntries(root, "*", SearchOption.AllDirectories)
+                     .OrderBy(path => Path.GetRelativePath(root, path), StringComparer.Ordinal))
+        {
+            if (++entries > 10000)
+                throw new InvalidDataException("Plugin package has too many filesystem entries.");
+            FileAttributes attributes = File.GetAttributes(entry);
+            if ((attributes & FileAttributes.ReparsePoint) != 0)
+                throw new InvalidDataException("Plugin package contains a symbolic link or reparse point.");
+
+            string relative = Path.GetRelativePath(root, entry).Replace('\\', '/');
+            if (relative.StartsWith("../", StringComparison.Ordinal) || Path.IsPathRooted(relative))
+                throw new InvalidDataException("Plugin package entry escaped its root.");
+
+            digest.AppendData(Encoding.UTF8.GetBytes(relative));
+            digest.AppendData(new byte[] { 0 });
+            if ((attributes & FileAttributes.Directory) != 0)
+            {
+                digest.AppendData(new byte[] { 1 });
+                continue;
+            }
+
+            digest.AppendData(new byte[] { 2 });
+            using FileStream stream = File.OpenRead(entry);
+            digest.AppendData(SHA256.HashData(stream));
+        }
+        return Convert.ToHexString(digest.GetHashAndReset()).ToLowerInvariant();
+    }
+
 
     /// <summary>
     /// Returns the machine-wide trust root that anchors plugin admission records. Residing under
