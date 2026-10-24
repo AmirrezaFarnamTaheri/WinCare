@@ -63,6 +63,11 @@
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
                 <Border x:Name="TotalMetric" Style="{StaticResource SurfaceBorderStyle}" Padding="16">
                     <StackPanel Spacing="4">
                         <TextBlock Style="{StaticResource FieldLabelTextStyle}" Text="Total downloads" />
