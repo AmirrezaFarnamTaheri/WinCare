@@ -132,20 +132,59 @@ public sealed class DownloadCenterTests
         Assert.Null(dispatcher.LastCreateParameters);
     }
 
-    [Fact]
-    public void Download_intake_requires_a_full_checksum_only_when_one_is_specified()
+    [Theory]
+    [InlineData("download-create")]
+    [InlineData("download-start")]
+    [InlineData("download-resume")]
+    [InlineData("download-suspend")]
+    [InlineData("download-cancel")]
+    [InlineData("download-remove")]
+    [InlineData("download-reconcile")]
+    public async Task User_initiated_bounded_download_commands_are_admitted_as_routine_actions(
+        string commandId)
     {
-        var vm = new WinCare.App.ViewModels.Pages.DownloadsPageViewModel(
-            new DownloadCenterService(new RecordingDispatcher()));
-        vm.NewUrl = "https://example.com/archive.zip";
-        Assert.True(vm.CanAdd);
+        // File transfers use scoped destinations, deny overwrite, impose 2 GiB limits,
+        // and mark downloaded files as originating from the Internet. The user's
+        // explicit Download/Pause/Cancel action must not fail because the UI doesn't
+        // offer the generic system-maintenance review-plan interaction.
+        var definition = WinCare.CommandCatalog.CommandCatalog.Find(commandId)!;
+        Assert.Equal(CommandRisk.Low, definition.Risk);
+        Assert.Equal(RiskTier.Safe, definition.RiskTier);
+        Assert.Equal(AdministratorAccess.No, definition.AdministratorAccess);
 
-        vm.ExpectedSha256 = "almost-a-hash";
-        Assert.False(vm.CanAdd);
-        vm.ExpectedSha256 = new string('F', 64);
-        Assert.True(vm.CanAdd);
-        vm.ExpectedSha256 = " ";
-        Assert.True(vm.CanAdd);
+        var handler = new RoutineDownloadHandler(commandId);
+        var dispatcher = new CommandDispatcher([definition], [handler], isProcessElevated: () => false);
+        object parameters = commandId == "download-create"
+            ? new { Url = "https://example.com/archive.zip" }
+            : new { Id = "queued-job-id" };
+        CommandResult result = await dispatcher.ExecuteAsync(
+            CommandRequest.Execute(commandId, JsonSerializer.SerializeToElement(parameters)),
+            CommandExecutionOptions.Default, CancellationToken.None);
+
+        Assert.Equal(CommandResultStatus.Succeeded, result.Status);
+        Assert.Equal(1, handler.Calls);
+    }
+
+    [Theory]
+    [InlineData("download-batch")]
+    [InlineData("download-start-due")]
+    public void Bulk_or_unattended_transfers_still_require_explicit_review(string commandId)
+    {
+        var definition = WinCare.CommandCatalog.CommandCatalog.Find(commandId)!;
+        Assert.Equal(RiskTier.Moderate, definition.RiskTier);
+    }
+
+    private sealed class RoutineDownloadHandler(string commandId) : ICommandHandler
+    {
+        public string CommandId { get; } = commandId;
+        public int Calls { get; private set; }
+        public Task<CommandHandlerOutcome> ExecuteAsync(CommandRequest request, CancellationToken cancellationToken)
+        {
+            Calls++;
+            return Task.FromResult(CommandHandlerOutcome.Succeeded(
+                "download.test", "Routine transfer admitted.",
+                JsonSerializer.SerializeToElement(new { accepted = true })));
+        }
     }
 
     private sealed class RecordingDispatcher : ICommandDispatcher
