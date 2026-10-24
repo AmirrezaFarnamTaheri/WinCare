@@ -25,6 +25,10 @@ try {
     $previous = $null
     if ($PreviousPackagePath) {
         if (-not (Test-Path -LiteralPath $PreviousPackagePath -PathType Leaf)) { throw 'Previous package missing.' }
+        $oldSig = Get-AuthenticodeSignature -LiteralPath $PreviousPackagePath
+        if (-not $oldSig.SignerCertificate -or $oldSig.SignerCertificate.Thumbprint -ne $cert.Thumbprint) {
+            throw 'Upgrade baseline is signed by a different identity.'
+        }
         Add-AppxPackage -Path $PreviousPackagePath -ForceApplicationShutdown
         $previous = @(Get-AppxPackage -Name $name)
         if ($previous.Count -ne 1) { throw 'Previous version did not install.' }

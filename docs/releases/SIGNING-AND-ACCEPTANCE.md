@@ -26,3 +26,19 @@ installation, launch, exit, upgrade from an older signed version, preservation o
 repair/reinstall, uninstall, reboot and recovery, both x64 and ARM64, UI automation at 100/150/200%
 scaling, Narrator keyboard navigation, and fault-injected registry rollback. Save evidence with
 build SHA, signer thumbprint and OS version. CI portable smoke alone cannot prove these steps.
+
+
+## Opt-in disposable installed MSIX acceptance
+
+The Native WinUI workflow exposes a manual **run_installed_acceptance** input.
+Select this only for a workflow_dispatch run. It uses disposable Windows x64
+and ARM64 runners, downloads the architecture-specific CI package and matching
+development signer, verifies the signer, installs the MSIX, inspects the installed
+publisher/version and uninstalls the package in a cleanup block. The script
+refuses execution unless WINCARE_DISPOSABLE_TEST_HOST=1 and the host has no
+pre-existing WinCare registration. An optional PreviousPackagePath supports a
+same-signer upgrade scenario when manually invoked with genuine old/new MSIXs.
+
+This test is not automatic in pull requests and has not established upgrade from
+a real published release, reboot persistence, GUI installer usability, or store
+certification. Store the run logs and package hashes with release acceptance.
