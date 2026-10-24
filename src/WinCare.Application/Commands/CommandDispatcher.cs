@@ -265,8 +265,8 @@ public sealed class CommandDispatcher : ICommandDispatcher
                         $"Mutating command '{request.CommandId}' requires explicit ReviewApproved confirmation.", null, false, startedAt);
                 }
 
-                // If a review plan was supplied, validate and consume it; otherwise admit directly with user confirmation.
-                if (request.Approval is not null && !TryConsumeIssuedReviewPlan(request, definition))
+                // Moderate mutations also require a current one-use preview-bound review plan; boolean confirmation alone is insufficient.
+                if (!TryConsumeIssuedReviewPlan(request, definition))
                 {
                     return CreateResult(request, CommandResultStatus.Blocked, "command.approval_plan_invalid",
                         $"Mutating command '{request.CommandId}' supplied an invalid, expired, or already-consumed review plan.", null, false, startedAt);

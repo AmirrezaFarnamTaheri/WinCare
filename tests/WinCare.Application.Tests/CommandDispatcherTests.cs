@@ -385,13 +385,19 @@ public sealed class CommandDispatcherTests
         RecordingHandler handler = new("elevated");
         CommandDispatcher dispatcher = CreateDispatcher([definition], [handler], isProcessElevated: () => true);
 
+        CommandResult preview = await dispatcher.ExecuteAsync(
+            Request("elevated", apply: false),
+            CommandExecutionOptions.Default,
+            CancellationToken.None);
+        Assert.NotNull(preview.ReviewPlan);
+
         CommandResult result = await dispatcher.ExecuteAsync(
-            Request("elevated", apply: true),
+            CommandRequest.Execute("elevated", approval: preview.ReviewPlan),
             new CommandExecutionOptions(ReviewApproved: true),
             CancellationToken.None);
 
         Assert.Equal(CommandResultStatus.Succeeded, result.Status);
-        Assert.Equal(1, handler.InvocationCount);
+        Assert.Equal(2, handler.InvocationCount);
     }
 
     [Fact]
