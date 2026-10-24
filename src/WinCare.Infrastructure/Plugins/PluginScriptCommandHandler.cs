@@ -82,7 +82,11 @@ namespace WinCare.Infrastructure.Plugins
             // approved mutation plan before the script is allowed to run.
             if (!request.Apply && !_declaredReadOnly)
             {
-                return BuildPreviewOutcome(request);
+                // A preview must not imply that tampered or untrusted plugin bytes
+                // are ready for approval. Elevated users may inspect the preview,
+                // but the executable apply path is always checked separately.
+                CommandHandlerOutcome? previewIntegrity = VerifyAdmittedPayload(requireNonElevated: false);
+                return previewIntegrity ?? BuildPreviewOutcome(request);
             }
 
             // Defense-in-depth: a mutating script must carry an approved mutation plan even
@@ -98,7 +102,7 @@ namespace WinCare.Infrastructure.Plugins
 
             try
             {
-                CommandHandlerOutcome? integrity = VerifyAdmittedPayload();
+                CommandHandlerOutcome? integrity = VerifyAdmittedPayload(requireNonElevated: true);
                 if (integrity is not null) return integrity;
 
                 var ext = Path.GetExtension(_scriptFullPath).ToLowerInvariant();
@@ -197,7 +201,7 @@ namespace WinCare.Infrastructure.Plugins
             }
         }
 
-        private CommandHandlerOutcome? VerifyAdmittedPayload()
+        private CommandHandlerOutcome? VerifyAdmittedPayload(bool requireNonElevated)
         {
             if (!_requiresAdmission) return null;
 
@@ -221,7 +225,7 @@ namespace WinCare.Infrastructure.Plugins
                 // User-writable script directories cannot provide an atomic, immutable
                 // code snapshot to an elevated interpreter. Do not promote user-scope
                 // script content into administrator execution on a timing race.
-                if (PluginAdmissionTrustStore.IsCurrentProcessElevated())
+                if (requireNonElevated && PluginAdmissionTrustStore.IsCurrentProcessElevated())
                     return CommandHandlerOutcome.Blocked("plugin.elevated_script_unsupported",
                         "External script plugins cannot run elevated until protected immutable staging is available.");
 
@@ -251,7 +255,7 @@ namespace WinCare.Infrastructure.Plugins
                 parameters = request.Parameters.ValueKind == JsonValueKind.Object
                     ? request.Parameters.Clone()
                     : JsonSerializer.SerializeToElement(new { }),
-                note = "A third-party script would run in-process with your user privileges on approval. Review the declared capabilities before approving."
+                note = "A third-party script would launch as a separate process under the current Windows session privileges, if permitted by admission policy. Review the declared capabilities before approving."
             });
 
             return CommandHandlerOutcome.Succeeded(

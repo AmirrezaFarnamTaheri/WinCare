@@ -237,8 +237,16 @@ public sealed class PluginRegistryServiceTests
 
             var request = CommandRequest.Preview("e2e.tool1");
             var result = await dispatcher.ExecuteAsync(request, CommandExecutionOptions.Default, CancellationToken.None);
-            Assert.Equal(CommandResultStatus.Succeeded, result.Status);
-            Assert.Contains("E2E_PLUGIN_SUCCESS", result.Message);
+            if (PluginAdmissionTrustStore.IsCurrentProcessElevated())
+            {
+                Assert.Equal(CommandResultStatus.Blocked, result.Status);
+                Assert.Equal("plugin.elevated_script_unsupported", result.Code);
+            }
+            else
+            {
+                Assert.Equal(CommandResultStatus.Succeeded, result.Status);
+                Assert.Contains("E2E_PLUGIN_SUCCESS", result.Message);
+            }
 
             await service.DisablePluginAsync("com.wincare.e2e", host);
             Assert.DoesNotContain(host.RegisteredCommands, c => c.Id == "e2e.tool1");
@@ -480,8 +488,16 @@ public sealed class PluginRegistryServiceTests
                 CommandRequest.Execute("mutating.tool1", previewRequest.Parameters, approval),
                 new CommandExecutionOptions(ReviewApproved: true),
                 CancellationToken.None);
-            Assert.Equal(CommandResultStatus.Succeeded, apply.Status);
-            Assert.Contains("MUTATION_RAN", apply.Message);
+            if (PluginAdmissionTrustStore.IsCurrentProcessElevated())
+            {
+                Assert.Equal(CommandResultStatus.Blocked, apply.Status);
+                Assert.Equal("plugin.elevated_script_unsupported", apply.Code);
+            }
+            else
+            {
+                Assert.Equal(CommandResultStatus.Succeeded, apply.Status);
+                Assert.Contains("MUTATION_RAN", apply.Message);
+            }
         }
         finally
         {
