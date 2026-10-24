@@ -145,6 +145,24 @@ public sealed class CommandDispatcherTests
     }
 
     [Fact]
+    public async Task Moderate_mutation_cannot_bypass_a_target_bound_preview_with_a_boolean_approval()
+    {
+        CommandDefinition definition = Definition("change", MigrationStatus.Implemented, readOnly: false);
+        RecordingHandler handler = new("change");
+        CommandDispatcher dispatcher = CreateDispatcher([definition], [handler]);
+        JsonElement parameters = JsonSerializer.SerializeToElement(new { value = 1 });
+
+        CommandResult applied = await dispatcher.ExecuteAsync(
+            CommandRequest.Execute("change", parameters),
+            new CommandExecutionOptions(ReviewApproved: true),
+            CancellationToken.None);
+
+        Assert.Equal(CommandResultStatus.Blocked, applied.Status);
+        Assert.Equal("command.approval_plan_invalid", applied.Code);
+        Assert.Equal(0, handler.InvocationCount);
+    }
+
+    [Fact]
     public async Task Successful_mutation_preview_issues_single_use_review_plan()
     {
         CommandDefinition definition = Definition("change", MigrationStatus.Implemented, readOnly: false);
