@@ -30,6 +30,15 @@ public sealed class CheckupSessionStore
         new HashSet<string>(StringComparer.Ordinal)
         { "Pending", "Running", "Checked", "NeedsReview", "Cancelled", "Interrupted" };
 
+    /// <summary>
+    /// Successful data collection is not the same as a healthy device. Carry visible
+    /// warning and critical findings into Home's durable single-session summary.
+    /// </summary>
+    public static string ClassifyArea(string probeState, string? assessmentBrush) =>
+        probeState == "Checked" &&
+        assessmentBrush is ("WarningBrush" or "DangerBrush")
+            ? "NeedsReview" : probeState;
+
     private readonly string _path;
     private readonly SemaphoreSlim _writeGate = new(1, 1);
     private CheckupSessionSnapshot? _latest;

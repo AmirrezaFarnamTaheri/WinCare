@@ -124,7 +124,7 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
         {
             foreach (string id in CheckupSessionStore.ProbeIds) probeStates[id] = "Running";
             await SaveSessionAsync(sessionId, startedAt, "Running", probeStates).ConfigureAwait(true);
-        {
+
             foreach ((_, string rowTitle) in FastCheckCommands)
             {
                 PageRow? row = Sections[0].Rows.FirstOrDefault(candidate => candidate.Title == rowTitle);
@@ -164,6 +164,7 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
             }
 
             EvaluateFindings(fastDict, null);
+            MapAreaFindingsIntoSession(probeStates);
             await SaveSessionAsync(sessionId, startedAt, "Running", probeStates).ConfigureAwait(true);
 
             CommandResult updateResult = await updateTask;
@@ -171,6 +172,7 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
             ApplyWuaResult(updateResult, fastDict);
             probeStates[WuaCommandId] = updateResult.Status == CommandResultStatus.Succeeded
                 ? "Checked" : "NeedsReview";
+            MapAreaFindingsIntoSession(probeStates);
             await SaveSessionAsync(sessionId, startedAt, "Completed", probeStates).ConfigureAwait(true);
             recordedFinalSession = true;
         }
@@ -209,6 +211,20 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
             IsRunning = false;
             IsStopping = false;
         }
+    }
+
+    private void MapAreaFindingsIntoSession(IDictionary<string, string> probeStates)
+    {
+        foreach ((string id, string rowTitle) in FastCheckCommands)
+        {
+            PageRow? row = Sections[0].Rows.FirstOrDefault(item => item.Title == rowTitle);
+            probeStates[id] = CheckupSessionStore.ClassifyArea(
+                probeStates[id], row?.StatusBrushKey);
+        }
+
+        PageRow? updates = Sections[0].Rows.FirstOrDefault(item => item.Title == WuaRowTitle);
+        probeStates[WuaCommandId] = CheckupSessionStore.ClassifyArea(
+            probeStates[WuaCommandId], updates?.StatusBrushKey);
     }
 
     /// <summary>Only the four probe states are saved, never raw command payloads.</summary>

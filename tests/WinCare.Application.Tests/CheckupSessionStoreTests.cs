@@ -65,4 +65,17 @@ public sealed class CheckupSessionStoreTests
         }
         finally { Directory.Delete(folder, recursive: true); }
     }
+
+    [Theory]
+    [InlineData("Checked", "SuccessBrush", "Checked")]
+    [InlineData("Checked", "WarningBrush", "NeedsReview")]
+    [InlineData("Checked", "DangerBrush", "NeedsReview")]
+    [InlineData("NeedsReview", "SuccessBrush", "NeedsReview")]
+    [InlineData("Running", "WarningBrush", "Running")]
+    public void Probe_success_with_adverse_findings_is_not_presented_as_clean_checkup(
+        string probeState, string brush, string expected)
+    {
+        Assert.Equal(expected, CheckupSessionStore.ClassifyArea(probeState, brush));
+    }
+
 }

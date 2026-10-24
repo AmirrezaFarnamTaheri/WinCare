@@ -17,6 +17,8 @@ class CheckupSessionWiringTests(unittest.TestCase):
         self.assertIn('SaveSessionAsync(sessionId, startedAt, "Completed"', source)
         self.assertIn('cancelled ? "Cancelled" : "Incomplete"', source)
         self.assertIn("CheckupSessionStore.ProbeIds", source)
+        self.assertIn("MapAreaFindingsIntoSession(probeStates)", source)
+        self.assertNotIn('ConfigureAwait(true);\n        {\n            foreach', source)
 
     def test_app_shared_store_drives_home_and_capture_mode_isolated_data_root(self):
         page = (ROOT / "src/WinCare.App/Views/Pages/HomePage.xaml.cs").read_text()
