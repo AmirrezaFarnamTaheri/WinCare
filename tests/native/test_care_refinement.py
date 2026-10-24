@@ -46,9 +46,10 @@ class CareRefinementTests(unittest.TestCase):
 
     def test_home_does_not_call_an_inactive_partial_check_running(self):
         source = self.read("ViewModels/Pages/HomePageViewModel.cs")
-        self.assertIn("bool isChecking = latestByCommand.Values.Any", source)
-        self.assertIn('CheckupTitle = "Checkup is incomplete";', source)
-        self.assertIn('else if (isChecking)', source)
+        self.assertIn('if (checkup.Status == "Running")', source)
+        self.assertIn('CheckupTitle = "Checkup in progress";', source)
+        self.assertIn('CheckupTitle = checkup.Status == "Cancelled" ? "Checkup stopped" : "Checkup incomplete";', source)
+        self.assertNotIn("latestByCommand", source)
 
     def test_activity_points_to_a_real_section_and_shows_dates(self):
         page = self.read("Views/Pages/ActivityPage.xaml")
