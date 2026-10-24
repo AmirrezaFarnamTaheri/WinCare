@@ -135,6 +135,7 @@ public static class BencodeDecoder
         if (bencodeBytes.Length == 0 || bencodeBytes[0] != (byte)'d')
             throw new FormatException("Torrent root must be a dictionary.");
 
+        byte[]? infoHash = null;
         int index = 1;
         while (index < bencodeBytes.Length && bencodeBytes[index] != (byte)'e')
         {
@@ -146,13 +147,15 @@ public static class BencodeDecoder
             SkipElement(bencodeBytes, ref index);
             if (keyBytes.AsSpan().SequenceEqual("info"u8))
             {
+                if (infoHash is not null)
+                    throw new FormatException("Torrent contains duplicate root 'info' keys.");
                 if (start >= bencodeBytes.Length || bencodeBytes[start] != (byte)'d')
                     throw new FormatException("Torrent info must be a dictionary.");
-                return SHA1.HashData(bencodeBytes.AsSpan(start, index - start));
+                infoHash = SHA1.HashData(bencodeBytes.AsSpan(start, index - start));
             }
         }
 
-        throw new FormatException("Torrent missing root 'info' dictionary.");
+        return infoHash ?? throw new FormatException("Torrent missing root 'info' dictionary.");
     }
 
     private static void SkipElement(byte[] data, ref int index, int depth = 0)

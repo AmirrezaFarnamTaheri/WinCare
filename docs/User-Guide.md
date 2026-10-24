@@ -161,6 +161,8 @@ Troubleshoot cannot create its own execution approval. Errors are shown as plain
 
 Extensions run in process with the current user's WinCare permissions. Their declared capabilities tell you what they expect to use; they are not a sandbox.
 
+**Installed extension packages are immutable after admission.** Every package file and path participates in an integrity digest. Creating a log, cache, or marker inside the installed extension folder changes that digest and blocks later execution. Extension authors must write mutable state under their own Windows Local AppData or temporary directory, not next to installed scripts. Files bundled with the extension can be located relative to the script's own path. External scripts cannot run elevated until protected immutable staging is available.
+
 ### Current release behavior
 
 This repository does **not** ship an approved production extension-catalog public key or a live official signed catalog. Remote installation therefore remains browse-only/disabled until a trusted production catalog is configured.

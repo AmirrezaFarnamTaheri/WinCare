@@ -95,40 +95,69 @@ public static class PluginAdmissionTrustStore
     /// </summary>
     public static string ComputePluginPayloadDigest(string directory)
     {
+        const int maxEntries = 10_000;
+        const int maxDepth = 64;
+        const long maxBytes = 200L * 1024 * 1024;
         string root = Path.GetFullPath(directory);
         if (!Directory.Exists(root) || (File.GetAttributes(root) & FileAttributes.ReparsePoint) != 0)
             throw new InvalidDataException("Plugin payload directory is missing or redirected.");
 
-        using IncrementalHash digest = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
-        int entries = 0;
-        foreach (string entry in Directory.EnumerateFileSystemEntries(root, "*", SearchOption.AllDirectories)
-                     .OrderBy(path => Path.GetRelativePath(root, path), StringComparer.Ordinal))
+        // Enumerate one level at a time. Recursive enumeration may follow an
+        // attacker-controlled junction before callers can inspect its attributes,
+        // and OrderBy on the recursive result buffers paths before applying limits.
+        var pending = new Stack<(string Directory, int Depth)>();
+        var entries = new List<(string Path, string Relative, bool IsDirectory)>();
+        pending.Push((root, 0));
+        long totalBytes = 0;
+        while (pending.Count > 0)
         {
-            if (++entries > 10000)
-                throw new InvalidDataException("Plugin package has too many filesystem entries.");
-            FileAttributes attributes = File.GetAttributes(entry);
-            if ((attributes & FileAttributes.ReparsePoint) != 0)
-                throw new InvalidDataException("Plugin package contains a symbolic link or reparse point.");
+            (string current, int depth) = pending.Pop();
+            if (depth > maxDepth)
+                throw new InvalidDataException("Plugin package directory nesting is excessive.");
 
-            string relative = Path.GetRelativePath(root, entry).Replace('\\', '/');
-            if (relative.StartsWith("../", StringComparison.Ordinal) || Path.IsPathRooted(relative))
-                throw new InvalidDataException("Plugin package entry escaped its root.");
-
-            digest.AppendData(Encoding.UTF8.GetBytes(relative));
-            digest.AppendData(new byte[] { 0 });
-            if ((attributes & FileAttributes.Directory) != 0)
+            foreach (string entry in Directory.EnumerateFileSystemEntries(
+                         current, "*", SearchOption.TopDirectoryOnly))
             {
-                digest.AppendData(new byte[] { 1 });
-                continue;
-            }
+                if (entries.Count >= maxEntries)
+                    throw new InvalidDataException("Plugin package has too many filesystem entries.");
 
-            digest.AppendData(new byte[] { 2 });
-            using FileStream stream = File.OpenRead(entry);
+                FileAttributes attributes = File.GetAttributes(entry);
+                if ((attributes & FileAttributes.ReparsePoint) != 0)
+                    throw new InvalidDataException("Plugin package contains a symbolic link or reparse point.");
+                string relative = Path.GetRelativePath(root, entry).Replace('\\', '/');
+                if (relative.StartsWith("../", StringComparison.Ordinal) || Path.IsPathRooted(relative))
+                    throw new InvalidDataException("Plugin package entry escaped its root.");
+
+                bool isDirectory = (attributes & FileAttributes.Directory) != 0;
+                entries.Add((entry, relative, isDirectory));
+                if (isDirectory)
+                {
+                    pending.Push((entry, depth + 1));
+                }
+                else
+                {
+                    totalBytes = checked(totalBytes + new FileInfo(entry).Length);
+                    if (totalBytes > maxBytes)
+                        throw new InvalidDataException("Plugin package is larger than the admitted payload limit.");
+                }
+            }
+        }
+
+        using IncrementalHash digest = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
+        foreach (var entry in entries.OrderBy(item => item.Relative, StringComparer.Ordinal))
+        {
+            digest.AppendData(Encoding.UTF8.GetBytes(entry.Relative));
+            digest.AppendData(new byte[] { 0 });
+            digest.AppendData(new byte[] { entry.IsDirectory ? (byte)1 : (byte)2 });
+            if (entry.IsDirectory) continue;
+
+            using FileStream stream = File.OpenRead(entry.Path);
+            if (stream.Length > maxBytes)
+                throw new InvalidDataException("Plugin payload file exceeds the admitted size limit.");
             digest.AppendData(SHA256.HashData(stream));
         }
         return Convert.ToHexString(digest.GetHashAndReset()).ToLowerInvariant();
     }
-
 
     /// <summary>
     /// Returns the machine-wide trust root that anchors plugin admission records. Residing under

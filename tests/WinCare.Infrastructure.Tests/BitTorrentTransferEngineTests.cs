@@ -107,6 +107,16 @@ public sealed class BitTorrentTransferEngineTests
         Assert.Equal(expected, metadata.InfoHashHex);
     }
 
+    [Fact]
+    public void Bencode_rejects_duplicate_root_info_keys()
+    {
+        string first = "d6:lengthi1e4:name1:a12:piece lengthi1e6:pieces20:12345678901234567890e";
+        string second = "d6:lengthi1e4:name1:b12:piece lengthi1e6:pieces20:12345678901234567890e";
+        byte[] bytes = Encoding.Latin1.GetBytes($"d4:info{first}4:info{second}e");
+
+        Assert.Throws<FormatException>(() => BencodeDecoder.DecodeTorrentFile(bytes));
+    }
+
     [Theory]
     [InlineData("../escape.dat")]
     [InlineData(@"..\\escape.dat")]

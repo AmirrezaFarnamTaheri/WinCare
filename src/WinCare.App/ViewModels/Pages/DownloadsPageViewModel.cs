@@ -56,7 +56,7 @@ public sealed class DownloadsPageViewModel : ObservableObject
         !IsBusy &&
         Uri.TryCreate(_newUrl.Trim(), UriKind.Absolute, out Uri? uri) &&
         uri.Scheme is "http" or "https" &&
-        uri.UserInfo.Length == 0 && uri.AbsoluteUri.Length <= 4096;
+        uri.UserInfo.Length == 0 && uri.AbsoluteUri.Length <= 2048;
 
     public bool HasNotice => _notice.Length > 0;
     public string Notice
@@ -265,7 +265,7 @@ public sealed class DownloadsPageViewModel : ObservableObject
                 return;
             }
             Notice = action == "resume"
-                ? "Download restarting from the beginning. The previous partial file is not reused without verification."
+                ? "Download attempt started. Partial bytes are reused only when an expected SHA-256 digest and valid HTTP range support safe resumption; otherwise it restarts."
                 : "Download started. You can keep using WinCare.";
             await RefreshAsync();
             return;

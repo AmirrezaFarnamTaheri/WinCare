@@ -85,7 +85,8 @@ namespace WinCare.Infrastructure.Plugins
                 // A preview must not imply that tampered or untrusted plugin bytes
                 // are ready for approval. Elevated users may inspect the preview,
                 // but the executable apply path is always checked separately.
-                CommandHandlerOutcome? previewIntegrity = VerifyAdmittedPayload(requireNonElevated: false);
+                CommandHandlerOutcome? previewIntegrity = await Task.Run(
+                    () => VerifyAdmittedPayload(requireNonElevated: false), cancellationToken).ConfigureAwait(false);
                 return previewIntegrity ?? BuildPreviewOutcome(request);
             }
 
@@ -102,7 +103,8 @@ namespace WinCare.Infrastructure.Plugins
 
             try
             {
-                CommandHandlerOutcome? integrity = VerifyAdmittedPayload(requireNonElevated: true);
+                CommandHandlerOutcome? integrity = await Task.Run(
+                    () => VerifyAdmittedPayload(requireNonElevated: true), cancellationToken).ConfigureAwait(false);
                 if (integrity is not null) return integrity;
 
                 var ext = Path.GetExtension(_scriptFullPath).ToLowerInvariant();

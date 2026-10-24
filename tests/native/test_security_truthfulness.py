@@ -15,6 +15,8 @@ class SecurityTruthfulnessTests(unittest.TestCase):
         self.assertIn("defenderServiceStateKnown", checkup)
         self.assertNotIn('findings.Add("Windows Defender isn\'t running")', checkup)
         self.assertIn("could not be confirmed", checkup)
+        self.assertIn('stateElement.GetString() == "Transitioning"', checkup)
+        self.assertIn("service is starting or stopping", checkup)
 
 
 if __name__ == "__main__":

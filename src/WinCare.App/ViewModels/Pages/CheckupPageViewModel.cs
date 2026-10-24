@@ -336,6 +336,19 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
                         SetNavigationAction(securityRow, "Review security", SecurityRoute, "Status");
                     }
                 }
+                else if (securityResult.Data.Value.TryGetProperty("defenderServiceState", out JsonElement stateElement) &&
+                         stateElement.ValueKind == JsonValueKind.String &&
+                         stateElement.GetString() == "Transitioning")
+                {
+                    hasWarning = true;
+                    findings.Add("Microsoft Defender service is starting or stopping; verify protection after the transition");
+                    if (securityRow is not null)
+                    {
+                        securityRow.State = "Service transitioning";
+                        securityRow.StatusBrushKey = "WarningBrush";
+                        SetNavigationAction(securityRow, "Review security", SecurityRoute, "Status");
+                    }
+                }
                 else if (securityResult.Data.Value.TryGetProperty("defenderServiceRunning", out JsonElement defenderElement) &&
                          defenderElement.ValueKind == JsonValueKind.False)
                 {
