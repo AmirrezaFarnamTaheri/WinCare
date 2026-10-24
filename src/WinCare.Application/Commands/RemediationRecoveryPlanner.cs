@@ -20,58 +20,35 @@ public static class RemediationRecoveryPlanner
         if (history.ValueKind != JsonValueKind.Object) return Failed("Recovery history must be an object.");
         string executionId = ReadString(history, "id");
         if (executionId.Length == 0) return Failed("Recovery history has no execution ID.");
-        string status = ReadString(history, "status");
-        bool isComplete = string.Equals(status, AppliedStatus, StringComparison.Ordinal);
-        bool isInterrupted = status is "Applying" or "PartiallyApplied" or "Cancelled";
-        // Older partial receipts omitted the planned change kinds. They cannot prove all
-        // side effects are registry-only, so never promise a complete compensation for them.
-        if (!isComplete && (!isInterrupted ||
-            !string.Equals(ReadString(history, "recoveryScope"), "RegistryOnly", StringComparison.Ordinal)))
-            return Failed("Only applied or journaled registry-only remediation can be restored.");
-
-        var evidence = new List<(JsonElement Change, bool PendingUncertain)>();
-        if (history.TryGetProperty("changes", out JsonElement changes) && changes.ValueKind == JsonValueKind.Array)
-        {
-            foreach (JsonElement change in changes.EnumerateArray())
-                evidence.Add((change, false));
-        }
-        else
-        {
-            return Failed("Recovery history has no applied changes array.");
-        }
-
-        if (history.TryGetProperty("pendingRegistryChange", out JsonElement pending) &&
-            pending.ValueKind is not (JsonValueKind.Null or JsonValueKind.Undefined))
-        {
-            if (isComplete || pending.ValueKind != JsonValueKind.Object)
-                return Failed("Recovery history has invalid pending change evidence.");
-            evidence.Add((pending, true));
-        }
-
-        if (evidence.Count is < 1 or > MaximumSteps)
-            return Failed($"Recovery history must contain 1 to {MaximumSteps} applied or prepared changes.");
+        if (!string.Equals(ReadString(history, "status"), AppliedStatus, StringComparison.Ordinal))
+            return Failed("Only a completed applied remediation can be restored.");
+        if (!history.TryGetProperty("changes", out JsonElement changes) || changes.ValueKind != JsonValueKind.Array || changes.GetArrayLength() is < 1 or > MaximumSteps)
+            return Failed($"Recovery history must contain 1 to {MaximumSteps} applied changes.");
 
         var steps = new List<RegistryRecoveryStep>();
-        foreach ((JsonElement change, bool pendingUncertain) in evidence.AsEnumerable().Reverse())
+        foreach (JsonElement change in changes.EnumerateArray().Reverse())
         {
-            if (change.ValueKind != JsonValueKind.Object ||
-                !string.Equals(ReadString(change, "Type"), RegistryChangeKind, StringComparison.Ordinal) ||
+            if (!string.Equals(ReadString(change, "Type"), RegistryChangeKind, StringComparison.Ordinal) ||
                 !change.TryGetProperty("detail", out JsonElement detail) || detail.ValueKind != JsonValueKind.Object)
                 return Failed("This remediation contains a change type without a complete executable compensator.");
             string path = ReadString(detail, "path");
             string name = ReadString(detail, "name");
             string appliedValueType = ReadString(detail, "valueType");
             if (path.Length == 0 || name.Length == 0 || appliedValueType.Length == 0 || !detail.TryGetProperty("value", out JsonElement appliedValue))
-                return Failed("A registry change is missing applied-value recovery evidence.");
-            // Missing 'previous' is corruption, while explicit JSON null means the
-            // value was absent before the write and must be removed during recovery.
+                return Failed("An applied registry change is missing recovery evidence.");
+            // The restore executor gives `previous: null` a precise meaning: the registry value
+            // did not exist before this remediation, so the compensator deletes the value it
+            // created. That is a valid, restorable undo and must stay executable.
             if (!detail.TryGetProperty("previous", out JsonElement previousValue))
-                return Failed($"Registry change '{name}' has no previous-value evidence.");
+            {
+                // The apply path always writes `previous` (as null when the value was newly
+                // created), so an absent property means the record is corrupt or predates the
+                // field. No compensator can be built from it, and promising one would be unsafe.
+                return Failed($"Applied registry change '{name}' has no previous-value evidence, so no compensator can be built for it.");
+            }
             JsonElement? previous = previousValue.ValueKind == JsonValueKind.Null ? null : previousValue.Clone();
-            string? previousKind = detail.TryGetProperty("previousKind", out JsonElement kind) &&
-                kind.ValueKind == JsonValueKind.String ? kind.GetString() : null;
-            steps.Add(new RegistryRecoveryStep(
-                path, name, appliedValue.Clone(), appliedValueType, previous, previousKind, pendingUncertain));
+            string? previousKind = detail.TryGetProperty("previousKind", out JsonElement kind) && kind.ValueKind == JsonValueKind.String ? kind.GetString() : null;
+            steps.Add(new RegistryRecoveryStep(path, name, appliedValue.Clone(), appliedValueType, previous, previousKind));
         }
         string digest = ApprovedMutationPlan.ComputeCanonicalDigest(history).ToLowerInvariant();
         return new RemediationRecoveryPlan(SchemaVersion, executionId, digest, steps, []);
@@ -89,4 +66,4 @@ public sealed record RemediationRecoveryPlan(int SchemaVersion, string Execution
 }
 
 public sealed record RegistryRecoveryStep(string Path, string Name, JsonElement AppliedValue,
-    string AppliedValueType, JsonElement? PreviousValue, string? PreviousValueKind, bool PendingUncertain = false);
+    string AppliedValueType, JsonElement? PreviousValue, string? PreviousValueKind);
