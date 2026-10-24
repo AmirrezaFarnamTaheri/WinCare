@@ -1,6 +1,5 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Navigation;
 using WinCare.App.ViewModels.Pages;
 using WinCare.App.Views;
 
@@ -15,14 +14,6 @@ public sealed partial class CheckupPage : Page
     }
 
     public CheckupPageViewModel ViewModel { get; }
-
-    protected override void OnNavigatedFrom(NavigationEventArgs e)
-    {
-        // The page is cached: without this the awaited probe results land on a live object
-        // graph and rewrite rows the user is no longer looking at.
-        ViewModel.CancelRunningCheck();
-        base.OnNavigatedFrom(e);
-    }
 
     private void FindingAction_Click(object sender, RoutedEventArgs e)
     {
