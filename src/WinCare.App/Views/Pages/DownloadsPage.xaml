@@ -4,7 +4,6 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:controls="using:WinCare.App.Controls"
     xmlns:downloads="using:WinCare.Application.Downloads"
-    xmlns:transfers="using:WinCare.Application.Transfers"
     xmlns:local="using:WinCare.App.Views.Pages"
     NavigationCacheMode="Required"
     SizeChanged="Page_SizeChanged">
@@ -12,7 +11,6 @@
         <Grid x:Name="PageLayout" Padding="32,28,32,28" RowSpacing="20" MaxWidth="1280"
               HorizontalAlignment="Stretch">
             <Grid.RowDefinitions>
-                <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
@@ -101,103 +99,8 @@
                 </Border>
             </Grid>
 
-            <!-- BitTorrent Active Swarms Section -->
-            <StackPanel Grid.Row="3" Spacing="12"
-                        Visibility="{x:Bind local:DownloadsPage.BoolToVisibility(ViewModel.HasTorrents), Mode=OneWay}">
-                <Grid ColumnDefinitions="*,Auto">
-                    <TextBlock Text="Active BitTorrent Swarms" Style="{StaticResource SectionHeaderTextStyle}" VerticalAlignment="Center" />
-                    <Border Grid.Column="1" Background="{ThemeResource AccentChromeSubtleBrush}" CornerRadius="4" Padding="8,3">
-                        <TextBlock Text="BitTorrent Protocol BEP-0003/0009" FontSize="11" FontFamily="Cascadia Code" Foreground="{ThemeResource AccentChromeBrush}" />
-                    </Border>
-                </Grid>
-
-                <ItemsControl ItemsSource="{x:Bind ViewModel.Torrents, Mode=OneWay}">
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate x:DataType="transfers:TorrentSessionSnapshot">
-                            <Border Style="{StaticResource SurfaceBorderStyle}" Padding="20" Margin="0,0,0,14">
-                                <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto" RowSpacing="12">
-                                    <!-- Swarm Header -->
-                                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
-                                        <FontIcon Glyph="&#xE896;" Foreground="{ThemeResource AccentChromeBrush}" FontSize="20" VerticalAlignment="Center" />
-                                        <StackPanel Grid.Column="1" Spacing="2">
-                                            <TextBlock Text="{x:Bind Name}" FontWeight="SemiBold" FontSize="15" />
-                                            <TextBlock Text="{x:Bind InfoHashHex}" FontFamily="Cascadia Code" FontSize="11" Foreground="{ThemeResource TextSecondaryBrush}" />
-                                        </StackPanel>
-                                        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8">
-                                            <Border Background="{ThemeResource SurfaceSecondaryBrush}" BorderBrush="{ThemeResource BorderSubtleBrush}" BorderThickness="1" CornerRadius="4" Padding="8,4">
-                                                <TextBlock Text="{x:Bind StatusText}" FontSize="12" FontWeight="SemiBold" FontFamily="Cascadia Code" />
-                                            </Border>
-                                            <Button Content="Pause" Tag="{x:Bind}" Click="PauseTorrent_Click" Style="{StaticResource QuietButtonStyle}"
-                                                    AutomationProperties.Name="Pause torrent" />
-                                            <Button Content="Resume" Tag="{x:Bind}" Click="ResumeTorrent_Click" Style="{StaticResource QuietButtonStyle}"
-                                                    AutomationProperties.Name="Resume torrent" />
-                                            <Button Content="Remove" Tag="{x:Bind}" Click="RemoveTorrent_Click" Style="{StaticResource QuietButtonStyle}"
-                                                    AutomationProperties.Name="Remove torrent" />
-                                        </StackPanel>
-                                    </Grid>
-
-                                    <!-- Telemetry Numbers (Cascadia Code) -->
-                                    <Grid Grid.Row="1" ColumnDefinitions="Auto,Auto,Auto,Auto,*,Auto" ColumnSpacing="20">
-                                        <TextBlock Text="{x:Bind ProgressFormatted}" FontFamily="Cascadia Code" FontSize="13" FontWeight="SemiBold" />
-                                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4">
-                                            <TextBlock Text="▼" Foreground="{ThemeResource SuccessBrush}" FontSize="11" VerticalAlignment="Center" />
-                                            <TextBlock Text="{x:Bind DownloadRateFormatted}" FontFamily="Cascadia Code" FontSize="12" Foreground="{ThemeResource SuccessBrush}" />
-                                        </StackPanel>
-                                        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4">
-                                            <TextBlock Text="▲" Foreground="{ThemeResource AccentChromeBrush}" FontSize="11" VerticalAlignment="Center" />
-                                            <TextBlock Text="{x:Bind UploadRateFormatted}" FontFamily="Cascadia Code" FontSize="12" Foreground="{ThemeResource AccentChromeBrush}" />
-                                        </StackPanel>
-                                        <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="4">
-                                            <TextBlock Text="Peers:" Foreground="{ThemeResource TextSecondaryBrush}" FontSize="12" />
-                                            <TextBlock Text="{x:Bind ConnectedPeers}" FontFamily="Cascadia Code" FontSize="12" FontWeight="SemiBold" />
-                                            <TextBlock Text="/" Foreground="{ThemeResource TextSecondaryBrush}" FontSize="12" />
-                                            <TextBlock Text="{x:Bind TotalSwarmPeers}" FontFamily="Cascadia Code" FontSize="12" Foreground="{ThemeResource TextSecondaryBrush}" />
-                                        </StackPanel>
-                                        <StackPanel Grid.Column="5" Orientation="Horizontal" Spacing="4">
-                                            <TextBlock Text="ETA:" Foreground="{ThemeResource TextSecondaryBrush}" FontSize="12" />
-                                            <TextBlock Text="{x:Bind EtaFormatted}" FontFamily="Cascadia Code" FontSize="12" FontWeight="SemiBold" />
-                                        </StackPanel>
-                                    </Grid>
-
-                                    <!-- Progress Bar -->
-                                    <ProgressBar Grid.Row="2" Value="{x:Bind ProgressPercentage}" Maximum="100" MinHeight="6"
-                                                 Foreground="{ThemeResource AccentChromeBrush}" />
-
-                                    <!-- Piece Bitfield Diagnostics -->
-                                    <Grid Grid.Row="3" ColumnDefinitions="*,Auto">
-                                        <StackPanel Orientation="Horizontal" Spacing="8">
-                                            <TextBlock Text="Swarm Piece Integrity:" FontSize="12" Foreground="{ThemeResource TextSecondaryBrush}" />
-                                            <TextBlock Text="{x:Bind VerifiedPieces}" FontFamily="Cascadia Code" FontSize="12" FontWeight="SemiBold" />
-                                            <TextBlock Text="/" Foreground="{ThemeResource TextSecondaryBrush}" FontSize="12" />
-                                            <TextBlock Text="{x:Bind TotalPieces}" FontFamily="Cascadia Code" FontSize="12" Foreground="{ThemeResource TextSecondaryBrush}" />
-                                            <TextBlock Text="pieces verified via SHA-1" FontSize="12" Foreground="{ThemeResource TextSecondaryBrush}" />
-                                        </StackPanel>
-                                    </Grid>
-
-                                    <!-- Peer Telemetry Mesh Grid -->
-                                    <Border Grid.Row="4" Background="{ThemeResource SurfaceSecondaryBrush}" CornerRadius="6" Padding="12,8">
-                                        <ItemsControl ItemsSource="{x:Bind Peers}">
-                                            <ItemsControl.ItemTemplate>
-                                                <DataTemplate x:DataType="transfers:PeerTelemetry">
-                                                    <Grid ColumnDefinitions="160,140,110,*,Auto" Margin="0,3">
-                                                        <TextBlock Text="{x:Bind Endpoint}" FontFamily="Cascadia Code" FontSize="11" Foreground="{ThemeResource TextPrimaryBrush}" />
-                                                        <TextBlock Grid.Column="1" Text="{x:Bind ClientName}" FontSize="11" Foreground="{ThemeResource TextSecondaryBrush}" />
-                                                        <TextBlock Grid.Column="2" Text="{x:Bind Flags}" FontFamily="Cascadia Code" FontSize="10" Foreground="{ThemeResource TextSecondaryBrush}" />
-                                                        <TextBlock Grid.Column="4" Text="{x:Bind DownloadSpeedFormatted}" FontFamily="Cascadia Code" FontSize="11" Foreground="{ThemeResource SuccessBrush}" />
-                                                    </Grid>
-                                                </DataTemplate>
-                                            </ItemsControl.ItemTemplate>
-                                        </ItemsControl>
-                                    </Border>
-                                </Grid>
-                            </Border>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
-            </StackPanel>
-
             <!-- HTTP Downloads Filters & Search -->
-            <Grid x:Name="FiltersGrid" Grid.Row="4" ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto"
+            <Grid x:Name="FiltersGrid" Grid.Row="3" ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto"
                   ColumnSpacing="12" RowSpacing="8">
                 <SelectorBar x:Name="JobFilters" Grid.ColumnSpan="2" SelectionChanged="JobFilters_SelectionChanged"
                              AutomationProperties.Name="Filter downloads">
@@ -215,7 +118,7 @@
             </Grid>
 
             <!-- HTTP Downloads List -->
-            <Grid Grid.Row="5">
+            <Grid Grid.Row="4">
                 <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="8"
                             Visibility="{x:Bind local:DownloadsPage.BoolToVisibility(ViewModel.IsEmpty), Mode=OneWay}">
                     <FontIcon Glyph="&#xE896;" FontSize="32" Foreground="{ThemeResource TextSecondaryBrush}"
@@ -285,8 +188,8 @@
             </Grid>
 
             <!-- Status InfoBar -->
-            <InfoBar Grid.Row="6" IsOpen="{x:Bind ViewModel.HasNotice, Mode=OneWay}"
-                     IsClosable="False" Severity="Informational" Title="Transfers"
+            <InfoBar Grid.Row="5" IsOpen="{x:Bind ViewModel.HasNotice, Mode=OneWay}"
+                     IsClosable="False" Severity="Informational" Title="Downloads"
                      Message="{x:Bind ViewModel.Notice, Mode=OneWay}"
                      AutomationProperties.LiveSetting="Polite" />
         </Grid>

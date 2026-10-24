@@ -38,6 +38,13 @@ class DownloadsWorkspaceTests(unittest.TestCase):
         self.assertIn('<RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/>', home)
         self.assertNotIn('RecommendationsGrid.ColumnDefinitions[2]', self.read("src/WinCare.App/Views/Pages/HomePage.xaml.cs"))
         self.assertIn('AutomationProperties.AutomationId="HomeDownloads"', home)
+        # The old synthetic BitTorrent panel is intentionally absent until
+        # a real transfer engine has independently passed network tests.
+        self.assertNotIn("Active BitTorrent Swarms", page)
+        self.assertNotIn("xmlns:transfers", page)
+        self.assertNotIn("TorrentSessionSnapshot", view_model)
+        self.assertNotIn("Torrents.GetActiveSnapshots", view_model)
+        self.assertNotIn("PauseTorrent_Click", code)
 
     def test_native_downloads_never_overwrite_a_destination_or_trust_bad_ranges(self) -> None:
         executor = self.read("src/WinCare.Infrastructure/Commands/WindowsCommandExecutor.Productivity.cs")

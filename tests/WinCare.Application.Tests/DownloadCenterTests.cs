@@ -30,6 +30,7 @@ public sealed class DownloadCenterTests
         Assert.Equal(50d, running.ProgressPercent);
         Assert.True(running.CanPause);
         Assert.False(running.IsIndeterminate);
+        Assert.Contains("discard its partial bytes", running.CancelAccessibleName);
         Assert.DoesNotContain("password", running.AccessibleName);
         Assert.DoesNotContain("supersecret", running.AccessibleName);
         Assert.All(items, row => Assert.DoesNotContain("never-show", row.AccessibleName));

@@ -30,7 +30,7 @@ public sealed record DownloadJobRow(
     public string ResumeAccessibleName => HasExpectedSha256
         ? $"Continue download {Name}; verified partial bytes may be reused when supported"
         : $"Restart download {Name} from the beginning";
-    public string CancelAccessibleName => $"Cancel download {Name}";
+    public string CancelAccessibleName => $"Cancel download {Name} and discard its partial bytes";
     public string RemoveAccessibleName => $"Remove download record for {Name}";
     public string ActionsAccessibleName => $"More actions for {Name}";
     public string FolderAccessibleName => $"Browse the folder containing {Name}";

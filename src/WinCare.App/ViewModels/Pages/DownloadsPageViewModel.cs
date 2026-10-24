@@ -7,14 +7,13 @@ using System.Threading;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using WinCare.Application.Downloads;
-using WinCare.Application.Transfers;
 using WinCare.Domain.Commands;
 
 namespace WinCare.App.ViewModels.Pages;
 
 /// <summary>
-/// Transfers workspace projection combining native HTTP download jobs
-/// and BitTorrent swarm sessions into a single high-performance interface.
+/// HTTP(S) download workspace. Torrents remain unavailable until an
+/// independently tested real data-plane engine exists.
 /// </summary>
 public sealed class DownloadsPageViewModel : ObservableObject
 {
@@ -36,7 +35,6 @@ public sealed class DownloadsPageViewModel : ObservableObject
 
     public ObservableCollection<DownloadJobRow> Jobs { get; } = new();
     public ObservableCollection<DownloadJobRow> VisibleJobs { get; } = new();
-    public ObservableCollection<TorrentSessionSnapshot> Torrents { get; } = new();
 
     public string NewUrl
     {
@@ -98,19 +96,18 @@ public sealed class DownloadsPageViewModel : ObservableObject
         }
     }
 
-    public bool HasTorrents => Torrents.Count > 0;
-    public bool IsEmpty => VisibleJobs.Count == 0 && Torrents.Count == 0 && !IsLoading;
-    public string EmptyDescription => Jobs.Count == 0 && Torrents.Count == 0
-        ? "No transfers yet. Paste an HTTP or HTTPS link above to start a download."
-        : "No downloads match. Try a different search or switch to All.";
+    public bool IsEmpty => VisibleJobs.Count == 0 && !IsLoading;
+    public string EmptyDescription => Jobs.Count == 0
+        ? "No downloads yet. Paste an HTTP or HTTPS file link above."
+        : "No downloads match. Try another search or choose All.";
 
-    public string TotalText => (Jobs.Count + Torrents.Count).ToString(System.Globalization.CultureInfo.CurrentCulture);
-    public string InProgressText => (Jobs.Count(j => j.State is "Pending" or "Running" or "SuspendRequested" or "Suspended" or "Interrupted" or "CancelRequested") +
-                                     Torrents.Count(t => t.Status is TorrentStatus.Downloading or TorrentStatus.Checking))
-        .ToString(System.Globalization.CultureInfo.CurrentCulture);
-    public string FinishedText => (Jobs.Count(j => j.State is "Completed" or "Cancelled" or "Failed") +
-                                   Torrents.Count(t => t.Status is TorrentStatus.Completed or TorrentStatus.Seeding))
-        .ToString(System.Globalization.CultureInfo.CurrentCulture);
+    public string TotalText => Jobs.Count.ToString(System.Globalization.CultureInfo.CurrentCulture);
+    public string InProgressText =>
+        Jobs.Count(j => j.State is "Pending" or "Running" or "SuspendRequested" or "Suspended" or "Interrupted" or "CancelRequested")
+            .ToString(System.Globalization.CultureInfo.CurrentCulture);
+    public string FinishedText =>
+        Jobs.Count(j => j.State is "Completed" or "Cancelled" or "Failed")
+            .ToString(System.Globalization.CultureInfo.CurrentCulture);
 
     public void Activate()
     {
@@ -149,7 +146,7 @@ public sealed class DownloadsPageViewModel : ObservableObject
     {
         if (!_isActive || Interlocked.CompareExchange(ref _refreshInFlight, 1, 0) != 0) return;
         CancellationToken token = _pageCancellation?.Token ?? CancellationToken.None;
-        IsLoading = Jobs.Count == 0 && Torrents.Count == 0;
+        IsLoading = Jobs.Count == 0;
         try
         {
             CommandResult result = await _center.ReadAsync(token);
@@ -160,19 +157,10 @@ public sealed class DownloadsPageViewModel : ObservableObject
                 Synchronize(Jobs, projected);
             }
 
-            // Sync BitTorrent active snapshots
-            var torrentSnapshots = Services.AppRuntime.Current.Torrents.GetActiveSnapshots();
-            Torrents.Clear();
-            foreach (var t in torrentSnapshots)
-            {
-                Torrents.Add(t);
-            }
-
             ApplyFilter();
             OnPropertyChanged(nameof(TotalText));
             OnPropertyChanged(nameof(InProgressText));
             OnPropertyChanged(nameof(FinishedText));
-            OnPropertyChanged(nameof(HasTorrents));
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested) { }
         catch (Exception ex)
@@ -230,12 +218,6 @@ public sealed class DownloadsPageViewModel : ObservableObject
         IsBusy = true;
         try
         {
-            if (link.StartsWith("magnet:?", StringComparison.OrdinalIgnoreCase))
-            {
-                Notice = "BitTorrent downloads are unavailable until a real, verified transfer engine is implemented.";
-                return;
-            }
-
             CommandResult result = await _center.AddAsync(
                 link, ExpectedSha256, _pageCancellation?.Token ?? default);
             if (!_isActive) return;
@@ -266,24 +248,6 @@ public sealed class DownloadsPageViewModel : ObservableObject
             if (_isActive) Notice = "Could not add that link. Check the URL and try again.";
         }
         finally { IsBusy = false; }
-    }
-
-    public void PauseTorrent(string infoHash)
-    {
-        Services.AppRuntime.Current.Torrents.PauseSession(infoHash);
-        _ = RefreshAsync();
-    }
-
-    public void ResumeTorrent(string infoHash)
-    {
-        Services.AppRuntime.Current.Torrents.ResumeSession(infoHash);
-        _ = RefreshAsync();
-    }
-
-    public async Task RemoveTorrentAsync(string infoHash)
-    {
-        await Services.AppRuntime.Current.Torrents.RemoveSessionAsync(infoHash);
-        await RefreshAsync();
     }
 
     public async Task RunActionAsync(DownloadJobRow row, string action)
