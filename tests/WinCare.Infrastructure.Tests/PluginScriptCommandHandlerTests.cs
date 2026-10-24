@@ -1,5 +1,6 @@
 using System.Text.Json;
 using WinCare.Domain.Commands;
+using WinCare.Application.Commands;
 using WinCare.Infrastructure.Plugins;
 
 namespace WinCare.Infrastructure.Tests;
