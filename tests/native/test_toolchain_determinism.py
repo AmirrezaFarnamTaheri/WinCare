@@ -48,7 +48,7 @@ class ToolchainDeterminismTests(unittest.TestCase):
     def test_ci_provisions_the_pinned_dotnet_sdk(self) -> None:
         workflow = (ROOT / ".github/workflows/native-winui.yml").read_text(encoding="utf-8")
         self.assertIn("global-json-file: global.json", workflow)
-        self.assertRegex(workflow, r"dotnet-version:\s*[\"']?8\.0\.416[\"']?")
+        self.assertRegex(workflow, r"dotnet-version:\s*[\"']?10\.0\.402[\"']?")
 
     def test_contributor_setup_matches_the_sdk_pin(self) -> None:
         contributing = (ROOT / "CONTRIBUTING.md").read_text(encoding="utf-8")
