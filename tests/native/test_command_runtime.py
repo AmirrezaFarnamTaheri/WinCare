@@ -164,7 +164,9 @@ class CommandRuntimeTests(unittest.TestCase):
         self.assertIn('executable = "powershell.exe";', handler)
         self.assertNotIn('string.Concat("power", "shell.exe"', handler)
         self.assertIn('if (!request.Apply && !_declaredReadOnly)', handler)
-        self.assertIn('return BuildPreviewOutcome(request);', handler)
+        preview = handler.split('if (!request.Apply && !_declaredReadOnly)', 1)[1].split('// Defense-in-depth', 1)[0]
+        self.assertIn('VerifyAdmittedPayload(requireNonElevated: false)', preview)
+        self.assertIn('previewIntegrity ?? BuildPreviewOutcome(request)', preview)
         self.assertIn('request.Approval is null', handler)
         self.assertIn('plugin.approval_required', handler)
         self.assertIn('_processRunner.RunAsync', handler)
