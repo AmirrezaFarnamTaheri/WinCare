@@ -107,7 +107,24 @@ namespace WinCare.Infrastructure.Plugins
                     () => VerifyAdmittedPayload(requireNonElevated: true), cancellationToken).ConfigureAwait(false);
                 if (integrity is not null) return integrity;
 
-                var ext = Path.GetExtension(_scriptFullPath).ToLowerInvariant();
+                // Hash a fresh copy of the complete admitted package and hold its
+                // file handles read-only through interpreter execution. The original
+                // user-writable plugin tree is no longer the executed code path.
+                string? admissionPath = _requiresAdmission
+                    ? PluginAdmissionTrustStore.TryResolveAdmissionRecordPath(_pluginDirectory) : null;
+                PluginAdmissionRecord? admitted = admissionPath is not null
+                    ? JsonSerializer.Deserialize<PluginAdmissionRecord>(File.ReadAllText(admissionPath))
+                    : null;
+                using VerifiedPluginExecutionSnapshot? snapshot = _requiresAdmission
+                    ? await Task.Run(() => VerifiedPluginExecutionSnapshot.Create(
+                        _pluginDirectory, _scriptFullPath,
+                        admitted?.PackageTreeSha256 ?? string.Empty,
+                        cancellationToken: cancellationToken), cancellationToken).ConfigureAwait(false)
+                    : null;
+                string executableScriptPath = snapshot?.ScriptFullPath ?? _scriptFullPath;
+                string executionWorkingDirectory = snapshot?.Root ?? _pluginDirectory;
+
+                var ext = Path.GetExtension(executableScriptPath).ToLowerInvariant();
                 string executable;
                 var arguments = new List<string>();
 
@@ -123,7 +140,7 @@ namespace WinCare.Infrastructure.Plugins
                     arguments.Add("-ExecutionPolicy");
                     arguments.Add("Bypass");
                     arguments.Add("-File");
-                    arguments.Add(_scriptFullPath);
+                    arguments.Add(executableScriptPath);
 
                     if (request.Parameters.ValueKind == JsonValueKind.Object)
                     {
@@ -139,7 +156,7 @@ namespace WinCare.Infrastructure.Plugins
                     // cmd.exe parses shell operators even when ArgumentList is used.
                     // Reject expansion and control syntax before passing data to it.
                     const string shellSyntax = "&|<>^%!\"\r\n()";
-                    if (_scriptFullPath.IndexOfAny(shellSyntax.ToCharArray()) >= 0 ||
+                    if (executableScriptPath.IndexOfAny(shellSyntax.ToCharArray()) >= 0 ||
                         (request.Parameters.ValueKind == JsonValueKind.Object &&
                          request.Parameters.EnumerateObject().Any(prop =>
                              prop.Value.ToString().IndexOfAny(shellSyntax.ToCharArray()) >= 0)))
@@ -150,7 +167,7 @@ namespace WinCare.Infrastructure.Plugins
                     executable = "cmd.exe";
                     arguments.Add("/d");
                     arguments.Add("/c");
-                    arguments.Add(_scriptFullPath);
+                    arguments.Add(executableScriptPath);
 
                     if (request.Parameters.ValueKind == JsonValueKind.Object)
                     {
@@ -162,7 +179,7 @@ namespace WinCare.Infrastructure.Plugins
                 }
                 else
                 {
-                    executable = _scriptFullPath;
+                    executable = executableScriptPath;
                     if (request.Parameters.ValueKind == JsonValueKind.Object)
                     {
                         foreach (var prop in request.Parameters.EnumerateObject())
@@ -177,7 +194,7 @@ namespace WinCare.Infrastructure.Plugins
                     arguments,
                     cancellationToken,
                     timeout: TimeSpan.FromSeconds(60),
-                    workingDirectory: _pluginDirectory).ConfigureAwait(false);
+                    workingDirectory: executionWorkingDirectory).ConfigureAwait(false);
 
                 if (result.ExitCode == 0)
                 {
@@ -197,7 +214,7 @@ namespace WinCare.Infrastructure.Plugins
             {
                 throw;
             }
-            catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or IOException or UnauthorizedAccessException or InvalidOperationException)
+            catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or IOException or UnauthorizedAccessException or InvalidOperationException or InvalidDataException)
             {
                 return CommandHandlerOutcome.Failed("plugin.fault", $"Plugin script execution failed ({ex.GetType().Name}).");
             }
