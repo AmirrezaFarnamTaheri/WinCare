@@ -22,6 +22,12 @@ class Dotnet10MigrationTests(unittest.TestCase):
                 self.assertRegex(content, r"<TargetFramework>net10\.0(?:-windows10\.0\.19041\.0)?</TargetFramework>")
                 self.assertNotIn("<TargetFramework>net8.0", content)
 
+    def test_net10_avoids_implicit_registry_package_reference(self):
+        infra = (ROOT / "src/WinCare.Infrastructure/WinCare.Infrastructure.csproj").read_text(encoding="utf-8")
+        central = (ROOT / "Directory.Packages.props").read_text(encoding="utf-8")
+        self.assertNotIn('PackageReference Include="Microsoft.Win32.Registry"', infra)
+        self.assertNotIn('PackageVersion Include="Microsoft.Win32.Registry"', central)
+
     def test_ci_uses_exact_current_dotnet10_sdk(self):
         sdk = json.loads((ROOT / "global.json").read_text(encoding="utf-8"))["sdk"]
         self.assertEqual("10.0.402", sdk["version"])
