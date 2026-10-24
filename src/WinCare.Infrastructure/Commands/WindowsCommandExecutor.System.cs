@@ -179,7 +179,7 @@ internal sealed partial class WindowsCommandExecutor
         findings.Add(new { area = "Assessment policy", item = "Thresholds", severity = "Information", message = $"Assessment rules v{WinCare.Domain.Assessment.AssessmentPolicy.Version}: storage High below {WinCare.Domain.Assessment.AssessmentPolicy.DiskFreePercentWarning}% free; this overview is not a complete health verdict of installed protection." });
         if (memory.MemoryLoad >= 90) findings.Add(new { area = "Memory", item = "Physical memory", severity = "Moderate", message = $"Memory load is {memory.MemoryLoad}%." });
         if (!firewall) findings.Add(new { area = "Security", item = "Windows Firewall", severity = "High", message = "One or more firewall profiles appear disabled." });
-        int actionableFindings = findings.Count(finding => !System.Text.Json.JsonSerializer.Serialize(finding).Contains("\"severity\":\"Information\"", StringComparison.Ordinal));
+        int actionableFindings = findings.Count - 1; // The single assessment-policy Information note is not a health defect.
         int score = Math.Max(0, 100 - actionableFindings * 15);
         return Success("health", "Health assessment completed from current machine state.", new { score, findings, checkedAt = DateTimeOffset.UtcNow });
     }
