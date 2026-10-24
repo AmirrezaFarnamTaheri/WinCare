@@ -41,10 +41,27 @@ internal sealed partial class WindowsCommandExecutor
             cancellationToken.ThrowIfCancellationRequested();
             (RegistryHive hive, string subKey) = ParseRegistryPath(step.Path);
             using RegistryKey baseKey = RegistryKey.OpenBaseKey(hive, RegistryView.Default);
-            using RegistryKey key = baseKey.CreateSubKey(subKey, writable: true);
+            using RegistryKey? beforeKey = baseKey.OpenSubKey(subKey, writable: false);
+
             object expectedApplied = ConvertRegistryValue(step.AppliedValue, step.AppliedValueType);
-            object? current = key.GetValue(step.Name, null, RegistryValueOptions.DoNotExpandEnvironmentNames);
-            if (!RegistryValuesEqual(current, expectedApplied))
+            object? current = beforeKey?.GetValue(step.Name, null, RegistryValueOptions.DoNotExpandEnvironmentNames);
+            bool matchesApplied = RegistryValuesEqual(current, expectedApplied);
+            bool previousMissing = step.PreviousValue is null ||
+                step.PreviousValue.Value.ValueKind == JsonValueKind.Null;
+            object? previous = previousMissing ? null :
+                ConvertRegistryValue(step.PreviousValue!.Value, step.PreviousValueKind!);
+            bool matchesPrevious = previousMissing ? current is null :
+                RegistryValuesEqual(current, previous!);
+
+            // The process may have died immediately after preparation, before the
+            // registry operation. In that case no compensation is necessary. This
+            // ambiguity is accepted ONLY for a durable version-two pending preimage.
+            if (step.PendingUncertain && matchesPrevious)
+            {
+                restored.Add(new { step.Path, step.Name, alreadyAtPreviousValue = true, verifiedAt = DateTimeOffset.UtcNow });
+                continue;
+            }
+            if (!matchesApplied)
             {
                 JsonElement partialReceipt = Data(new
                 {
@@ -56,20 +73,36 @@ internal sealed partial class WindowsCommandExecutor
                     restored,
                     conflict = new { step.Path, step.Name }
                 });
-                await AppendStateItemAsync("remediation-recovery-history", partialReceipt, cancellationToken).ConfigureAwait(false);
+                await AppendStateItemAsync(
+                    "remediation-recovery-history", partialReceipt, cancellationToken).ConfigureAwait(false);
                 return CommandHandlerOutcome.Failed("remediation-restore.concurrent_change",
                     $"Recovery stopped before '{step.Path}\\{step.Name}' because its current value no longer matches the applied receipt. No later recovery steps were attempted.",
                     partialReceipt);
             }
 
-            if (step.PreviousValue is null || step.PreviousValue.Value.ValueKind == JsonValueKind.Null || string.IsNullOrWhiteSpace(step.PreviousValueKind))
+            // The key must exist if its applied value was observed. Never create a
+            // registry subkey as a side-effect of merely inspecting recovery.
+            using RegistryKey? key = baseKey.OpenSubKey(subKey, writable: true);
+            if (key is null)
+                throw new InvalidDataException("Recovery registry target disappeared before the write.");
+
+            object? rechecked = key.GetValue(step.Name, null, RegistryValueOptions.DoNotExpandEnvironmentNames);
+            if (!RegistryValuesEqual(rechecked, expectedApplied))
+                throw new InvalidDataException("Recovery registry value changed during the write window.");
+
+            if (previousMissing)
                 key.DeleteValue(step.Name, throwOnMissingValue: false);
             else
-            {
-                object previous = ConvertRegistryValue(step.PreviousValue.Value, step.PreviousValueKind);
-                key.SetValue(step.Name, previous, ParseRegistryKind(step.PreviousValueKind));
-            }
-            restored.Add(new { step.Path, step.Name, restoredAt = DateTimeOffset.UtcNow });
+                key.SetValue(step.Name, previous!, ParseRegistryKind(step.PreviousValueKind!));
+
+            object? verified = key.GetValue(step.Name, null, RegistryValueOptions.DoNotExpandEnvironmentNames);
+            bool readBackMatches = previousMissing ? verified is null :
+                RegistryValuesEqual(verified, previous!) &&
+                key.GetValueKind(step.Name) == ParseRegistryKind(step.PreviousValueKind!);
+            if (!readBackMatches)
+                throw new InvalidDataException("Recovery readback did not match the previous registry value.");
+
+            restored.Add(new { step.Path, step.Name, alreadyAtPreviousValue = false, restoredAt = DateTimeOffset.UtcNow });
         }
 
         JsonElement receipt = Data(new { id = Guid.NewGuid().ToString("N"), sourceExecutionId = plan.ExecutionId, sourceDigest = plan.Digest, status = "Restored", completedAt = DateTimeOffset.UtcNow, restored });
@@ -168,42 +201,104 @@ internal sealed partial class WindowsCommandExecutor
     private async Task<CommandHandlerOutcome> ApplyRemediationRuleAsync(RemediationRule rule, CancellationToken cancellationToken)
     {
         int build = Environment.OSVersion.Version.Build;
-        if (build < rule.Compatibility.MinBuild) return Block("preset", $"Rule '{rule.Id}' requires Windows build {rule.Compatibility.MinBuild} or newer.");
+        if (build < rule.Compatibility.MinBuild)
+            return Block("preset", $"Rule '{rule.Id}' requires Windows build {rule.Compatibility.MinBuild} or newer.");
         if (rule.Compatibility.MaxBuild.HasValue && build > rule.Compatibility.MaxBuild.Value)
             return Block("preset", $"Rule '{rule.Id}' is only supported through Windows build {rule.Compatibility.MaxBuild.Value}.");
-        if (rule.RequiresAdmin && !IsAdministrator()) return Block("preset", $"Rule '{rule.Id}' requires administrator access.");
+        if (rule.RequiresAdmin && !IsAdministrator())
+            return Block("preset", $"Rule '{rule.Id}' requires administrator access.");
 
         string executionId = Guid.NewGuid().ToString("N");
+        DateTimeOffset startedAt = DateTimeOffset.UtcNow;
+        bool registryOnly = rule.Changes.Count > 0 &&
+            rule.Changes.All(change => change.Type == RemediationRecoveryPlanner.RegistryChangeKind);
+        string recoveryScope = registryOnly ? "RegistryOnly" : "Mixed";
         var changes = new List<object>();
-        JsonElement intentRecord = Data(new { id = executionId, ruleId = rule.Id, rule.Title, status = "Applying", startedAt = DateTimeOffset.UtcNow, changes });
-        await AppendStateItemAsync("remediation-history", intentRecord, cancellationToken).ConfigureAwait(false);
+        object? pendingRegistryChange = null;
 
+        JsonElement Snapshot(string status, string? error = null) => Data(new
+        {
+            id = executionId, ruleId = rule.Id, rule.Title,
+            journalSchemaVersion = RemediationRecoveryPlanner.JournalSchemaVersion,
+            recoveryScope, status, startedAt, error, changes, pendingRegistryChange
+        });
+
+        // Persist the initial intent before starting any host mutation.
+        await AppendStateItemAsync("remediation-history", Snapshot("Applying"), cancellationToken).ConfigureAwait(false);
         try
         {
             foreach (RemediationChange change in rule.Changes)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                object detail = await ApplyRemediationChangeAsync(rule.Id, change, cancellationToken).ConfigureAwait(false);
-                changes.Add(new { change.Type, detail, appliedAt = DateTimeOffset.UtcNow });
+                Func<object, Task>? prepareRegistryWrite = null;
+                if (change.Type == RemediationRecoveryPlanner.RegistryChangeKind)
+                {
+                    prepareRegistryWrite = async detail =>
+                    {
+                        pendingRegistryChange = new { change.Type, detail };
+                        // The previous value is flushed to the atomic state store before
+                        // the registry write. Never pass the potentially cancelled operation
+                        // token to the mandatory durability barrier.
+                        await TransitionStateItemAsync(
+                            "remediation-history", executionId, Snapshot("Applying"),
+                            CancellationToken.None).ConfigureAwait(false);
+                        if (OnIntentPersistedAsync is not null)
+                            await OnIntentPersistedAsync("remediation-history:Prepared").ConfigureAwait(false);
+                    };
+                }
+
+                object detail = RemediationChangeExecutorSeam is null
+                    ? await ApplyRemediationChangeAsync(
+                        rule.Id, change, cancellationToken, prepareRegistryWrite).ConfigureAwait(false)
+                    : await RemediationChangeExecutorSeam(
+                        rule.Id, change, prepareRegistryWrite, cancellationToken).ConfigureAwait(false);
+
+                object completedChange = new { change.Type, detail, appliedAt = DateTimeOffset.UtcNow };
+                var nextChanges = new List<object>(changes) { completedChange };
+                JsonElement progress = Data(new
+                {
+                    id = executionId, ruleId = rule.Id, rule.Title,
+                    journalSchemaVersion = RemediationRecoveryPlanner.JournalSchemaVersion,
+                    recoveryScope, status = "Applying", startedAt,
+                    changes = nextChanges, pendingRegistryChange = (object?)null
+                });
+                // Do not clear the pending preimage in memory until the committed
+                // step has been durably published. If this write fails, the pending
+                // journal entry remains usable for interrupted-step compensation.
+                await TransitionStateItemAsync(
+                    "remediation-history", executionId, progress,
+                    CancellationToken.None).ConfigureAwait(false);
+                changes.Add(completedChange);
+                pendingRegistryChange = null;
             }
-            JsonElement history = Data(new { id = executionId, ruleId = rule.Id, rule.Title, status = "Applied", completedAt = DateTimeOffset.UtcNow, changes });
+
+            JsonElement history = Data(new
+            {
+                id = executionId, ruleId = rule.Id, rule.Title,
+                journalSchemaVersion = RemediationRecoveryPlanner.JournalSchemaVersion,
+                recoveryScope, status = "Applied", startedAt,
+                completedAt = DateTimeOffset.UtcNow, changes,
+                pendingRegistryChange = (object?)null
+            });
             using CancellationTokenSource finalRuleCleanupCts = new(TimeSpan.FromSeconds(5));
-            await TransitionStateItemAsync("remediation-history", executionId, history, finalRuleCleanupCts.Token).ConfigureAwait(false);
-            // A catalog recovery description is not an executable compensator endpoint.
-            // Keep handler metadata truthful until a bounded restore operation exists.
+            await TransitionStateItemAsync(
+                "remediation-history", executionId, history, finalRuleCleanupCts.Token).ConfigureAwait(false);
             return Success("preset", $"Rule '{rule.Title}' applied.", history, undo: false);
         }
         catch (Exception ex)
         {
             using CancellationTokenSource cleanupCts = new(TimeSpan.FromSeconds(5));
-            string terminalStatus = ex is OperationCanceledException ? "Cancelled" : "PartiallyApplied";
-            JsonElement partialRecord = Data(new { id = executionId, ruleId = rule.Id, rule.Title, status = terminalStatus, failedAt = DateTimeOffset.UtcNow, error = ex.Message, appliedChanges = changes });
-            await TransitionStateItemAsync("remediation-history", executionId, partialRecord, cleanupCts.Token).ConfigureAwait(false);
+            string status = ex is OperationCanceledException ? "Cancelled" : "PartiallyApplied";
+            await TransitionStateItemAsync(
+                "remediation-history", executionId, Snapshot(status, ex.Message),
+                cleanupCts.Token).ConfigureAwait(false);
             throw;
         }
     }
 
-    private async Task<object> ApplyRemediationChangeAsync(string ruleId, RemediationChange change, CancellationToken cancellationToken)
+    private async Task<object> ApplyRemediationChangeAsync(
+        string ruleId, RemediationChange change, CancellationToken cancellationToken,
+        Func<object, Task>? prepareRegistryWrite = null)
     {
         JsonElement p = change.Parameters;
         switch (change.Type)
@@ -216,12 +311,35 @@ internal sealed partial class WindowsCommandExecutor
                 JsonElement value = p.GetProperty("Value");
                 (RegistryHive hive, string subKey) = ParseRegistryPath(rawPath);
                 using RegistryKey baseKey = RegistryKey.OpenBaseKey(hive, RegistryView.Default);
-                using RegistryKey key = baseKey.CreateSubKey(subKey, writable: true);
-                object? previous = key.GetValue(name, null, RegistryValueOptions.DoNotExpandEnvironmentNames);
-                RegistryValueKind? previousKind = previous is null ? null : key.GetValueKind(name);
+                // A CreateSubKey call itself mutates Windows; read the exact preimage
+                // from a non-mutating handle before the mandatory journal barrier.
+                using RegistryKey? beforeKey = baseKey.OpenSubKey(subKey, writable: false);
+                object? previous = beforeKey?.GetValue(name, null, RegistryValueOptions.DoNotExpandEnvironmentNames);
+                RegistryValueKind? previousKind = previous is null ? null : beforeKey?.GetValueKind(name);
                 object converted = ConvertRegistryValue(value, valueType);
-                key.SetValue(name, converted, ParseRegistryKind(valueType));
-                return new { path = rawPath, name, previous, previousKind = previousKind?.ToString(), value = converted, valueType };
+                var detail = new
+                {
+                    path = rawPath, name, previous, previousKind = previousKind?.ToString(),
+                    value = converted, valueType
+                };
+                if (prepareRegistryWrite is null)
+                    throw new InvalidDataException("Registry remediation requires a persisted preimage before mutation.");
+                await prepareRegistryWrite(detail).ConfigureAwait(false);
+                cancellationToken.ThrowIfCancellationRequested();
+
+                using RegistryKey key = baseKey.CreateSubKey(subKey, writable: true);
+                object? current = key.GetValue(name, null, RegistryValueOptions.DoNotExpandEnvironmentNames);
+                RegistryValueKind? currentKind = current is null ? null : key.GetValueKind(name);
+                if (!(previous is null ? current is null : RegistryValuesEqual(current, previous)) ||
+                    currentKind != previousKind)
+                    throw new InvalidDataException("Registry target changed after the recovery preimage was recorded.");
+
+                RegistryValueKind kind = ParseRegistryKind(valueType);
+                key.SetValue(name, converted, kind);
+                object? observed = key.GetValue(name, null, RegistryValueOptions.DoNotExpandEnvironmentNames);
+                if (!RegistryValuesEqual(observed, converted) || key.GetValueKind(name) != kind)
+                    throw new InvalidDataException("Registry write did not match the requested value and kind.");
+                return detail;
             }
             case "SetOptionalFeatureState":
             {
