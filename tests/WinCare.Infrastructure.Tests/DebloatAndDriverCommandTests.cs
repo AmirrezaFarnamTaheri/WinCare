@@ -41,28 +41,9 @@ public sealed class DebloatAndDriverCommandTests
         Assert.Equal("Tweak", ex.ParameterName);
     }
 
-    [Theory]
-    [InlineData("end-task", true)]
-    [InlineData("last-active-click", false)]
-    [InlineData("show-file-extensions", true)]
-    [InlineData("show-hidden-files", false)]
-    [InlineData("launch-to-this-pc", true)]
-    [InlineData("hide-search-box", true)]
-    [InlineData("background-apps", true)]
-    [InlineData("keyboard-latency", true)]
-    public void ShellTweak_applies_hkcu_tweaks_successfully(string tweak, bool enable)
-    {
-        var executor = CreateExecutor();
-        var p = Params(new { Tweak = tweak, Enable = enable });
-        var method = typeof(WindowsCommandExecutor).GetMethod(
-            "ApplyShellTweak",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-
-        var outcome = (CommandHandlerOutcome)method!.Invoke(executor, [p])!;
-
-        Assert.Equal(CommandResultStatus.Succeeded, outcome.Status);
-        Assert.Equal("tweak-shell.ok", outcome.Code);
-    }
+    // Shell tweak application writes real HKCU/HKLM settings. Run that coverage only
+    // in a disposable Windows integration VM with before/after registry assertions.
+    // Unit tests must never change the developer or CI runner's shell configuration.
 
     [Fact]
     public void DriverServiceAudit_returns_success_with_service_list()
