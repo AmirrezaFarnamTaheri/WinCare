@@ -28,6 +28,50 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' || (github.event_name == 'push' && !startsWith(github.ref, 'refs/tags/v')) }}
 
 jobs:
+  # Temporary migration-only bootstrap. The normal verify job deliberately fails
+  # while old .NET 8 lockfiles remain. This independent job produces actual NuGet
+  # dependency graphs using a Windows SDK host for human-reviewed committing.
+  # REMOVE this job after the generated locks are committed and CI runs locked.
+  net10-lockfile-bootstrap:
+    if: github.event_name == 'pull_request' && github.head_ref == 'migration/net10-lts-20261024'
+    runs-on: windows-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-dotnet@e2cf7c663b93c38144629f5d40b62d3eaaa63a03
+        with:
+          dotnet-version: "10.0.402"
+          global-json-file: global.json
+      - name: Generate locked graphs for .NET 10 and both portable RIDs
+        shell: bash
+        run: |
+          set -euo pipefail
+          dotnet --version
+          dotnet restore WinCare.Native.sln -p:Platform=x64 -p:RestoreLockedMode=false --force-evaluate
+          dotnet restore WinCare.Native.sln -p:Platform=ARM64 -p:RestoreLockedMode=false --force-evaluate
+          for runtime in win-x64 win-arm64; do
+            dotnet restore src/WinCare.App/WinCare.App.csproj \
+              -p:Platform=x64 \
+              -p:WindowsPackageType=None \
+              -p:PublishSingleFile=true \
+              -r "$runtime" \
+              -p:RestoreLockedMode=false \
+              --force-evaluate
+          done
+          for project in extensions/*/*.csproj; do
+            dotnet restore "$project" -p:RestoreLockedMode=false --force-evaluate
+          done
+      - name: Attach regenerated NuGet lockfiles
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: net10-lockfiles-windows
+          path: |
+            src/**/packages*.lock.json
+            tests/**/packages*.lock.json
+            extensions/**/packages*.lock.json
+          if-no-files-found: error
+          retention-days: 3
+
   verify:
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -86,7 +130,7 @@ jobs:
           components: rustfmt, clippy
       - uses: actions/setup-dotnet@e2cf7c663b93c38144629f5d40b62d3eaaa63a03 # pinned commit
         with:
-          dotnet-version: "8.0.416"
+          dotnet-version: "10.0.402"
           global-json-file: global.json
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
