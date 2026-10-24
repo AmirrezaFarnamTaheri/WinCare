@@ -45,18 +45,20 @@ internal sealed partial class WindowsCommandExecutor
 
             object expectedApplied = ConvertRegistryValue(step.AppliedValue, step.AppliedValueType);
             object? current = beforeKey?.GetValue(step.Name, null, RegistryValueOptions.DoNotExpandEnvironmentNames);
-            bool matchesApplied = RegistryValuesEqual(current, expectedApplied);
+            RegistryValueKind? currentKind = current is null ? null : beforeKey?.GetValueKind(step.Name);
+            RegistryValueKind appliedKind = ParseRegistryKind(step.AppliedValueType);
+            bool matchesApplied = RecoveryRegistryValueMatches(current, currentKind, expectedApplied, appliedKind);
             bool previousMissing = step.PreviousValue is null ||
                 step.PreviousValue.Value.ValueKind == JsonValueKind.Null;
             object? previous = previousMissing ? null :
                 ConvertRegistryValue(step.PreviousValue!.Value, step.PreviousValueKind!);
-            bool matchesPrevious = previousMissing ? current is null :
-                RegistryValuesEqual(current, previous!);
+            RegistryValueKind? previousKind = previousMissing ? null : ParseRegistryKind(step.PreviousValueKind!);
+            bool matchesPrevious = RecoveryRegistryValueMatches(current, currentKind, previous, previousKind);
 
-            // The process may have died immediately after preparation, before the
-            // registry operation. In that case no compensation is necessary. This
-            // ambiguity is accepted ONLY for a durable version-two pending preimage.
-            if (step.PendingUncertain && matchesPrevious)
+            // A write-ahead operation can stop before its write, and a recovery
+            // itself may stop after an earlier step was restored. Treat either
+            // already-matching preimage as a verified no-op, making retries safe.
+            if (matchesPrevious)
             {
                 restored.Add(new { step.Path, step.Name, alreadyAtPreviousValue = true, verifiedAt = DateTimeOffset.UtcNow });
                 continue;
@@ -87,8 +89,9 @@ internal sealed partial class WindowsCommandExecutor
                 throw new InvalidDataException("Recovery registry target disappeared before the write.");
 
             object? rechecked = key.GetValue(step.Name, null, RegistryValueOptions.DoNotExpandEnvironmentNames);
-            if (!RegistryValuesEqual(rechecked, expectedApplied))
-                throw new InvalidDataException("Recovery registry value changed during the write window.");
+            RegistryValueKind? recheckedKind = rechecked is null ? null : key.GetValueKind(step.Name);
+            if (!RecoveryRegistryValueMatches(rechecked, recheckedKind, expectedApplied, appliedKind))
+                throw new InvalidDataException("Recovery registry value or kind changed during the write window.");
 
             if (previousMissing)
                 key.DeleteValue(step.Name, throwOnMissingValue: false);
@@ -96,9 +99,8 @@ internal sealed partial class WindowsCommandExecutor
                 key.SetValue(step.Name, previous!, ParseRegistryKind(step.PreviousValueKind!));
 
             object? verified = key.GetValue(step.Name, null, RegistryValueOptions.DoNotExpandEnvironmentNames);
-            bool readBackMatches = previousMissing ? verified is null :
-                RegistryValuesEqual(verified, previous!) &&
-                key.GetValueKind(step.Name) == ParseRegistryKind(step.PreviousValueKind!);
+            RegistryValueKind? verifiedKind = verified is null ? null : key.GetValueKind(step.Name);
+            bool readBackMatches = RecoveryRegistryValueMatches(verified, verifiedKind, previous, previousKind);
             if (!readBackMatches)
                 throw new InvalidDataException("Recovery readback did not match the previous registry value.");
 
@@ -107,8 +109,14 @@ internal sealed partial class WindowsCommandExecutor
 
         JsonElement receipt = Data(new { id = Guid.NewGuid().ToString("N"), sourceExecutionId = plan.ExecutionId, sourceDigest = plan.Digest, status = "Restored", completedAt = DateTimeOffset.UtcNow, restored });
         await AppendStateItemAsync("remediation-recovery-history", receipt, cancellationToken).ConfigureAwait(false);
-        return Success("remediation-restore", $"Restored {restored.Count} registry value{(restored.Count == 1 ? string.Empty : "s")} from the verified remediation receipt.", receipt, undo: false);
+        return Success("remediation-restore", $"Verified {restored.Count} registry value{(restored.Count == 1 ? string.Empty : "s")} against the approved previous state; already-restored values were not changed.", receipt, undo: false);
     }
+
+    internal static bool RecoveryRegistryValueMatches(
+        object? actual, RegistryValueKind? actualKind, object? expected, RegistryValueKind? expectedKind) =>
+        expected is null
+            ? actual is null && actualKind is null
+            : actualKind == expectedKind && RegistryValuesEqual(actual, expected);
 
     private static bool RegistryValuesEqual(object? current, object expected) => (current, expected) switch
     {
