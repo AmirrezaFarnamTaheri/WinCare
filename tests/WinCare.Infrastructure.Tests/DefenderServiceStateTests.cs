@@ -16,4 +16,40 @@ public sealed class DefenderServiceStateTests
     {
         Assert.Equal(expected, WindowsCommandExecutor.ClassifyDefenderServiceState(exitCode, output));
     }
+
+    [Fact]
+    public void Firewall_state_is_unknown_when_any_profile_has_no_verifiable_setting()
+    {
+        var states = new (bool Enabled, bool ExplicitValue)[]
+        {
+            (true, true),
+            (true, false),
+            (true, true)
+        };
+        Assert.Equal("Unknown", WindowsCommandExecutor.ClassifyFirewallProfileStates(states));
+    }
+
+    [Fact]
+    public void Explicit_disabled_firewall_has_priority_over_unobserved_profiles()
+    {
+        var states = new (bool Enabled, bool ExplicitValue)[]
+        {
+            (true, false),
+            (false, true),
+            (true, true)
+        };
+        Assert.Equal("Disabled", WindowsCommandExecutor.ClassifyFirewallProfileStates(states));
+    }
+
+    [Fact]
+    public void Firewall_cannot_be_reported_enabled_without_all_three_confirmed_profiles()
+    {
+        Assert.Equal("Unknown", WindowsCommandExecutor.ClassifyFirewallProfileStates(
+            Array.Empty<(bool Enabled, bool ExplicitValue)>()));
+        Assert.Equal("Enabled", WindowsCommandExecutor.ClassifyFirewallProfileStates(
+            new (bool Enabled, bool ExplicitValue)[]
+            {
+                (true, true), (true, true), (true, true)
+            }));
+    }
 }
