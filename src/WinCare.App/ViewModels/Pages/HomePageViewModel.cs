@@ -1,12 +1,12 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using WinCare.Domain.Activity;
+using WinCare.Application.Checkups;
 
 namespace WinCare.App.ViewModels.Pages;
 
 /// <summary>Summarizes recent checkup and activity state. Home never runs system commands.</summary>
 public sealed class HomePageViewModel : ObservableObject
 {
-    private static readonly string[] QuickCheckCommandIds = ["system", "storage", "security", "wua-search"];
     private static readonly TimeSpan CheckupFreshnessWindow = TimeSpan.FromMinutes(30);
 
     private bool _isCompactLayout;
@@ -40,7 +40,7 @@ public sealed class HomePageViewModel : ObservableObject
 
     public void SetCompactLayout(bool isCompact) => IsCompactLayout = isCompact;
 
-    public void RefreshActivity(IReadOnlyList<ActivityRecord> records)
+    public void RefreshActivity(IReadOnlyList<ActivityRecord> records, CheckupSessionSnapshot? checkup = null)
     {
         ActivityRecord? latest = records.MaxBy(record => record.StartedAt);
         RecentActivityTitle = latest?.Title ?? "No activity recorded";
@@ -51,81 +51,77 @@ public sealed class HomePageViewModel : ObservableObject
             ? "No activity yet"
             : $"{records.Count} record{(records.Count == 1 ? string.Empty : "s")}";
 
-        var latestByCommand = records
-            .Where(record => QuickCheckCommandIds.Contains(record.CommandId, StringComparer.OrdinalIgnoreCase))
-            .GroupBy(record => record.CommandId, StringComparer.OrdinalIgnoreCase)
-            .ToDictionary(group => group.Key, group => group.MaxBy(record => record.StartedAt)!, StringComparer.OrdinalIgnoreCase);
-
-        SystemStatus = StatusFor(latestByCommand, "system");
-        StorageStatus = StatusFor(latestByCommand, "storage");
-        SecurityStatus = StatusFor(latestByCommand, "security");
-        UpdatesStatus = StatusFor(latestByCommand, "wua-search");
-
-        DateTimeOffset now = DateTimeOffset.UtcNow;
-        int completed = QuickCheckCommandIds.Count(commandId =>
-            latestByCommand.TryGetValue(commandId, out ActivityRecord? record) &&
-            record.State == ActivityState.Completed);
-        int recent = QuickCheckCommandIds.Count(commandId =>
-            latestByCommand.TryGetValue(commandId, out ActivityRecord? record) &&
-            record.State == ActivityState.Completed &&
-            now - CheckupTimestamp(record) <= CheckupFreshnessWindow);
-        int needsAttention = QuickCheckCommandIds.Count(commandId =>
-            latestByCommand.TryGetValue(commandId, out ActivityRecord? record) &&
-            record.State is ActivityState.Failed or ActivityState.NeedsAttention);
-
-        bool isChecking = latestByCommand.Values.Any(record => record.State == ActivityState.Running);
-        CheckupCoverageText = $"{completed} of {QuickCheckCommandIds.Length} areas";
-        if (recent == QuickCheckCommandIds.Length)
+        // Only a single session produced by Checkup can be described as a checkup.
+        // Independent command history is still shown as activity above, never blended
+        // into a synthetic four-area result.
+        if (checkup is null)
         {
-            DateTimeOffset oldestResult = latestByCommand.Values.Min(CheckupTimestamp);
-            CheckupTitle = "Your latest checkup is ready";
-            CheckupSummary = $"All four areas are up to date. Oldest result: {oldestResult.ToLocalTime():g}.";
+            SystemStatus = SecurityStatus = StorageStatus = UpdatesStatus = "Not checked";
+            CheckupCoverageText = "0 of 4 areas";
+            CheckupTitle = "Start with a checkup";
+            CheckupSummary = "It checks a few important areas without changing anything.";
+            return;
         }
-        else if (completed == QuickCheckCommandIds.Length)
+
+        SystemStatus = StatusFor(checkup, "system");
+        StorageStatus = StatusFor(checkup, "storage");
+        SecurityStatus = StatusFor(checkup, "security");
+        UpdatesStatus = StatusFor(checkup, "wua-search");
+
+        int completed = checkup.Areas.Count(area => area.State is "Checked" or "NeedsReview");
+        int needsReview = checkup.Areas.Count(area => area.State == "NeedsReview");
+        CheckupCoverageText = $"{completed} of {CheckupSessionStore.ProbeIds.Length} areas";
+
+        if (checkup.Status == "Running")
         {
-            CheckupTitle = "Your checkup is getting old";
-            CheckupSummary = recent == 0
-                ? "These results are over 30 minutes old. Run Checkup for a fresh look."
-                : $"{recent} of {QuickCheckCommandIds.Length} results are still recent. Run Checkup to refresh the rest.";
+            CheckupTitle = "Checkup in progress";
+            CheckupSummary = $"{completed} of 4 checks finished. Return to Checkup to see current results.";
         }
-        else if (latestByCommand.Count > 0)
+        else if (checkup.Status == "Completed")
         {
-            if (needsAttention > 0)
-                CheckupTitle = "A few checks need attention";
-            else if (isChecking)
-                CheckupTitle = "Checkup is still in progress";
+            DateTimeOffset finishedAt = checkup.CompletedAt ?? checkup.StartedAt;
+            if (DateTimeOffset.UtcNow - finishedAt > CheckupFreshnessWindow)
+            {
+                CheckupTitle = "Checkup results are out of date";
+                CheckupSummary = "Run Checkup again to refresh this complete session.";
+            }
+            else if (needsReview > 0)
+            {
+                CheckupTitle = "Checkup finished with items to review";
+                CheckupSummary = $"{completed} areas checked; {needsReview} need another look.";
+            }
             else
-                CheckupTitle = "Checkup is incomplete";
-            CheckupSummary = isChecking
-                ? $"{completed} of {QuickCheckCommandIds.Length} checks finished. Other checks are still running."
-                : $"{completed} of {QuickCheckCommandIds.Length} checks finished. Run Checkup to check all four areas.";
+            {
+                CheckupTitle = "Your latest checkup is ready";
+                CheckupSummary = $"Four areas checked in one session at {finishedAt.ToLocalTime():g}.";
+            }
         }
         else
         {
-            CheckupTitle = "Start with a checkup";
-            CheckupSummary = "It checks a few important areas without changing anything.";
+            CheckupTitle = checkup.Status == "Cancelled" ? "Checkup stopped" : "Checkup incomplete";
+            CheckupSummary = $"{completed} areas checked in the last session. Run Checkup to finish all four.";
         }
     }
 
-    private static string StatusFor(IReadOnlyDictionary<string, ActivityRecord> latestByCommand, string commandId)
+    private static string StatusFor(CheckupSessionSnapshot session, string commandId)
     {
-        if (!latestByCommand.TryGetValue(commandId, out ActivityRecord? record)) return "Not checked";
-
-        if (record.State == ActivityState.Completed && DateTimeOffset.UtcNow - CheckupTimestamp(record) > CheckupFreshnessWindow)
-            return $"Out of date ({CheckupTimestamp(record).ToLocalTime():HH:mm})";
-
-        return record.State switch
+        CheckupAreaSnapshot? area = session.Areas.FirstOrDefault(item => item.CommandId == commandId);
+        if (area is null) return "Not checked";
+        if (area.State is "Checked" or "NeedsReview" &&
+            session.Status != "Running" && DateTimeOffset.UtcNow -
+            (session.CompletedAt ?? session.StartedAt) > CheckupFreshnessWindow)
+            return "Out of date";
+        return area.State switch
         {
-            ActivityState.Completed => "Checked",
-            ActivityState.Running => "Checking…",
-            ActivityState.NeedsAttention => "Needs attention",
-            ActivityState.Failed => "Check failed",
-            ActivityState.Cancelled => "Check cancelled",
-            _ => ToFriendlyState(record.State),
+            "Checked" => "Checked",
+            "NeedsReview" => "Needs review",
+            "Running" => "Checking…",
+            "Pending" => "Not checked yet",
+            "Cancelled" => "Check cancelled",
+            "Interrupted" => "Not finished",
+            _ => "Not checked",
         };
     }
-
-    private static DateTimeOffset CheckupTimestamp(ActivityRecord record) => record.CompletedAt ?? record.StartedAt;
 
     private static string ToFriendlyState(ActivityState state) => state switch
     {
