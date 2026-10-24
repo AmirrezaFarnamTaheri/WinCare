@@ -42,3 +42,13 @@ same-signer upgrade scenario when manually invoked with genuine old/new MSIXs.
 This test is not automatic in pull requests and has not established upgrade from
 a real published release, reboot persistence, GUI installer usability, or store
 certification. Store the run logs and package hashes with release acceptance.
+
+
+## Final audit pull-request installed acceptance
+
+The high-impact audit branch **PR #59** runs the x64 and ARM64 disposable
+Windows MSIX install/uninstall tests automatically on pull-request builds,
+in addition to managed tests and portable startup smoke. This is a
+temporary, explicitly scoped pre-merge acceptance gate, not an installation
+on contributor/user devices. It does not exercise public-signer upgrade,
+reboot recovery, interactive WinUI accessibility, or store publication.

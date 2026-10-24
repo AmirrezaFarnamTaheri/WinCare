@@ -549,7 +549,7 @@ jobs:
     needs: [verify, build]
     if: >-
       (github.event_name == 'workflow_dispatch' && inputs.run_installed_acceptance == true) ||
-      (github.event_name == 'pull_request' && github.head_ref == 'migration/net10-lts-20261024')
+      (github.event_name == 'pull_request' && github.head_ref == 'fix/audit-reliability-baseline-20261024')
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 20
     strategy:
