@@ -30,6 +30,26 @@ class MsixSelectionTests(unittest.TestCase):
             (root / "WinCare.App_5.0.0.0_ARM64.msix").touch()
             self.assertEqual(matching, find_canonical_package(root, "x64"))
 
+    def test_ambiguous_package_versions_across_two_directories_are_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            script = root / "tools"
+            script.mkdir()
+            (script / "WinCare.App_4.0.0.0_x64.msix").touch()
+            (root / "WinCare.App_5.0.0.0_x64.msix").touch()
+            self.assertIsNone(find_canonical_package((script, root), "x64"))
+
+    def test_ambiguous_first_directory_never_falls_back_to_parent_package(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            script = root / "tools"
+            script.mkdir()
+            (script / "WinCare.App_4.0.0.0_x64.msix").touch()
+            (script / "WinCare.App_5.0.0.0_x64.msix").touch()
+            (root / "WinCare.App_6.0.0.0_x64.msix").touch()
+            self.assertIsNone(find_canonical_package((script, root), "x64"))
+
+
 
 if __name__ == "__main__":
     unittest.main()

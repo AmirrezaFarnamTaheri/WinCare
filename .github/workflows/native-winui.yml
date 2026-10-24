@@ -613,6 +613,11 @@ jobs:
             gh release download "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --dir "$existing_dir"
             python tools/check_release_assets.py --expected release_assets --published "$existing_dir"
             echo "Release $RELEASE_TAG already contains exactly the validated artifact bytes."
+            if [[ "$(gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --json isDraft --jq '.isDraft')" == "true" ]]; then
+              # Previous upload succeeded but the final publish step was interrupted.
+              # Publish only after the tag and complete asset set were verified above.
+              gh release edit "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" "$RELEASE_FLAGS" --draft=false
+            fi
           else
             notes_file="docs/releases/${RELEASE_TAG}.md"
             if [[ ! -f "$notes_file" ]]; then
@@ -622,10 +627,9 @@ jobs:
             gh release create "$RELEASE_TAG" release_assets/* \
               --title "WinCare $RELEASE_TAG" \
               --notes-file "$notes_file" \
-              "$RELEASE_FLAGS" \
               --draft \
               --target "$GITHUB_SHA" \
               --repo "$GITHUB_REPOSITORY"
             # Keep the release invisible until all assets have been uploaded.
-            gh release edit "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --draft=false
+            gh release edit "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" "$RELEASE_FLAGS" --draft=false
           fi

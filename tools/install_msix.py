@@ -54,18 +54,21 @@ def detect_architecture() -> str:
     return "x64"
 
 
-def find_canonical_package(search_dir: Path, arch: str) -> Path | None:
-    """Find the best matching .msix package for the given architecture."""
-    matches = [
-        candidate for candidate in search_dir.glob("*.msix")
+def find_canonical_package(search_dir: Path | tuple[Path, ...], arch: str) -> Path | None:
+    """Require exactly one architecture-matched MSIX across all search directories."""
+    search_dirs = (search_dir,) if isinstance(search_dir, Path) else search_dir
+    matches = {
+        candidate.resolve()
+        for directory in search_dirs
+        for candidate in directory.glob("*.msix")
         if any(
             part.lower() == arch.lower()
             for part in candidate.stem.replace("-", "_").split("_")
         )
-    ]
-    # Never guess when multiple versions exist, and never install an unrelated
-    # architecture simply because it is the only package in the directory.
-    return matches[0] if len(matches) == 1 else None
+    }
+    # A duplicate in an earlier directory cannot be bypassed by picking a
+    # package from its parent directory.
+    return next(iter(matches)) if len(matches) == 1 else None
 
 
 def main() -> int:
@@ -79,7 +82,7 @@ def main() -> int:
 
     package_path: Path | None = args.package
     if package_path is None:
-        package_path = find_canonical_package(script_dir, arch) or find_canonical_package(script_dir.parent, arch)
+        package_path = find_canonical_package((script_dir, script_dir.parent), arch)
 
     if package_path is None or not package_path.is_file():
         print(f"[-] Error: Could not locate a valid WinCare MSIX package for architecture '{arch}'.")
