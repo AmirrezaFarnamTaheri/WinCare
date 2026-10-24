@@ -82,4 +82,65 @@ public sealed class RemediationRecoveryPlannerTests
             RemediationRecoveryPlanner.Create(first.RootElement).Digest,
             RemediationRecoveryPlanner.Create(reordered.RootElement).Digest);
     }
+
+    [Fact]
+    public void Interrupted_registry_only_remediation_can_recover_committed_steps()
+    {
+        JsonElement history = JsonSerializer.SerializeToElement(new
+        {
+            id = "interrupted-registry",
+            status = "PartiallyApplied",
+            recoveryScope = "RegistryOnly",
+            changes = new object[]
+            {
+                new { Type = "SetRegistryValue", detail = new { path = @"HKCU:\\A", name = "One", previous = 1, previousKind = "DWord", value = 0, valueType = "DWord" } },
+            },
+        });
+
+        RemediationRecoveryPlan plan = RemediationRecoveryPlanner.Create(history);
+
+        Assert.True(plan.IsExecutable);
+        Assert.Equal("One", Assert.Single(plan.Steps).Name);
+    }
+
+    [Fact]
+    public void Prepared_registry_change_is_recoverable_whether_crash_happened_before_or_after_write()
+    {
+        JsonElement history = JsonSerializer.SerializeToElement(new
+        {
+            id = "interrupted-pending",
+            status = "Applying",
+            recoveryScope = "RegistryOnly",
+            changes = new object[]
+            {
+                new { Type = "SetRegistryValue", detail = new { path = @"HKCU:\\A", name = "Committed", previous = 1, previousKind = "DWord", value = 0, valueType = "DWord" } },
+            },
+            pendingRegistryChange = new
+            {
+                Type = "SetRegistryValue",
+                detail = new { path = @"HKCU:\\A", name = "Pending", previous = 2, previousKind = "DWord", value = 3, valueType = "DWord" }
+            }
+        });
+
+        RemediationRecoveryPlan plan = RemediationRecoveryPlanner.Create(history);
+
+        Assert.True(plan.IsExecutable);
+        Assert.Equal(["Pending", "Committed"], plan.Steps.Select(step => step.Name));
+        Assert.True(plan.Steps[0].PendingUncertain);
+        Assert.False(plan.Steps[1].PendingUncertain);
+    }
+
+    [Fact]
+    public void Interrupted_remediation_without_registry_only_evidence_remains_blocked()
+    {
+        JsonElement history = JsonSerializer.SerializeToElement(new
+        {
+            id = "mixed-work", status = "PartiallyApplied",
+            changes = new object[]
+            {
+                new { Type = "SetRegistryValue", detail = new { path = @"HKCU:\\A", name = "One", previous = 1, previousKind = "DWord", value = 0, valueType = "DWord" } }
+            }
+        });
+        Assert.False(RemediationRecoveryPlanner.Create(history).IsExecutable);
+    }
 }
