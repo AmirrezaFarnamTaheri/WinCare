@@ -62,7 +62,7 @@ The main navigation is task-oriented:
 - **Power tools**: the searchable command catalog with filters, favorites, Recent, and plans. Entries that are unavailable are labeled as such. Favorited tools also appear as shortcuts on Home.
 - **Files & storage**: see drive capacity, browse files and folders, and inspect the size of a folder.
 - **Processes**: review CPU and memory use, sort or search running tasks, and confirm before ending an ordinary process.
-- **Downloads**: start, pause, resume, and track downloads, or inspect their destination folder.
+- **Downloads**: start, pause, restart, and track HTTP(S) downloads, or inspect their destination folder.
 - **Troubleshoot**: describe a symptom and get local checks plus suggested next steps.
 - **Extensions**: manage installed optional features and browse the online list when it is available.
 - **Activity**: running work, items needing attention, finished work, and reports.
@@ -85,7 +85,7 @@ See running process names, PIDs, resident memory and sampled CPU usage. Refresh 
 
 ### Downloads
 
-Paste a direct HTTP(S) address and choose **Download**. Completed files stay on disk if you remove their history records. The **Show folder** action opens the file's destination in Files & storage; Windows Explorer remains available for moving or deleting downloaded files.
+Paste a direct HTTP(S) address and choose **Download**. **Restart** begins a stopped transfer from the beginning; this build does not safely resume arbitrary unverified partial bytes. BitTorrent magnet links are not supported because the previous swarm implementation did not exchange or verify real pieces. Completed files stay on disk if you remove their history records. The **Show folder** action opens the file's destination in Files & storage; Windows Explorer remains available for moving or deleting downloaded files.
 
 ## 5. Home
 
