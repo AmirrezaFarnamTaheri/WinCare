@@ -521,6 +521,97 @@ public sealed class CommandSafetyTests
         }
     }
 
+
+    [Fact]
+    public async Task Journaled_registry_rule_persists_preimage_before_simulated_mutation()
+    {
+        string root = Path.Combine(Path.GetTempPath(), "WinCareJournalStep_" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            using WindowsCommandExecutor executor = new(root);
+            var store = new CommandStateStore(root);
+            int prepared = 0;
+            executor.RemediationChangeExecutorSeam = async (ruleId, change, persistBeforeWrite, ct) =>
+            {
+                Assert.Equal("SetRegistryValue", change.Type);
+                Assert.NotNull(persistBeforeWrite);
+                string path = change.Parameters.GetProperty("Path").GetString()!;
+                string name = change.Parameters.GetProperty("Name").GetString()!;
+                object preimage = new { path, name, previous = 7, previousKind = "DWord", value = 0, valueType = "DWord" };
+                await persistBeforeWrite!(preimage);
+                JsonElement history = await store.ReadArrayAsync("remediation-history", CancellationToken.None);
+                JsonElement item = history.EnumerateArray().Last();
+                Assert.Equal("Applying", item.GetProperty("status").GetString());
+                Assert.Equal(2, item.GetProperty("journalSchemaVersion").GetInt32());
+                Assert.Equal("RegistryOnly", item.GetProperty("recoveryScope").GetString());
+                Assert.Equal(name, item.GetProperty("pendingRegistryChange").GetProperty("detail").GetProperty("name").GetString());
+                prepared++;
+                return preimage;
+            };
+            var definition = new CommandDefinition(
+                Id: "preset", Title: "Apply Remediation Preset", Summary: "Apply preset",
+                Area: "Remediation", Section: "Presets", Risk: CommandRisk.Moderate,
+                ReadOnly: false, AdministratorAccess: AdministratorAccess.No,
+                Restart: RestartExpectation.No, LegacySource: "Remediation.ps1",
+                MigrationStatus: MigrationStatus.Implemented, Keywords: Array.Empty<string>());
+            JsonElement parameters = JsonSerializer.SerializeToElement(new { PresetId = "safe" });
+
+            CommandHandlerOutcome result = await executor.ExecuteAsync(
+                definition, CommandRequest.Execute("preset", parameters), CancellationToken.None);
+
+            Assert.Equal(CommandResultStatus.Succeeded, result.Status);
+            Assert.Equal(3, prepared);
+            JsonElement receipts = await store.ReadArrayAsync("remediation-history", CancellationToken.None);
+            Assert.Equal(3, receipts.GetArrayLength());
+            foreach (JsonElement receipt in receipts.EnumerateArray())
+            {
+                Assert.Equal("Applied", receipt.GetProperty("status").GetString());
+                Assert.Equal(1, receipt.GetProperty("changes").GetArrayLength());
+                Assert.Equal(JsonValueKind.Null, receipt.GetProperty("pendingRegistryChange").ValueKind);
+            }
+        }
+        finally { if (Directory.Exists(root)) Directory.Delete(root, true); }
+    }
+
+    [Fact]
+    public async Task Interrupted_registry_rule_preserves_prepared_preimage_after_failure()
+    {
+        string root = Path.Combine(Path.GetTempPath(), "WinCareJournalCrash_" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            using WindowsCommandExecutor executor = new(root);
+            var store = new CommandStateStore(root);
+            executor.RemediationChangeExecutorSeam = async (_, change, prepare, ct) =>
+            {
+                Assert.NotNull(prepare);
+                await prepare!(new
+                {
+                    path = change.Parameters.GetProperty("Path").GetString(),
+                    name = change.Parameters.GetProperty("Name").GetString(),
+                    previous = 3, previousKind = "DWord", value = 0, valueType = "DWord"
+                });
+                throw new InvalidDataException("Injected post-preparation failure");
+            };
+            var definition = new CommandDefinition(
+                Id: "preset", Title: "Apply Remediation Preset", Summary: "Apply preset",
+                Area: "Remediation", Section: "Presets", Risk: CommandRisk.Moderate,
+                ReadOnly: false, AdministratorAccess: AdministratorAccess.No,
+                Restart: RestartExpectation.No, LegacySource: "Remediation.ps1",
+                MigrationStatus: MigrationStatus.Implemented, Keywords: Array.Empty<string>());
+            JsonElement parameters = JsonSerializer.SerializeToElement(new { PresetId = "safe" });
+
+            await executor.ExecuteAsync(definition, CommandRequest.Execute("preset", parameters), CancellationToken.None);
+            JsonElement history = await store.ReadArrayAsync("remediation-history", CancellationToken.None);
+            JsonElement receipt = Assert.Single(history.EnumerateArray());
+            Assert.Equal("PartiallyApplied", receipt.GetProperty("status").GetString());
+            Assert.Equal("RegistryOnly", receipt.GetProperty("recoveryScope").GetString());
+            Assert.Equal(2, receipt.GetProperty("journalSchemaVersion").GetInt32());
+            Assert.Equal(3, receipt.GetProperty("pendingRegistryChange").GetProperty("detail").GetProperty("previous").GetInt32());
+            Assert.True(RemediationRecoveryPlanner.Create(receipt).IsExecutable);
+        }
+        finally { if (Directory.Exists(root)) Directory.Delete(root, true); }
+    }
+
     private sealed class FakeCommandHandler : ICommandHandler
     {
         public string CommandId { get; }
