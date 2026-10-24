@@ -20,12 +20,16 @@ public sealed record DownloadJobRow(
     bool CanResume,
     bool CanCancel,
     bool CanRemove,
-    DateTimeOffset CreatedAt)
+    DateTimeOffset CreatedAt,
+    bool HasExpectedSha256 = false)
 {
     public string AccessibleName => $"{Name}, {Host}, {StateLabel}, {TransferLabel}";
     public string StartAccessibleName => $"Start download {Name}";
     public string PauseAccessibleName => $"Pause download {Name}";
-    public string ResumeAccessibleName => $"Restart download {Name} from the beginning";
+    public string ResumeButtonLabel => HasExpectedSha256 ? "Continue" : "Restart";
+    public string ResumeAccessibleName => HasExpectedSha256
+        ? $"Continue download {Name}; verified partial bytes may be reused when supported"
+        : $"Restart download {Name} from the beginning";
     public string CancelAccessibleName => $"Cancel download {Name}";
     public string RemoveAccessibleName => $"Remove download record for {Name}";
     public string ActionsAccessibleName => $"More actions for {Name}";
@@ -74,6 +78,9 @@ public static class DownloadJobProjection
             // Invalid entries are retained as unknown status rather than treated
             // as runnable queue operations.
             if (state.Length == 0) continue;
+            string expectedSha256 = Text(item, "sha256");
+            bool hasExpectedSha256 = expectedSha256.Length == 64 &&
+                expectedSha256.All(Uri.IsHexDigit);
             string label = state switch
             {
                 "Pending" => "Queued",
@@ -81,7 +88,9 @@ public static class DownloadJobProjection
                 "Publishing" => "Finishing",
                 "SuspendRequested" => "Pausing",
                 "Suspended" => "Paused",
-                "Interrupted" => "Interrupted — restart available",
+                "Interrupted" => hasExpectedSha256
+                    ? "Interrupted — continue available"
+                    : "Interrupted — restart available",
                 "CancelRequested" => "Cancelling",
                 "Cancelled" => "Cancelled",
                 "Completed" => "Completed",
@@ -114,7 +123,7 @@ public static class DownloadJobProjection
                 state is "Suspended" or "Interrupted",
                 state is "Pending" or "Running" or "Suspended" or "Interrupted",
                 state is "Completed" or "Cancelled" or "Failed",
-                created));
+                created, hasExpectedSha256));
         }
         return jobs
             .OrderByDescending(job => job.CreatedAt)

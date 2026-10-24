@@ -243,7 +243,7 @@
                                                     Style="{StaticResource QuietButtonStyle}"
                                                     Visibility="{x:Bind local:DownloadsPage.BoolToVisibility(CanPause)}"
                                                     AutomationProperties.Name="{x:Bind PauseAccessibleName}" />
-                                            <Button Content="Restart" Click="Resume_Click" Tag="{x:Bind}"
+                                            <Button Content="{x:Bind ResumeButtonLabel}" Click="Resume_Click" Tag="{x:Bind}"
                                                     Style="{StaticResource QuietButtonStyle}"
                                                     Visibility="{x:Bind local:DownloadsPage.BoolToVisibility(CanResume)}"
                                                     AutomationProperties.Name="{x:Bind ResumeAccessibleName}" />
