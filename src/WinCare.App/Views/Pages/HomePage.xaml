@@ -57,7 +57,7 @@
                                    Text="{x:Bind ViewModel.CheckupCoverageText, Mode=OneWay}"/>
                         <TextBlock Style="{StaticResource FieldLabelTextStyle}" Text="Checkup coverage"/>
                         <TextBlock Style="{StaticResource TelemetryTextStyle}" FontFamily="Cascadia Code" FontSize="11"
-                                   Text="Four areas checked" Foreground="{ThemeResource TextSecondaryBrush}" Margin="0,2,0,0" />
+                                   Text="Four read-only areas" Foreground="{ThemeResource TextSecondaryBrush}" Margin="0,2,0,0" />
                     </StackPanel>
                 </Grid>
             </Border>
