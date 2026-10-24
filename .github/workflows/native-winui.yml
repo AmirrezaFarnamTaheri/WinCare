@@ -53,17 +53,16 @@ jobs:
           dotnet --version
           dotnet restore WinCare.Native.sln -p:Platform=x64 -p:RestoreLockedMode=false --force-evaluate
           dotnet restore WinCare.Native.sln -p:Platform=ARM64 -p:RestoreLockedMode=false --force-evaluate
-          # Use NuGet's project-scoped --lock-file-path and --no-dependencies
+          # Use NuGet's project-relative --lock-file-path and --no-dependencies
           # explicitly. A plain restore can update canonical locks while leaving
           # the RID-specific portable graphs stale under Windows App SDK targets.
           for runtime in win-x64 win-arm64; do
             for project in src/*/*.csproj; do
-              directory="${project%/*}"
               dotnet restore "$project" \
                 -p:Platform=x64 -p:WindowsPackageType=None \
                 -p:PublishSingleFile=true -r "$runtime" \
                 -p:RestoreLockedMode=false \
-                --lock-file-path "$directory/packages.portable.$runtime.lock.json" \
+                --lock-file-path "packages.portable.$runtime.lock.json" \
                 --no-dependencies --force --force-evaluate
             done
           done
