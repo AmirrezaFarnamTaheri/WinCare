@@ -322,15 +322,32 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
             PageRow? securityRow = Sections[0].Rows.FirstOrDefault(candidate => candidate.Title == "Security");
             if (securityResult.Data?.ValueKind == JsonValueKind.Object)
             {
-                if (securityResult.Data.Value.TryGetProperty("defenderServiceRunning", out JsonElement defenderElement) && !defenderElement.GetBoolean())
+                bool defenderStateKnown =
+                    !securityResult.Data.Value.TryGetProperty("defenderServiceStateKnown", out JsonElement knownElement) ||
+                    knownElement.ValueKind != JsonValueKind.False;
+                if (!defenderStateKnown)
                 {
-                    hasCritical = true;
-                    findings.Add("Windows Defender isn't running");
+                    hasWarning = true;
+                    findings.Add("Microsoft Defender service status could not be confirmed");
                     if (securityRow is not null)
                     {
-                        securityRow.State = "Defender stopped";
-                        securityRow.StatusBrushKey = "DangerBrush";
-                        SetNavigationAction(securityRow, "Fix security", SecurityRoute, "Status");
+                        securityRow.State = "Service status unknown";
+                        securityRow.StatusBrushKey = "WarningBrush";
+                        SetNavigationAction(securityRow, "Review security", SecurityRoute, "Status");
+                    }
+                }
+                else if (securityResult.Data.Value.TryGetProperty("defenderServiceRunning", out JsonElement defenderElement) &&
+                         defenderElement.ValueKind == JsonValueKind.False)
+                {
+                    // Another antivirus may be the registered active protection provider;
+                    // stopped WinDefend alone does not prove that the PC is unprotected.
+                    hasWarning = true;
+                    findings.Add("Microsoft Defender service is stopped; confirm which antivirus protects this device");
+                    if (securityRow is not null)
+                    {
+                        securityRow.State = "Review antivirus";
+                        securityRow.StatusBrushKey = "WarningBrush";
+                        SetNavigationAction(securityRow, "Review security", SecurityRoute, "Status");
                     }
                 }
 
