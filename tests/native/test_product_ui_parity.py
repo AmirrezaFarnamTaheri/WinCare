@@ -62,7 +62,7 @@ class ProductUiParityTests(unittest.TestCase):
         self.assertIn("checkup.CompletedAt ?? checkup.StartedAt", view_model)
         self.assertNotIn("EvidenceScoreText", view_model)
         self.assertNotIn("EvidenceSummaryCard", xaml)
-        self.assertIn("record.CompletedAt ?? record.StartedAt", view_model)
+        self.assertIn("checkup.CompletedAt ?? checkup.StartedAt", view_model)
 
     def test_home_uses_plain_language_and_does_not_advertise_a_fake_swarm(self) -> None:
         xaml = self.read("src/WinCare.App/Views/Pages/HomePage.xaml")
