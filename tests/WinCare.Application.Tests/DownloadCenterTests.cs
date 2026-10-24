@@ -106,13 +106,58 @@ public sealed class DownloadCenterTests
         await Assert.ThrowsAsync<ArgumentException>(() => manager.AddAsync("https://user:password@example.com/file.zip"));
     }
 
+    [Fact]
+    public async Task Optional_SHA256_is_normalized_and_sent_to_the_native_download_queue()
+    {
+        var dispatcher = new RecordingDispatcher();
+        var manager = new DownloadCenterService(dispatcher);
+        const string checksum = "ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789";
+
+        await manager.AddAsync("https://example.com/archive.zip", checksum);
+
+        Assert.Equal(checksum.ToLowerInvariant(), dispatcher.LastCreateParameters?.GetProperty("Sha256").GetString());
+    }
+
+    [Theory]
+    [InlineData("short")]
+    [InlineData("ZBCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789")]
+    public async Task Malformed_SHA256_is_rejected_before_queue_mutation(string checksum)
+    {
+        var dispatcher = new RecordingDispatcher();
+        var manager = new DownloadCenterService(dispatcher);
+
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            manager.AddAsync("https://example.com/file.zip", checksum));
+
+        Assert.Null(dispatcher.LastCreateParameters);
+    }
+
+    [Fact]
+    public void Download_intake_requires_a_full_checksum_only_when_one_is_specified()
+    {
+        var vm = new WinCare.App.ViewModels.Pages.DownloadsPageViewModel(
+            new DownloadCenterService(new RecordingDispatcher()));
+        vm.NewUrl = "https://example.com/archive.zip";
+        Assert.True(vm.CanAdd);
+
+        vm.ExpectedSha256 = "almost-a-hash";
+        Assert.False(vm.CanAdd);
+        vm.ExpectedSha256 = new string('F', 64);
+        Assert.True(vm.CanAdd);
+        vm.ExpectedSha256 = " ";
+        Assert.True(vm.CanAdd);
+    }
+
     private sealed class RecordingDispatcher : ICommandDispatcher
     {
         private readonly TaskCompletionSource<bool> _releaseTransfer = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public TaskCompletionSource<bool> TransferStarted { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public JsonElement? LastCreateParameters { get; private set; }
         public void ReleaseTransfer() => _releaseTransfer.TrySetResult(true);
         public async Task<CommandResult> ExecuteAsync(CommandRequest request, CommandExecutionOptions options, CancellationToken token)
         {
+            if (request.CommandId == "download-create")
+                LastCreateParameters = request.Parameters.Clone();
             if (request.CommandId is "download-start" or "download-resume")
             {
                 TransferStarted.TrySetResult(true);
