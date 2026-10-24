@@ -161,7 +161,7 @@ Troubleshoot cannot create its own execution approval. Errors are shown as plain
 
 Extensions run in process with the current user's WinCare permissions. Their declared capabilities tell you what they expect to use; they are not a sandbox.
 
-**Installed extension packages are immutable after admission.** Every package file and path participates in an integrity digest. Creating a log, cache, or marker inside the installed extension folder changes that digest and blocks later execution. Extension authors must write mutable state under their own Windows Local AppData or temporary directory, not next to installed scripts. Files bundled with the extension can be located relative to the script's own path. External scripts cannot run elevated until protected immutable staging is available.
+**Installed extension packages are immutable after admission.** Every package file and path participates in an integrity digest. For admitted external script tools, WinCare stages a per-run copy of the complete plugin tree, checks its digest against the external trust record, and holds the copied files open read-only while the interpreter runs. Altering installed script bytes cannot change the code of that in-flight execution. Each snapshot is temporary and deleted after execution; writes to its working directory are not persistent. Extension authors must write persistent mutable data under their own Windows Local AppData, not inside the installed extension folder. Bundled resources can be located relative to the executing script's directory. External scripts remain blocked from elevated execution: a same-user staged snapshot is not an OS security sandbox or an administrator-owned trust boundary.
 
 ### Current release behavior
 
