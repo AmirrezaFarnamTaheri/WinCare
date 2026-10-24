@@ -182,6 +182,8 @@ internal sealed partial class WindowsCommandExecutor : ICommandOperationExecutor
             if (!definition.ReadOnly && !request.Apply)
             {
                 ValidateCommandParameters(definition, parameters);
+                if (definition.Id.Equals("remediation-restore", StringComparison.OrdinalIgnoreCase))
+                    return await RemediationRestorePreviewAsync(parameters, cancellationToken).ConfigureAwait(false);
                 return MutationPreview(definition, parameters);
             }
 

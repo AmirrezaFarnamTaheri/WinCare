@@ -52,8 +52,8 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
     public IRelayCommand StopCheckCommand { get; }
 
     /// <summary>
-    /// Cancels an in-flight checkup. Used when the user navigates away from the cached page so
-    /// late-arriving probe results cannot mutate rows the user is no longer looking at.
+    /// Cancels an in-flight checkup only on explicit user request. The cached page
+    /// keeps its state and allows read-only checks to complete after navigation.
     /// </summary>
     public void CancelRunningCheck()
     {
@@ -106,8 +106,8 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
         CheckupStatusDetail = "checking now";
         CheckupStatusBrushKey = "AccentChromeBrush";
 
-        // Link the command token with a page-owned source so leaving the page cancels the
-        // whole run, including the Windows Update probe.
+        // Link the command token with a page-owned source so the Stop checkup
+        // button cancels the whole run, including the Windows Update probe.
         using CancellationTokenSource runCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         _runCts = runCts;
         CancellationToken token = runCts.Token;
@@ -322,15 +322,32 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
             PageRow? securityRow = Sections[0].Rows.FirstOrDefault(candidate => candidate.Title == "Security");
             if (securityResult.Data?.ValueKind == JsonValueKind.Object)
             {
-                if (securityResult.Data.Value.TryGetProperty("defenderServiceRunning", out JsonElement defenderElement) && !defenderElement.GetBoolean())
+                bool defenderStateKnown =
+                    !securityResult.Data.Value.TryGetProperty("defenderServiceStateKnown", out JsonElement knownElement) ||
+                    knownElement.ValueKind != JsonValueKind.False;
+                if (!defenderStateKnown)
                 {
-                    hasCritical = true;
-                    findings.Add("Windows Defender isn't running");
+                    hasWarning = true;
+                    findings.Add("Microsoft Defender service status could not be confirmed");
                     if (securityRow is not null)
                     {
-                        securityRow.State = "Defender stopped";
-                        securityRow.StatusBrushKey = "DangerBrush";
-                        SetNavigationAction(securityRow, "Fix security", SecurityRoute, "Status");
+                        securityRow.State = "Service status unknown";
+                        securityRow.StatusBrushKey = "WarningBrush";
+                        SetNavigationAction(securityRow, "Review security", SecurityRoute, "Status");
+                    }
+                }
+                else if (securityResult.Data.Value.TryGetProperty("defenderServiceRunning", out JsonElement defenderElement) &&
+                         defenderElement.ValueKind == JsonValueKind.False)
+                {
+                    // Another antivirus may be the registered active protection provider;
+                    // stopped WinDefend alone does not prove that the PC is unprotected.
+                    hasWarning = true;
+                    findings.Add("Microsoft Defender service is stopped; confirm which antivirus protects this device");
+                    if (securityRow is not null)
+                    {
+                        securityRow.State = "Review antivirus";
+                        securityRow.StatusBrushKey = "WarningBrush";
+                        SetNavigationAction(securityRow, "Review security", SecurityRoute, "Status");
                     }
                 }
 

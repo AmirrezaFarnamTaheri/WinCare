@@ -108,7 +108,9 @@ public sealed partial class DownloadsPage : Page
         for (int i = 0; i < 3; i++)
         {
             MetricsGrid.ColumnDefinitions[i].Width = compact && i > 0 ? new GridLength(0) : new GridLength(1, GridUnitType.Star);
+            MetricsGrid.RowDefinitions[i].Height = compact || i == 0 ? GridLength.Auto : new GridLength(0);
         }
+        MetricsGrid.RowSpacing = compact ? 12 : 0;
         Grid.SetRow(TotalMetric, 0);
         Grid.SetColumn(ActiveMetric, compact ? 0 : 1);
         Grid.SetRow(ActiveMetric, compact ? 1 : 0);

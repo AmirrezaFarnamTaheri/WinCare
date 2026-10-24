@@ -605,15 +605,14 @@ jobs:
               echo "Bump Directory.Build.props before publishing a new release." >&2
               exit 1
             fi
-            existing_assets=$(gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name')
-            for asset in release_assets/*; do
-              asset_name=$(basename "$asset")
-              if grep -Fxq "$asset_name" <<<"$existing_assets"; then
-                echo "Asset '$asset_name' already exists; skipping."
-              else
-                gh release upload "$RELEASE_TAG" "$asset" --repo "$GITHUB_REPOSITORY"
-              fi
-            done
+            # Existing releases are immutable by content, not merely by tag/name.
+            # A retry can use a different signing identity; appending new assets to a
+            # partial earlier publication would silently mix incompatible signers.
+            existing_dir=$(mktemp -d)
+            trap 'rm -rf "$existing_dir"' EXIT
+            gh release download "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --dir "$existing_dir"
+            python tools/check_release_assets.py --expected release_assets --published "$existing_dir"
+            echo "Release $RELEASE_TAG already contains exactly the validated artifact bytes."
           else
             notes_file="docs/releases/${RELEASE_TAG}.md"
             if [[ ! -f "$notes_file" ]]; then
@@ -624,6 +623,9 @@ jobs:
               --title "WinCare $RELEASE_TAG" \
               --notes-file "$notes_file" \
               "$RELEASE_FLAGS" \
+              --draft \
               --target "$GITHUB_SHA" \
               --repo "$GITHUB_REPOSITORY"
+            # Keep the release invisible until all assets have been uploaded.
+            gh release edit "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --draft=false
           fi

@@ -23,4 +23,18 @@ public sealed class DownloadFilterTests
         Assert.Empty(DownloadViewFilters.Apply(jobs, "All", "secret2"));
         Assert.Equal(3, jobs.Count);
     }
+
+    [Fact]
+    public void Interrupted_download_does_not_promise_validated_byte_resume()
+    {
+        using var payload = JsonDocument.Parse("""
+            [{"id":"restart-me","state":"Interrupted","destination":"archive.zip","url":"https://example.com/archive.zip","partialBytes":4096}]
+            """);
+
+        DownloadJobRow job = Assert.Single(DownloadJobProjection.Project(payload.RootElement));
+
+        Assert.True(job.CanResume);
+        Assert.Contains("restart", job.StateLabel, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("restart", job.ResumeAccessibleName, StringComparison.OrdinalIgnoreCase);
+    }
 }

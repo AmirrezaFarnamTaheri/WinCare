@@ -53,11 +53,10 @@ public sealed class DownloadsPageViewModel : ObservableObject
         private set => SetProperty(ref _isLoading, value);
     }
     public bool CanAdd =>
-        !IsBusy && (
-            (Uri.TryCreate(_newUrl.Trim(), UriKind.Absolute, out Uri? uri) &&
-             (uri.Scheme is "http" or "https" || uri.Scheme.Equals("magnet", StringComparison.OrdinalIgnoreCase)) &&
-             uri.UserInfo.Length == 0 && uri.AbsoluteUri.Length <= 4096) ||
-            _newUrl.Trim().StartsWith("magnet:?", StringComparison.OrdinalIgnoreCase));
+        !IsBusy &&
+        Uri.TryCreate(_newUrl.Trim(), UriKind.Absolute, out Uri? uri) &&
+        uri.Scheme is "http" or "https" &&
+        uri.UserInfo.Length == 0 && uri.AbsoluteUri.Length <= 4096;
 
     public bool HasNotice => _notice.Length > 0;
     public string Notice
@@ -72,7 +71,7 @@ public sealed class DownloadsPageViewModel : ObservableObject
     public bool HasTorrents => Torrents.Count > 0;
     public bool IsEmpty => VisibleJobs.Count == 0 && Torrents.Count == 0 && !IsLoading;
     public string EmptyDescription => Jobs.Count == 0 && Torrents.Count == 0
-        ? "No transfers yet. Paste a link or magnet URI above to start your first transfer."
+        ? "No transfers yet. Paste an HTTP or HTTPS link above to start a download."
         : "No downloads match. Try a different search or switch to All.";
 
     public string TotalText => (Jobs.Count + Torrents.Count).ToString(System.Globalization.CultureInfo.CurrentCulture);
@@ -89,12 +88,7 @@ public sealed class DownloadsPageViewModel : ObservableObject
         _pageCancellation = new CancellationTokenSource();
         _isActive = true;
 
-        // Auto-seed default Linux distribution torrent on first view for instant swarm telemetry demonstration
-        if (Services.AppRuntime.Current.Torrents.GetActiveSnapshots().Count == 0)
-        {
-            _ = Services.AppRuntime.Current.Torrents.AddMagnetAsync(
-                "magnet:?xt=urn:btih:e5824abb3d435d2d8571149da7a85d3f3d477a37&dn=Ubuntu-24.04-desktop-amd64.iso&tr=udp%3A%2F%2Ftracker.opentrackr.org%3A1337%2Fannounce");
-        }
+        // Opening Transfers must never start network activity or create a demo job.
     }
 
     public void Deactivate()
@@ -207,17 +201,7 @@ public sealed class DownloadsPageViewModel : ObservableObject
         {
             if (link.StartsWith("magnet:?", StringComparison.OrdinalIgnoreCase))
             {
-                var snapshot = await Services.AppRuntime.Current.Torrents.AddMagnetAsync(link);
-                if (snapshot is not null)
-                {
-                    NewUrl = string.Empty;
-                    Notice = $"BitTorrent swarm '{snapshot.Name}' joined and active.";
-                }
-                else
-                {
-                    Notice = "Could not parse Magnet URI.";
-                }
-                await RefreshAsync();
+                Notice = "BitTorrent downloads are unavailable until a real, verified transfer engine is implemented.";
                 return;
             }
 
@@ -280,7 +264,9 @@ public sealed class DownloadsPageViewModel : ObservableObject
                 Notice = "That download is already running.";
                 return;
             }
-            Notice = "Transfer started. You can keep using WinCare.";
+            Notice = action == "resume"
+                ? "Download restarting from the beginning. The previous partial file is not reused without verification."
+                : "Download started. You can keep using WinCare.";
             await RefreshAsync();
             return;
         }

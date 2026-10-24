@@ -61,8 +61,18 @@ internal sealed partial class WindowsCommandExecutor
     private async Task<CommandHandlerOutcome> ExecutePerfStandbyPurgeAsync(CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        long freed = await MemoryGovernor.CompactSystemMemoryAsync(cancellationToken).ConfigureAwait(false);
-        return CommandHandlerOutcome.Success($"Standby memory list purged and working sets trimmed. Reclaimed {freed / (1024 * 1024)} MB of RAM.");
+        MemoryGovernor.MemoryCompactionResult result =
+            await MemoryGovernor.CompactSystemMemoryAsync(cancellationToken).ConfigureAwait(false);
+        if (!result.AnySucceeded)
+            return CommandHandlerOutcome.Failed(
+                "Memory adjustment was not confirmed: Windows refused or did not support the requested native operations.");
+
+        double observedMiB = result.ObservedAvailableBytesChange / (1024d * 1024d);
+        return CommandHandlerOutcome.Success(
+            $"Windows accepted {(result.StandbyRequestSucceeded ? "the standby-list request" : "no standby-list request")}; " +
+            $"trimmed {result.WorkingSetTrimCount} of {result.WorkingSetAttemptCount} attempted working sets. " +
+            $"Available physical memory changed by {observedMiB:+0.0;-0.0;0.0} MiB during the operation; " +
+            "this observation is not proof of memory reclaimed.");
     }
 
     private Task<CommandHandlerOutcome> ExecutePerfTimerAsync(CancellationToken cancellationToken)

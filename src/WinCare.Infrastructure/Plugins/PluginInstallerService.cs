@@ -548,6 +548,7 @@ public class PluginInstallerService : IPluginInstallerService
 
             var manifestDigest = Convert.ToHexString(SHA256.HashData(manifestRawBytes)).ToLowerInvariant();
             string? assemblyDigest = await RecordAdmittedAssemblyDigestAsync(doc.RootElement, tempExtractDir, cancellationToken).ConfigureAwait(false);
+            string packageTreeDigest = PluginAdmissionTrustStore.ComputePluginPayloadDigest(tempExtractDir);
             var finalTargetDir = ValidateAndGetPluginDirectory(manifestId);
 
             // The trust anchor must live where the installing account cannot rewrite it. Only an
@@ -564,6 +565,7 @@ public class PluginInstallerService : IPluginInstallerService
                 PluginId = manifestId,
                 ManifestSha256 = manifestDigest,
                 AssemblySha256 = assemblyDigest,
+                PackageTreeSha256 = packageTreeDigest,
                 PublisherId = string.IsNullOrWhiteSpace(expectedPublisherId) ? null : expectedPublisherId,
                 PublisherPublicKeyPem = hasExpectedKey ? expectedPublisherPublicKeyPem : null,
                 PublisherSignature = hasExpectedSignature ? expectedPublisherSignature : null,

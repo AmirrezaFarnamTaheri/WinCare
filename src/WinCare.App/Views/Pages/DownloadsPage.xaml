@@ -22,15 +22,15 @@
             </Grid.RowDefinitions>
 
             <!-- Workspace Header -->
-            <controls:PageHeaderControl Title="Transfers &amp; Torrent Hub"
-                Description="Unified high-throughput BitTorrent swarm engine with sparse allocation and direct HTTP downloader." />
+            <controls:PageHeaderControl Title="Downloads"
+                Description="Download files from HTTP or HTTPS links and check their progress." />
 
             <!-- Transfer Intake Card -->
             <Border Grid.Row="1" Style="{StaticResource SurfaceBorderStyle}" Padding="20">
                 <StackPanel Spacing="12">
                     <StackPanel Spacing="4">
-                        <TextBlock Text="New Transfer" Style="{StaticResource SectionHeaderTextStyle}" />
-                        <TextBlock Text="Paste a direct HTTP/HTTPS link or BitTorrent magnet:?xt=urn:btih: URI."
+                        <TextBlock Text="Add a download" Style="{StaticResource SectionHeaderTextStyle}" />
+                        <TextBlock Text="Paste a direct HTTP or HTTPS link to a file."
                                    Style="{StaticResource RowSecondaryTextStyle}" />
                     </StackPanel>
                     <Grid x:Name="AddGrid" ColumnSpacing="12" RowSpacing="8">
@@ -44,15 +44,15 @@
                         </Grid.RowDefinitions>
                         <TextBox x:Name="LinkInput" MinHeight="44" MaxLength="4096"
                                  Text="{x:Bind ViewModel.NewUrl, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                 PlaceholderText="https://example.com/file.iso or magnet:?xt=urn:btih:..."
-                                 AutomationProperties.Name="Transfer link or magnet URI" AutomationProperties.AutomationId="DownloadUrl" />
-                        <Button x:Name="AddButton" Grid.Column="1" Content="Start Transfer"
+                                 PlaceholderText="https://example.com/file.zip"
+                                 AutomationProperties.Name="HTTP or HTTPS download link" AutomationProperties.AutomationId="DownloadUrl" />
+                        <Button x:Name="AddButton" Grid.Column="1" Content="Download"
                                 Style="{StaticResource PrimaryActionButtonStyle}" Click="Add_Click"
                                 IsEnabled="{x:Bind ViewModel.CanAdd, Mode=OneWay}"
-                                AutomationProperties.Name="Start transfer" AutomationProperties.AutomationId="AddDownload" />
+                                AutomationProperties.Name="Start download" AutomationProperties.AutomationId="AddDownload" />
                     </Grid>
                     <TextBlock Style="{StaticResource FieldHintTextStyle}"
-                               Text="Transfers are pre-allocated on NTFS as sparse files with SIMD piece checksum verification. No system stutter." />
+                               Text="You can keep using WinCare while downloads run. Paused transfers may restart from the beginning." />
                 </StackPanel>
             </Border>
 
@@ -63,22 +63,27 @@
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
                 <Border x:Name="TotalMetric" Style="{StaticResource SurfaceBorderStyle}" Padding="16">
                     <StackPanel Spacing="4">
-                        <TextBlock Style="{StaticResource FieldLabelTextStyle}" Text="Total Transfers" />
+                        <TextBlock Style="{StaticResource FieldLabelTextStyle}" Text="Total downloads" />
                         <TextBlock Style="{StaticResource MetricTextStyle}" Text="{x:Bind ViewModel.TotalText, Mode=OneWay}" />
                     </StackPanel>
                 </Border>
                 <Border x:Name="ActiveMetric" Grid.Column="1" Style="{StaticResource SurfaceBorderStyle}" Padding="16">
                     <StackPanel Spacing="4">
-                        <TextBlock Style="{StaticResource FieldLabelTextStyle}" Text="Active &amp; In-Flight" />
+                        <TextBlock Style="{StaticResource FieldLabelTextStyle}" Text="In progress" />
                         <TextBlock Style="{StaticResource MetricTextStyle}" Foreground="{ThemeResource SuccessBrush}"
                                    Text="{x:Bind ViewModel.InProgressText, Mode=OneWay}" />
                     </StackPanel>
                 </Border>
                 <Border x:Name="FinishedMetric" Grid.Column="2" Style="{StaticResource SurfaceBorderStyle}" Padding="16">
                     <StackPanel Spacing="4">
-                        <TextBlock Style="{StaticResource FieldLabelTextStyle}" Text="Finished &amp; Seeding" />
+                        <TextBlock Style="{StaticResource FieldLabelTextStyle}" Text="Finished" />
                         <TextBlock Style="{StaticResource MetricTextStyle}" Text="{x:Bind ViewModel.FinishedText, Mode=OneWay}" />
                     </StackPanel>
                 </Border>
@@ -238,7 +243,7 @@
                                                     Style="{StaticResource QuietButtonStyle}"
                                                     Visibility="{x:Bind local:DownloadsPage.BoolToVisibility(CanPause)}"
                                                     AutomationProperties.Name="{x:Bind PauseAccessibleName}" />
-                                            <Button Content="Resume" Click="Resume_Click" Tag="{x:Bind}"
+                                            <Button Content="Restart" Click="Resume_Click" Tag="{x:Bind}"
                                                     Style="{StaticResource QuietButtonStyle}"
                                                     Visibility="{x:Bind local:DownloadsPage.BoolToVisibility(CanResume)}"
                                                     AutomationProperties.Name="{x:Bind ResumeAccessibleName}" />

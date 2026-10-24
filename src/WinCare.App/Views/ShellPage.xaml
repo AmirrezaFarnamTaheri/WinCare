@@ -6,43 +6,11 @@
     SizeChanged="Shell_SizeChanged"
     Background="{ThemeResource PageBackgroundBrush}">
 
-    <Grid RowDefinitions="Auto,*,Auto">
-        <!-- Window TitleBar Ribbon & Global Search Command Bar (Ctrl+K) -->
-        <Grid Grid.Row="0" Height="48" Padding="16,0,16,0" ColumnDefinitions="Auto,*,Auto"
-              Background="{ThemeResource TitleBarBackgroundBrush}">
-            <!-- Brand Badge -->
-            <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
-                <FontIcon Glyph="&#xE90F;" Foreground="{ThemeResource AccentChromeBrush}" FontSize="18" />
-                <TextBlock Text="WinCare" FontWeight="SemiBold" FontSize="14" VerticalAlignment="Center" />
-                <Border Background="{ThemeResource SurfaceSecondaryBrush}" BorderBrush="{ThemeResource BorderSubtleBrush}"
-                        BorderThickness="1" CornerRadius="4" Padding="6,2">
-                    <TextBlock Text="v5.0 Native" FontSize="11" FontFamily="Cascadia Code" Foreground="{ThemeResource TextSecondaryBrush}" />
-                </Border>
-            </StackPanel>
-
-            <!-- Global Command Palette Launcher (Ctrl+K) -->
-            <Button Grid.Column="1" HorizontalAlignment="Center" Width="440" Height="34"
-                    Style="{StaticResource QuietButtonStyle}" Click="OpenCommandPalette_Click"
-                    AutomationProperties.Name="Global command search">
-                <Grid ColumnDefinitions="Auto,*,Auto" HorizontalAlignment="Stretch">
-                    <FontIcon Glyph="&#xE721;" FontSize="12" Margin="0,0,8,0" Foreground="{ThemeResource TextSecondaryBrush}" VerticalAlignment="Center" />
-                    <TextBlock Grid.Column="1" Text="Search tools, commands, or paste magnet URI..." FontSize="12"
-                               Foreground="{ThemeResource TextSecondaryBrush}" VerticalAlignment="Center" />
-                    <Border Grid.Column="2" Background="{ThemeResource SurfaceBrush}" BorderBrush="{ThemeResource BorderSubtleBrush}"
-                            BorderThickness="1" CornerRadius="3" Padding="5,1" VerticalAlignment="Center">
-                        <TextBlock Text="Ctrl+K" FontSize="10" FontFamily="Cascadia Code" Foreground="{ThemeResource TextSecondaryBrush}" />
-                    </Border>
-                </Grid>
-            </Button>
-
-            <!-- Right Spacer for Windows Caption Controls -->
-            <StackPanel Grid.Column="2" Width="40" />
-        </Grid>
-
+    <Grid RowDefinitions="*">
         <!-- Main Body: 5-Workspace Adaptive Navigation Rail + Viewport -->
         <NavigationView
-            x:Name="PrimaryNavigation" Grid.Row="1"
-            IsBackButtonVisible="Collapsed"
+            x:Name="PrimaryNavigation" Grid.Row="0"
+            IsBackButtonVisible="Auto"
             IsBackEnabled="False"
             BackRequested="PrimaryNavigation_BackRequested"
             IsSettingsVisible="False"
@@ -120,19 +88,5 @@
             <Frame x:Name="ContentFrame" Navigated="ContentFrame_Navigated" />
         </NavigationView>
 
-        <!-- System Status Bar -->
-        <Border Grid.Row="2" Height="30" Background="{ThemeResource TitleBarBackgroundBrush}"
-                BorderThickness="0,1,0,0" BorderBrush="{ThemeResource BorderSubtleBrush}" Padding="16,0">
-            <Grid ColumnDefinitions="Auto,*,Auto">
-                <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                    <Ellipse Width="6" Height="6" Fill="{ThemeResource SuccessBrush}" />
-                    <TextBlock Text="Kernel Core: Synced (ABI v1)" FontSize="11" FontFamily="Cascadia Code" Foreground="{ThemeResource TextSecondaryBrush}" />
-                </StackPanel>
-                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="16" VerticalAlignment="Center">
-                    <TextBlock Text="Memory: Nominal" FontSize="11" FontFamily="Cascadia Code" Foreground="{ThemeResource TextSecondaryBrush}" />
-                    <TextBlock Text="Swarm Engine: Ready" FontSize="11" FontFamily="Cascadia Code" Foreground="{ThemeResource TextSecondaryBrush}" />
-                </StackPanel>
-            </Grid>
-        </Border>
     </Grid>
 </Page>

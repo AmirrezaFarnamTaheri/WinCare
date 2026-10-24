@@ -153,6 +153,32 @@ public sealed class CommandParameterValidatorTests
         Assert.Contains(errors, error => error.Contains("outside its supported range", StringComparison.Ordinal));
     }
 
+    [Theory]
+    [InlineData("1e2147483647")]
+    [InlineData("1e100000000")]
+    public void An_unbounded_exponent_must_be_rejected_without_allocating_a_giant_integer(string bound)
+    {
+        CommandParameterDefinition definition = new(
+            "Count", CommandParameterKind.Long, Required: true, Minimum: bound);
+
+        IReadOnlyList<string> errors = CommandParameterValidator.Validate(
+            "exponent-bound", Parameters("{\"Count\":1}"), Schema(definition));
+
+        Assert.Contains(errors, error => error.Contains("unreadable range", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void A_reasonable_exponent_bound_is_compared_without_losing_precision()
+    {
+        CommandParameterDefinition definition = new(
+            "Count", CommandParameterKind.Long, Required: true, Maximum: "1e30");
+
+        IReadOnlyList<string> errors = CommandParameterValidator.Validate(
+            "exponent-bound", Parameters("{\"Count\":9223372036854775807}"), Schema(definition));
+
+        Assert.Empty(errors);
+    }
+
     [Fact]
     public void An_undeclared_parameter_is_reported()
     {

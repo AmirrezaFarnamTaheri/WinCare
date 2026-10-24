@@ -56,13 +56,16 @@ def detect_architecture() -> str:
 
 def find_canonical_package(search_dir: Path, arch: str) -> Path | None:
     """Find the best matching .msix package for the given architecture."""
-    for candidate in sorted(search_dir.glob("*.msix")):
-        if arch.lower() in candidate.name.lower():
-            return candidate
-    all_msix = list(search_dir.glob("*.msix"))
-    if len(all_msix) == 1:
-        return all_msix[0]
-    return None
+    matches = [
+        candidate for candidate in search_dir.glob("*.msix")
+        if any(
+            part.lower() == arch.lower()
+            for part in candidate.stem.replace("-", "_").split("_")
+        )
+    ]
+    # Never guess when multiple versions exist, and never install an unrelated
+    # architecture simply because it is the only package in the directory.
+    return matches[0] if len(matches) == 1 else None
 
 
 def main() -> int:
@@ -87,7 +90,10 @@ def main() -> int:
     cert_path: Path | None = args.certificate
     if cert_path is None:
         cert_candidates = sorted(script_dir.glob("*.cer")) + sorted(script_dir.parent.glob("*.cer"))
-        if cert_candidates:
+        if len(cert_candidates) > 1:
+            print("[-] Multiple certificate files found. Specify the matching signer with --certificate.")
+            return 1
+        if len(cert_candidates) == 1:
             cert_path = cert_candidates[0]
     if cert_path is not None:
         cert_path = cert_path.resolve()

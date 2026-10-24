@@ -179,19 +179,42 @@ internal sealed partial class WindowsCommandExecutor
         findings.Add(new { area = "Assessment policy", item = "Thresholds", severity = "Information", message = $"Assessment rules v{WinCare.Domain.Assessment.AssessmentPolicy.Version}: storage High below {WinCare.Domain.Assessment.AssessmentPolicy.DiskFreePercentWarning}% free; this overview is not a complete health verdict of installed protection." });
         if (memory.MemoryLoad >= 90) findings.Add(new { area = "Memory", item = "Physical memory", severity = "Moderate", message = $"Memory load is {memory.MemoryLoad}%." });
         if (!firewall) findings.Add(new { area = "Security", item = "Windows Firewall", severity = "High", message = "One or more firewall profiles appear disabled." });
-        int score = Math.Max(0, 100 - findings.Count * 15);
+        int actionableFindings = findings.Count - 1; // The single assessment-policy Information note is not a health defect.
+        int score = Math.Max(0, 100 - actionableFindings * 15);
         return Success("health", "Health assessment completed from current machine state.", new { score, findings, checkedAt = DateTimeOffset.UtcNow });
+    }
+
+    internal static string ClassifyDefenderServiceState(int exitCode, string output)
+    {
+        // A failed service probe is unknown, not evidence that protection is disabled.
+        if (exitCode != 0 || string.IsNullOrWhiteSpace(output)) return "Unknown";
+        System.Text.RegularExpressions.Match state =
+            System.Text.RegularExpressions.Regex.Match(
+                output, @"(?im)^\s*STATE\s*:\s*(\d+)\b",
+                System.Text.RegularExpressions.RegexOptions.CultureInvariant);
+        if (!state.Success || !int.TryParse(state.Groups[1].Value, out int code))
+            return "Unknown";
+        return code switch
+        {
+            4 => "Running",
+            1 => "Stopped",
+            >= 2 and <= 7 => "Transitioning",
+            _ => "Unknown",
+        };
     }
 
     private async Task<CommandHandlerOutcome> SecurityOverviewAsync(CancellationToken cancellationToken)
     {
         ProcessExecutionResult defender = await _process.RunAsync("sc.exe", ["query", "WinDefend"], cancellationToken).ConfigureAwait(false);
+        string defenderState = ClassifyDefenderServiceState(defender.ExitCode, defender.StandardOutput);
         FirewallProfileState[] firewallProfiles = ReadFirewallProfileStates();
         using RegistryKey? policies = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System");
         int enableLua = Convert.ToInt32(policies?.GetValue("EnableLUA", 1), CultureInfo.InvariantCulture);
         return Success("security", "Security posture collected from Windows services, firewall and policy state.", new
         {
-            defenderServiceRunning = defender.StandardOutput.Contains("RUNNING", StringComparison.OrdinalIgnoreCase),
+            defenderServiceRunning = defenderState == "Running",
+            defenderServiceStateKnown = defenderState != "Unknown",
+            defenderServiceState = defenderState,
             firewallEnabled = firewallProfiles.All(profile => profile.Enabled),
             firewallProfiles,
             uacEnabled = enableLua != 0,

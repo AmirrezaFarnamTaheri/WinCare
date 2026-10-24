@@ -54,6 +54,17 @@ class DownloadsWorkspaceTests(unittest.TestCase):
         self.assertNotIn("File.Move(partial, destination, overwrite: true)", executor)
         self.assertIn("File.Move(tempPath, task.DestinationPath, overwrite: false)", scheduler)
 
+    def test_metrics_have_explicit_rows_for_compact_layout(self) -> None:
+        page = ET.fromstring(self.read("src/WinCare.App/Views/Pages/DownloadsPage.xaml"))
+        code = self.read("src/WinCare.App/Views/Pages/DownloadsPage.xaml.cs")
+        xaml_ns = "http://schemas.microsoft.com/winfx/2006/xaml"
+        metrics = next(element for element in page.iter()
+                       if element.get(f"{{{xaml_ns}}}Name") == "MetricsGrid")
+        definitions = next(child for child in metrics if child.tag.endswith("Grid.RowDefinitions"))
+        self.assertEqual(3, len(list(definitions)))
+        self.assertIn("MetricsGrid.RowDefinitions[i].Height", code)
+        self.assertIn("Grid.SetRow(FinishedMetric, compact ? 2 : 0);", code)
+
     def test_ui_displays_only_redacted_sources_and_real_progress(self) -> None:
         projection = self.read("src/WinCare.Application/Downloads/DownloadJobProjection.cs")
         page = self.read("src/WinCare.App/Views/Pages/DownloadsPage.xaml")

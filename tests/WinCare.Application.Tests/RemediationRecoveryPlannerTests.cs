@@ -82,4 +82,87 @@ public sealed class RemediationRecoveryPlannerTests
             RemediationRecoveryPlanner.Create(first.RootElement).Digest,
             RemediationRecoveryPlanner.Create(reordered.RootElement).Digest);
     }
+
+    [Fact]
+    public void Interrupted_remediation_remains_non_executable_until_durable_journal_writes_are_verified()
+    {
+        // Recording an intent without durably writing the registry preimage before the
+        // mutation cannot establish crash recovery. A new scope label is not proof.
+        JsonElement interrupted = JsonSerializer.SerializeToElement(new
+        {
+            id = "crash-between-write-and-receipt", status = "PartiallyApplied",
+            recoveryScope = "RegistryOnly",
+            changes = new object[]
+            {
+                new { Type = "SetRegistryValue", detail = new
+                    { path = @"HKCU:\A", name = "One", previous = 1, previousKind = "DWord", value = 0, valueType = "DWord" } }
+            }
+        });
+        JsonElement pending = JsonSerializer.SerializeToElement(new
+        {
+            id = "crash-after-preparation", status = "Applying", recoveryScope = "RegistryOnly",
+            changes = Array.Empty<object>(),
+            pendingRegistryChange = new { Type = "SetRegistryValue", detail = new
+                { path = @"HKCU:\A", name = "Pending", previous = 1, previousKind = "DWord", value = 0, valueType = "DWord" } }
+        });
+
+        Assert.False(RemediationRecoveryPlanner.Create(interrupted).IsExecutable);
+        Assert.False(RemediationRecoveryPlanner.Create(pending).IsExecutable);
+    }
+    [Fact]
+    public void Interrupted_registry_only_receipt_with_durable_pending_preimage_can_be_reviewed()
+    {
+        JsonElement record = JsonSerializer.SerializeToElement(new
+        {
+            id = "journaled-1", status = "Applying", journalSchemaVersion = 2,
+            recoveryScope = "RegistryOnly",
+            changes = new object[]
+            {
+                new { Type = "SetRegistryValue", detail = new { path = @"HKCU:\A", name = "First", previous = 1, previousKind = "DWord", value = 0, valueType = "DWord" } },
+            },
+            pendingRegistryChange = new
+            {
+                Type = "SetRegistryValue",
+                detail = new { path = @"HKCU:\B", name = "Second", previous = (object?)null, previousKind = (string?)null, value = 1, valueType = "DWord" }
+            }
+        });
+
+        RemediationRecoveryPlan plan = RemediationRecoveryPlanner.Create(record);
+
+        Assert.True(plan.IsExecutable, string.Join(" ", plan.Failures));
+        Assert.Equal(["Second", "First"], plan.Steps.Select(step => step.Name));
+        Assert.True(plan.Steps[0].PendingUncertain);
+        Assert.False(plan.Steps[1].PendingUncertain);
+        Assert.Null(plan.Steps[0].PreviousValue);
+    }
+
+    [Fact]
+    public void Only_journal_version_two_registry_only_incomplete_receipts_are_recoverable()
+    {
+        JsonElement unversioned = JsonSerializer.SerializeToElement(new
+        {
+            id = "not-journaled", status = "PartiallyApplied", recoveryScope = "RegistryOnly",
+            changes = new[] { new { Type = "SetRegistryValue", detail = new { path = @"HKCU:\A", name = "Value", previous = 1, previousKind = "DWord", value = 0, valueType = "DWord" } } }
+        });
+        JsonElement mixed = JsonSerializer.SerializeToElement(new
+        {
+            id = "mixed", status = "Applying", journalSchemaVersion = 2, recoveryScope = "Mixed",
+            changes = new[] { new { Type = "SetRegistryValue", detail = new { path = @"HKCU:\A", name = "Value", previous = 1, previousKind = "DWord", value = 0, valueType = "DWord" } } }
+        });
+
+        Assert.False(RemediationRecoveryPlanner.Create(unversioned).IsExecutable);
+        Assert.False(RemediationRecoveryPlanner.Create(mixed).IsExecutable);
+    }
+
+    [Fact]
+    public void Non_null_preimage_without_registry_kind_fails_closed()
+    {
+        JsonElement record = JsonSerializer.SerializeToElement(new
+        {
+            id = "missing-kind", status = "Applied",
+            changes = new[] { new { Type = "SetRegistryValue", detail = new { path = @"HKCU:\A", name = "Value", previous = 1, value = 0, valueType = "DWord" } } }
+        });
+        Assert.False(RemediationRecoveryPlanner.Create(record).IsExecutable);
+    }
+
 }
