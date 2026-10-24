@@ -40,8 +40,6 @@ public sealed partial class ShellPage : Page
 
     public void OpenGlobalSearch(string? query) => OpenNavigationItem(AllToolsKey, query?.Trim() ?? string.Empty);
 
-    private void OpenCommandPalette_Click(object sender, RoutedEventArgs e) => OpenGlobalSearch(null);
-
     public void OpenTool(ToolNavigationRequest request) => OpenNavigationItem(AllToolsKey, request);
 
     public void NavigateTo(string key, object? parameter = null)
