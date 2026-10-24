@@ -886,6 +886,7 @@ internal sealed partial class WindowsCommandExecutor : ICommandOperationExecutor
             "cleaner-disk-pressure" => CleanupAffectedResources(p.Int32("OlderThanDays", 7, 0, 3650)),
             "deep-clean" => DeepCleanAffectedResources(p),
             "preset" => PresetAffectedResources(p.RequiredString("PresetId")),
+            "context-menu-set" => ContextMenuAffectedResources(p),
             _ => new[] { new { resourceType = "SystemState", path = commandId, target = "HostMutation", proposedValue = "Apply", reversible = isReversible } }
         };
     }

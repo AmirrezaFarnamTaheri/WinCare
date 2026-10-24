@@ -1321,10 +1321,10 @@
     {
       "id": "context-menu-set",
       "title": "Change context menu",
-      "summary": "Preview the operation, then change context menu after approval.",
+      "summary": "Create, update, or delete a persistent shell command under the selected user registry key.",
       "area": "System care",
       "section": "Performance",
-      "risk": "Moderate",
+      "risk": "High",
       "readOnly": false,
       "administratorAccess": "Required",
       "restart": "No",

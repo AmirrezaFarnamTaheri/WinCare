@@ -89,6 +89,53 @@ public sealed class CleanerPreviewTests
         Assert.Equal(cache, path);
     }
 
+    [Theory]
+    [InlineData("File", @"HKCU\Software\Classes\*\shell\WinCareEntry")]
+    [InlineData("Directory", @"HKCU\Software\Classes\Directory\shell\WinCareEntry")]
+    [InlineData("Background", @"HKCU\Software\Classes\Directory\Background\shell\WinCareEntry")]
+    public void Context_menu_preview_shows_the_exact_registry_subtree_that_will_be_deleted(
+        string scope, string expectedPath)
+    {
+        JsonElement result = PreviewAsJson("context-menu-set", new
+        {
+            Scope = scope,
+            Id = "WinCareEntry",
+            Enabled = false
+        });
+
+        JsonElement resource = Assert.Single(result.EnumerateArray());
+        Assert.Equal("RegistryKey", resource.GetProperty("resourceType").GetString());
+        Assert.Equal(expectedPath, resource.GetProperty("path").GetString());
+        Assert.Contains("child", resource.GetProperty("proposedValue").GetString(), StringComparison.OrdinalIgnoreCase);
+        Assert.False(resource.GetProperty("reversible").GetBoolean());
+    }
+
+    [Fact]
+    public void Context_menu_preview_shows_the_exact_persistent_command_and_is_high_risk()
+    {
+        JsonElement resource = Assert.Single(PreviewAsJson("context-menu-set", new
+        {
+            Scope = "File",
+            Id = "WinCareEntry",
+            Enabled = true,
+            Label = "Open in editor",
+            Command = "notepad.exe %1"
+        }).EnumerateArray());
+
+        Assert.Equal("notepad.exe %1", resource.GetProperty("proposedValue").GetString());
+        Assert.Equal("Open in editor", resource.GetProperty("target").GetString());
+        Assert.NotEqual("HostMutation", resource.GetProperty("target").GetString());
+        Assert.Equal(WinCare.Domain.Commands.RiskTier.Destructive,
+            WinCare.CommandCatalog.CommandCatalog.Find("context-menu-set")!.RiskTier);
+    }
+
+    [Fact]
+    public void Invalid_context_menu_scope_fails_before_issuing_a_concrete_preview()
+    {
+        Assert.Throws<CommandParameterException>(() =>
+            PreviewAsJson("context-menu-set", new { Scope = "Unknown", Id = "Entry", Enabled = false }));
+    }
+
     [Fact]
     public void Preset_preview_expands_the_resolved_rules_and_plan_digest()
     {
