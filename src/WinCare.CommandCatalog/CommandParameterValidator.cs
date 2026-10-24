@@ -256,7 +256,7 @@ public static class CommandParameterValidator
             // An exponent form such as "1e30" is an exact integer the decimal type cannot always
             // hold. The arbitrary-precision reader rejects an exponent style outright, so the
             // digits are expanded instead, which keeps the comparison exact.
-            if (TryExpandExponent(text, out string? expanded))
+            if (TryExpandExponent(text, out string? expanded) && expanded is not null)
             {
                 value = BigInteger.Parse(expanded, CultureInfo.InvariantCulture);
                 return true;
@@ -346,7 +346,7 @@ public static class CommandParameterValidator
         if (digits.Length == 0 || !digits.All(char.IsAsciiDigit)) return false;
 
         int shift = exponent - scale;
-        if (shift < 0) return false;
+        if (shift < 0 || shift > 4096 || digits.Length > 4096 - shift) return false;
 
         string magnitude = digits.TrimStart('0');
         if (magnitude.Length == 0)
