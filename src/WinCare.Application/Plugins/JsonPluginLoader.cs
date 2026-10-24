@@ -181,6 +181,22 @@ public static class JsonPluginLoader
                     "Manifest identity does not match the externally stored plugin admission record.");
             }
 
+            bool hasScripts = result.Manifest.Tools.Any(tool => !string.IsNullOrWhiteSpace(tool.ScriptPath));
+            if (hasScripts && string.IsNullOrWhiteSpace(admissionRecord.PackageTreeSha256))
+            {
+                return new PluginLoadResult(false, null, Array.Empty<CommandDefinition>(),
+                    "Script plugin admission is missing payload integrity evidence. Reinstall the plugin.");
+            }
+            if (!string.IsNullOrWhiteSpace(admissionRecord.PackageTreeSha256))
+            {
+                string actualPayloadDigest = PluginAdmissionTrustStore.ComputePluginPayloadDigest(pluginDirectoryPath);
+                if (!string.Equals(actualPayloadDigest, admissionRecord.PackageTreeSha256, StringComparison.OrdinalIgnoreCase))
+                {
+                    return new PluginLoadResult(false, null, Array.Empty<CommandDefinition>(),
+                        "Plugin payload integrity check failed: a script, dependency, or package file changed since admission.");
+                }
+            }
+
             return result;
         }
         catch (Exception ex)
