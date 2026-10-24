@@ -70,6 +70,8 @@ class ProductUiParityTests(unittest.TestCase):
             self.assertNotIn(invented, xaml)
         self.assertIn('Title="Your PC at a glance"', xaml)
         self.assertIn('Text="Downloads"', xaml)
+        self.assertNotIn('Text="Four areas checked"', xaml)
+        self.assertIn('Text="Four read-only areas"', xaml)
 
     def test_checkup_keeps_read_only_work_running_when_navigating_away(self) -> None:
         page = self.read("src/WinCare.App/Views/Pages/CheckupPage.xaml.cs")
