@@ -122,6 +122,14 @@ jobs:
       - name: Sign and verify MSIX
         timeout-minutes: 3
         shell: pwsh
+        env:
+          # Pull requests and ordinary CI builds use disposable development certificates.
+          # Tags, explicit release commits, and manual publications require one pinned
+          # signer shared by both x64 and ARM64 build jobs.
+          WINCARE_SIGN_FOR_RELEASE: ${{ startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.publish_release == true) || (github.event_name == 'push' && github.ref == 'refs/heads/master' && startsWith(github.event.head_commit.message, 'release: WinCare v')) }}
+          WINCARE_RELEASE_PFX_BASE64: ${{ secrets.WINCARE_RELEASE_PFX_BASE64 }}
+          WINCARE_RELEASE_PFX_PASSWORD: ${{ secrets.WINCARE_RELEASE_PFX_PASSWORD }}
+          WINCARE_RELEASE_CERT_THUMBPRINT: ${{ vars.WINCARE_RELEASE_CERT_THUMBPRINT }}
         run: |
           $ErrorActionPreference = 'Stop'
           $cert = $null
@@ -176,23 +184,51 @@ jobs:
           try {
             $signDir = "$PWD/artifacts/signing"
             New-Item -ItemType Directory -Force -Path $signDir | Out-Null
-            # TODO(maintainers): this mints a brand-new, per-run development identity with no
-            # -NotAfter, so a published signature is non-reproducible and lapses with the
-            # ephemeral certificate. It is runner-local by design and no signing secret lives in
-            # this workflow. Before the production channel, replace it with a persisted identity
-            # from a repository secret (or Azure Trusted Signing / OIDC) and keep the RFC 3161
-            # timestamp below so published signatures stay valid after the certificate expires.
-            # Once the identity is stable, pin its public certificate in tools/install_msix.py
-            # instead of the 'CN=WinCare Development' subject string.
-            $cert = New-SelfSignedCertificate `
-              -Type Custom `
-              -KeyUsage DigitalSignature `
-              -KeySpec Signature `
-              -Subject 'CN=WinCare Development' `
-              -FriendlyName 'WinCare Development Package' `
-              -CertStoreLocation 'Cert:\CurrentUser\My' `
-              -HashAlgorithm SHA256 `
-              -TextExtension @('2.5.29.37={text}1.3.6.1.5.5.7.3.3', '2.5.29.19={text}')
+            if ($env:WINCARE_SIGN_FOR_RELEASE -eq 'true') {
+              if (-not $env:WINCARE_RELEASE_PFX_BASE64 -or -not $env:WINCARE_RELEASE_PFX_PASSWORD -or
+                  -not $env:WINCARE_RELEASE_CERT_THUMBPRINT) {
+                throw 'Publishing requires WINCARE_RELEASE_PFX_BASE64, WINCARE_RELEASE_PFX_PASSWORD and WINCARE_RELEASE_CERT_THUMBPRINT. Refusing ephemeral release signing.'
+              }
+
+              $pfxPath = Join-Path $env:RUNNER_TEMP ("WinCare-release-" + [guid]::NewGuid().ToString('N') + ".pfx")
+              try {
+                $bytes = [Convert]::FromBase64String($env:WINCARE_RELEASE_PFX_BASE64)
+                if ($bytes.Length -lt 256 -or $bytes.Length -gt 131072) {
+                  throw 'Release PFX size is outside the accepted bounds.'
+                }
+                [IO.File]::WriteAllBytes($pfxPath, $bytes)
+                $password = ConvertTo-SecureString $env:WINCARE_RELEASE_PFX_PASSWORD -AsPlainText -Force
+                $imported = @(Import-PfxCertificate -FilePath $pfxPath -CertStoreLocation 'Cert:\CurrentUser\My' -Password $password -Exportable:$false)
+                $candidates = @($imported | Where-Object { $_.HasPrivateKey })
+                if ($candidates.Count -ne 1) {
+                  throw 'Release PFX must contain exactly one code-signing identity with a private key.'
+                }
+                $cert = $candidates[0]
+              }
+              finally {
+                if (Test-Path -LiteralPath $pfxPath) {
+                  Remove-Item -LiteralPath $pfxPath -Force
+                }
+              }
+              if ($cert.Subject -ne 'CN=WinCare Development') {
+                throw "Release signer subject '$($cert.Subject)' is inconsistent with the checked-in MSIX package publisher."
+              }
+              if ($cert.Thumbprint -ne $env:WINCARE_RELEASE_CERT_THUMBPRINT) {
+                throw 'Release signer thumbprint does not match the pinned repository variable.'
+              }
+            }
+            else {
+              # Development-only CI signer. Never publish these per-run certificates.
+              $cert = New-SelfSignedCertificate `
+                -Type Custom `
+                -KeyUsage DigitalSignature `
+                -KeySpec Signature `
+                -Subject 'CN=WinCare Development' `
+                -FriendlyName 'WinCare Development Package' `
+                -CertStoreLocation 'Cert:\CurrentUser\My' `
+                -HashAlgorithm SHA256 `
+                -TextExtension @('2.5.29.37={text}1.3.6.1.5.5.7.3.3', '2.5.29.19={text}')
+            }
             Export-Certificate -Cert $cert -FilePath "$signDir/WinCare.cer" | Out-Null
             # Hand the identity to the 'Sign portable executable' step so the MSIX and the
             # portable exe carry one shared signer and the published WinCare.cer attests to both.
@@ -585,6 +621,8 @@ jobs:
             --output release_assets \
             --version "$RELEASE_TAG" \
             "${manifest_args[@]}"
+          # Both architectures must use the same pinned release signing identity.
+          python tools/verify_release_signer.py --assets release_assets --version "$RELEASE_TAG"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: WinCare-release-${{ needs.verify.outputs.product_version }}
