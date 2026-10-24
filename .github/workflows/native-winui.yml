@@ -17,6 +17,11 @@ on:
         required: false
         type: string
         default: ''
+      run_installed_acceptance:
+        description: 'Install and uninstall MSIX on disposable Windows runners'
+        required: false
+        type: boolean
+        default: false
 
 concurrency:
   group: native-winui-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
@@ -539,6 +544,37 @@ jobs:
               throw "$message Commit reviewed capture images and provenance before release promotion."
             }
           }
+
+  installed-lifecycle-acceptance:
+    needs: [verify, build]
+    if: github.event_name == 'workflow_dispatch' && inputs.run_installed_acceptance == true
+    runs-on: \${{ matrix.runner }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: x64
+            runner: windows-latest
+          - platform: ARM64
+            runner: windows-11-vs2026-arm
+    env:
+      WINCARE_DISPOSABLE_TEST_HOST: '1'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: package-\${{ matrix.platform }}
+          path: artifacts/package
+      - name: Install and uninstall WinCare MSIX
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $packages = @(Get-ChildItem artifacts/package -Recurse -File -Filter 'WinCare.App_*.msix' | Where-Object { $_.FullName -notmatch '[\\/]Dependencies[\\/]' })
+          $certificates = @(Get-ChildItem artifacts/package -Recurse -File -Filter 'WinCare.cer')
+          if ($packages.Count -ne 1 -or $certificates.Count -ne 1) { throw 'Expected exactly one app MSIX and one signer certificate.' }
+          & pwsh -NoProfile -NonInteractive -File tools/test_msix_lifecycle.ps1 -PackagePath $packages[0].FullName -CertificatePath $certificates[0].FullName
+          if ($LASTEXITCODE -ne 0) { throw "Installed acceptance failed: $LASTEXITCODE" }
 
   release-gate:
     needs: [verify, build, portable-runtime-smoke]
