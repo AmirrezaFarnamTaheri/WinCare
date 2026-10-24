@@ -58,7 +58,8 @@ public sealed class PluginRegistryServiceTests
         {
             SchemaVersion = 1,
             PluginId = JsonDocument.Parse(manifestJson).RootElement.GetProperty("id").GetString()!,
-            ManifestSha256 = manifestDigest
+            ManifestSha256 = manifestDigest,
+            PackageTreeSha256 = PluginAdmissionTrustStore.ComputePluginPayloadDigest(pluginDir)
         }));
     }
 
