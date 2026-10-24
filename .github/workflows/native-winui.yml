@@ -126,7 +126,7 @@ jobs:
           # Pull requests and ordinary CI builds use disposable development certificates.
           # Tags, explicit release commits, and manual publications require one pinned
           # signer shared by both x64 and ARM64 build jobs.
-          WINCARE_SIGN_FOR_RELEASE: ${{ startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.publish_release == true) || (github.event_name == 'push' && github.ref == 'refs/heads/master' && startsWith(github.event.head_commit.message, 'release: WinCare v')) }}
+          WINCARE_SIGN_FOR_RELEASE: "${{ startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.publish_release == true) || (github.event_name == 'push' && github.ref == 'refs/heads/master' && startsWith(github.event.head_commit.message, 'release: WinCare v')) }}"
           WINCARE_RELEASE_PFX_BASE64: ${{ secrets.WINCARE_RELEASE_PFX_BASE64 }}
           WINCARE_RELEASE_PFX_PASSWORD: ${{ secrets.WINCARE_RELEASE_PFX_PASSWORD }}
           WINCARE_RELEASE_CERT_THUMBPRINT: ${{ vars.WINCARE_RELEASE_CERT_THUMBPRINT }}
