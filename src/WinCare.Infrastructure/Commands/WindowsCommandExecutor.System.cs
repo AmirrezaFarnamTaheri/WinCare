@@ -171,14 +171,15 @@ internal sealed partial class WindowsCommandExecutor
         WindowsInterop.MemoryStatusEx memory = new() { Length = (uint)System.Runtime.InteropServices.Marshal.SizeOf<WindowsInterop.MemoryStatusEx>() };
         WindowsInterop.GlobalMemoryStatusEx(ref memory);
         FirewallProfileState[] firewallProfiles = ReadFirewallProfileStates();
-        bool firewall = firewallProfiles.All(profile => profile.Enabled);
+        string firewallState = ClassifyFirewallProfileStates(firewallProfiles.Select(profile => (profile.Enabled, profile.ExplicitValue)).ToArray());
         var findings = new List<object>();
         // Thresholds come from the shared versioned assessment policy.
         findings.AddRange(drives.Where(d => d.freePercent < WinCare.Domain.Assessment.AssessmentPolicy.DiskFreePercentWarning)
             .Select(d => (object)new { area = "Storage", item = d.Name, severity = "High", message = $"Only {d.freePercent}% free." }));
         findings.Add(new { area = "Assessment policy", item = "Thresholds", severity = "Information", message = $"Assessment rules v{WinCare.Domain.Assessment.AssessmentPolicy.Version}: storage High below {WinCare.Domain.Assessment.AssessmentPolicy.DiskFreePercentWarning}% free; this overview is not a complete health verdict of installed protection." });
         if (memory.MemoryLoad >= 90) findings.Add(new { area = "Memory", item = "Physical memory", severity = "Moderate", message = $"Memory load is {memory.MemoryLoad}%." });
-        if (!firewall) findings.Add(new { area = "Security", item = "Windows Firewall", severity = "High", message = "One or more firewall profiles appear disabled." });
+        if (firewallState == "Disabled") findings.Add(new { area = "Security", item = "Windows Firewall", severity = "High", message = "At least one firewall profile is explicitly disabled." });
+        else if (firewallState == "Unknown") findings.Add(new { area = "Security", item = "Windows Firewall", severity = "Moderate", message = "Firewall state could not be verified for all three profiles." });
         int actionableFindings = findings.Count - 1; // The single assessment-policy Information note is not a health defect.
         int score = Math.Max(0, 100 - actionableFindings * 15);
         return Success("health", "Health assessment completed from current machine state.", new { score, findings, checkedAt = DateTimeOffset.UtcNow });
@@ -215,11 +216,21 @@ internal sealed partial class WindowsCommandExecutor
             defenderServiceRunning = defenderState == "Running",
             defenderServiceStateKnown = defenderState != "Unknown",
             defenderServiceState = defenderState,
-            firewallEnabled = firewallProfiles.All(profile => profile.Enabled),
+            firewallEnabled = ClassifyFirewallProfileStates(firewallProfiles.Select(profile => (profile.Enabled, profile.ExplicitValue)).ToArray()) == "Enabled",
+            firewallState = ClassifyFirewallProfileStates(firewallProfiles.Select(profile => (profile.Enabled, profile.ExplicitValue)).ToArray()),
             firewallProfiles,
             uacEnabled = enableLua != 0,
             checkedAt = DateTimeOffset.UtcNow,
         });
+    }
+
+    internal static string ClassifyFirewallProfileStates(IReadOnlyList<(bool Enabled, bool ExplicitValue)> states)
+    {
+        // An explicit off state is actionable even when another profile was not observed.
+        if (states.Any(state => state.ExplicitValue && !state.Enabled)) return "Disabled";
+        // Missing registry values are not evidence that a firewall profile is enabled.
+        if (states.Count != 3 || states.Any(state => !state.ExplicitValue)) return "Unknown";
+        return "Enabled";
     }
 
     private sealed record FirewallProfileState(string Profile, bool Enabled, bool ExplicitValue);
@@ -288,8 +299,8 @@ internal sealed partial class WindowsCommandExecutor
         using RegistryKey? policies = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System");
         var controls = new[]
         {
-            new { id = "defender-service", state = defender.StandardOutput.Contains("RUNNING", StringComparison.OrdinalIgnoreCase) ? "Enabled" : "Disabled" },
-            new { id = "firewall", state = firewallProfiles.All(profile => profile.Enabled) ? "Enabled" : "Review" },
+            new { id = "defender-service", state = ClassifyDefenderServiceState(defender.ExitCode, defender.StandardOutput) },
+            new { id = "firewall", state = ClassifyFirewallProfileStates(firewallProfiles.Select(profile => (profile.Enabled, profile.ExplicitValue)).ToArray()) },
             new { id = "uac", state = Convert.ToInt32(policies?.GetValue("EnableLUA", 1), CultureInfo.InvariantCulture) != 0 ? "Enabled" : "Disabled" },
         };
         return Success("security-controls", "Security control state inspected.", controls);
