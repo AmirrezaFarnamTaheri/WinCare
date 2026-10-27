@@ -14,7 +14,13 @@ PROJECTS = (
     "WinCare.Infrastructure",
 )
 RUNTIMES = ("win-x64", "win-arm64")
-CATALOG_DOMAIN_VERSION = "[3.0.0, )"
+# Resolve NuGet's actual project-reference version from the product build properties,
+# not from a historical hard-coded pre-release baseline.
+import xml.etree.ElementTree as ET
+_props = ET.parse(ROOT / "Directory.Build.props").getroot()
+_prefix = _props.findtext(".//VersionPrefix", "")
+_suffix = _props.findtext(".//VersionSuffix", "")
+CATALOG_DOMAIN_VERSION = f"[{_prefix}-{_suffix}, )" if _suffix else f"[{_prefix}, )"
 
 
 class PortableLockContractTests(unittest.TestCase):
@@ -62,7 +68,7 @@ class PortableLockContractTests(unittest.TestCase):
         ]
         for relative in relative_paths:
             lock = json.loads((ROOT / relative).read_text(encoding="utf-8-sig"))
-            base_graph = lock["dependencies"]["net8.0"]
+            base_graph = lock["dependencies"]["net10.0"]
             self.assertEqual("Project", base_graph["wincare.domain"]["type"], relative)
 
     def test_embedded_catalog_project_graphs_include_domain_dependency(self) -> None:
@@ -100,6 +106,8 @@ class PortableLockContractTests(unittest.TestCase):
                 for dependency_key in lock["dependencies"]
                 if "/" in dependency_key
             }
+            # Locked single-file publishing uses the app's declared dual-RID
+            # graph. A lock containing only the selected architecture fails NU1004.
             self.assertEqual(expected_runtimes, runtime_keys, relative)
 
     def test_no_portable_lock_bootstrap_workflow_remains(self) -> None:

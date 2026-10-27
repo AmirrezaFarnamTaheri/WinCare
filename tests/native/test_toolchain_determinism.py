@@ -16,6 +16,10 @@ EXPECTED_LOCKFILES = {
     "tests/WinCare.Application.Tests/packages.lock.json",
     "tests/WinCare.CommandCatalog.Tests/packages.lock.json",
     "tests/WinCare.Infrastructure.Tests/packages.lock.json",
+    "extensions/wincare-ext-devbridge/packages.lock.json",
+    "extensions/wincare-ext-downloader/packages.lock.json",
+    "extensions/wincare-ext-gamerig/packages.lock.json",
+    "extensions/wincare-ext-workspace/packages.lock.json",
 }
 
 
@@ -37,19 +41,19 @@ class ToolchainDeterminismTests(unittest.TestCase):
         global_json = json.loads((ROOT / "global.json").read_text(encoding="utf-8"))
         sdk = global_json["sdk"]
 
-        self.assertEqual("8.0.416", sdk["version"])
+        self.assertEqual("10.0.402", sdk["version"])
         self.assertEqual("disable", sdk["rollForward"])
         self.assertFalse(sdk["allowPrerelease"])
 
     def test_ci_provisions_the_pinned_dotnet_sdk(self) -> None:
         workflow = (ROOT / ".github/workflows/native-winui.yml").read_text(encoding="utf-8")
         self.assertIn("global-json-file: global.json", workflow)
-        self.assertRegex(workflow, r"dotnet-version:\s*[\"']?8\.0\.416[\"']?")
+        self.assertRegex(workflow, r"dotnet-version:\s*[\"']?10\.0\.402[\"']?")
 
     def test_contributor_setup_matches_the_sdk_pin(self) -> None:
         contributing = (ROOT / "CONTRIBUTING.md").read_text(encoding="utf-8")
-        self.assertIn("Exactly .NET SDK **8.0.416**", contributing)
-        self.assertNotIn("8.0.416 or newer", contributing)
+        self.assertIn("Exactly .NET SDK **10.0.402**", contributing)
+        self.assertNotIn("10.0.402 or newer", contributing)
         self.assertIn("--locked-mode", contributing)
 
     def test_nuget_dependency_graph_is_committed_and_locked_in_ci(self) -> None:

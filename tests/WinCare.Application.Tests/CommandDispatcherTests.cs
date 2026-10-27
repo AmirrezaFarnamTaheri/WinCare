@@ -145,6 +145,24 @@ public sealed class CommandDispatcherTests
     }
 
     [Fact]
+    public async Task Moderate_mutation_cannot_bypass_a_target_bound_preview_with_a_boolean_approval()
+    {
+        CommandDefinition definition = Definition("change", MigrationStatus.Implemented, readOnly: false);
+        RecordingHandler handler = new("change");
+        CommandDispatcher dispatcher = CreateDispatcher([definition], [handler]);
+        JsonElement parameters = JsonSerializer.SerializeToElement(new { value = 1 });
+
+        CommandResult applied = await dispatcher.ExecuteAsync(
+            CommandRequest.Execute("change", parameters),
+            new CommandExecutionOptions(ReviewApproved: true),
+            CancellationToken.None);
+
+        Assert.Equal(CommandResultStatus.Blocked, applied.Status);
+        Assert.Equal("command.approval_plan_invalid", applied.Code);
+        Assert.Equal(0, handler.InvocationCount);
+    }
+
+    [Fact]
     public async Task Successful_mutation_preview_issues_single_use_review_plan()
     {
         CommandDefinition definition = Definition("change", MigrationStatus.Implemented, readOnly: false);
@@ -367,13 +385,19 @@ public sealed class CommandDispatcherTests
         RecordingHandler handler = new("elevated");
         CommandDispatcher dispatcher = CreateDispatcher([definition], [handler], isProcessElevated: () => true);
 
+        CommandResult preview = await dispatcher.ExecuteAsync(
+            Request("elevated", apply: false),
+            CommandExecutionOptions.Default,
+            CancellationToken.None);
+        Assert.NotNull(preview.ReviewPlan);
+
         CommandResult result = await dispatcher.ExecuteAsync(
-            Request("elevated", apply: true),
+            CommandRequest.Execute("elevated", approval: preview.ReviewPlan),
             new CommandExecutionOptions(ReviewApproved: true),
             CancellationToken.None);
 
         Assert.Equal(CommandResultStatus.Succeeded, result.Status);
-        Assert.Equal(1, handler.InvocationCount);
+        Assert.Equal(2, handler.InvocationCount);
     }
 
     [Fact]

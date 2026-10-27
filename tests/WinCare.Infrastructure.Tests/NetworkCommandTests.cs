@@ -38,11 +38,6 @@ public sealed class NetworkCommandTests
         Assert.NotNull(status);
     }
 
-    [Fact]
-    public void FlushDnsCache_Executes_Without_Exception()
-    {
-        bool result = WindowsCommandExecutor.NetworkHelper.FlushDnsCache();
-        // Result is either true (native Win32 called) or false (gracefully caught on unsupported platforms)
-        Assert.True(result || !result);
-    }
+    // Real DNS cache flushing is a host mutation and belongs in a disposable
+    // Windows acceptance environment, not the ordinary unit-test suite.
 }

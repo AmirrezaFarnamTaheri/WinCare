@@ -1,4 +1,5 @@
 using WinCare.Application.Activity;
+using WinCare.Application.Checkups;
 using WinCare.Application.Commands;
 using WinCare.Application.Downloads;
 using WinCare.Application.Plugins;
@@ -37,6 +38,7 @@ public sealed class AppRuntime
     private AppRuntime(bool captureMode = false)
     {
         Journal = new ActivityJournalService();
+        Checkups = new CheckupSessionStore();
         NativeCore = new NativeCoreService();
         StorageReports = new StorageReportService();
         SystemProbe = new NativeSystemProbeRepository();
@@ -75,6 +77,9 @@ public sealed class AppRuntime
     /// Gets the activity journal service instance.
     /// </summary>
     public ActivityJournalService Journal { get; }
+
+    /// <summary>Versioned, durable last-checkup session shared across Home and Checkup.</summary>
+    public CheckupSessionStore Checkups { get; }
 
     /// <summary>
     /// Gets the native core service instance.

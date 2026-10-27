@@ -62,7 +62,7 @@ The main navigation is task-oriented:
 - **Power tools**: the searchable command catalog with filters, favorites, Recent, and plans. Entries that are unavailable are labeled as such. Favorited tools also appear as shortcuts on Home.
 - **Files & storage**: see drive capacity, browse files and folders, and inspect the size of a folder.
 - **Processes**: review CPU and memory use, sort or search running tasks, and confirm before ending an ordinary process.
-- **Downloads**: start, pause, resume, and track downloads, or inspect their destination folder.
+- **Downloads**: start, pause, restart, and track HTTP(S) downloads, or inspect their destination folder.
 - **Troubleshoot**: describe a symptom and get local checks plus suggested next steps.
 - **Extensions**: manage installed optional features and browse the online list when it is available.
 - **Activity**: running work, items needing attention, finished work, and reports.
@@ -85,7 +85,7 @@ See running process names, PIDs, resident memory and sampled CPU usage. Refresh 
 
 ### Downloads
 
-Paste a direct HTTP(S) address and choose **Download**. Completed files stay on disk if you remove their history records. The **Show folder** action opens the file's destination in Files & storage; Windows Explorer remains available for moving or deleting downloaded files.
+Paste a direct HTTP(S) address and choose **Download**. Optionally expand **Advanced: verify with SHA-256** and enter a known 64-character hexadecimal checksum to have WinCare verify the complete file and allow checksum-backed continuation when supported. **Restart** begins a stopped transfer from the beginning when no expected checksum was supplied. Jobs created with a valid expected SHA-256 may instead show **Continue**: WinCare requests a validated HTTP byte range, reuses partial bytes only when the response matches, and verifies the final checksum. This build does not safely resume arbitrary unverified partial bytes. BitTorrent magnet links are not supported because the previous swarm implementation did not exchange or verify real pieces. Completed files stay on disk if you remove their history records. The **Show folder** action opens the file's destination in Files & storage; Windows Explorer remains available for moving or deleting downloaded files.
 
 ## 5. Home
 
@@ -160,6 +160,8 @@ Troubleshoot cannot create its own execution approval. Errors are shown as plain
 ## 10. Extensions
 
 Extensions run in process with the current user's WinCare permissions. Their declared capabilities tell you what they expect to use; they are not a sandbox.
+
+**Installed extension packages are immutable after admission.** Every package file and path participates in an integrity digest. For admitted external script tools, WinCare stages a per-run copy of the complete plugin tree, checks its digest against the external trust record, and holds the copied files open read-only while the interpreter runs. Altering installed script bytes cannot change the code of that in-flight execution. Each snapshot is temporary and deleted after execution; writes to its working directory are not persistent. Extension authors must write persistent mutable data under their own Windows Local AppData, not inside the installed extension folder. Bundled resources can be located relative to the executing script's directory. External scripts remain blocked from elevated execution: a same-user staged snapshot is not an OS security sandbox or an administrator-owned trust boundary.
 
 ### Current release behavior
 

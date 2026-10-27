@@ -24,8 +24,21 @@ public sealed class DownloadCenterService
     public Task<CommandResult> ReadAsync(CancellationToken cancellationToken = default) =>
         _dispatcher.ExecuteAsync(CommandRequest.Preview("downloads"), CommandExecutionOptions.Default, cancellationToken);
 
-    public Task<CommandResult> AddAsync(string url, CancellationToken cancellationToken = default)
+    public Task<CommandResult> AddAsync(string url, CancellationToken cancellationToken = default) =>
+        AddAsync(url, expectedSha256: null, cancellationToken);
+
+    /// <summary>
+    /// An optional expected SHA-256 is verified before publishing the file and
+    /// permits conditional range continuation without mixing unverified bytes.
+    /// An absent checksum intentionally retains restart-from-zero semantics.
+    /// </summary>
+    public Task<CommandResult> AddAsync(
+        string url, string? expectedSha256, CancellationToken cancellationToken = default)
     {
+        string checksum = expectedSha256?.Trim() ?? string.Empty;
+        if (checksum.Length > 0 &&
+            (checksum.Length != 64 || checksum.Any(c => !Uri.IsHexDigit(c))))
+            throw new ArgumentException("Expected SHA-256 must contain exactly 64 hexadecimal characters.", nameof(expectedSha256));
         if (!Uri.TryCreate(url, UriKind.Absolute, out Uri? parsed) ||
             parsed.Scheme is not ("http" or "https") ||
             !string.IsNullOrEmpty(parsed.UserInfo) ||
@@ -37,7 +50,10 @@ public sealed class DownloadCenterService
         lock (_lifecycle)
         {
             if (_closing) throw new InvalidOperationException("Downloads are closing.");
-            return DispatchAsync("download-create", new { Url = parsed.AbsoluteUri }, cancellationToken);
+            object parameters = checksum.Length == 0
+                ? new { Url = parsed.AbsoluteUri }
+                : new { Url = parsed.AbsoluteUri, Sha256 = checksum.ToLowerInvariant() };
+            return DispatchAsync("download-create", parameters, cancellationToken);
         }
     }
 

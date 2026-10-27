@@ -333,7 +333,7 @@ public sealed class AllToolsPageViewModel : ObservableObject, IDisposable
         _searchCts?.Cancel();
         _searchCts?.Dispose();
         _searchCts = null;
-        Execution.CancelRunningExecution();
+        // Navigation releases catalog subscriptions only. Cancellation remains an explicit user action.
     }
 
     /// <summary>

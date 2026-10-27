@@ -6,7 +6,6 @@ using Microsoft.UI.Xaml.Navigation;
 using WinCare.App.ViewModels.Pages;
 using WinCare.App.Views;
 using WinCare.Application.Downloads;
-using WinCare.Application.Transfers;
 
 namespace WinCare.App.Views.Pages;
 
@@ -65,24 +64,6 @@ public sealed partial class DownloadsPage : Page
     private async void Cancel_Click(object sender, RoutedEventArgs e) => await RunActionAsync(sender, "cancel");
     private async void Remove_Click(object sender, RoutedEventArgs e) => await RunActionAsync(sender, "remove");
 
-    private void PauseTorrent_Click(object sender, RoutedEventArgs e)
-    {
-        if (sender is FrameworkElement { Tag: TorrentSessionSnapshot t })
-            ViewModel.PauseTorrent(t.InfoHashHex);
-    }
-
-    private void ResumeTorrent_Click(object sender, RoutedEventArgs e)
-    {
-        if (sender is FrameworkElement { Tag: TorrentSessionSnapshot t })
-            ViewModel.ResumeTorrent(t.InfoHashHex);
-    }
-
-    private async void RemoveTorrent_Click(object sender, RoutedEventArgs e)
-    {
-        if (sender is FrameworkElement { Tag: TorrentSessionSnapshot t })
-            await ViewModel.RemoveTorrentAsync(t.InfoHashHex);
-    }
-
     private void ShowFolder_Click(object sender, RoutedEventArgs e)
     {
         if (sender is FrameworkElement { Tag: DownloadJobRow row } && !string.IsNullOrWhiteSpace(row.Destination))
@@ -108,7 +89,9 @@ public sealed partial class DownloadsPage : Page
         for (int i = 0; i < 3; i++)
         {
             MetricsGrid.ColumnDefinitions[i].Width = compact && i > 0 ? new GridLength(0) : new GridLength(1, GridUnitType.Star);
+            MetricsGrid.RowDefinitions[i].Height = compact || i == 0 ? GridLength.Auto : new GridLength(0);
         }
+        MetricsGrid.RowSpacing = compact ? 12 : 0;
         Grid.SetRow(TotalMetric, 0);
         Grid.SetColumn(ActiveMetric, compact ? 0 : 1);
         Grid.SetRow(ActiveMetric, compact ? 1 : 0);

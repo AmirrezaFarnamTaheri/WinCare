@@ -36,9 +36,10 @@ public sealed partial class HomePage : Page
     {
         base.OnNavigatedTo(e);
         _isVisible = true;
-        ViewModel.RefreshActivity(AppRuntime.Current.Journal.GetAll());
+        RefreshHomeCheckup();
         RefreshFavoriteTools();
         AppRuntime.Current.Journal.Changed += JournalChanged;
+        AppRuntime.Current.Checkups.Changed += CheckupChanged;
         AppRuntime.Current.PluginRegistry.RegistryChanged += RegistryChanged;
         _ = RefreshWidgetsAsync();
     }
@@ -48,11 +49,19 @@ public sealed partial class HomePage : Page
         _isVisible = false;
         _widgetRefreshVersion++;
         AppRuntime.Current.Journal.Changed -= JournalChanged;
+        AppRuntime.Current.Checkups.Changed -= CheckupChanged;
         AppRuntime.Current.PluginRegistry.RegistryChanged -= RegistryChanged;
         base.OnNavigatedFrom(e);
     }
 
-    private void JournalChanged(object? sender, EventArgs e) => DispatcherQueue.TryEnqueue(() => { if (_isVisible) ViewModel.RefreshActivity(AppRuntime.Current.Journal.GetAll()); });
+    private void RefreshHomeCheckup() =>
+        ViewModel.RefreshActivity(AppRuntime.Current.Journal.GetAll(), AppRuntime.Current.Checkups.ReadLatest());
+
+    private void JournalChanged(object? sender, EventArgs e) =>
+        DispatcherQueue.TryEnqueue(() => { if (_isVisible) RefreshHomeCheckup(); });
+
+    private void CheckupChanged(object? sender, EventArgs e) =>
+        DispatcherQueue.TryEnqueue(() => { if (_isVisible) RefreshHomeCheckup(); });
     private void RegistryChanged(object? sender, EventArgs e) => DispatcherQueue.TryEnqueue(() =>
     {
         if (!_isVisible) return;

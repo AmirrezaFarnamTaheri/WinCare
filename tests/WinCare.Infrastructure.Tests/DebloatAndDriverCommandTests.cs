@@ -41,28 +41,9 @@ public sealed class DebloatAndDriverCommandTests
         Assert.Equal("Tweak", ex.ParameterName);
     }
 
-    [Theory]
-    [InlineData("end-task", true)]
-    [InlineData("last-active-click", false)]
-    [InlineData("show-file-extensions", true)]
-    [InlineData("show-hidden-files", false)]
-    [InlineData("launch-to-this-pc", true)]
-    [InlineData("hide-search-box", true)]
-    [InlineData("background-apps", true)]
-    [InlineData("keyboard-latency", true)]
-    public void ShellTweak_applies_hkcu_tweaks_successfully(string tweak, bool enable)
-    {
-        var executor = CreateExecutor();
-        var p = Params(new { Tweak = tweak, Enable = enable });
-        var method = typeof(WindowsCommandExecutor).GetMethod(
-            "ApplyShellTweak",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-
-        var outcome = (CommandHandlerOutcome)method!.Invoke(executor, [p])!;
-
-        Assert.Equal(CommandResultStatus.Succeeded, outcome.Status);
-        Assert.Equal("tweak-shell.ok", outcome.Code);
-    }
+    // Shell tweak application writes real HKCU/HKLM settings. Run that coverage only
+    // in a disposable Windows integration VM with before/after registry assertions.
+    // Unit tests must never change the developer or CI runner's shell configuration.
 
     [Fact]
     public void DriverServiceAudit_returns_success_with_service_list()
@@ -125,70 +106,5 @@ public sealed class DebloatAndDriverCommandTests
         Assert.True(outcome.Data.Value.TryGetProperty("hypervisorEnforcedCodeIntegrity", out _));
         Assert.True(outcome.Data.Value.TryGetProperty("vulnerableDriverBlocklist", out _));
         Assert.True(outcome.Data.Value.TryGetProperty("smartAppControlState", out _));
-    }
-
-    [Fact]
-    public void ShellTweak_copilot_key_remap_handles_execution()
-    {
-        var executor = CreateExecutor();
-        var p = Params(new { Tweak = "copilot-key-remap", Enable = false });
-        var method = typeof(WindowsCommandExecutor).GetMethod(
-            "ApplyShellTweak",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-
-        try
-        {
-            var outcome = (CommandHandlerOutcome)method!.Invoke(executor, [p])!;
-            Assert.Equal(CommandResultStatus.Succeeded, outcome.Status);
-            Assert.Equal("tweak-shell.ok", outcome.Code);
-        }
-        catch (System.Reflection.TargetInvocationException tie) when (tie.InnerException is UnauthorizedAccessException)
-        {
-            // Non-elevated test runner; permissions correctly guarded by OS
-        }
-    }
-
-    [Fact]
-    public void AiTweak_recall_handles_execution()
-    {
-        var executor = CreateExecutor();
-        var p = Params(new { Component = "recall" });
-        var method = typeof(WindowsCommandExecutor).GetMethod(
-            "ApplyAiTweak",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-
-        try
-        {
-            var outcome = (CommandHandlerOutcome)method!.Invoke(executor, [p, false])!;
-            Assert.Equal(CommandResultStatus.Succeeded, outcome.Status);
-            Assert.Equal("tweak-ai.ok", outcome.Code);
-        }
-        catch (System.Reflection.TargetInvocationException tie) when (tie.InnerException is UnauthorizedAccessException)
-        {
-            // Non-elevated test runner; permissions correctly guarded by OS
-        }
-    }
-
-    [Theory]
-    [InlineData("setup-hardware-bypass")]
-    [InlineData("oobe-network-bypass")]
-    public void ShellTweak_hardware_and_oobe_bypass_handles_execution(string tweak)
-    {
-        var executor = CreateExecutor();
-        var p = Params(new { Tweak = tweak, Enable = false });
-        var method = typeof(WindowsCommandExecutor).GetMethod(
-            "ApplyShellTweak",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-
-        try
-        {
-            var outcome = (CommandHandlerOutcome)method!.Invoke(executor, [p])!;
-            Assert.Equal(CommandResultStatus.Succeeded, outcome.Status);
-            Assert.Equal("tweak-shell.ok", outcome.Code);
-        }
-        catch (System.Reflection.TargetInvocationException tie) when (tie.InnerException is UnauthorizedAccessException)
-        {
-            // Non-elevated test runner; permissions correctly guarded by OS
-        }
     }
 }

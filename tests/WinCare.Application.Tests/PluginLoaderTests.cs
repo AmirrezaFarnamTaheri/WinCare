@@ -95,4 +95,45 @@ public sealed class PluginLoaderTests
             Directory.Delete(tempDir, recursive: true);
         }
     }
+    [Fact]
+    public void Admitted_script_bytes_are_bound_to_external_trust_record()
+    {
+        string root = Path.Combine(Path.GetTempPath(), "WinCarePluginBinding_" + Guid.NewGuid().ToString("N"));
+        string directory = Path.Combine(root, "plugins", "demo");
+        Directory.CreateDirectory(directory);
+        try
+        {
+            string script = Path.Combine(directory, "job.ps1");
+            File.WriteAllText(script, "Write-Output safe");
+            string manifest = """
+                {"id":"com.wincare.payload.demo","name":"Demo","version":"1.0",
+                 "tools":[{"id":"demo.run","title":"Run","summary":"Run job","scriptPath":"job.ps1"}]}
+                """;
+            File.WriteAllText(Path.Combine(directory, "wincare-plugin.json"), manifest);
+
+            string recordPath = PluginAdmissionTrustStore.GetUserScopedRecordPath(directory);
+            Directory.CreateDirectory(Path.GetDirectoryName(recordPath)!);
+            var record = new PluginAdmissionRecord
+            {
+                PluginId = "com.wincare.payload.demo",
+                ManifestSha256 = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(
+                    System.Text.Encoding.UTF8.GetBytes(manifest))).ToLowerInvariant(),
+                PackageTreeSha256 = PluginAdmissionTrustStore.ComputePluginPayloadDigest(directory),
+                TrustScope = PluginAdmissionTrustStore.UserTrustScope,
+            };
+            File.WriteAllText(recordPath, System.Text.Json.JsonSerializer.Serialize(record));
+
+            Assert.True(JsonPluginLoader.LoadFromDirectory(directory, true, static () => false).Success);
+            File.WriteAllText(script, "Write-Output replaced");
+
+            PluginLoadResult afterTampering = JsonPluginLoader.LoadFromDirectory(directory, true, static () => false);
+            Assert.False(afterTampering.Success);
+            Assert.Contains("payload", afterTampering.ErrorMessage, StringComparison.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            if (Directory.Exists(root)) Directory.Delete(root, recursive: true);
+        }
+    }
+
 }

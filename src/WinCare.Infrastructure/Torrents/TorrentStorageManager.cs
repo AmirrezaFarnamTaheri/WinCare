@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Threading;
@@ -43,15 +44,22 @@ public sealed class TorrentStorageManager : IAsyncDisposable
     /// </summary>
     public async Task InitializeFilesAsync(CancellationToken cancellationToken = default)
     {
-        if (!Directory.Exists(_baseDirectory))
+        // Preflight every path and length before creating any folders or files.
+        foreach (TorrentFileEntry file in _metadata.Files)
         {
-            Directory.CreateDirectory(_baseDirectory);
+            cancellationToken.ThrowIfCancellationRequested();
+            if (file.Length < 0)
+                throw new InvalidDataException("Torrent file length cannot be negative.");
+            _ = ResolveDestination(file.RelativePath);
         }
+
+        if (!Directory.Exists(_baseDirectory))
+            Directory.CreateDirectory(_baseDirectory);
 
         foreach (TorrentFileEntry file in _metadata.Files)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            string fullPath = Path.Combine(_baseDirectory, file.RelativePath);
+            string fullPath = ResolveDestination(file.RelativePath);
             string? dir = Path.GetDirectoryName(fullPath);
             if (dir is not null && !Directory.Exists(dir))
             {
@@ -105,7 +113,7 @@ public sealed class TorrentStorageManager : IAsyncDisposable
             long writeStartInFile = Math.Max(0, globalOffset - fileStart);
             int writeLength = (int)Math.Min(remainingBytes, file.Length - writeStartInFile);
 
-            string fullPath = Path.Combine(_baseDirectory, file.RelativePath);
+            string fullPath = ResolveDestination(file.RelativePath);
             await using var fs = new FileStream(fullPath, FileMode.Open, FileAccess.Write, FileShare.ReadWrite);
             fs.Seek(writeStartInFile, SeekOrigin.Begin);
             await fs.WriteAsync(pieceData.Slice(bufferOffset, writeLength), cancellationToken).ConfigureAwait(false);
@@ -118,6 +126,41 @@ public sealed class TorrentStorageManager : IAsyncDisposable
         }
 
         return true;
+    }
+
+    private string ResolveDestination(string relativePath)
+    {
+        if (string.IsNullOrWhiteSpace(relativePath) || Path.IsPathRooted(relativePath) ||
+            relativePath.IndexOf(':') >= 0 ||
+            relativePath.Split(['/', '\\']).Any(segment =>
+                segment.Length == 0 || segment is "." or ".." ||
+                segment.EndsWith(' ') || segment.EndsWith('.')))
+        {
+            throw new InvalidDataException("Torrent metadata contains an unsafe file path.");
+        }
+
+        string root = Path.GetFullPath(_baseDirectory);
+        string fullPath = Path.GetFullPath(Path.Combine(root, relativePath));
+        string prefix = Path.TrimEndingDirectorySeparator(root) + Path.DirectorySeparatorChar;
+        StringComparison comparison = OperatingSystem.IsWindows()
+            ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+        if (!fullPath.StartsWith(prefix, comparison))
+            throw new InvalidDataException("Torrent file would escape the destination directory.");
+
+        // Do not follow pre-existing symlinks or junctions. This is defense in depth;
+        // creation races still require an isolated, owned destination for untrusted torrents.
+        string? candidate = fullPath;
+        while (candidate is not null)
+        {
+            if ((File.Exists(candidate) || Directory.Exists(candidate)) &&
+                (File.GetAttributes(candidate) & FileAttributes.ReparsePoint) != 0)
+                throw new InvalidDataException("Torrent destination contains a reparse point.");
+            string? parent = Path.GetDirectoryName(candidate);
+            if (parent is null || string.Equals(parent, candidate, comparison)) break;
+            candidate = parent;
+        }
+
+        return fullPath;
     }
 
     private static void TryMarkSparse(SafeFileHandle handle)

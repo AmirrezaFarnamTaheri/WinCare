@@ -7,14 +7,13 @@ using System.Threading;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using WinCare.Application.Downloads;
-using WinCare.Application.Transfers;
 using WinCare.Domain.Commands;
 
 namespace WinCare.App.ViewModels.Pages;
 
 /// <summary>
-/// Transfers workspace projection combining native HTTP download jobs
-/// and BitTorrent swarm sessions into a single high-performance interface.
+/// HTTP(S) download workspace. Torrents remain unavailable until an
+/// independently tested real data-plane engine exists.
 /// </summary>
 public sealed class DownloadsPageViewModel : ObservableObject
 {
@@ -25,6 +24,7 @@ public sealed class DownloadsPageViewModel : ObservableObject
     private int _refreshInFlight;
     private CancellationTokenSource? _pageCancellation;
     private string _newUrl = string.Empty;
+    private string _expectedSha256 = string.Empty;
     private string _notice = string.Empty;
     private string _filter = "All";
     private string _searchText = string.Empty;
@@ -35,13 +35,40 @@ public sealed class DownloadsPageViewModel : ObservableObject
 
     public ObservableCollection<DownloadJobRow> Jobs { get; } = new();
     public ObservableCollection<DownloadJobRow> VisibleJobs { get; } = new();
-    public ObservableCollection<TorrentSessionSnapshot> Torrents { get; } = new();
 
     public string NewUrl
     {
         get => _newUrl;
         set { if (SetProperty(ref _newUrl, value ?? string.Empty)) OnPropertyChanged(nameof(CanAdd)); }
     }
+    /// <summary>Optional expected digest. Blank means restart instead of unchecked byte-range continuation.</summary>
+    public string ExpectedSha256
+    {
+        get => _expectedSha256;
+        set
+        {
+            if (SetProperty(ref _expectedSha256, value ?? string.Empty))
+            {
+                OnPropertyChanged(nameof(IsExpectedSha256Valid));
+                OnPropertyChanged(nameof(ChecksumHint));
+                OnPropertyChanged(nameof(CanAdd));
+            }
+        }
+    }
+
+    public bool IsExpectedSha256Valid
+    {
+        get
+        {
+            string digest = _expectedSha256.Trim();
+            return digest.Length == 0 || (digest.Length == 64 && digest.All(Uri.IsHexDigit));
+        }
+    }
+
+    public string ChecksumHint => IsExpectedSha256Valid
+        ? "Optional. A known checksum verifies the complete file; otherwise retries restart."
+        : "Enter exactly 64 hexadecimal characters (0–9, A–F), or leave blank.";
+
     public bool IsBusy
     {
         get => _isBusy;
@@ -53,11 +80,11 @@ public sealed class DownloadsPageViewModel : ObservableObject
         private set => SetProperty(ref _isLoading, value);
     }
     public bool CanAdd =>
-        !IsBusy && (
-            (Uri.TryCreate(_newUrl.Trim(), UriKind.Absolute, out Uri? uri) &&
-             (uri.Scheme is "http" or "https" || uri.Scheme.Equals("magnet", StringComparison.OrdinalIgnoreCase)) &&
-             uri.UserInfo.Length == 0 && uri.AbsoluteUri.Length <= 4096) ||
-            _newUrl.Trim().StartsWith("magnet:?", StringComparison.OrdinalIgnoreCase));
+        !IsBusy &&
+        Uri.TryCreate(_newUrl.Trim(), UriKind.Absolute, out Uri? uri) &&
+        uri.Scheme is "http" or "https" &&
+        uri.UserInfo.Length == 0 && uri.AbsoluteUri.Length <= 2048 &&
+        IsExpectedSha256Valid;
 
     public bool HasNotice => _notice.Length > 0;
     public string Notice
@@ -69,19 +96,18 @@ public sealed class DownloadsPageViewModel : ObservableObject
         }
     }
 
-    public bool HasTorrents => Torrents.Count > 0;
-    public bool IsEmpty => VisibleJobs.Count == 0 && Torrents.Count == 0 && !IsLoading;
-    public string EmptyDescription => Jobs.Count == 0 && Torrents.Count == 0
-        ? "No transfers yet. Paste a link or magnet URI above to start your first transfer."
-        : "No downloads match. Try a different search or switch to All.";
+    public bool IsEmpty => VisibleJobs.Count == 0 && !IsLoading;
+    public string EmptyDescription => Jobs.Count == 0
+        ? "No downloads yet. Paste an HTTP or HTTPS file link above."
+        : "No downloads match. Try another search or choose All.";
 
-    public string TotalText => (Jobs.Count + Torrents.Count).ToString(System.Globalization.CultureInfo.CurrentCulture);
-    public string InProgressText => (Jobs.Count(j => j.State is "Pending" or "Running" or "SuspendRequested" or "Suspended" or "Interrupted" or "CancelRequested") +
-                                     Torrents.Count(t => t.Status is TorrentStatus.Downloading or TorrentStatus.Checking))
-        .ToString(System.Globalization.CultureInfo.CurrentCulture);
-    public string FinishedText => (Jobs.Count(j => j.State is "Completed" or "Cancelled" or "Failed") +
-                                   Torrents.Count(t => t.Status is TorrentStatus.Completed or TorrentStatus.Seeding))
-        .ToString(System.Globalization.CultureInfo.CurrentCulture);
+    public string TotalText => Jobs.Count.ToString(System.Globalization.CultureInfo.CurrentCulture);
+    public string InProgressText =>
+        Jobs.Count(j => j.State is "Pending" or "Running" or "SuspendRequested" or "Suspended" or "Interrupted" or "CancelRequested")
+            .ToString(System.Globalization.CultureInfo.CurrentCulture);
+    public string FinishedText =>
+        Jobs.Count(j => j.State is "Completed" or "Cancelled" or "Failed")
+            .ToString(System.Globalization.CultureInfo.CurrentCulture);
 
     public void Activate()
     {
@@ -89,12 +115,7 @@ public sealed class DownloadsPageViewModel : ObservableObject
         _pageCancellation = new CancellationTokenSource();
         _isActive = true;
 
-        // Auto-seed default Linux distribution torrent on first view for instant swarm telemetry demonstration
-        if (Services.AppRuntime.Current.Torrents.GetActiveSnapshots().Count == 0)
-        {
-            _ = Services.AppRuntime.Current.Torrents.AddMagnetAsync(
-                "magnet:?xt=urn:btih:e5824abb3d435d2d8571149da7a85d3f3d477a37&dn=Ubuntu-24.04-desktop-amd64.iso&tr=udp%3A%2F%2Ftracker.opentrackr.org%3A1337%2Fannounce");
-        }
+        // Opening Transfers must never start network activity or create a demo job.
     }
 
     public void Deactivate()
@@ -104,6 +125,7 @@ public sealed class DownloadsPageViewModel : ObservableObject
         _pageCancellation?.Dispose();
         _pageCancellation = null;
         NewUrl = string.Empty;
+        ExpectedSha256 = string.Empty;
     }
 
     public void SetFilter(string filter)
@@ -124,7 +146,7 @@ public sealed class DownloadsPageViewModel : ObservableObject
     {
         if (!_isActive || Interlocked.CompareExchange(ref _refreshInFlight, 1, 0) != 0) return;
         CancellationToken token = _pageCancellation?.Token ?? CancellationToken.None;
-        IsLoading = Jobs.Count == 0 && Torrents.Count == 0;
+        IsLoading = Jobs.Count == 0;
         try
         {
             CommandResult result = await _center.ReadAsync(token);
@@ -135,19 +157,10 @@ public sealed class DownloadsPageViewModel : ObservableObject
                 Synchronize(Jobs, projected);
             }
 
-            // Sync BitTorrent active snapshots
-            var torrentSnapshots = Services.AppRuntime.Current.Torrents.GetActiveSnapshots();
-            Torrents.Clear();
-            foreach (var t in torrentSnapshots)
-            {
-                Torrents.Add(t);
-            }
-
             ApplyFilter();
             OnPropertyChanged(nameof(TotalText));
             OnPropertyChanged(nameof(InProgressText));
             OnPropertyChanged(nameof(FinishedText));
-            OnPropertyChanged(nameof(HasTorrents));
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested) { }
         catch (Exception ex)
@@ -205,27 +218,13 @@ public sealed class DownloadsPageViewModel : ObservableObject
         IsBusy = true;
         try
         {
-            if (link.StartsWith("magnet:?", StringComparison.OrdinalIgnoreCase))
-            {
-                var snapshot = await Services.AppRuntime.Current.Torrents.AddMagnetAsync(link);
-                if (snapshot is not null)
-                {
-                    NewUrl = string.Empty;
-                    Notice = $"BitTorrent swarm '{snapshot.Name}' joined and active.";
-                }
-                else
-                {
-                    Notice = "Could not parse Magnet URI.";
-                }
-                await RefreshAsync();
-                return;
-            }
-
-            CommandResult result = await _center.AddAsync(link, _pageCancellation?.Token ?? default);
+            CommandResult result = await _center.AddAsync(
+                link, ExpectedSha256, _pageCancellation?.Token ?? default);
             if (!_isActive) return;
             if (result.Status == CommandResultStatus.Succeeded)
             {
                 NewUrl = string.Empty;
+                ExpectedSha256 = string.Empty;
                 string? id = result.Data is System.Text.Json.JsonElement record &&
                     record.TryGetProperty("id", out System.Text.Json.JsonElement idValue)
                     ? idValue.GetString() : null;
@@ -251,24 +250,6 @@ public sealed class DownloadsPageViewModel : ObservableObject
         finally { IsBusy = false; }
     }
 
-    public void PauseTorrent(string infoHash)
-    {
-        Services.AppRuntime.Current.Torrents.PauseSession(infoHash);
-        _ = RefreshAsync();
-    }
-
-    public void ResumeTorrent(string infoHash)
-    {
-        Services.AppRuntime.Current.Torrents.ResumeSession(infoHash);
-        _ = RefreshAsync();
-    }
-
-    public async Task RemoveTorrentAsync(string infoHash)
-    {
-        await Services.AppRuntime.Current.Torrents.RemoveSessionAsync(infoHash);
-        await RefreshAsync();
-    }
-
     public async Task RunActionAsync(DownloadJobRow row, string action)
     {
         if (IsBusy || string.IsNullOrWhiteSpace(row.Id)) return;
@@ -280,7 +261,9 @@ public sealed class DownloadsPageViewModel : ObservableObject
                 Notice = "That download is already running.";
                 return;
             }
-            Notice = "Transfer started. You can keep using WinCare.";
+            Notice = action == "resume"
+                ? "Download attempt started. Partial bytes are reused only when an expected SHA-256 digest and valid HTTP range support safe resumption; otherwise it restarts."
+                : "Download started. You can keep using WinCare.";
             await RefreshAsync();
             return;
         }

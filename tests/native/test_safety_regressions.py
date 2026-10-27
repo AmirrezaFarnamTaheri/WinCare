@@ -53,10 +53,9 @@ class SafetyRegressionTests(unittest.TestCase):
         ):
             self.assertIn(token, view_model)
 
-        # ADR-001 narrows the two-phase gate to irreversible work only. Moderate
-        # maintenance runs on one click, so the approval switch must not be offered
-        # for it -- but a destructive command must never lose the gate.
-        self.assertIn("RequiresApprovalSwitch => ShowDestructiveWarning", view_model)
+        # A boolean alone is not a reviewed plan. Moderate and destructive
+        # changes both require a preview and parameter-bound one-use approval.
+        self.assertIn("RequiresApprovalSwitch => IsMutatingTool && (IsModerateTool || IsDestructiveTool)", view_model)
         self.assertIn("ShowDestructiveWarning => IsDestructiveTool && !IsSelectedToolUnavailable", view_model)
 
         # The approval surface is the moment the user is asked to approve. Before a

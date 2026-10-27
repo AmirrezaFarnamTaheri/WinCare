@@ -77,5 +77,20 @@ class NavigationTopologyTests(unittest.TestCase):
         self.assertEqual(expected_footer, footer_routes)
 
 
+    def test_shell_has_one_real_search_and_no_unverified_health_claims(self) -> None:
+        shell = read("src/WinCare.App/Views/ShellPage.xaml")
+        main = read("src/WinCare.App/MainWindow.xaml")
+        for false_claim in (
+            "Kernel Core: Synced", "Memory: Nominal", "Swarm Engine: Ready",
+            "v5.0 Native", "paste magnet URI",
+        ):
+            self.assertNotIn(false_claim, shell)
+        self.assertNotIn("OpenCommandPalette_Click", shell)
+        self.assertIn('IsBackButtonVisible="Auto"', shell)
+        self.assertIn('x:Name="GlobalSearchBox"', main)
+        self.assertEqual(1, main.count('x:Name="GlobalSearchBox"'))
+
+
+
 if __name__ == "__main__":
     unittest.main()

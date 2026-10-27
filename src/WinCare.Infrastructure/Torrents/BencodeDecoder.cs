@@ -130,51 +130,66 @@ public static class BencodeDecoder
 
     private static byte[] ExtractAndHashInfoDict(byte[] bencodeBytes)
     {
-        // Find "4:info" in the byte array
-        ReadOnlySpan<byte> target = "4:info"u8;
-        int index = bencodeBytes.AsSpan().IndexOf(target);
-        if (index < 0)
+        // Traverse the root dictionary's keys. Looking for the raw substring "4:info"
+        // can match bytes inside an unrelated string and produce an incorrect info hash.
+        if (bencodeBytes.Length == 0 || bencodeBytes[0] != (byte)'d')
+            throw new FormatException("Torrent root must be a dictionary.");
+
+        byte[]? infoHash = null;
+        int index = 1;
+        while (index < bencodeBytes.Length && bencodeBytes[index] != (byte)'e')
         {
-            throw new FormatException("Could not locate '4:info' header in bencoded payload.");
+            object key = DecodeElement(bencodeBytes, ref index);
+            if (key is not byte[] keyBytes)
+                throw new FormatException("Torrent dictionary keys must be byte strings.");
+
+            int start = index;
+            SkipElement(bencodeBytes, ref index);
+            if (keyBytes.AsSpan().SequenceEqual("info"u8))
+            {
+                if (infoHash is not null)
+                    throw new FormatException("Torrent contains duplicate root 'info' keys.");
+                if (start >= bencodeBytes.Length || bencodeBytes[start] != (byte)'d')
+                    throw new FormatException("Torrent info must be a dictionary.");
+                infoHash = SHA1.HashData(bencodeBytes.AsSpan(start, index - start));
+            }
         }
 
-        int startPos = index + target.Length;
-        int endPos = startPos;
-        SkipElement(bencodeBytes, ref endPos);
-
-        int length = endPos - startPos;
-        byte[] infoSlice = new byte[length];
-        Buffer.BlockCopy(bencodeBytes, startPos, infoSlice, 0, length);
-
-        return SHA1.HashData(infoSlice);
+        return infoHash ?? throw new FormatException("Torrent missing root 'info' dictionary.");
     }
 
-    private static void SkipElement(byte[] data, ref int index)
+    private static void SkipElement(byte[] data, ref int index, int depth = 0)
     {
-        if (index >= data.Length) return;
+        if (depth > 64 || index >= data.Length)
+            throw new FormatException("Malformed or excessively nested bencode.");
+
         byte b = data[index];
         if (b == (byte)'i')
         {
-            index++;
-            while (index < data.Length && data[index] != (byte)'e') index++;
-            if (index < data.Length) index++;
+            int end = Array.IndexOf(data, (byte)'e', index + 1);
+            if (end < 0) throw new FormatException("Unterminated bencode integer.");
+            index = end + 1;
         }
         else if (b == (byte)'l' || b == (byte)'d')
         {
             index++;
             while (index < data.Length && data[index] != (byte)'e')
-            {
-                SkipElement(data, ref index);
-            }
-            if (index < data.Length) index++;
+                SkipElement(data, ref index, depth + 1);
+            if (index >= data.Length) throw new FormatException("Unterminated bencode collection.");
+            index++;
         }
         else if (char.IsAsciiDigit((char)b))
         {
             int colon = Array.IndexOf(data, (byte)':', index);
-            if (colon < 0) throw new FormatException("Malformed bencode string.");
-            string lenStr = Encoding.ASCII.GetString(data, index, colon - index);
-            int len = int.Parse(lenStr);
-            index = colon + 1 + len;
+            if (colon < 0 ||
+                !int.TryParse(Encoding.ASCII.GetString(data, index, colon - index), out int length) ||
+                length < 0 || (long)colon + 1 + length > data.Length)
+                throw new FormatException("Malformed bencode byte string.");
+            index = colon + 1 + length;
+        }
+        else
+        {
+            throw new FormatException($"Unknown bencode prefix at offset {index}.");
         }
     }
 

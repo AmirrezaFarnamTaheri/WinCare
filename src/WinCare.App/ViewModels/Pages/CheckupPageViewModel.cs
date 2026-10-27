@@ -1,6 +1,7 @@
 using System.Text.Json;
 using CommunityToolkit.Mvvm.Input;
 using WinCare.Application.Commands;
+using WinCare.Application.Checkups;
 using WinCare.Application.Navigation;
 using WinCare.App.Services;
 using WinCare.Domain.Commands;
@@ -25,6 +26,7 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
     private const string WuaRowTitle = "Updates";
 
     private readonly ICommandDispatcher _dispatcher;
+    private readonly CheckupSessionStore? _sessions;
     private CancellationTokenSource? _runCts;
     private bool _isRunning;
     private bool _isStopping;
@@ -33,9 +35,9 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
     private string _checkupStatusDetail = "Run Checkup to see the latest results";
     private string _checkupStatusBrushKey = "AccentChromeBrush";
 
-    public CheckupPageViewModel() : this(AppRuntime.Current.Dispatcher) { }
+    public CheckupPageViewModel() : this(AppRuntime.Current.Dispatcher, AppRuntime.Current.Checkups) { }
 
-    internal CheckupPageViewModel(ICommandDispatcher dispatcher)
+    internal CheckupPageViewModel(ICommandDispatcher dispatcher, CheckupSessionStore? sessions = null)
         : base([
             new PageSection("Checkup", "Run Checkup to see the latest results.", [
                 new PageRow("Windows and hardware", "Windows version, uptime, memory, processor, and device basics.", "Ready", "Read-only"),
@@ -44,6 +46,7 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
                 new PageRow("Updates", "Check Windows Update without installing anything.", "Ready", "Read-only")])])
     {
         _dispatcher = dispatcher;
+        _sessions = sessions;
         RunQuickCheckCommand = new AsyncRelayCommand(RunQuickCheckAsync, () => !IsRunning);
         StopCheckCommand = new RelayCommand(CancelRunningCheck, () => IsRunning && !IsStopping);
     }
@@ -52,8 +55,8 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
     public IRelayCommand StopCheckCommand { get; }
 
     /// <summary>
-    /// Cancels an in-flight checkup. Used when the user navigates away from the cached page so
-    /// late-arriving probe results cannot mutate rows the user is no longer looking at.
+    /// Cancels an in-flight checkup only on explicit user request. The cached page
+    /// keeps its state and allows read-only checks to complete after navigation.
     /// </summary>
     public void CancelRunningCheck()
     {
@@ -106,14 +109,22 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
         CheckupStatusDetail = "checking now";
         CheckupStatusBrushKey = "AccentChromeBrush";
 
-        // Link the command token with a page-owned source so leaving the page cancels the
-        // whole run, including the Windows Update probe.
+        // Link the command token with a page-owned source so the Stop checkup
+        // button cancels the whole run, including the Windows Update probe.
         using CancellationTokenSource runCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         _runCts = runCts;
         CancellationToken token = runCts.Token;
         Task<CommandResult>? updateTask = null;
+        Guid sessionId = Guid.NewGuid();
+        DateTimeOffset startedAt = DateTimeOffset.UtcNow;
+        var probeStates = CheckupSessionStore.ProbeIds.ToDictionary(
+            id => id, _ => "Pending", StringComparer.Ordinal);
+        bool recordedFinalSession = false;
         try
         {
+            foreach (string id in CheckupSessionStore.ProbeIds) probeStates[id] = "Running";
+            await SaveSessionAsync(sessionId, startedAt, "Running", probeStates).ConfigureAwait(true);
+
             foreach ((_, string rowTitle) in FastCheckCommands)
             {
                 PageRow? row = Sections[0].Rows.FirstOrDefault(candidate => candidate.Title == rowTitle);
@@ -142,6 +153,8 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
                 (string commandId, string rowTitle) = FastCheckCommands[index];
                 CommandResult result = fastResults[index];
                 fastDict[commandId] = result;
+                probeStates[commandId] = result.Status == CommandResultStatus.Succeeded
+                    ? "Checked" : "NeedsReview";
                 PageRow? row = Sections[0].Rows.FirstOrDefault(candidate => candidate.Title == rowTitle);
                 if (row is null) continue;
 
@@ -151,10 +164,17 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
             }
 
             EvaluateFindings(fastDict, null);
+            MapAreaFindingsIntoSession(probeStates);
+            await SaveSessionAsync(sessionId, startedAt, "Running", probeStates).ConfigureAwait(true);
 
             CommandResult updateResult = await updateTask;
             token.ThrowIfCancellationRequested();
             ApplyWuaResult(updateResult, fastDict);
+            probeStates[WuaCommandId] = updateResult.Status == CommandResultStatus.Succeeded
+                ? "Checked" : "NeedsReview";
+            MapAreaFindingsIntoSession(probeStates);
+            await SaveSessionAsync(sessionId, startedAt, "Completed", probeStates).ConfigureAwait(true);
+            recordedFinalSession = true;
         }
         catch (OperationCanceledException)
         {
@@ -177,9 +197,55 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
                 await updateTask;
             }
             if (cancelled) CompleteInterruptedCheck(cancelled: true);
+            if (!recordedFinalSession)
+            {
+                foreach (string id in probeStates.Keys.ToArray())
+                {
+                    if (probeStates[id] == "Running")
+                        probeStates[id] = cancelled ? "Cancelled" : "Interrupted";
+                }
+                await SaveSessionAsync(sessionId, startedAt,
+                    cancelled ? "Cancelled" : "Incomplete", probeStates).ConfigureAwait(true);
+            }
             _runCts = null;
             IsRunning = false;
             IsStopping = false;
+        }
+    }
+
+    private void MapAreaFindingsIntoSession(IDictionary<string, string> probeStates)
+    {
+        foreach ((string id, string rowTitle) in FastCheckCommands)
+        {
+            PageRow? row = Sections[0].Rows.FirstOrDefault(item => item.Title == rowTitle);
+            probeStates[id] = CheckupSessionStore.ClassifyArea(
+                probeStates[id], row?.StatusBrushKey);
+        }
+
+        PageRow? updates = Sections[0].Rows.FirstOrDefault(item => item.Title == WuaRowTitle);
+        probeStates[WuaCommandId] = CheckupSessionStore.ClassifyArea(
+            probeStates[WuaCommandId], updates?.StatusBrushKey);
+    }
+
+    /// <summary>Only the four probe states are saved, never raw command payloads.</summary>
+    private async Task SaveSessionAsync(
+        Guid id, DateTimeOffset startedAt, string status,
+        IReadOnlyDictionary<string, string> probeStates)
+    {
+        if (_sessions is null) return;
+        try
+        {
+            CheckupAreaSnapshot[] areas = CheckupSessionStore.ProbeIds
+                .Select(commandId => new CheckupAreaSnapshot(commandId, probeStates[commandId]))
+                .ToArray();
+            await _sessions.SaveAsync(new CheckupSessionSnapshot(
+                CheckupSessionStore.CurrentSchemaVersion, id, startedAt,
+                status == "Running" ? null : DateTimeOffset.UtcNow,
+                status, areas), CancellationToken.None);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException)
+        {
+            System.Diagnostics.Debug.WriteLine($"[CheckupPageViewModel] Saving checkup session failed: {ex}");
         }
     }
 
@@ -322,15 +388,45 @@ public sealed class CheckupPageViewModel : TabbedPageViewModel
             PageRow? securityRow = Sections[0].Rows.FirstOrDefault(candidate => candidate.Title == "Security");
             if (securityResult.Data?.ValueKind == JsonValueKind.Object)
             {
-                if (securityResult.Data.Value.TryGetProperty("defenderServiceRunning", out JsonElement defenderElement) && !defenderElement.GetBoolean())
+                bool defenderStateKnown =
+                    !securityResult.Data.Value.TryGetProperty("defenderServiceStateKnown", out JsonElement knownElement) ||
+                    knownElement.ValueKind != JsonValueKind.False;
+                if (!defenderStateKnown)
                 {
-                    hasCritical = true;
-                    findings.Add("Windows Defender isn't running");
+                    hasWarning = true;
+                    findings.Add("Microsoft Defender service status could not be confirmed");
                     if (securityRow is not null)
                     {
-                        securityRow.State = "Defender stopped";
-                        securityRow.StatusBrushKey = "DangerBrush";
-                        SetNavigationAction(securityRow, "Fix security", SecurityRoute, "Status");
+                        securityRow.State = "Service status unknown";
+                        securityRow.StatusBrushKey = "WarningBrush";
+                        SetNavigationAction(securityRow, "Review security", SecurityRoute, "Status");
+                    }
+                }
+                else if (securityResult.Data.Value.TryGetProperty("defenderServiceState", out JsonElement stateElement) &&
+                         stateElement.ValueKind == JsonValueKind.String &&
+                         stateElement.GetString() == "Transitioning")
+                {
+                    hasWarning = true;
+                    findings.Add("Microsoft Defender service is starting or stopping; verify protection after the transition");
+                    if (securityRow is not null)
+                    {
+                        securityRow.State = "Service transitioning";
+                        securityRow.StatusBrushKey = "WarningBrush";
+                        SetNavigationAction(securityRow, "Review security", SecurityRoute, "Status");
+                    }
+                }
+                else if (securityResult.Data.Value.TryGetProperty("defenderServiceRunning", out JsonElement defenderElement) &&
+                         defenderElement.ValueKind == JsonValueKind.False)
+                {
+                    // Another antivirus may be the registered active protection provider;
+                    // stopped WinDefend alone does not prove that the PC is unprotected.
+                    hasWarning = true;
+                    findings.Add("Microsoft Defender service is stopped; confirm which antivirus protects this device");
+                    if (securityRow is not null)
+                    {
+                        securityRow.State = "Review antivirus";
+                        securityRow.StatusBrushKey = "WarningBrush";
+                        SetNavigationAction(securityRow, "Review security", SecurityRoute, "Status");
                     }
                 }
 

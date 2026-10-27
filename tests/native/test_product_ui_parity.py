@@ -58,10 +58,28 @@ class ProductUiParityTests(unittest.TestCase):
         self.assertIn('Text="Quick actions"', xaml)
         self.assertIn("PageNavigation.NavigateToSection", code_behind)
         self.assertIn("CheckupCoverageText", view_model)
-        self.assertIn("CheckupTimestamp", view_model)
+        self.assertIn("CheckupSessionSnapshot? checkup", view_model)
+        self.assertIn("checkup.CompletedAt ?? checkup.StartedAt", view_model)
         self.assertNotIn("EvidenceScoreText", view_model)
         self.assertNotIn("EvidenceSummaryCard", xaml)
-        self.assertIn("record.CompletedAt ?? record.StartedAt", view_model)
+        self.assertIn("checkup.CompletedAt ?? checkup.StartedAt", view_model)
+
+    def test_home_uses_plain_language_and_does_not_advertise_a_fake_swarm(self) -> None:
+        xaml = self.read("src/WinCare.App/Views/Pages/HomePage.xaml")
+        for invented in ("System Nexus", "6 Unified Nodes", "TELEMETRY SCANNER",
+                         "Transfers &amp; Swarms", "BitTorrent P2P", "BT / HTTP"):
+            self.assertNotIn(invented, xaml)
+        self.assertIn('Title="Your PC at a glance"', xaml)
+        self.assertIn('Text="Downloads"', xaml)
+        self.assertNotIn('Text="Four areas checked"', xaml)
+        self.assertIn('Text="Four read-only areas"', xaml)
+
+    def test_checkup_keeps_read_only_work_running_when_navigating_away(self) -> None:
+        page = self.read("src/WinCare.App/Views/Pages/CheckupPage.xaml.cs")
+        self.assertNotIn("ViewModel.CancelRunningCheck();", page)
+        vm = self.read("src/WinCare.App/ViewModels/Pages/CheckupPageViewModel.cs")
+        self.assertIn("StopCheckCommand", vm)
+        self.assertIn("CancelRunningCheck", vm)
 
     def test_checkup_is_read_only_and_uses_named_destinations(self) -> None:
         view_model = self.read("src/WinCare.App/ViewModels/Pages/CheckupPageViewModel.cs")

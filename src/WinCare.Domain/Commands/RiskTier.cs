@@ -12,8 +12,8 @@ public enum RiskTier
     Safe = 0,
 
     /// <summary>
-    /// Moderate operational risk. Admitted with user review confirmation (<c>ReviewApproved = true</c>),
-    /// but does not strictly require a two-phase cryptographic preflight plan.
+    /// Moderate operational risk. Requires both explicit review confirmation
+    /// and a current, single-use preview plan bound to the exact command parameters.
     /// </summary>
     Moderate = 1,
 

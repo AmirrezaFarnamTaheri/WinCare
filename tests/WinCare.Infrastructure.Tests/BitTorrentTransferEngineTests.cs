@@ -93,4 +93,65 @@ public sealed class BitTorrentTransferEngineTests
             }
         }
     }
+
+    [Fact]
+    public void Bencode_info_hash_comes_from_root_info_value_not_an_embedded_string()
+    {
+        string decoy = "4:infod4:name4:fakee";
+        string info = "d6:lengthi12e4:name8:real.bin12:piece lengthi12e6:pieces20:12345678901234567890e";
+        string torrent = $"d8:announce{decoy.Length}:{decoy}4:info{info}e";
+
+        TorrentMetadata metadata = BencodeDecoder.DecodeTorrentFile(Encoding.Latin1.GetBytes(torrent));
+
+        string expected = Convert.ToHexString(SHA1.HashData(Encoding.Latin1.GetBytes(info))).ToLowerInvariant();
+        Assert.Equal(expected, metadata.InfoHashHex);
+    }
+
+    [Fact]
+    public void Bencode_rejects_duplicate_root_info_keys()
+    {
+        string first = "d6:lengthi1e4:name1:a12:piece lengthi1e6:pieces20:12345678901234567890e";
+        string second = "d6:lengthi1e4:name1:b12:piece lengthi1e6:pieces20:12345678901234567890e";
+        byte[] bytes = Encoding.Latin1.GetBytes($"d4:info{first}4:info{second}e");
+
+        Assert.Throws<FormatException>(() => BencodeDecoder.DecodeTorrentFile(bytes));
+    }
+
+    [Theory]
+    [InlineData("../escape.dat")]
+    [InlineData(@"..\\escape.dat")]
+    [InlineData("folder/../../escape.dat")]
+    [InlineData("/outside.dat")]
+    public async Task Torrent_storage_rejects_paths_outside_destination_without_creating_files(string relativePath)
+    {
+        string parent = Path.Combine(Path.GetTempPath(), "wincare-torrent-boundary-" + Guid.NewGuid().ToString("N"));
+        string root = Path.Combine(parent, "downloads");
+        var metadata = new TorrentMetadata(
+            "0123456789abcdef0123456789abcdef01234567", "escape.dat", 10, 10, 1,
+            [new byte[20]], [new TorrentFileEntry(relativePath, 10, 0)], []);
+        try
+        {
+            await using var storage = new TorrentStorageManager(metadata, root);
+            await Assert.ThrowsAsync<InvalidDataException>(() => storage.InitializeFilesAsync());
+            Assert.False(Directory.Exists(root));
+            Assert.False(File.Exists(Path.Combine(parent, "escape.dat")));
+        }
+        finally
+        {
+            if (Directory.Exists(parent)) Directory.Delete(parent, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task Torrent_engine_does_not_start_a_fake_swarm_or_allocate_storage()
+    {
+        string root = Path.Combine(Path.GetTempPath(), "wincare-no-fake-swarm-" + Guid.NewGuid().ToString("N"));
+        await using var engine = new TorrentEngineService(root);
+        var snapshot = await engine.AddMagnetAsync(
+            "magnet:?xt=urn:btih:da39a3ee5e6b4b0d3255bfef95601890afd80709&dn=test");
+
+        Assert.Null(snapshot);
+        Assert.Empty(engine.GetActiveSnapshots());
+        Assert.False(Directory.Exists(root));
+    }
 }

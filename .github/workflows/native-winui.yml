@@ -17,6 +17,11 @@ on:
         required: false
         type: string
         default: ''
+      run_installed_acceptance:
+        description: 'Install and uninstall MSIX on disposable Windows runners'
+        required: false
+        type: boolean
+        default: false
 
 concurrency:
   group: native-winui-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
@@ -81,7 +86,7 @@ jobs:
           components: rustfmt, clippy
       - uses: actions/setup-dotnet@e2cf7c663b93c38144629f5d40b62d3eaaa63a03 # pinned commit
         with:
-          dotnet-version: "8.0.416"
+          dotnet-version: "10.0.402"
           global-json-file: global.json
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
@@ -122,6 +127,14 @@ jobs:
       - name: Sign and verify MSIX
         timeout-minutes: 3
         shell: pwsh
+        env:
+          # Pull requests and ordinary CI builds use disposable development certificates.
+          # Tags, explicit release commits, and manual publications require one pinned
+          # signer shared by both x64 and ARM64 build jobs.
+          WINCARE_SIGN_FOR_RELEASE: "${{ startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.publish_release == true) || (github.event_name == 'push' && github.ref == 'refs/heads/master' && startsWith(github.event.head_commit.message, 'release: WinCare v')) }}"
+          WINCARE_RELEASE_PFX_BASE64: ${{ secrets.WINCARE_RELEASE_PFX_BASE64 }}
+          WINCARE_RELEASE_PFX_PASSWORD: ${{ secrets.WINCARE_RELEASE_PFX_PASSWORD }}
+          WINCARE_RELEASE_CERT_THUMBPRINT: ${{ vars.WINCARE_RELEASE_CERT_THUMBPRINT }}
         run: |
           $ErrorActionPreference = 'Stop'
           $cert = $null
@@ -176,23 +189,51 @@ jobs:
           try {
             $signDir = "$PWD/artifacts/signing"
             New-Item -ItemType Directory -Force -Path $signDir | Out-Null
-            # TODO(maintainers): this mints a brand-new, per-run development identity with no
-            # -NotAfter, so a published signature is non-reproducible and lapses with the
-            # ephemeral certificate. It is runner-local by design and no signing secret lives in
-            # this workflow. Before the production channel, replace it with a persisted identity
-            # from a repository secret (or Azure Trusted Signing / OIDC) and keep the RFC 3161
-            # timestamp below so published signatures stay valid after the certificate expires.
-            # Once the identity is stable, pin its public certificate in tools/install_msix.py
-            # instead of the 'CN=WinCare Development' subject string.
-            $cert = New-SelfSignedCertificate `
-              -Type Custom `
-              -KeyUsage DigitalSignature `
-              -KeySpec Signature `
-              -Subject 'CN=WinCare Development' `
-              -FriendlyName 'WinCare Development Package' `
-              -CertStoreLocation 'Cert:\CurrentUser\My' `
-              -HashAlgorithm SHA256 `
-              -TextExtension @('2.5.29.37={text}1.3.6.1.5.5.7.3.3', '2.5.29.19={text}')
+            if ($env:WINCARE_SIGN_FOR_RELEASE -eq 'true') {
+              if (-not $env:WINCARE_RELEASE_PFX_BASE64 -or -not $env:WINCARE_RELEASE_PFX_PASSWORD -or
+                  -not $env:WINCARE_RELEASE_CERT_THUMBPRINT) {
+                throw 'Publishing requires WINCARE_RELEASE_PFX_BASE64, WINCARE_RELEASE_PFX_PASSWORD and WINCARE_RELEASE_CERT_THUMBPRINT. Refusing ephemeral release signing.'
+              }
+
+              $pfxPath = Join-Path $env:RUNNER_TEMP ("WinCare-release-" + [guid]::NewGuid().ToString('N') + ".pfx")
+              try {
+                $bytes = [Convert]::FromBase64String($env:WINCARE_RELEASE_PFX_BASE64)
+                if ($bytes.Length -lt 256 -or $bytes.Length -gt 131072) {
+                  throw 'Release PFX size is outside the accepted bounds.'
+                }
+                [IO.File]::WriteAllBytes($pfxPath, $bytes)
+                $password = ConvertTo-SecureString $env:WINCARE_RELEASE_PFX_PASSWORD -AsPlainText -Force
+                $imported = @(Import-PfxCertificate -FilePath $pfxPath -CertStoreLocation 'Cert:\CurrentUser\My' -Password $password -Exportable:$false)
+                $candidates = @($imported | Where-Object { $_.HasPrivateKey })
+                if ($candidates.Count -ne 1) {
+                  throw 'Release PFX must contain exactly one code-signing identity with a private key.'
+                }
+                $cert = $candidates[0]
+              }
+              finally {
+                if (Test-Path -LiteralPath $pfxPath) {
+                  Remove-Item -LiteralPath $pfxPath -Force
+                }
+              }
+              if ($cert.Subject -ne 'CN=WinCare Development') {
+                throw "Release signer subject '$($cert.Subject)' is inconsistent with the checked-in MSIX package publisher."
+              }
+              if ($cert.Thumbprint -ne $env:WINCARE_RELEASE_CERT_THUMBPRINT) {
+                throw 'Release signer thumbprint does not match the pinned repository variable.'
+              }
+            }
+            else {
+              # Development-only CI signer. Never publish these per-run certificates.
+              $cert = New-SelfSignedCertificate `
+                -Type Custom `
+                -KeyUsage DigitalSignature `
+                -KeySpec Signature `
+                -Subject 'CN=WinCare Development' `
+                -FriendlyName 'WinCare Development Package' `
+                -CertStoreLocation 'Cert:\CurrentUser\My' `
+                -HashAlgorithm SHA256 `
+                -TextExtension @('2.5.29.37={text}1.3.6.1.5.5.7.3.3', '2.5.29.19={text}')
+            }
             Export-Certificate -Cert $cert -FilePath "$signDir/WinCare.cer" | Out-Null
             # Hand the identity to the 'Sign portable executable' step so the MSIX and the
             # portable exe carry one shared signer and the published WinCare.cer attests to both.
@@ -504,6 +545,39 @@ jobs:
             }
           }
 
+  installed-lifecycle-acceptance:
+    needs: [verify, build]
+    if: >-
+      (github.event_name == 'workflow_dispatch' && inputs.run_installed_acceptance == true) ||
+      (github.event_name == 'pull_request' && github.head_ref == 'fix/audit-reliability-baseline-20261024')
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: x64
+            runner: windows-latest
+          - platform: ARM64
+            runner: windows-11-vs2026-arm
+    env:
+      WINCARE_DISPOSABLE_TEST_HOST: '1'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: package-${{ matrix.platform }}
+          path: artifacts/package
+      - name: Install and uninstall WinCare MSIX
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $packages = @(Get-ChildItem artifacts/package -Recurse -File -Filter 'WinCare.App_*.msix' | Where-Object { $_.FullName -notmatch '[\\/]Dependencies[\\/]' })
+          $certificates = @(Get-ChildItem artifacts/package -Recurse -File -Filter 'WinCare.cer')
+          if ($packages.Count -ne 1 -or $certificates.Count -ne 1) { throw 'Expected exactly one app MSIX and one signer certificate.' }
+          & pwsh -NoProfile -NonInteractive -File tools/test_msix_lifecycle.ps1 -PackagePath $packages[0].FullName -CertificatePath $certificates[0].FullName
+          if ($LASTEXITCODE -ne 0) { throw "Installed acceptance failed: $LASTEXITCODE" }
+
   release-gate:
     needs: [verify, build, portable-runtime-smoke]
     if: >-
@@ -585,6 +659,8 @@ jobs:
             --output release_assets \
             --version "$RELEASE_TAG" \
             "${manifest_args[@]}"
+          # Both architectures must use the same pinned release signing identity.
+          python tools/verify_release_signer.py --assets release_assets --version "$RELEASE_TAG"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: WinCare-release-${{ needs.verify.outputs.product_version }}
@@ -605,15 +681,19 @@ jobs:
               echo "Bump Directory.Build.props before publishing a new release." >&2
               exit 1
             fi
-            existing_assets=$(gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name')
-            for asset in release_assets/*; do
-              asset_name=$(basename "$asset")
-              if grep -Fxq "$asset_name" <<<"$existing_assets"; then
-                echo "Asset '$asset_name' already exists; skipping."
-              else
-                gh release upload "$RELEASE_TAG" "$asset" --repo "$GITHUB_REPOSITORY"
-              fi
-            done
+            # Existing releases are immutable by content, not merely by tag/name.
+            # A retry can use a different signing identity; appending new assets to a
+            # partial earlier publication would silently mix incompatible signers.
+            existing_dir=$(mktemp -d)
+            trap 'rm -rf "$existing_dir"' EXIT
+            gh release download "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --dir "$existing_dir"
+            python tools/check_release_assets.py --expected release_assets --published "$existing_dir"
+            echo "Release $RELEASE_TAG already contains exactly the validated artifact bytes."
+            if [[ "$(gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --json isDraft --jq '.isDraft')" == "true" ]]; then
+              # Previous upload succeeded but the final publish step was interrupted.
+              # Publish only after the tag and complete asset set were verified above.
+              gh release edit "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" "$RELEASE_FLAGS" --draft=false
+            fi
           else
             notes_file="docs/releases/${RELEASE_TAG}.md"
             if [[ ! -f "$notes_file" ]]; then
@@ -623,7 +703,9 @@ jobs:
             gh release create "$RELEASE_TAG" release_assets/* \
               --title "WinCare $RELEASE_TAG" \
               --notes-file "$notes_file" \
-              "$RELEASE_FLAGS" \
+              --draft \
               --target "$GITHUB_SHA" \
               --repo "$GITHUB_REPOSITORY"
+            # Keep the release invisible until all assets have been uploaded.
+            gh release edit "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" "$RELEASE_FLAGS" --draft=false
           fi

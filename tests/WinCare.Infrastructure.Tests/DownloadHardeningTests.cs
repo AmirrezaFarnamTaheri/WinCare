@@ -23,6 +23,52 @@ public sealed class DownloadHardeningTests
     }
 
     [Fact]
+    public async Task Download_center_and_real_admission_dispatcher_complete_a_verified_transfer()
+    {
+        if (!OperatingSystem.IsWindows()) return;
+        string root = Root();
+        try
+        {
+            byte[] bytes = [13, 21, 34, 55, 89, 144];
+            string sha256 = Convert.ToHexString(SHA256.HashData(bytes)).ToLowerInvariant();
+            string destination = Path.Combine(root, "verified.bin");
+            using var http = new HttpClient(new Handler(request =>
+            {
+                Assert.Null(request.Headers.Range);
+                return new HttpResponseMessage(HttpStatusCode.OK) { Content = new ByteArrayContent(bytes) };
+            }));
+            using var executor = new WindowsCommandExecutor(null, null, new CommandStateStore(root), http);
+            var definitions = new[] { "download-create", "download-start", "download-remove" }
+                .Select(id => WinCare.CommandCatalog.CommandCatalog.Find(id)!).ToArray();
+            var handlers = definitions.Select(definition =>
+                (ICommandHandler)new DispatcherDownloadHandler(definition, executor)).ToArray();
+            var dispatcher = new CommandDispatcher(definitions, handlers, isProcessElevated: () => false);
+
+            CommandResult created = await dispatcher.ExecuteAsync(
+                CommandRequest.Execute("download-create", JsonSerializer.SerializeToElement(new
+                {
+                    Url = "https://example.com/verified.bin",
+                    Destination = destination,
+                    Sha256 = sha256
+                })), CommandExecutionOptions.Default, CancellationToken.None);
+            Assert.Equal(CommandResultStatus.Succeeded, created.Status);
+            string id = created.Data!.Value.GetProperty("id").GetString()!;
+            var center = new WinCare.Application.Downloads.DownloadCenterService(dispatcher);
+            Assert.True(center.TryStart(id, resume: false, out Task<CommandResult> completion));
+            CommandResult completed = await completion.WaitAsync(TimeSpan.FromSeconds(15));
+
+            Assert.Equal(CommandResultStatus.Succeeded, completed.Status);
+            Assert.Equal(bytes, await File.ReadAllBytesAsync(destination));
+            Assert.Contains("ZoneId=3", await File.ReadAllTextAsync(destination + ":Zone.Identifier"));
+
+            CommandResult removed = await center.RemoveAsync(id);
+            Assert.Equal(CommandResultStatus.Succeeded, removed.Status);
+            Assert.Equal(bytes, await File.ReadAllBytesAsync(destination));
+        }
+        finally { Directory.Delete(root, recursive: true); }
+    }
+
+    [Fact]
     public async Task Signed_link_survives_restart_without_plaintext_or_public_ciphertext()
     {
         if (!OperatingSystem.IsWindows()) return;
@@ -325,6 +371,15 @@ public sealed class DownloadHardeningTests
         public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
         public override void SetLength(long value) => throw new NotSupportedException();
         public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+    }
+
+    private sealed class DispatcherDownloadHandler(
+        WinCare.CommandCatalog.Models.CommandDefinition definition,
+        WindowsCommandExecutor executor) : ICommandHandler
+    {
+        public string CommandId => definition.Id;
+        public Task<CommandHandlerOutcome> ExecuteAsync(CommandRequest request, CancellationToken cancellationToken) =>
+            executor.ExecuteAsync(definition, request, cancellationToken);
     }
 
     private sealed class Handler(Func<HttpRequestMessage, HttpResponseMessage> respond) : HttpMessageHandler

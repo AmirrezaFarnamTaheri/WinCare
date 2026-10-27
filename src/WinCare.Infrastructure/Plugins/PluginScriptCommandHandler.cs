@@ -5,6 +5,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using WinCare.Application.Commands;
+using WinCare.Application.Plugins;
 using WinCare.Domain.Commands;
 using WinCare.Infrastructure.Commands;
 
@@ -28,6 +29,7 @@ namespace WinCare.Infrastructure.Plugins
         private readonly string _commandId;
         private readonly string _scriptFullPath;
         private readonly string _pluginDirectory;
+        private readonly bool _requiresAdmission;
         private readonly bool _declaredReadOnly;
         private readonly IReadOnlyList<string> _declaredCapabilities;
         private readonly BoundedProcessRunner _processRunner;
@@ -60,6 +62,10 @@ namespace WinCare.Infrastructure.Plugins
             }
 
             _scriptFullPath = combined;
+            // Discovery only instantiates installed user plugins with an external trust
+            // record. Pin this expectation so deleting the record after enable does not
+            // silently downgrade execution to unverified bytes.
+            _requiresAdmission = PluginAdmissionTrustStore.TryResolveAdmissionRecordPath(_pluginDirectory) is not null;
         }
 
         public async Task<CommandHandlerOutcome> ExecuteAsync(CommandRequest request, CancellationToken cancellationToken)
@@ -76,7 +82,12 @@ namespace WinCare.Infrastructure.Plugins
             // approved mutation plan before the script is allowed to run.
             if (!request.Apply && !_declaredReadOnly)
             {
-                return BuildPreviewOutcome(request);
+                // A preview must not imply that tampered or untrusted plugin bytes
+                // are ready for approval. Elevated users may inspect the preview,
+                // but the executable apply path is always checked separately.
+                CommandHandlerOutcome? previewIntegrity = await Task.Run(
+                    () => VerifyAdmittedPayload(requireNonElevated: false), cancellationToken).ConfigureAwait(false);
+                return previewIntegrity ?? BuildPreviewOutcome(request);
             }
 
             // Defense-in-depth: a mutating script must carry an approved mutation plan even
@@ -92,7 +103,28 @@ namespace WinCare.Infrastructure.Plugins
 
             try
             {
-                var ext = Path.GetExtension(_scriptFullPath).ToLowerInvariant();
+                CommandHandlerOutcome? integrity = await Task.Run(
+                    () => VerifyAdmittedPayload(requireNonElevated: true), cancellationToken).ConfigureAwait(false);
+                if (integrity is not null) return integrity;
+
+                // Hash a fresh copy of the complete admitted package and hold its
+                // file handles read-only through interpreter execution. The original
+                // user-writable plugin tree is no longer the executed code path.
+                string? admissionPath = _requiresAdmission
+                    ? PluginAdmissionTrustStore.TryResolveAdmissionRecordPath(_pluginDirectory) : null;
+                PluginAdmissionRecord? admitted = admissionPath is not null
+                    ? JsonSerializer.Deserialize<PluginAdmissionRecord>(File.ReadAllText(admissionPath))
+                    : null;
+                using VerifiedPluginExecutionSnapshot? snapshot = _requiresAdmission
+                    ? await Task.Run(() => VerifiedPluginExecutionSnapshot.Create(
+                        _pluginDirectory, _scriptFullPath,
+                        admitted?.PackageTreeSha256 ?? string.Empty,
+                        cancellationToken: cancellationToken), cancellationToken).ConfigureAwait(false)
+                    : null;
+                string executableScriptPath = snapshot?.ScriptFullPath ?? _scriptFullPath;
+                string executionWorkingDirectory = snapshot?.Root ?? _pluginDirectory;
+
+                var ext = Path.GetExtension(executableScriptPath).ToLowerInvariant();
                 string executable;
                 var arguments = new List<string>();
 
@@ -108,7 +140,7 @@ namespace WinCare.Infrastructure.Plugins
                     arguments.Add("-ExecutionPolicy");
                     arguments.Add("Bypass");
                     arguments.Add("-File");
-                    arguments.Add(_scriptFullPath);
+                    arguments.Add(executableScriptPath);
 
                     if (request.Parameters.ValueKind == JsonValueKind.Object)
                     {
@@ -124,7 +156,7 @@ namespace WinCare.Infrastructure.Plugins
                     // cmd.exe parses shell operators even when ArgumentList is used.
                     // Reject expansion and control syntax before passing data to it.
                     const string shellSyntax = "&|<>^%!\"\r\n()";
-                    if (_scriptFullPath.IndexOfAny(shellSyntax.ToCharArray()) >= 0 ||
+                    if (executableScriptPath.IndexOfAny(shellSyntax.ToCharArray()) >= 0 ||
                         (request.Parameters.ValueKind == JsonValueKind.Object &&
                          request.Parameters.EnumerateObject().Any(prop =>
                              prop.Value.ToString().IndexOfAny(shellSyntax.ToCharArray()) >= 0)))
@@ -135,7 +167,7 @@ namespace WinCare.Infrastructure.Plugins
                     executable = "cmd.exe";
                     arguments.Add("/d");
                     arguments.Add("/c");
-                    arguments.Add(_scriptFullPath);
+                    arguments.Add(executableScriptPath);
 
                     if (request.Parameters.ValueKind == JsonValueKind.Object)
                     {
@@ -147,7 +179,7 @@ namespace WinCare.Infrastructure.Plugins
                 }
                 else
                 {
-                    executable = _scriptFullPath;
+                    executable = executableScriptPath;
                     if (request.Parameters.ValueKind == JsonValueKind.Object)
                     {
                         foreach (var prop in request.Parameters.EnumerateObject())
@@ -162,7 +194,7 @@ namespace WinCare.Infrastructure.Plugins
                     arguments,
                     cancellationToken,
                     timeout: TimeSpan.FromSeconds(60),
-                    workingDirectory: _pluginDirectory).ConfigureAwait(false);
+                    workingDirectory: executionWorkingDirectory).ConfigureAwait(false);
 
                 if (result.ExitCode == 0)
                 {
@@ -182,9 +214,47 @@ namespace WinCare.Infrastructure.Plugins
             {
                 throw;
             }
-            catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or IOException or UnauthorizedAccessException or InvalidOperationException)
+            catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or IOException or UnauthorizedAccessException or InvalidOperationException or InvalidDataException)
             {
                 return CommandHandlerOutcome.Failed("plugin.fault", $"Plugin script execution failed ({ex.GetType().Name}).");
+            }
+        }
+
+        private CommandHandlerOutcome? VerifyAdmittedPayload(bool requireNonElevated)
+        {
+            if (!_requiresAdmission) return null;
+
+            try
+            {
+                string? path = PluginAdmissionTrustStore.TryResolveAdmissionRecordPath(_pluginDirectory);
+                if (path is null || !File.Exists(path))
+                    return CommandHandlerOutcome.Blocked("plugin.payload_integrity_failed",
+                        "The plugin admission record disappeared after registration. Reinstall the plugin.");
+
+                var record = JsonSerializer.Deserialize<PluginAdmissionRecord>(File.ReadAllText(path));
+                if (string.IsNullOrWhiteSpace(record?.PackageTreeSha256))
+                    return CommandHandlerOutcome.Blocked("plugin.payload_integrity_failed",
+                        "The plugin admission record does not bind script and dependency bytes. Reinstall the plugin.");
+
+                string actualDigest = PluginAdmissionTrustStore.ComputePluginPayloadDigest(_pluginDirectory);
+                if (!string.Equals(actualDigest, record.PackageTreeSha256, StringComparison.OrdinalIgnoreCase))
+                    return CommandHandlerOutcome.Blocked("plugin.payload_integrity_failed",
+                        "Plugin script or dependency bytes changed after approval. Reinstall and review the plugin again.");
+
+                // User-writable script directories cannot provide an atomic, immutable
+                // code snapshot to an elevated interpreter. Do not promote user-scope
+                // script content into administrator execution on a timing race.
+                if (requireNonElevated && PluginAdmissionTrustStore.IsCurrentProcessElevated())
+                    return CommandHandlerOutcome.Blocked("plugin.elevated_script_unsupported",
+                        "External script plugins cannot run elevated until protected immutable staging is available.");
+
+                return null;
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or
+                                        JsonException or InvalidDataException or ArgumentException)
+            {
+                return CommandHandlerOutcome.Blocked("plugin.payload_integrity_failed",
+                    $"Plugin integrity could not be verified ({ex.GetType().Name}).");
             }
         }
 
@@ -204,7 +274,7 @@ namespace WinCare.Infrastructure.Plugins
                 parameters = request.Parameters.ValueKind == JsonValueKind.Object
                     ? request.Parameters.Clone()
                     : JsonSerializer.SerializeToElement(new { }),
-                note = "A third-party script would run in-process with your user privileges on approval. Review the declared capabilities before approving."
+                note = "A third-party script would launch as a separate process under the current Windows session privileges, if permitted by admission policy. Review the declared capabilities before approving."
             });
 
             return CommandHandlerOutcome.Succeeded(

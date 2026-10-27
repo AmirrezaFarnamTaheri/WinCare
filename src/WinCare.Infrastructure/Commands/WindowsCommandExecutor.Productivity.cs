@@ -92,18 +92,44 @@ internal sealed partial class WindowsCommandExecutor
         return Success("context-menu", $"Enumerated {rows.Count} shell context-menu entries.", rows);
     }
 
+    /// <summary>
+    /// One root resolver shared by the preview and the registry mutation. A scope
+    /// that cannot be previewed cannot reach a different host target at apply time.
+    /// </summary>
+    private static string ContextMenuRegistryRoot(string scope) => scope.Trim().ToLowerInvariant() switch
+    {
+        "file" => @"Software\Classes\*\shell",
+        "directory" => @"Software\Classes\Directory\shell",
+        "background" => @"Software\Classes\Directory\Background\shell",
+        _ => throw new CommandParameterException("Scope", "Scope must be File, Directory, or Background."),
+    };
+
+    private static object[] ContextMenuAffectedResources(CommandParameters p)
+    {
+        string id = SanitizeRegistryLeaf(p.RequiredString("Id"));
+        string root = ContextMenuRegistryRoot(p.String("Scope", "File"));
+        bool enabled = p.Boolean("Enabled", true);
+        return
+        [
+            new
+            {
+                resourceType = "RegistryKey",
+                path = @"HKCU\" + root + @"\" + id,
+                target = enabled ? p.String("Label", id).Trim() : "Context-menu entry and its child keys",
+                proposedValue = enabled
+                    ? p.RequiredString("Command").Trim()
+                    : "Remove selected entry and all child keys",
+                reversible = false,
+            },
+        ];
+    }
+
     private CommandHandlerOutcome ContextMenuSet(CommandParameters p)
     {
         string scope = p.String("Scope", "File").Trim();
         string id = SanitizeRegistryLeaf(p.RequiredString("Id"));
         bool enabled = p.Boolean("Enabled", true);
-        string rootPath = scope.ToLowerInvariant() switch
-        {
-            "file" => @"Software\Classes\*\shell",
-            "directory" => @"Software\Classes\Directory\shell",
-            "background" => @"Software\Classes\Directory\Background\shell",
-            _ => throw new CommandParameterException("Scope", "Scope must be File, Directory, or Background."),
-        };
+        string rootPath = ContextMenuRegistryRoot(scope);
         using RegistryKey root = Registry.CurrentUser.CreateSubKey(rootPath, writable: true);
         if (!enabled)
         {

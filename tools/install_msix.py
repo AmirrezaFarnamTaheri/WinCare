@@ -54,15 +54,21 @@ def detect_architecture() -> str:
     return "x64"
 
 
-def find_canonical_package(search_dir: Path, arch: str) -> Path | None:
-    """Find the best matching .msix package for the given architecture."""
-    for candidate in sorted(search_dir.glob("*.msix")):
-        if arch.lower() in candidate.name.lower():
-            return candidate
-    all_msix = list(search_dir.glob("*.msix"))
-    if len(all_msix) == 1:
-        return all_msix[0]
-    return None
+def find_canonical_package(search_dir: Path | tuple[Path, ...], arch: str) -> Path | None:
+    """Require exactly one architecture-matched MSIX across all search directories."""
+    search_dirs = (search_dir,) if isinstance(search_dir, Path) else search_dir
+    matches = {
+        candidate.resolve()
+        for directory in search_dirs
+        for candidate in directory.glob("*.msix")
+        if any(
+            part.lower() == arch.lower()
+            for part in candidate.stem.replace("-", "_").split("_")
+        )
+    }
+    # A duplicate in an earlier directory cannot be bypassed by picking a
+    # package from its parent directory.
+    return next(iter(matches)) if len(matches) == 1 else None
 
 
 def main() -> int:
@@ -76,7 +82,7 @@ def main() -> int:
 
     package_path: Path | None = args.package
     if package_path is None:
-        package_path = find_canonical_package(script_dir, arch) or find_canonical_package(script_dir.parent, arch)
+        package_path = find_canonical_package((script_dir, script_dir.parent), arch)
 
     if package_path is None or not package_path.is_file():
         print(f"[-] Error: Could not locate a valid WinCare MSIX package for architecture '{arch}'.")
@@ -87,7 +93,10 @@ def main() -> int:
     cert_path: Path | None = args.certificate
     if cert_path is None:
         cert_candidates = sorted(script_dir.glob("*.cer")) + sorted(script_dir.parent.glob("*.cer"))
-        if cert_candidates:
+        if len(cert_candidates) > 1:
+            print("[-] Multiple certificate files found. Specify the matching signer with --certificate.")
+            return 1
+        if len(cert_candidates) == 1:
             cert_path = cert_candidates[0]
     if cert_path is not None:
         cert_path = cert_path.resolve()

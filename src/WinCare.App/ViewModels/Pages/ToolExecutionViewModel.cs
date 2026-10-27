@@ -127,7 +127,7 @@ public sealed class ToolExecutionViewModel : ObservableObject
             if (IsExecuting) return IsCancellationRequested ? "Stopping…" : "Running";
             if (_selectedTool is not null && !IsSelectedToolImplemented) return "Unavailable";
             if (IsSafeTool) return "Run tool";
-            if (IsModerateTool) return "Run action";
+            if (IsModerateTool) return IsReviewApproved ? "Apply reviewed change" : "Preview impact";
             return IsReviewApproved ? "Apply destructive change" : "Preview impact";
         }
     }
@@ -211,7 +211,7 @@ public sealed class ToolExecutionViewModel : ObservableObject
         : IsSafeTool
         ? (IsMutatingTool ? "Direct, low-risk change" : "Read-only inspection")
         : IsModerateTool
-            ? "Routine system maintenance"
+            ? (IsReviewApproved ? "Reviewed and ready" : IsApprovalStage ? "Approve to apply" : "Preview before applying")
             : (IsReviewApproved
                 ? "Reviewed and ready"
                 : IsApprovalStage
@@ -225,7 +225,11 @@ public sealed class ToolExecutionViewModel : ObservableObject
             ? "WinCare will run this bounded action and record the outcome in Activity."
             : "This tool gathers evidence without changing Windows. The result is recorded in Activity.")
         : IsModerateTool
-            ? "WinCare will run this bounded maintenance action directly and record the outcome in Activity."
+            ? (IsReviewApproved
+                ? "Apply the exact previewed plan; this approval is valid once."
+                : IsApprovalStage
+                    ? "Review the previewed targets and approve the change to proceed."
+                    : "Preview the current targets and effects before applying this maintenance action.")
             : (IsReviewApproved
                 ? "The approved preview matches the current inputs. Applying consumes this approval once and records the outcome."
                 : IsApprovalStage
@@ -289,7 +293,7 @@ public sealed class ToolExecutionViewModel : ObservableObject
     public bool IsModerateTool => _selectedTool?.Definition.RiskTier == RiskTier.Moderate;
     public bool IsDestructiveTool => _selectedTool?.Definition.RiskTier == RiskTier.Destructive;
     public bool IsMutatingTool => _selectedTool?.Definition.ReadOnly == false;
-    public bool RequiresApprovalSwitch => ShowDestructiveWarning;
+    public bool RequiresApprovalSwitch => IsMutatingTool && (IsModerateTool || IsDestructiveTool) && !IsSelectedToolUnavailable;
     // The approval stage is the moment the user is actually asked to approve: a successful
     // preview exists, so the reported targets are on screen and can be checked. Before that
     // point there is nothing to review, so the surface does not stack a warning, a switch,
@@ -403,9 +407,9 @@ public sealed class ToolExecutionViewModel : ObservableObject
         ToolRowViewModel? selected = _selectedTool;
         if (selected is null || !CanRunSelectedTool) return;
 
-        bool apply = IsMutatingTool && (IsSafeTool || IsModerateTool || IsReviewApproved);
+        bool apply = IsMutatingTool && (IsSafeTool || IsReviewApproved);
         long reviewVersion = _reviewVersion;
-        if (apply && IsDestructiveTool && !CanApproveReview) return;
+        if (apply && (IsModerateTool || IsDestructiveTool) && !CanApproveReview) return;
 
         if (!TryBuildExecutionParameters(out JsonElement parameters, out string parameterError))
         {
@@ -422,7 +426,7 @@ public sealed class ToolExecutionViewModel : ObservableObject
         try
         {
             // Include any issued review plan with the execution request.
-            ApprovedMutationPlan? approval = (apply && IsDestructiveTool) ? _lastApprovedPlan : null;
+            ApprovedMutationPlan? approval = (apply && (IsModerateTool || IsDestructiveTool)) ? _lastApprovedPlan : null;
             CommandRequest request = apply
                 ? CommandRequest.Execute(selected.Id, parameters, approval)
                 : CommandRequest.Preview(selected.Id, parameters);

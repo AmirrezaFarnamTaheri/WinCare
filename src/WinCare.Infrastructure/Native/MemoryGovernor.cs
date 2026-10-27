@@ -42,6 +42,15 @@ public static class MemoryGovernor
         uint MemoryLoadPercentage
     );
 
+    public sealed record MemoryCompactionResult(
+        bool StandbyRequestSucceeded,
+        int WorkingSetTrimCount,
+        int WorkingSetAttemptCount,
+        long ObservedAvailableBytesChange)
+    {
+        public bool AnySucceeded => StandbyRequestSucceeded || WorkingSetTrimCount > 0;
+    }
+
     public static MemoryMetrics GetSystemMemoryMetrics()
     {
         MEMORYSTATUSEX stat = new() { dwLength = (uint)Marshal.SizeOf<MEMORYSTATUSEX>() };
@@ -52,53 +61,64 @@ public static class MemoryGovernor
         return new MemoryMetrics(0, 0, 0);
     }
 
-    public static async Task<long> CompactSystemMemoryAsync(CancellationToken ct = default)
+    public static Task<MemoryCompactionResult> CompactSystemMemoryAsync(CancellationToken ct = default)
     {
-        return await Task.Run(() =>
+        return Task.Run(() =>
         {
+            ct.ThrowIfCancellationRequested();
             long before = (long)GetSystemMemoryMetrics().AvailablePhysicalBytes;
+            bool standbySucceeded = false;
 
             GCHandle commandHandle = GCHandle.Alloc(MemoryPurgeStandbyList, GCHandleType.Pinned);
             try
             {
-                _ = NtSetSystemInformation(80, commandHandle.AddrOfPinnedObject(), sizeof(int));
+                standbySucceeded = NtSetSystemInformation(80, commandHandle.AddrOfPinnedObject(), sizeof(int)) == 0;
             }
-            catch
+            catch (Exception ex) when (ex is DllNotFoundException or EntryPointNotFoundException)
             {
+                // Report unsupported operation; do not invent a successful purge.
             }
             finally
             {
                 commandHandle.Free();
             }
 
+            int attempted = 0;
+            int trimmed = 0;
             try
             {
-                Process[] processes = Process.GetProcesses();
-                foreach (var proc in processes)
+                foreach (Process process in Process.GetProcesses())
                 {
-                    if (ct.IsCancellationRequested) break;
-                    try
+                    using (process)
                     {
-                        if (!proc.HasExited && proc.Id > 4)
+                        ct.ThrowIfCancellationRequested();
+                        try
                         {
-                            EmptyWorkingSet(proc.Handle);
+                            if (!process.HasExited && process.Id > 4)
+                            {
+                                attempted++;
+                                if (EmptyWorkingSet(process.Handle))
+                                    trimmed++;
+                            }
                         }
-                    }
-                    catch
-                    {
-                    }
-                    finally
-                    {
-                        proc.Dispose();
+                        catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or
+                                                     InvalidOperationException or UnauthorizedAccessException)
+                        {
+                            // Each process may deny trimming; count only verified calls.
+                        }
                     }
                 }
             }
-            catch
+            catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or
+                                         InvalidOperationException)
             {
+                // Continue to report actual verified operations.
             }
 
+            ct.ThrowIfCancellationRequested();
             long after = (long)GetSystemMemoryMetrics().AvailablePhysicalBytes;
-            return Math.Max(0, after - before);
+            return new MemoryCompactionResult(standbySucceeded, trimmed, attempted, after - before);
         }, ct);
     }
+
 }

@@ -9,7 +9,7 @@ Thank you for your interest in contributing to **WinCare**! We welcome contribut
 The complete development environment requires:
 
 - **Operating System**: Supported 64-bit Windows 10 (version 2004 / build 19041+) or Windows 11
-- **.NET SDK**: Exactly .NET SDK **8.0.416**, as pinned by `global.json` (feature-band roll-forward and prerelease SDKs are disabled)
+- **.NET SDK**: Exactly .NET SDK **10.0.402**, as pinned by `global.json` (feature-band roll-forward and prerelease SDKs are disabled)
 - **Windows App SDK**: Build tools and WinApp CLI
 - **Rust Toolchain**: Rust stable (1.97.1) with `x86_64-pc-windows-msvc` and/or `aarch64-pc-windows-msvc` targets
 - **Python**: Python 3.11+ (Python 3.13 recommended) for structural validation, contrast checks, and deterministic packaging
@@ -27,7 +27,7 @@ To maintain clean separation of concerns and avoid duplicated logic:
 
 | Language | Responsibility & Domain |
 |---|---|
-| **C# (.NET 8)** | WinUI 3 presentation, MVVM view models, command catalog admission, dynamic plugin host, AI Doctor diagnostic engine, activity journaling, recovery workflows, and packaging |
+| **C# (.NET 10)** | WinUI 3 presentation, MVVM view models, command catalog admission, dynamic plugin host, AI Doctor diagnostic engine, activity journaling, recovery workflows, and packaging |
 | **Rust 2024** | Bounded native system primitives (`sys_info`, `dir_size`, `sha256`) via versioned C ABI (`wincare-core`) and low-overhead background health monitoring service (`wincare-guard`) |
 | **Python 3.13** | Source validation gates, visual token and WCAG AA contrast verification, parity-fixture comparison, and deterministic release packaging |
 | **Node.js / JS** | Developer Plugin CLI toolkit (`tools/wincare-plugin-cli`) for scaffolding, linting, validating, and packaging community extensions |

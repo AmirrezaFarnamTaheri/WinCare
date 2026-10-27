@@ -26,59 +26,17 @@ public sealed class TorrentEngineService : IAsyncDisposable
     /// <summary>
     /// Adds and starts a torrent transfer from a Magnet URI.
     /// </summary>
-    public async Task<TorrentSessionSnapshot?> AddMagnetAsync(string magnetUri, string? destinationDirectory = null)
+    public Task<TorrentSessionSnapshot?> AddMagnetAsync(string magnetUri, string? destinationDirectory = null)
     {
-        if (!MagnetUriParser.TryParse(magnetUri, out TorrentMetadata? metadata) || metadata is null)
-        {
-            return null;
-        }
-
-        // Default mock synthetic size of 4.5 GB for sample magnet if 0
-        if (metadata.TotalBytes == 0)
-        {
-            metadata = metadata with
-            {
-                TotalBytes = 4831838208L, // 4.5 GB
-                PieceLength = 2097152,    // 2 MB pieces
-                PieceCount = 2304
-            };
-        }
-
-        string targetDir = destinationDirectory ?? _defaultDownloadDirectory;
-        var session = new TorrentSession(metadata, targetDir);
-
-        if (_sessions.TryAdd(metadata.InfoHashHex, session))
-        {
-            await session.StartAsync().ConfigureAwait(false);
-            return session.CreateSnapshot();
-        }
-
-        return _sessions[metadata.InfoHashHex].CreateSnapshot();
+        // No tracker, peer-wire, piece-verification or persisted transfer engine is wired here.
+        // Never manufacture progress, allocate files or present a synthetic swarm as genuine.
+        return Task.FromResult<TorrentSessionSnapshot?>(null);
     }
 
-    /// <summary>
-    /// Adds and starts a torrent transfer from raw .torrent file bytes.
-    /// </summary>
-    public async Task<TorrentSessionSnapshot?> AddTorrentFileAsync(byte[] torrentBytes, string? destinationDirectory = null)
+    public Task<TorrentSessionSnapshot?> AddTorrentFileAsync(byte[] torrentBytes, string? destinationDirectory = null)
     {
-        try
-        {
-            TorrentMetadata metadata = BencodeDecoder.DecodeTorrentFile(torrentBytes);
-            string targetDir = destinationDirectory ?? _defaultDownloadDirectory;
-            var session = new TorrentSession(metadata, targetDir);
-
-            if (_sessions.TryAdd(metadata.InfoHashHex, session))
-            {
-                await session.StartAsync().ConfigureAwait(false);
-                return session.CreateSnapshot();
-            }
-
-            return _sessions[metadata.InfoHashHex].CreateSnapshot();
-        }
-        catch
-        {
-            return null;
-        }
+        ArgumentNullException.ThrowIfNull(torrentBytes);
+        return Task.FromResult<TorrentSessionSnapshot?>(null);
     }
 
     public bool PauseSession(string infoHashHex)

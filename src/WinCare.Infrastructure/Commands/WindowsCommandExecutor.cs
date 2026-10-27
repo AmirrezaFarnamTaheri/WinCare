@@ -68,6 +68,8 @@ internal sealed partial class WindowsCommandExecutor : ICommandOperationExecutor
 
     internal Func<string, Task>? OnIntentPersistedAsync { get; set; }
     internal Func<RemediationRule, CancellationToken, Task<CommandHandlerOutcome>>? RuleExecutorSeam { get; set; }
+    // Test-only boundary for fault injection. Production always uses Windows registry APIs.
+    internal Func<string, RemediationChange, Func<object, Task>?, CancellationToken, Task<object>>? RemediationChangeExecutorSeam { get; set; }
     // Test seam for AppX package-manager invocations. Production always uses the bounded
     // runner; keeping this seam local prevents package-operation tests from invoking DISM.
     internal Func<string, IReadOnlyList<string>, CancellationToken, TimeSpan, Task<ProcessExecutionResult>>? AppxProcessRunnerSeam { get; set; }
@@ -182,6 +184,8 @@ internal sealed partial class WindowsCommandExecutor : ICommandOperationExecutor
             if (!definition.ReadOnly && !request.Apply)
             {
                 ValidateCommandParameters(definition, parameters);
+                if (definition.Id.Equals("remediation-restore", StringComparison.OrdinalIgnoreCase))
+                    return await RemediationRestorePreviewAsync(parameters, cancellationToken).ConfigureAwait(false);
                 return MutationPreview(definition, parameters);
             }
 
@@ -882,6 +886,7 @@ internal sealed partial class WindowsCommandExecutor : ICommandOperationExecutor
             "cleaner-disk-pressure" => CleanupAffectedResources(p.Int32("OlderThanDays", 7, 0, 3650)),
             "deep-clean" => DeepCleanAffectedResources(p),
             "preset" => PresetAffectedResources(p.RequiredString("PresetId")),
+            "context-menu-set" => ContextMenuAffectedResources(p),
             _ => new[] { new { resourceType = "SystemState", path = commandId, target = "HostMutation", proposedValue = "Apply", reversible = isReversible } }
         };
     }

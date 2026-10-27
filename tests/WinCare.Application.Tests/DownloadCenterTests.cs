@@ -30,6 +30,7 @@ public sealed class DownloadCenterTests
         Assert.Equal(50d, running.ProgressPercent);
         Assert.True(running.CanPause);
         Assert.False(running.IsIndeterminate);
+        Assert.Contains("discard its partial bytes", running.CancelAccessibleName);
         Assert.DoesNotContain("password", running.AccessibleName);
         Assert.DoesNotContain("supersecret", running.AccessibleName);
         Assert.All(items, row => Assert.DoesNotContain("never-show", row.AccessibleName));
@@ -106,13 +107,97 @@ public sealed class DownloadCenterTests
         await Assert.ThrowsAsync<ArgumentException>(() => manager.AddAsync("https://user:password@example.com/file.zip"));
     }
 
+    [Fact]
+    public async Task Optional_SHA256_is_normalized_and_sent_to_the_native_download_queue()
+    {
+        var dispatcher = new RecordingDispatcher();
+        var manager = new DownloadCenterService(dispatcher);
+        const string checksum = "ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789";
+
+        await manager.AddAsync("https://example.com/archive.zip", checksum);
+
+        Assert.Equal(checksum.ToLowerInvariant(), dispatcher.LastCreateParameters?.GetProperty("Sha256").GetString());
+    }
+
+    [Theory]
+    [InlineData("short")]
+    [InlineData("ZBCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789")]
+    public async Task Malformed_SHA256_is_rejected_before_queue_mutation(string checksum)
+    {
+        var dispatcher = new RecordingDispatcher();
+        var manager = new DownloadCenterService(dispatcher);
+
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            manager.AddAsync("https://example.com/file.zip", checksum));
+
+        Assert.Null(dispatcher.LastCreateParameters);
+    }
+
+    [Theory]
+    [InlineData("download-create")]
+    [InlineData("download-start")]
+    [InlineData("download-resume")]
+    [InlineData("download-suspend")]
+    [InlineData("download-cancel")]
+    [InlineData("download-remove")]
+    [InlineData("download-reconcile")]
+    public async Task User_initiated_bounded_download_commands_are_admitted_as_routine_actions(
+        string commandId)
+    {
+        // File transfers use scoped destinations, deny overwrite, impose 2 GiB limits,
+        // and mark downloaded files as originating from the Internet. The user's
+        // explicit Download/Pause/Cancel action must not fail because the UI doesn't
+        // offer the generic system-maintenance review-plan interaction.
+        var definition = WinCare.CommandCatalog.CommandCatalog.Find(commandId)!;
+        Assert.Equal(CommandRisk.Low, definition.Risk);
+        Assert.Equal(RiskTier.Safe, definition.RiskTier);
+        Assert.Equal(AdministratorAccess.No, definition.AdministratorAccess);
+
+        var handler = new RoutineDownloadHandler(commandId);
+        var dispatcher = new CommandDispatcher([definition], [handler], isProcessElevated: () => false);
+        object parameters = commandId == "download-create"
+            ? new { Url = "https://example.com/archive.zip" }
+            : new { Id = "queued-job-id" };
+        CommandResult result = await dispatcher.ExecuteAsync(
+            CommandRequest.Execute(commandId, JsonSerializer.SerializeToElement(parameters)),
+            CommandExecutionOptions.Default, CancellationToken.None);
+
+        Assert.Equal(CommandResultStatus.Succeeded, result.Status);
+        Assert.Equal(1, handler.Calls);
+    }
+
+    [Theory]
+    [InlineData("download-batch")]
+    [InlineData("download-start-due")]
+    public void Bulk_or_unattended_transfers_still_require_explicit_review(string commandId)
+    {
+        var definition = WinCare.CommandCatalog.CommandCatalog.Find(commandId)!;
+        Assert.Equal(RiskTier.Moderate, definition.RiskTier);
+    }
+
+    private sealed class RoutineDownloadHandler(string commandId) : ICommandHandler
+    {
+        public string CommandId { get; } = commandId;
+        public int Calls { get; private set; }
+        public Task<CommandHandlerOutcome> ExecuteAsync(CommandRequest request, CancellationToken cancellationToken)
+        {
+            Calls++;
+            return Task.FromResult(CommandHandlerOutcome.Succeeded(
+                "download.test", "Routine transfer admitted.",
+                JsonSerializer.SerializeToElement(new { accepted = true })));
+        }
+    }
+
     private sealed class RecordingDispatcher : ICommandDispatcher
     {
         private readonly TaskCompletionSource<bool> _releaseTransfer = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public TaskCompletionSource<bool> TransferStarted { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public JsonElement? LastCreateParameters { get; private set; }
         public void ReleaseTransfer() => _releaseTransfer.TrySetResult(true);
         public async Task<CommandResult> ExecuteAsync(CommandRequest request, CommandExecutionOptions options, CancellationToken token)
         {
+            if (request.CommandId == "download-create")
+                LastCreateParameters = request.Parameters.Clone();
             if (request.CommandId is "download-start" or "download-resume")
             {
                 TransferStarted.TrySetResult(true);
