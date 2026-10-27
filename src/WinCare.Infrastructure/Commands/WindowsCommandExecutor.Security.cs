@@ -501,7 +501,7 @@ internal sealed partial class WindowsCommandExecutor
         {
             new { id = "uac", passed = Convert.ToInt32(system?.GetValue("EnableLUA", 1), CultureInfo.InvariantCulture) != 0 },
             new { id = "lsa-protection", passed = Convert.ToInt32(lsa?.GetValue("RunAsPPL", 0), CultureInfo.InvariantCulture) != 0 },
-            new { id = "firewall", passed = firewallProfiles.All(profile => profile.Enabled) },
+            new { id = "firewall", passed = ClassifyFirewallProfileStates(firewallProfiles.Select(profile => (profile.Enabled, profile.ExplicitValue)).ToArray()) == "Enabled" },
         };
         return Success("hardening-assess", "Balanced hardening assessment completed.", new { checks, passed = checks.Count(x => x.passed), total = checks.Length });
     }
