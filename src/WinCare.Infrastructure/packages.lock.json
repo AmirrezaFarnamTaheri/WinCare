@@ -14,9 +14,12 @@
       },
       "System.Diagnostics.EventLog": {
         "type": "Direct",
-        "requested": "[8.0.1, )",
-        "resolved": "8.0.1",
-        "contentHash": "n1ZP7NM2Gkn/MgD8+eOT5MulMj6wfeQMNS2Pizvq5GHCZfjlFMXV2irQlQmJhwA2VABC57M0auudO89Iu2uRLg=="
+        "requested": "[11.0.0, )",
+        "resolved": "11.0.0",
+        "contentHash": "lKore9DXE1q8o6ss6/M7++xBpn2FMS0axaAypBspYLqY5OT1ZRPLzFGwF18l61aXfXTPpwkx5tYh4zMUHoAv/g==",
+        "dependencies": {
+          "System.Security.Principal.Windows": "5.0.0"
+        }
       },
       "Microsoft.NETCore.Platforms": {
         "type": "Transitive",
@@ -40,14 +43,14 @@
       "wincare.application": {
         "type": "Project",
         "dependencies": {
-          "WinCare.CommandCatalog": "[3.0.0, )",
-          "WinCare.Domain": "[3.0.0, )"
+          "WinCare.CommandCatalog": "[4.0.0-rc2, )",
+          "WinCare.Domain": "[4.0.0-rc2, )"
         }
       },
       "wincare.commandcatalog": {
         "type": "Project",
         "dependencies": {
-          "WinCare.Domain": "[3.0.0, )"
+          "WinCare.Domain": "[4.0.0-rc2, )"
         }
       },
       "wincare.domain": {
